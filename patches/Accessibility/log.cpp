@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
+#include <share.h>
 
 namespace acclog {
 
@@ -125,7 +126,10 @@ void RawWriteLocked(const char* tag, const char* content) {
     if (!g_logOpenAttempted) {
         g_logOpenAttempted = true;
         CreateDirectoryA(g_logDir, nullptr);
-        if (fopen_s(&g_logFile, g_logPath, "ab") != 0 || !g_logFile) {
+        // Shared for reading (deny only other writers) so external tools can
+        // tail the log live while the game runs. fopen_s opens unshared.
+        g_logFile = _fsopen(g_logPath, "ab", _SH_DENYWR);
+        if (!g_logFile) {
             g_logFile = nullptr;
             OutputDebugStringA("[accessibility] WARNING: log file open failed\n");
         }
