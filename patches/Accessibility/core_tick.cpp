@@ -7,6 +7,7 @@
 
 #include "announce_facing.h"
 #include "audio_footstep_suppress.h"
+#include "bridge.h"
 #include "bringup_announce.h"
 #include "camera_announce.h"
 #include "camera_orient.h"
@@ -997,6 +998,11 @@ void Dispatch() {
     // input handler staged something, which only happens on a real
     // CSWGuiPazaakStart.
     PHASE("pazaakdeck", acc::menus::pazaakdeck::Tick());
+
+    // Local bridge: refresh the state snapshot and run queued requests from
+    // the external client. Before the pending-op drain so a bridge action
+    // that queues menu work is handled this same tick.
+    PHASE("bridge", acc::bridge::Tick());
 
     // Drain queued actions LAST — monitors above must see consistent state.
     PHASE("menus.TickPendingOps", acc::menus::TickPendingOps());

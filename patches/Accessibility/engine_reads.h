@@ -330,6 +330,16 @@ int ReadObjectDamageLevel(void* serverObject);
 // -1 on null / fault. Any object kind — creatures, placeables, doors.
 int ReadObjectCurrentHitPoints(void* serverObject);
 
+// Maximum hit points of a server creature (GetMaxHitPoints(1), the same call
+// ReadObjectDamageLevel's KOTOR 2 path makes), -1 on null / fault. Used by
+// the local bridge's party readout.
+int ReadCreatureMaxHitPoints(void* serverCreature);
+
+// Current hit points through the engine accessor GetCurrentHitPoints(0)
+// (current plus temporary), -1 on null / fault. The raw +0xe0 field read by
+// ReadObjectCurrentHitPoints is not the live value for the player creature.
+int ReadCreatureCurrentHitPoints(void* serverCreature);
+
 // True when a server object carries the plot flag (indestructible). Static
 // placeables and doors also read true: both games' loaders set the flag for
 // them. False on null / fault.

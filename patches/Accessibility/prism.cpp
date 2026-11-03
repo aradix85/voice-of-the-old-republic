@@ -40,6 +40,7 @@
 #include <string>
 #include <type_traits>
 
+#include "bridge.h"   // spoken-line ring buffer for the local bridge
 #include "log.h"
 #include "mod_settings_store.h"  // persist the SAPI urgent-volume slider
 
@@ -462,6 +463,7 @@ void CaptureSpoken(const char* text) {
     }
     if (!text) return;
     strncpy_s(s_lastSpoken, text, _TRUNCATE);
+    ::acc::bridge::RecordSpoken(s_lastSpoken);
 }
 
 // Wide path: fold back to the game codepage so LastSpoken() has one encoding
@@ -478,6 +480,7 @@ void CaptureSpokenW(const wchar_t* text) {
                                   (int)sizeof(s_lastSpoken), nullptr, nullptr);
     if (got <= 0) s_lastSpoken[0] = '\0';
     s_lastSpoken[sizeof(s_lastSpoken) - 1] = '\0';
+    ::acc::bridge::RecordSpoken(s_lastSpoken);
 }
 
 // ---- SEH guards around prism backend calls -----------------------------

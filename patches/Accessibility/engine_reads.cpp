@@ -62,6 +62,28 @@ int ReadObjectDamageLevel(void* serverObject) {
     return 5;
 }
 
+int ReadCreatureCurrentHitPoints(void* serverCreature) {
+    if (!serverCreature) return -1;
+    __try {
+        auto curFn = reinterpret_cast<PFN_GetHpThisInt>(
+            kAddrCSWSObjectGetCurrentHitPoints);
+        return static_cast<short>(curFn(serverCreature, 0));
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return -1;
+    }
+}
+
+int ReadCreatureMaxHitPoints(void* serverCreature) {
+    if (!serverCreature) return -1;
+    __try {
+        auto maxFn = reinterpret_cast<PFN_GetHpThisInt>(
+            kAddrCSWSCreatureGetMaxHitPoints);
+        return static_cast<short>(maxFn(serverCreature, 1));
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return -1;
+    }
+}
+
 int ReadObjectCurrentHitPoints(void* serverObject) {
     if (!serverObject) return -1;
     __try {
