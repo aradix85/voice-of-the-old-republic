@@ -86,6 +86,54 @@ std::vector<std::pair<int, std::string>> LandmarkRegions(void* area) {
     return out;
 }
 
+// Door exits carry the door's own position (room_topology::ExitPoint). Give
+// such an exit the same number the Q/E and , / . cycles use ("Door 2"), so
+// "Door East" in the region label and "Door 2" in the lists are visibly the
+// same door: "Door East" becomes "Door 2 East".
+struct DoorName {
+    Vector      pos;
+    std::string base;      // what the label's noun is ("Door", "Lift")
+    std::string numbered;  // base + area ordinal ("Door 2"); == base if unique
+};
+
+std::vector<DoorName> NumberedDoors() {
+    std::vector<DoorName> out;
+    acc::cycle::CategoryListing listing;
+    if (!acc::cycle::BuildCategoryListing(acc::filter::CycleCategory::Door,
+                                          listing)) {
+        return out;
+    }
+    for (int i = 0; i < listing.count; ++i) {
+        if (listing.isPin[i] || !listing.objs[i]) continue;
+        char buf[160] = {0};
+        if (!acc::engine::GetObjectBaseName(listing.objs[i], buf, sizeof(buf)) ||
+            !buf[0]) {
+            continue;
+        }
+        DoorName d;
+        d.pos  = listing.positions[i];
+        d.base = buf;
+        acc::narration::AppendAreaPositionOrdinal(
+            listing.objs[i], acc::filter::CycleCategory::Door, buf, sizeof(buf));
+        d.numbered = buf;
+        out.push_back(std::move(d));
+    }
+    return out;
+}
+
+void NumberDoorExit(ExitMark& e, const std::vector<DoorName>& doors) {
+    for (const DoorName& d : doors) {
+        const float dx = d.pos.x - e.pos.x;
+        const float dy = d.pos.y - e.pos.y;
+        if (dx * dx + dy * dy > 0.6f * 0.6f) continue;
+        if (d.numbered.size() > d.base.size() &&
+            e.text.compare(0, d.base.size(), d.base) == 0) {
+            e.text = d.numbered + e.text.substr(d.base.size());
+        }
+        return;
+    }
+}
+
 std::string Destination(void* area, int target,
                         const std::vector<std::pair<int, std::string>>& landmarks,
                         const std::string& exitText) {
@@ -167,12 +215,16 @@ bool Annotate(void* area, const std::string& label,
     const bool haveCentre =
         acc::room_topology::GetClusterInfo(area, g_current, here);
     const auto landmarks = LandmarkRegions(area);
+    const auto doors = NumberedDoors();
 
     outExits = exits;
     std::string list;
     bool added = false;
     for (ExitMark& e : outExits) {
         if (e.text.empty()) continue;
+        const std::string before = e.text;
+        NumberDoorExit(e, doors);
+        if (e.text != before) added = true;
         const Vector from = haveCentre ? here.centre : e.pos;
         const int target = RegionBehind(area, from, e.pos);
         std::string extra;

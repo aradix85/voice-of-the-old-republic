@@ -2,6 +2,7 @@
 
 #include <windows.h>
 #include <cstdint>
+#include <cmath>
 #include <cstdio>
 
 #include "audio_bus.h"
@@ -9,6 +10,7 @@
 #include "combat_query.h"   // BuildTargetCombatBrief enrichment
 #include "discovery.h"      // organic-discovery recording
 #include "engine_area.h"
+#include "engine_compass.h"  // ClockPosition — Q/E speaks where, like the , / . cycle
 #include "engine_app.h"     // GetClientAppInternal
 #include "engine_player.h"  // GetPartyMembers, GetPlayerPosition
 #include "filter_objects.h"
@@ -219,13 +221,36 @@ bool NarrateHandle(uint32_t handle, const char* reason, bool explicitRequest) {
     }
 
     char enriched[320];
-    if (acc::combat::query::BuildTargetCombatBrief(
+    const bool haveBrief =
+        acc::combat::query::BuildTargetCombatBrief(
             obj, name, enriched, sizeof(enriched)) &&
-        enriched[0] != '\0') {
-        prism::Speak(enriched, /*interrupt=*/true);
-    } else {
-        prism::Speak(name, /*interrupt=*/true);
+        enriched[0] != '\0';
+    const char* spoken = haveBrief ? enriched : name;
+
+    // An explicit Q/E press also says where the target is, in the same
+    // "{name}, {clock} o'clock, {metres} metres" shape as the , / . cycle,
+    // so both ways of finding a door or a person sound alike. The automatic
+    // focus-follow stays short.
+    char located[400];
+    Vector playerPos{};
+    float yaw = 0.0f;
+    if (explicitRequest && havePos &&
+        acc::engine::GetPlayerPosition(playerPos)) {
+        const float dx = pos.x - playerPos.x;
+        const float dy = pos.y - playerPos.y;
+        int metres = static_cast<int>(std::sqrt(dx * dx + dy * dy) + 0.5f);
+        if (metres < 1) metres = 1;
+        const bool haveYaw = acc::engine::GetPlayerYawDegrees(yaw);
+        const char* fmt = acc::strings::Get(haveYaw
+            ? acc::strings::Id::FmtAnnounceWithClock
+            : acc::strings::Id::FmtAnnounceNoClock);
+        int n = haveYaw
+            ? std::snprintf(located, sizeof(located), fmt, spoken,
+                            acc::engine::ClockPosition(yaw, dx, dy), metres)
+            : std::snprintf(located, sizeof(located), fmt, spoken, metres);
+        if (n > 0) spoken = located;
     }
+    prism::Speak(spoken, /*interrupt=*/true);
 
     uint32_t serverHandle = acc::engine::GetObjectHandle(obj);
     acc::narrated_target::Stamp(obj, serverHandle);
