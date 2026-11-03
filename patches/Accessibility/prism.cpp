@@ -43,6 +43,7 @@
 #include "bridge.h"   // spoken-line ring buffer for the local bridge
 #include "log.h"
 #include "mod_settings_store.h"  // persist the SAPI urgent-volume slider
+#include "menus_modsettings.h"   // "Speak everything with the screen reader"
 
 namespace prism {
 
@@ -1196,8 +1197,20 @@ void Speak(const char* text, bool interrupt) {
 // utterance, so nothing here touches it. `interrupt` is true for every
 // cross-cancel announce (the original callers); SpeakOnUrgentChannel passes
 // it through so a caller that emits consecutive lines keeps them queued.
+// Mod settings -> "Speak everything with the screen reader": the urgent
+// (SAPI) and compass voices step aside and every line goes to the normal
+// screen-reader channel instead.
+static bool AllViaScreenReader() {
+    return acc::menus::modsettings::GetToggle(
+        acc::menus::modsettings::Option::AllViaScreenReader);
+}
+
 static void SpeakUrgentImpl(const char* text, bool interrupt) {
     if (!g_normalReady || !text || !*text) return;
+    if (AllViaScreenReader()) {
+        Speak(text, interrupt);
+        return;
+    }
 
     // Capture before the dispatch, not inside the rc==kPrismOk branch: the
     // one-shot suppress flag has to be consumed by exactly this call whether
@@ -1288,6 +1301,10 @@ void SpeakOnUrgentChannel(const char* text, bool interrupt) {
 // (SAPI may already be mid-utterance — same double-speak reasoning).
 void SpeakCompass(const char* text) {
     DropCompassFollowUp("newer compass line");
+    if (AllViaScreenReader()) {
+        Speak(text, /*interrupt=*/true);
+        return;
+    }
     if (!g_compassReady) {
         SpeakUrgentImpl(text, /*interrupt=*/true);
         return;
@@ -1458,6 +1475,15 @@ static DWORD CompassSpeechMs(const char* text) {
 }
 
 void SpeakCompassThen(const char* text, const char* followUp) {
+    if (AllViaScreenReader() && text && *text) {
+        if (followUp && *followUp) {
+            const std::string both = std::string(text) + "\n" + followUp;
+            Speak(both.c_str(), /*interrupt=*/true);
+        } else {
+            Speak(text, /*interrupt=*/true);
+        }
+        return;
+    }
     if (!followUp || !*followUp) {
         SpeakCompass(text);
         return;

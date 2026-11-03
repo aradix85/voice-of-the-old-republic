@@ -1201,6 +1201,7 @@ const char* Get(Id id) {
         case Id::ExitAnnoToJunction:    return "hacia un cruce";
         case Id::ExitAnnoToArea:        return "hacia una zona";
         case Id::ExitAnnoToDeadEnd:     return "hacia un callej\xF3n sin salida";
+        case Id::ModSettingAllViaScreenReader: return "Leerlo todo con el lector de pantalla";
         case Id::Count_:               return "";
     }
     return "";

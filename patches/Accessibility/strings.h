@@ -2488,6 +2488,8 @@ enum class Id : int {
     ExitAnnoToArea,           // "to a room"
     ExitAnnoToDeadEnd,        // "to a dead end"
 
+    ModSettingAllViaScreenReader,  // toggle label — every line on the screen reader
+
     Count_,
 };
 

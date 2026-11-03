@@ -1198,6 +1198,7 @@ const char* Get(Id id) {
         case Id::ExitAnnoToJunction:    return "do skrzy\xbf""owania";
         case Id::ExitAnnoToArea:        return "do obszaru";
         case Id::ExitAnnoToDeadEnd:     return "do \x9c""lepego zau\xb3""ka";
+        case Id::ModSettingAllViaScreenReader: return "Czytaj wszystko czytnikiem ekranu";
         case Id::Count_:               return "";
     }
     return "";

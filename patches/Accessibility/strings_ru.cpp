@@ -1237,6 +1237,7 @@ const char* Get(Id id) {
         case Id::ExitAnnoToJunction:    return "\xea \xef\xe5\xf0\xe5\xea\xf0\xe5\xf1\xf2\xea\xf3";
         case Id::ExitAnnoToArea:        return "\xea \xe7\xee\xed\xe5";
         case Id::ExitAnnoToDeadEnd:     return "\xea \xf2\xf3\xef\xe8\xea\xf3";
+        case Id::ModSettingAllViaScreenReader: return "\xc2\xf1\xb8 \xf7\xe5\xf0\xe5\xe7 \xfd\xea\xf0\xe0\xed\xed\xfb\xe9 \xe4\xee\xf1\xf2\xf3\xef";
         case Id::Count_:               return "";
     }
     return "";

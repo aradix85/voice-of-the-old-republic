@@ -1199,6 +1199,7 @@ const char* Get(Id id) {
         case Id::ExitAnnoToJunction:    return "to a junction";
         case Id::ExitAnnoToArea:        return "to a room";
         case Id::ExitAnnoToDeadEnd:     return "to a dead end";
+        case Id::ModSettingAllViaScreenReader: return "Speak everything with the screen reader";
         case Id::Count_:               return "";
     }
     return "";

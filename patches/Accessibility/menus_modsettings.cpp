@@ -70,6 +70,12 @@ bool s_toggles[static_cast<int>(Option::Count)] = {
                                   // Purely a channel choice: whether a line is
                                   // spoken at all is still decided by the
                                   // suppression rules in dialog_speech.cpp.
+    /* AllViaScreenReader */ false,  // default off. ON sends every line the
+                                  // mod speaks to the screen reader: the
+                                  // announcement and compass voices and the 3D
+                                  // speech step aside (prism, positional_speech).
+                                  // For players who want one voice, at their
+                                  // own rate, and text-only descriptions.
     /* TurretAutoAim   */ false,  // "Autoaiming" — OFF by default. When ON, the
                                   // turret PERMANENTLY locks aim onto the
                                   // selected fighter (full auto-track), so the
@@ -333,6 +339,7 @@ constexpr OptionSpec k_options[] = {
     { Option::WallSounds,      acc::strings::Id::ModSettingWallSounds,      RowKind::Toggle  },
     { Option::HumanSubtitles,  acc::strings::Id::ModSettingHumanSubtitles,  RowKind::Toggle  },
     { Option::SubtitleSapi,    acc::strings::Id::ModSettingSubtitleSapi,    RowKind::Toggle  },
+    { Option::AllViaScreenReader, acc::strings::Id::ModSettingAllViaScreenReader, RowKind::Toggle },
     { Option::TurretAutoAim,   acc::strings::Id::ModSettingTurretAutoAim,   RowKind::Toggle  },
     { Option::SkipIntros,      acc::strings::Id::ModSettingSkipIntros,      RowKind::Toggle  },
     { Option::CueVolume,       acc::strings::Id::ModSettingCueVolume,       RowKind::Slider  },
@@ -399,6 +406,7 @@ constexpr int k_rootRowCount = static_cast<int>(
 // the compass voice's own submenu: a separate voice, but one more voice
 // setting, so it lives beside the announcement voice rather than at the root.
 constexpr Option k_voiceRows[] = {
+    Option::AllViaScreenReader,
     Option::UrgentVolume,
     Option::UrgentRate,
     Option::UrgentVoice,
@@ -502,6 +510,7 @@ const char* PersistKey(Option opt) {
         case Option::WallSounds:      return "WallSounds";
         case Option::HumanSubtitles:  return "HumanSubtitles";
         case Option::SubtitleSapi:    return "SubtitleSapi";
+        case Option::AllViaScreenReader: return "AllViaScreenReader";
         case Option::TurretAutoAim:   return "TurretAutoAim";
         case Option::PositionalCombatSpeech: return "PositionalCombatSpeech";
         case Option::PositionalExitSpeech:   return "PositionalExitSpeech";

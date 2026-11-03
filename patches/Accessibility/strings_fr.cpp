@@ -1200,6 +1200,7 @@ const char* Get(Id id) {
         case Id::ExitAnnoToJunction:    return "vers une intersection";
         case Id::ExitAnnoToArea:        return "vers une zone";
         case Id::ExitAnnoToDeadEnd:     return "vers un cul-de-sac";
+        case Id::ModSettingAllViaScreenReader: return "Tout lire avec le lecteur d'\xe9""cran";
         case Id::Count_:               return "";
     }
     return "";

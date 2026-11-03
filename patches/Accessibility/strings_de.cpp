@@ -1220,6 +1220,7 @@ const char* Get(Id id) {
         case Id::ExitAnnoToJunction:    return "zu einer Kreuzung";
         case Id::ExitAnnoToArea:        return "zu einem Bereich";
         case Id::ExitAnnoToDeadEnd:     return "zu einer Sackgasse";
+        case Id::ModSettingAllViaScreenReader: return "Alles mit dem Screenreader sprechen";
         case Id::Count_:               return "";
     }
     return "";

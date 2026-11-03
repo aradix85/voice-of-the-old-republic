@@ -687,6 +687,12 @@ void Cut(Channel channel) {
 
 bool IsEnabled(Channel channel) {
     using acc::menus::modsettings::Option;
+    // "Speak everything with the screen reader" overrides both 3D toggles:
+    // callers fall back to their centred speech, which prism then routes to
+    // the screen reader.
+    if (acc::menus::modsettings::GetToggle(Option::AllViaScreenReader)) {
+        return false;
+    }
     return acc::menus::modsettings::GetToggle(channel == Channel::Exits
                                                   ? Option::PositionalExitSpeech
                                                   : Option::PositionalCombatSpeech);
