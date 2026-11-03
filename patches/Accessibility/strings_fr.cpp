@@ -1201,6 +1201,20 @@ const char* Get(Id id) {
         case Id::ExitAnnoToArea:        return "vers une zone";
         case Id::ExitAnnoToDeadEnd:     return "vers un cul-de-sac";
         case Id::ModSettingAllViaScreenReader: return "Tout lire avec le lecteur d'\xe9""cran";
+        case Id::LockNeedStoryOnly:       return "ne s'ouvre que par l'histoire";
+        case Id::LockNeedKey:             return "n\xe9""cessite une cl\xe9";
+        case Id::FmtLockNeedSecurity:     return "S\xe9""curit\xe9 %d";
+        case Id::FmtRegionHere:           return "Ici : %s";
+        case Id::FmtRegionHereMore:       return "%d de plus";
+        case Id::FmtOverviewExplored:     return "%d zones sur %d explor\xe9""es";
+        case Id::OverviewNoMap:           return "Pas encore de carte de cette zone";
+        case Id::FmtOverviewNearest:      return "Inexplor\xe9 le plus proche : %s";
+        case Id::OverviewAllExplored:     return "Tout ce qui est accessible est explor\xe9";
+        case Id::FmtOverviewLockedAway:   return "%d de plus derri\xe8re des portes verrouill\xe9""es";
+        case Id::FmtOverviewToSearch:     return "\xc0 fouiller : %d";
+        case Id::OverviewNothingToSearch: return "Plus rien \xe0 fouiller";
+        case Id::KbNameExploreOverview:   return "Aper\xe7u de l'exploration";
+        case Id::HelpKeyExploreOverview:  return "Ctrl plus N : la part de cette zone que vous avez explor\xe9""e, l'endroit inexplor\xe9 le plus proche avec la sortie qui y m\xe8ne, et ce qu'il reste \xe0 fouiller";
         case Id::Count_:               return "";
     }
     return "";

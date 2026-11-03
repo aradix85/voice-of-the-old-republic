@@ -202,6 +202,7 @@ constexpr Entry kEntries[] = {
     { S::HelpKeyCycleEnds,       Grp::Exploration, 0 },
     { S::HelpKeyHeading,         Grp::Exploration, 0 },
     { S::HelpKeyCameraOrient,    Grp::Exploration, 0 },
+    { S::HelpKeyExploreOverview, Grp::Exploration, kWorld },
     { S::HelpKeyDropMarker,      Grp::Exploration, kMap },
 
     // ---- Combat & actions ----

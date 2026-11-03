@@ -32,6 +32,7 @@
 #include "engine_panels.h"
 #include "engine_player.h"
 #include "engine_reads.h"
+#include "exit_memory.h"
 #include "filter_objects.h"
 #include "guidance_autowalk.h"
 #include "interact_dispatch.h"
@@ -382,6 +383,36 @@ std::string BuildNearby(float radius) {
     return s;
 }
 
+std::string BuildOverview() {
+    if (!acc::game::IsKotor1())
+        return "{\"error\":\"overview is KOTOR 1 only for now\"}";
+    acc::exit_memory::Overview o;
+    if (!acc::exit_memory::CollectOverview(o))
+        return "{\"error\":\"no player position (not in the world?)\"}";
+    PlayerFrame f = ReadPlayerFrame();
+    std::string s = "{\"have_map\":";
+    s += o.haveGraph ? "true" : "false";
+    s += ",\"explored\":" + std::to_string(o.explored) +
+         ",\"total\":" + std::to_string(o.total) +
+         ",\"locked_away\":" + std::to_string(o.lockedAway);
+    if (o.haveTarget) {
+        s += ",\"nearest_unexplored\":{\"what\":" + JsonGame(o.targetWhat.c_str()) +
+             ",\"via\":" + JsonGame(o.via.c_str()) +
+             ",\"x\":" + Num(o.targetPos.x) + ",\"y\":" + Num(o.targetPos.y) +
+             ",\"where\":" + RelativeJson(f, o.targetPos) + "}";
+    }
+    s += ",\"to_search\":[";
+    for (size_t i = 0; i < o.loot.size(); ++i) {
+        const auto& l = o.loot[i];
+        if (i) s += ",";
+        s += "{\"name\":" + JsonGame(l.name.c_str()) +
+             ",\"x\":" + Num(l.pos.x) + ",\"y\":" + Num(l.pos.y) +
+             ",\"where\":" + RelativeJson(f, l.pos) + "}";
+    }
+    s += "],\"text\":" + JsonGame(acc::exit_memory::OverviewText(o).c_str()) + "}";
+    return s;
+}
+
 uint32_t ParseHandle(const std::string& v) {
     if (v.empty()) return 0;
     return static_cast<uint32_t>(std::strtoul(v.c_str(), nullptr, 0));
@@ -456,6 +487,7 @@ std::string RunJob(const Job& job) {
         return BuildNearby(radius);
     }
     if (job.path == "/do") return RunAction(job);
+    if (job.path == "/overview") return BuildOverview();
     return "{\"error\":\"unknown job\"}";
 }
 
@@ -630,7 +662,7 @@ void HandleClient(SOCKET c) {
         SendResponse(c, 200, body);
         return;
     }
-    if (path == "/nearby" || path == "/do") {
+    if (path == "/nearby" || path == "/do" || path == "/overview") {
         int status = 200;
         std::string body = QueueAndWait(path, params, &status);
         SendResponse(c, status, body);

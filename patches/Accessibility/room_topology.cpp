@@ -369,6 +369,9 @@ struct AreaGraph {
     DoorRecord  doors       [kMaxDoors];
     int              transition_count = 0;
     TransitionRecord transitions[kMaxTransitions];
+    // Region adjacency (ClusterLink), recorded at the end of BuildForArea
+    // for the exploration overview. Not used by labelling.
+    std::vector<ClusterLink> cluster_links;
 };
 
 AreaGraph g_graph;
@@ -2937,6 +2940,7 @@ void Reset() {
     g_graph.node_count = 0;
     g_graph.door_count = 0;
     g_graph.transition_count = 0;
+    g_graph.cluster_links.clear();
     s_class_clear   = 0;
     s_class_door    = 0;
     s_class_blocked = 0;
@@ -4131,6 +4135,42 @@ void BuildForArea(void* area) {
         g_graph.node_cluster_id[i] = UFFind(i);
     }
 
+    // Region adjacency for the exploration overview: which regions share a
+    // nav edge that does not cross a wall, and whether every such edge runs
+    // through a door. Labels never read this.
+    g_graph.cluster_links.clear();
+    for (int i = 0; i < n; ++i) {
+        int lo = 0, hi = 0;
+        acc::engine::navgraph::NeighbourRange(g, i, lo, hi);
+        for (int e = lo; e < hi; ++e) {
+            const int j = static_cast<int>(g.conns[e]);
+            if (j == i || j < 0 || j >= n) continue;  // pairs dedupe below
+            int ca = g_graph.node_cluster_id[i];
+            int cb = g_graph.node_cluster_id[j];
+            if (ca == cb) continue;
+            if (ca > cb) std::swap(ca, cb);
+            const EdgeResult er = ClassifyEdge(nullptr, g_graph.node_pos[i],
+                                               g_graph.node_pos[j],
+                                               "ClusterLinks");
+            if (er.kind == kEdgeBlocked) continue;
+            const bool viaDoor = er.kind == kEdgeDoor && er.doorIdx >= 0;
+            ClusterLink* found = nullptr;
+            for (ClusterLink& l : g_graph.cluster_links) {
+                if (l.a == ca && l.b == cb) { found = &l; break; }
+            }
+            if (!found) {
+                ClusterLink l;
+                l.a       = ca;
+                l.b       = cb;
+                l.viaDoor = viaDoor;
+                if (viaDoor) l.doorPos = g_graph.doors[er.doorIdx].pos;
+                g_graph.cluster_links.push_back(l);
+            } else if (found->viaDoor && !viaDoor) {
+                found->viaDoor = false;  // a free way round the door
+            }
+        }
+    }
+
     g_graph.built = true;
     acclog::Write("WallTopo",
                   "BuildForArea: area=%p nodes=%d clusters=%d "
@@ -4206,6 +4246,33 @@ bool GetClusterInfo(void* area, int clusterId, ClusterInfo& out) {
     return false;
 }
 
+
+bool ListClusters(void* area, std::vector<ClusterSummary>& out) {
+    out.clear();
+    if (!HasGraphForArea(area)) return false;
+    for (int i = 0; i < g_graph.node_count; ++i) {
+        if (g_graph.node_filtered[i]) continue;
+        const int id = g_graph.node_cluster_id[i];
+        bool seen = false;
+        for (const ClusterSummary& c : out) {
+            if (c.id == id) { seen = true; break; }
+        }
+        if (seen) continue;
+        ClusterSummary c;
+        c.id     = id;
+        c.kind   = g_graph.node_kind[i];
+        c.centre = g_graph.node_centre[i];
+        out.push_back(c);
+    }
+    return true;
+}
+
+bool GetClusterLinks(void* area, std::vector<ClusterLink>& out) {
+    out.clear();
+    if (!HasGraphForArea(area)) return false;
+    out = g_graph.cluster_links;
+    return true;
+}
 
 bool LookupAt(void* area, const Vector& worldPos,
               std::string& outLabel, int& outSig,

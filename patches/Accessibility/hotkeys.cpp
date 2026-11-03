@@ -116,6 +116,7 @@ const char* const kActionNames[static_cast<int>(Action::COUNT)] = {
     "PartyLeaderAnnounce",
     "CameraOrient",
     "SaveMarkerAtCursor",
+    "ExploreOverview",
     "ViewModeToggle",
     "CameraStateProbe",
     "EditboxReReadUp",
@@ -348,6 +349,11 @@ void InitDefaults() {
     // so this stays distinct from any future modifier variants.
     bind(Action::SaveMarkerAtCursor,   'N', 0, kModShift,
                                        kModCtrl | kModAlt | kModAltGr);
+    // Ctrl+N — exploration overview (exit_memory): regions explored, the
+    // nearest unexplored one and the exit toward it, loot left. N has no
+    // engine binding, and both N bindings above forbid Ctrl.
+    bind(Action::ExploreOverview,      'N', 0, kModCtrl,
+                                       kModShift | kModAlt | kModAltGr);
 
     // ----- View mode -----
     bind(Action::ViewModeToggle,       'B', 0, 0,         kModShift);

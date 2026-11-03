@@ -164,6 +164,28 @@ struct ClusterInfo {
 // graph.
 bool GetClusterInfo(void* area, int clusterId, ClusterInfo& out);
 
+// One region of the area's graph, for the exploration overview
+// (exit_memory). Regions made only of filtered nodes — never announced —
+// are left out.
+struct ClusterSummary {
+    int    id     = kClusterIdNone;
+    int    kind   = -1;
+    Vector centre = {0.0f, 0.0f, 0.0f};
+};
+bool ListClusters(void* area, std::vector<ClusterSummary>& out);
+
+// Two regions joined by at least one nav-graph edge that does not cross a
+// wall. viaDoor: every such edge passes through a door (doorPos is that
+// door's position), so whether the link is open depends on the door.
+// Recorded once per build; each pair appears once, a < b.
+struct ClusterLink {
+    int    a       = kClusterIdNone;
+    int    b       = kClusterIdNone;
+    bool   viaDoor = false;
+    Vector doorPos = {0.0f, 0.0f, 0.0f};
+};
+bool GetClusterLinks(void* area, std::vector<ClusterLink>& out);
+
 void DumpGraphToLog();
 
 }  // namespace acc::room_topology

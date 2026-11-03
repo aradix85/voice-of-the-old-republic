@@ -2490,6 +2490,29 @@ enum class Id : int {
 
     ModSettingAllViaScreenReader,  // toggle label — every line on the screen reader
 
+    // ---- Lock detail after "locked" on doors and containers (engine_area
+    //      AppendLockNeed, KOTOR 1 only): what it takes to open it.
+    LockNeedStoryOnly,        // "opens only through the story" — key required, none named
+    LockNeedKey,              // "needs a key"
+    FmtLockNeedSecurity,      // "Security %d" — the Security difficulty
+
+    // ---- What is in the player's new region, after its exits
+    //      (exit_memory). Entries joined with "; ".
+    FmtRegionHere,            // "Here: %s"
+    FmtRegionHereMore,        // "%d more" — entries beyond the cap
+
+    // ---- Exploration overview (exit_memory, Ctrl+N). Sentences joined
+    //      with ". "; positions use FmtAnnounceWithClock.
+    FmtOverviewExplored,      // "Explored %d of %d regions"
+    OverviewNoMap,            // "No map of this area yet"
+    FmtOverviewNearest,       // "Nearest unexplored: %s"
+    OverviewAllExplored,      // "Everything you can reach is explored"
+    FmtOverviewLockedAway,    // "%d more behind locked doors"
+    FmtOverviewToSearch,      // "To search: %d"
+    OverviewNothingToSearch,  // "Nothing left to search"
+    KbNameExploreOverview,    // keybind menu row
+    HelpKeyExploreOverview,   // F1 help row
+
     Count_,
 };
 

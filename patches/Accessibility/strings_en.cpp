@@ -1200,6 +1200,20 @@ const char* Get(Id id) {
         case Id::ExitAnnoToArea:        return "to a room";
         case Id::ExitAnnoToDeadEnd:     return "to a dead end";
         case Id::ModSettingAllViaScreenReader: return "Speak everything with the screen reader";
+        case Id::LockNeedStoryOnly:       return "opens only through the story";
+        case Id::LockNeedKey:             return "needs a key";
+        case Id::FmtLockNeedSecurity:     return "Security %d";
+        case Id::FmtRegionHere:           return "Here: %s";
+        case Id::FmtRegionHereMore:       return "%d more";
+        case Id::FmtOverviewExplored:     return "Explored %d of %d regions";
+        case Id::OverviewNoMap:           return "No map of this area yet";
+        case Id::FmtOverviewNearest:      return "Nearest unexplored: %s";
+        case Id::OverviewAllExplored:     return "Everything you can reach is explored";
+        case Id::FmtOverviewLockedAway:   return "%d more behind locked doors";
+        case Id::FmtOverviewToSearch:     return "To search: %d";
+        case Id::OverviewNothingToSearch: return "Nothing left to search";
+        case Id::KbNameExploreOverview:   return "Exploration overview";
+        case Id::HelpKeyExploreOverview:  return "Ctrl plus N: how much of this area you have explored, the nearest unexplored place and the exit towards it, and what is left to search";
         case Id::Count_:               return "";
     }
     return "";

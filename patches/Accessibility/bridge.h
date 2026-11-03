@@ -21,6 +21,7 @@
 //   GET /spoken?since=<id>&max=<n>
 //   GET /state
 //   GET /nearby?radius=<metres>
+//   GET /overview   (regions explored, nearest unexplored, loot left)
 //   GET /do?action=select|interact|use&handle=<hex or dec>
 //   GET /do?action=walk&x=<f>&y=<f>
 //   GET /do?action=say&text=<utf-8, url-encoded>

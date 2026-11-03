@@ -23,6 +23,7 @@
 #include "combat_queue.h"
 #include "engine_area.h"
 #include "examine_view.h"
+#include "exit_memory.h"
 #include "engine_input.h"
 #include "engine_levelup.h"
 #include "engine_offsets.h"
@@ -317,6 +318,10 @@ void PollHotkey() {
     // currently-controlled leader. Self-gates on player-loaded and
     // UI-block (matching Tab leader-announce).
     acc::combat::query::PollWin32SelfStatusHotkey();
+
+    // Ctrl+N — exploration overview: regions explored, nearest unexplored
+    // and the exit toward it, loot left. Self-gates like H.
+    acc::exit_memory::PollOverviewHotkey();
 
     // Examine view input routing — runs FIRST so an open examine view
     // wins arrow / Enter / Esc keys over any other in-world consumer.

@@ -1577,6 +1577,11 @@ void Tick() {
     // the same window because the friendly check happens on commit).
     if (clusterId == g_pending_cluster_id) {
         ++g_pending_cluster_count;
+        // Stood here for the stability window: visited, even if this region
+        // never commits (minor regions passed through, centre rule unmet).
+        if (g_pending_cluster_count == kClusterStabilityTicks) {
+            acc::exit_memory::OnClusterSeen(clusterId);
+        }
     } else {
         g_pending_cluster_id       = clusterId;
         g_pending_cluster_count    = 1;

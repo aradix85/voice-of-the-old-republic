@@ -73,6 +73,7 @@ constexpr ActionEntry kExploration[] = {
     { A::PartyLeaderAnnounce, S::KbNamePartyLeaderAnnounce },
     { A::CameraOrient,        S::KbNameCameraOrient },
     { A::SaveMarkerAtCursor,  S::KbNameSaveMarkerAtCursor },
+    { A::ExploreOverview,     S::KbNameExploreOverview },
     { A::ViewModeToggle,      S::KbNameViewModeToggle },
 };
 

@@ -1202,6 +1202,20 @@ const char* Get(Id id) {
         case Id::ExitAnnoToArea:        return "hacia una zona";
         case Id::ExitAnnoToDeadEnd:     return "hacia un callej\xF3n sin salida";
         case Id::ModSettingAllViaScreenReader: return "Leerlo todo con el lector de pantalla";
+        case Id::LockNeedStoryOnly:       return "solo se abre por la historia";
+        case Id::LockNeedKey:             return "necesita una llave";
+        case Id::FmtLockNeedSecurity:     return "Seguridad %d";
+        case Id::FmtRegionHere:           return "Aqu\xed: %s";
+        case Id::FmtRegionHereMore:       return "%d m\xe1s";
+        case Id::FmtOverviewExplored:     return "Explorado: %d de %d zonas";
+        case Id::OverviewNoMap:           return "A\xfan no hay mapa de esta zona";
+        case Id::FmtOverviewNearest:      return "Lo inexplorado m\xe1s cercano: %s";
+        case Id::OverviewAllExplored:     return "Todo lo alcanzable est\xe1 explorado";
+        case Id::FmtOverviewLockedAway:   return "%d m\xe1s tras puertas cerradas con llave";
+        case Id::FmtOverviewToSearch:     return "Por registrar: %d";
+        case Id::OverviewNothingToSearch: return "No queda nada por registrar";
+        case Id::KbNameExploreOverview:   return "Resumen de exploraci\xf3n";
+        case Id::HelpKeyExploreOverview:  return "Ctrl m\xe1s N: cu\xe1nto de esta zona has explorado, el lugar inexplorado m\xe1s cercano con la salida hacia \xe9l, y lo que queda por registrar";
         case Id::Count_:               return "";
     }
     return "";

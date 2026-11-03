@@ -1200,6 +1200,20 @@ const char* Get(Id id) {
         case Id::ExitAnnoToArea:        return "verso un'area";
         case Id::ExitAnnoToDeadEnd:     return "verso un vicolo cieco";
         case Id::ModSettingAllViaScreenReader: return "Leggi tutto con lo screen reader";
+        case Id::LockNeedStoryOnly:       return "si apre solo con la storia";
+        case Id::LockNeedKey:             return "serve una chiave";
+        case Id::FmtLockNeedSecurity:     return "Sicurezza %d";
+        case Id::FmtRegionHere:           return "Qui: %s";
+        case Id::FmtRegionHereMore:       return "altri %d";
+        case Id::FmtOverviewExplored:     return "Esplorate %d aree su %d";
+        case Id::OverviewNoMap:           return "Nessuna mappa di quest'area per ora";
+        case Id::FmtOverviewNearest:      return "Inesplorato pi\xf9 vicino: %s";
+        case Id::OverviewAllExplored:     return "Tutto ci\xf2 che \xe8 raggiungibile \xe8 esplorato";
+        case Id::FmtOverviewLockedAway:   return "Altre %d dietro porte chiuse a chiave";
+        case Id::FmtOverviewToSearch:     return "Da perquisire: %d";
+        case Id::OverviewNothingToSearch: return "Niente altro da perquisire";
+        case Id::KbNameExploreOverview:   return "Panoramica esplorazione";
+        case Id::HelpKeyExploreOverview:  return "Ctrl pi\xf9 N: quanto di quest'area hai esplorato, il punto inesplorato pi\xf9 vicino con l'uscita che vi porta, e cosa resta da perquisire";
         case Id::Count_:               return "";
     }
     return "";

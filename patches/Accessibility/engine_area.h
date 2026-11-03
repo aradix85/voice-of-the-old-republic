@@ -267,6 +267,29 @@ bool IsEmptyContainer(void* gameObject);
 // fully open. False on null/fault/state==0.
 bool IsDoorOpen(void* serverDoor);
 
+// CSWSDoor live locked flag (kDoorLockedOffset). False on null, on a
+// non-door, and on fault.
+bool IsDoorLocked(void* serverDoor);
+
+// What it takes to open a locked door or container, read from the object's
+// own lock fields (UTD / UTP KeyRequired, KeyName, OpenLockDC). KOTOR 1
+// only: the KOTOR 2 layout of these fields is not mapped yet, so there the
+// answer is always Unknown.
+enum class LockNeed {
+    Unknown,    // unlocked, not readable, or nothing useful to say
+    StoryOnly,  // a key is required but none is named: opens by script only
+    Key,        // a key is required and named
+    Security,   // can be picked; outDc holds the Security difficulty
+};
+// outLocked (optional) receives the live locked flag, so a caller can say
+// "locked" even when the need is Unknown. Doors and placeables only.
+LockNeed ReadLockNeed(void* gameObject, int& outDc, bool* outLocked = nullptr);
+
+// Items currently in a loot container (placeable with HasInventory), the
+// same repository count IsEmptyContainer reads. -1 when the object is not a
+// loot container, and on fault.
+int GetContainerItemCount(void* gameObject);
+
 // CSWSDoor Static flag +0x3c0 (UTD Static). A static door is
 // non-interactive set dressing — the engine never lets anyone open it and
 // offers no actions on it. We label these "cosmetic" in narration and
@@ -567,6 +590,17 @@ const size_t kDoorOpenStateOffset          = acc::off::Pick(0x2cc, 0x31c);  // b
 const size_t kDoorDescriptionOffset        = acc::off::Pick(0x3a4, 0x3f4);
 const size_t kDoorStaticOffset             = acc::off::Pick(0x3c0, 0x410);  // undefined4 (UTD Static flag)
 const size_t kDoorTransitionDestOffset     = acc::off::Pick(0x3c8, 0x418);
+// Lock fields (ReadLockNeed). KOTOR 1 values from the 1.03 address DB
+// (CSWSDoor open_lock_dc / key_name / key_required, CSWSPlaceable locked /
+// key_name / key_required / open_lock_dc); the KOTOR 2 layout is not mapped,
+// hence Kotor1Only. The flags are GFF BYTEs, read as their low byte.
+const size_t kDoorOpenLockDcOffset         = acc::off::Kotor1Only(0x2bf);  // byte
+const size_t kDoorKeyNameOffset            = acc::off::Kotor1Only(0x2d0);  // CExoString
+const size_t kDoorKeyRequiredOffset        = acc::off::Kotor1Only(0x2d8);  // int (bool)
+const size_t kPlaceableLockedOffset        = acc::off::Kotor1Only(0x260);  // int (bool)
+const size_t kPlaceableKeyNameOffset       = acc::off::Kotor1Only(0x264);  // CExoString
+const size_t kPlaceableKeyRequiredOffset   = acc::off::Kotor1Only(0x26c);  // int (bool)
+const size_t kPlaceableOpenLockDcOffset    = acc::off::Kotor1Only(0x274);  // short
 // DUPLICATE of kCreatureStatsPointerOffset in engine_offsets_fields.h — same
 // CSWSCreature.creature_stats field under a second name. Kept in sync by hand;
 // worth collapsing to one declaration. KOTOR 2 value from the seeded

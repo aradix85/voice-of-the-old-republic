@@ -8,6 +8,7 @@
 #include "announce_facing.h"
 #include "audio_footstep_suppress.h"
 #include "bridge.h"
+#include "exit_memory.h"
 #include "bringup_announce.h"
 #include "camera_announce.h"
 #include "camera_orient.h"
@@ -1003,6 +1004,9 @@ void Dispatch() {
     // the external client. Before the pending-op drain so a bridge action
     // that queues menu work is handled this same tick.
     PHASE("bridge", acc::bridge::Tick());
+
+    // Visited regions: load this area's set from the save once settled.
+    PHASE("exit_memory", acc::exit_memory::Tick());
 
     // Drain queued actions LAST — monitors above must see consistent state.
     PHASE("menus.TickPendingOps", acc::menus::TickPendingOps());

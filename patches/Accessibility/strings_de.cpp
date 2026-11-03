@@ -1221,6 +1221,20 @@ const char* Get(Id id) {
         case Id::ExitAnnoToArea:        return "zu einem Bereich";
         case Id::ExitAnnoToDeadEnd:     return "zu einer Sackgasse";
         case Id::ModSettingAllViaScreenReader: return "Alles mit dem Screenreader sprechen";
+        case Id::LockNeedStoryOnly:       return "\xf6""ffnet sich nur durch die Handlung";
+        case Id::LockNeedKey:             return "braucht einen Schl\xfcssel";
+        case Id::FmtLockNeedSecurity:     return "Sicherheit %d";
+        case Id::FmtRegionHere:           return "Hier: %s";
+        case Id::FmtRegionHereMore:       return "%d weitere";
+        case Id::FmtOverviewExplored:     return "%d von %d Bereichen erkundet";
+        case Id::OverviewNoMap:           return "Noch keine Karte dieses Gebiets";
+        case Id::FmtOverviewNearest:      return "N\xe4""chster unerkundeter Ort: %s";
+        case Id::OverviewAllExplored:     return "Alles Erreichbare ist erkundet";
+        case Id::FmtOverviewLockedAway:   return "%d weitere hinter verschlossenen T\xfcren";
+        case Id::FmtOverviewToSearch:     return "Zu durchsuchen: %d";
+        case Id::OverviewNothingToSearch: return "Nichts mehr zu durchsuchen";
+        case Id::KbNameExploreOverview:   return "Erkundungs\xfc""berblick";
+        case Id::HelpKeyExploreOverview:  return "Strg und N: wie viel dieses Gebiets du erkundet hast, der n\xe4""chste unerkundete Ort mit dem Ausgang dorthin, und was noch zu durchsuchen ist";
         case Id::Count_:               return "";
     }
     return "";

@@ -1199,6 +1199,20 @@ const char* Get(Id id) {
         case Id::ExitAnnoToArea:        return "do obszaru";
         case Id::ExitAnnoToDeadEnd:     return "do \x9c""lepego zau\xb3""ka";
         case Id::ModSettingAllViaScreenReader: return "Czytaj wszystko czytnikiem ekranu";
+        case Id::LockNeedStoryOnly:       return "otwiera si\xea tylko przez fabu\xb3\xea";
+        case Id::LockNeedKey:             return "wymaga klucza";
+        case Id::FmtLockNeedSecurity:     return "Zabezpieczenia %d";
+        case Id::FmtRegionHere:           return "Tutaj: %s";
+        case Id::FmtRegionHereMore:       return "jeszcze %d";
+        case Id::FmtOverviewExplored:     return "Zbadano %d z %d obszar\xf3w";
+        case Id::OverviewNoMap:           return "Brak mapy tego obszaru";
+        case Id::FmtOverviewNearest:      return "Najbli\xbfszy niezbadany: %s";
+        case Id::OverviewAllExplored:     return "Wszystko, co osi\xb9galne, zbadane";
+        case Id::FmtOverviewLockedAway:   return "Jeszcze %d za zamkni\xeatymi drzwiami";
+        case Id::FmtOverviewToSearch:     return "Do przeszukania: %d";
+        case Id::OverviewNothingToSearch: return "Nie ma ju\xbf nic do przeszukania";
+        case Id::KbNameExploreOverview:   return "Przegl\xb9""d eksploracji";
+        case Id::HelpKeyExploreOverview:  return "Ctrl i N: ile tego obszaru zbada\xb3""e\x9c, najbli\xbfsze niezbadane miejsce z wyj\x9c""ciem w jego stron\xea, i co zosta\xb3o do przeszukania";
         case Id::Count_:               return "";
     }
     return "";

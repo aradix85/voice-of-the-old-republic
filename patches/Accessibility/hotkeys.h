@@ -99,6 +99,7 @@ enum class Action : int {
     PartyLeaderAnnounce,   // Tab
     CameraOrient,          // N — beacon waypoint or next cardinal CW
     SaveMarkerAtCursor,    // Shift+N — drops marker on the map
+    ExploreOverview,       // Ctrl+N — explored / nearest unexplored / loot left
 
     // ----- View mode -----
     ViewModeToggle,        // B   (Shift forbidden)
