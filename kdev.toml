@@ -5,13 +5,13 @@
 
 [game]
 # KOTOR 1 install root. The 'swkotor.exe' inside this directory is the build target.
-install = 'C:\Program Files (x86)\Steam\steamapps\common\swkotor'
+install = 'C:\steam\steamapps\common\swkotor'
 
 # KOTOR 2 install root, holding 'swkotor2.exe'. OPTIONAL — only needed for the
 # port (docs/kotor2-port.md). Commands that can act on either game take
 # '--game k2'; without this key that flag fails with a clear message rather
 # than silently operating on the KOTOR 1 install.
-install_k2 = 'C:\Program Files (x86)\Steam\steamapps\common\Knights of the Old Republic II'
+install_k2 = 'C:\steam\steamapps\common\Knights of the Old Republic II'
 # The GOG K2 install (a supported target since the 2026-09-04 GOG-relink port;
 # see docs/kotor2-port.md "GOG build") lives at
 # 'C:\Program Files\GOG Galaxy\Games\Star Wars - KotOR2' — point install_k2
@@ -24,7 +24,7 @@ install_k2 = 'C:\Program Files (x86)\Steam\steamapps\common\Knights of the Old R
 # This holds our rebuilt 0.6.0 KotorPatcher.dll (KPM 0.6.0 base + our PR-1/3/4/5)
 # plus the 0.6.0 AddressDatabases. KPatchCore itself is compiled from the
 # vendored source under [upstream].clone via kdev.csproj's project reference.
-release = 'C:\Tools\KotorPatchManager-v0.6.0'
+release = 'C:\Users\radix\Documents\KOTOR-toegankelijkheid\kpm-release'
 
 [upstream]
 # Source clone of the patch manager. Used by 'kdev build' to set up the layout
