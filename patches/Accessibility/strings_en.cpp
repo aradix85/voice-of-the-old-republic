@@ -1191,6 +1191,14 @@ const char* Get(Id id) {
         case Id::ChargenBtnRecommended: return "Recommended";
         case Id::ChargenBtnAccept:      return "Accept";
         case Id::ChargenBtnBack:        return "Back";
+        case Id::ExitAnnoNew:           return "new";
+        case Id::ExitAnnoVisited:       return "visited";
+        case Id::ExitAnnoBack:          return "back";
+        case Id::FmtExitAnnoTo:         return "to %s";
+        case Id::ExitAnnoToCorridor:    return "to a corridor";
+        case Id::ExitAnnoToJunction:    return "to a junction";
+        case Id::ExitAnnoToArea:        return "to a room";
+        case Id::ExitAnnoToDeadEnd:     return "to a dead end";
         case Id::Count_:               return "";
     }
     return "";

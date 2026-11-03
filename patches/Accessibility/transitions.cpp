@@ -12,6 +12,7 @@
 #include "discovery.h"       // discovery-tier area reconciliation + landmark record
 #include "endar_softlock.h"  // Endar Spire room-5 softlock guard
 #include "engine_area.h"
+#include "exit_memory.h"     // destination / visited / way-back words on exits
 #include "engine_input.h"    // ForceReacquireInput — post-load DirectInput re-grab
 #include "engine_panels.h"   // IsForegroundUiBlocking — gate vs. menus / dialogs
 #include "engine_player.h"
@@ -766,6 +767,22 @@ void LogWallTopoComparison(void* area, int roomIndex,
 // caller via LookupAt. We log it for diagnostics; resolution itself
 // goes through ResolveRoomSpeech so the friendly-name tier wins when
 // available (TSL coverage).
+// The player's own region announce: exit_memory adds what lies behind each
+// exit, whether it was visited, and which one leads back. Falls back to the
+// plain label when there is nothing to add. View mode keeps calling
+// SpeakRegionLabel directly — these words are about the player's path.
+void SpeakPlayerRegionLabel(void* area, const std::string& label,
+                            const std::vector<acc::room_topology::ExitMark>& exits) {
+    std::string annotated;
+    std::vector<acc::room_topology::ExitMark> annotatedExits;
+    if (acc::exit_memory::Annotate(area, label, exits, annotated,
+                                   annotatedExits)) {
+        acc::transitions::SpeakRegionLabel(annotated.c_str(), annotatedExits);
+    } else {
+        acc::transitions::SpeakRegionLabel(label.c_str(), exits);
+    }
+}
+
 void SpeakRoomChange(void* area, int clusterId, const Vector& worldPos) {
     std::string speechBuf;
     std::vector<acc::room_topology::ExitMark> exits;
@@ -860,7 +877,7 @@ void SpeakRoomChange(void* area, int clusterId, const Vector& worldPos) {
     // a different shape, the deferred Platz no longer applies).
     g_pending_platz_valid = false;
 
-    acc::transitions::SpeakRegionLabel(speechBuf.c_str(), exits);
+    SpeakPlayerRegionLabel(area, speechBuf, exits);
     CommitSpokenLabel(speechBuf, worldPos, GetTickCount());
     g_last_spoken_pos       = worldPos;
     g_last_spoken_pos_valid = true;
@@ -895,7 +912,7 @@ void TickPendingPlatz(void* area, const Vector& playerPos) {
 
     if (resolved && fireBuf == g_pending_platz_text) {
         // Same Platz still under the player. Fire the announce now.
-        acc::transitions::SpeakRegionLabel(fireBuf.c_str(), exits);
+        SpeakPlayerRegionLabel(area, fireBuf, exits);
         g_last_spoken_pos       = playerPos;
         g_last_spoken_pos_valid = true;
         acclog::Write("Transition",
@@ -906,7 +923,7 @@ void TickPendingPlatz(void* area, const Vector& playerPos) {
     } else if (resolved && fireBuf != g_last_spoken_room_text) {
         // Player has moved on to a different shape during the delay.
         // Fire the NEW label so we don't leave them unannounced.
-        acc::transitions::SpeakRegionLabel(fireBuf.c_str(), exits);
+        SpeakPlayerRegionLabel(area, fireBuf, exits);
         CommitSpokenLabel(fireBuf, playerPos, now);
         g_last_spoken_pos       = playerPos;
         g_last_spoken_pos_valid = true;
@@ -1404,6 +1421,7 @@ void Tick() {
         // only here). Ordering matters — BuildForArea consults the latch.
         acc::room_topology::ResetNavGraphRetry();
         acc::room_topology::BuildForArea(area);
+        acc::exit_memory::OnAreaEntered(area);
         g_prev_area = area;
         ResetRoomSpeechState();
         ResetLandmarkProximityState();
@@ -1623,6 +1641,9 @@ void Tick() {
         // commit g_prev_cluster_id so the player walking back-and-forth
         // during combat doesn't queue up a burst of announcements for
         // the moment combat ends.
+        // Exit memory follows the committed region whether or not the
+        // announce is gated, so "visited" and "back" stay true.
+        acc::exit_memory::OnClusterCommitted(g_prev_cluster_id, clusterId);
         if (IsWorldSpeechGatedImpl()) {
             acclog::Write("Transition",
                           "cluster -> %d gated (combat / blocking UI), "

@@ -1192,6 +1192,14 @@ const char* Get(Id id) {
         case Id::ChargenBtnRecommended: return "Recommand\xE9";
         case Id::ChargenBtnAccept:      return "Accepter";
         case Id::ChargenBtnBack:        return "Retour";
+        case Id::ExitAnnoNew:           return "nouveau";
+        case Id::ExitAnnoVisited:       return "visit\xe9";
+        case Id::ExitAnnoBack:          return "retour";
+        case Id::FmtExitAnnoTo:         return "vers %s";
+        case Id::ExitAnnoToCorridor:    return "vers un couloir";
+        case Id::ExitAnnoToJunction:    return "vers une intersection";
+        case Id::ExitAnnoToArea:        return "vers une zone";
+        case Id::ExitAnnoToDeadEnd:     return "vers un cul-de-sac";
         case Id::Count_:               return "";
     }
     return "";

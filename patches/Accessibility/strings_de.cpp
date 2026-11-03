@@ -1212,6 +1212,14 @@ const char* Get(Id id) {
         case Id::ChargenBtnRecommended: return "Empfohlen";
         case Id::ChargenBtnAccept:      return "Akzeptieren";
         case Id::ChargenBtnBack:        return "Zur\xfc""ck";
+        case Id::ExitAnnoNew:           return "neu";
+        case Id::ExitAnnoVisited:       return "besucht";
+        case Id::ExitAnnoBack:          return "zur\xfc""ck";
+        case Id::FmtExitAnnoTo:         return "Richtung %s";
+        case Id::ExitAnnoToCorridor:    return "zu einem Korridor";
+        case Id::ExitAnnoToJunction:    return "zu einer Kreuzung";
+        case Id::ExitAnnoToArea:        return "zu einem Bereich";
+        case Id::ExitAnnoToDeadEnd:     return "zu einer Sackgasse";
         case Id::Count_:               return "";
     }
     return "";

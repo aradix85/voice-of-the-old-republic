@@ -1229,6 +1229,14 @@ const char* Get(Id id) {
         case Id::ChargenBtnRecommended: return "\xD0\xE5\xEA\xEE\xEC\xE5\xED\xE4\xF3\xE5\xF2\xF1\xFF";
         case Id::ChargenBtnAccept:      return "\xCF\xF0\xE8\xED\xFF\xF2\xFC";
         case Id::ChargenBtnBack:        return "\xCD\xE0\xE7\xE0\xE4";
+        case Id::ExitAnnoNew:           return "\xed\xee\xe2\xee\xe5";
+        case Id::ExitAnnoVisited:       return "\xef\xee\xf1\xe5\xf9\xe5\xed\xee";
+        case Id::ExitAnnoBack:          return "\xed\xe0\xe7\xe0\xe4";
+        case Id::FmtExitAnnoTo:         return "\xea %s";
+        case Id::ExitAnnoToCorridor:    return "\xea \xea\xee\xf0\xe8\xe4\xee\xf0\xf3";
+        case Id::ExitAnnoToJunction:    return "\xea \xef\xe5\xf0\xe5\xea\xf0\xe5\xf1\xf2\xea\xf3";
+        case Id::ExitAnnoToArea:        return "\xea \xe7\xee\xed\xe5";
+        case Id::ExitAnnoToDeadEnd:     return "\xea \xf2\xf3\xef\xe8\xea\xf3";
         case Id::Count_:               return "";
     }
     return "";
