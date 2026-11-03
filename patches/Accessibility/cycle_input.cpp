@@ -1142,4 +1142,8 @@ void PollWin32() {
     else if (risingAnnounce)      OnAnnounceFocus();
 }
 
+void WalkToNarratedTarget() {
+    OnPathfindFocus();
+}
+
 }  // namespace acc::cycle_input

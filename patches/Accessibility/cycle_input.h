@@ -26,6 +26,11 @@ bool TryHandleEvent(int param_1, int param_2);
 
 void PollWin32();
 
+// Shift+- on the current narrated target: walk there and use it (open a
+// container, a door), with the usual pre-roll speech and approach tracker.
+// A second call while that walk is in flight cancels it, like Shift+-.
+void WalkToNarratedTarget();
+
 // Third ingestion path: the KOTOR 2 gamepad (pad_input.cpp). The D-Pad is
 // inert in the world — all four codes reach the GUI manager, nothing consumes
 // them — so it carries the cycle bindings, with the triggers as a modifier

@@ -319,6 +319,28 @@ void DispatchInteractImpl(void* target, uint32_t handle, bool forceRadial) {
                                                         : "transition");
     }
 
+    // An open door has no verb — the engine offers nothing, so Enter used to
+    // answer "No actions available" — but a player pressing Enter on a door
+    // wants to go through it. Walk to it instead (engine A*), the way a
+    // transition is handled above. Shift+Enter keeps the radial.
+    if (!forceRadial && cat == acc::filter::CycleCategory::Door &&
+        acc::engine::IsDoorOpen(target)) {
+        Vector dpos{};
+        if (acc::engine::GetObjectPosition(target, dpos) &&
+            acc::guidance::WalkTo(dpos)) {
+            char dmsg[192];
+            std::snprintf(dmsg, sizeof(dmsg),
+                          acc::strings::Get(acc::strings::Id::FmtWalkingTo), name);
+            prism::Speak(dmsg, /*interrupt=*/true);
+            ArmInteractApproach(name, target, /*inputDisabled=*/false,
+                                /*isDialog=*/false);
+            acclog::Write("Interact", "Enter -> [%s] open door via WalkTo(coord) "
+                "target=0x%08x pos=(%.2f,%.2f,%.2f)",
+                dmsg, handle, dpos.x, dpos.y, dpos.z);
+            return;
+        }
+    }
+
     // First: try the engine action picker. It runs the same picker the
     // cursor uses on hover (open / talk / Security / Bash / Disable Trap
     // / …) and dispatches the result through the engine's own click

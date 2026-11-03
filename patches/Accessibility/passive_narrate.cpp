@@ -472,6 +472,12 @@ void Tick() {
     NarrateHandle(handle, "reannounce", /*explicitRequest=*/true);
 }
 
+bool NarrateExplicit(uint32_t serverHandle) {
+    const uint32_t clientHandle = serverHandle | 0x80000000u;
+    s_show_object_handle = clientHandle;
+    return NarrateHandle(clientHandle, "QE ring", /*explicitRequest=*/true);
+}
+
 }  // namespace acc::passive_narrate
 
 // Thin trampoline for the ShowObject detour (hooks.toml @ 0x005f9c8e).

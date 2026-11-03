@@ -14,6 +14,7 @@
 #include "engine_game.h"    // IsKotor2 — K2 flags real locked doors Static
 #include "engine_rebase.h"
 #include "engine_offsets_select.h"
+#include "party_status.h"   // best Security in the party, for lock detail
 
 namespace acc::engine {
 
@@ -531,6 +532,15 @@ void AppendLockNeed(void* obj, char* outBuf, size_t bufSize) {
             std::snprintf(buf, sizeof(buf),
                 acc::strings::Get(acc::strings::Id::FmtLockNeedSecurity), dc);
             AppendCommaSeparated(outBuf, bufSize, buf);
+            std::string who;
+            int score = 0;
+            if (acc::party_status::BestSecurity(who, score)) {
+                char best[192];
+                std::snprintf(best, sizeof(best),
+                    acc::strings::Get(acc::strings::Id::FmtLockBestSecurity),
+                    who.c_str(), score);
+                AppendCommaSeparated(outBuf, bufSize, best);
+            }
             break;
         }
         default:
@@ -1096,7 +1106,14 @@ LockNeed ReadLockNeed(void* gameObject, int& outDc, bool* outLocked) {
                            f)) {
         return LockNeed::Unknown;
     }
-    if (f.locked == 0) return LockNeed::Unknown;
+    if (f.locked == 0) {
+        // Containers: log the raw fields once anyway, so the placeable
+        // offsets can be checked against unlocked UTPs too.
+        if (kind == static_cast<int>(GameObjectKind::Placeable)) {
+            LogLockOnce(gameObject, kind, f, "", LockNeed::Unknown);
+        }
+        return LockNeed::Unknown;
+    }
     if (outLocked) *outLocked = true;
 
     char key[64] = {0};

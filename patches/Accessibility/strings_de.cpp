@@ -1235,6 +1235,17 @@ const char* Get(Id id) {
         case Id::OverviewNothingToSearch: return "Nichts mehr zu durchsuchen";
         case Id::KbNameExploreOverview:   return "Erkundungs\xfc""berblick";
         case Id::HelpKeyExploreOverview:  return "Strg und N: wie viel dieses Gebiets du erkundet hast, der n\xe4""chste unerkundete Ort mit dem Ausgang dorthin, und was noch zu durchsuchen ist";
+        case Id::ModSettingQEAllAround:       return "Q und E: alles um dich herum, nicht nur was die Kamera sieht";
+        case Id::FmtPartyMemberHp:            return "%s %d von %d";
+        case Id::PartyCanLevelUp:             return "kann aufsteigen";
+        case Id::FmtCanLevelUpNotice:         return "%s kann aufsteigen";
+        case Id::KbNamePartyStatus:           return "Gesundheit der Gruppe";
+        case Id::HelpKeyPartyStatus:          return "Strg und H: Gesundheit aller in der Gruppe, und wer aufsteigen kann";
+        case Id::FmtWalkingTo:                return "Unterwegs: %s";
+        case Id::KbNameExploreWalkUnexplored: return "Zum n\xe4""chsten unerkundeten Ort gehen";
+        case Id::KbNameExploreWalkLoot:       return "Zum n\xe4""chsten Durchsuchbaren gehen";
+        case Id::HelpKeyExploreWalk:          return "Strg, Umschalt und N: zum n\xe4""chsten unerkundeten Ort gehen. Alt und N: zum n\xe4""chsten Beh\xe4lter oder Gegenstand gehen, der noch zu durchsuchen ist";
+        case Id::FmtLockBestSecurity:         return "am besten in der Gruppe: %s mit %d";
         case Id::Count_:               return "";
     }
     return "";

@@ -1215,6 +1215,17 @@ const char* Get(Id id) {
         case Id::OverviewNothingToSearch: return "Plus rien \xe0 fouiller";
         case Id::KbNameExploreOverview:   return "Aper\xe7u de l'exploration";
         case Id::HelpKeyExploreOverview:  return "Ctrl plus N : la part de cette zone que vous avez explor\xe9""e, l'endroit inexplor\xe9 le plus proche avec la sortie qui y m\xe8ne, et ce qu'il reste \xe0 fouiller";
+        case Id::ModSettingQEAllAround:       return "Q et E : tout autour de vous, pas seulement ce que voit la cam\xe9ra";
+        case Id::FmtPartyMemberHp:            return "%s %d sur %d";
+        case Id::PartyCanLevelUp:             return "peut monter de niveau";
+        case Id::FmtCanLevelUpNotice:         return "%s peut monter de niveau";
+        case Id::KbNamePartyStatus:           return "Sant\xe9 du groupe";
+        case Id::HelpKeyPartyStatus:          return "Ctrl plus H : la sant\xe9 de tout le groupe, et qui peut monter de niveau";
+        case Id::FmtWalkingTo:                return "En route : %s";
+        case Id::KbNameExploreWalkUnexplored: return "Aller \xe0 l'endroit inexplor\xe9 le plus proche";
+        case Id::KbNameExploreWalkLoot:       return "Aller \xe0 la chose \xe0 fouiller la plus proche";
+        case Id::HelpKeyExploreWalk:          return "Ctrl plus Maj plus N : aller vers l'endroit inexplor\xe9 le plus proche. Alt plus N : aller au conteneur ou \xe0 l'objet \xe0 fouiller le plus proche";
+        case Id::FmtLockBestSecurity:         return "meilleur du groupe : %s avec %d";
         case Id::Count_:               return "";
     }
     return "";

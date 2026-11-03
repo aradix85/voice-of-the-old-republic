@@ -76,6 +76,11 @@ bool s_toggles[static_cast<int>(Option::Count)] = {
                                   // speech step aside (prism, positional_speech).
                                   // For players who want one voice, at their
                                   // own rate, and text-only descriptions.
+    /* QEAllAround */ false,      // default off. ON: Q/E cycle every object
+                                  // around the player within the engine's
+                                  // target range, clockwise from straight
+                                  // ahead, instead of only what the camera
+                                  // shows (qe_ring). Camera-independent.
     /* TurretAutoAim   */ false,  // "Autoaiming" — OFF by default. When ON, the
                                   // turret PERMANENTLY locks aim onto the
                                   // selected fighter (full auto-track), so the
@@ -340,6 +345,7 @@ constexpr OptionSpec k_options[] = {
     { Option::HumanSubtitles,  acc::strings::Id::ModSettingHumanSubtitles,  RowKind::Toggle  },
     { Option::SubtitleSapi,    acc::strings::Id::ModSettingSubtitleSapi,    RowKind::Toggle  },
     { Option::AllViaScreenReader, acc::strings::Id::ModSettingAllViaScreenReader, RowKind::Toggle },
+    { Option::QEAllAround,     acc::strings::Id::ModSettingQEAllAround,     RowKind::Toggle  },
     { Option::TurretAutoAim,   acc::strings::Id::ModSettingTurretAutoAim,   RowKind::Toggle  },
     { Option::SkipIntros,      acc::strings::Id::ModSettingSkipIntros,      RowKind::Toggle  },
     { Option::CueVolume,       acc::strings::Id::ModSettingCueVolume,       RowKind::Slider  },
@@ -383,6 +389,7 @@ const OptionSpec& Spec(Option opt) {
 // features rather than four consecutive rows about the same voice.
 constexpr Option k_rootRows[] = {
     Option::ExtendedCycling,
+    Option::QEAllAround,
     Option::RoomShapes,
     Option::WallSounds,
     Option::HumanSubtitles,
@@ -511,6 +518,7 @@ const char* PersistKey(Option opt) {
         case Option::HumanSubtitles:  return "HumanSubtitles";
         case Option::SubtitleSapi:    return "SubtitleSapi";
         case Option::AllViaScreenReader: return "AllViaScreenReader";
+        case Option::QEAllAround:     return "QEAllAround";
         case Option::TurretAutoAim:   return "TurretAutoAim";
         case Option::PositionalCombatSpeech: return "PositionalCombatSpeech";
         case Option::PositionalExitSpeech:   return "PositionalExitSpeech";

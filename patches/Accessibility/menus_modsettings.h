@@ -66,6 +66,8 @@ enum class Option {
                        // voice instead of the screen reader (off by default)
     AllViaScreenReader,  // every line on the screen reader: no SAPI announcement
                          // or compass voice, no 3D speech (off by default)
+    QEAllAround,         // Q/E cycle everything around the player, not only the
+                         // camera's view (qe_ring; off by default)
     TurretAutoAim,     // easy-mode cheat — turret auto-tracks the locked fighter (off by default)
     SkipIntros,        // filesystem-backed — state is biologo.bik vs biologo.bik.disabled
     CueVolume,         // slider — global hint-sound volume (audio_bus owns the value)

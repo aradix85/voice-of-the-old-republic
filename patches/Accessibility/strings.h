@@ -2513,6 +2513,24 @@ enum class Id : int {
     KbNameExploreOverview,    // keybind menu row
     HelpKeyExploreOverview,   // F1 help row
 
+    ModSettingQEAllAround,    // toggle label — Q/E cycle all around (qe_ring)
+
+    // ---- Party status (party_status, Ctrl+H) and the level-up notice.
+    FmtPartyMemberHp,         // "%s %d of %d" — name, current, max hit points
+    PartyCanLevelUp,          // "can level up" — suffix on a member entry
+    FmtCanLevelUpNotice,      // "%s can level up" — spoken once when it becomes true
+    KbNamePartyStatus,        // keybind menu row
+    HelpKeyPartyStatus,       // F1 help row
+
+    // ---- Walk toward the nearest unexplored region / loot (exit_memory).
+    FmtWalkingTo,             // "Walking: %s"
+    KbNameExploreWalkUnexplored,
+    KbNameExploreWalkLoot,
+    HelpKeyExploreWalk,       // F1 help row for both walk keys
+
+    // ---- Lock detail: who in the party is best at Security (KOTOR 1).
+    FmtLockBestSecurity,      // "best in your party: %s with %d"
+
     Count_,
 };
 

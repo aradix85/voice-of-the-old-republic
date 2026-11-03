@@ -117,6 +117,9 @@ const char* const kActionNames[static_cast<int>(Action::COUNT)] = {
     "CameraOrient",
     "SaveMarkerAtCursor",
     "ExploreOverview",
+    "ExploreWalkUnexplored",
+    "ExploreWalkLoot",
+    "PartyStatusAnnounce",
     "ViewModeToggle",
     "CameraStateProbe",
     "EditboxReReadUp",
@@ -353,6 +356,16 @@ void InitDefaults() {
     // nearest unexplored one and the exit toward it, loot left. N has no
     // engine binding, and both N bindings above forbid Ctrl.
     bind(Action::ExploreOverview,      'N', 0, kModCtrl,
+                                       kModShift | kModAlt | kModAltGr);
+    // Ctrl+Shift+N — walk toward that nearest unexplored region; Alt+N —
+    // walk to and open the nearest container with items (exit_memory).
+    bind(Action::ExploreWalkUnexplored, 'N', 0, kModCtrl | kModShift,
+                                       kModAlt | kModAltGr);
+    bind(Action::ExploreWalkLoot,      'N', 0, kModAlt,
+                                       kModShift | kModCtrl | kModAltGr);
+    // Ctrl+H — everyone's health (party_status). Bare H is the leader's own
+    // status and forbids Ctrl; Shift+H (queue) requires Shift.
+    bind(Action::PartyStatusAnnounce,  'H', 0, kModCtrl,
                                        kModShift | kModAlt | kModAltGr);
 
     // ----- View mode -----

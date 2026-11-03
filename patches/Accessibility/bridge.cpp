@@ -40,6 +40,7 @@
 #include "log.h"
 #include "mod_version.h"
 #include "narrated_target.h"
+#include "party_status.h"
 #include "prism.h"
 #include "same_name_suffix.h"
 
@@ -224,8 +225,12 @@ std::string CreatureJson(void* serverCreature) {
         name = ToUtf8(buf);
     int hp = acc::engine::ReadCreatureCurrentHitPoints(serverCreature);
     int maxHp = acc::engine::ReadCreatureMaxHitPoints(serverCreature);
-    return "{\"name\":" + Json(name) + ",\"hp\":" + std::to_string(hp) +
-           ",\"max_hp\":" + std::to_string(maxHp) + "}";
+    std::string s = "{\"name\":" + Json(name) + ",\"hp\":" + std::to_string(hp) +
+                    ",\"max_hp\":" + std::to_string(maxHp);
+    int security = 0;
+    if (acc::party_status::SecurityOf(serverCreature, security))
+        s += ",\"security\":" + std::to_string(security);
+    return s + "}";
 }
 
 std::string BuildSnapshot() {

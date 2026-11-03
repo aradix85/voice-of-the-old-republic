@@ -11,6 +11,7 @@
 #include <utility>
 #include <vector>
 
+#include "cycle_input.h"       // WalkToNarratedTarget
 #include "cycle_state.h"
 #include "engine_area.h"
 #include "engine_compass.h"
@@ -19,7 +20,10 @@
 #include "engine_reads.h"      // ReadCreatureCurrentHitPoints
 #include "engine_scriptvar.h"  // visited regions in the save
 #include "filter_objects.h"
+#include "guidance_approach.h"
+#include "guidance_autowalk.h"
 #include "hotkeys.h"
+#include "narrated_target.h"
 #include "log.h"
 #include "prism.h"
 #include "same_name_suffix.h"
@@ -55,8 +59,10 @@ constexpr size_t kMaxSavedRegions = 300;
 constexpr float  kSavedMatchM     = 2.5f;
 
 // Distances past the exit point, metres, at which the region behind it is
-// probed. The first probe that lands in a different region wins.
-constexpr float kProbeSteps[] = {1.5f, 3.0f, 5.0f, 8.0f};
+// probed (0 = the exit point itself, which for a direction exit can already
+// lie in the next region). The first probe that lands in a region linked to
+// the current one wins; failing that, the first different region.
+constexpr float kProbeSteps[] = {0.0f, 1.5f, 3.0f, 5.0f, 8.0f};
 
 // "Here:" — objects farther than this from the player are not considered
 // (a cheap pre-filter before the region test), and at most this many are
@@ -93,20 +99,35 @@ int RegionAt(void* area, const Vector& p) {
     return cid;
 }
 
-int RegionBehind(void* area, int self, const Vector& from,
-                 const Vector& exitPos) {
+// Regions sharing a nav edge with `self` (room_topology's region links).
+std::set<int> LinkedRegions(void* area, int self) {
+    std::set<int> out;
+    std::vector<ClusterLink> links;
+    acc::room_topology::GetClusterLinks(area, links);
+    for (const ClusterLink& l : links) {
+        if (l.a == self) out.insert(l.b);
+        else if (l.b == self) out.insert(l.a);
+    }
+    return out;
+}
+
+int RegionBehind(void* area, int self, const std::set<int>& linked,
+                 const Vector& from, const Vector& exitPos) {
     float dx = exitPos.x - from.x;
     float dy = exitPos.y - from.y;
     float len = std::sqrt(dx * dx + dy * dy);
     if (len < 0.5f) return kClusterIdNone;
     dx /= len;
     dy /= len;
+    int firstOther = kClusterIdNone;
     for (float d : kProbeSteps) {
         Vector p{exitPos.x + dx * d, exitPos.y + dy * d, exitPos.z};
         int cid = RegionAt(area, p);
-        if (cid >= 0 && cid != self) return cid;
+        if (cid < 0 || cid == self) continue;
+        if (linked.empty() || linked.count(cid)) return cid;
+        if (firstOther < 0) firstOther = cid;
     }
-    return kClusterIdNone;
+    return firstOther;
 }
 
 // Discovered landmarks (map notes the player has met) with the region each
@@ -413,6 +434,24 @@ std::vector<Vector> LockedDoorPositions(void* area) {
     return out;
 }
 
+// A closed door standing within kDoorMatchM of `p`, or null.
+void* ClosedDoorNear(void* area, const Vector& p) {
+    acc::engine::AreaObjectIterator it(area);
+    while (void* obj = it.Next()) {
+        if (acc::engine::GetObjectKind(obj) !=
+            static_cast<int>(acc::engine::GameObjectKind::Door)) {
+            continue;
+        }
+        if (acc::engine::IsDoorOpen(obj)) continue;
+        Vector q;
+        if (!acc::engine::GetObjectPosition(obj, q)) continue;
+        const float dx = q.x - p.x;
+        const float dy = q.y - p.y;
+        if (dx * dx + dy * dy <= kDoorMatchM * kDoorMatchM) return obj;
+    }
+    return nullptr;
+}
+
 bool NearAny(const Vector& p, const std::vector<Vector>& points, float maxM) {
     for (const Vector& q : points) {
         const float dx = q.x - p.x;
@@ -537,13 +576,14 @@ bool Annotate(void* area, const std::string& label,
             acc::room_topology::GetClusterInfo(area, g_current, here);
         const auto landmarks = LandmarkRegions(area);
         const auto doors = NumberedDoors();
+        const std::set<int> linked = LinkedRegions(area, g_current);
         for (ExitMark& e : annotated) {
             if (e.text.empty()) continue;
             const std::string before = e.text;
             NumberDoorExit(e, doors);
             if (e.text != before) exitsAdded = true;
             const Vector from = haveCentre ? here.centre : e.pos;
-            const int target = RegionBehind(area, g_current, from, e.pos);
+            const int target = RegionBehind(area, g_current, linked, from, e.pos);
             std::string extra;
             if (target >= 0) {
                 if (target == g_previous) {
@@ -613,6 +653,7 @@ bool CollectOverview(Overview& o) {
         std::vector<ClusterLink> links;
         acc::room_topology::GetClusterLinks(area, links);
         const std::vector<Vector> lockedDoors = LockedDoorPositions(area);
+        const std::set<int> linked = LinkedRegions(area, start);
         Adjacency open(nodes.size()), all(nodes.size());
         for (const ClusterLink& l : links) {
             const int a = indexOf(l.a);
@@ -655,6 +696,16 @@ bool CollectOverview(Overview& o) {
                                        std::string());
             const int hop = hopOpen[target];
             const int hopId = nodes[hop].id;
+            o.stepPos = nodes[hop].centre;
+            // The closed door on the link into the first region, if any:
+            // walking there means opening it.
+            for (const ClusterLink& l : links) {
+                const bool thisLink = (l.a == start && l.b == hopId) ||
+                                      (l.b == start && l.a == hopId);
+                if (!thisLink || !l.viaDoor) continue;
+                o.stepDoor = ClosedDoorNear(area, l.doorPos);
+                break;
+            }
             // The exit of the current region that leads to the first region
             // on the way (the label's exits belong to the region under the
             // player).
@@ -666,7 +717,9 @@ bool CollectOverview(Overview& o) {
                 for (ExitMark e : exits) {
                     if (e.text.empty()) continue;
                     const Vector from = haveCentre ? here.centre : e.pos;
-                    if (RegionBehind(area, start, from, e.pos) != hopId) continue;
+                    if (RegionBehind(area, start, linked, from, e.pos) != hopId) {
+                        continue;
+                    }
                     NumberDoorExit(e, doors);
                     o.via = e.text;
                     o.targetPos = e.pos;
@@ -695,6 +748,8 @@ bool CollectOverview(Overview& o) {
                 continue;
             }
             LootSpot s;
+            s.obj      = obj;
+            s.handle   = acc::engine::GetObjectHandle(obj);
             s.name     = name;
             s.pos      = listing.positions[i];
             s.distance = listing.distances[i];
@@ -773,6 +828,87 @@ void PollOverviewHotkey() {
     const std::string text = OverviewText(o);
     prism::Speak(text.c_str(), /*interrupt=*/true);
     acclog::Write("ExitMemory", "overview: %s", text.c_str());
+}
+
+namespace {
+
+void WalkTowardUnexplored() {
+    using acc::strings::Id;
+    Overview o;
+    if (!CollectOverview(o)) return;
+    if (!o.haveTarget) {
+        // Nothing reachable left: say why (all explored / behind locks).
+        const std::string text = OverviewText(o);
+        prism::Speak(text.c_str(), /*interrupt=*/true);
+        return;
+    }
+    std::string subject = o.via;
+    if (!o.targetWhat.empty()) {
+        if (!subject.empty()) subject += ", ";
+        subject += o.targetWhat;
+    }
+    if (subject.empty()) subject = acc::strings::Get(Id::ExitAnnoNew);
+
+    if (o.stepDoor) {
+        // A closed door on the way: walk to it and open it (Shift+- on it).
+        acc::narrated_target::Stamp(o.stepDoor,
+                                    acc::engine::GetObjectHandle(o.stepDoor));
+        acc::cycle_input::WalkToNarratedTarget();
+        acclog::Write("ExitMemory", "walk unexplored: via door (%s)",
+                      subject.c_str());
+        return;
+    }
+    if (!acc::guidance::WalkTo(o.stepPos)) {
+        char fail[256];
+        std::snprintf(fail, sizeof(fail), acc::strings::Get(Id::FmtGuidingFailed),
+                      subject.c_str());
+        prism::Speak(fail, /*interrupt=*/true);
+        return;
+    }
+    char buf[640];
+    std::snprintf(buf, sizeof(buf), acc::strings::Get(Id::FmtWalkingTo),
+                  Located(subject, o.stepPos).c_str());
+    prism::Speak(buf, /*interrupt=*/true);
+    acc::guidance::ApproachArm arm;
+    arm.owner = acc::guidance::ApproachOwner::Cycle;
+    std::snprintf(arm.name, sizeof(arm.name), "%s", subject.c_str());
+    arm.targetPos    = o.stepPos;
+    arm.speakBlocked = true;
+    acc::guidance::ArmApproach(arm);
+    acclog::Write("ExitMemory", "walk unexplored: %s -> (%.1f, %.1f)", buf,
+                  o.stepPos.x, o.stepPos.y);
+}
+
+void WalkToNearestLoot() {
+    Overview o;
+    if (!CollectOverview(o)) return;
+    if (o.loot.empty()) {
+        prism::Speak(acc::strings::Get(acc::strings::Id::OverviewNothingToSearch),
+                     /*interrupt=*/true);
+        return;
+    }
+    const LootSpot& s = o.loot.front();
+    if (!s.obj || !s.handle) return;
+    acc::narrated_target::Stamp(s.obj, s.handle);
+    acc::cycle_input::WalkToNarratedTarget();
+    acclog::Write("ExitMemory", "walk loot: %s", s.name.c_str());
+}
+
+}  // namespace
+
+void PollWalkHotkeys() {
+    const bool unexplored =
+        acc::hotkeys::Pressed(acc::hotkeys::Action::ExploreWalkUnexplored);
+    const bool loot = acc::hotkeys::Pressed(acc::hotkeys::Action::ExploreWalkLoot);
+    if (!unexplored && !loot) return;
+    Vector unused;
+    if (!acc::engine::GetPlayerPosition(unused)) return;
+    if (acc::engine::IsForegroundUiBlocking()) return;
+    if (unexplored) {
+        WalkTowardUnexplored();
+    } else {
+        WalkToNearestLoot();
+    }
 }
 
 }  // namespace acc::exit_memory

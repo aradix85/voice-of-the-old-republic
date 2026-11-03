@@ -56,6 +56,7 @@ constexpr ActionEntry kWorld[] = {
     { A::ExamineOpen,         S::KbNameExamineOpen },
     { A::CombatQueueOpen,     S::KbNameCombatQueueOpen },
     { A::SelfStatusAnnounce,  S::KbNameSelfStatusAnnounce },
+    { A::PartyStatusAnnounce, S::KbNamePartyStatus },
 };
 
 constexpr ActionEntry kExploration[] = {
@@ -74,6 +75,8 @@ constexpr ActionEntry kExploration[] = {
     { A::CameraOrient,        S::KbNameCameraOrient },
     { A::SaveMarkerAtCursor,  S::KbNameSaveMarkerAtCursor },
     { A::ExploreOverview,     S::KbNameExploreOverview },
+    { A::ExploreWalkUnexplored, S::KbNameExploreWalkUnexplored },
+    { A::ExploreWalkLoot,     S::KbNameExploreWalkLoot },
     { A::ViewModeToggle,      S::KbNameViewModeToggle },
 };
 

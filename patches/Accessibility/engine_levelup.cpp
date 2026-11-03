@@ -261,6 +261,21 @@ bool PlayerCanLevelUp() {
     }
 }
 
+bool CreatureCanLevelUp(void* serverCreature) {
+    if (!serverCreature) return false;
+    __try {
+        void* stats = *reinterpret_cast<void**>(
+            reinterpret_cast<unsigned char*>(serverCreature) +
+            kCreatureStatsPointerOffset);
+        if (!stats) return false;
+        auto fn = reinterpret_cast<PFN_CanLevelUp>(
+            kAddrCSWSCreatureStatsCanLevelUp);
+        return fn(stats) != 0;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+}
+
 bool TriggerLevelUp() {
     // Root-cause guard: ShowLevelUpGUI only gates on level_up_mode, which
     // we force to 1 below, so the engine's natural XP check never runs.

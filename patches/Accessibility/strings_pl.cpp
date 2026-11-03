@@ -1213,6 +1213,17 @@ const char* Get(Id id) {
         case Id::OverviewNothingToSearch: return "Nie ma ju\xbf nic do przeszukania";
         case Id::KbNameExploreOverview:   return "Przegl\xb9""d eksploracji";
         case Id::HelpKeyExploreOverview:  return "Ctrl i N: ile tego obszaru zbada\xb3""e\x9c, najbli\xbfsze niezbadane miejsce z wyj\x9c""ciem w jego stron\xea, i co zosta\xb3o do przeszukania";
+        case Id::ModSettingQEAllAround:       return "Q i E: wszystko wok\xf3\xb3 ciebie, nie tylko to, co widzi kamera";
+        case Id::FmtPartyMemberHp:            return "%s %d z %d";
+        case Id::PartyCanLevelUp:             return "mo\xbf""e awansowa\xe6";
+        case Id::FmtCanLevelUpNotice:         return "%s mo\xbf""e awansowa\xe6";
+        case Id::KbNamePartyStatus:           return "Zdrowie dru\xbfyny";
+        case Id::HelpKeyPartyStatus:          return "Ctrl i H: zdrowie ca\xb3""ej dru\xbfyny i kto mo\xbf""e awansowa\xe6";
+        case Id::FmtWalkingTo:                return "Id\xea: %s";
+        case Id::KbNameExploreWalkUnexplored: return "Id\x9f do najbli\xbfszego niezbadanego miejsca";
+        case Id::KbNameExploreWalkLoot:       return "Id\x9f do najbli\xbfszej rzeczy do przeszukania";
+        case Id::HelpKeyExploreWalk:          return "Ctrl, Shift i N: id\x9f w stron\xea najbli\xbfszego niezbadanego miejsca. Alt i N: id\x9f do najbli\xbfszego pojemnika lub przedmiotu do przeszukania";
+        case Id::FmtLockBestSecurity:         return "najlepszy w dru\xbfynie: %s, %d";
         case Id::Count_:               return "";
     }
     return "";

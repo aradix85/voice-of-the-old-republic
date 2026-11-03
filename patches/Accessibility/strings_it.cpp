@@ -1214,6 +1214,17 @@ const char* Get(Id id) {
         case Id::OverviewNothingToSearch: return "Niente altro da perquisire";
         case Id::KbNameExploreOverview:   return "Panoramica esplorazione";
         case Id::HelpKeyExploreOverview:  return "Ctrl pi\xf9 N: quanto di quest'area hai esplorato, il punto inesplorato pi\xf9 vicino con l'uscita che vi porta, e cosa resta da perquisire";
+        case Id::ModSettingQEAllAround:       return "Q ed E: tutto intorno a te, non solo ci\xf2 che vede la telecamera";
+        case Id::FmtPartyMemberHp:            return "%s %d su %d";
+        case Id::PartyCanLevelUp:             return "pu\xf2 salire di livello";
+        case Id::FmtCanLevelUpNotice:         return "%s pu\xf2 salire di livello";
+        case Id::KbNamePartyStatus:           return "Salute del gruppo";
+        case Id::HelpKeyPartyStatus:          return "Ctrl pi\xf9 H: la salute di tutto il gruppo, e chi pu\xf2 salire di livello";
+        case Id::FmtWalkingTo:                return "In cammino: %s";
+        case Id::KbNameExploreWalkUnexplored: return "Vai al punto inesplorato pi\xf9 vicino";
+        case Id::KbNameExploreWalkLoot:       return "Vai alla cosa da perquisire pi\xf9 vicina";
+        case Id::HelpKeyExploreWalk:          return "Ctrl pi\xf9 Maiusc pi\xf9 N: vai verso il punto inesplorato pi\xf9 vicino. Alt pi\xf9 N: vai al contenitore o oggetto da perquisire pi\xf9 vicino";
+        case Id::FmtLockBestSecurity:         return "il migliore del gruppo: %s con %d";
         case Id::Count_:               return "";
     }
     return "";

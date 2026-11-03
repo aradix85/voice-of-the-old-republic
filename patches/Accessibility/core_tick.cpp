@@ -9,6 +9,7 @@
 #include "audio_footstep_suppress.h"
 #include "bridge.h"
 #include "exit_memory.h"
+#include "party_status.h"
 #include "bringup_announce.h"
 #include "camera_announce.h"
 #include "camera_orient.h"
@@ -1007,6 +1008,9 @@ void Dispatch() {
 
     // Visited regions: load this area's set from the save once settled.
     PHASE("exit_memory", acc::exit_memory::Tick());
+
+    // "<name> can level up", once per member when it becomes true.
+    PHASE("party_status", acc::party_status::Tick());
 
     // Drain queued actions LAST — monitors above must see consistent state.
     PHASE("menus.TickPendingOps", acc::menus::TickPendingOps());

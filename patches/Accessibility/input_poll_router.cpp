@@ -24,6 +24,7 @@
 #include "engine_area.h"
 #include "examine_view.h"
 #include "exit_memory.h"
+#include "party_status.h"
 #include "engine_input.h"
 #include "engine_levelup.h"
 #include "engine_offsets.h"
@@ -322,6 +323,11 @@ void PollHotkey() {
     // Ctrl+N — exploration overview: regions explored, nearest unexplored
     // and the exit toward it, loot left. Self-gates like H.
     acc::exit_memory::PollOverviewHotkey();
+    // Ctrl+Shift+N / Alt+N — walk toward the nearest unexplored region / to
+    // the nearest container or item left to search.
+    acc::exit_memory::PollWalkHotkeys();
+    // Ctrl+H — every party member's health and who can level up.
+    acc::party_status::PollHotkey();
 
     // Examine view input routing — runs FIRST so an open examine view
     // wins arrow / Enter / Esc keys over any other in-world consumer.

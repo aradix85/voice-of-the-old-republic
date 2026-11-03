@@ -43,6 +43,13 @@ void RequestQEReannounce(int directionCode);
 // the detour. Single-threaded engine, no atomic needed.
 bool IsInSynthesizedQE();
 
+// Speak and stamp a server object exactly like an explicit Q/E landing on
+// it: name and combat brief, clock and distance, narrated target,
+// discovery. Used by the all-around Q/E cycle (qe_ring). Also records it
+// as the last shown object so an engine ShowObject for the same target
+// does not speak it twice.
+bool NarrateExplicit(uint32_t serverHandle);
+
 // Per-tick drain of pending Q/E re-announce + sentinel-skip retry.
 void Tick();
 

@@ -1216,6 +1216,17 @@ const char* Get(Id id) {
         case Id::OverviewNothingToSearch: return "No queda nada por registrar";
         case Id::KbNameExploreOverview:   return "Resumen de exploraci\xf3n";
         case Id::HelpKeyExploreOverview:  return "Ctrl m\xe1s N: cu\xe1nto de esta zona has explorado, el lugar inexplorado m\xe1s cercano con la salida hacia \xe9l, y lo que queda por registrar";
+        case Id::ModSettingQEAllAround:       return "Q y E: todo a tu alrededor, no solo lo que ve la c\xe1mara";
+        case Id::FmtPartyMemberHp:            return "%s %d de %d";
+        case Id::PartyCanLevelUp:             return "puede subir de nivel";
+        case Id::FmtCanLevelUpNotice:         return "%s puede subir de nivel";
+        case Id::KbNamePartyStatus:           return "Salud del grupo";
+        case Id::HelpKeyPartyStatus:          return "Ctrl m\xe1s H: la salud de todo el grupo, y qui\xe9n puede subir de nivel";
+        case Id::FmtWalkingTo:                return "En camino: %s";
+        case Id::KbNameExploreWalkUnexplored: return "Ir al lugar inexplorado m\xe1s cercano";
+        case Id::KbNameExploreWalkLoot:       return "Ir a lo m\xe1s cercano por registrar";
+        case Id::HelpKeyExploreWalk:          return "Ctrl m\xe1s May\xfas m\xe1s N: ir hacia el lugar inexplorado m\xe1s cercano. Alt m\xe1s N: ir al contenedor u objeto por registrar m\xe1s cercano";
+        case Id::FmtLockBestSecurity:         return "el mejor del grupo: %s con %d";
         case Id::Count_:               return "";
     }
     return "";

@@ -191,6 +191,7 @@ constexpr Entry kEntries[] = {
     { S::HelpKeyInteract,        Grp::Interaction, kWorld },
     { S::HelpKeyOpenActionMenu,  Grp::Interaction, kWorld },
     { S::HelpKeySelfStatus,      Grp::Interaction, kWorld },
+    { S::HelpKeyPartyStatus,     Grp::Interaction, kWorld },
     { S::HelpKeyAnnounceFocus,   Grp::Interaction, kWorld },
     { S::HelpKeyWalkToFocus,     Grp::Interaction, 0 },
     { S::HelpKeyBeacon,          Grp::Interaction, 0 },
@@ -203,6 +204,7 @@ constexpr Entry kEntries[] = {
     { S::HelpKeyHeading,         Grp::Exploration, 0 },
     { S::HelpKeyCameraOrient,    Grp::Exploration, 0 },
     { S::HelpKeyExploreOverview, Grp::Exploration, kWorld },
+    { S::HelpKeyExploreWalk,     Grp::Exploration, kWorld },
     { S::HelpKeyDropMarker,      Grp::Exploration, kMap },
 
     // ---- Combat & actions ----

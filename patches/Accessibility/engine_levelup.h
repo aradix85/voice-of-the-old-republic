@@ -23,6 +23,10 @@ namespace acc::engine_levelup {
 // conservatively).
 bool PlayerCanLevelUp();
 
+// Same predicate for any server creature (party members). False on null
+// or fault. Read-only; safe to poll.
+bool CreatureCanLevelUp(void* serverCreature);
+
 // True iff chain resolved + dispatched without SEH. Refuses (returns
 // false, leaves level_up_mode untouched) when PlayerCanLevelUp() is
 // false — the engine's ShowLevelUpGUI only gates on level_up_mode, which

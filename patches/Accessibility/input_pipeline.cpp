@@ -46,6 +46,7 @@
 #include "pad_input.h"       // TranslateClientEvent — the pad's in-world route
                              // slot to drive deterministic targeting
 #include "passive_narrate.h" // ReannounceCurrentShowObjectTarget — Q/E
+#include "qe_ring.h"         // Q/E all around (mod setting)
 #include "engine_rebase.h"
 #include "engine_game.h"
                              // re-announce path for the single-enemy
@@ -624,6 +625,19 @@ extern "C" int __cdecl OnClientHandleInputEvent(void* this_ptr,
     // delta path clears the pending flag and only the new-target cue
     // plays. If it stayed (single-enemy case), the Tick drain fires
     // the reannounce. Press-edge only (val != 0).
+    // Mod setting "Q and E: everything around you": the mod cycles every
+    // object around the player instead of the engine's camera-view halo,
+    // then points the engine's target and action lists at the landing so R
+    // and 1..3 act on it (same prep as a bare 1..7 press).
+    if (param_2 != 0 && (param_1 == 204 || param_1 == 205) &&
+        !acc::passive_narrate::IsInSynthesizedQE() &&
+        acc::qe_ring::HandlePress(param_1 == 204 ? +1 : -1)) {
+        PrepareBareDispatchForNarratedTarget();
+        acclog::Write("Diag.ClientHIE",
+                      "seq=%u Q/E CONSUMED — all-around cycle", seq);
+        return 1;  // consume → consumed_exit
+    }
+
     if (param_2 != 0 && (param_1 == 204 || param_1 == 205)) {
         // passive_narrate's sentinel-skip retry path calls HandleInputEvent
         // itself to re-issue Q/E after the engine emptied its candidate

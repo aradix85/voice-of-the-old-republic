@@ -100,6 +100,9 @@ enum class Action : int {
     CameraOrient,          // N — beacon waypoint or next cardinal CW
     SaveMarkerAtCursor,    // Shift+N — drops marker on the map
     ExploreOverview,       // Ctrl+N — explored / nearest unexplored / loot left
+    ExploreWalkUnexplored, // Ctrl+Shift+N — walk toward the nearest unexplored region
+    ExploreWalkLoot,       // Alt+N — walk to the nearest container / item left
+    PartyStatusAnnounce,   // Ctrl+H — every party member's HP, who can level up
 
     // ----- View mode -----
     ViewModeToggle,        // B   (Shift forbidden)

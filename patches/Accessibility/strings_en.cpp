@@ -1214,6 +1214,17 @@ const char* Get(Id id) {
         case Id::OverviewNothingToSearch: return "Nothing left to search";
         case Id::KbNameExploreOverview:   return "Exploration overview";
         case Id::HelpKeyExploreOverview:  return "Ctrl plus N: how much of this area you have explored, the nearest unexplored place and the exit towards it, and what is left to search";
+        case Id::ModSettingQEAllAround:       return "Q and E: everything around you, not just what the camera sees";
+        case Id::FmtPartyMemberHp:            return "%s %d of %d";
+        case Id::PartyCanLevelUp:             return "can level up";
+        case Id::FmtCanLevelUpNotice:         return "%s can level up";
+        case Id::KbNamePartyStatus:           return "Party health";
+        case Id::HelpKeyPartyStatus:          return "Ctrl plus H: health of everyone in your party, and who can level up";
+        case Id::FmtWalkingTo:                return "Walking: %s";
+        case Id::KbNameExploreWalkUnexplored: return "Walk to the nearest unexplored place";
+        case Id::KbNameExploreWalkLoot:       return "Walk to the nearest thing to search";
+        case Id::HelpKeyExploreWalk:          return "Control plus Shift plus N: walk toward the nearest unexplored place. Alt plus N: walk to the nearest container or item left to search";
+        case Id::FmtLockBestSecurity:         return "best in your party: %s with %d";
         case Id::Count_:               return "";
     }
     return "";

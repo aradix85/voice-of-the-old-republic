@@ -43,6 +43,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -82,6 +83,8 @@ bool Annotate(void* area, const std::string& label,
 // One thing still worth a look: a loot container that holds items, or an
 // item on the ground. Named as the , / . cycle names it (game codepage).
 struct LootSpot {
+    void*       obj    = nullptr;
+    uint32_t    handle = 0;  // server handle
     std::string name;
     Vector      pos      = {0.0f, 0.0f, 0.0f};
     float       distance = 0.0f;  // metres from the player
@@ -95,6 +98,8 @@ struct Overview {
     std::string targetWhat;        // "to a corridor" / "to the Bridge"
     std::string via;               // exit of the current region toward it, may be empty
     Vector      targetPos = {0.0f, 0.0f, 0.0f};  // the via exit, else the next region's centre
+    Vector      stepPos   = {0.0f, 0.0f, 0.0f};  // centre of the first region on the way
+    void*       stepDoor  = nullptr;  // closed (unlocked) door on the way into it, or null
     int         lockedAway = 0;    // unexplored regions reachable only through locked doors
     std::vector<LootSpot> loot;    // nearest first
 };
@@ -107,5 +112,11 @@ std::string OverviewText(const Overview& o);
 
 // Ctrl+N (Action::ExploreOverview). Called from the input poll router.
 void PollOverviewHotkey();
+
+// Ctrl+Shift+N (ExploreWalkUnexplored): walk one region toward the nearest
+// unexplored one — through the closed door on the way, opening it, when
+// there is one. Alt+N (ExploreWalkLoot): walk to the nearest container with
+// items or item on the ground and use it, like Shift+- on it.
+void PollWalkHotkeys();
 
 }  // namespace acc::exit_memory
