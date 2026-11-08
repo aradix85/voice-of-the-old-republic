@@ -5,6 +5,7 @@
 
 #include "discovery.h"
 #include "engine_area.h"
+#include "engine_player.h"      // GetPartyMembers — companions always listed
 #include "examine_view.h"       // IsCreatureDead — corpses out of the Npc list
 #include "exit_memory.h"        // UnreachableFlags — reachable objects first
 #include "log.h"
@@ -159,6 +160,24 @@ bool BuildCategoryListing(acc::filter::CycleCategory category,
         mapCtx && category == acc::filter::CycleCategory::Landmark;
     void* areaMapForFog = mapLandmark ? acc::engine::GetAreaMap() : nullptr;
 
+    // The party walks with you, so it is never "discovered" in a new area,
+    // and Q/E leaves it out on purpose. Without this the people list had no
+    // way to reach a companion to talk to (2026-11-08, Taris Upper City:
+    // every category but doors was empty and Carth could not be picked).
+    uint32_t party[12] = {0};
+    const int partyCount =
+        (!mapCtx && category == acc::filter::CycleCategory::Npc)
+            ? acc::engine::GetPartyMembers(party, 12)
+            : 0;
+    auto isParty = [&](void* o) {
+        if (partyCount <= 0) return false;
+        const uint32_t h = acc::engine::GetObjectHandle(o);
+        for (int i = 0; i < partyCount; ++i) {
+            if (party[i] == h) return true;
+        }
+        return false;
+    };
+
     {
         acc::engine::AreaObjectIterator it(area);
         while (void* obj = it.Next()) {
@@ -171,7 +190,8 @@ bool BuildCategoryListing(acc::filter::CycleCategory category,
                 // has_map_note already checked by ObjectMatches(Landmark);
                 // add the engine's two remaining gates.
                 if (!acc::engine::IsMapNoteEnabled(obj)) continue;
-            } else if (discoveryFilter && !acc::discovery::IsDiscovered(obj)) {
+            } else if (discoveryFilter && !acc::discovery::IsDiscovered(obj) &&
+                       !isParty(obj)) {
                 continue;
             }
 

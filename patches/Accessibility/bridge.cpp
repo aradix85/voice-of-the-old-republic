@@ -227,8 +227,12 @@ std::string CreatureJson(void* serverCreature) {
         name = ToUtf8(buf);
     int hp = acc::engine::ReadCreatureCurrentHitPoints(serverCreature);
     int maxHp = acc::engine::ReadCreatureMaxHitPoints(serverCreature);
+    char handle[16];
+    std::snprintf(handle, sizeof(handle), "0x%08x",
+                  acc::engine::GetObjectHandle(serverCreature));
     std::string s = "{\"name\":" + Json(name) + ",\"hp\":" + std::to_string(hp) +
-                    ",\"max_hp\":" + std::to_string(maxHp);
+                    ",\"max_hp\":" + std::to_string(maxHp) +
+                    ",\"handle\":" + Json(handle);
     int security = 0;
     if (acc::party_status::SecurityOf(serverCreature, security))
         s += ",\"security\":" + std::to_string(security);
