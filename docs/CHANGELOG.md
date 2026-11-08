@@ -78,6 +78,9 @@ push to the branch is built by GitHub Actions and published as the pre-release
 - A party member standing on the target is named: "X is standing in the way".
 - A walk boxed in by people steps aside by itself and tries again; if it
   still cannot start, you hear who is in the way.
+- Talking to someone behind a counter works: the walk stops in front of them
+  and the conversation starts.
+- Enter on a map note at a door uses the door.
 - A door near you that someone else opens says "Door 1 opens".
 - R while already attacking that enemy says "Already attacking X".
 - Standing idle in combat with an enemy near is announced once.
@@ -176,7 +179,17 @@ push to the branch is built by GitHub Actions and published as the pre-release
   is in the way." names the nearest creature beside you. The beaten duelists
   lie round Ajuur in the Taris Upper City Cantina, and every Enter and
   Ctrl+Shift+N from among them ended in "way blocked" without a single step,
-  while one manual step aside always freed the walk.
+  while one manual step aside always freed the walk. Sidesteps only happen
+  with someone within 2.5 metres; a half-metre shuffle no longer counts as a
+  walk that ran.
+- The rescue walk to a creature or placeable stops 1.8 metres in front of it
+  on your side, not on its exact spot, and a conversation that needed it is
+  asked for again on arrival (once per 20 seconds per person). Janice Nall in
+  the Taris droid shop stands behind her counter; the walk to her spot never
+  started and every Enter ended in "way blocked".
+- Enter on a map note within 3 metres of a door goes to that door (open, walk
+  through, or try it). "To Sith Party" sits on the closed North Apartments
+  entrance, and the walk to the note stopped against the door.
 - Enter on an open door walks through it.
 - A door within 20 metres that someone else opens says "Door 1 opens" (KOTOR
   1). This is mostly a story door opening from its own script after your

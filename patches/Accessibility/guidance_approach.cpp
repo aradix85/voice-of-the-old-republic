@@ -12,6 +12,7 @@
 #include "engine_subscreen.h" // WorldIsPaused — a paused world is not a blocked way
 #include "examine_view.h"     // IsCreatureDead — corpses are not obstacles
 #include "guidance_autowalk.h"// CancelMovement
+#include "interact_dispatch.h" // DispatchInteract — re-fire a talk after a rescue walk
 #include "log.h"
 #include "prism.h"
 #include "spectator_scene.h" // Endar Spire scripted spectator-battle cue
@@ -61,6 +62,10 @@ constexpr float kObstacleRadius     = 3.5f;  // creatures this close shape the s
 constexpr float kInTheWayRadius     = 2.5f;  // named in the final blocked line
 constexpr float kStepArrivedM       = 0.6f;  // close enough to the step point
 constexpr int   kMaxObstacles       = 24;
+constexpr float kRootedMaxM         = 1.5f;  // moved less than this = still rooted
+constexpr float kFrontOfTargetM     = 1.8f;  // rescue walks stop this far in front
+                                             // of a creature or placeable
+constexpr DWORD kRefireGuardMs      = 20000; // one talk re-fire per target per 20 s
 
 struct ApproachState {
     bool          active        = false;
@@ -103,7 +108,18 @@ struct ApproachState {
     bool          stepping      = false;
     Vector        stepPos       = {0.0f, 0.0f, 0.0f};
     float         triedYaw[kSidestepMax] = {};
+
+    // Where the current walk (the first, the coordinate retry or a re-walk)
+    // started. "Rooted" means the PC is still within kRootedMaxM of it: a
+    // half-metre shuffle on a re-walk must not count as a walk that ran.
+    Vector        walkStartPos  = {0.0f, 0.0f, 0.0f};
+    bool          haveWalkStart = false;
 };
+
+// Last talk re-fired after a rescue walk, so a target that still cannot be
+// reached does not loop dialog -> retry -> re-fire forever.
+uint32_t g_refireHandle = 0;
+DWORD    g_refireAt     = 0;
 ApproachState g_st;
 
 // Outcome of the last approach that ended, and the serial of the latest arm
@@ -137,6 +153,35 @@ float GapTo(const Vector& tgt, const Vector& pos) {
     return std::sqrt(dx * dx + dy * dy);
 }
 
+void MarkWalkStart() {
+    Vector pc;
+    g_st.haveWalkStart = acc::engine::GetPlayerPosition(pc);
+    if (g_st.haveWalkStart) g_st.walkStartPos = pc;
+}
+
+// Where a rescue walk should go. A creature or placeable often stands where
+// the walkmesh cannot reach: a shopkeeper behind a counter (2026-11-09, Janice
+// Nall in the Taris droid shop: the walk to her exact spot never started,
+// three sidesteps later still "way blocked"). Aim for a point in front of it
+// on the player's side instead; from there the engine's talk or use resolves.
+// Waypoints and coordinates keep their exact position.
+Vector RescueDestination(const Vector& tgt) {
+    if (!g_st.targetObj) return tgt;
+    const int kind = acc::engine::GetObjectKind(g_st.targetObj);
+    if (kind != static_cast<int>(acc::engine::GameObjectKind::Creature) &&
+        kind != static_cast<int>(acc::engine::GameObjectKind::Placeable)) {
+        return tgt;
+    }
+    Vector pc;
+    if (!acc::engine::GetPlayerPosition(pc)) return tgt;
+    const float dx = pc.x - tgt.x;
+    const float dy = pc.y - tgt.y;
+    const float d  = std::sqrt(dx * dx + dy * dy);
+    if (d < kFrontOfTargetM + 0.7f) return tgt;
+    return Vector{tgt.x + dx / d * kFrontOfTargetM,
+                  tgt.y + dy / d * kFrontOfTargetM, tgt.z};
+}
+
 // The walk never physically started (see the header note): re-issue it as a
 // plain coordinate walk to the target position rather than hand the player a
 // "way blocked" they would reasonably read as "there is no route at all".
@@ -163,7 +208,9 @@ bool TryCoordinateWalkRetry(const Vector& tgt) {
     }
 
     g_st.coordRetried = true;
-    if (!acc::guidance::WalkTo(tgt)) {
+    const Vector dest = RescueDestination(tgt);
+    MarkWalkStart();
+    if (!acc::guidance::WalkTo(dest)) {
         acclog::Write("Approach", "walk never started; coordinate-walk retry "
             "failed to queue name=[%s] — falling through to blocked", g_st.name);
         return false;
@@ -172,8 +219,10 @@ bool TryCoordinateWalkRetry(const Vector& tgt) {
     g_st.haveProgress = false;          // restart the stall window clean
     g_st.progressAt   = GetTickCount();
     acclog::Write("Approach", "walk never started (PC has not moved since arm) "
-        "— retrying as coordinate walk to (%.2f,%.2f,%.2f) name=[%s]",
-        tgt.x, tgt.y, tgt.z, g_st.name);
+        "— retrying as coordinate walk to (%.2f,%.2f,%.2f)%s name=[%s]",
+        dest.x, dest.y, dest.z,
+        (dest.x != tgt.x || dest.y != tgt.y) ? " (in front of the target)" : "",
+        g_st.name);
     return true;
 }
 
@@ -249,10 +298,26 @@ bool ChooseSidestep(const Vector& pc, const Vector& tgt, Vector& out,
 // Rooted even after the coordinate retry: step aside and walk again (see
 // kSidestepMax). Returns true when a sidestep is in flight.
 bool TrySidestep(const Vector& tgt) {
-    if (g_st.movedSinceArm || !g_st.coordRetried) return false;
+    if (!g_st.coordRetried) return false;
     if (g_st.sidestepTries >= kSidestepMax) return false;
     Vector pc;
     if (!acc::engine::GetPlayerPosition(pc)) return false;
+    if (g_st.haveWalkStart && GapTo(pc, g_st.walkStartPos) > kRootedMaxM) {
+        return false;                   // the walk ran; not a crowd problem
+    }
+    // Only a crowd is worth stepping around. With nobody beside the PC the
+    // block is the walkmesh or a closed door, and a sidestep only wastes time
+    // (2026-11-09: three sidesteps at the North Apartments door and at the
+    // droid shop counter, the nearest creature 3.6 m and more away).
+    {
+        Vector beside[kMaxObstacles];
+        if (NearbyCreatures(pc, kInTheWayRadius, beside, nullptr,
+                            kMaxObstacles) == 0) {
+            acclog::Write("Approach", "sidestep skipped: nobody within %.1fm "
+                "name=[%s]", kInTheWayRadius, g_st.name);
+            return false;
+        }
+    }
     Vector step{};
     float  yaw = 0.0f, nearest = 0.0f;
     if (!ChooseSidestep(pc, tgt, step, yaw, nearest)) {
@@ -288,7 +353,8 @@ bool TrySidestep(const Vector& tgt) {
 void ResumeAfterSidestep() {
     g_st.stepping = false;
     Vector tgt;
-    if (!ResolveTargetPos(tgt) || !acc::guidance::WalkTo(tgt)) {
+    MarkWalkStart();
+    if (!ResolveTargetPos(tgt) || !acc::guidance::WalkTo(RescueDestination(tgt))) {
         acclog::Write("Approach", "sidestep: re-walk could not be queued "
             "name=[%s] — disarm", g_st.name);
         EndApproach(ApproachOutcome::Other);
@@ -339,8 +405,29 @@ bool CreatureInTheWay(char* name, size_t nameSize) {
 // (conversation / panel) takes it from here, and if nothing surfaces the next
 // stall lands back on the quiet disarm with the latch already set.
 bool TryReissueUse(float gap) {
-    if (!g_st.coordRetried || g_st.useReissued || g_st.useHandle == 0) return false;
+    if (!g_st.coordRetried || g_st.useReissued) return false;
     if (gap * gap > kReissueUseMSq) return false;
+
+    // A talk that needed the rescue walk: the conversation it asked for never
+    // opened, so ask again from here through the same Enter pipeline. Guarded
+    // per target so an unreachable speaker cannot loop.
+    if (g_st.useHandle == 0 && g_st.isDialog && g_st.targetObj) {
+        const uint32_t h   = acc::engine::GetObjectHandle(g_st.targetObj);
+        const DWORD    now = GetTickCount();
+        if (h == 0 || (h == g_refireHandle && now - g_refireAt < kRefireGuardMs)) {
+            return false;
+        }
+        g_st.useReissued = true;
+        g_refireHandle   = h;
+        g_refireAt       = now;
+        void* obj = g_st.targetObj;
+        acclog::Write("Approach", "arrived after rescue walk (gap %.2fm) — "
+            "talking again handle=0x%08x name=[%s]", gap, h, g_st.name);
+        EndApproach(ApproachOutcome::Other);
+        acc::interact::DispatchInteract(obj, h, /*forceRadial=*/false);
+        return true;
+    }
+    if (g_st.useHandle == 0) return false;
 
     g_st.useReissued = true;
 
@@ -484,6 +571,7 @@ void ArmApproach(const ApproachArm& arm) {
     g_st.armedAt       = now;
     g_st.haveProgress  = false;
     g_st.progressAt    = now;
+    MarkWalkStart();
 
     // If no fallback pos was supplied but we have the object, snapshot a live
     // read now so a later announce still has a position even if the object
