@@ -2538,6 +2538,7 @@ enum class Id : int {
     FmtDoorLeads,             // "leads %s" (compass direction through a door)
     FmtLootReminder,          // "Still here: %s"
     EndarTraskDoorOwnCharacter,  // Trask may not open the Trask door himself
+    RouteNoWayLocked,         // "No way there now: it is behind a locked door."
 
     Count_,
 };

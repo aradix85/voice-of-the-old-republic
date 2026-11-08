@@ -1233,6 +1233,7 @@ const char* Get(Id id) {
         case Id::FmtDoorLeads:                return "lleva hacia %s";
         case Id::FmtLootReminder:             return "A\xfan aqu\xed: %s";
         case Id::EndarTraskDoorOwnCharacter:  return "Tu propio personaje debe abrir esta puerta. Vuelve primero con Tab.";
+        case Id::RouteNoWayLocked:            return "Ahora no hay camino: est\xe1 detr\xe1s de una puerta cerrada.";
         case Id::Count_:               return "";
     }
     return "";

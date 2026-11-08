@@ -142,6 +142,19 @@ std::string TargetWayInfo(void* obj, const Vector& pos);
 // door within 20 s; dropped if a conversation or panel opens meanwhile.
 void RemindLootOnLeaving(void* target);
 
+// For the , / . cycles: out[i] = true when positions[i] (objs[i], may be
+// null) can be reached from the player only through a locked door, or lies
+// in a region the graph has no way to. Doors count by the side the player
+// walks up to. False (out untouched) without a graph or in view mode.
+// Reads no cycle listings, so cycle_state may call it.
+bool UnreachableFlags(void* const* objs, const Vector* positions, int count,
+                      bool* out);
+
+// Enter on something that lies only behind a locked door: a beat after the
+// walk line, "No way there now: it is behind a locked door." The dispatch
+// itself is never held back.
+void WarnIfBehindLock(void* target);
+
 // Ctrl+Shift+N (ExploreWalkUnexplored): walk one region toward the nearest
 // unexplored one — through the closed door on the way, opening it, when
 // there is one. Alt+N (ExploreWalkLoot): walk to the nearest container with

@@ -286,6 +286,11 @@ void DispatchInteractImpl(void* target, uint32_t handle, bool forceRadial) {
                          cat == acc::filter::CycleCategory::Transition)) {
         acc::exit_memory::RemindLootOnLeaving(target);
     }
+    // Something that lies only behind a locked door: the engine's walk can
+    // never get there and used to stall in silence. Say so a beat after the
+    // walk line; the dispatch below still runs (doors' open attempts can be
+    // story triggers, see the WARNING above).
+    if (!forceRadial) acc::exit_memory::WarnIfBehindLock(target);
 
     // Transitions are TRIGGER regions that fire on walk-IN, not on "use", and
     // landmarks are WAYPOINTS — map markers with no physical presence at all.

@@ -87,6 +87,12 @@ constexpr DWORD kReminderDelayMs  = 1200;
 constexpr DWORD kReminderRepeatMs = 20000;
 constexpr int   kReminderNamed    = 3;
 
+// "No way there now" after an Enter on something only behind locked doors:
+// queued behind the walk line like the reminder.
+constexpr DWORD kNoWayDelayMs = 700;
+bool        g_noWayPending    = false;
+DWORD       g_noWayAtMs       = 0;
+
 bool        g_reminderPending = false;
 DWORD       g_reminderAtMs    = 0;
 std::string g_reminderText;
@@ -687,11 +693,12 @@ std::string RouteText(const Route& r) {
 // South, back"). `outNear` gets the graph index of the region on the
 // player's side, -1 when unknown. Empty when the graph joins nothing
 // through the door (area transitions, set dressing).
-std::string DoorBeyond(const Graph& g, const Vector& doorPos, int* outNear) {
-    using acc::strings::Id;
-    if (outNear) *outNear = -1;
-    int nearId = kClusterIdNone;
-    int farId  = kClusterIdNone;
+// The two regions a door joins, seen from the player: `nearId` on the
+// player's side, `farId` beyond. False when the graph joins nothing through
+// it. Reads no cycle listings (the cycles call into here).
+bool DoorSides(const Graph& g, const Vector& doorPos, int& nearId, int& farId) {
+    nearId = kClusterIdNone;
+    farId  = kClusterIdNone;
 
     // The regions the door joins, from the links recorded through it.
     std::vector<int> sides;
@@ -733,22 +740,30 @@ std::string DoorBeyond(const Graph& g, const Vector& doorPos, int* outNear) {
         // No link through it: probe past the door on the line from the
         // player, and accept only a region linked to the near side.
         const float len = Dist2D(g.player, doorPos);
-        if (len < 0.5f) return std::string();
+        if (len < 0.5f) return false;
         const float ux = (doorPos.x - g.player.x) / len;
         const float uy = (doorPos.y - g.player.y) / len;
         const Vector before{doorPos.x - ux * 2.0f, doorPos.y - uy * 2.0f,
                             doorPos.z};
         nearId = RegionAt(g.area, before);
-        if (nearId < 0) return std::string();
+        if (nearId < 0) return false;
         std::set<int> nearLinked;
         for (const ClusterLink& l : g.links) {
             if (l.a == nearId) nearLinked.insert(l.b);
             else if (l.b == nearId) nearLinked.insert(l.a);
         }
         farId = RegionBehind(g.area, nearId, nearLinked, g.player, doorPos);
-        if (farId < 0 || !nearLinked.count(farId)) return std::string();
+        if (farId < 0 || !nearLinked.count(farId)) return false;
     }
-    if (nearId < 0 || farId < 0) return std::string();
+    return nearId >= 0 && farId >= 0;
+}
+
+std::string DoorBeyond(const Graph& g, const Vector& doorPos, int* outNear) {
+    using acc::strings::Id;
+    if (outNear) *outNear = -1;
+    int nearId = kClusterIdNone;
+    int farId  = kClusterIdNone;
+    if (!DoorSides(g, doorPos, nearId, farId)) return std::string();
     if (outNear) *outNear = g.IndexOf(nearId);
 
     // Direction: from the near region's centre out through the door, the
@@ -860,6 +875,17 @@ std::string RegionLabelAt(void* area, const Vector& player) {
 }
 
 void FlushReminder() {
+    if (g_noWayPending &&
+        static_cast<LONG>(GetTickCount() - g_noWayAtMs) >= 0) {
+        g_noWayPending = false;
+        Vector unused;
+        if (acc::engine::GetPlayerPosition(unused) &&
+            !acc::engine::IsForegroundUiBlocking()) {
+            const char* line = acc::strings::Get(acc::strings::Id::RouteNoWayLocked);
+            prism::Speak(line, /*interrupt=*/false);
+            acclog::Write("ExitMemory", "no way: %s", line);
+        }
+    }
     if (!g_reminderPending) return;
     if (static_cast<LONG>(GetTickCount() - g_reminderAtMs) < 0) return;
     g_reminderPending = false;
@@ -1205,6 +1231,61 @@ std::string TargetWayInfo(void* obj, const Vector& pos) {
         return out;
     }
     return RouteText(RouteTo(g, pos));
+}
+
+bool UnreachableFlags(void* const* objs, const Vector* positions, int count,
+                      bool* out) {
+    if (!positions || !out || count <= 0) return false;
+    if (acc::view_mode::IsActive()) return false;
+    Vector player;
+    if (!acc::engine::GetPlayerPosition(player)) return false;
+    Graph g;
+    if (!BuildGraph(acc::engine::GetCurrentArea(), player, g) || g.si < 0) {
+        return false;
+    }
+    for (int i = 0; i < count; ++i) {
+        out[i] = false;
+        int t = -1;
+        void* obj = objs ? objs[i] : nullptr;
+        if (obj && acc::filter::ObjectMatches(obj, CycleCategory::Door)) {
+            // A door counts by the side the player would walk up to.
+            int nearId = kClusterIdNone;
+            int farId  = kClusterIdNone;
+            if (DoorSides(g, positions[i], nearId, farId)) t = g.IndexOf(nearId);
+        }
+        if (t < 0) t = g.IndexOf(RegionAt(g.area, positions[i]));
+        if (t < 0 || t == g.si) continue;
+        out[i] = g.distOpen[t] >= kFar;
+    }
+    return true;
+}
+
+void WarnIfBehindLock(void* target) {
+    if (!target || acc::view_mode::IsActive()) return;
+    Vector pos;
+    if (!acc::engine::GetObjectPosition(target, pos)) return;
+    bool behind = false;
+    void* objs[1] = {target};
+    if (!UnreachableFlags(objs, &pos, 1, &behind) || !behind) return;
+    // Only behind a lock, not merely without a known link: that much the
+    // graph can tell for sure (an unlinked region may still be reached by a
+    // lift or a scene).
+    Vector player;
+    if (!acc::engine::GetPlayerPosition(player)) return;
+    Graph g;
+    if (!BuildGraph(acc::engine::GetCurrentArea(), player, g)) return;
+    int t = -1;
+    if (acc::filter::ObjectMatches(target, CycleCategory::Door)) {
+        int nearId = kClusterIdNone;
+        int farId  = kClusterIdNone;
+        if (DoorSides(g, pos, nearId, farId)) t = g.IndexOf(nearId);
+    }
+    if (t < 0) t = g.IndexOf(RegionAt(g.area, pos));
+    if (t < 0 || g.distAll[t] >= kFar) return;
+    g_noWayPending = true;
+    g_noWayAtMs    = GetTickCount() + kNoWayDelayMs;
+    acclog::Write("ExitMemory", "no way queued: target 0x%08x behind a lock",
+                  acc::engine::GetObjectHandle(target));
 }
 
 void RemindLootOnLeaving(void* target) {

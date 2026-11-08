@@ -144,15 +144,18 @@ int NumberingClass(void* gameObject) {
         static_cast<int>(acc::engine::GameObjectKind::Door)) {
         return 0;
     }
-    // Static/cosmetic doors are frequently flagged locked in the blueprint
-    // even though nobody can ever open them — which is exactly why we speak
-    // "kosmetisch" instead of "verriegelt" for them. Honour that here too, or
-    // two identical bits of set dressing side by side would land in different
-    // numbering sequences purely on a flag the player is never told about.
-    // IsDoorCosmetic (not IsDoorStatic) so the K2 static-but-really-locked
-    // doors group with the other "verriegelt" doors they sound like.
-    if (acc::engine::IsDoorCosmetic(gameObject)) return 0;
-    return acc::engine::WasDoorLockedAtAreaLoad(gameObject) ? 1 : 0;
+    // Every usable door in one sequence, by position alone; set dressing
+    // (cosmetic doors, which the cycles no longer list) apart so it never
+    // pushes a real door's number up.
+    //
+    // There used to be a separate sequence for doors locked when the area
+    // loaded, so picking a lock would not renumber the others. But "when the
+    // area loaded" is also when a SAVE loads: a story door that was locked at
+    // the start of a new game and open in the save moved to the other
+    // sequence on reload, and every door's number changed (2026-11-08: Door 4
+    // became Door 8, Door 8 became Door 9, Door 5 became Door 10). Position
+    // alone never moves, whatever the doors' state, on any load.
+    return acc::engine::IsDoorCosmetic(gameObject) ? 2 : 0;
 }
 
 void AppendAreaPositionOrdinal(void* gameObject,

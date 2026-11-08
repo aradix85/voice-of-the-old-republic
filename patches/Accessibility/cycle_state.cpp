@@ -5,6 +5,7 @@
 
 #include "discovery.h"
 #include "engine_area.h"
+#include "exit_memory.h"        // UnreachableFlags — reachable objects first
 #include "log.h"
 #include "map_shipped_hints.h"
 #include "map_user_markers.h"
@@ -41,6 +42,34 @@ void SortByDistanceAscending(CategoryListing& l) {
         l.isPin[j + 1]     = saveIsPin;
         l.isStatic[j + 1]  = saveIsStatic;
     }
+}
+
+// World cycles: what the player can walk to now first, nearest first, then
+// what lies only behind locked doors (or where the region graph has no way
+// to), also nearest first. A door counts by the side the player walks up
+// to. Without the reorder the door list read like a history of every door
+// passed, most of them shut off behind the story (2026-11-08).
+void ReachableFirst(CategoryListing& l, acc::filter::CycleContext ctx) {
+    if (ctx == acc::filter::CycleContext::Map || l.count < 2) return;
+    bool behind[CategoryListing::kMaxObjects] = {};
+    if (!acc::exit_memory::UnreachableFlags(l.objs, l.positions, l.count,
+                                            behind)) {
+        return;
+    }
+    CategoryListing sorted;
+    sorted.count = 0;
+    for (int pass = 0; pass < 2; ++pass) {
+        for (int i = 0; i < l.count; ++i) {
+            if (behind[i] != (pass == 1)) continue;
+            const int k = sorted.count++;
+            sorted.objs[k]      = l.objs[i];
+            sorted.positions[k] = l.positions[i];
+            sorted.distances[k] = l.distances[i];
+            sorted.isPin[k]     = l.isPin[i];
+            sorted.isStatic[k]  = l.isStatic[i];
+        }
+    }
+    l = sorted;
 }
 
 // Squared horizontal distance — Z deliberately ignored. Pillar 4
@@ -142,6 +171,13 @@ bool BuildCategoryListing(acc::filter::CycleCategory category,
                 // add the engine's two remaining gates.
                 if (!acc::engine::IsMapNoteEnabled(obj)) continue;
             } else if (discoveryFilter && !acc::discovery::IsDiscovered(obj)) {
+                continue;
+            }
+
+            // Set-dressing doors: nobody can ever open them, the engine
+            // offers no action on them and Q/E already leaves them out.
+            if (!mapCtx && category == acc::filter::CycleCategory::Door &&
+                acc::engine::IsDoorCosmetic(obj)) {
                 continue;
             }
 
@@ -354,6 +390,7 @@ bool CycleCategoryDirectional(CategoryListing& outListing,
                              : acc::filter::PrevCategory(s.category);
         if (BuildCategoryListing(s.category, outListing, ctx) &&
             outListing.count > 0) {
+            ReachableFirst(outListing, ctx);
             s.focusedIndex = 0;
             s.focusedObj   = outListing.objs[0];
             return true;
@@ -382,6 +419,7 @@ bool RefreshCurrentListing(CategoryListing& outListing,
                            acc::filter::CycleContext ctx) {
     auto& s = GetState(ctx);
     if (!BuildCategoryListing(s.category, outListing, ctx)) return false;
+    ReachableFirst(outListing, ctx);
 
     if (outListing.count == 0) {
         s.focusedIndex = -1;

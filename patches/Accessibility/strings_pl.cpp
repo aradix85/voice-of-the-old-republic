@@ -1230,6 +1230,7 @@ const char* Get(Id id) {
         case Id::FmtDoorLeads:                return "prowadzi na %s";
         case Id::FmtLootReminder:             return "Jeszcze tutaj: %s";
         case Id::EndarTraskDoorOwnCharacter:  return "Te drzwi musi otworzy\xe6 twoja w\xb3""asna posta\xe6. Najpierw wr\xf3\xe6 klawiszem Tab.";
+        case Id::RouteNoWayLocked:            return "Na razie nie ma drogi: to jest za zamkni\xeatymi drzwiami.";
         case Id::Count_:               return "";
     }
     return "";

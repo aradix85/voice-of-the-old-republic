@@ -938,7 +938,13 @@ bool IsTransitionTrigger(void* trigger) {
                            kTriggerTransitionDestOffset;
         const char* text = *reinterpret_cast<const char**>(p);
         uint32_t    aux  = *reinterpret_cast<uint32_t*>(p + 4);
-        if (text) return aux > 0;  // inline text: aux is its length
+        // Inline text: aux is its length. 0xFFFFFFFF is never a length: it
+        // is the "no strref" sentinel next to a non-null (empty) text slot,
+        // which is what plain script triggers carry (Endar Spire's
+        // "nulltrigger", "Trask on Bridge" and the explosion triggers all
+        // have TransitionDestination strref -1 and no LinkedTo, yet were
+        // cycled and Q/E-listed as exits, 2026-11-08).
+        if (text) return aux > 0 && aux != 0xFFFFFFFFu && aux <= 0x10000u;
         // No inline text: aux is the TLK strref (0 / -1 / out-of-range
         // all mean "no destination", matching LookupTlk).
         return aux != 0 && aux != 0xFFFFFFFFu && aux <= 0x100000u;
