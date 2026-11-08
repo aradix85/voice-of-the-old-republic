@@ -1,0 +1,92 @@
+# Builds accessibility.dll for the "bridge" branch on GitHub's Windows runners
+# and publishes it as the rolling pre-release "bridge-latest".
+#
+# kdev's config check wants a game folder with swkotor.exe and a Kotor Patch
+# Manager release with bin/KotorPatcher.dll. The build itself reads neither, so
+# CI points kdev.toml at stand-ins: an empty swkotor.exe and the KotorPatcher.dll
+# that already ships in installer/KotorAccessibilityInstaller/Resources.
+
+name: Build
+
+on:
+  push:
+    branches: [bridge]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Build kdev
+        shell: pwsh
+        run: dotnet build tools/kdev/kdev.csproj -c Release --nologo
+
+      - name: Point kdev.toml at CI stand-ins
+        shell: pwsh
+        run: |
+          $ci = Join-Path $env:RUNNER_TEMP 'ci'
+          $game = Join-Path $ci 'swkotor'
+          $kpm  = Join-Path $ci 'kpm-release'
+          New-Item -ItemType Directory -Force $game, (Join-Path $kpm 'bin') | Out-Null
+          New-Item -ItemType File -Force (Join-Path $game 'swkotor.exe') | Out-Null
+          Copy-Item installer/KotorAccessibilityInstaller/Resources/KotorPatcher.dll (Join-Path $kpm 'bin')
+          $toml = Get-Content kdev.toml -Raw
+          $toml = $toml -replace "(?m)^install\s*=.*$", "install = '$game'"
+          $toml = $toml -replace "(?m)^install_k2\s*=.*$", ""
+          $toml = $toml -replace "(?m)^release\s*=.*$", "release = '$kpm'"
+          Set-Content kdev.toml $toml -NoNewline
+
+      - name: Build the patch
+        shell: pwsh
+        run: |
+          & tools/kdev/bin/Release/net10.0/win-x64/kdev.exe build
+          if ($LASTEXITCODE -ne 0) { throw "kdev build failed ($LASTEXITCODE)" }
+
+      - name: Extract accessibility.dll
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force out | Out-Null
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $zip = [IO.Compression.ZipFile]::OpenRead((Resolve-Path build/Accessibility.kpatch))
+          try {
+            $entry = $zip.Entries | Where-Object FullName -eq 'binaries/windows_x86.dll'
+            if (-not $entry) { throw 'binaries/windows_x86.dll not found in the kpatch' }
+            [IO.Compression.ZipFileExtensions]::ExtractToFile($entry, (Join-Path (Resolve-Path out) 'accessibility.dll'), $true)
+          } finally { $zip.Dispose() }
+          Copy-Item build/Accessibility.kpatch out/
+          Get-ChildItem out | Format-Table Name, Length
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: accessibility-${{ github.sha }}
+          path: out/
+
+      - name: Publish pre-release bridge-latest
+        if: github.ref == 'refs/heads/bridge'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $short = '${{ github.sha }}'.Substring(0, 7)
+          $notes = @"
+          Build of branch bridge at commit $short.
+
+          Install: close the game, then copy accessibility.dll to the game folder as patches\accessibility.dll (for example C:\Program Files (x86)\Steam\steamapps\common\swkotor\patches\accessibility.dll). Requires Voice of the Old Republic 0.9.1 to be installed first.
+          "@
+          gh release delete bridge-latest --cleanup-tag --yes 2>$null
+          gh release create bridge-latest out/accessibility.dll out/Accessibility.kpatch `
+            --target '${{ github.sha }}' --prerelease `
+            --title "Bridge build $short" --notes $notes
