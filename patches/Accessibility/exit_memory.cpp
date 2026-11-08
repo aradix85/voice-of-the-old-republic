@@ -15,6 +15,7 @@
 
 #include "cycle_input.h"       // WalkToNarratedTarget
 #include "cycle_state.h"
+#include "discovery.h"         // loot heard in the overview joins the , / . cycle
 #include "engine_area.h"
 #include "engine_compass.h"
 #include "engine_panels.h"     // IsForegroundUiBlocking
@@ -27,6 +28,7 @@
 #include "hotkeys.h"
 #include "narrated_target.h"
 #include "log.h"
+#include "menus_modsettings.h"   // ExtendedCycling: list loot map-wide
 #include "prism.h"
 #include "same_name_suffix.h"
 #include "strings.h"
@@ -770,34 +772,46 @@ std::string DoorBeyond(const Graph& g, const Vector& doorPos, int* outNear) {
 }
 
 // Loot left: containers holding items, and items on the ground, nearest
-// first (straight line).
+// first (straight line). Every such object in the area, whether or not the
+// player has heard it yet: the , / . cycles' discovery tier is the wrong
+// filter here (a footlocker not yet walked past is exactly what "left to
+// search" is for, and ground items are never in that tier at all). Callers
+// decide what of it to speak; `known` says whether the cycles would list it.
 void CollectLoot(std::vector<LootSpot>& out) {
     out.clear();
-    const CycleCategory cats[] = {CycleCategory::Container, CycleCategory::Item};
-    for (CycleCategory cat : cats) {
-        acc::cycle::CategoryListing listing;
-        if (!acc::cycle::BuildCategoryListing(cat, listing)) continue;
-        for (int i = 0; i < listing.count; ++i) {
-            void* obj = listing.objs[i];
-            if (listing.isPin[i] || !obj) continue;
-            if (cat == CycleCategory::Container &&
-                acc::engine::GetContainerItemCount(obj) <= 0) {
-                continue;
-            }
-            char name[160] = {0};
-            if (!acc::narration::GetSpokenName(obj, cat, name, sizeof(name)) ||
-                !name[0]) {
-                continue;
-            }
-            LootSpot s;
-            s.obj      = obj;
-            s.handle   = acc::engine::GetObjectHandle(obj);
-            s.name     = name;
-            s.pos      = listing.positions[i];
-            s.distance = listing.distances[i];
-            s.walk     = s.distance;
-            out.push_back(std::move(s));
+    Vector player;
+    if (!acc::engine::GetPlayerPosition(player)) return;
+    void* area = acc::engine::GetCurrentArea();
+    if (!area) return;
+    const bool mapWide = acc::menus::modsettings::GetToggle(
+        acc::menus::modsettings::Option::ExtendedCycling);
+    acc::engine::AreaObjectIterator it(area);
+    while (void* obj = it.Next()) {
+        CycleCategory cat;
+        if (acc::filter::ObjectMatches(obj, CycleCategory::Container)) {
+            cat = CycleCategory::Container;
+            if (acc::engine::GetContainerItemCount(obj) <= 0) continue;
+        } else if (acc::filter::ObjectMatches(obj, CycleCategory::Item)) {
+            cat = CycleCategory::Item;
+        } else {
+            continue;
         }
+        Vector pos;
+        if (!acc::engine::GetObjectPosition(obj, pos)) continue;
+        char name[160] = {0};
+        if (!acc::narration::GetSpokenName(obj, cat, name, sizeof(name)) ||
+            !name[0]) {
+            continue;
+        }
+        LootSpot s;
+        s.obj      = obj;
+        s.handle   = acc::engine::GetObjectHandle(obj);
+        s.name     = name;
+        s.pos      = pos;
+        s.distance = Dist2D(pos, player);
+        s.walk     = s.distance;
+        s.known    = mapWide || acc::discovery::IsDiscovered(obj);
+        out.push_back(std::move(s));
     }
     std::stable_sort(out.begin(), out.end(),
                      [](const LootSpot& a, const LootSpot& b) {
@@ -1038,7 +1052,23 @@ bool CollectOverview(Overview& o) {
             s.way = RouteText(r);
             if (r.kind == Route::Open) s.walk = static_cast<float>(r.walkM);
             s.reachable = r.kind != Route::Locked && r.kind != Route::Unreachable;
+            // Not heard yet and not reachable now (behind a locked door, or
+            // somewhere the graph has no way to): leave it out, it would
+            // only name what lies ahead in the story.
+            if (!s.known) {
+                const bool nearUnknown =
+                    r.kind == Route::Unknown && s.distance <= kHereRadiusM;
+                s.keep = r.kind == Route::Here || r.kind == Route::Open ||
+                         nearUnknown;
+            }
         }
+    } else {
+        for (LootSpot& s : o.loot) s.keep = s.known || s.distance <= kHereRadiusM;
+    }
+    o.loot.erase(std::remove_if(o.loot.begin(), o.loot.end(),
+                                [](const LootSpot& s) { return !s.keep; }),
+                 o.loot.end());
+    if (o.haveGraph) {
         std::stable_sort(o.loot.begin(), o.loot.end(),
                          [](const LootSpot& a, const LootSpot& b) {
                              if (a.reachable != b.reachable) return a.reachable;
@@ -1119,6 +1149,12 @@ void PollOverviewHotkey() {
     if (acc::engine::IsForegroundUiBlocking()) return;
     Overview o;
     if (!CollectOverview(o)) return;
+    // The loot just named is now known: let the , / . cycles find it too.
+    int named = 0;
+    for (const LootSpot& s : o.loot) {
+        if (named++ == kLootSpoken) break;
+        if (s.obj) acc::discovery::Record(s.obj);
+    }
     // Where am I first, then the area as a whole.
     std::string text = CurrentRegionText();
     if (!text.empty() && text.back() != '.') text += '.';

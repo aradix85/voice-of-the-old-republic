@@ -94,6 +94,8 @@ struct LootSpot {
     std::string way;
     float       walk      = 0.0f;  // walking metres (straight line if unknown)
     bool        reachable = true;  // false: only through locked doors / no link
+    bool        known     = true;  // heard before (or map-wide cycling is on)
+    bool        keep      = true;  // internal: listed in the overview
 };
 
 struct Overview {
