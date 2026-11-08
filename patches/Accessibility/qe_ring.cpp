@@ -117,6 +117,7 @@ bool HandlePress(int direction) {
             if (IsParty(handle, party, partyCount)) continue;
             const int hp = acc::engine::ReadCreatureCurrentHitPoints(obj);
             if (hp == 0 || hp < -1) continue;  // dead
+            if (acc::examine_view::IsCreatureDead(obj)) continue;
             if (combat && !acc::examine_view::IsHostileCreature(obj)) continue;
         }
         if (cat == CycleCategory::Door && acc::engine::IsDoorCosmetic(obj)) continue;

@@ -90,6 +90,7 @@ push to the branch is built by GitHub Actions and published as the pre-release
 - New setting: Q and E step through everything within 30 metres instead of
   only what the camera sees.
 - Q/E find objects built into a wall, such as the Endar Spire escape pod.
+- Dead creatures are left out of , / . and Q/E.
 - New setting: everything is spoken by the screen reader (no SAPI or compass
   voice, no 3D speech).
 - Enter on an open door walks through it.
@@ -179,6 +180,9 @@ push to the branch is built by GitHub Actions and published as the pre-release
 - With that setting, a container or other placeable is not hidden by a wall
   that the line meets within 2 metres of it: it is built into that wall. The
   Endar Spire escape pod never came up on Q/E.
+- Dead creatures (the engine's dead flag) are left out of the , / . people
+  list and Q/E. A killed Sith Soldier stayed listed, and Enter on it started a
+  conversation walk that ended in "Movement cancelled".
 - Script triggers (for example "nulltrigger") are no longer treated as area
   transitions.
 

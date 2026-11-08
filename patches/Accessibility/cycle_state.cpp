@@ -5,6 +5,7 @@
 
 #include "discovery.h"
 #include "engine_area.h"
+#include "examine_view.h"       // IsCreatureDead — corpses out of the Npc list
 #include "exit_memory.h"        // UnreachableFlags — reachable objects first
 #include "log.h"
 #include "map_shipped_hints.h"
@@ -178,6 +179,16 @@ bool BuildCategoryListing(acc::filter::CycleCategory category,
             // offers no action on them and Q/E already leaves them out.
             if (!mapCtx && category == acc::filter::CycleCategory::Door &&
                 acc::engine::IsDoorCosmetic(obj)) {
+                continue;
+            }
+
+            // Dead creatures: nothing to talk to or fight, and Enter on one
+            // starts a conversation walk that only ends in "Movement
+            // cancelled" (2026-11-08, Taris: the Sith Soldier killed at the
+            // Duros' door stayed in , / . as "Sith Soldier, 1 metres").
+            // Their loot, if any, is a separate Remains container.
+            if (category == acc::filter::CycleCategory::Npc &&
+                acc::examine_view::IsCreatureDead(obj)) {
                 continue;
             }
 

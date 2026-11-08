@@ -524,6 +524,15 @@ void SpeakRow(int idx) {
 // consistent with what the user hears elsewhere. SEH-guarded via the readers.
 // Companions (faction 0/2/4 → Friendly) and neutral townsfolk are excluded;
 // a neutral-until-provoked enemy would also read as non-hostile until it turns.
+bool IsCreatureDead(void* serverCreature) {
+    if (!serverCreature) return false;
+    if (acc::engine::GetObjectKind(serverCreature) !=
+        static_cast<int>(acc::engine::GameObjectKind::Creature)) {
+        return false;
+    }
+    return ReadDeadFlag(serverCreature);
+}
+
 bool IsHostileCreature(void* serverObject) {
     if (!serverObject) return false;
     if (acc::engine::GetObjectKind(serverObject) !=

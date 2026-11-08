@@ -51,6 +51,11 @@ bool ResolveSpellName(int spellId, char* outBuf, size_t outBufSize);
 // stealth_watch's focus gate.
 bool IsHostileCreature(void* serverObject);
 
+// True iff the engine's CSWSCreature::GetDead reports the creature dead.
+// False on a null pointer or a faulted call. For the , / . and Q/E lists:
+// a corpse is nothing to talk to or fight.
+bool IsCreatureDead(void* serverCreature);
+
 bool Open();
 bool IsActive();
 
