@@ -68,6 +68,7 @@ push to the branch is built by GitHub Actions and published as the pre-release
 - Ctrl+L walks to the nearest container or item left to search and opens it.
 - Small open slivers of the same space within 6 metres count as seen.
 - Focusing a door says which way it leads and what lies beyond it.
+- A door into another area no longer says "to a dead end".
 - Anything in another region gives the walking route to it, or "behind a
   locked door".
 - Enter on a door while the region still holds loot adds "Still here: ...".
@@ -84,6 +85,9 @@ push to the branch is built by GitHub Actions and published as the pre-release
 - Script triggers are no longer announced as exits.
 - Locked doors and containers say whether they open only through the story,
   need a key, or need Security N, with the best Security in the party.
+- A locked door that the story opens when you try it says "may open when you
+  try".
+- A door that a script opened says "open", not "locked".
 - Ctrl+H reads the health of the whole party and who can level up; "Name can
   level up" is announced on its own.
 - Q/E say the clock direction and distance of each object.
@@ -101,7 +105,8 @@ push to the branch is built by GitHub Actions and published as the pre-release
 - F1 help and the README list the new keys.
 - A local bridge lets an external helper read the game state and act in the
   game.
-- Log only: the patch log can be read while the game runs.
+- Log only: the patch log can be read while the game runs; lock lines name a
+  door's OnFailToOpen script.
 
 <h3>Exploration:</h3>
 
@@ -123,7 +128,7 @@ push to the branch is built by GitHub Actions and published as the pre-release
   keyboard dead until Alt+Tab.
 - When nothing unexplored can be reached but a locked door leads to an
   unexplored region, Ctrl+N names the nearest such door ("Door to try: Door 1,
-  locked, opens only through the story, 12 o'clock, 3 metres") and
+  locked, may open when you try, 12 o'clock, 3 metres") and
   Ctrl+Shift+N tries it as Enter would. Story doors on the Endar Spire open on
   the attempt itself; the overview used to say only "7 more behind locked
   doors". With Trask as leader the Trask-door guard still refuses.
@@ -147,6 +152,10 @@ push to the branch is built by GitHub Actions and published as the pre-release
   side; anything in another region gives the route ("via Door 2 East, about 30
   metres to walk") or "behind a locked door". Routes follow the region graph
   instead of a straight line.
+- A door into another area gives only the way to it. The bit of walkmesh
+  behind such a door counted as a region of its own, so the Taris Upper City
+  Cantina entrance said "leads South, to a dead end, new"; the door's label
+  already names the area it leads to.
 - Enter on a door or exit while the region still holds loot queues a short
   "Still here: Metal box" after the walk line, at most once per door every 20
   seconds.
@@ -200,6 +209,15 @@ push to the branch is built by GitHub Actions and published as the pre-release
 
 - Locked doors and containers say "locked, opens only through the story",
   "needs a key" or "Security N, best in your party: Name with N".
+- A locked door with an OnFailToOpen script and no key or Security to open it
+  says "locked, may open when you try" instead of "opens only through the
+  story" (KOTOR 1). The attempt is what such a script reacts to: the Endar
+  Spire bridge doors and the Taris Upper City Cantina entrance open on it, and
+  the old wording talked the player out of trying. The script is
+  CSWSDoor.scripts[14] (+0x298), slot order read from CSWSDoor::LoadDoor.
+- An open door says "open" even while its lock flag is still set. A script can
+  open a door without unlocking it; the Upper City Cantina entrance was read
+  "locked" as you walked through it.
 - Ctrl+H reads every party member's health and who can level up; "Name can
   level up" is announced when it becomes true.
 

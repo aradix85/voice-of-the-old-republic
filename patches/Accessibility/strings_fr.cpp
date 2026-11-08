@@ -1202,6 +1202,7 @@ const char* Get(Id id) {
         case Id::ExitAnnoToDeadEnd:     return "vers un cul-de-sac";
         case Id::ModSettingAllViaScreenReader: return "Tout lire avec le lecteur d'\xe9""cran";
         case Id::LockNeedStoryOnly:       return "ne s'ouvre que par l'histoire";
+        case Id::LockNeedTryIt:           return "peut s'ouvrir si on essaie";
         case Id::LockNeedKey:             return "n\xe9""cessite une cl\xe9";
         case Id::FmtLockNeedSecurity:     return "S\xe9""curit\xe9 %d";
         case Id::FmtRegionHere:           return "Ici : %s";

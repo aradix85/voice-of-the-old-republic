@@ -1378,8 +1378,15 @@ std::string TargetWayInfo(void* obj, const Vector& pos) {
     }
     if (acc::filter::ObjectMatches(obj, CycleCategory::Door)) {
         if (acc::engine::IsDoorCosmetic(obj)) return std::string();
+        // A door into another area already says where it goes (its
+        // TransitionDestination is in the label). The sliver of this area's
+        // walkmesh behind it is not a place: "leads South, to a dead end,
+        // new" on the Upper City Cantina entrance only sounded like a place
+        // still to explore. Give just the way to the door (to its near
+        // side: the door's own position can fall in that sliver).
         int nearIdx = -1;
         std::string out = DoorBeyond(g, pos, &nearIdx);
+        if (acc::engine::DoorHasTransitionDest(obj)) out.clear();
         if (nearIdx < 0) return out.empty() ? RouteText(RouteTo(g, pos)) : out;
         if (nearIdx != g.si) {
             const std::string route = RouteText(RouteToIndex(g, nearIdx, pos));

@@ -1222,6 +1222,7 @@ const char* Get(Id id) {
         case Id::ExitAnnoToDeadEnd:     return "zu einer Sackgasse";
         case Id::ModSettingAllViaScreenReader: return "Alles mit dem Screenreader sprechen";
         case Id::LockNeedStoryOnly:       return "\xf6""ffnet sich nur durch die Handlung";
+        case Id::LockNeedTryIt:           return "\xf6""ffnet sich vielleicht beim Versuch";
         case Id::LockNeedKey:             return "braucht einen Schl\xfcssel";
         case Id::FmtLockNeedSecurity:     return "Sicherheit %d";
         case Id::FmtRegionHere:           return "Hier: %s";

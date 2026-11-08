@@ -1201,6 +1201,7 @@ const char* Get(Id id) {
         case Id::ExitAnnoToDeadEnd:     return "verso un vicolo cieco";
         case Id::ModSettingAllViaScreenReader: return "Leggi tutto con lo screen reader";
         case Id::LockNeedStoryOnly:       return "si apre solo con la storia";
+        case Id::LockNeedTryIt:           return "potrebbe aprirsi al tentativo";
         case Id::LockNeedKey:             return "serve una chiave";
         case Id::FmtLockNeedSecurity:     return "Sicurezza %d";
         case Id::FmtRegionHere:           return "Qui: %s";

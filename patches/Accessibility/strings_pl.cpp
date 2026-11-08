@@ -1200,6 +1200,7 @@ const char* Get(Id id) {
         case Id::ExitAnnoToDeadEnd:     return "do \x9c""lepego zau\xb3""ka";
         case Id::ModSettingAllViaScreenReader: return "Czytaj wszystko czytnikiem ekranu";
         case Id::LockNeedStoryOnly:       return "otwiera si\xea tylko przez fabu\xb3\xea";
+        case Id::LockNeedTryIt:           return "mo\xbf""e si\xea otworzy\xe6 przy pr\xf3""bie";
         case Id::LockNeedKey:             return "wymaga klucza";
         case Id::FmtLockNeedSecurity:     return "Zabezpieczenia %d";
         case Id::FmtRegionHere:           return "Tutaj: %s";

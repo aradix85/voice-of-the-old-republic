@@ -523,6 +523,10 @@ void AppendLockNeed(void* obj, char* outBuf, size_t bufSize) {
             AppendCommaSeparated(outBuf, bufSize,
                 acc::strings::Get(acc::strings::Id::LockNeedStoryOnly));
             break;
+        case LockNeed::TryIt:
+            AppendCommaSeparated(outBuf, bufSize,
+                acc::strings::Get(acc::strings::Id::LockNeedTryIt));
+            break;
         case LockNeed::Key:
             AppendCommaSeparated(outBuf, bufSize,
                 acc::strings::Get(acc::strings::Id::LockNeedKey));
@@ -582,11 +586,11 @@ void BuildDoorSuffix(void* serverDoor, char* outBuf, size_t bufSize) {
     uint8_t  openState = 0;
     ReadDoorFlags(serverDoor, locked, openState);  // defaults on fault
 
-    if (locked != 0) {
-        AppendCommaSeparated(outBuf, bufSize,
-            acc::strings::Get(acc::strings::Id::DoorLocked));
-        AppendLockNeed(serverDoor, outBuf, bufSize);
-    } else if (openState != 0) {
+    // Open wins over locked: a story script can open a door without
+    // clearing its lock flag (the Taris Upper City Cantina entrance stood
+    // open while still Locked=1, and was read "locked" as the player walked
+    // through it).
+    if (openState != 0) {
         // Treat any non-zero open_state as "open enough to mention".
         // Stock KOTOR uses 0=closed, ≥1=opening/open in our observations
         // (CSWCDoor.state=2 was the post-open value seen in the May 5
@@ -595,6 +599,10 @@ void BuildDoorSuffix(void* serverDoor, char* outBuf, size_t bufSize) {
         // animating door — better signal than silent.
         AppendCommaSeparated(outBuf, bufSize,
             acc::strings::Get(acc::strings::Id::DoorOpen));
+    } else if (locked != 0) {
+        AppendCommaSeparated(outBuf, bufSize,
+            acc::strings::Get(acc::strings::Id::DoorLocked));
+        AppendLockNeed(serverDoor, outBuf, bufSize);
     } else if (WasDoorLockedAtAreaLoad(serverDoor)) {
         // Closed again / still closed, but this door WAS locked when we got
         // here — the player has picked or keyed it since. Worth saying: it
@@ -1035,6 +1043,17 @@ bool IsDoorLocked(void* serverDoor) {
     return ReadDoorFlags(serverDoor, locked, open) && locked != 0;
 }
 
+bool DoorHasTransitionDest(void* serverDoor) {
+    if (!serverDoor ||
+        GetObjectKind(serverDoor) != static_cast<int>(GameObjectKind::Door)) {
+        return false;
+    }
+    char buf[128] = {0};
+    return TryReadLocString(serverDoor, kDoorTransitionDestOffset, buf,
+                            sizeof(buf)) &&
+           buf[0];
+}
+
 namespace {
 
 struct LockFields {
@@ -1062,7 +1081,7 @@ bool ReadLockFieldsRaw(void* obj, size_t lockedOff, size_t keyReqOff,
 // One log line per object (recent handles remembered), so the raw values
 // can be checked against the object's UTD / UTP template.
 void LogLockOnce(void* obj, int kind, const LockFields& f, const char* key,
-                 LockNeed need) {
+                 LockNeed need, const char* failScript = "") {
     static uint32_t s_logged[64] = {0};
     static int      s_next = 0;
     const uint32_t handle = GetObjectHandle(obj);
@@ -1074,9 +1093,10 @@ void LogLockOnce(void* obj, int kind, const LockFields& f, const char* key,
     char tag[64] = {0};
     TryReadTag(obj, tag, sizeof(tag));
     acclog::Write("LockNeed",
-                  "tag=%s kind=%d locked=%d keyRequired=%d dc=%d key='%s' -> %d",
+                  "tag=%s kind=%d locked=%d keyRequired=%d dc=%d key='%s' "
+                  "failToOpen='%s' -> %d",
                   tag, kind, f.locked, f.keyRequired, f.dc, key ? key : "",
-                  static_cast<int>(need));
+                  failScript ? failScript : "", static_cast<int>(need));
 }
 
 }  // namespace
@@ -1132,7 +1152,20 @@ LockNeed ReadLockNeed(void* gameObject, int& outDc, bool* outLocked) {
         need  = LockNeed::Security;
         outDc = f.dc;
     }
-    LogLockOnce(gameObject, kind, f, haveKey ? key : "", need);
+    // A door no key or slicer opens but with an OnFailToOpen script: the
+    // attempt is the story's cue (Endar Spire bridge doors, the Taris Upper
+    // City Cantina entrance), so "opens only through the story" would talk
+    // the player out of the one thing that works. Say to try it instead.
+    char failScript[32] = {0};
+    if (kind == static_cast<int>(GameObjectKind::Door) &&
+        (need == LockNeed::StoryOnly || need == LockNeed::Unknown) &&
+        acc::off::Ok(kDoorOnFailToOpenOffset) &&
+        ReadCExoString(gameObject, kDoorOnFailToOpenOffset, failScript,
+                       sizeof(failScript)) &&
+        failScript[0]) {
+        need = LockNeed::TryIt;
+    }
+    LogLockOnce(gameObject, kind, f, haveKey ? key : "", need, failScript);
     return need;
 }
 

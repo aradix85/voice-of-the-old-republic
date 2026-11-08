@@ -2493,6 +2493,7 @@ enum class Id : int {
     // ---- Lock detail after "locked" on doors and containers (engine_area
     //      AppendLockNeed, KOTOR 1 only): what it takes to open it.
     LockNeedStoryOnly,        // "opens only through the story" — key required, none named
+    LockNeedTryIt,            // "may open when you try" — locked door with an OnFailToOpen script
     LockNeedKey,              // "needs a key"
     FmtLockNeedSecurity,      // "Security %d" — the Security difficulty
 

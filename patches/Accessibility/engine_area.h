@@ -271,6 +271,11 @@ bool IsDoorOpen(void* serverDoor);
 // non-door, and on fault.
 bool IsDoorLocked(void* serverDoor);
 
+// True when the door names another area as its destination (non-empty
+// TransitionDestination, the "Taris - Upper City Cantina" in the door's
+// label). False on null, a non-door, an empty destination, and on fault.
+bool DoorHasTransitionDest(void* serverDoor);
+
 // What it takes to open a locked door or container, read from the object's
 // own lock fields (UTD / UTP KeyRequired, KeyName, OpenLockDC). KOTOR 1
 // only: the KOTOR 2 layout of these fields is not mapped yet, so there the
@@ -280,6 +285,8 @@ enum class LockNeed {
     StoryOnly,  // a key is required but none is named: opens by script only
     Key,        // a key is required and named
     Security,   // can be picked; outDc holds the Security difficulty
+    TryIt,      // door with an OnFailToOpen script and no other way in:
+                // the attempt itself is what the story reacts to
 };
 // outLocked (optional) receives the live locked flag, so a caller can say
 // "locked" even when the need is Unknown. Doors and placeables only.
@@ -597,6 +604,12 @@ const size_t kDoorTransitionDestOffset     = acc::off::Pick(0x3c8, 0x418);
 const size_t kDoorOpenLockDcOffset         = acc::off::Kotor1Only(0x2bf);  // byte
 const size_t kDoorKeyNameOffset            = acc::off::Kotor1Only(0x2d0);  // CExoString
 const size_t kDoorKeyRequiredOffset        = acc::off::Kotor1Only(0x2d8);  // int (bool)
+// CSWSDoor.scripts[14], the OnFailToOpen script (CExoString). The address DB
+// gives scripts as CExoString[15] at +0x228; the slot order is read from
+// CSWSDoor::LoadDoor (0x0058a1f0, unpacked Steam 1.03): "OnOpen" -> +0x228,
+// "OnClosed" -> +0x230, ..., "OnClick" -> +0x288, "OnDialog" -> +0x290,
+// "OnFailToOpen" -> +0x298.
+const size_t kDoorOnFailToOpenOffset       = acc::off::Kotor1Only(0x298);  // CExoString
 const size_t kPlaceableLockedOffset        = acc::off::Kotor1Only(0x260);  // int (bool)
 const size_t kPlaceableKeyNameOffset       = acc::off::Kotor1Only(0x264);  // CExoString
 const size_t kPlaceableKeyRequiredOffset   = acc::off::Kotor1Only(0x26c);  // int (bool)
