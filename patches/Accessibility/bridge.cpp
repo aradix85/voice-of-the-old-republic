@@ -37,6 +37,8 @@
 #include "guidance_autowalk.h"
 #include "interact_dispatch.h"
 #include "key_inject.h"
+#include "menus_chain.h"
+#include "menus_extract.h"
 #include "log.h"
 #include "mod_version.h"
 #include "narrated_target.h"
@@ -418,6 +420,40 @@ std::string BuildOverview() {
     return s;
 }
 
+// The open screen as the mod's menu navigation sees it: every entry of the
+// focus chain the arrow keys walk, with the focused one marked. Only when
+// that chain belongs to the foreground panel (it is kept after a panel
+// closes).
+std::string BuildMenu() {
+    void* mgr = acc::engine::GetGuiManager();
+    void* panel = mgr ? acc::engine::GetForegroundPanel(mgr) : nullptr;
+    std::string s = "{";
+    if (panel) {
+        s += "\"screen\":" +
+             Json(acc::engine::PanelKindName(acc::engine::IdentifyPanel(panel))) +
+             ",";
+    }
+    namespace ch = acc::menus::chain;
+    if (!panel || ch::g_chainPanel != panel || ch::g_chainCount <= 0) {
+        return s + "\"open\":false}";
+    }
+    s += "\"open\":true,\"focused\":" + std::to_string(ch::g_chainIndex + 1) +
+         ",\"count\":" + std::to_string(ch::g_chainCount) + ",\"entries\":[";
+    const int n = ch::g_chainCount < 150 ? ch::g_chainCount : 150;
+    for (int i = 0; i < n; ++i) {
+        const ch::ChainEntry& e = ch::g_chain[i];
+        char buf[512] = {0};
+        if (e.virtualKind == 0 && e.control) {
+            acc::menus::extract::FromControl(e.control, buf, sizeof(buf), panel);
+        }
+        if (i) s += ",";
+        s += "{\"number\":" + std::to_string(i + 1) +
+             ",\"text\":" + JsonGame(buf[0] ? buf : "?") +
+             (i == ch::g_chainIndex ? ",\"focused\":true" : "") + "}";
+    }
+    return s + "]}";
+}
+
 uint32_t ParseHandle(const std::string& v) {
     if (v.empty()) return 0;
     return static_cast<uint32_t>(std::strtoul(v.c_str(), nullptr, 0));
@@ -493,6 +529,7 @@ std::string RunJob(const Job& job) {
     }
     if (job.path == "/do") return RunAction(job);
     if (job.path == "/overview") return BuildOverview();
+    if (job.path == "/menu") return BuildMenu();
     return "{\"error\":\"unknown job\"}";
 }
 
@@ -667,7 +704,8 @@ void HandleClient(SOCKET c) {
         SendResponse(c, 200, body);
         return;
     }
-    if (path == "/nearby" || path == "/do" || path == "/overview") {
+    if (path == "/nearby" || path == "/do" || path == "/overview" ||
+        path == "/menu") {
         int status = 200;
         std::string body = QueueAndWait(path, params, &status);
         SendResponse(c, status, body);
