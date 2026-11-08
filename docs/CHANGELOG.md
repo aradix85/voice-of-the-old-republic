@@ -91,6 +91,7 @@ push to the branch is built by GitHub Actions and published as the pre-release
   only what the camera sees.
 - Q/E find objects built into a wall, such as the Endar Spire escape pod.
 - Dead creatures are left out of , / . and Q/E.
+- A bystander's remark is no longer cut off by the automatic target line.
 - New setting: everything is spoken by the screen reader (no SAPI or compass
   voice, no 3D speech).
 - Enter on an open door walks through it.
@@ -183,6 +184,10 @@ push to the branch is built by GitHub Actions and published as the pre-release
 - Dead creatures (the engine's dead flag) are left out of the , / . people
   list and Q/E. A killed Sith Soldier stayed listed, and Enter on it started a
   conversation walk that ended in "Movement cancelled".
+- While a bark bubble is open, the automatic focus-follow line ("Ithorian. 3
+  meters.") is queued behind it instead of interrupting it; an explicit Q/E
+  press still interrupts. Talking to an Ithorian, his whole reply was cut off
+  a second after it started.
 - Script triggers (for example "nulltrigger") are no longer treated as area
   transitions.
 

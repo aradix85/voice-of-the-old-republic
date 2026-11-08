@@ -12,6 +12,7 @@
 #include "engine_area.h"
 #include "engine_compass.h"  // ClockPosition — Q/E speaks where, like the , / . cycle
 #include "engine_app.h"     // GetClientAppInternal
+#include "engine_panels.h"  // HasActiveBarkBubble — don't cut a bark off
 #include "engine_player.h"  // GetPartyMembers, GetPlayerPosition
 #include "exit_memory.h"    // TargetWayInfo — where a door leads, the way there
 #include "filter_objects.h"
@@ -262,7 +263,13 @@ bool NarrateHandle(uint32_t handle, const char* reason, bool explicitRequest) {
             }
         }
     }
-    prism::Speak(spoken, /*interrupt=*/true);
+    // The automatic focus-follow must not cut off a bark that is being read.
+    // 2026-11-08, Taris: Enter on an Ithorian surfaced his bark, the engine
+    // then moved its target to him and "Ithorian. 3 meters." interrupted the
+    // line a second later, so the player heard nothing of it. Queue behind
+    // the bark instead; an explicit Q/E press still interrupts.
+    const bool behindBark = !explicitRequest && acc::engine::HasActiveBarkBubble();
+    prism::Speak(spoken, /*interrupt=*/!behindBark);
 
     uint32_t serverHandle = acc::engine::GetObjectHandle(obj);
     acc::narrated_target::Stamp(obj, serverHandle);
