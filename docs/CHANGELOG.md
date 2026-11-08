@@ -42,6 +42,154 @@ player's installed language in-game; this only governs how we *describe* it
 here.) Where naming the exact spoken string matters, give the English term
 and add the German in parentheses if it genuinely aids clarity.
 
+<h2>v0.9.1+bridge (fork aradix85, branch bridge)</h2>
+
+Changes on top of v0.9.1 in this fork. Not part of an upstream release; each
+push to the branch is built by GitHub Actions and published as the pre-release
+`bridge-latest`.
+
+<h3>Overview:</h3>
+
+- Entering a region says, for each exit, where it leads and whether it is
+  visited, new or the way back.
+- Doors in the region announcement carry the same numbers as Q/E and , / .
+- After the exits, "Here:" names everything in the region: people outside
+  the party, containers that are not empty, items on the ground.
+- Visited regions are kept in the save.
+- Ctrl+N gives an exploration overview: the current region, how much is
+  explored, the nearest unexplored place and what is left to search, each with
+  its route.
+- Ctrl+Shift+N walks the whole way to the nearest unexplored region, opening
+  doors on the way.
+- Ctrl+L walks to the nearest container or item left to search and opens it.
+- Small open slivers of the same space within 6 metres count as seen.
+- Focusing a door says which way it leads and what lies beyond it.
+- Anything in another region gives the walking route to it, or "behind a
+  locked door".
+- Enter on a door while the region still holds loot adds "Still here: ...".
+- Enter on something behind a locked door says "No way there now".
+- A walk while the game is paused says "The game is paused. Press Space to
+  walk." instead of "way blocked".
+- A party member standing on the target is named: "X is standing in the way".
+- Door numbers stay the same after saving and loading.
+- Decorative doors are left out of the , / . cycle.
+- , / . lists only what you can still reach, and no empty containers.
+- Script triggers are no longer announced as exits.
+- Locked doors and containers say whether they open only through the story,
+  need a key, or need Security N, with the best Security in the party.
+- Ctrl+H reads the health of the whole party and who can level up; "Name can
+  level up" is announced on its own.
+- Q/E say the clock direction and distance of each object.
+- New setting: Q and E step through everything within 30 metres instead of
+  only what the camera sees.
+- New setting: everything is spoken by the screen reader (no SAPI or compass
+  voice, no 3D speech).
+- Enter on an open door walks through it.
+- Endar Spire: Trask as party leader can no longer try the door that must be
+  opened by your own character.
+- F1 help and the README list the new keys.
+- A local bridge lets an external helper read the game state and act in the
+  game.
+- Log only: the patch log can be read while the game runs.
+
+<h3>Exploration:</h3>
+
+- Region announcements name each exit's destination ("West, to a corridor,
+  visited"; "South, back") and number doors like the cycles ("Door 4 North").
+- "Here:" lists what is in the region whether you have heard it or not, and
+  never names you.
+- Visited regions are stored in a save variable per area (`ACC_VISIT_<area>`)
+  by region centre, so they survive saving, loading and game updates.
+- Ctrl+N (exploration overview) starts with the current region, then the
+  explored count, the nearest unexplored region and the exit toward it, how
+  many regions lie behind locked doors, and up to five places left to search
+  with their routes.
+- Ctrl+Shift+N walks region by region to the nearest unexplored region,
+  chosen when you press the key, and opens closed doors on the way. It stops
+  on arrival, when you move yourself or start another walk, when a step is
+  blocked, in combat or when a panel opens. Was Alt+N in earlier builds of
+  this fork; Alt plus a letter put Windows into menu mode and left the
+  keyboard dead until Alt+Tab.
+- Ctrl+L walks to the nearest container with items or item on the ground and
+  uses it.
+- Regions joined to yours without a door whose centre is within 6 metres
+  count as seen. Large rooms such as the Endar Spire bridge are cut into many
+  small regions, and walking to each one sent you back and forth. Loot and
+  creatures are tracked separately, so nothing worth finding is skipped.
+- Exits into rooms and open areas say "to an area", matching the region label.
+
+<h3>Targets and walking:</h3>
+
+- A focused door says which way it leads and what lies beyond, seen from your
+  side; anything in another region gives the route ("via Door 2 East, about 30
+  metres to walk") or "behind a locked door". Routes follow the region graph
+  instead of a straight line.
+- Enter on a door or exit while the region still holds loot queues a short
+  "Still here: Metal box" after the walk line, at most once per door every 20
+  seconds.
+- Enter on something only behind a locked door adds "No way there now: it is
+  behind a locked door."
+- A walk requested while the game is paused (Space, or the enemy-sighted
+  auto-pause) says once that the game is paused; the walk resumes on unpause.
+- When a walk stalls because a party member stands on the target, you hear
+  "X is standing in the way. Switch to them with Tab and step aside."
+- Enter on an open door walks through it.
+
+<h3>Cycles:</h3>
+
+- Door numbers depend on position only, so they no longer change after a
+  save and reload (the engine restores doors in a different order).
+- Decorative (cosmetic) doors are left out of the , / . door list.
+- In the world, , / . skip what you cannot reach (behind a locked door) and
+  empty containers; an empty category is skipped.
+- Q/E name each object with its clock direction and distance.
+- Setting "Q and E: everything around you": Q/E step through everything
+  within 30 metres that is not behind a wall; in combat only living enemies.
+- Script triggers (for example "nulltrigger") are no longer treated as area
+  transitions.
+
+<h3>Locks and party:</h3>
+
+- Locked doors and containers say "locked, opens only through the story",
+  "needs a key" or "Security N, best in your party: Name with N".
+- Ctrl+H reads every party member's health and who can level up; "Name can
+  level up" is announced when it becomes true.
+
+<h3>Endar Spire:</h3>
+
+- With Trask as party leader, the door Trask's scene needs your own character
+  to try is refused with a spoken explanation (trying it as Trask ended in a
+  black screen). The "Sealed" line waits 15 seconds after his scene.
+
+<h3>Speech:</h3>
+
+- Setting "All via screen reader": no SAPI or compass voice and no 3D speech;
+  everything goes to the screen reader.
+
+<h3>Help:</h3>
+
+- F1 lists Ctrl+N, Ctrl+Shift+N, Ctrl+L and Ctrl+H; the Q/E, , / . and Ctrl+N
+  descriptions match the new behaviour. The README (all seven languages) lists
+  the new keys and what a region announcement says. The new keys have no
+  controller rows yet.
+
+<h3>Bridge:</h3>
+
+- A loopback HTTP server (`bridge.json` next to `swkotor.exe` holds port and
+  token) serves the game state, what was spoken, nearby objects, the
+  exploration overview, all objects (`/objects`), the region graph
+  (`/rooms`), the open screen's entries (`/menu`), and actions (select, use,
+  walk, speak, key). Used by the fork's own `kotor.py` helper.
+- No world reads happen before the player exists, so a new game no longer
+  sticks on the load screen.
+
+<h3>Build:</h3>
+
+- GitHub Actions builds `accessibility.dll` on every push to `bridge` and
+  publishes it as the pre-release `bridge-latest`.
+- Log only: the patch log is opened shared for reading, so it can be followed
+  while the game runs.
+
 <h2>v0.9.1</h2>
 
 <h3>Overview:</h3>
