@@ -323,7 +323,7 @@ void PollHotkey() {
     // Ctrl+N — exploration overview: regions explored, nearest unexplored
     // and the exit toward it, loot left. Self-gates like H.
     acc::exit_memory::PollOverviewHotkey();
-    // Ctrl+Shift+N / Alt+N — walk toward the nearest unexplored region / to
+    // Ctrl+Shift+N / Ctrl+L — walk toward the nearest unexplored region / to
     // the nearest container or item left to search.
     acc::exit_memory::PollWalkHotkeys();
     // Ctrl+H — every party member's health and who can level up.

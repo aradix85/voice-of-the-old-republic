@@ -357,12 +357,18 @@ void InitDefaults() {
     // engine binding, and both N bindings above forbid Ctrl.
     bind(Action::ExploreOverview,      'N', 0, kModCtrl,
                                        kModShift | kModAlt | kModAltGr);
-    // Ctrl+Shift+N — walk toward that nearest unexplored region; Alt+N —
-    // walk to and open the nearest container with items (exit_memory).
+    // Ctrl+Shift+N — walk toward that nearest unexplored region; Ctrl+L (L for
+    // loot) — walk to and open the nearest container with items
+    // (exit_memory). Loot was on Alt+N first, and that is exactly the Alt +
+    // letter trap documented at CopyLastSpoken below: Windows' keyboard-menu
+    // mode left the engine's DirectInput keyboard unacquired, so the loot
+    // panel that opened at the end of the walk ignored every key until an
+    // alt-tab (2026-11-08, Anouk). Ctrl+L: L has no Ctrl binding, and
+    // LevelUpOpen (Shift+L) is not reached without Shift.
     bind(Action::ExploreWalkUnexplored, 'N', 0, kModCtrl | kModShift,
                                        kModAlt | kModAltGr);
-    bind(Action::ExploreWalkLoot,      'N', 0, kModAlt,
-                                       kModShift | kModCtrl | kModAltGr);
+    bind(Action::ExploreWalkLoot,      'L', 0, kModCtrl,
+                                       kModShift | kModAlt | kModAltGr);
     // Ctrl+H — everyone's health (party_status). Bare H is the leader's own
     // status and forbids Ctrl; Shift+H (queue) requires Shift.
     bind(Action::PartyStatusAnnounce,  'H', 0, kModCtrl,

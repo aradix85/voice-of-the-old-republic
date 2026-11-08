@@ -150,6 +150,21 @@ void RemindLootOnLeaving(void* target);
 bool UnreachableFlags(void* const* objs, const Vector* positions, int count,
                       bool* out);
 
+// The area's regions as the overview sees them, for the bridge's /rooms.
+struct RegionSummary {
+    int    id      = -1;
+    Vector centre  = {0.0f, 0.0f, 0.0f};
+    const char* kind = "";  // "corridor" / "junction" / "dead end" / "room"
+    bool   visited = false;
+    bool   here    = false;   // the player's region
+    bool   reachable = false; // without passing a locked door
+    bool   behindLock = false;  // only through a locked door
+    float  walk    = 0.0f;    // centre-to-centre metres from the player's region
+};
+// False without a graph. `links` gets each region pair once (a < b).
+bool ListRegions(std::vector<RegionSummary>& out,
+                 std::vector<std::pair<int, int>>& links);
+
 // Enter on something that lies only behind a locked door: a beat after the
 // walk line, "No way there now: it is behind a locked door." The dispatch
 // itself is never held back.
@@ -157,7 +172,7 @@ void WarnIfBehindLock(void* target);
 
 // Ctrl+Shift+N (ExploreWalkUnexplored): walk one region toward the nearest
 // unexplored one — through the closed door on the way, opening it, when
-// there is one. Alt+N (ExploreWalkLoot): walk to the nearest container with
+// there is one. Ctrl+L (ExploreWalkLoot): walk to the nearest container with
 // items or item on the ground and use it, like Shift+- on it.
 void PollWalkHotkeys();
 

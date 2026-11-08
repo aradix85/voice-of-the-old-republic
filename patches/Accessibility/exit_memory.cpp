@@ -1275,6 +1275,36 @@ bool UnreachableFlags(void* const* objs, const Vector* positions, int count,
     return true;
 }
 
+bool ListRegions(std::vector<RegionSummary>& out,
+                 std::vector<std::pair<int, int>>& links) {
+    out.clear();
+    links.clear();
+    Vector player;
+    if (!acc::engine::GetPlayerPosition(player)) return false;
+    void* area = acc::engine::GetCurrentArea();
+    Graph g;
+    if (!BuildGraph(area, player, g)) return false;
+    for (size_t i = 0; i < g.nodes.size(); ++i) {
+        RegionSummary r;
+        r.id      = g.nodes[i].id;
+        r.centre  = g.nodes[i].centre;
+        switch (g.nodes[i].kind) {
+            case acc::room_topology::KindCorridor: r.kind = "corridor"; break;
+            case acc::room_topology::KindJunction: r.kind = "junction"; break;
+            case acc::room_topology::KindDeadEnd:  r.kind = "dead end"; break;
+            default:                               r.kind = "room"; break;
+        }
+        r.visited    = area == g_area && g_visited.count(r.id) != 0;
+        r.here       = static_cast<int>(i) == g.si;
+        r.reachable  = g.distOpen[i] < kFar;
+        r.behindLock = !r.reachable && g.distAll[i] < kFar;
+        r.walk       = r.reachable ? g.distOpen[i] : 0.0f;
+        out.push_back(r);
+    }
+    for (const ClusterLink& l : g.links) links.emplace_back(l.a, l.b);
+    return true;
+}
+
 void WarnIfBehindLock(void* target) {
     if (!target || acc::view_mode::IsActive()) return;
     Vector pos;

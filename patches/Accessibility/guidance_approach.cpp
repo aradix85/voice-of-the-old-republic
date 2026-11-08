@@ -188,6 +188,32 @@ bool TryReissueUse(float gap) {
     return true;
 }
 
+// A party member standing at the target, closer to it than the player and
+// within a few metres: the walk cannot get past them to the use point.
+// 2026-11-08: Trask stood on the Bridge door's use point, every Enter ended
+// in "way blocked" and the player could not know why. Fills `name`.
+bool CompanionInTheWay(const Vector& tgt, char* name, size_t nameSize) {
+    Vector pc;
+    if (!acc::engine::GetPlayerPosition(pc)) return false;
+    const float pcGap = GapTo(tgt, pc);
+    void* leader = acc::engine::GetPlayerServerCreature();
+    uint32_t handles[12] = {};
+    const int count = acc::engine::GetPartyMembers(handles, 12);
+    for (int i = 0; i < count; ++i) {
+        void* obj = acc::engine::ResolveServerObjectHandle(handles[i]);
+        if (!obj || obj == leader) continue;
+        Vector p;
+        if (!acc::engine::GetObjectPosition(obj, p)) continue;
+        const float gap = GapTo(tgt, p);
+        if (gap > 3.0f || gap >= pcGap) continue;
+        name[0] = '\0';
+        if (acc::engine::GetObjectName(obj, name, nameSize) && name[0]) {
+            return true;
+        }
+    }
+    return false;
+}
+
 // Break a blocked approach: cancel the bouncing walk, restore input if the
 // caller disabled it (explicit, so engine_player's queue-watched restore and
 // this tracker never fight), clear dialog-pending limbo (talk only), and
@@ -214,7 +240,15 @@ void OnBlocked(DWORD stalledMs) {
         } else {
             Vector tgt;
             char msg[192];
-            if (ResolveTargetPos(tgt) && g_st.name[0]) {
+            char who[64];
+            if (ResolveTargetPos(tgt) && CompanionInTheWay(tgt, who, sizeof(who))) {
+                std::snprintf(msg, sizeof(msg),
+                              acc::strings::Get(acc::strings::Id::FmtCompanionInTheWay),
+                              who);
+                prism::Speak(msg, /*interrupt=*/true);
+                acclog::Write("Approach", "blocked with %s at the target -> [%s]",
+                              who, msg);
+            } else if (ResolveTargetPos(tgt) && g_st.name[0]) {
                 SpeakWayBlocked(g_st.name, tgt);
             } else {
                 std::snprintf(msg, sizeof(msg), "%s",

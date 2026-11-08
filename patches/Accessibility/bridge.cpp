@@ -309,6 +309,26 @@ std::string BuildSnapshot() {
     for (int i = 0; i < n; ++i) {
         addMember(acc::engine::ResolveServerObjectHandle(handles[i]));
     }
+    // The player character is in neither list while a companion leads (Tab):
+    // find it in the area by its chargen name.
+    char pcName[128] = {0};
+    if (area && acc::engine::GetPlayerCharacterName(pcName, sizeof(pcName)) &&
+        pcName[0]) {
+        acc::engine::AreaObjectIterator it(area);
+        while (void* obj = it.Next()) {
+            if (acc::engine::GetObjectKind(obj) !=
+                static_cast<int>(acc::engine::GameObjectKind::Creature)) {
+                continue;
+            }
+            char nm[128] = {0};
+            if (!acc::engine::GetObjectName(obj, nm, sizeof(nm)) ||
+                _stricmp(nm, pcName) != 0) {
+                continue;
+            }
+            addMember(obj);
+            break;
+        }
+    }
     s += "]";
 
     s += ",\"in_combat\":";
@@ -453,6 +473,113 @@ std::string BuildOverview() {
     return s;
 }
 
+// Every door, loot container and ground item in the area with its live state,
+// heard before or not, for the map tool (kotor_kaart.py --live) to lay over
+// the static game files: which doors are open, which containers are empty,
+// what can be reached now, and what the game added (remains of the fallen).
+std::string BuildObjects() {
+    if (!acc::game::IsKotor1())
+        return "{\"error\":\"objects is KOTOR 1 only for now\"}";
+    PlayerFrame f = ReadPlayerFrame();
+    void* area = acc::engine::GetCurrentArea();
+    if (!f.ok || !area) return "{\"error\":\"no player position (not in the world?)\"}";
+
+    struct Entry {
+        void* obj;
+        acc::filter::CycleCategory cat;
+        Vector pos;
+    };
+    std::vector<Entry> found;
+    acc::engine::AreaObjectIterator it(area);
+    while (void* obj = it.Next()) {
+        using C = acc::filter::CycleCategory;
+        C cat;
+        if (acc::filter::ObjectMatches(obj, C::Door)) cat = C::Door;
+        else if (acc::filter::ObjectMatches(obj, C::Container)) cat = C::Container;
+        else if (acc::filter::ObjectMatches(obj, C::Item)) cat = C::Item;
+        else continue;
+        Vector p;
+        if (!acc::engine::GetObjectPosition(obj, p)) continue;
+        found.push_back(Entry{obj, cat, p});
+        if (found.size() >= 256) break;
+    }
+    std::vector<void*> objs;
+    std::vector<Vector> poss;
+    for (const Entry& e : found) {
+        objs.push_back(e.obj);
+        poss.push_back(e.pos);
+    }
+    std::vector<char> behind(found.size(), 0);
+    if (!found.empty()) {
+        bool flags[256] = {};
+        if (acc::exit_memory::UnreachableFlags(objs.data(), poss.data(),
+                                               static_cast<int>(found.size()),
+                                               flags)) {
+            for (size_t i = 0; i < found.size(); ++i) behind[i] = flags[i] ? 1 : 0;
+        }
+    }
+
+    std::string s = "{\"objects\":[";
+    for (size_t i = 0; i < found.size(); ++i) {
+        const Entry& e = found[i];
+        char nbuf[256] = {0};
+        std::string name = "?";
+        if (acc::narration::GetSpokenName(e.obj, e.cat, nbuf, sizeof(nbuf)) && nbuf[0])
+            name = ToUtf8(nbuf);
+        char hbuf[16];
+        std::snprintf(hbuf, sizeof(hbuf), "0x%08x", acc::engine::GetObjectHandle(e.obj));
+        if (i) s += ",";
+        s += "{\"category\":" + Json(CategoryKey(e.cat)) +
+             ",\"name\":" + Json(name) + ",\"handle\":" + Json(hbuf) +
+             ",\"x\":" + Num(e.pos.x) + ",\"y\":" + Num(e.pos.y) +
+             ",\"reachable\":" + (behind[i] ? "false" : "true");
+        if (e.cat == acc::filter::CycleCategory::Door) {
+            s += std::string(",\"open\":") +
+                 (acc::engine::IsDoorOpen(e.obj) ? "true" : "false") +
+                 ",\"locked\":" + (acc::engine::IsDoorLocked(e.obj) ? "true" : "false") +
+                 ",\"cosmetic\":" + (acc::engine::IsDoorCosmetic(e.obj) ? "true" : "false");
+        } else if (e.cat == acc::filter::CycleCategory::Container) {
+            s += ",\"items\":" + std::to_string(acc::engine::GetContainerItemCount(e.obj));
+        }
+        s += ",\"where\":" + RelativeJson(f, e.pos) + "}";
+    }
+    s += "]}";
+    return s;
+}
+
+// The area's regions (the mod's room graph): kind, visited, reachable now,
+// and which regions touch. For the map tool's room summary.
+std::string BuildRooms() {
+    if (!acc::game::IsKotor1())
+        return "{\"error\":\"rooms is KOTOR 1 only for now\"}";
+    PlayerFrame f = ReadPlayerFrame();
+    std::vector<acc::exit_memory::RegionSummary> rooms;
+    std::vector<std::pair<int, int>> links;
+    if (!acc::exit_memory::ListRegions(rooms, links))
+        return "{\"error\":\"no room map for this area (yet)\"}";
+    std::string s = "{\"rooms\":[";
+    for (size_t i = 0; i < rooms.size(); ++i) {
+        const auto& r = rooms[i];
+        if (i) s += ",";
+        s += "{\"id\":" + std::to_string(r.id) + ",\"kind\":" + Json(r.kind) +
+             ",\"x\":" + Num(r.centre.x) + ",\"y\":" + Num(r.centre.y) +
+             ",\"visited\":" + (r.visited ? "true" : "false") +
+             ",\"here\":" + (r.here ? "true" : "false") +
+             ",\"reachable\":" + (r.reachable ? "true" : "false") +
+             ",\"behind_lock\":" + (r.behindLock ? "true" : "false") +
+             ",\"walk\":" + Num(r.walk) +
+             ",\"where\":" + RelativeJson(f, r.centre) + "}";
+    }
+    s += "],\"links\":[";
+    for (size_t i = 0; i < links.size(); ++i) {
+        if (i) s += ",";
+        s += "[" + std::to_string(links[i].first) + "," +
+             std::to_string(links[i].second) + "]";
+    }
+    s += "]}";
+    return s;
+}
+
 // The open screen as the mod's menu navigation sees it: every entry of the
 // focus chain the arrow keys walk, with the focused one marked. Only when
 // that chain belongs to the foreground panel (it is kept after a panel
@@ -562,6 +689,8 @@ std::string RunJob(const Job& job) {
     }
     if (job.path == "/do") return RunAction(job);
     if (job.path == "/overview") return BuildOverview();
+    if (job.path == "/objects") return BuildObjects();
+    if (job.path == "/rooms") return BuildRooms();
     if (job.path == "/menu") return BuildMenu();
     return "{\"error\":\"unknown job\"}";
 }
