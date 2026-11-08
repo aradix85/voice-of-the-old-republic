@@ -644,7 +644,7 @@ const char* Get(Id id) {
         case Id::HelpKeyViewMode:       return "B: look-around mode, hold position while you turn the camera";
         case Id::HelpKeySwitchLeader:   return "Tab: switch the party member you control";
 
-        case Id::HelpKeyCycleTargets:   return "Q and E: cycle objects currently in view";
+        case Id::HelpKeyCycleTargets:   return "Q and E: cycle objects currently in view, or everything within 30 metres if that is turned on in Mod settings";
         case Id::HelpKeyInteract:       return "Enter: interact with or attack the focused target";
         case Id::HelpKeyOpenActionMenu: return "Shift plus Enter: open the action menu for the focused target";
         case Id::HelpKeySelfStatus:     return "H: announce your own health, effects and weapon";
@@ -653,7 +653,7 @@ const char* Get(Id id) {
         case Id::HelpKeyBeacon:         return "Control plus minus: start a guidance beacon to the focused object";
         case Id::HelpKeyDialogRepeat:   return "R: repeat the current spoken line";
 
-        case Id::HelpKeyCycleObjects:   return "Comma and period: cycle objects you have already discovered, in the current category";
+        case Id::HelpKeyCycleObjects:   return "Comma and period: cycle objects you have already discovered and can still reach, in the current category. Empty containers and decorative doors are left out";
         case Id::HelpKeyCycleCategory:  return "Shift plus comma or period: previous or next category";
         case Id::HelpKeyCycleEnds:      return "Control plus comma or period: jump to the nearest or farthest object";
         case Id::HelpKeyHeading:        return "Right Alt: announce your facing direction and the area you are in";
@@ -1213,7 +1213,7 @@ const char* Get(Id id) {
         case Id::FmtOverviewToSearch:     return "To search: %d";
         case Id::OverviewNothingToSearch: return "Nothing left to search";
         case Id::KbNameExploreOverview:   return "Exploration overview";
-        case Id::HelpKeyExploreOverview:  return "Ctrl plus N: how much of this area you have explored, the nearest unexplored place and the exit towards it, and what is left to search";
+        case Id::HelpKeyExploreOverview:  return "Ctrl plus N: the room you are in, how much of this area you have explored, the nearest unexplored place and the way there, and what is left to search";
         case Id::ModSettingQEAllAround:       return "Q and E: everything around you, not just what the camera sees";
         case Id::FmtPartyMemberHp:            return "%s %d of %d";
         case Id::PartyCanLevelUp:             return "can level up";

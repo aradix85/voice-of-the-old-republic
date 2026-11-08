@@ -642,7 +642,7 @@ const char* Get(Id id) {
         case Id::HelpKeyViewMode:       return "B: modalit\xE0 osservazione, restare fermi mentre si gira la telecamera";
         case Id::HelpKeySwitchLeader:   return "Tab: cambiare il membro del gruppo controllato";
 
-        case Id::HelpKeyCycleTargets:   return "Q ed E: scorrere gli oggetti attualmente visibili";
+        case Id::HelpKeyCycleTargets:   return "Q ed E: scorrere gli oggetti attualmente visibili, o tutto ci\xf2 che si trova entro 30 metri se lo attivi nelle impostazioni della mod";
         case Id::HelpKeyInteract:       return "Invio: interagire con il bersaglio selezionato o attaccarlo";
         case Id::HelpKeyOpenActionMenu: return "Maiusc pi\xF9 Invio: aprire il menu azioni del bersaglio selezionato";
         case Id::HelpKeySelfStatus:     return "H: annunciare la propria salute, gli effetti e l'arma";
@@ -651,7 +651,7 @@ const char* Get(Id id) {
         case Id::HelpKeyBeacon:         return "Ctrl pi\xF9 meno: avviare una guida verso l'oggetto evidenziato";
         case Id::HelpKeyDialogRepeat:   return "R: ripetere la battuta attuale";
 
-        case Id::HelpKeyCycleObjects:   return "Virgola e punto: scorrere gli oggetti gi\xE0 scoperti della categoria attuale";
+        case Id::HelpKeyCycleObjects:   return "Virgola e punto: scorrere gli oggetti gi\xe0 scoperti della categoria attuale che puoi ancora raggiungere. I contenitori vuoti e le porte decorative vengono saltati";
         case Id::HelpKeyCycleCategory:  return "Maiusc pi\xF9 virgola o punto: categoria precedente o successiva";
         case Id::HelpKeyCycleEnds:      return "Ctrl pi\xF9 virgola o punto: andare all'oggetto pi\xF9 vicino o pi\xF9 lontano";
         case Id::HelpKeyHeading:        return "Alt destro: annunciare la direzione in cui guardi e la zona in cui ti trovi";
@@ -1213,7 +1213,7 @@ const char* Get(Id id) {
         case Id::FmtOverviewToSearch:     return "Da perquisire: %d";
         case Id::OverviewNothingToSearch: return "Niente altro da perquisire";
         case Id::KbNameExploreOverview:   return "Panoramica esplorazione";
-        case Id::HelpKeyExploreOverview:  return "Ctrl pi\xf9 N: quanto di quest'area hai esplorato, il punto inesplorato pi\xf9 vicino con l'uscita che vi porta, e cosa resta da perquisire";
+        case Id::HelpKeyExploreOverview:  return "Ctrl pi\xf9 N: la stanza in cui ti trovi, quanto di quest'area hai esplorato, il punto inesplorato pi\xf9 vicino con la strada per arrivarci, e cosa resta da perquisire";
         case Id::ModSettingQEAllAround:       return "Q ed E: tutto intorno a te, non solo ci\xf2 che vede la telecamera";
         case Id::FmtPartyMemberHp:            return "%s %d su %d";
         case Id::PartyCanLevelUp:             return "pu\xf2 salire di livello";

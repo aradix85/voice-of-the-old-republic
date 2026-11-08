@@ -103,12 +103,14 @@ Mod zostawia domyślny układ klawiszy gry bez zmian, z jednym ergonomicznym wyj
 - Shift+L — Otwarcie panelu awansu na poziom
 - F1 — Otwarcie lub zamknięcie pełnej listy klawiszy; Ctrl+F1 — odczytanie klawiszy bieżącego ekranu
 - Ctrl+R — Skopiowanie do schowka ostatnio wypowiedzianego tekstu (kwestii dialogowej, wpisu w dzienniku, imienia NPC — tego, co przeczytano ostatnio)
+- Ctrl+H — Zdrowie całej drużyny i kto może awansować (gdy ktoś może awansować, jest to też ogłaszane samo)
+- Enter na otwartych drzwiach — Przejście przez nie
 
 <h3>Klawisze moda — cykl odkrytych obiektów</h3>
 
 Drugi cykl, obok Q / E, który przechodzi po obiektach już odkrytych w bieżącym obszarze — drzwiach, pojemnikach, postaciach, przejściach między obszarami, punktach orientacyjnych i twoich własnych znacznikach na mapie — pogrupowanych według kategorii. (Włącz „Wybór obiektów na całej mapie" w Ustawieniach moda, żeby objąć też rzeczy jeszcze nieodnalezione.)
 
-- `,` / `.` — Poprzedni / następny obiekt w bieżącej kategorii
+- `,` / `.` — Poprzedni / następny obiekt w bieżącej kategorii (tylko to, do czego nadal możesz dojść: obiekty za zamkniętymi drzwiami, puste pojemniki i drzwi dekoracyjne są pomijane)
 - Shift+`,` / Shift+`.` — Poprzednia / następna kategoria (istoty, drzwi, pojemniki, przejścia, znaczniki mapy, …)
 - Ctrl+`,` / Ctrl+`.` — Skok do najbliższego / najdalszego obiektu w kategorii
 - `/` (układ amerykański) lub `-` (układ niemiecki) — Zapowiedź aktualnie wskazanego obiektu
@@ -119,6 +121,11 @@ Drugi cykl, obok Q / E, który przechodzi po obiektach już odkrytych w bieżąc
 
 - AltGr (prawy Alt, samodzielnie) — Zapowiedź bieżącego kierunku patrzenia jako strony świata, głosem kompasu, a potem obszaru, w którym jesteś
 - N — Obrót kamery do wyjścia z bieżącego obszaru najbliższego kierunkowi, w którym patrzysz, mierzonego od miejsca, w którym stoisz; każde kolejne naciśnięcie obraca zgodnie z ruchem wskazówek zegara do następnego wyjścia. Tam, gdzie żadne wyjścia nie są znane, obrót o 90° zgodnie z ruchem wskazówek zegara do następnej strony świata. Jeśli radiolatarnia jest włączona, zamiast tego wycelowanie w jej następny punkt trasy
+- Ctrl+N — Przegląd eksploracji: pomieszczenie, w którym jesteś, ile obszaru zbadałeś, najbliższe niezbadane miejsce i droga do niego, i co zostało do przeszukania, każde z trasą
+- Ctrl+Shift+N — Pójście w stronę najbliższego niezbadanego miejsca
+- Ctrl+L — Pójście do najbliższego pojemnika lub przedmiotu do przeszukania i otwarcie go
+- Q / E — Mod dodaje kierunek według zegara i odległość. Gdy w ustawieniach moda włączone jest „Q i E: wszystko wokół ciebie”, przechodzą przez wszystko w promieniu 30 metrów, co nie jest za ścianą (w walce tylko żywi wrogowie)
+- Po wejściu do pomieszczenia — Każde wyjście mówi, dokąd prowadzi i czy już tam byłeś; potem następuje lista wszystkiego, co jest w pomieszczeniu. Drzwi mówią też po wybraniu, dokąd prowadzą, a przy rzeczach w innym pomieszczeniu słyszysz drogę do nich
 - Tab — Zapowiada nowego przywódcę drużyny po tym, jak silnik przełączy sterowanie
 
 <h3>Klawisze moda — tryb widoku</h3>

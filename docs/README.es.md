@@ -103,12 +103,14 @@ El mod deja intacto el mapa de teclas predeterminado del juego, con un cambio er
 - Mayús+L — Abrir el panel de subida de nivel
 - F1 — Abrir o cerrar la lista completa de teclas; Ctrl+F1 — leer las teclas de la pantalla actual
 - Ctrl+R — Copiar al portapapeles el último texto leído (una línea de diálogo, una entrada del diario, el nombre de un PNJ: lo último que se haya leído)
+- Ctrl+H — Salud de todo el grupo y quién puede subir de nivel (cuando alguien puede subir de nivel, también se anuncia solo)
+- Intro sobre una puerta abierta — Cruzarla
 
 <h3>Teclas del mod — ciclo de objetos descubiertos</h3>
 
 Un segundo ciclo, además de Q / E, que recorre los objetos que ya has descubierto en la zona actual — puertas, contenedores, personajes, transiciones de zona, puntos de referencia y tus propias marcas de mapa — agrupados por categoría. (Activa "Selección de objetos en todo el mapa" en los Ajustes del mod para incluir también lo que aún no has encontrado.)
 
-- `,` / `.` — Objeto anterior / siguiente en la categoría actual
+- `,` / `.` — Objeto anterior / siguiente en la categoría actual (solo lo que todavía puedes alcanzar: se omiten los objetos tras una puerta cerrada con llave, los contenedores vacíos y las puertas decorativas)
 - Mayús+`,` / Mayús+`.` — Categoría anterior / siguiente (criaturas, puertas, contenedores, transiciones, marcas de mapa, …)
 - Ctrl+`,` / Ctrl+`.` — Saltar al objeto más cercano / más lejano de la categoría
 - `/` (distribución de EE. UU.) o `-` (distribución alemana) — Anunciar el objeto enfocado actualmente
@@ -119,6 +121,11 @@ Un segundo ciclo, además de Q / E, que recorre los objetos que ya has descubier
 
 - AltGr (Alt derecho, solo) — Anunciar la orientación actual como punto cardinal, con la voz de la brújula, y después la zona en la que estás
 - N — Girar la cámara hacia la salida de tu zona actual más cercana a la dirección en la que miras, medida desde donde estás; cada pulsación más gira en sentido horario a la siguiente salida. Donde no se conocen salidas, gira 90° en sentido horario hacia el siguiente punto cardinal. Si hay una baliza activa, apuntar en su lugar al siguiente punto de ruta de la baliza
+- Ctrl+N — Resumen de exploración: la sala en la que estás, cuánto de la zona has explorado, el lugar inexplorado más cercano y el camino hacia él, y lo que queda por registrar, cada cosa con su ruta
+- Ctrl+Mayús+N — Ir hacia el lugar inexplorado más cercano
+- Ctrl+L — Ir al contenedor u objeto por registrar más cercano y abrirlo
+- Q / E — El mod añade la dirección horaria y la distancia. Con «Q y E: todo a tu alrededor» activado en los ajustes del mod, recorren todo lo que hay a menos de 30 metros y no está tras una pared (en combate, solo enemigos vivos)
+- Al entrar en una sala — Cada salida dice adónde lleva y si ya has estado allí; después sigue una lista con todo lo que hay en la sala. Las puertas también dicen adónde llevan al seleccionarlas, y para lo que está en otra sala oyes el camino hasta allí
 - Tab — Anuncia el nuevo líder del grupo después de que el motor cambie el control
 
 <h3>Teclas del mod — modo vista</h3>

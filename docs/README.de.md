@@ -103,12 +103,14 @@ Die Mod lässt das Standard-Tastaturlayout des Spiels unverändert, mit einer er
 - Shift+L — Stufenaufstieg-Bildschirm öffnen
 - F1 — Die vollständige Tastenliste öffnen oder schließen; Ctrl+F1 — die Tasten für den aktuellen Bildschirm vorlesen
 - Strg+R — Den zuletzt gesprochenen Text in die Zwischenablage kopieren (eine Dialogzeile, einen Journaleintrag, einen NPC-Namen — was zuletzt vorgelesen wurde)
+- Ctrl+H — Gesundheit aller Gruppenmitglieder und wer aufsteigen kann (sobald jemand aufsteigen kann, wird das auch von selbst angesagt)
+- Enter auf einer offenen Tür — Hindurchgehen
 
 <h3>Mod-Tasten — Liste entdeckter Objekte</h3>
 
 Eine zweite Liste, zusätzlich zu Q / E, mit den Objekten, die du im aktuellen Bereich bereits entdeckt hast — Türen, Behälter, Charaktere, Bereichsübergänge, Landmarken und deine eigenen Kartenmarker — nach Kategorie gruppiert. (Aktiviere „Kartenweite Objektauswahl" in den Mod-Einstellungen, um auch noch nicht gefundene Dinge einzuschließen.)
 
-- `,` / `.` — Vorheriges / nächstes Objekt in der aktuellen Kategorie
+- `,` / `.` — Vorheriges / nächstes Objekt in der aktuellen Kategorie (nur was du noch erreichen kannst: Objekte hinter einer verschlossenen Tür, leere Behälter und dekorative Türen werden ausgelassen)
 - Shift+`,` / Shift+`.` — Vorherige / nächste Kategorie (Kreaturen, Türen, Behälter, Übergänge, Kartenmarker, …)
 - Ctrl+`,` / Ctrl+`.` — Zum nächstgelegenen / entferntesten Objekt der Kategorie springen
 - `-` (deutsches Layout) oder `/` (US-Layout) — Das aktuell fokussierte Objekt ansagen
@@ -119,6 +121,11 @@ Eine zweite Liste, zusätzlich zu Q / E, mit den Objekten, die du im aktuellen B
 
 - AltGr (rechte Alt-Taste, allein) — Aktuelle Blickrichtung als Himmelsrichtung ansagen, mit der Kompassstimme, danach den Bereich, in dem du stehst
 - N — Kamera zu dem Ausgang deines aktuellen Bereichs drehen, der deiner Blickrichtung am nächsten liegt, gemessen von deinem Standort; jeder weitere Druck dreht im Uhrzeigersinn zum nächsten Ausgang. Wo keine Ausgänge bekannt sind, 90° im Uhrzeigersinn zur nächsten Himmelsrichtung. Ist eine Bake aktiv, stattdessen zum nächsten Wegpunkt der Bake ausrichten
+- Ctrl+N — Erkundungsübersicht: der Raum, in dem du bist, wie viel des Gebiets du erkundet hast, der nächste unerkundete Ort und der Weg dorthin, und was noch zu durchsuchen ist, jeweils mit Route
+- Ctrl+Shift+N — Zum nächsten unerkundeten Ort gehen
+- Ctrl+L — Zum nächsten Behälter oder Gegenstand gehen, der noch zu durchsuchen ist, und ihn öffnen
+- Q / E — Die Mod nennt Uhrzeigerrichtung und Entfernung. Ist in den Mod-Einstellungen „Q und E: alles um dich herum“ eingeschaltet, gehen sie alles im Umkreis von 30 Metern durch, das nicht hinter einer Wand liegt (im Kampf nur lebende Gegner)
+- Beim Betreten eines Raums — Jeder Ausgang sagt, wohin er führt und ob du schon dort warst; danach folgt eine Liste mit allem, was im Raum ist. Türen sagen auch beim Anwählen, wohin sie führen, und bei Dingen in einem anderen Raum hörst du den Weg dorthin
 - Tab — Den neuen Gruppenanführer ansagen, nachdem die Engine die Steuerung wechselt
 
 <h3>Mod-Tasten — Sichtmodus</h3>

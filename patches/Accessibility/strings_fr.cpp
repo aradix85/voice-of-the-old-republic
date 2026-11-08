@@ -643,7 +643,7 @@ const char* Get(Id id) {
         case Id::HelpKeyViewMode:       return "B : mode observation, rester sur place en tournant la cam\xE9ra";
         case Id::HelpKeySwitchLeader:   return "Tab : changer de membre du groupe contr\xF4l\xE9";
 
-        case Id::HelpKeyCycleTargets:   return "Q et E : faire d\xE9""filer les objets actuellement visibles";
+        case Id::HelpKeyCycleTargets:   return "Q et E : faire d\xe9""filer les objets actuellement visibles, ou tout ce qui se trouve \xe0 moins de 30 m\xe8tres si c'est activ\xe9 dans les r\xe9glages du mod";
         case Id::HelpKeyInteract:       return "Entr\xE9""e : interagir avec la cible vis\xE9""e ou l'attaquer";
         case Id::HelpKeyOpenActionMenu: return "Maj plus Entr\xE9""e : ouvrir le menu d'action de la cible vis\xE9""e";
         case Id::HelpKeySelfStatus:     return "H : annoncer votre sant\xE9, vos effets et votre arme";
@@ -652,7 +652,7 @@ const char* Get(Id id) {
         case Id::HelpKeyBeacon:         return "Ctrl plus moins : lancer un guide vers l'objet point\xE9";
         case Id::HelpKeyDialogRepeat:   return "R : r\xE9p\xE9ter la r\xE9plique en cours";
 
-        case Id::HelpKeyCycleObjects:   return "Virgule et point : faire d\xE9""filer les objets d\xE9j\xE0 d\xE9""couverts de la cat\xE9gorie actuelle";
+        case Id::HelpKeyCycleObjects:   return "Virgule et point : faire d\xe9""filer les objets d\xe9j\xe0 d\xe9""couverts de la cat\xe9gorie actuelle que vous pouvez encore atteindre. Les conteneurs vides et les portes d\xe9""coratives sont ignor\xe9s";
         case Id::HelpKeyCycleCategory:  return "Maj plus virgule ou point : cat\xE9gorie pr\xE9""c\xE9""dente ou suivante";
         case Id::HelpKeyCycleEnds:      return "Ctrl plus virgule ou point : aller \xE0 l'objet le plus proche ou le plus \xE9loign\xE9";
         case Id::HelpKeyHeading:        return "Alt droite : annoncer votre orientation et la zone o\xF9 vous \xEAtes";
@@ -1214,7 +1214,7 @@ const char* Get(Id id) {
         case Id::FmtOverviewToSearch:     return "\xc0 fouiller : %d";
         case Id::OverviewNothingToSearch: return "Plus rien \xe0 fouiller";
         case Id::KbNameExploreOverview:   return "Aper\xe7u de l'exploration";
-        case Id::HelpKeyExploreOverview:  return "Ctrl plus N : la part de cette zone que vous avez explor\xe9""e, l'endroit inexplor\xe9 le plus proche avec la sortie qui y m\xe8ne, et ce qu'il reste \xe0 fouiller";
+        case Id::HelpKeyExploreOverview:  return "Ctrl plus N : la pi\xe8""ce o\xf9 vous \xeates, la part de cette zone que vous avez explor\xe9""e, l'endroit inexplor\xe9 le plus proche avec le chemin pour y aller, et ce qu'il reste \xe0 fouiller";
         case Id::ModSettingQEAllAround:       return "Q et E : tout autour de vous, pas seulement ce que voit la cam\xe9ra";
         case Id::FmtPartyMemberHp:            return "%s %d sur %d";
         case Id::PartyCanLevelUp:             return "peut monter de niveau";

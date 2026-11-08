@@ -103,12 +103,14 @@ Le mod conserve la disposition des touches par défaut du jeu, avec une modifica
 - Maj+L — Ouvrir l'écran de montée de niveau
 - F1 — Ouvrir ou fermer la liste complète des touches ; Ctrl+F1 — lire les touches de l'écran actuel
 - Ctrl+R — Copier le dernier texte lu dans le presse-papiers (une ligne de dialogue, une entrée du journal, le nom d'un PNJ — ce qui vient d'être lu)
+- Ctrl+H — Santé de tout le groupe et qui peut monter de niveau (quand quelqu'un peut monter de niveau, c'est aussi annoncé de lui-même)
+- Entrée sur une porte ouverte — La franchir
 
 <h3>Touches du mod — cycle des objets découverts</h3>
 
 Un second cycle, en plus de Q / E, qui parcourt les objets que vous avez déjà découverts dans la zone actuelle — portes, conteneurs, personnages, transitions de zone, points de repère et vos propres marqueurs de carte — regroupés par catégorie. (Activez « Sélection d'objets sur toute la carte » dans les Paramètres du mod pour inclure aussi ce que vous n'avez pas encore trouvé.)
 
-- `,` / `.` — Objet précédent / suivant dans la catégorie actuelle
+- `,` / `.` — Objet précédent / suivant dans la catégorie actuelle (seulement ce que vous pouvez encore atteindre : les objets derrière une porte verrouillée, les conteneurs vides et les portes décoratives sont ignorés)
 - Maj+`,` / Maj+`.` — Catégorie précédente / suivante (créatures, portes, conteneurs, transitions, marqueurs de carte, …)
 - Ctrl+`,` / Ctrl+`.` — Aller à l'objet le plus proche / le plus éloigné de la catégorie
 - `/` (disposition US) ou `-` (disposition allemande) — Annoncer l'objet actuellement ciblé
@@ -119,6 +121,11 @@ Un second cycle, en plus de Q / E, qui parcourt les objets que vous avez déjà 
 
 - AltGr (Alt droite, seule) — Annoncer l'orientation actuelle comme point cardinal, avec la voix de la boussole, puis la zone où vous êtes
 - N — Tourner la caméra vers la sortie de votre zone actuelle la plus proche de la direction où vous regardez, mesurée depuis votre position ; chaque nouvelle pression tourne dans le sens horaire vers la sortie suivante. Là où aucune sortie n'est connue, tourne de 90° dans le sens horaire vers le point cardinal suivant. Si une balise est armée, viser plutôt le point de passage suivant de la balise
+- Ctrl+N — Aperçu de l'exploration : la pièce où vous êtes, la part de la zone que vous avez explorée, l'endroit inexploré le plus proche et le chemin pour y aller, et ce qu'il reste à fouiller, chacun avec son itinéraire
+- Ctrl+Maj+N — Aller vers l'endroit inexploré le plus proche
+- Ctrl+L — Aller au conteneur ou à l'objet à fouiller le plus proche, et l'ouvrir
+- Q / E — Le mod ajoute la direction horaire et la distance. Avec « Q et E : tout autour de vous » activé dans les réglages du mod, ils parcourent tout ce qui se trouve à moins de 30 mètres et n'est pas derrière un mur (en combat, seulement les ennemis vivants)
+- En entrant dans une pièce — Chaque sortie dit où elle mène et si vous y êtes déjà allé ; suit une liste de tout ce qui se trouve dans la pièce. Les portes disent aussi où elles mènent quand vous les sélectionnez, et pour ce qui se trouve dans une autre pièce, vous entendez le chemin pour y aller
 - Tab — Annonce le nouveau chef de groupe après que le moteur a changé de contrôle
 
 <h3>Touches du mod — mode vue</h3>

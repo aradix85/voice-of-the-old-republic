@@ -642,7 +642,7 @@ const char* Get(Id id) {
         case Id::HelpKeyViewMode:       return "B: tryb rozgl\xB9""dania, stoisz w miejscu, obracaj\xB9""c kamer\xEA";
         case Id::HelpKeySwitchLeader:   return "Tab: zmienia kontrolowanego cz\xB3onka dru\xBFyny";
 
-        case Id::HelpKeyCycleTargets:   return "Q i E: prze\xB3\xB9""czaj\xB9 obiekty w polu widzenia";
+        case Id::HelpKeyCycleTargets:   return "Q i E: prze\xb3\xb9""czaj obiekty w polu widzenia albo wszystko w promieniu 30 metr\xf3w, je\x9cli w\xb3\xb9""czysz to w ustawieniach moda";
         case Id::HelpKeyInteract:       return "Enter: interakcja z wybranym celem lub atak na niego";
         case Id::HelpKeyOpenActionMenu: return "Shift i Enter: otwiera menu akcji dla wybranego celu";
         case Id::HelpKeySelfStatus:     return "H: podaje twoje zdrowie, efekty i bro\xF1";
@@ -651,7 +651,7 @@ const char* Get(Id id) {
         case Id::HelpKeyBeacon:         return "Ctrl i minus: uruchamia sygna\xB3 prowadz\xB9""cy do wybranego obiektu";
         case Id::HelpKeyDialogRepeat:   return "R: powtarza bie\xBF\xB9""c\xB9 wypowied\x9F";
 
-        case Id::HelpKeyCycleObjects:   return "Przecinek i kropka: prze\xB3\xB9""czaj\xB9 odkryte obiekty w bie\xBF\xB9""cej kategorii";
+        case Id::HelpKeyCycleObjects:   return "Przecinek i kropka: prze\xb3\xb9""czaj odkryte obiekty w bie\xbf\xb9""cej kategorii, do kt\xf3rych nadal mo\xbf""esz doj\x9c\xe6. Puste pojemniki i drzwi dekoracyjne s\xb9 pomijane";
         case Id::HelpKeyCycleCategory:  return "Shift z przecinkiem lub kropk\xB9: poprzednia lub nast\xEApna kategoria";
         case Id::HelpKeyCycleEnds:      return "Ctrl z przecinkiem lub kropk\xB9: skok do najbli\xBFszego lub najdalszego obiektu";
         case Id::HelpKeyHeading:        return "Prawy Alt: podaje kierunek patrzenia i obszar, w kt\xF3rym jeste\x9C";
@@ -1212,7 +1212,7 @@ const char* Get(Id id) {
         case Id::FmtOverviewToSearch:     return "Do przeszukania: %d";
         case Id::OverviewNothingToSearch: return "Nie ma ju\xbf nic do przeszukania";
         case Id::KbNameExploreOverview:   return "Przegl\xb9""d eksploracji";
-        case Id::HelpKeyExploreOverview:  return "Ctrl i N: ile tego obszaru zbada\xb3""e\x9c, najbli\xbfsze niezbadane miejsce z wyj\x9c""ciem w jego stron\xea, i co zosta\xb3o do przeszukania";
+        case Id::HelpKeyExploreOverview:  return "Ctrl i N: pomieszczenie, w kt\xf3rym jeste\x9c, ile tego obszaru zbada\xb3""e\x9c, najbli\xbfsze niezbadane miejsce z drog\xb9 do niego, i co zosta\xb3o do przeszukania";
         case Id::ModSettingQEAllAround:       return "Q i E: wszystko wok\xf3\xb3 ciebie, nie tylko to, co widzi kamera";
         case Id::FmtPartyMemberHp:            return "%s %d z %d";
         case Id::PartyCanLevelUp:             return "mo\xbf""e awansowa\xe6";

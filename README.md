@@ -103,12 +103,14 @@ The mod keeps the game's default key map intact, with one ergonomic change the i
 - Shift+L — Open the level-up panel
 - F1 — Open or close the full key list; Ctrl+F1 — read the keys for the current screen
 - Ctrl+R — Copy the last spoken text to the clipboard (a dialogue line, a journal entry, an NPC name — whatever was read out last)
+- Ctrl+H — Health of everyone in your party, and who can level up (when someone can level up, that is also announced on its own)
+- Enter on an open door — Walk through it
 
 <h3>Mod keys — discovered-object cycle</h3>
 
 A second cycle, on top of Q / E, that steps through the objects you have already discovered in the current area — doors, containers, characters, area transitions, landmarks, and your own map markers — grouped by category. (Turn on "Map-wide object selection" in Mod settings to also include things you haven't found yet.)
 
-- `,` / `.` — Previous / next object in the current category
+- `,` / `.` — Previous / next object in the current category (only what you can still reach: things behind a locked door, empty containers and decorative doors are left out)
 - Shift+`,` / Shift+`.` — Previous / next category (creatures, doors, containers, transitions, map pins, …)
 - Ctrl+`,` / Ctrl+`.` — Jump to the nearest / farthest object in the category
 - `/` (US layout) or `-` (German layout) — Announce the currently focused object
@@ -119,6 +121,11 @@ A second cycle, on top of Q / E, that steps through the objects you have already
 
 - AltGr (right Alt, alone) — Speak the current facing as a compass direction, in the compass voice, then the area you are in
 - N — Turn the camera to the exit of your current area that lies closest to where you are looking, measured from where you stand; each further press turns clockwise to the next exit. Where no exits are known, it turns 90° clockwise to the next cardinal direction. If a beacon is armed, point at the beacon's next waypoint instead
+- Ctrl+N — Exploration overview: the room you are in, how much of the area you have explored, the nearest unexplored place and the way there, and what is left to search, each with its route
+- Ctrl+Shift+N — Walk toward the nearest unexplored place
+- Ctrl+L — Walk to the nearest container or item left to search, and open it
+- Q / E — The mod adds the clock direction and distance. With "Q and E: everything around you" turned on in Mod settings, they step through everything within 30 metres that is not behind a wall (in combat only living enemies)
+- Entering a room — Each exit says where it leads and whether you have been there, followed by a list of everything in the room. Doors also say where they lead when you focus them, and for anything in another room you hear the way there
 - Tab — Announces the new party leader after the engine cycles control
 
 <h3>Mod keys — view mode</h3>

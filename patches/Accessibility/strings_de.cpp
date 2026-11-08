@@ -663,7 +663,7 @@ const char* Get(Id id) {
         case Id::HelpKeyViewMode:       return "B: Umsehen-Modus, Position halten und die Kamera drehen";
         case Id::HelpKeySwitchLeader:   return "Tabulator: gesteuertes Gruppenmitglied wechseln";
 
-        case Id::HelpKeyCycleTargets:   return "Q und E: aktuell sichtbare Objekte durchschalten";
+        case Id::HelpKeyCycleTargets:   return "Q und E: aktuell sichtbare Objekte durchschalten, oder alles im Umkreis von 30 Metern, wenn das in den Mod-Einstellungen eingeschaltet ist";
         case Id::HelpKeyInteract:       return "Eingabetaste: mit dem anvisierten Ziel interagieren oder angreifen";
         case Id::HelpKeyOpenActionMenu: return "Umschalt und Eingabetaste: Aktionsmen\xFC f\xFCr das anvisierte Ziel \xF6""ffnen";
         case Id::HelpKeySelfStatus:     return "H: eigene Gesundheit, Effekte und Waffe ansagen";
@@ -672,7 +672,7 @@ const char* Get(Id id) {
         case Id::HelpKeyBeacon:         return "Strg und Minus: Wegweiser zum fokussierten Objekt starten";
         case Id::HelpKeyDialogRepeat:   return "R: die aktuelle gesprochene Zeile wiederholen";
 
-        case Id::HelpKeyCycleObjects:   return "Komma und Punkt: bereits entdeckte Objekte der aktuellen Kategorie durchschalten";
+        case Id::HelpKeyCycleObjects:   return "Komma und Punkt: bereits entdeckte Objekte der aktuellen Kategorie durchschalten, die du noch erreichen kannst. Leere Beh\xe4lter und dekorative T\xfcren werden ausgelassen";
         case Id::HelpKeyCycleCategory:  return "Umschalt und Komma oder Punkt: vorherige oder n\xE4""chste Kategorie";
         case Id::HelpKeyCycleEnds:      return "Strg und Komma oder Punkt: zum n\xE4""chsten oder entferntesten Objekt springen";
         case Id::HelpKeyHeading:        return "Rechte Alt-Taste: Blickrichtung und aktuellen Bereich ansagen";
@@ -1234,7 +1234,7 @@ const char* Get(Id id) {
         case Id::FmtOverviewToSearch:     return "Zu durchsuchen: %d";
         case Id::OverviewNothingToSearch: return "Nichts mehr zu durchsuchen";
         case Id::KbNameExploreOverview:   return "Erkundungs\xfc""berblick";
-        case Id::HelpKeyExploreOverview:  return "Strg und N: wie viel dieses Gebiets du erkundet hast, der n\xe4""chste unerkundete Ort mit dem Ausgang dorthin, und was noch zu durchsuchen ist";
+        case Id::HelpKeyExploreOverview:  return "Strg und N: der Raum, in dem du bist, wie viel dieses Gebiets du erkundet hast, der n\xe4""chste unerkundete Ort mit dem Weg dorthin, und was noch zu durchsuchen ist";
         case Id::ModSettingQEAllAround:       return "Q und E: alles um dich herum, nicht nur was die Kamera sieht";
         case Id::FmtPartyMemberHp:            return "%s %d von %d";
         case Id::PartyCanLevelUp:             return "kann aufsteigen";

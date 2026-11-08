@@ -644,7 +644,7 @@ const char* Get(Id id) {
         case Id::HelpKeyViewMode:       return "B: modo observaci\xF3n, mantener la posici\xF3n mientras giras la c\xE1mara";
         case Id::HelpKeySwitchLeader:   return "Tab: cambiar el miembro del grupo que controlas";
 
-        case Id::HelpKeyCycleTargets:   return "Q y E: recorrer los objetos visibles en pantalla";
+        case Id::HelpKeyCycleTargets:   return "Q y E: recorrer los objetos visibles en pantalla, o todo lo que hay a menos de 30 metros si lo activas en los ajustes del mod";
         case Id::HelpKeyInteract:       return "Intro: interactuar con el objetivo seleccionado o atacarlo";
         case Id::HelpKeyOpenActionMenu: return "May\xFAs m\xE1s Intro: abrir el men\xFA de acciones del objetivo seleccionado";
         case Id::HelpKeySelfStatus:     return "H: anunciar tu salud, tus efectos y tu arma";
@@ -653,7 +653,7 @@ const char* Get(Id id) {
         case Id::HelpKeyBeacon:         return "Ctrl m\xE1s menos: iniciar una gu\xED""a hacia el objeto resaltado";
         case Id::HelpKeyDialogRepeat:   return "R: repetir la l\xEDnea actual";
 
-        case Id::HelpKeyCycleObjects:   return "Coma y punto: recorrer los objetos ya descubiertos de la categor\xED""a actual";
+        case Id::HelpKeyCycleObjects:   return "Coma y punto: recorrer los objetos ya descubiertos de la categor\xed""a actual que todav\xed""a puedes alcanzar. Se omiten los contenedores vac\xedos y las puertas decorativas";
         case Id::HelpKeyCycleCategory:  return "May\xFAs m\xE1s coma o punto: categor\xED""a anterior o siguiente";
         case Id::HelpKeyCycleEnds:      return "Ctrl m\xE1s coma o punto: ir al objeto m\xE1s cercano o m\xE1s lejano";
         case Id::HelpKeyHeading:        return "Alt derecho: anunciar tu orientaci\xF3n y la zona en la que est\xE1s";
@@ -1215,7 +1215,7 @@ const char* Get(Id id) {
         case Id::FmtOverviewToSearch:     return "Por registrar: %d";
         case Id::OverviewNothingToSearch: return "No queda nada por registrar";
         case Id::KbNameExploreOverview:   return "Resumen de exploraci\xf3n";
-        case Id::HelpKeyExploreOverview:  return "Ctrl m\xe1s N: cu\xe1nto de esta zona has explorado, el lugar inexplorado m\xe1s cercano con la salida hacia \xe9l, y lo que queda por registrar";
+        case Id::HelpKeyExploreOverview:  return "Ctrl m\xe1s N: la sala en la que est\xe1s, cu\xe1nto de esta zona has explorado, el lugar inexplorado m\xe1s cercano con el camino hacia \xe9l, y lo que queda por registrar";
         case Id::ModSettingQEAllAround:       return "Q y E: todo a tu alrededor, no solo lo que ve la c\xe1mara";
         case Id::FmtPartyMemberHp:            return "%s %d de %d";
         case Id::PartyCanLevelUp:             return "puede subir de nivel";
