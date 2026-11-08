@@ -96,6 +96,8 @@ push to the branch is built by GitHub Actions and published as the pre-release
 - Q/E find objects built into a wall, such as the Endar Spire escape pod.
 - Dead creatures are left out of , / . and Q/E.
 - Your party members are always in the , / . people list.
+- The game's map notes, such as "Duel Organizer", are always in the , / .
+  landmark list, also before you have been there.
 - A bystander's remark is no longer cut off by the automatic target line.
 - New setting: everything is spoken by the screen reader (no SAPI or compass
   voice, no 3D speech).
@@ -195,6 +197,11 @@ push to the branch is built by GitHub Actions and published as the pre-release
   they were never "discovered" (they walk in with you). Q/E still leaves them
   out; the people list was the only way to pick a companion to talk to, and in
   a new area it had none.
+- The game's own map notes (enabled ones, the same the map screen can show)
+  are always in the , / . landmark list, also before you have discovered
+  them; Enter walks there. Without map-wide selection there was no way to find
+  a named place you had not reached: Ajuur in the Taris Upper City Cantina
+  stood 50 metres away behind walls, outside Q/E and the people list.
 - Dead creatures (the engine's dead flag) are left out of the , / . people
   list and Q/E. A killed Sith Soldier stayed listed, and Enter on it started a
   conversation walk that ended in "Movement cancelled".

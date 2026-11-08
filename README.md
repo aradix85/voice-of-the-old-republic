@@ -108,7 +108,7 @@ The mod keeps the game's default key map intact, with one ergonomic change the i
 
 <h3>Mod keys — discovered-object cycle</h3>
 
-A second cycle, on top of Q / E, that steps through the objects you have already discovered in the current area — doors, containers, characters, area transitions, landmarks, and your own map markers — grouped by category. (Turn on "Map-wide object selection" in Mod settings to also include things you haven't found yet.)
+A second cycle, on top of Q / E, that steps through the objects you have already discovered in the current area — doors, containers, characters, area transitions, landmarks, and your own map markers — grouped by category. The game's own map notes (such as "Duel Organizer") are in the landmark list even before you reach them, so Enter can walk you there. (Turn on "Map-wide object selection" in Mod settings to also include everything else you haven't found yet.)
 
 - `,` / `.` — Previous / next object in the current category (only what you can still reach: things behind a locked door, empty containers and decorative doors are left out)
 - Shift+`,` / Shift+`.` — Previous / next category (creatures, doors, containers, transitions, map pins, …)

@@ -191,7 +191,18 @@ bool BuildCategoryListing(acc::filter::CycleCategory category,
                 // add the engine's two remaining gates.
                 if (!acc::engine::IsMapNoteEnabled(obj)) continue;
             } else if (discoveryFilter && !acc::discovery::IsDiscovered(obj) &&
-                       !isParty(obj)) {
+                       !isParty(obj) &&
+                       // The game's own map notes ("Duel Organizer") are
+                       // signposts the designers placed so players can find
+                       // a place they have not reached yet; a sighted player
+                       // reads them off the map. Keep enabled ones in the
+                       // landmark list even before discovery, so a named
+                       // place 50 metres away behind walls can be picked and
+                       // walked to without turning on map-wide selection
+                       // (2026-11-08, Taris Upper City Cantina: Ajuur could
+                       // not be found). Only a handful per area.
+                       !(category == acc::filter::CycleCategory::Landmark &&
+                         acc::engine::IsMapNoteEnabled(obj))) {
                 continue;
             }
 
