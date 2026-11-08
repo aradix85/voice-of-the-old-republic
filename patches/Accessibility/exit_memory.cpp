@@ -350,32 +350,50 @@ std::string HereList(void* area, int cluster) {
     std::vector<Entry> found;
     uint32_t party[12] = {0};
     const int partyCount = acc::engine::GetPartyMembers(party, 12);
-    const CycleCategory cats[] = {CycleCategory::Npc, CycleCategory::Container,
-                                  CycleCategory::Item};
-    for (CycleCategory cat : cats) {
-        acc::cycle::CategoryListing listing;
-        if (!acc::cycle::BuildCategoryListing(cat, listing)) continue;
-        for (int i = 0; i < listing.count; ++i) {
-            void* obj = listing.objs[i];
-            if (listing.isPin[i] || !obj) continue;
-            if (listing.distances[i] > kHereRadiusM) continue;
-            if (cat == CycleCategory::Npc) {
-                if (IsPartyMember(obj, party, partyCount)) continue;
-                const int hp = acc::engine::ReadCreatureCurrentHitPoints(obj);
-                if (hp == 0 || hp < -1) continue;  // dead
-            }
-            if (cat == CycleCategory::Container &&
-                acc::engine::IsEmptyContainer(obj)) {
-                continue;  // looted: nothing to come back for
-            }
-            if (RegionAt(area, listing.positions[i]) != cluster) continue;
-            char name[160] = {0};
-            if (!acc::narration::GetSpokenName(obj, cat, name, sizeof(name)) ||
-                !name[0]) {
-                continue;
-            }
-            found.push_back(Entry{listing.distances[i], name});
+    // Everything standing in the region, heard before or not: a sighted
+    // player sees the whole room on walking in. (The , / . listing would
+    // limit this to discovered objects whenever map-wide cycling is off,
+    // and never holds ground items at all.)
+    Vector player;
+    if (!acc::engine::GetPlayerPosition(player)) return std::string();
+    void* pc = acc::engine::GetPlayerServerCreature();
+    acc::engine::AreaObjectIterator it(area);
+    while (void* obj = it.Next()) {
+        if (obj == pc) continue;
+        CycleCategory cat;
+        if (acc::filter::ObjectMatches(obj, CycleCategory::Npc)) {
+            cat = CycleCategory::Npc;
+        } else if (acc::filter::ObjectMatches(obj, CycleCategory::Container)) {
+            cat = CycleCategory::Container;
+        } else if (acc::filter::ObjectMatches(obj, CycleCategory::Item)) {
+            cat = CycleCategory::Item;
+        } else {
+            continue;
         }
+        Vector pos;
+        if (!acc::engine::GetObjectPosition(obj, pos)) continue;
+        const float dx = pos.x - player.x;
+        const float dy = pos.y - player.y;
+        const float dist = std::sqrt(dx * dx + dy * dy);
+        if (dist > kHereRadiusM) continue;
+        if (cat == CycleCategory::Npc) {
+            if (IsPartyMember(obj, party, partyCount)) continue;
+            const int hp = acc::engine::ReadCreatureCurrentHitPoints(obj);
+            if (hp == 0 || hp < -1) continue;  // dead
+        }
+        if (cat == CycleCategory::Container &&
+            acc::engine::IsEmptyContainer(obj)) {
+            continue;  // looted: nothing to come back for
+        }
+        if (RegionAt(area, pos) != cluster) continue;
+        char name[160] = {0};
+        if (!acc::narration::GetSpokenName(obj, cat, name, sizeof(name)) ||
+            !name[0]) {
+            continue;
+        }
+        found.push_back(Entry{dist, name});
+        // Heard now: the , / . cycles may list it from here on.
+        acc::discovery::Record(obj);
     }
     if (found.empty()) return std::string();
     std::stable_sort(found.begin(), found.end(),
