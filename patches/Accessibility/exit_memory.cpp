@@ -362,10 +362,21 @@ std::string HereList(void* area, int cluster) {
     // and never holds ground items at all.)
     Vector player;
     if (!acc::engine::GetPlayerPosition(player)) return std::string();
+    // The creature under control, by handle: pointer identity missed it and
+    // "Here:" named the player herself ("Here: korasha; Remains 1").
+    // With a companion as leader the player character is neither the
+    // controlled creature nor in the follower table, so also skip it by its
+    // chargen name.
     void* pc = acc::engine::GetPlayerServerCreature();
+    const uint32_t pcHandle = pc ? acc::engine::GetObjectHandle(pc) : 0u;
+    char pcName[128] = {0};
+    acc::engine::GetPlayerCharacterName(pcName, sizeof(pcName));
     acc::engine::AreaObjectIterator it(area);
     while (void* obj = it.Next()) {
         if (obj == pc) continue;
+        if (pcHandle != 0 && acc::engine::GetObjectHandle(obj) == pcHandle) {
+            continue;
+        }
         CycleCategory cat;
         if (acc::filter::ObjectMatches(obj, CycleCategory::Npc)) {
             cat = CycleCategory::Npc;
@@ -395,6 +406,10 @@ std::string HereList(void* area, int cluster) {
         char name[160] = {0};
         if (!acc::narration::GetSpokenName(obj, cat, name, sizeof(name)) ||
             !name[0]) {
+            continue;
+        }
+        if (cat == CycleCategory::Npc && pcName[0] &&
+            ToLowerAscii(name) == ToLowerAscii(pcName)) {
             continue;
         }
         found.push_back(Entry{dist, name});

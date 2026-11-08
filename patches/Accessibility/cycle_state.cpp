@@ -44,32 +44,32 @@ void SortByDistanceAscending(CategoryListing& l) {
     }
 }
 
-// World cycles: what the player can walk to now first, nearest first, then
-// what lies only behind locked doors (or where the region graph has no way
-// to), also nearest first. A door counts by the side the player walks up
-// to. Without the reorder the door list read like a history of every door
-// passed, most of them shut off behind the story (2026-11-08).
-void ReachableFirst(CategoryListing& l, acc::filter::CycleContext ctx) {
-    if (ctx == acc::filter::CycleContext::Map || l.count < 2) return;
+// World cycles list what the player can still go to: nothing that lies only
+// behind locked doors (or where the region graph has no way to; a door
+// counts by the side the player walks up to), and no container already
+// emptied. Without this the lists read like a history of everything passed:
+// every looted footlocker and every door shut off behind the story, far
+// behind the player (2026-11-08). Q/E still finds anything in view.
+void KeepWhatIsLeft(CategoryListing& l, acc::filter::CycleContext ctx) {
+    if (ctx == acc::filter::CycleContext::Map || l.count == 0) return;
     bool behind[CategoryListing::kMaxObjects] = {};
-    if (!acc::exit_memory::UnreachableFlags(l.objs, l.positions, l.count,
-                                            behind)) {
-        return;
-    }
-    CategoryListing sorted;
-    sorted.count = 0;
-    for (int pass = 0; pass < 2; ++pass) {
-        for (int i = 0; i < l.count; ++i) {
-            if (behind[i] != (pass == 1)) continue;
-            const int k = sorted.count++;
-            sorted.objs[k]      = l.objs[i];
-            sorted.positions[k] = l.positions[i];
-            sorted.distances[k] = l.distances[i];
-            sorted.isPin[k]     = l.isPin[i];
-            sorted.isStatic[k]  = l.isStatic[i];
+    acc::exit_memory::UnreachableFlags(l.objs, l.positions, l.count, behind);
+    CategoryListing kept;
+    kept.count = 0;
+    for (int i = 0; i < l.count; ++i) {
+        if (behind[i]) continue;
+        if (!l.isPin[i] && !l.isStatic[i] && l.objs[i] &&
+            acc::engine::IsEmptyContainer(l.objs[i])) {
+            continue;
         }
+        const int k = kept.count++;
+        kept.objs[k]      = l.objs[i];
+        kept.positions[k] = l.positions[i];
+        kept.distances[k] = l.distances[i];
+        kept.isPin[k]     = l.isPin[i];
+        kept.isStatic[k]  = l.isStatic[i];
     }
-    l = sorted;
+    l = kept;
 }
 
 // Squared horizontal distance — Z deliberately ignored. Pillar 4
@@ -390,7 +390,8 @@ bool CycleCategoryDirectional(CategoryListing& outListing,
                              : acc::filter::PrevCategory(s.category);
         if (BuildCategoryListing(s.category, outListing, ctx) &&
             outListing.count > 0) {
-            ReachableFirst(outListing, ctx);
+            KeepWhatIsLeft(outListing, ctx);
+            if (outListing.count == 0) continue;  // nothing left: next category
             s.focusedIndex = 0;
             s.focusedObj   = outListing.objs[0];
             return true;
@@ -419,7 +420,7 @@ bool RefreshCurrentListing(CategoryListing& outListing,
                            acc::filter::CycleContext ctx) {
     auto& s = GetState(ctx);
     if (!BuildCategoryListing(s.category, outListing, ctx)) return false;
-    ReachableFirst(outListing, ctx);
+    KeepWhatIsLeft(outListing, ctx);
 
     if (outListing.count == 0) {
         s.focusedIndex = -1;
