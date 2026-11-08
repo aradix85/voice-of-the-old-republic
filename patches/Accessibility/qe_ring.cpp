@@ -34,6 +34,12 @@ constexpr float kRangeM = 30.0f;
 // The line-of-sight test stops this short of the object, so a container or
 // panel standing against a wall is not hidden by that wall.
 constexpr float kLosShortenM = 0.6f;
+// A placeable set into the wall itself (an escape pod, a wall panel) has its
+// position past the walkmesh edge. When the line first meets a wall this
+// close to such an object, the wall is the one it is built into, not one in
+// between. 2026-11-08, Endar Spire: the Escape Pod 5 m away never came up on
+// Q/E, so the player had no way to pick it and was stuck.
+constexpr float kWallSetPlaceableM = 2.0f;
 
 struct Candidate {
     void*    obj;
@@ -120,7 +126,12 @@ bool HandlePress(int direction) {
             Vector hit{};
             if (acc::engine::SegmentCrossesWalkmesh(walls, wallCount, player, end,
                                                     hit)) {
-                continue;  // behind a wall
+                const float hx = p.x - hit.x;
+                const float hy = p.y - hit.y;
+                const bool setInWall =
+                    cat == CycleCategory::Container &&
+                    hx * hx + hy * hy <= kWallSetPlaceableM * kWallSetPlaceableM;
+                if (!setInWall) continue;  // behind a wall
             }
         }
         const float bearing = acc::engine::EngineYawToCompass(

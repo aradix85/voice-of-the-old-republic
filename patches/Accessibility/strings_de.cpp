@@ -1244,7 +1244,7 @@ const char* Get(Id id) {
         case Id::FmtWalkingTo:                return "Unterwegs: %s";
         case Id::KbNameExploreWalkUnexplored: return "Zum n\xe4""chsten unerkundeten Ort gehen";
         case Id::KbNameExploreWalkLoot:       return "Zum n\xe4""chsten Durchsuchbaren gehen";
-        case Id::HelpKeyExploreWalk:          return "Strg, Umschalt und N: zum n\xe4""chsten unerkundeten Ort gehen. Strg und L: zum n\xe4""chsten Beh\xe4lter oder Gegenstand gehen, der noch zu durchsuchen ist";
+        case Id::HelpKeyExploreWalk:          return "Strg, Umschalt und N: zum n\xe4""chsten unerkundeten Ort gehen; f\xfchren nur verschlossene T\xfcren weiter, wird die n\xe4""chste probiert. Strg und L: zum n\xe4""chsten Beh\xe4lter oder Gegenstand gehen, der noch zu durchsuchen ist";
         case Id::FmtLockBestSecurity:         return "am besten in der Gruppe: %s mit %d";
         case Id::FmtRouteVia:                 return "\xfc""ber %s, etwa %d Meter zu gehen";
         case Id::FmtRouteWalk:                return "etwa %d Meter zu gehen";
@@ -1255,6 +1255,9 @@ const char* Get(Id id) {
         case Id::RouteNoWayLocked:            return "Gerade kein Weg dorthin: es liegt hinter einer verschlossenen T\xfcr.";
         case Id::GuidancePausedHint:          return "Das Spiel ist pausiert. Dr\xfc""cke die Leertaste, um zu gehen.";
         case Id::FmtCompanionInTheWay:        return "%s steht im Weg. Wechsle mit Tab zu dieser Figur und tritt zur Seite.";
+        case Id::FmtOverviewTryDoor:          return "T\xfcr zum Ausprobieren: %s";
+        case Id::ExploreTryingDoor:           return "Alles Erreichbare ist erkundet, also wird diese T\xfcr probiert.";
+        case Id::FmtDoorOpensNearby:          return "%s \xf6""ffnet sich";
         case Id::Count_:               return "";
     }
     return "";

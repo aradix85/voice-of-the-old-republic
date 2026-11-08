@@ -1223,7 +1223,7 @@ const char* Get(Id id) {
         case Id::FmtWalkingTo:                return "Walking: %s";
         case Id::KbNameExploreWalkUnexplored: return "Walk to the nearest unexplored place";
         case Id::KbNameExploreWalkLoot:       return "Walk to the nearest thing to search";
-        case Id::HelpKeyExploreWalk:          return "Control plus Shift plus N: walk toward the nearest unexplored place. Control plus L: walk to the nearest container or item left to search";
+        case Id::HelpKeyExploreWalk:          return "Control plus Shift plus N: walk toward the nearest unexplored place; when only locked doors lead on, it tries the nearest one. Control plus L: walk to the nearest container or item left to search";
         case Id::FmtLockBestSecurity:         return "best in your party: %s with %d";
         case Id::FmtRouteVia:                 return "via %s, about %d metres to walk";
         case Id::FmtRouteWalk:                return "about %d metres to walk";
@@ -1234,6 +1234,9 @@ const char* Get(Id id) {
         case Id::RouteNoWayLocked:            return "No way there now: it is behind a locked door.";
         case Id::GuidancePausedHint:          return "The game is paused. Press Space to walk.";
         case Id::FmtCompanionInTheWay:        return "%s is standing in the way. Switch to them with Tab and step aside.";
+        case Id::FmtOverviewTryDoor:          return "Door to try: %s";
+        case Id::ExploreTryingDoor:           return "Everything you can reach is explored, so trying this door.";
+        case Id::FmtDoorOpensNearby:          return "%s opens";
         case Id::Count_:               return "";
     }
     return "";

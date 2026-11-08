@@ -122,7 +122,7 @@ A second cycle, on top of Q / E, that steps through the objects you have already
 - AltGr (right Alt, alone) — Speak the current facing as a compass direction, in the compass voice, then the area you are in
 - N — Turn the camera to the exit of your current area that lies closest to where you are looking, measured from where you stand; each further press turns clockwise to the next exit. Where no exits are known, it turns 90° clockwise to the next cardinal direction. If a beacon is armed, point at the beacon's next waypoint instead
 - Ctrl+N — Exploration overview: the room you are in, how much of the area you have explored, the nearest unexplored place and the way there, and what is left to search, each with its route
-- Ctrl+Shift+N — Walk toward the nearest unexplored place
+- Ctrl+Shift+N — Walk toward the nearest unexplored place; when only locked doors lead on, it tries the nearest one
 - Ctrl+L — Walk to the nearest container or item left to search, and open it
 - Q / E — The mod adds the clock direction and distance. With "Q and E: everything around you" turned on in Mod settings, they step through everything within 30 metres that is not behind a wall (in combat only living enemies)
 - Entering a room — Each exit says where it leads and whether you have been there, followed by a list of everything in the room. Doors also say where they lead when you focus them, and for anything in another room you hear the way there

@@ -51,4 +51,7 @@ void RegisterMsgRule();
 // True = the attempt was refused and the reason spoken; the caller returns.
 bool BlockCompanionAttempt(void* target);
 
+// The same test without speaking: would BlockCompanionAttempt refuse it?
+bool WouldBlockCompanionAttempt(void* target);
+
 }  // namespace acc::endar

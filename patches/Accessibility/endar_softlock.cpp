@@ -272,7 +272,7 @@ void RegisterMsgRule() {
     acc::msg::Router::Instance().AddRule("EndarDoorLocked", RuleEndarDoorLocked);
 }
 
-bool BlockCompanionAttempt(void* target) {
+bool WouldBlockCompanionAttempt(void* target) {
     if (!target || !g_inModule) return false;
     char tag[64] = "";
     if (!acc::engine::GetObjectTag(target, tag, sizeof(tag)) ||
@@ -281,11 +281,13 @@ bool BlockCompanionAttempt(void* target) {
     }
     void* leader = acc::engine::GetPlayerServerCreature();
     char leaderTag[64] = "";
-    if (!leader ||
-        !acc::engine::GetObjectTag(leader, leaderTag, sizeof(leaderTag)) ||
-        !EqualsCI(leaderTag, kTraskTag)) {
-        return false;
-    }
+    return leader &&
+           acc::engine::GetObjectTag(leader, leaderTag, sizeof(leaderTag)) &&
+           EqualsCI(leaderTag, kTraskTag);
+}
+
+bool BlockCompanionAttempt(void* target) {
+    if (!WouldBlockCompanionAttempt(target)) return false;
     const char* line =
         acc::strings::Get(acc::strings::Id::EndarTraskDoorOwnCharacter);
     prism::Speak(line, /*interrupt=*/true);

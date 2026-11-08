@@ -122,7 +122,7 @@ Un secondo ciclo, oltre a Q / E, che percorre gli oggetti già scoperti nell'are
 - AltGr (Alt destro, da solo) — Annunciare la direzione attuale come punto cardinale, con la voce della bussola, poi la zona in cui ti trovi
 - N — Ruotare la telecamera verso l'uscita della zona attuale più vicina alla direzione in cui guardi, misurata dalla tua posizione; ogni ulteriore pressione ruota in senso orario verso l'uscita successiva. Dove non sono note uscite, ruota di 90° in senso orario verso il punto cardinale successivo. Se un radiofaro è attivo, puntare invece al suo prossimo waypoint
 - Ctrl+N — Panoramica dell'esplorazione: la stanza in cui ti trovi, quanto dell'area hai esplorato, il punto inesplorato più vicino e la strada per arrivarci, e cosa resta da perquisire, ciascuno con il suo percorso
-- Ctrl+Maiusc+N — Andare verso il punto inesplorato più vicino
+- Ctrl+Maiusc+N — Andare verso il punto inesplorato più vicino; se proseguono solo porte chiuse, prova la più vicina
 - Ctrl+L — Andare al contenitore o oggetto da perquisire più vicino, e aprirlo
 - Q / E — La mod aggiunge la direzione a orologio e la distanza. Con «Q ed E: tutto intorno a te» attivato nelle impostazioni della mod, scorrono tutto ciò che si trova entro 30 metri e non è dietro un muro (in combattimento solo i nemici vivi)
 - Entrando in una stanza — Ogni uscita dice dove porta e se ci sei già stato; segue un elenco di tutto ciò che c'è nella stanza. Anche le porte dicono dove portano quando le selezioni, e per ciò che si trova in un'altra stanza senti la strada per arrivarci

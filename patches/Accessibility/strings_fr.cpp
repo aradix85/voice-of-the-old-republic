@@ -1224,7 +1224,7 @@ const char* Get(Id id) {
         case Id::FmtWalkingTo:                return "En route : %s";
         case Id::KbNameExploreWalkUnexplored: return "Aller \xe0 l'endroit inexplor\xe9 le plus proche";
         case Id::KbNameExploreWalkLoot:       return "Aller \xe0 la chose \xe0 fouiller la plus proche";
-        case Id::HelpKeyExploreWalk:          return "Ctrl plus Maj plus N : aller vers l'endroit inexplor\xe9 le plus proche. Ctrl plus L : aller au conteneur ou \xe0 l'objet \xe0 fouiller le plus proche";
+        case Id::HelpKeyExploreWalk:          return "Ctrl plus Maj plus N : aller vers l'endroit inexplor\xe9 le plus proche ; si seules des portes verrouill\xe9""es m\xe8nent plus loin, la plus proche est essay\xe9""e. Ctrl plus L : aller au conteneur ou \xe0 l'objet \xe0 fouiller le plus proche";
         case Id::FmtLockBestSecurity:         return "meilleur du groupe : %s avec %d";
         case Id::FmtRouteVia:                 return "par %s, environ %d m\xe8tres \xe0 pied";
         case Id::FmtRouteWalk:                return "environ %d m\xe8tres \xe0 pied";
@@ -1235,6 +1235,9 @@ const char* Get(Id id) {
         case Id::RouteNoWayLocked:            return "Pas de chemin pour l'instant : c'est derri\xe8re une porte verrouill\xe9""e.";
         case Id::GuidancePausedHint:          return "Le jeu est en pause. Appuyez sur Espace pour marcher.";
         case Id::FmtCompanionInTheWay:        return "%s bloque le passage. Passez \xe0 ce personnage avec Tab et \xe9""cartez-vous.";
+        case Id::FmtOverviewTryDoor:          return "Porte \xe0 essayer : %s";
+        case Id::ExploreTryingDoor:           return "Tout ce qui est accessible est explor\xe9, cette porte est donc essay\xe9""e.";
+        case Id::FmtDoorOpensNearby:          return "%s s'ouvre";
         case Id::Count_:               return "";
     }
     return "";

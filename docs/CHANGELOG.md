@@ -59,8 +59,10 @@ push to the branch is built by GitHub Actions and published as the pre-release
 - Ctrl+N gives an exploration overview: the current region, how much is
   explored, the nearest unexplored place and what is left to search, each with
   its route.
+- Ctrl+N names the locked door to try when nothing unexplored is reachable.
 - Ctrl+Shift+N walks the whole way to the nearest unexplored region, opening
   doors on the way.
+- Ctrl+Shift+N tries that locked door when nothing unexplored is reachable.
 - Ctrl+L walks to the nearest container or item left to search and opens it.
 - Small open slivers of the same space within 6 metres count as seen.
 - Focusing a door says which way it leads and what lies beyond it.
@@ -71,6 +73,7 @@ push to the branch is built by GitHub Actions and published as the pre-release
 - A walk while the game is paused says "The game is paused. Press Space to
   walk." instead of "way blocked".
 - A party member standing on the target is named: "X is standing in the way".
+- A door near you that someone else opens says "Door 1 opens".
 - Door numbers stay the same after saving and loading.
 - Decorative doors are left out of the , / . cycle.
 - , / . lists only what you can still reach, and no empty containers.
@@ -82,6 +85,7 @@ push to the branch is built by GitHub Actions and published as the pre-release
 - Q/E say the clock direction and distance of each object.
 - New setting: Q and E step through everything within 30 metres instead of
   only what the camera sees.
+- Q/E find objects built into a wall, such as the Endar Spire escape pod.
 - New setting: everything is spoken by the screen reader (no SAPI or compass
   voice, no 3D speech).
 - Enter on an open door walks through it.
@@ -110,6 +114,12 @@ push to the branch is built by GitHub Actions and published as the pre-release
   blocked, in combat or when a panel opens. Was Alt+N in earlier builds of
   this fork; Alt plus a letter put Windows into menu mode and left the
   keyboard dead until Alt+Tab.
+- When nothing unexplored can be reached but a locked door leads to an
+  unexplored region, Ctrl+N names the nearest such door ("Door to try: Door 1,
+  locked, opens only through the story, 12 o'clock, 3 metres") and
+  Ctrl+Shift+N tries it as Enter would. Story doors on the Endar Spire open on
+  the attempt itself; the overview used to say only "7 more behind locked
+  doors". With Trask as leader the Trask-door guard still refuses.
 - Ctrl+L walks to the nearest container with items or item on the ground and
   uses it.
 - Regions joined to yours without a door whose centre is within 6 metres
@@ -134,6 +144,10 @@ push to the branch is built by GitHub Actions and published as the pre-release
 - When a walk stalls because a party member stands on the target, you hear
   "X is standing in the way. Switch to them with Tab and step aside."
 - Enter on an open door walks through it.
+- A door within 20 metres that someone else opens says "Door 1 opens" (KOTOR
+  1). This is mostly a story door opening from its own script after your
+  attempt; the last thing heard used to be "Door 1, locked", so a successful
+  attempt sounded like a failed one. Not during conversations.
 
 <h3>Cycles:</h3>
 
@@ -145,6 +159,9 @@ push to the branch is built by GitHub Actions and published as the pre-release
 - Q/E name each object with its clock direction and distance.
 - Setting "Q and E: everything around you": Q/E step through everything
   within 30 metres that is not behind a wall; in combat only living enemies.
+- With that setting, a container or other placeable is not hidden by a wall
+  that the line meets within 2 metres of it: it is built into that wall. The
+  Endar Spire escape pod never came up on Q/E.
 - Script triggers (for example "nulltrigger") are no longer treated as area
   transitions.
 
@@ -169,7 +186,8 @@ push to the branch is built by GitHub Actions and published as the pre-release
 <h3>Help:</h3>
 
 - F1 lists Ctrl+N, Ctrl+Shift+N, Ctrl+L and Ctrl+H; the Q/E, , / . and Ctrl+N
-  descriptions match the new behaviour. The README (all seven languages) lists
+  descriptions match the new behaviour, and the Ctrl+Shift+N line mentions the
+  door attempt. The README (all seven languages) lists
   the new keys and what a region announcement says. The new keys have no
   controller rows yet.
 

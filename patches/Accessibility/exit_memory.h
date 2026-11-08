@@ -110,6 +110,12 @@ struct Overview {
     Vector      stepPos   = {0.0f, 0.0f, 0.0f};  // centre of the first region on the way
     void*       stepDoor  = nullptr;  // closed (unlocked) door on the way into it, or null
     int         lockedAway = 0;    // unexplored regions reachable only through locked doors
+    // Nothing left to walk to: the nearest locked door (not set dressing)
+    // standing between the reachable regions and an unexplored one. Story
+    // doors often open on the attempt itself (Endar Spire), so it is the
+    // door to try. Null when there is a target or no such door.
+    void*       tryDoor    = nullptr;
+    Vector      tryDoorPos = {0.0f, 0.0f, 0.0f};
     std::vector<LootSpot> loot;    // reachable first, then by walking distance
 };
 
@@ -174,7 +180,9 @@ void WarnIfBehindLock(void* target);
 // Ctrl+Shift+N (ExploreWalkUnexplored): walk the whole way to the nearest
 // unexplored region, region by region, opening closed doors on the way. One
 // line up front (what and how far); the regions passed announce themselves as
-// usual. Stops on arrival, on manual movement or any other walk, a blocked
+// usual. When nothing unexplored is reachable but a locked door leads to an
+// unexplored region, it tries that door like Enter on it. Stops on arrival,
+// on manual movement or any other walk, a blocked
 // step, combat or an opened panel. Ctrl+L (ExploreWalkLoot): walk to the
 // nearest container with items or item on the ground and use it, like Shift+-
 // on it.

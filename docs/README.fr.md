@@ -122,7 +122,7 @@ Un second cycle, en plus de Q / E, qui parcourt les objets que vous avez déjà 
 - AltGr (Alt droite, seule) — Annoncer l'orientation actuelle comme point cardinal, avec la voix de la boussole, puis la zone où vous êtes
 - N — Tourner la caméra vers la sortie de votre zone actuelle la plus proche de la direction où vous regardez, mesurée depuis votre position ; chaque nouvelle pression tourne dans le sens horaire vers la sortie suivante. Là où aucune sortie n'est connue, tourne de 90° dans le sens horaire vers le point cardinal suivant. Si une balise est armée, viser plutôt le point de passage suivant de la balise
 - Ctrl+N — Aperçu de l'exploration : la pièce où vous êtes, la part de la zone que vous avez explorée, l'endroit inexploré le plus proche et le chemin pour y aller, et ce qu'il reste à fouiller, chacun avec son itinéraire
-- Ctrl+Maj+N — Aller vers l'endroit inexploré le plus proche
+- Ctrl+Maj+N — Aller vers l'endroit inexploré le plus proche ; si seules des portes verrouillées mènent plus loin, la plus proche est essayée
 - Ctrl+L — Aller au conteneur ou à l'objet à fouiller le plus proche, et l'ouvrir
 - Q / E — Le mod ajoute la direction horaire et la distance. Avec « Q et E : tout autour de vous » activé dans les réglages du mod, ils parcourent tout ce qui se trouve à moins de 30 mètres et n'est pas derrière un mur (en combat, seulement les ennemis vivants)
 - En entrant dans une pièce — Chaque sortie dit où elle mène et si vous y êtes déjà allé ; suit une liste de tout ce qui se trouve dans la pièce. Les portes disent aussi où elles mènent quand vous les sélectionnez, et pour ce qui se trouve dans une autre pièce, vous entendez le chemin pour y aller

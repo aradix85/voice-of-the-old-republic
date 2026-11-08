@@ -8,8 +8,11 @@
 //
 // Signal: the CSWSDoor::OpenDoor detour fires at the start of the open (before
 // SetOpenState kicks off the animation), handing us the opener's server object
-// id. We only react to doors the player-controlled leader opens — a follower /
-// enemy / script opening a door nearby must not fire a readout.
+// id. Only doors the player-controlled leader opens re-read the facing — a
+// follower / enemy / script opening a door nearby must not fire a readout.
+// Those instead get one short line when the door is near the leader ("Door 1
+// opens", KOTOR 1): a story door that opens from its own script after the
+// player's attempt would otherwise go unannounced.
 //
 // De-noising lives in camera_announce::AnnounceCurrentFacing: the same sector
 // spoken by the per-tick direction-change announce within the last second is
@@ -23,9 +26,9 @@
 namespace acc::door_announce {
 
 // Called from the OpenDoor detour (main thread) with the opener's SERVER
-// object id. Records it + a timestamp for the next Tick; no engine reads or
-// speech here.
-void NoteDoorOpened(uint32_t openerServerId);
+// object id and the door's server handle (0 when unknown). Records them for
+// the next Tick; no speech here.
+void NoteDoorOpened(uint32_t openerServerId, uint32_t doorHandle);
 
 // Per-tick consumer. Must run AFTER camera_announce::Tick so the dedup sees
 // this frame's last-spoken sector. Cheap when idle (one flag check).

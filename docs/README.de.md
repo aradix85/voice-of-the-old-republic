@@ -122,7 +122,7 @@ Eine zweite Liste, zusätzlich zu Q / E, mit den Objekten, die du im aktuellen B
 - AltGr (rechte Alt-Taste, allein) — Aktuelle Blickrichtung als Himmelsrichtung ansagen, mit der Kompassstimme, danach den Bereich, in dem du stehst
 - N — Kamera zu dem Ausgang deines aktuellen Bereichs drehen, der deiner Blickrichtung am nächsten liegt, gemessen von deinem Standort; jeder weitere Druck dreht im Uhrzeigersinn zum nächsten Ausgang. Wo keine Ausgänge bekannt sind, 90° im Uhrzeigersinn zur nächsten Himmelsrichtung. Ist eine Bake aktiv, stattdessen zum nächsten Wegpunkt der Bake ausrichten
 - Ctrl+N — Erkundungsübersicht: der Raum, in dem du bist, wie viel des Gebiets du erkundet hast, der nächste unerkundete Ort und der Weg dorthin, und was noch zu durchsuchen ist, jeweils mit Route
-- Ctrl+Shift+N — Zum nächsten unerkundeten Ort gehen
+- Ctrl+Shift+N — Zum nächsten unerkundeten Ort gehen; führen nur verschlossene Türen weiter, wird die nächste probiert
 - Ctrl+L — Zum nächsten Behälter oder Gegenstand gehen, der noch zu durchsuchen ist, und ihn öffnen
 - Q / E — Die Mod nennt Uhrzeigerrichtung und Entfernung. Ist in den Mod-Einstellungen „Q und E: alles um dich herum“ eingeschaltet, gehen sie alles im Umkreis von 30 Metern durch, das nicht hinter einer Wand liegt (im Kampf nur lebende Gegner)
 - Beim Betreten eines Raums — Jeder Ausgang sagt, wohin er führt und ob du schon dort warst; danach folgt eine Liste mit allem, was im Raum ist. Türen sagen auch beim Anwählen, wohin sie führen, und bei Dingen in einem anderen Raum hörst du den Weg dorthin

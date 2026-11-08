@@ -122,7 +122,7 @@ Drugi cykl, obok Q / E, który przechodzi po obiektach już odkrytych w bieżąc
 - AltGr (prawy Alt, samodzielnie) — Zapowiedź bieżącego kierunku patrzenia jako strony świata, głosem kompasu, a potem obszaru, w którym jesteś
 - N — Obrót kamery do wyjścia z bieżącego obszaru najbliższego kierunkowi, w którym patrzysz, mierzonego od miejsca, w którym stoisz; każde kolejne naciśnięcie obraca zgodnie z ruchem wskazówek zegara do następnego wyjścia. Tam, gdzie żadne wyjścia nie są znane, obrót o 90° zgodnie z ruchem wskazówek zegara do następnej strony świata. Jeśli radiolatarnia jest włączona, zamiast tego wycelowanie w jej następny punkt trasy
 - Ctrl+N — Przegląd eksploracji: pomieszczenie, w którym jesteś, ile obszaru zbadałeś, najbliższe niezbadane miejsce i droga do niego, i co zostało do przeszukania, każde z trasą
-- Ctrl+Shift+N — Pójście w stronę najbliższego niezbadanego miejsca
+- Ctrl+Shift+N — Pójście w stronę najbliższego niezbadanego miejsca; gdy dalej prowadzą tylko zamknięte drzwi, próbuje najbliższych
 - Ctrl+L — Pójście do najbliższego pojemnika lub przedmiotu do przeszukania i otwarcie go
 - Q / E — Mod dodaje kierunek według zegara i odległość. Gdy w ustawieniach moda włączone jest „Q i E: wszystko wokół ciebie”, przechodzą przez wszystko w promieniu 30 metrów, co nie jest za ścianą (w walce tylko żywi wrogowie)
 - Po wejściu do pomieszczenia — Każde wyjście mówi, dokąd prowadzi i czy już tam byłeś; potem następuje lista wszystkiego, co jest w pomieszczeniu. Drzwi mówią też po wybraniu, dokąd prowadzą, a przy rzeczach w innym pomieszczeniu słyszysz drogę do nich

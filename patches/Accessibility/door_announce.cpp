@@ -1,13 +1,21 @@
 #include "door_announce.h"
 
 #include <windows.h>
+#include <cmath>
 #include <cstdint>
+#include <cstdio>
 
 #include "camera_announce.h"
+#include "engine_area.h"    // door position, base name, cosmetic test
+#include "engine_panels.h"  // HasActiveDialogPanel
 #include "engine_player.h"  // GetPlayerServerCreature
+#include "filter_objects.h"
 #include "log.h"
 #include "engine_offsets_select.h"
 #include "engine_game.h"
+#include "prism.h"
+#include "same_name_suffix.h"  // the door's number, as the cycles say it
+#include "strings.h"
 
 namespace acc::door_announce {
 
@@ -28,6 +36,14 @@ const size_t kGameObjectIdOffset = acc::off::Same(0x4);
 // same frame. Last-writer-wins if two doors open in one frame (negligible).
 bool     s_pending       = false;
 uint32_t s_pendingOpener = 0;
+uint32_t s_pendingDoor   = 0;  // server handle, 0 when unknown (KOTOR 2)
+
+// A door someone else opens (a story script, an enemy) is spoken when it is
+// this close to the leader, once per door within the repeat window.
+constexpr float kNearbyOpenM      = 20.0f;
+constexpr DWORD kNearbyRepeatMs   = 3000;
+uint32_t        s_lastNearbyDoor  = 0;
+DWORD           s_lastNearbyAtMs  = 0;
 
 bool ReadServerObjectId(void* serverObj, uint32_t& outId) {
     if (!serverObj) return false;
@@ -40,10 +56,52 @@ bool ReadServerObjectId(void* serverObj, uint32_t& outId) {
     }
 }
 
+// "Door 1 opens" for a door the leader did not open, near the leader. The
+// Endar Spire story doors open from their own OnFailToOpen script after the
+// player's attempt (opener = the door itself): without this line the last
+// thing heard was "Door 1, locked", so a successful attempt sounded like a
+// failed one (2026-11-08). Number without state words: at this point the
+// lock flag may not have caught up with the open.
+void AnnounceNearbyOpen(uint32_t doorHandle) {
+    if (doorHandle == 0) return;
+    void* door = acc::engine::ResolveServerObjectHandle(doorHandle);
+    if (!door || acc::engine::IsDoorCosmetic(door)) return;
+    if (acc::engine::HasActiveDialogPanel()) return;
+    Vector dp;
+    Vector pp;
+    if (!acc::engine::GetObjectPosition(door, dp) ||
+        !acc::engine::GetPlayerPosition(pp)) {
+        return;
+    }
+    const float dx = dp.x - pp.x;
+    const float dy = dp.y - pp.y;
+    const float dist = std::sqrt(dx * dx + dy * dy);
+    if (dist > kNearbyOpenM) return;
+    const DWORD now = GetTickCount();
+    if (doorHandle == s_lastNearbyDoor && now - s_lastNearbyAtMs < kNearbyRepeatMs) {
+        return;
+    }
+    char name[160] = {0};
+    if (!acc::engine::GetObjectBaseName(door, name, sizeof(name)) || !name[0]) {
+        return;
+    }
+    acc::narration::AppendAreaPositionOrdinal(
+        door, acc::filter::CycleCategory::Door, name, sizeof(name));
+    char line[256];
+    std::snprintf(line, sizeof(line),
+                  acc::strings::Get(acc::strings::Id::FmtDoorOpensNearby), name);
+    prism::Speak(line, /*interrupt=*/false);
+    s_lastNearbyDoor = doorHandle;
+    s_lastNearbyAtMs = now;
+    acclog::Write("DoorAnnounce", "nearby open 0x%08x at %.1f m -> [%s]",
+                  doorHandle, dist, line);
+}
+
 }  // namespace
 
-void NoteDoorOpened(uint32_t openerServerId) {
+void NoteDoorOpened(uint32_t openerServerId, uint32_t doorHandle) {
     s_pendingOpener = openerServerId;
+    s_pendingDoor   = doorHandle;
     s_pending       = true;
 }
 
@@ -51,6 +109,7 @@ void Tick() {
     if (!s_pending) return;
     s_pending = false;
     uint32_t opener = s_pendingOpener;
+    uint32_t door   = s_pendingDoor;
 
     // Only the player-controlled character's own door-opens re-orient the
     // player. GetPlayerServerCreature is the currently-controlled leader's
@@ -62,7 +121,9 @@ void Tick() {
 
     if (opener != leaderId) {
         acclog::Write("DoorAnnounce",
-            "door opened by 0x%08x != leader 0x%08x — skip", opener, leaderId);
+            "door opened by 0x%08x != leader 0x%08x — no facing readout",
+            opener, leaderId);
+        AnnounceNearbyOpen(door);
         return;
     }
 
@@ -77,11 +138,12 @@ void Tick() {
 // EDI = param_1 = opener's SERVER object id. Server-side, so the id is directly
 // comparable to the leader's. We only record; the facing readout + player
 // filter + dedup run on the next tick.
-extern "C" void __cdecl OnDoorOpen(void* /*serverDoor*/, uint32_t openerServerId) {
+extern "C" void __cdecl OnDoorOpen(void* serverDoor, uint32_t openerServerId) {
     // Gate cleared for KOTOR 2 in Batch 3. Whole chain K2-verified: the tick
     // reads the leader via GetPlayerServerObject (K2 branch calls the engine's
     // GetServerCreature) and the facing readout's camera fields are Pick'd.
-    acc::door_announce::NoteDoorOpened(openerServerId);
+    acc::door_announce::NoteDoorOpened(openerServerId,
+                                       acc::engine::GetObjectHandle(serverDoor));
 }
 
 // CSWSDoor::OpenDoor @0x00619D00 on KOTOR 2, hooked at 0x00619DAA — right
@@ -100,5 +162,6 @@ void __cdecl OnDoorOpenK2(void* ebp) {
         return;
     }
 
-    acc::door_announce::NoteDoorOpened(openerId);
+    // The door pointer is not read here: the nearby-open line is KOTOR 1 only.
+    acc::door_announce::NoteDoorOpened(openerId, 0);
 }

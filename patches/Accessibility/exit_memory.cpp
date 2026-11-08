@@ -16,6 +16,7 @@
 #include "cycle_input.h"       // WalkToNarratedTarget
 #include "cycle_state.h"
 #include "discovery.h"         // loot heard in the overview joins the , / . cycle
+#include "endar_softlock.h"    // Trask may not try his own door
 #include "engine_area.h"
 #include "engine_compass.h"
 #include "engine_panels.h"     // IsForegroundUiBlocking
@@ -27,6 +28,7 @@
 #include "guidance_approach.h"
 #include "guidance_autowalk.h"
 #include "hotkeys.h"
+#include "interact_dispatch.h" // Ctrl+Shift+N tries a locked door like Enter
 #include "narrated_target.h"
 #include "log.h"
 #include "menus_modsettings.h"   // ExtendedCycling: list loot map-wide
@@ -1139,6 +1141,49 @@ bool CollectOverview(Overview& o) {
             o.via = ExitToward(g, hop, &viaPos);
             o.targetPos = o.via.empty() ? g.nodes[hop].centre : viaPos;
         }
+
+        // Nothing left to walk to, but unexplored regions behind locked
+        // doors: the nearest locked door with a reachable region on one side
+        // and an unexplored one on the other. 2026-11-08, Endar Spire bridge:
+        // the overview only said "7 more behind locked doors", the player
+        // never tried Door 1 (which opens on the attempt) and was stuck.
+        if (target < 0 && o.lockedAway > 0) {
+            float best = kFar;
+            for (const ClusterLink& l : g.links) {
+                if (!l.viaDoor) continue;
+                const int a = g.IndexOf(l.a);
+                const int b = g.IndexOf(l.b);
+                if (a < 0 || b < 0) continue;
+                int nearI = -1;
+                int farI  = -1;
+                if (g.distOpen[a] < kFar && g.distOpen[b] >= kFar) {
+                    nearI = a;
+                    farI  = b;
+                } else if (g.distOpen[b] < kFar && g.distOpen[a] >= kFar) {
+                    nearI = b;
+                    farI  = a;
+                } else {
+                    continue;
+                }
+                if (g_visited.count(g.nodes[farI].id)) continue;
+                void* door = ClosedDoorNear(area, l.doorPos);
+                if (!door || !acc::engine::IsDoorLocked(door) ||
+                    acc::engine::IsDoorCosmetic(door)) {
+                    continue;
+                }
+                Vector dp = l.doorPos;
+                acc::engine::GetObjectPosition(door, dp);
+                const float walk =
+                    (nearI == g.si)
+                        ? Dist2D(player, dp)
+                        : g.distOpen[nearI] + Dist2D(g.nodes[nearI].centre, dp);
+                if (walk < best) {
+                    best          = walk;
+                    o.tryDoor     = door;
+                    o.tryDoorPos  = dp;
+                }
+            }
+        }
     }
 
     // Loot left, with the way to each spot in another region. Reachable
@@ -1204,6 +1249,17 @@ std::string OverviewText(const Overview& o) {
             std::snprintf(buf, sizeof(buf),
                           acc::strings::Get(Id::FmtOverviewLockedAway), o.lockedAway);
             parts.push_back(buf);
+        }
+        if (!o.haveTarget && o.tryDoor) {
+            char name[192] = {0};
+            if (acc::narration::GetSpokenName(o.tryDoor, CycleCategory::Door,
+                                              name, sizeof(name)) &&
+                name[0]) {
+                std::snprintf(buf, sizeof(buf),
+                              acc::strings::Get(Id::FmtOverviewTryDoor),
+                              Located(name, o.tryDoorPos).c_str());
+                parts.push_back(buf);
+            }
         }
     }
     if (o.loot.empty()) {
@@ -1566,8 +1622,24 @@ void WalkTowardUnexplored() {
     Overview o;
     if (!CollectOverview(o)) return;
     if (!o.haveTarget || o.targetId < 0) {
-        // Nothing reachable left: say why (all explored / behind locks).
         StopChain("nothing left");
+        const uint32_t handle =
+            o.tryDoor ? acc::engine::GetObjectHandle(o.tryDoor) : 0;
+        if (handle != 0) {
+            // Only a locked door leads on: try it, exactly as Enter on it.
+            // The Trask guard speaks its own reason and refuses.
+            if (acc::endar::BlockCompanionAttempt(o.tryDoor)) return;
+            acc::narrated_target::Stamp(o.tryDoor, handle);
+            acc::interact::DispatchInteract(o.tryDoor, handle,
+                                            /*forceRadial=*/false);
+            // Queued behind the interact line, which names the door.
+            prism::Speak(acc::strings::Get(Id::ExploreTryingDoor),
+                         /*interrupt=*/false);
+            acclog::Write("ExitMemory", "explore walk: nothing reachable left, "
+                          "trying locked door 0x%08x", handle);
+            return;
+        }
+        // Nothing reachable left: say why (all explored / behind locks).
         const std::string text = OverviewText(o);
         prism::Speak(text.c_str(), /*interrupt=*/true);
         return;

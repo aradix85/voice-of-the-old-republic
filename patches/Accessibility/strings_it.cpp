@@ -1223,7 +1223,7 @@ const char* Get(Id id) {
         case Id::FmtWalkingTo:                return "In cammino: %s";
         case Id::KbNameExploreWalkUnexplored: return "Vai al punto inesplorato pi\xf9 vicino";
         case Id::KbNameExploreWalkLoot:       return "Vai alla cosa da perquisire pi\xf9 vicina";
-        case Id::HelpKeyExploreWalk:          return "Ctrl pi\xf9 Maiusc pi\xf9 N: vai verso il punto inesplorato pi\xf9 vicino. Ctrl pi\xf9 L: vai al contenitore o oggetto da perquisire pi\xf9 vicino";
+        case Id::HelpKeyExploreWalk:          return "Ctrl pi\xf9 Maiusc pi\xf9 N: vai verso il punto inesplorato pi\xf9 vicino; se proseguono solo porte chiuse, prova la pi\xf9 vicina. Ctrl pi\xf9 L: vai al contenitore o oggetto da perquisire pi\xf9 vicino";
         case Id::FmtLockBestSecurity:         return "il migliore del gruppo: %s con %d";
         case Id::FmtRouteVia:                 return "da %s, circa %d metri a piedi";
         case Id::FmtRouteWalk:                return "circa %d metri a piedi";
@@ -1234,6 +1234,9 @@ const char* Get(Id id) {
         case Id::RouteNoWayLocked:            return "Per ora non c'\xe8 strada: \xe8 dietro una porta chiusa.";
         case Id::GuidancePausedHint:          return "Il gioco \xe8 in pausa. Premi Spazio per camminare.";
         case Id::FmtCompanionInTheWay:        return "%s \xe8 in mezzo. Passa a quel personaggio con Tab e spostati.";
+        case Id::FmtOverviewTryDoor:          return "Porta da provare: %s";
+        case Id::ExploreTryingDoor:           return "Tutto ci\xf2 che \xe8 raggiungibile \xe8 esplorato, quindi si prova questa porta.";
+        case Id::FmtDoorOpensNearby:          return "%s si apre";
         case Id::Count_:               return "";
     }
     return "";

@@ -122,7 +122,7 @@ Un segundo ciclo, además de Q / E, que recorre los objetos que ya has descubier
 - AltGr (Alt derecho, solo) — Anunciar la orientación actual como punto cardinal, con la voz de la brújula, y después la zona en la que estás
 - N — Girar la cámara hacia la salida de tu zona actual más cercana a la dirección en la que miras, medida desde donde estás; cada pulsación más gira en sentido horario a la siguiente salida. Donde no se conocen salidas, gira 90° en sentido horario hacia el siguiente punto cardinal. Si hay una baliza activa, apuntar en su lugar al siguiente punto de ruta de la baliza
 - Ctrl+N — Resumen de exploración: la sala en la que estás, cuánto de la zona has explorado, el lugar inexplorado más cercano y el camino hacia él, y lo que queda por registrar, cada cosa con su ruta
-- Ctrl+Mayús+N — Ir hacia el lugar inexplorado más cercano
+- Ctrl+Mayús+N — Ir hacia el lugar inexplorado más cercano; si solo siguen puertas cerradas, prueba la más cercana
 - Ctrl+L — Ir al contenedor u objeto por registrar más cercano y abrirlo
 - Q / E — El mod añade la dirección horaria y la distancia. Con «Q y E: todo a tu alrededor» activado en los ajustes del mod, recorren todo lo que hay a menos de 30 metros y no está tras una pared (en combate, solo enemigos vivos)
 - Al entrar en una sala — Cada salida dice adónde lleva y si ya has estado allí; después sigue una lista con todo lo que hay en la sala. Las puertas también dicen adónde llevan al seleccionarlas, y para lo que está en otra sala oyes el camino hasta allí
