@@ -867,7 +867,7 @@ void HandleClient(SOCKET c) {
         return;
     }
     if (path == "/nearby" || path == "/do" || path == "/overview" ||
-        path == "/menu") {
+        path == "/menu" || path == "/objects" || path == "/rooms") {
         int status = 200;
         std::string body = QueueAndWait(path, params, &status);
         SendResponse(c, status, body);
