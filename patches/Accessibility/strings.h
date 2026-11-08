@@ -2539,6 +2539,7 @@ enum class Id : int {
     FmtLootReminder,          // "Still here: %s"
     EndarTraskDoorOwnCharacter,  // Trask may not open the Trask door himself
     RouteNoWayLocked,         // "No way there now: it is behind a locked door."
+    GuidancePausedHint,       // "The game is paused. Press Space to walk."
 
     Count_,
 };

@@ -8,6 +8,7 @@
 #include "engine_compass.h"   // EngineYawToCompass / CompassToSector / SectorString
 #include "engine_panels.h"    // HasActiveDialogPanel / IsForegroundUiBlocking / SetGlobalDialogState
 #include "engine_player.h"    // GetPlayerPosition / SetPlayerInputEnabled
+#include "engine_subscreen.h" // WorldIsPaused — a paused world is not a blocked way
 #include "guidance_autowalk.h"// CancelMovement
 #include "log.h"
 #include "prism.h"
@@ -39,6 +40,8 @@ constexpr float kReissueUseMSq  = 16.0f;   // (4m)^2 — a retried walk that set
                                            // because the walk targets the object
                                            // centre while the walkmesh can stop
                                            // the PC a metre or two short of it.
+constexpr DWORD kPauseHintMs    = 1000;    // paused this long after a walk
+                                           // request: say why nothing moves
 constexpr DWORD kCancelGraceMs  = 300;     // movement-key cancel ignores the
                                            // first 300ms after a dispatch — covers
                                            // a key still held from before the walk
@@ -73,6 +76,11 @@ struct ApproachState {
     // note on ApproachArm::useHandle), and its one-shot latch.
     uint32_t      useHandle     = 0;
     bool          useReissued   = false;
+
+    // World paused (Space, or the engine's auto-pause when an enemy comes
+    // into view) while armed: since when, and whether the hint was spoken.
+    DWORD         pausedSince     = 0;
+    bool          pauseHintSpoken = false;
 };
 ApproachState g_st;
 
@@ -302,6 +310,27 @@ void TickApproach() {
         g_st.active = false;
         return;
     }
+
+    // A paused world moves nobody, so nothing here is blocked: hold the stall
+    // and ceiling clocks (the queued walk resumes by itself on unpause) and
+    // say once why the walk is not happening. Before this, the engine's
+    // enemy-sighted auto-pause turned every walk into "way blocked" and the
+    // player had no way to tell (2026-11-08, Endar Spire battle corridor).
+    if (acc::engine::WorldIsPaused()) {
+        if (g_st.pausedSince == 0) g_st.pausedSince = now;
+        g_st.progressAt = now;
+        g_st.armedAt    = now;
+        if (!g_st.pauseHintSpoken && now - g_st.pausedSince >= kPauseHintMs) {
+            g_st.pauseHintSpoken = true;
+            const char* hint =
+                acc::strings::Get(acc::strings::Id::GuidancePausedHint);
+            prism::Speak(hint, /*interrupt=*/false);
+            acclog::Write("Approach", "world paused while armed -> [%s] name=[%s]",
+                          hint, g_st.name);
+        }
+        return;
+    }
+    g_st.pausedSince = 0;
 
     Vector pos;
     if (!acc::engine::GetPlayerPosition(pos)) {

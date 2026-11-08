@@ -1231,6 +1231,7 @@ const char* Get(Id id) {
         case Id::FmtLootReminder:             return "Jeszcze tutaj: %s";
         case Id::EndarTraskDoorOwnCharacter:  return "Te drzwi musi otworzy\xe6 twoja w\xb3""asna posta\xe6. Najpierw wr\xf3\xe6 klawiszem Tab.";
         case Id::RouteNoWayLocked:            return "Na razie nie ma drogi: to jest za zamkni\xeatymi drzwiami.";
+        case Id::GuidancePausedHint:          return "Gra jest wstrzymana. Naci\x9cnij spacj\xea, aby i\x9c\xe6.";
         case Id::Count_:               return "";
     }
     return "";

@@ -1234,6 +1234,7 @@ const char* Get(Id id) {
         case Id::FmtLootReminder:             return "A\xfan aqu\xed: %s";
         case Id::EndarTraskDoorOwnCharacter:  return "Tu propio personaje debe abrir esta puerta. Vuelve primero con Tab.";
         case Id::RouteNoWayLocked:            return "Ahora no hay camino: est\xe1 detr\xe1s de una puerta cerrada.";
+        case Id::GuidancePausedHint:          return "El juego est\xe1 en pausa. Pulsa Espacio para caminar.";
         case Id::Count_:               return "";
     }
     return "";

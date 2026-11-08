@@ -1233,6 +1233,7 @@ const char* Get(Id id) {
         case Id::FmtLootReminder:             return "Encore ici : %s";
         case Id::EndarTraskDoorOwnCharacter:  return "Votre propre personnage doit ouvrir cette porte. Revenez d'abord avec Tab.";
         case Id::RouteNoWayLocked:            return "Pas de chemin pour l'instant : c'est derri\xe8re une porte verrouill\xe9""e.";
+        case Id::GuidancePausedHint:          return "Le jeu est en pause. Appuyez sur Espace pour marcher.";
         case Id::Count_:               return "";
     }
     return "";
