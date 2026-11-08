@@ -1238,6 +1238,10 @@ const char* Get(Id id) {
         case Id::FmtOverviewTryDoor:          return "Porte \xe0 essayer : %s";
         case Id::ExploreTryingDoor:           return "Tout ce qui est accessible est explor\xe9, cette porte est donc essay\xe9""e.";
         case Id::FmtDoorOpensNearby:          return "%s s'ouvre";
+        case Id::FmtAlreadyAttacking:         return "Vous attaquez d\xe9j\xe0 %s";
+        case Id::CombatIdleNotice:            return "Vous n'attaquez pas. Choisissez un ennemi avec Q ou E et appuyez sur R.";
+        case Id::FmtOverviewWayOut:           return "Sortie : %s";
+        case Id::FmtExploreWayOut:            return "Sortie : %s. Appuyez sur Entr\xe9""e pour y aller.";
         case Id::Count_:               return "";
     }
     return "";

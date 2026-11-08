@@ -142,6 +142,10 @@ void MarkNearbySeen();
 
 constexpr float kFar = 1e30f;
 
+// A way-out door the graph cannot route to still counts when it is this
+// close in a straight line.
+constexpr float kExitDoorNearM = 40.0f;
+
 std::string ToLowerAscii(const char* s) {
     std::string out = s ? s : "";
     for (char& c : out) {
@@ -1184,6 +1188,41 @@ bool CollectOverview(Overview& o) {
                 }
             }
         }
+
+        // Still nothing: the nearest door the graph joins nothing through,
+        // usually the way out of the area. 2026-11-08, Taris hideout: one
+        // region, explored, and the exit door "To Apartment Complex" was
+        // named nowhere (its far side was folded into the same region and
+        // the door carries no transition text), so the player was stuck.
+        if (target < 0 && !o.tryDoor) {
+            float best = kFar;
+            acc::engine::AreaObjectIterator it(area);
+            while (void* obj = it.Next()) {
+                if (acc::engine::GetObjectKind(obj) !=
+                    static_cast<int>(acc::engine::GameObjectKind::Door)) {
+                    continue;
+                }
+                if (acc::engine::IsDoorCosmetic(obj)) continue;
+                Vector dp;
+                if (!acc::engine::GetObjectPosition(obj, dp)) continue;
+                int nearId = kClusterIdNone;
+                int farId  = kClusterIdNone;
+                if (DoorSides(g, dp, nearId, farId)) continue;
+                const float d = Dist2D(player, dp);
+                const Route r = RouteTo(g, dp);
+                const bool reachable =
+                    r.kind == Route::Here || r.kind == Route::Open ||
+                    (r.kind == Route::Unknown && d <= kExitDoorNearM);
+                if (!reachable) continue;
+                const float walk =
+                    r.kind == Route::Open ? static_cast<float>(r.walkM) : d;
+                if (walk < best) {
+                    best          = walk;
+                    o.exitDoor    = obj;
+                    o.exitDoorPos = dp;
+                }
+            }
+        }
     }
 
     // Loot left, with the way to each spot in another region. Reachable
@@ -1258,6 +1297,16 @@ std::string OverviewText(const Overview& o) {
                 std::snprintf(buf, sizeof(buf),
                               acc::strings::Get(Id::FmtOverviewTryDoor),
                               Located(name, o.tryDoorPos).c_str());
+                parts.push_back(buf);
+            }
+        } else if (!o.haveTarget && o.exitDoor) {
+            char name[192] = {0};
+            if (acc::narration::GetSpokenName(o.exitDoor, CycleCategory::Door,
+                                              name, sizeof(name)) &&
+                name[0]) {
+                std::snprintf(buf, sizeof(buf),
+                              acc::strings::Get(Id::FmtOverviewWayOut),
+                              Located(name, o.exitDoorPos).c_str());
                 parts.push_back(buf);
             }
         }
@@ -1637,6 +1686,26 @@ void WalkTowardUnexplored() {
                          /*interrupt=*/false);
             acclog::Write("ExitMemory", "explore walk: nothing reachable left, "
                           "trying locked door 0x%08x", handle);
+            return;
+        }
+        const uint32_t exitHandle =
+            o.exitDoor ? acc::engine::GetObjectHandle(o.exitDoor) : 0;
+        char exitName[192] = {0};
+        if (exitHandle != 0 &&
+            acc::narration::GetSpokenName(o.exitDoor, CycleCategory::Door,
+                                          exitName, sizeof(exitName)) &&
+            exitName[0]) {
+            // Only a way out is left: make it the target and say so. No
+            // walk: going through may load another area, so that stays
+            // the player's own Enter.
+            acc::narrated_target::Stamp(o.exitDoor, exitHandle);
+            char line[640];
+            std::snprintf(line, sizeof(line),
+                          acc::strings::Get(Id::FmtExploreWayOut),
+                          Located(exitName, o.exitDoorPos).c_str());
+            prism::Speak(line, /*interrupt=*/true);
+            acclog::Write("ExitMemory", "explore walk: way out 0x%08x -> [%s]",
+                          exitHandle, line);
             return;
         }
         // Nothing reachable left: say why (all explored / behind locks).

@@ -5,13 +5,22 @@
 #include <cstdint>
 #include <cstdio>
 
+#include <cmath>
+
 #include "combat_queue.h"    // OnEngineActionAdded — authoritative queue announce
 #include "engine_app.h"      // GetClientApp
+#include "engine_area.h"     // AreaObjectIterator (idle notice: enemy nearby)
 #include "engine_offsets.h"
 #include "engine_panels.h"   // ResolveMainInterface
 #include "engine_player.h"   // GetPlayerServerCreature, GetClientLeader
+#include "engine_reads.h"    // ReadCreatureCurrentHitPoints
+#include "engine_subscreen.h"  // WorldIsPaused
+#include "examine_view.h"    // IsHostileCreature
+#include "filter_objects.h"
 #include "log.h"
 #include "narrated_target.h"
+#include "prism.h"
+#include "strings.h"
 #include "engine_rebase.h"
 #include "engine_offsets_select.h"
 #include "engine_game.h"
@@ -130,6 +139,74 @@ int ReadOuterQueueSize(void* serverCreature) {
     }
 }
 
+// Target (server id) of the first real action queued on the creature's
+// combat round; 0 when nothing is queued or the read faults.
+uint32_t ReadFirstQueuedTarget(void* serverCreature) {
+    if (!serverCreature) return 0;
+    __try {
+        void* combatRound = *reinterpret_cast<void**>(
+            reinterpret_cast<unsigned char*>(serverCreature) +
+            kCreatureCombatRoundOffset);
+        if (!combatRound) return 0;
+        void* listPtr = *reinterpret_cast<void**>(
+            reinterpret_cast<unsigned char*>(combatRound) +
+            kCombatRoundActionsOffset);
+        if (!listPtr) return 0;
+        void* internalPtr = *reinterpret_cast<void**>(
+            reinterpret_cast<unsigned char*>(listPtr) + kListInternalOffset);
+        if (!internalPtr) return 0;
+        void* node = *reinterpret_cast<void**>(
+            reinterpret_cast<unsigned char*>(internalPtr) +
+            kListInternalHeadOffset);
+        for (int walked = 0; node && walked < 64; ++walked) {
+            void* data = *reinterpret_cast<void**>(
+                reinterpret_cast<unsigned char*>(node) + kLinkedListNodeDataOff);
+            if (data) {
+                auto* base = reinterpret_cast<unsigned char*>(data);
+                if (*(base + kCombatRoundActionTypeOffset) != 0xFF) {
+                    return *reinterpret_cast<uint32_t*>(
+                        base + kCombatRoundActionTargetOffset);
+                }
+            }
+            node = *reinterpret_cast<void**>(
+                reinterpret_cast<unsigned char*>(node) + kLinkedListNodeNextOff);
+        }
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return 0;
+    }
+    return 0;
+}
+
+// A living hostile creature within this many metres of the player.
+constexpr float kIdleEnemyRangeM = 25.0f;
+bool HostileNearby() {
+    Vector p;
+    if (!acc::engine::GetPlayerPosition(p)) return false;
+    void* area = acc::engine::GetCurrentArea();
+    if (!area) return false;
+    acc::engine::AreaObjectIterator it(area);
+    while (void* obj = it.Next()) {
+        if (!acc::filter::ObjectMatches(obj, acc::filter::CycleCategory::Npc)) continue;
+        if (!acc::examine_view::IsHostileCreature(obj)) continue;
+        const int hp = acc::engine::ReadCreatureCurrentHitPoints(obj);
+        if (hp == 0 || hp < -1) continue;
+        Vector q;
+        if (!acc::engine::GetObjectPosition(obj, q)) continue;
+        const float dx = q.x - p.x;
+        const float dy = q.y - p.y;
+        if (dx * dx + dy * dy <= kIdleEnemyRangeM * kIdleEnemyRangeM) return true;
+    }
+    return false;
+}
+
+// Idle notice: in combat, not paused, nothing queued for the controlled
+// character and an enemy still near, for this long -> one spoken line.
+// 2026-11-08: the player pressed R every second because she did not know
+// the attack carries on by itself; this line says when R is actually needed.
+constexpr DWORD kIdleNoticeMs = 2500;
+DWORD g_idleSince  = 0;
+bool  g_idleSpoken = false;
+
 int CallGetAutoPaused(void* exoApp) {
     if (!exoApp) return -1;
     __try {
@@ -245,6 +322,42 @@ void Tick() {
                       g_last.tgt, now.tgt);
     }
     g_last = now;
+
+    // Idle notice (KOTOR 1). Cheap checks first; the area walk only runs
+    // once the controlled character has stood with an empty queue for a
+    // while.
+    if (acc::game::IsKotor2()) return;
+    const bool idleNow =
+        now.qs == 0 && now.oq == 0 &&
+        acc::engine::IsAnyPartyMemberInCombat() &&
+        !acc::engine::WorldIsPaused() &&
+        !acc::engine::HasActiveDialogPanel() &&
+        !acc::engine::IsForegroundUiBlocking();
+    if (!idleNow) {
+        g_idleSince = 0;
+        if (now.qs > 0 || now.oq > 0 || !acc::engine::IsAnyPartyMemberInCombat()) {
+            g_idleSpoken = false;
+        }
+        return;
+    }
+    const DWORD tick = GetTickCount();
+    if (g_idleSince == 0) {
+        g_idleSince = tick;
+        return;
+    }
+    if (g_idleSpoken || tick - g_idleSince < kIdleNoticeMs) return;
+    g_idleSpoken = true;
+    if (!HostileNearby()) return;
+    const char* line = acc::strings::Get(acc::strings::Id::CombatIdleNotice);
+    prism::Speak(line, /*interrupt=*/false);
+    acclog::Write("Combat.Diag", "idle notice -> [%s]", line);
+}
+
+bool LeaderIsAttacking(uint32_t targetId) {
+    if (targetId == 0) return false;
+    void* server = acc::engine::GetPlayerServerCreature();
+    const uint32_t queued = ReadFirstQueuedTarget(server);
+    return queued != 0 && (queued & 0x7fffffffu) == (targetId & 0x7fffffffu);
 }
 
 void LogPreFire(const char* label) {

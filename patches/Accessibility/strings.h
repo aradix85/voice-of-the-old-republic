@@ -2544,6 +2544,10 @@ enum class Id : int {
     FmtOverviewTryDoor,       // "Door to try: %s" (overview, nothing else reachable)
     ExploreTryingDoor,        // Ctrl+Shift+N tries the locked door that leads on
     FmtDoorOpensNearby,       // "%s opens" (a door someone else opened, nearby)
+    FmtAlreadyAttacking,      // R while already attacking that target
+    CombatIdleNotice,         // in combat, nothing queued, enemy near
+    FmtOverviewWayOut,        // overview: door out of the area
+    FmtExploreWayOut,         // Ctrl+Shift+N: only a way out is left
 
     Count_,
 };

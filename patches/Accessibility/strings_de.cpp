@@ -1258,6 +1258,10 @@ const char* Get(Id id) {
         case Id::FmtOverviewTryDoor:          return "T\xfcr zum Ausprobieren: %s";
         case Id::ExploreTryingDoor:           return "Alles Erreichbare ist erkundet, also wird diese T\xfcr probiert.";
         case Id::FmtDoorOpensNearby:          return "%s \xf6""ffnet sich";
+        case Id::FmtAlreadyAttacking:         return "Du greifst %s bereits an";
+        case Id::CombatIdleNotice:            return "Du greifst nicht an. W\xe4hle mit Q oder E einen Gegner und dr\xfc""cke R.";
+        case Id::FmtOverviewWayOut:           return "Ausgang: %s";
+        case Id::FmtExploreWayOut:            return "Ausgang: %s. Dr\xfc""cke Enter, um hinzugehen.";
         case Id::Count_:               return "";
     }
     return "";

@@ -19,6 +19,7 @@
 #include <cstdio>
 #include <cmath>
 
+#include "combat_diag.h"     // LeaderIsAttacking: R while already attacking
 #include "combat_query.h"
 #include "combat_queue.h"
 #include "engine_area.h"
@@ -418,7 +419,18 @@ void PollHotkey() {
             void* obj = acc::engine::ResolveClientObjectHandle(snap.target_id);
             if (obj) acc::engine::GetObjectName(obj, name, sizeof(name));
             char msg[192];
-            if (name[0]) {
+            // Already attacking this target: R only queues the same attack
+            // again (the engine attacks every round by itself). Say so,
+            // instead of repeating "Attack X" on every press (2026-11-08:
+            // "Attack Sith Soldier" seventeen times in one fight).
+            const bool already =
+                name[0] && acc::engine::IsAnyPartyMemberInCombat() &&
+                acc::combat_diag::LeaderIsAttacking(snap.target_id);
+            if (already) {
+                std::snprintf(msg, sizeof(msg),
+                    acc::strings::Get(acc::strings::Id::FmtAlreadyAttacking),
+                    name);
+            } else if (name[0]) {
                 std::snprintf(msg, sizeof(msg),
                     acc::strings::Get(acc::strings::Id::FmtInteractEngine),
                     snap.label, name);

@@ -1237,6 +1237,10 @@ const char* Get(Id id) {
         case Id::FmtOverviewTryDoor:          return "Door to try: %s";
         case Id::ExploreTryingDoor:           return "Everything you can reach is explored, so trying this door.";
         case Id::FmtDoorOpensNearby:          return "%s opens";
+        case Id::FmtAlreadyAttacking:         return "Already attacking %s";
+        case Id::CombatIdleNotice:            return "You are not attacking. Choose an enemy with Q or E and press R.";
+        case Id::FmtOverviewWayOut:           return "Way out: %s";
+        case Id::FmtExploreWayOut:            return "Way out: %s. Press Enter to go there.";
         case Id::Count_:               return "";
     }
     return "";

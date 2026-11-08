@@ -116,6 +116,11 @@ struct Overview {
     // door to try. Null when there is a target or no such door.
     void*       tryDoor    = nullptr;
     Vector      tryDoorPos = {0.0f, 0.0f, 0.0f};
+    // Nothing left to walk to and no locked door to try: the nearest door
+    // the region graph joins nothing through (a way out of the area, or a
+    // door whose far side the graph does not know). Null otherwise.
+    void*       exitDoor    = nullptr;
+    Vector      exitDoorPos = {0.0f, 0.0f, 0.0f};
     std::vector<LootSpot> loot;    // reachable first, then by walking distance
 };
 

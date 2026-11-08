@@ -1236,6 +1236,10 @@ const char* Get(Id id) {
         case Id::FmtOverviewTryDoor:          return "Drzwi do spr\xf3""bowania: %s";
         case Id::ExploreTryingDoor:           return "Wszystko, co osi\xb9galne, zbadane, wi\xea""c pr\xf3""ba z tymi drzwiami.";
         case Id::FmtDoorOpensNearby:          return "%s si\xea otwiera";
+        case Id::FmtAlreadyAttacking:         return "Ju\xbf atakujesz: %s";
+        case Id::CombatIdleNotice:            return "Nie atakujesz. Wybierz wroga klawiszem Q lub E i naci\x9cnij R.";
+        case Id::FmtOverviewWayOut:           return "Wyj\x9c""cie: %s";
+        case Id::FmtExploreWayOut:            return "Wyj\x9c""cie: %s. Naci\x9cnij Enter, aby tam p\xf3j\x9c\xe6.";
         case Id::Count_:               return "";
     }
     return "";

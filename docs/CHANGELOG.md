@@ -63,6 +63,8 @@ push to the branch is built by GitHub Actions and published as the pre-release
 - Ctrl+Shift+N walks the whole way to the nearest unexplored region, opening
   doors on the way.
 - Ctrl+Shift+N tries that locked door when nothing unexplored is reachable.
+- With nothing else left, Ctrl+N names the way out of the area and Ctrl+Shift+N
+  makes it the target.
 - Ctrl+L walks to the nearest container or item left to search and opens it.
 - Small open slivers of the same space within 6 metres count as seen.
 - Focusing a door says which way it leads and what lies beyond it.
@@ -74,6 +76,8 @@ push to the branch is built by GitHub Actions and published as the pre-release
   walk." instead of "way blocked".
 - A party member standing on the target is named: "X is standing in the way".
 - A door near you that someone else opens says "Door 1 opens".
+- R while already attacking that enemy says "Already attacking X".
+- Standing idle in combat with an enemy near is announced once.
 - Door numbers stay the same after saving and loading.
 - Decorative doors are left out of the , / . cycle.
 - , / . lists only what you can still reach, and no empty containers.
@@ -120,6 +124,12 @@ push to the branch is built by GitHub Actions and published as the pre-release
   Ctrl+Shift+N tries it as Enter would. Story doors on the Endar Spire open on
   the attempt itself; the overview used to say only "7 more behind locked
   doors". With Trask as leader the Trask-door guard still refuses.
+- When there is no locked door to try either, Ctrl+N names the nearest door
+  the region graph joins nothing through ("Way out: To Apartment Complex, 5
+  o'clock, 12 metres") and Ctrl+Shift+N makes it the target and says "Press
+  Enter to go there", without walking (going through may load another area).
+  The Taris hideout is one region; its exit door carries no transition text
+  and was named nowhere.
 - Ctrl+L walks to the nearest container with items or item on the ground and
   uses it.
 - Regions joined to yours without a door whose centre is within 6 metres
@@ -148,6 +158,13 @@ push to the branch is built by GitHub Actions and published as the pre-release
   1). This is mostly a story door opening from its own script after your
   attempt; the last thing heard used to be "Door 1, locked", so a successful
   attempt sounded like a failed one. Not during conversations.
+- R on the enemy you are already attacking says "Already attacking Sith
+  Soldier" instead of "Attack Sith Soldier": the attack carries on every round
+  by itself, R only queues it again.
+- In combat, when your character has had nothing queued for 2.5 seconds while
+  a living enemy is within 25 metres (not paused, no conversation), you hear
+  once "You are not attacking. Choose an enemy with Q or E and press R."
+  (KOTOR 1).
 
 <h3>Cycles:</h3>
 

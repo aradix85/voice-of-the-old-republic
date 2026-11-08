@@ -1237,6 +1237,10 @@ const char* Get(Id id) {
         case Id::FmtOverviewTryDoor:          return "Porta da provare: %s";
         case Id::ExploreTryingDoor:           return "Tutto ci\xf2 che \xe8 raggiungibile \xe8 esplorato, quindi si prova questa porta.";
         case Id::FmtDoorOpensNearby:          return "%s si apre";
+        case Id::FmtAlreadyAttacking:         return "Stai gi\xe0 attaccando %s";
+        case Id::CombatIdleNotice:            return "Non stai attaccando. Scegli un nemico con Q o E e premi R.";
+        case Id::FmtOverviewWayOut:           return "Uscita: %s";
+        case Id::FmtExploreWayOut:            return "Uscita: %s. Premi Invio per andarci.";
         case Id::Count_:               return "";
     }
     return "";
