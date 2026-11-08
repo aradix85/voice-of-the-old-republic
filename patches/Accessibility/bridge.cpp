@@ -245,6 +245,23 @@ std::string BuildSnapshot() {
         return s;
     }
 
+    // World reads only once the player creature exists. Between character
+    // creation's Play and the first area the server already has the area but
+    // not the player yet, and reading the area name, party and target from
+    // here every 250 ms kept the new game's load screen up for good (bisected
+    // 2026-11-08: the bridge tick alone was enough, the rest of the mod not).
+    // Menus and spoken lines still work: they don't go through this snapshot.
+    if (!acc::engine::GetPlayerServerCreature()) {
+        s += ",\"in_world\":false";
+        void* mgr0 = acc::engine::GetGuiManager();
+        void* panel0 = mgr0 ? acc::engine::GetForegroundPanel(mgr0) : nullptr;
+        if (panel0) {
+            s += ",\"screen\":" + Json(acc::engine::PanelKindName(
+                                       acc::engine::IdentifyPanel(panel0)));
+        }
+        return s + "}";
+    }
+
     char buf[256] = {0};
     void* area = acc::engine::GetCurrentArea();
     if (area && acc::engine::GetAreaDisplayName(area, buf, sizeof(buf)))
