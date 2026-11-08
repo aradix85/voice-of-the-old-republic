@@ -103,6 +103,7 @@ struct Overview {
     int         explored  = 0;     // regions visited
     int         total     = 0;     // regions the player can reach or has seen
     bool        haveTarget = false;
+    int         targetId  = -1;    // region id of the nearest unexplored region
     std::string targetWhat;        // "to a corridor" / "to the Bridge"
     std::string via;               // exit of the current region toward it, may be empty
     Vector      targetPos = {0.0f, 0.0f, 0.0f};  // the via exit, else the next region's centre
@@ -170,10 +171,13 @@ bool ListRegions(std::vector<RegionSummary>& out,
 // itself is never held back.
 void WarnIfBehindLock(void* target);
 
-// Ctrl+Shift+N (ExploreWalkUnexplored): walk one region toward the nearest
-// unexplored one — through the closed door on the way, opening it, when
-// there is one. Ctrl+L (ExploreWalkLoot): walk to the nearest container with
-// items or item on the ground and use it, like Shift+- on it.
+// Ctrl+Shift+N (ExploreWalkUnexplored): walk the whole way to the nearest
+// unexplored region, region by region, opening closed doors on the way. One
+// line up front (what and how far); the regions passed announce themselves as
+// usual. Stops on arrival, on manual movement or any other walk, a blocked
+// step, combat or an opened panel. Ctrl+L (ExploreWalkLoot): walk to the
+// nearest container with items or item on the ground and use it, like Shift+-
+// on it.
 void PollWalkHotkeys();
 
 }  // namespace acc::exit_memory

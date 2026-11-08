@@ -115,6 +115,15 @@ void CancelApproach();
 // trying to reach" and tear the stale attempt down instead of stacking onto it.
 void* ApproachTarget();
 
+// How the most recent approach ended. None while one is in flight (or before
+// the first). Every ArmApproach takes the next serial, so a caller that armed
+// one can tell from `serial` whether a later arm superseded it. Lets a
+// multi-step walk (Ctrl+Shift+N) chain its next step only after its own
+// previous step arrived, and stop when the player walked elsewhere, cancelled,
+// or the step was blocked.
+enum class ApproachOutcome { None, Arrived, Blocked, Cancelled, Other };
+ApproachOutcome LastApproachOutcome(uint32_t* serial);
+
 // Announce "way blocked" for a target with the given name + LIVE distance and
 // compass direction (player→target), falling back to the plain phrase when the
 // player position is unreadable. Standalone so callers that want a one-shot

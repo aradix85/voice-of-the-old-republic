@@ -84,6 +84,16 @@ struct ApproachState {
 };
 ApproachState g_st;
 
+// Outcome of the last approach that ended, and the serial of the latest arm
+// (see LastApproachOutcome).
+uint32_t        g_armSerial = 0;
+ApproachOutcome g_outcome   = ApproachOutcome::None;
+
+void EndApproach(ApproachOutcome outcome) {
+    g_st.active = false;
+    g_outcome   = outcome;
+}
+
 // Live target position when the object is readable, else the stamped fallback.
 // Returns false when neither is available.
 bool ResolveTargetPos(Vector& out) {
@@ -263,7 +273,7 @@ void OnBlocked(DWORD stalledMs) {
         static_cast<int>(g_st.owner), g_st.isDialog ? 1 : 0,
         g_st.inputDisabled ? 1 : 0, static_cast<unsigned long>(stalledMs),
         g_st.name);
-    g_st.active = false;
+    EndApproach(ApproachOutcome::Blocked);
 }
 
 }  // namespace
@@ -272,6 +282,8 @@ void ArmApproach(const ApproachArm& arm) {
     DWORD now = GetTickCount();
     g_st = {};
     g_st.active        = true;
+    ++g_armSerial;
+    g_outcome          = ApproachOutcome::None;
     g_st.owner         = arm.owner;
     std::snprintf(g_st.name, sizeof(g_st.name), "%s",
                   (arm.name[0]) ? arm.name : "?");
@@ -317,7 +329,7 @@ void TickApproach() {
     // dialog started; nothing to cancel.
     if (acc::engine::HasActiveDialogPanel()) {
         acclog::Write("Approach", "conversation open — disarm (walk-to-talk OK)");
-        g_st.active = false;
+        EndApproach(ApproachOutcome::Other);
         return;
     }
 
@@ -328,7 +340,7 @@ void TickApproach() {
     if (acc::engine::IsForegroundUiBlocking(&blk)) {
         acclog::Write("Approach", "interaction panel open (fgKind=%d) — disarm "
             "(walk-to-use OK)", static_cast<int>(blk.fgKind));
-        g_st.active = false;
+        EndApproach(ApproachOutcome::Other);
         return;
     }
 
@@ -341,7 +353,7 @@ void TickApproach() {
     // re-enables input on its own when the queue drains/stalls.
     if (!g_st.barkAtArm && acc::engine::HasActiveBarkBubble()) {
         acclog::Write("Approach", "bark surfaced — disarm (interaction fired)");
-        g_st.active = false;
+        EndApproach(ApproachOutcome::Other);
         return;
     }
 
@@ -372,7 +384,7 @@ void TickApproach() {
         // wedged unreadable state can't keep us armed forever.
         if (now - g_st.armedAt >= kCeilingMs) {
             acclog::Write("Approach", "ceiling (position unreadable) — disarm");
-            g_st.active = false;
+            EndApproach(ApproachOutcome::Other);
         }
         return;
     }
@@ -418,7 +430,7 @@ void TickApproach() {
     if (!ResolveTargetPos(tgt)) {
         acclog::Write("Approach", "stalled but target position unresolvable — "
             "disarm quietly (cannot prove out of reach; not cancelling)");
-        g_st.active = false;
+        EndApproach(ApproachOutcome::Other);
         return;
     }
     // Reach tolerance depends on whether the walk ever physically ran — two very
@@ -448,7 +460,7 @@ void TickApproach() {
             "moved=%d) — disarm, no nag",
             static_cast<unsigned long>(now - g_st.progressAt), gap,
             g_st.movedSinceArm ? 1 : 0);
-        g_st.active = false;
+        EndApproach(ApproachOutcome::Arrived);
         return;
     }
     // Out of reach and stalled. Before calling it blocked, check whether the
@@ -466,7 +478,12 @@ bool IsApproachInFlight() {
 }
 
 void CancelApproach() {
-    g_st.active = false;
+    if (g_st.active) EndApproach(ApproachOutcome::Cancelled);
+}
+
+ApproachOutcome LastApproachOutcome(uint32_t* serial) {
+    if (serial) *serial = g_armSerial;
+    return g_st.active ? ApproachOutcome::None : g_outcome;
 }
 
 void* ApproachTarget() {
@@ -497,7 +514,7 @@ bool CancelByMovement() {
         "inputDisabled=%d name=[%s] (manual control reclaimed)",
         static_cast<int>(g_st.owner), g_st.isDialog ? 1 : 0,
         g_st.inputDisabled ? 1 : 0, g_st.name);
-    g_st.active = false;
+    EndApproach(ApproachOutcome::Cancelled);
     return true;
 }
 

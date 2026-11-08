@@ -22,6 +22,7 @@
 #include "engine_player.h"     // position, yaw, party, player creature
 #include "engine_reads.h"      // ReadCreatureCurrentHitPoints
 #include "engine_scriptvar.h"  // visited regions in the save
+#include "engine_subscreen.h"  // WorldIsPaused (explore walk waits)
 #include "filter_objects.h"
 #include "guidance_approach.h"
 #include "guidance_autowalk.h"
@@ -101,6 +102,41 @@ DWORD       g_reminderDoorMs  = 0;
 // A link through a door counts as locked when a locked, closed door
 // stands this close to the door the link was recorded with.
 constexpr float kDoorMatchM  = 1.5f;
+
+// Ctrl+Shift+N walks the whole way to the nearest unexplored region, one
+// region hop after another: each hop is a short walk to the next region's
+// centre, which the engine reliably completes (a single long walk across
+// several regions and doors does not). The goal region is fixed when the key
+// is pressed, so the walk does not turn round when another unexplored region
+// becomes nearer on the way. Region ids are only kept for this one walk;
+// nothing is saved by id (ids are not stable across loads).
+struct ExploreChain {
+    bool        active  = false;
+    int         goal    = -1;
+    uint32_t    serial  = 0;      // approach serial of the current hop
+    int         hops    = 0;
+    DWORD       endedAt = 0;      // when the current hop's approach ended
+    Vector      stepFrom = {0.0f, 0.0f, 0.0f};  // where the current hop began
+    void*       door    = nullptr;  // door the current hop opens, if any
+    int         doorTries = 0;      // hops in a row at that same door
+    std::string name;             // "to a corridor": for way-blocked lines
+};
+ExploreChain g_chain;
+constexpr int   kChainMaxHops  = 40;
+constexpr DWORD kChainSettleMs = 500;   // after a hop: door swing, region commit
+constexpr float kChainMinMoveM = 1.0f;  // a hop that moved less made no progress
+
+// Regions next to the player's, joined without a door, whose centre is this
+// close count as seen: a few steps of the same open space are not a place to
+// walk to. The Endar Spire bridge is cut into many such slivers, and walking
+// to each one in turn sent the player back and forth (2026-11-08). Loot and
+// creatures are tracked on their own, so nothing worth finding is lost.
+constexpr float kSeenM       = 6.0f;
+constexpr DWORD kSeenEveryMs = 500;
+DWORD g_seenAt = 0;
+
+void TickExploreChain();
+void MarkNearbySeen();
 
 constexpr float kFar = 1e30f;
 
@@ -927,6 +963,7 @@ void OnAreaEntered(void* area) {
     g_saveLoaded     = false;
     g_settleCreature = nullptr;
     g_settleTicks    = 0;
+    g_chain          = ExploreChain{};
     acclog::Write("ExitMemory", "area %s entered (save var %s, load deferred)",
                   g_areaKey.c_str(), g_varName.c_str());
 }
@@ -944,6 +981,8 @@ void OnClusterSeen(int id) {
 
 void Tick() {
     FlushReminder();
+    TickExploreChain();
+    MarkNearbySeen();
     if (g_saveLoaded || !g_area) return;
     if (g_varName.empty()) {
         g_saveLoaded = true;  // no stable key: session-only memory
@@ -1078,6 +1117,7 @@ bool CollectOverview(Overview& o) {
 
         if (target >= 0 && g.hopOpen[target] >= 0) {
             o.haveTarget = true;
+            o.targetId   = g.nodes[target].id;
             const auto landmarks = LandmarkRegions(area);
             o.targetWhat = Destination(area, g.nodes[target].id, landmarks,
                                        std::string());
@@ -1390,51 +1430,180 @@ void RemindLootOnLeaving(void* target) {
 
 namespace {
 
+void StopChain(const char* why) {
+    if (!g_chain.active) return;
+    g_chain.active = false;
+    acclog::Write("ExitMemory", "explore walk: stop after %d hop(s), goal %d (%s)",
+                  g_chain.hops, g_chain.goal, why);
+}
+
+// One hop of the explore walk: from the player's region to the next region on
+// the open way to the goal — through the closed door on that link (walked to
+// and opened like Shift+- on it) or to the next region's centre. False when
+// there is no open way or no walk started.
+bool ChainStep() {
+    Vector player;
+    if (!acc::engine::GetPlayerPosition(player)) return false;
+    void* area = acc::engine::GetCurrentArea();
+    Graph g;
+    if (!BuildGraph(area, player, g)) return false;
+    const int t = g.IndexOf(g_chain.goal);
+    if (t < 0 || g.si < 0 || t == g.si) return false;
+    if (g.distOpen[t] >= kFar || g.hopOpen[t] < 0) return false;
+    const int hop   = g.hopOpen[t];
+    const int hopId = g.nodes[hop].id;
+    void* door = nullptr;
+    for (const ClusterLink& l : g.links) {
+        const bool thisLink = (l.a == g.start && l.b == hopId) ||
+                              (l.b == g.start && l.a == hopId);
+        if (!thisLink || !l.viaDoor) continue;
+        door = ClosedDoorNear(area, l.doorPos);
+        break;
+    }
+    uint32_t before = 0;
+    acc::guidance::LastApproachOutcome(&before);
+    if (door) {
+        acc::narrated_target::Stamp(door, acc::engine::GetObjectHandle(door));
+        acc::cycle_input::WalkToNarratedTarget();
+    } else {
+        if (!acc::guidance::WalkTo(g.nodes[hop].centre)) return false;
+        acc::guidance::ApproachArm arm;
+        arm.owner = acc::guidance::ApproachOwner::Cycle;
+        std::snprintf(arm.name, sizeof(arm.name), "%s", g_chain.name.c_str());
+        arm.targetPos    = g.nodes[hop].centre;
+        arm.speakBlocked = true;
+        acc::guidance::ArmApproach(arm);
+    }
+    uint32_t serial = 0;
+    acc::guidance::LastApproachOutcome(&serial);
+    if (serial == before) return false;  // nothing was dispatched
+    g_chain.doorTries = (door && door == g_chain.door) ? g_chain.doorTries + 1 : 0;
+    g_chain.door     = door;
+    g_chain.serial   = serial;
+    g_chain.endedAt  = 0;
+    g_chain.stepFrom = player;
+    acclog::Write("ExitMemory", "explore walk: hop %d region %d -> %d%s (goal %d)",
+                  g_chain.hops, g.start, hopId, door ? " through a door" : "",
+                  g_chain.goal);
+    return true;
+}
+
+void TickExploreChain() {
+    if (!g_chain.active) return;
+    if (acc::guidance::IsAnyModApproachInFlight()) {
+        g_chain.endedAt = 0;
+        return;
+    }
+    uint32_t serial = 0;
+    const acc::guidance::ApproachOutcome out =
+        acc::guidance::LastApproachOutcome(&serial);
+    if (serial != g_chain.serial) return StopChain("another walk took over");
+    if (out == acc::guidance::ApproachOutcome::Blocked) return StopChain("blocked");
+    if (out == acc::guidance::ApproachOutcome::Cancelled) return StopChain("cancelled");
+    if (acc::engine::GetCurrentArea() != g_area) return StopChain("area changed");
+    if (g_chain.goal == g_current || g_visited.count(g_chain.goal)) {
+        return StopChain("arrived");
+    }
+    if (acc::engine::IsAnyPartyMemberInCombat()) return StopChain("combat");
+    if (acc::engine::HasActiveDialogPanel() ||
+        acc::engine::IsForegroundUiBlocking()) {
+        return StopChain("panel open");
+    }
+    const DWORD now = GetTickCount();
+    if (g_chain.endedAt == 0) {
+        g_chain.endedAt = now;
+        return;
+    }
+    if (now - g_chain.endedAt < kChainSettleMs) return;
+    if (acc::engine::WorldIsPaused()) return;  // carries on after unpause
+    Vector p;
+    if (!acc::engine::GetPlayerPosition(p)) return;
+    // A door hop may open the door without a step (the player stood at it);
+    // any other hop that left the player where it began made no progress.
+    if (!g_chain.door && Dist2D(p, g_chain.stepFrom) < kChainMinMoveM) {
+        return StopChain("no progress");
+    }
+    if (g_chain.doorTries >= 2) return StopChain("door did not open");
+    if (++g_chain.hops > kChainMaxHops) return StopChain("hop limit");
+    if (!ChainStep()) {
+        ClusterInfo goal;
+        if (acc::room_topology::GetClusterInfo(g_area, g_chain.goal, goal)) {
+            acc::guidance::SpeakWayBlocked(g_chain.name.c_str(), goal.centre);
+        }
+        StopChain("no way on");
+    }
+}
+
+void MarkNearbySeen() {
+    if (!g_area || g_current < 0) return;
+    const DWORD now = GetTickCount();
+    if (now - g_seenAt < kSeenEveryMs) return;
+    g_seenAt = now;
+    if (acc::engine::GetCurrentArea() != g_area) return;
+    Vector p;
+    if (!acc::engine::GetPlayerPosition(p)) return;
+    std::vector<ClusterLink> links;
+    acc::room_topology::GetClusterLinks(g_area, links);
+    for (const ClusterLink& l : links) {
+        if (l.viaDoor) continue;
+        int other;
+        if (l.a == g_current) other = l.b;
+        else if (l.b == g_current) other = l.a;
+        else continue;
+        if (other < 0 || g_visited.count(other)) continue;
+        ClusterInfo info;
+        if (!acc::room_topology::GetClusterInfo(g_area, other, info)) continue;
+        const float d = Dist2D(p, info.centre);
+        if (d > kSeenM) continue;
+        RecordVisit(other);
+        acclog::Write("ExitMemory", "region %d seen from region %d (%.1f m)",
+                      other, g_current, d);
+    }
+}
+
 void WalkTowardUnexplored() {
     using acc::strings::Id;
     Overview o;
     if (!CollectOverview(o)) return;
-    if (!o.haveTarget) {
+    if (!o.haveTarget || o.targetId < 0) {
         // Nothing reachable left: say why (all explored / behind locks).
+        StopChain("nothing left");
         const std::string text = OverviewText(o);
         prism::Speak(text.c_str(), /*interrupt=*/true);
         return;
     }
-    std::string subject = o.via;
-    if (!o.targetWhat.empty()) {
-        if (!subject.empty()) subject += ", ";
-        subject += o.targetWhat;
-    }
-    if (subject.empty()) subject = acc::strings::Get(Id::ExitAnnoNew);
+    g_chain        = ExploreChain{};
+    g_chain.active = true;
+    g_chain.goal   = o.targetId;
+    g_chain.name   = o.targetWhat.empty() ? std::string(acc::strings::Get(Id::ExitAnnoNew))
+                                          : o.targetWhat;
 
-    if (o.stepDoor) {
-        // A closed door on the way: walk to it and open it (Shift+- on it).
-        acc::narrated_target::Stamp(o.stepDoor,
-                                    acc::engine::GetObjectHandle(o.stepDoor));
-        acc::cycle_input::WalkToNarratedTarget();
-        acclog::Write("ExitMemory", "walk unexplored: via door (%s)",
-                      subject.c_str());
-        return;
+    // One line up front: what the walk heads for and how far it is to walk.
+    std::string subject = g_chain.name;
+    Vector player;
+    Graph g;
+    if (acc::engine::GetPlayerPosition(player) &&
+        BuildGraph(acc::engine::GetCurrentArea(), player, g)) {
+        const int t = g.IndexOf(o.targetId);
+        if (t >= 0) {
+            const std::string way = RouteText(RouteToIndex(g, t, g.nodes[t].centre));
+            if (!way.empty()) subject += ", " + way;
+        }
     }
-    if (!acc::guidance::WalkTo(o.stepPos)) {
+    if (!ChainStep()) {
+        g_chain.active = false;
         char fail[256];
         std::snprintf(fail, sizeof(fail), acc::strings::Get(Id::FmtGuidingFailed),
-                      subject.c_str());
+                      g_chain.name.c_str());
         prism::Speak(fail, /*interrupt=*/true);
         return;
     }
     char buf[640];
     std::snprintf(buf, sizeof(buf), acc::strings::Get(Id::FmtWalkingTo),
-                  Located(subject, o.stepPos).c_str());
+                  subject.c_str());
     prism::Speak(buf, /*interrupt=*/true);
-    acc::guidance::ApproachArm arm;
-    arm.owner = acc::guidance::ApproachOwner::Cycle;
-    std::snprintf(arm.name, sizeof(arm.name), "%s", subject.c_str());
-    arm.targetPos    = o.stepPos;
-    arm.speakBlocked = true;
-    acc::guidance::ArmApproach(arm);
-    acclog::Write("ExitMemory", "walk unexplored: %s -> (%.1f, %.1f)", buf,
-                  o.stepPos.x, o.stepPos.y);
+    acclog::Write("ExitMemory", "walk unexplored: %s (goal region %d)", buf,
+                  o.targetId);
 }
 
 void WalkToNearestLoot() {

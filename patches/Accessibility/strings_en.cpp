@@ -1197,7 +1197,7 @@ const char* Get(Id id) {
         case Id::FmtExitAnnoTo:         return "to %s";
         case Id::ExitAnnoToCorridor:    return "to a corridor";
         case Id::ExitAnnoToJunction:    return "to a junction";
-        case Id::ExitAnnoToArea:        return "to a room";
+        case Id::ExitAnnoToArea:        return "to an area";
         case Id::ExitAnnoToDeadEnd:     return "to a dead end";
         case Id::ModSettingAllViaScreenReader: return "Speak everything with the screen reader";
         case Id::LockNeedStoryOnly:       return "opens only through the story";
