@@ -2542,6 +2542,7 @@ enum class Id : int {
     RouteNoWayLocked,         // "No way there now: it is behind a locked door."
     GuidancePausedHint,       // "The game is paused. Press Space to walk."
     FmtCompanionInTheWay,     // "%s is standing in the way. Switch to them with Tab and step aside."
+    FmtCreatureInTheWay,      // "%s is in the way." (after "way blocked", someone beside the PC)
     FmtOverviewTryDoor,       // "Door to try: %s" (overview, nothing else reachable)
     ExploreTryingDoor,        // Ctrl+Shift+N tries the locked door that leads on
     FmtDoorOpensNearby,       // "%s opens" (a door someone else opened, nearby)

@@ -1234,6 +1234,7 @@ const char* Get(Id id) {
         case Id::RouteNoWayLocked:            return "Na razie nie ma drogi: to jest za zamkni\xeatymi drzwiami.";
         case Id::GuidancePausedHint:          return "Gra jest wstrzymana. Naci\x9cnij spacj\xea, aby i\x9c\xe6.";
         case Id::FmtCompanionInTheWay:        return "%s stoi na drodze. Prze\xb3\xb9""cz si\xea na t\xea posta\xe6 klawiszem Tab i odsu\xf1 si\xea.";
+        case Id::FmtCreatureInTheWay:         return "%s stoi na drodze.";
         case Id::FmtOverviewTryDoor:          return "Drzwi do spr\xf3""bowania: %s";
         case Id::ExploreTryingDoor:           return "Wszystko, co osi\xb9galne, zbadane, wi\xea""c pr\xf3""ba z tymi drzwiami.";
         case Id::FmtDoorOpensNearby:          return "%s si\xea otwiera";

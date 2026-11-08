@@ -1256,6 +1256,7 @@ const char* Get(Id id) {
         case Id::RouteNoWayLocked:            return "Gerade kein Weg dorthin: es liegt hinter einer verschlossenen T\xfcr.";
         case Id::GuidancePausedHint:          return "Das Spiel ist pausiert. Dr\xfc""cke die Leertaste, um zu gehen.";
         case Id::FmtCompanionInTheWay:        return "%s steht im Weg. Wechsle mit Tab zu dieser Figur und tritt zur Seite.";
+        case Id::FmtCreatureInTheWay:         return "%s steht im Weg.";
         case Id::FmtOverviewTryDoor:          return "T\xfcr zum Ausprobieren: %s";
         case Id::ExploreTryingDoor:           return "Alles Erreichbare ist erkundet, also wird diese T\xfcr probiert.";
         case Id::FmtDoorOpensNearby:          return "%s \xf6""ffnet sich";

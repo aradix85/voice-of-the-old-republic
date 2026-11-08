@@ -1236,6 +1236,7 @@ const char* Get(Id id) {
         case Id::RouteNoWayLocked:            return "Pas de chemin pour l'instant : c'est derri\xe8re une porte verrouill\xe9""e.";
         case Id::GuidancePausedHint:          return "Le jeu est en pause. Appuyez sur Espace pour marcher.";
         case Id::FmtCompanionInTheWay:        return "%s bloque le passage. Passez \xe0 ce personnage avec Tab et \xe9""cartez-vous.";
+        case Id::FmtCreatureInTheWay:         return "%s bloque le passage.";
         case Id::FmtOverviewTryDoor:          return "Porte \xe0 essayer : %s";
         case Id::ExploreTryingDoor:           return "Tout ce qui est accessible est explor\xe9, cette porte est donc essay\xe9""e.";
         case Id::FmtDoorOpensNearby:          return "%s s'ouvre";

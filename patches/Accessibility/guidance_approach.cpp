@@ -3,12 +3,14 @@
 #include <windows.h>
 #include <cmath>
 #include <cstdio>
+#include <cstring>
 
 #include "engine_area.h"      // GetObjectPosition / GetObjectName
 #include "engine_compass.h"   // EngineYawToCompass / CompassToSector / SectorString
 #include "engine_panels.h"    // HasActiveDialogPanel / IsForegroundUiBlocking / SetGlobalDialogState
 #include "engine_player.h"    // GetPlayerPosition / SetPlayerInputEnabled
 #include "engine_subscreen.h" // WorldIsPaused — a paused world is not a blocked way
+#include "examine_view.h"     // IsCreatureDead — corpses are not obstacles
 #include "guidance_autowalk.h"// CancelMovement
 #include "log.h"
 #include "prism.h"
@@ -47,6 +49,19 @@ constexpr DWORD kCancelGraceMs  = 300;     // movement-key cancel ignores the
                                            // a key still held from before the walk
                                            // and the engine's enqueue ramp-up.
 
+// Sidestep rescue. When even the coordinate retry leaves the PC rooted, the
+// usual cause is creatures packed around it: the engine's planner will not
+// start a path that begins inside their collision. 2026-11-08, Taris Upper
+// City Cantina: the beaten duelists lie "dying" round Ajuur, and every Enter
+// and Ctrl+Shift+N from among them ended in "way blocked" with the PC not
+// taking one step; a short manual step aside always freed it.
+constexpr int   kSidestepMax        = 3;     // sidesteps per arm before giving up
+constexpr float kSidestepDist       = 2.0f;  // metres per sidestep
+constexpr float kObstacleRadius     = 3.5f;  // creatures this close shape the step
+constexpr float kInTheWayRadius     = 2.5f;  // named in the final blocked line
+constexpr float kStepArrivedM       = 0.6f;  // close enough to the step point
+constexpr int   kMaxObstacles       = 24;
+
 struct ApproachState {
     bool          active        = false;
     ApproachOwner owner         = ApproachOwner::Interact;
@@ -81,6 +96,13 @@ struct ApproachState {
     // into view) while armed: since when, and whether the hint was spoken.
     DWORD         pausedSince     = 0;
     bool          pauseHintSpoken = false;
+
+    // Sidestep rescue (see kSidestepMax): how many were dispatched, whether
+    // one is walking now, where to, and the directions already tried.
+    int           sidestepTries = 0;
+    bool          stepping      = false;
+    Vector        stepPos       = {0.0f, 0.0f, 0.0f};
+    float         triedYaw[kSidestepMax] = {};
 };
 ApproachState g_st;
 
@@ -153,6 +175,154 @@ bool TryCoordinateWalkRetry(const Vector& tgt) {
         "— retrying as coordinate walk to (%.2f,%.2f,%.2f) name=[%s]",
         tgt.x, tgt.y, tgt.z, g_st.name);
     return true;
+}
+
+// Living creatures (party included, the leader not) within `radius` of `pc`.
+// Fills positions and, when `outObj` is given, the objects. Returns the count.
+int NearbyCreatures(const Vector& pc, float radius, Vector* outPos,
+                    void** outObj, int maxCount) {
+    void* area = acc::engine::GetCurrentArea();
+    if (!area) return 0;
+    void* leader = acc::engine::GetPlayerServerCreature();
+    int n = 0;
+    acc::engine::AreaObjectIterator it(area);
+    while (void* obj = it.Next()) {
+        if (n >= maxCount) break;
+        if (obj == leader) continue;
+        if (acc::engine::GetObjectKind(obj) !=
+            static_cast<int>(acc::engine::GameObjectKind::Creature)) {
+            continue;
+        }
+        if (acc::examine_view::IsCreatureDead(obj)) continue;
+        Vector p;
+        if (!acc::engine::GetObjectPosition(obj, p)) continue;
+        if (GapTo(p, pc) > radius) continue;
+        outPos[n] = p;
+        if (outObj) outObj[n] = obj;
+        ++n;
+    }
+    return n;
+}
+
+// Pick a sidestep point kSidestepDist from `pc`: as far from nearby creatures
+// as possible, leaning toward the target, but never straight at it (that line
+// is the one that just failed) and never back along an already-tried
+// direction. Returns false when every direction is hemmed in.
+bool ChooseSidestep(const Vector& pc, const Vector& tgt, Vector& out,
+                    float& outYaw, float& outNearest) {
+    Vector obs[kMaxObstacles];
+    const int n = NearbyCreatures(pc, kObstacleRadius, obs, nullptr,
+                                  kMaxObstacles);
+    const float kPi   = 3.14159265358979f;
+    const float toTgt = std::atan2(tgt.y - pc.y, tgt.x - pc.x);
+    float best = -1.0e9f;
+    bool  found = false;
+    for (int k = 0; k < 16; ++k) {
+        const float a   = k * (2.0f * kPi / 16.0f);
+        const float fwd = std::cos(a - toTgt);      // 1 toward target
+        if (fwd > 0.9f) continue;                   // the failed line itself
+        bool tried = false;
+        for (int t = 0; t < g_st.sidestepTries; ++t) {
+            if (std::cos(a - g_st.triedYaw[t]) > 0.85f) { tried = true; break; }
+        }
+        if (tried) continue;
+        Vector c{pc.x + std::cos(a) * kSidestepDist,
+                 pc.y + std::sin(a) * kSidestepDist, pc.z};
+        float nearest = 99.0f;
+        for (int i = 0; i < n; ++i) {
+            const float d = GapTo(obs[i], c);
+            if (d < nearest) nearest = d;
+        }
+        if (nearest < 1.2f) continue;               // steps into someone
+        const float score = (nearest < 3.0f ? nearest : 3.0f) + 0.75f * fwd;
+        if (score > best) {
+            best       = score;
+            out        = c;
+            outYaw     = a;
+            outNearest = nearest;
+            found      = true;
+        }
+    }
+    return found;
+}
+
+// Rooted even after the coordinate retry: step aside and walk again (see
+// kSidestepMax). Returns true when a sidestep is in flight.
+bool TrySidestep(const Vector& tgt) {
+    if (g_st.movedSinceArm || !g_st.coordRetried) return false;
+    if (g_st.sidestepTries >= kSidestepMax) return false;
+    Vector pc;
+    if (!acc::engine::GetPlayerPosition(pc)) return false;
+    Vector step{};
+    float  yaw = 0.0f, nearest = 0.0f;
+    if (!ChooseSidestep(pc, tgt, step, yaw, nearest)) {
+        acclog::Write("Approach", "sidestep: every direction hemmed in "
+            "name=[%s]", g_st.name);
+        return false;
+    }
+    acc::guidance::CancelMovement();
+    if (g_st.inputDisabled) {
+        acc::engine::SetPlayerInputEnabled(true);
+        g_st.inputDisabled = false;
+    }
+    if (!acc::guidance::WalkTo(step)) {
+        acclog::Write("Approach", "sidestep: WalkTo refused name=[%s]",
+                      g_st.name);
+        return false;
+    }
+    g_st.triedYaw[g_st.sidestepTries] = yaw;
+    ++g_st.sidestepTries;
+    g_st.stepping     = true;
+    g_st.stepPos      = step;
+    g_st.haveProgress = false;
+    g_st.progressAt   = GetTickCount();
+    acclog::Write("Approach", "sidestep %d/%d: rooted, stepping %.1fm to "
+        "(%.2f,%.2f) (nearest creature there %.1fm) name=[%s]",
+        g_st.sidestepTries, kSidestepMax, kSidestepDist, step.x, step.y,
+        nearest, g_st.name);
+    return true;
+}
+
+// The sidestep landed (or got partway): walk to the target again. The re-walk
+// counts as a fresh start, so a PC that stays rooted is caught again.
+void ResumeAfterSidestep() {
+    g_st.stepping = false;
+    Vector tgt;
+    if (!ResolveTargetPos(tgt) || !acc::guidance::WalkTo(tgt)) {
+        acclog::Write("Approach", "sidestep: re-walk could not be queued "
+            "name=[%s] — disarm", g_st.name);
+        EndApproach(ApproachOutcome::Other);
+        return;
+    }
+    g_st.movedSinceArm = false;
+    g_st.haveProgress  = false;
+    g_st.progressAt    = GetTickCount();
+    acclog::Write("Approach", "sidestep done — walking to target again "
+        "(%.2f,%.2f) name=[%s]", tgt.x, tgt.y, g_st.name);
+}
+
+// Nearest living creature within kInTheWayRadius of the PC, for the final
+// blocked line. Fills `name` (trailing blanks trimmed).
+bool CreatureInTheWay(char* name, size_t nameSize) {
+    Vector pc;
+    if (!acc::engine::GetPlayerPosition(pc)) return false;
+    Vector pos[kMaxObstacles];
+    void*  obj[kMaxObstacles] = {};
+    const int n = NearbyCreatures(pc, kInTheWayRadius, pos, obj, kMaxObstacles);
+    int   bestI = -1;
+    float bestD = 99.0f;
+    for (int i = 0; i < n; ++i) {
+        const float d = GapTo(pos[i], pc);
+        if (d < bestD) { bestD = d; bestI = i; }
+    }
+    if (bestI < 0) return false;
+    name[0] = '\0';
+    if (!acc::engine::GetObjectName(obj[bestI], name, nameSize) || !name[0]) {
+        return false;
+    }
+    size_t len = std::strlen(name);
+    while (len > 0 && name[len - 1] == ' ') name[--len] = '\0';
+    return len > 0;
 }
 
 // The coordinate-walk retry only walks. It has to clear the failed plan to free
@@ -257,6 +427,18 @@ void OnBlocked(DWORD stalledMs) {
                               who);
                 prism::Speak(msg, /*interrupt=*/true);
                 acclog::Write("Approach", "blocked with %s at the target -> [%s]",
+                              who, msg);
+            } else if (!g_st.movedSinceArm &&
+                       CreatureInTheWay(who, sizeof(who))) {
+                char tail[128];
+                std::snprintf(tail, sizeof(tail),
+                              acc::strings::Get(acc::strings::Id::FmtCreatureInTheWay),
+                              who);
+                std::snprintf(msg, sizeof(msg), "%s. %s",
+                              acc::strings::Get(acc::strings::Id::InteractWayBlocked),
+                              tail);
+                prism::Speak(msg, /*interrupt=*/true);
+                acclog::Write("Approach", "blocked with %s beside the PC -> [%s]",
                               who, msg);
             } else if (ResolveTargetPos(tgt) && g_st.name[0]) {
                 SpeakWayBlocked(g_st.name, tgt);
@@ -389,6 +571,12 @@ void TickApproach() {
         return;
     }
 
+    // A sidestep that reached its point hands straight back to the target walk.
+    if (g_st.stepping && GapTo(g_st.stepPos, pos) <= kStepArrivedM) {
+        ResumeAfterSidestep();
+        return;
+    }
+
     // Movement liveness. lastPos updates only when the PC has moved ≥0.5 m, so a
     // normal sub-threshold stride still registers progress every few ticks and
     // keeps resetting the stall timer — a long cross-terrain walk is never cut
@@ -411,6 +599,20 @@ void TickApproach() {
                                                            // ramping up (the
                                                            // stall window > any
                                                            // engine start latency)
+
+    // A sidestep stalled short of its point: if it moved at all, try the
+    // target again from here; if it never moved, try another direction.
+    if (g_st.stepping) {
+        if (g_st.movedSinceArm) {
+            ResumeAfterSidestep();
+            return;
+        }
+        g_st.stepping = false;
+        Vector t2;
+        if (ResolveTargetPos(t2) && TrySidestep(t2)) return;
+        OnBlocked(now - g_st.progressAt);
+        return;
+    }
 
     // Stalled with no success surfaced. Either it effectively arrived (a no-panel
     // act — door/bash/mine — or a near-miss left it close: don't nag), or it
@@ -469,6 +671,7 @@ void TickApproach() {
     // "way blocked" there tells the player no route exists when the coordinate
     // A* would have walked them straight to it.
     if (TryCoordinateWalkRetry(tgt)) return;
+    if (TrySidestep(tgt)) return;
 
     OnBlocked(now - g_st.progressAt);
 }

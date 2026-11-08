@@ -76,6 +76,8 @@ push to the branch is built by GitHub Actions and published as the pre-release
 - A walk while the game is paused says "The game is paused. Press Space to
   walk." instead of "way blocked".
 - A party member standing on the target is named: "X is standing in the way".
+- A walk boxed in by people steps aside by itself and tries again; if it
+  still cannot start, you hear who is in the way.
 - A door near you that someone else opens says "Door 1 opens".
 - R while already attacking that enemy says "Already attacking X".
 - Standing idle in combat with an enemy near is announced once.
@@ -167,6 +169,14 @@ push to the branch is built by GitHub Actions and published as the pre-release
   auto-pause) says once that the game is paused; the walk resumes on unpause.
 - When a walk stalls because a party member stands on the target, you hear
   "X is standing in the way. Switch to them with Tab and step aside."
+- When a walk never starts at all, not even on the coordinate retry, your
+  character steps 2 metres to the freest side (away from nearby creatures,
+  leaning toward the target, never straight at it) and walks again; up to
+  three sidesteps. Only then "Movement cancelled, way blocked. Deadeye Duncan
+  is in the way." names the nearest creature beside you. The beaten duelists
+  lie round Ajuur in the Taris Upper City Cantina, and every Enter and
+  Ctrl+Shift+N from among them ended in "way blocked" without a single step,
+  while one manual step aside always freed the walk.
 - Enter on an open door walks through it.
 - A door within 20 metres that someone else opens says "Door 1 opens" (KOTOR
   1). This is mostly a story door opening from its own script after your
