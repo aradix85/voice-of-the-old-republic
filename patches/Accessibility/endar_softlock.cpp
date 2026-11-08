@@ -50,6 +50,16 @@ constexpr char kCut2Door[] = "end_door10_cut2";
 // every attempt from 23:34:22 on.
 constexpr char kTraskDoor[] = "end_door19";
 
+// Trask's own tag (engine_player_party: his first_name is empty, so the name
+// readers land on it too).
+constexpr char kTraskTag[] = "end_trask";
+
+// The Trask door after his scene. The open attempt that runs it is reported
+// locked as well, and Trask leaves the party while it plays, so for a while
+// an empty roster does not yet mean the door is dead. Stay quiet about
+// "sealed" until the roster has been empty this long.
+constexpr DWORD kSceneGraceMs = 15000;
+
 // Failed opens on the room-5 door before we escalate from "the door opens
 // after the fight" to "you may be stuck, reload". A normal player pokes it
 // once or twice on the way to clearing the room; this many repeats means
@@ -85,6 +95,9 @@ acc::strings::Id      g_pendingHint    = acc::strings::Id::EndarDoorBattleHint;
 DWORD                 g_pendingHintAtMs = 0;
 
 DWORD g_lastDiagScanMs = 0;
+
+// Last time (diag scan) the party still had a companion. 0 = never seen.
+DWORD g_lastCompanionMs = 0;
 
 // Last edge-logged plot snapshot. -2 = never logged (forces a first emit).
 struct Snapshot {
@@ -138,6 +151,7 @@ void LogSnapshot(const char* why, const Snapshot& s) {
 }
 
 void ResetVisit() {
+    g_lastCompanionMs = 0;
     g_door16Attempts  = 0;
     g_spokeBattleHint = false;
     g_spokeReloadHint = false;
@@ -187,6 +201,14 @@ void OnDoorLocked(const char* tag) {
                 "%s reported locked, but %d companion(s) still in the party — "
                 "the level-up gate / sacrifice is still ahead, staying quiet",
                 kTraskDoor, companions);
+            return;
+        }
+        if (g_lastCompanionMs != 0 &&
+            GetTickCount() - g_lastCompanionMs < kSceneGraceMs) {
+            acclog::Write("Endar.Softlock",
+                "%s reported locked, roster empty for only %lums — his scene "
+                "is still playing, staying quiet", kTraskDoor,
+                static_cast<unsigned long>(GetTickCount() - g_lastCompanionMs));
             return;
         }
         QueueHint(acc::strings::Id::DoorSealedNoOpen);
@@ -250,6 +272,29 @@ void RegisterMsgRule() {
     acc::msg::Router::Instance().AddRule("EndarDoorLocked", RuleEndarDoorLocked);
 }
 
+bool BlockCompanionAttempt(void* target) {
+    if (!target || !g_inModule) return false;
+    char tag[64] = "";
+    if (!acc::engine::GetObjectTag(target, tag, sizeof(tag)) ||
+        !EqualsCI(tag, kTraskDoor)) {
+        return false;
+    }
+    void* leader = acc::engine::GetPlayerServerCreature();
+    char leaderTag[64] = "";
+    if (!leader ||
+        !acc::engine::GetObjectTag(leader, leaderTag, sizeof(leaderTag)) ||
+        !EqualsCI(leaderTag, kTraskTag)) {
+        return false;
+    }
+    const char* line =
+        acc::strings::Get(acc::strings::Id::EndarTraskDoorOwnCharacter);
+    prism::Speak(line, /*interrupt=*/true);
+    acclog::Write("Endar.Softlock",
+        "%s attempted with Trask as leader -> not dispatched, [%s]",
+        kTraskDoor, line);
+    return true;
+}
+
 void OnAreaChanged(void* /*area*/) {
     bool nowIn = IsCommandModule();
     if (nowIn && !g_inModule) {
@@ -278,6 +323,7 @@ void Tick() {
     g_lastDiagScanMs = now;
 
     if (!g_inModule) return;
+    if (CompanionCount() > 0) g_lastCompanionMs = now;
     Snapshot s = ReadSnapshot();
     if (!(s == g_lastSnap)) {
         LogSnapshot("change:", s);

@@ -2531,6 +2531,14 @@ enum class Id : int {
     // ---- Lock detail: who in the party is best at Security (KOTOR 1).
     FmtLockBestSecurity,      // "best in your party: %s with %d"
 
+    // ---- Routes, door destinations, loot reminder (exit_memory), Endar guard.
+    FmtRouteVia,              // "via %s, about %d metres to walk"
+    FmtRouteWalk,             // "about %d metres to walk"
+    RouteLocked,              // "behind a locked door"
+    FmtDoorLeads,             // "leads %s" (compass direction through a door)
+    FmtLootReminder,          // "Still here: %s"
+    EndarTraskDoorOwnCharacter,  // Trask may not open the Trask door himself
+
     Count_,
 };
 

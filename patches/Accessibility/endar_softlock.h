@@ -39,4 +39,16 @@ void Tick();
 // attempt itself.
 void RegisterMsgRule();
 
+// Interact-dispatch guard for one case only: the Trask door (end_door19)
+// tried while Trask himself is the party leader (Tab swapped to him). The
+// door's OnFailToOpen (k_pend_traskdie1) then runs with Trask as the opener
+// and his scene stalls on a black screen (2026-11-08, Korasha save: reload
+// was the only way out). This is NOT the tag-keyed "sealed door" shortcut the
+// WARNING in interact_dispatch.cpp forbids: it never guesses whether the door
+// is dead, it only refuses the attempt by the one creature that breaks the
+// story trigger, and the player character can still make the same attempt.
+// After the scene Trask is gone, so the guard cannot fire any more.
+// True = the attempt was refused and the reason spoken; the caller returns.
+bool BlockCompanionAttempt(void* target);
+
 }  // namespace acc::endar

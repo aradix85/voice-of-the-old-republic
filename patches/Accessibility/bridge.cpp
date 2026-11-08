@@ -285,21 +285,29 @@ std::string BuildSnapshot() {
     if (acc::engine::GetActiveLeaderName(buf, sizeof(buf)))
         s += ",\"leader\":" + JsonGame(buf);
 
-    // Party: the player character plus the NPC members.
+    // Party: the controlled creature plus the NPC members, each once. With a
+    // companion as leader (Tab) the controlled creature is that companion,
+    // and the member table can list it again.
     s += ",\"party\":[";
     bool first = true;
-    if (void* pc = acc::engine::GetPlayerServerCreature()) {
-        s += CreatureJson(pc);
-        first = false;
-    }
-    uint32_t handles[12] = {0};
-    int n = acc::engine::GetPartyMembers(handles, 12);
-    for (int i = 0; i < n; ++i) {
-        void* obj = acc::engine::ResolveServerObjectHandle(handles[i]);
-        if (!obj) continue;
+    uint32_t listed[13] = {0};
+    int listedCount = 0;
+    auto addMember = [&](void* obj) {
+        if (!obj) return;
+        const uint32_t h = acc::engine::GetObjectHandle(obj);
+        for (int k = 0; k < listedCount; ++k) {
+            if (h != 0 && listed[k] == h) return;
+        }
+        if (listedCount < 13) listed[listedCount++] = h;
         if (!first) s += ",";
         s += CreatureJson(obj);
         first = false;
+    };
+    addMember(acc::engine::GetPlayerServerCreature());
+    uint32_t handles[12] = {0};
+    int n = acc::engine::GetPartyMembers(handles, 12);
+    for (int i = 0; i < n; ++i) {
+        addMember(acc::engine::ResolveServerObjectHandle(handles[i]));
     }
     s += "]";
 
@@ -416,6 +424,8 @@ std::string BuildOverview() {
     PlayerFrame f = ReadPlayerFrame();
     std::string s = "{\"have_map\":";
     s += o.haveGraph ? "true" : "false";
+    const std::string here = acc::exit_memory::CurrentRegionText();
+    if (!here.empty()) s += ",\"here\":" + JsonGame(here.c_str());
     s += ",\"explored\":" + std::to_string(o.explored) +
          ",\"total\":" + std::to_string(o.total) +
          ",\"locked_away\":" + std::to_string(o.lockedAway);
@@ -429,9 +439,15 @@ std::string BuildOverview() {
     for (size_t i = 0; i < o.loot.size(); ++i) {
         const auto& l = o.loot[i];
         if (i) s += ",";
+        char hbuf[16];
+        std::snprintf(hbuf, sizeof(hbuf), "0x%08x", l.handle);
         s += "{\"name\":" + JsonGame(l.name.c_str()) +
+             ",\"handle\":" + Json(hbuf) +
              ",\"x\":" + Num(l.pos.x) + ",\"y\":" + Num(l.pos.y) +
-             ",\"where\":" + RelativeJson(f, l.pos) + "}";
+             ",\"where\":" + RelativeJson(f, l.pos) +
+             ",\"reachable\":" + (l.reachable ? "true" : "false");
+        if (!l.way.empty()) s += ",\"way\":" + JsonGame(l.way.c_str());
+        s += "}";
     }
     s += "],\"text\":" + JsonGame(acc::exit_memory::OverviewText(o).c_str()) + "}";
     return s;

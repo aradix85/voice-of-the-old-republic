@@ -11,6 +11,8 @@
 #include <utility>
 #include <vector>
 
+#include <windows.h>           // GetTickCount (loot reminder timing)
+
 #include "cycle_input.h"       // WalkToNarratedTarget
 #include "cycle_state.h"
 #include "engine_area.h"
@@ -28,6 +30,7 @@
 #include "prism.h"
 #include "same_name_suffix.h"
 #include "strings.h"
+#include "view_mode.h"         // routes are from the player, not the cursor
 
 namespace acc::exit_memory {
 
@@ -71,7 +74,22 @@ constexpr float kHereRadiusM = 30.0f;
 constexpr int   kHereMax     = 6;
 
 // Overview: loot spots named (the rest are counted).
-constexpr int   kLootSpoken  = 3;
+constexpr int   kLootSpoken  = 5;
+// Walking distances are spoken rounded to this many metres.
+constexpr float kWalkRoundM  = 5.0f;
+
+// Loot reminder (RemindLootOnLeaving): spoken this long after the walk line,
+// queued behind it; not again for the same door within the repeat window;
+// at most this many things named.
+constexpr DWORD kReminderDelayMs  = 1200;
+constexpr DWORD kReminderRepeatMs = 20000;
+constexpr int   kReminderNamed    = 3;
+
+bool        g_reminderPending = false;
+DWORD       g_reminderAtMs    = 0;
+std::string g_reminderText;
+uint32_t    g_reminderDoor    = 0;
+DWORD       g_reminderDoorMs  = 0;
 // A link through a door counts as locked when a locked, closed door
 // stands this close to the door the link was recorded with.
 constexpr float kDoorMatchM  = 1.5f;
@@ -483,6 +501,344 @@ std::string Located(const std::string& subject, const Vector& pos) {
     return buf;
 }
 
+// ---------------------------------------------------------------------------
+// The region graph seen from the player: shortest walks between region
+// centres, once with locked doors as walls and once without. Shared by the
+// overview, the routes to targets in other regions and the door lines.
+
+struct Graph {
+    void*                       area   = nullptr;
+    Vector                      player = {0.0f, 0.0f, 0.0f};
+    std::vector<ClusterSummary> nodes;
+    std::vector<ClusterLink>    links;
+    std::vector<ExitMark>       exits;   // of the region under the player
+    std::set<int>               linked;  // regions sharing a link with start
+    int                         underPlayer = kClusterIdNone;
+    int                         start       = kClusterIdNone;
+    int                         si          = -1;  // start's index in nodes
+    std::vector<float>          distOpen, distAll;
+    std::vector<int>            hopOpen, hopAll;
+
+    int IndexOf(int id) const {
+        for (size_t i = 0; i < nodes.size(); ++i) {
+            if (nodes[i].id == id) return static_cast<int>(i);
+        }
+        return -1;
+    }
+};
+
+float Dist2D(const Vector& a, const Vector& b) {
+    const float dx = a.x - b.x;
+    const float dy = a.y - b.y;
+    return std::sqrt(dx * dx + dy * dy);
+}
+
+bool BuildGraph(void* area, const Vector& player, Graph& g) {
+    g = Graph{};
+    g.area   = area;
+    g.player = player;
+    if (!area || !acc::room_topology::ListClusters(area, g.nodes) ||
+        g.nodes.empty()) {
+        return false;
+    }
+    std::string label;
+    int sig = 0;
+    acc::room_topology::LookupAt(area, player, label, sig, g.underPlayer,
+                                 /*allowDiagLog=*/false,
+                                 /*requireWallReachable=*/true,
+                                 /*zTrusted=*/true, &g.exits);
+    g.start = (area == g_area && g_current >= 0) ? g_current : g.underPlayer;
+
+    acc::room_topology::GetClusterLinks(area, g.links);
+    const std::vector<Vector> lockedDoors = LockedDoorPositions(area);
+    Adjacency open(g.nodes.size()), all(g.nodes.size());
+    for (const ClusterLink& l : g.links) {
+        if (l.a == g.start) g.linked.insert(l.b);
+        else if (l.b == g.start) g.linked.insert(l.a);
+        const int a = g.IndexOf(l.a);
+        const int b = g.IndexOf(l.b);
+        if (a < 0 || b < 0) continue;
+        const float w =
+            (std::max)(0.5f, Dist2D(g.nodes[a].centre, g.nodes[b].centre));
+        all[a].emplace_back(b, w);
+        all[b].emplace_back(a, w);
+        if (l.viaDoor && NearAny(l.doorPos, lockedDoors, kDoorMatchM)) continue;
+        open[a].emplace_back(b, w);
+        open[b].emplace_back(a, w);
+    }
+    g.si = g.IndexOf(g.start);
+    ShortestPaths(open, g.si, g.distOpen, g.hopOpen);
+    ShortestPaths(all, g.si, g.distAll, g.hopAll);
+    return true;
+}
+
+// The exit of the player's region that leads into region index `hop`,
+// numbered like the cycles ("Door 2 East"). Empty when the player is not
+// standing in the start region or no exit points that way.
+std::string ExitToward(const Graph& g, int hop, Vector* outPos) {
+    if (hop < 0 || hop >= static_cast<int>(g.nodes.size()) ||
+        g.underPlayer != g.start || g.exits.empty()) {
+        return std::string();
+    }
+    ClusterInfo here;
+    const bool haveCentre =
+        acc::room_topology::GetClusterInfo(g.area, g.start, here);
+    const int hopId = g.nodes[hop].id;
+    for (const ExitMark& mark : g.exits) {
+        if (mark.text.empty()) continue;
+        const Vector from = haveCentre ? here.centre : mark.pos;
+        if (RegionBehind(g.area, g.start, g.linked, from, mark.pos) != hopId) {
+            continue;
+        }
+        ExitMark e = mark;
+        NumberDoorExit(e, NumberedDoors());
+        if (outPos) *outPos = e.pos;
+        return e.text;
+    }
+    return std::string();
+}
+
+struct Route {
+    enum Kind { Unknown, Here, Open, Locked, Unreachable };
+    Kind        kind  = Unknown;
+    std::string via;        // exit of the player's region to take, may be empty
+    int         walkM = 0;  // Open only, rounded to kWalkRoundM
+};
+
+int RoundWalk(float m) {
+    const int step = static_cast<int>(kWalkRoundM);
+    const int r = static_cast<int>(m / kWalkRoundM + 0.5f) * step;
+    return r < step ? step : r;
+}
+
+// The way from the player to `targetPos`, which lies in region index `t`.
+// The walk is player -> centre of the first region on the way -> centre to
+// centre -> the target, never less than the straight line.
+Route RouteToIndex(const Graph& g, int t, const Vector& targetPos) {
+    Route r;
+    if (g.si < 0 || t < 0 || t >= static_cast<int>(g.nodes.size())) return r;
+    if (t == g.si) {
+        r.kind = Route::Here;
+        return r;
+    }
+    if (g.distOpen[t] < kFar && g.hopOpen[t] >= 0) {
+        const int hop = g.hopOpen[t];
+        r.kind = Route::Open;
+        r.via  = ExitToward(g, hop, nullptr);
+        float m = Dist2D(g.player, g.nodes[hop].centre) +
+                  (g.distOpen[t] - g.distOpen[hop]) +
+                  Dist2D(g.nodes[t].centre, targetPos);
+        m = (std::max)(m, Dist2D(g.player, targetPos));
+        r.walkM = RoundWalk(m);
+        return r;
+    }
+    r.kind = g.distAll[t] < kFar ? Route::Locked : Route::Unreachable;
+    return r;
+}
+
+Route RouteTo(const Graph& g, const Vector& targetPos) {
+    return RouteToIndex(g, g.IndexOf(RegionAt(g.area, targetPos)), targetPos);
+}
+
+std::string RouteText(const Route& r) {
+    using acc::strings::Id;
+    char buf[320];
+    switch (r.kind) {
+        case Route::Open:
+            if (!r.via.empty()) {
+                std::snprintf(buf, sizeof(buf), acc::strings::Get(Id::FmtRouteVia),
+                              r.via.c_str(), r.walkM);
+            } else {
+                std::snprintf(buf, sizeof(buf), acc::strings::Get(Id::FmtRouteWalk),
+                              r.walkM);
+            }
+            return buf;
+        case Route::Locked:
+            return acc::strings::Get(Id::RouteLocked);
+        default:
+            // Unreachable stays quiet: a region the graph has no link to
+            // may still be reached by a lift or a scene the graph cannot see.
+            return std::string();
+    }
+}
+
+// Where a door leads, from the player's side: the compass direction through
+// it and the region beyond ("leads West, to a corridor, visited"; "leads
+// South, back"). `outNear` gets the graph index of the region on the
+// player's side, -1 when unknown. Empty when the graph joins nothing
+// through the door (area transitions, set dressing).
+std::string DoorBeyond(const Graph& g, const Vector& doorPos, int* outNear) {
+    using acc::strings::Id;
+    if (outNear) *outNear = -1;
+    int nearId = kClusterIdNone;
+    int farId  = kClusterIdNone;
+
+    // The regions the door joins, from the links recorded through it.
+    std::vector<int> sides;
+    for (const ClusterLink& l : g.links) {
+        if (!l.viaDoor || Dist2D(l.doorPos, doorPos) > kDoorMatchM) continue;
+        if (std::find(sides.begin(), sides.end(), l.a) == sides.end()) {
+            sides.push_back(l.a);
+        }
+        if (std::find(sides.begin(), sides.end(), l.b) == sides.end()) {
+            sides.push_back(l.b);
+        }
+    }
+    auto walkTo = [&g](int id) {
+        const int i = g.IndexOf(id);
+        return (i >= 0 && i < static_cast<int>(g.distAll.size())) ? g.distAll[i]
+                                                                  : kFar;
+    };
+    if (sides.size() >= 2) {
+        // Near: the player's region when the door is one of its own, else
+        // the side reached first. Far: the side reached last.
+        float bestNear = kFar;
+        for (int id : sides) {
+            const float d = (id == g.start) ? -1.0f : walkTo(id);
+            if (nearId < 0 || d < bestNear) {
+                bestNear = d;
+                nearId = id;
+            }
+        }
+        float bestFar = -1.0f;
+        for (int id : sides) {
+            if (id == nearId) continue;
+            const float d = walkTo(id);
+            if (farId < 0 || d > bestFar) {
+                bestFar = d;
+                farId = id;
+            }
+        }
+    } else {
+        // No link through it: probe past the door on the line from the
+        // player, and accept only a region linked to the near side.
+        const float len = Dist2D(g.player, doorPos);
+        if (len < 0.5f) return std::string();
+        const float ux = (doorPos.x - g.player.x) / len;
+        const float uy = (doorPos.y - g.player.y) / len;
+        const Vector before{doorPos.x - ux * 2.0f, doorPos.y - uy * 2.0f,
+                            doorPos.z};
+        nearId = RegionAt(g.area, before);
+        if (nearId < 0) return std::string();
+        std::set<int> nearLinked;
+        for (const ClusterLink& l : g.links) {
+            if (l.a == nearId) nearLinked.insert(l.b);
+            else if (l.b == nearId) nearLinked.insert(l.a);
+        }
+        farId = RegionBehind(g.area, nearId, nearLinked, g.player, doorPos);
+        if (farId < 0 || !nearLinked.count(farId)) return std::string();
+    }
+    if (nearId < 0 || farId < 0) return std::string();
+    if (outNear) *outNear = g.IndexOf(nearId);
+
+    // Direction: from the near region's centre out through the door, the
+    // same way the region label words its exits ("Door East").
+    float dx = 0.0f;
+    float dy = 0.0f;
+    ClusterInfo info;
+    if (acc::room_topology::GetClusterInfo(g.area, nearId, info) &&
+        Dist2D(info.centre, doorPos) >= 1.0f) {
+        dx = doorPos.x - info.centre.x;
+        dy = doorPos.y - info.centre.y;
+    } else if (acc::room_topology::GetClusterInfo(g.area, farId, info)) {
+        dx = info.centre.x - doorPos.x;
+        dy = info.centre.y - doorPos.y;
+    }
+    if (dx * dx + dy * dy < 0.25f) return std::string();
+    const float yaw = std::atan2(dy, dx) * 57.29578f;
+    const int sector =
+        acc::engine::CompassToSector(acc::engine::EngineYawToCompass(yaw));
+    char buf[320];
+    std::snprintf(buf, sizeof(buf), acc::strings::Get(Id::FmtDoorLeads),
+                  acc::strings::Get(acc::engine::SectorString(sector)));
+    std::string out = buf;
+
+    if (g.area == g_area && nearId == g.start && farId == g_previous) {
+        out += ", ";
+        out += acc::strings::Get(Id::ExitAnnoBack);
+        return out;
+    }
+    const std::string dest =
+        Destination(g.area, farId, LandmarkRegions(g.area), std::string());
+    if (!dest.empty()) out += ", " + dest;
+    if (g.area == g_area) {
+        out += ", ";
+        out += g_visited.count(farId) ? acc::strings::Get(Id::ExitAnnoVisited)
+                                      : acc::strings::Get(Id::ExitAnnoNew);
+    }
+    return out;
+}
+
+// Loot left: containers holding items, and items on the ground, nearest
+// first (straight line).
+void CollectLoot(std::vector<LootSpot>& out) {
+    out.clear();
+    const CycleCategory cats[] = {CycleCategory::Container, CycleCategory::Item};
+    for (CycleCategory cat : cats) {
+        acc::cycle::CategoryListing listing;
+        if (!acc::cycle::BuildCategoryListing(cat, listing)) continue;
+        for (int i = 0; i < listing.count; ++i) {
+            void* obj = listing.objs[i];
+            if (listing.isPin[i] || !obj) continue;
+            if (cat == CycleCategory::Container &&
+                acc::engine::GetContainerItemCount(obj) <= 0) {
+                continue;
+            }
+            char name[160] = {0};
+            if (!acc::narration::GetSpokenName(obj, cat, name, sizeof(name)) ||
+                !name[0]) {
+                continue;
+            }
+            LootSpot s;
+            s.obj      = obj;
+            s.handle   = acc::engine::GetObjectHandle(obj);
+            s.name     = name;
+            s.pos      = listing.positions[i];
+            s.distance = listing.distances[i];
+            s.walk     = s.distance;
+            out.push_back(std::move(s));
+        }
+    }
+    std::stable_sort(out.begin(), out.end(),
+                     [](const LootSpot& a, const LootSpot& b) {
+                         return a.distance < b.distance;
+                     });
+}
+
+// The player's region label, annotated like the walk-in announce when the
+// committed region is the one underfoot.
+std::string RegionLabelAt(void* area, const Vector& player) {
+    std::string label;
+    int sig = 0;
+    int cid = kClusterIdNone;
+    std::vector<ExitMark> exits;
+    if (!acc::room_topology::LookupAt(area, player, label, sig, cid,
+                                      /*allowDiagLog=*/false,
+                                      /*requireWallReachable=*/true,
+                                      /*zTrusted=*/true, &exits) ||
+        label.empty()) {
+        return std::string();
+    }
+    if (area == g_area && cid >= 0 && cid == g_current) {
+        std::string annotated;
+        std::vector<ExitMark> unused;
+        if (Annotate(area, label, exits, annotated, unused)) return annotated;
+    }
+    return label;
+}
+
+void FlushReminder() {
+    if (!g_reminderPending) return;
+    if (static_cast<LONG>(GetTickCount() - g_reminderAtMs) < 0) return;
+    g_reminderPending = false;
+    Vector unused;
+    if (!acc::engine::GetPlayerPosition(unused)) return;
+    // A conversation or a panel took over meanwhile: the moment has passed.
+    if (acc::engine::IsForegroundUiBlocking()) return;
+    prism::Speak(g_reminderText.c_str(), /*interrupt=*/false);
+    acclog::Write("ExitMemory", "loot reminder: %s", g_reminderText.c_str());
+}
+
 }  // namespace
 
 void OnAreaEntered(void* area) {
@@ -514,6 +870,7 @@ void OnClusterSeen(int id) {
 }
 
 void Tick() {
+    FlushReminder();
     if (g_saveLoaded || !g_area) return;
     if (g_varName.empty()) {
         g_saveLoaded = true;  // no stable key: session-only memory
@@ -628,138 +985,66 @@ bool CollectOverview(Overview& o) {
     void* area = acc::engine::GetCurrentArea();
     if (!area) return false;
 
-    std::vector<ClusterSummary> nodes;
-    if (acc::room_topology::ListClusters(area, nodes) && !nodes.empty()) {
+    Graph g;
+    if (BuildGraph(area, player, g)) {
         o.haveGraph = true;
 
-        // The player's region and its exits, straight from the graph.
-        std::string label;
-        int sig = 0;
-        int underPlayer = kClusterIdNone;
-        std::vector<ExitMark> exits;
-        acc::room_topology::LookupAt(area, player, label, sig, underPlayer,
-                                     /*allowDiagLog=*/false,
-                                     /*requireWallReachable=*/true,
-                                     /*zTrusted=*/true, &exits);
-        const int start = g_current >= 0 ? g_current : underPlayer;
-
-        auto indexOf = [&nodes](int id) {
-            for (size_t i = 0; i < nodes.size(); ++i) {
-                if (nodes[i].id == id) return static_cast<int>(i);
-            }
-            return -1;
-        };
-
-        std::vector<ClusterLink> links;
-        acc::room_topology::GetClusterLinks(area, links);
-        const std::vector<Vector> lockedDoors = LockedDoorPositions(area);
-        const std::set<int> linked = LinkedRegions(area, start);
-        Adjacency open(nodes.size()), all(nodes.size());
-        for (const ClusterLink& l : links) {
-            const int a = indexOf(l.a);
-            const int b = indexOf(l.b);
-            if (a < 0 || b < 0) continue;
-            const float dx = nodes[a].centre.x - nodes[b].centre.x;
-            const float dy = nodes[a].centre.y - nodes[b].centre.y;
-            const float w = (std::max)(0.5f, std::sqrt(dx * dx + dy * dy));
-            all[a].emplace_back(b, w);
-            all[b].emplace_back(a, w);
-            if (l.viaDoor && NearAny(l.doorPos, lockedDoors, kDoorMatchM)) continue;
-            open[a].emplace_back(b, w);
-            open[b].emplace_back(a, w);
-        }
-
-        const int si = indexOf(start);
-        std::vector<float> distOpen, distAll;
-        std::vector<int> hopOpen, hopAll;
-        ShortestPaths(open, si, distOpen, hopOpen);
-        ShortestPaths(all, si, distAll, hopAll);
-
         int target = -1;
-        for (size_t i = 0; i < nodes.size(); ++i) {
-            const bool visited = g_visited.count(nodes[i].id) != 0;
-            const bool reachable = distAll[i] < kFar;
+        for (size_t i = 0; i < g.nodes.size(); ++i) {
+            const bool visited = g_visited.count(g.nodes[i].id) != 0;
+            const bool reachable = g.distAll[i] < kFar;
             if (visited || reachable) ++o.total;
             if (visited) ++o.explored;
-            if (visited || !reachable || static_cast<int>(i) == si) continue;
-            if (distOpen[i] >= kFar) {
+            if (visited || !reachable || static_cast<int>(i) == g.si) continue;
+            if (g.distOpen[i] >= kFar) {
                 ++o.lockedAway;
-            } else if (target < 0 || distOpen[i] < distOpen[target]) {
+            } else if (target < 0 || g.distOpen[i] < g.distOpen[target]) {
                 target = static_cast<int>(i);
             }
         }
 
-        if (target >= 0 && hopOpen[target] >= 0) {
+        if (target >= 0 && g.hopOpen[target] >= 0) {
             o.haveTarget = true;
             const auto landmarks = LandmarkRegions(area);
-            o.targetWhat = Destination(area, nodes[target].id, landmarks,
+            o.targetWhat = Destination(area, g.nodes[target].id, landmarks,
                                        std::string());
-            const int hop = hopOpen[target];
-            const int hopId = nodes[hop].id;
-            o.stepPos = nodes[hop].centre;
+            const int hop = g.hopOpen[target];
+            const int hopId = g.nodes[hop].id;
+            o.stepPos = g.nodes[hop].centre;
             // The closed door on the link into the first region, if any:
             // walking there means opening it.
-            for (const ClusterLink& l : links) {
-                const bool thisLink = (l.a == start && l.b == hopId) ||
-                                      (l.b == start && l.a == hopId);
+            for (const ClusterLink& l : g.links) {
+                const bool thisLink = (l.a == g.start && l.b == hopId) ||
+                                      (l.b == g.start && l.a == hopId);
                 if (!thisLink || !l.viaDoor) continue;
                 o.stepDoor = ClosedDoorNear(area, l.doorPos);
                 break;
             }
             // The exit of the current region that leads to the first region
-            // on the way (the label's exits belong to the region under the
-            // player).
-            if (underPlayer == start && !exits.empty()) {
-                ClusterInfo here;
-                const bool haveCentre =
-                    acc::room_topology::GetClusterInfo(area, start, here);
-                const auto doors = NumberedDoors();
-                for (ExitMark e : exits) {
-                    if (e.text.empty()) continue;
-                    const Vector from = haveCentre ? here.centre : e.pos;
-                    if (RegionBehind(area, start, linked, from, e.pos) != hopId) {
-                        continue;
-                    }
-                    NumberDoorExit(e, doors);
-                    o.via = e.text;
-                    o.targetPos = e.pos;
-                    break;
-                }
-            }
-            if (o.via.empty()) o.targetPos = nodes[hop].centre;
+            // on the way.
+            Vector viaPos{};
+            o.via = ExitToward(g, hop, &viaPos);
+            o.targetPos = o.via.empty() ? g.nodes[hop].centre : viaPos;
         }
     }
 
-    // Loot left: containers holding items, and items on the ground.
-    const CycleCategory cats[] = {CycleCategory::Container, CycleCategory::Item};
-    for (CycleCategory cat : cats) {
-        acc::cycle::CategoryListing listing;
-        if (!acc::cycle::BuildCategoryListing(cat, listing)) continue;
-        for (int i = 0; i < listing.count; ++i) {
-            void* obj = listing.objs[i];
-            if (listing.isPin[i] || !obj) continue;
-            if (cat == CycleCategory::Container &&
-                acc::engine::GetContainerItemCount(obj) <= 0) {
-                continue;
-            }
-            char name[160] = {0};
-            if (!acc::narration::GetSpokenName(obj, cat, name, sizeof(name)) ||
-                !name[0]) {
-                continue;
-            }
-            LootSpot s;
-            s.obj      = obj;
-            s.handle   = acc::engine::GetObjectHandle(obj);
-            s.name     = name;
-            s.pos      = listing.positions[i];
-            s.distance = listing.distances[i];
-            o.loot.push_back(std::move(s));
+    // Loot left, with the way to each spot in another region. Reachable
+    // spots first, nearest walk first; what only lies behind locked doors
+    // (or that the graph has no link to) goes last.
+    CollectLoot(o.loot);
+    if (o.haveGraph) {
+        for (LootSpot& s : o.loot) {
+            const Route r = RouteTo(g, s.pos);
+            s.way = RouteText(r);
+            if (r.kind == Route::Open) s.walk = static_cast<float>(r.walkM);
+            s.reachable = r.kind != Route::Locked && r.kind != Route::Unreachable;
         }
+        std::stable_sort(o.loot.begin(), o.loot.end(),
+                         [](const LootSpot& a, const LootSpot& b) {
+                             if (a.reachable != b.reachable) return a.reachable;
+                             return a.walk < b.walk;
+                         });
     }
-    std::stable_sort(o.loot.begin(), o.loot.end(),
-                     [](const LootSpot& a, const LootSpot& b) {
-                         return a.distance < b.distance;
-                     });
     return true;
 }
 
@@ -804,6 +1089,7 @@ std::string OverviewText(const Overview& o) {
             if (n == kLootSpoken) break;
             if (!spots.empty()) spots += "; ";
             spots += Located(s.name, s.pos);
+            if (!s.way.empty()) spots += ", " + s.way;
             ++n;
         }
         parts.push_back(spots);
@@ -818,6 +1104,14 @@ std::string OverviewText(const Overview& o) {
     return text;
 }
 
+std::string CurrentRegionText() {
+    Vector player;
+    if (!acc::engine::GetPlayerPosition(player)) return std::string();
+    void* area = acc::engine::GetCurrentArea();
+    if (!area) return std::string();
+    return RegionLabelAt(area, player);
+}
+
 void PollOverviewHotkey() {
     if (!acc::hotkeys::Pressed(acc::hotkeys::Action::ExploreOverview)) return;
     Vector unused;
@@ -825,9 +1119,93 @@ void PollOverviewHotkey() {
     if (acc::engine::IsForegroundUiBlocking()) return;
     Overview o;
     if (!CollectOverview(o)) return;
-    const std::string text = OverviewText(o);
+    // Where am I first, then the area as a whole.
+    std::string text = CurrentRegionText();
+    if (!text.empty() && text.back() != '.') text += '.';
+    if (!text.empty()) text += ' ';
+    text += OverviewText(o);
     prism::Speak(text.c_str(), /*interrupt=*/true);
     acclog::Write("ExitMemory", "overview: %s", text.c_str());
+}
+
+std::string TargetWayInfo(void* obj, const Vector& pos) {
+    if (!obj || acc::view_mode::IsActive()) return std::string();
+    Vector player;
+    if (!acc::engine::GetPlayerPosition(player)) return std::string();
+    Graph g;
+    if (!BuildGraph(acc::engine::GetCurrentArea(), player, g) || g.si < 0) {
+        return std::string();
+    }
+    if (acc::filter::ObjectMatches(obj, CycleCategory::Door)) {
+        if (acc::engine::IsDoorCosmetic(obj)) return std::string();
+        int nearIdx = -1;
+        std::string out = DoorBeyond(g, pos, &nearIdx);
+        if (nearIdx < 0) return out.empty() ? RouteText(RouteTo(g, pos)) : out;
+        if (nearIdx != g.si) {
+            const std::string route = RouteText(RouteToIndex(g, nearIdx, pos));
+            if (!route.empty()) {
+                if (!out.empty()) out += ", ";
+                out += route;
+            }
+        }
+        return out;
+    }
+    return RouteText(RouteTo(g, pos));
+}
+
+void RemindLootOnLeaving(void* target) {
+    using acc::strings::Id;
+    if (!target) return;
+    // Not leaving through a door that is locked shut.
+    if (acc::filter::ObjectMatches(target, CycleCategory::Door) &&
+        acc::engine::IsDoorLocked(target) && !acc::engine::IsDoorOpen(target)) {
+        return;
+    }
+    const uint32_t door = acc::engine::GetObjectHandle(target);
+    const DWORD now = GetTickCount();
+    if (door != 0 && door == g_reminderDoor &&
+        now - g_reminderDoorMs < kReminderRepeatMs) {
+        return;
+    }
+    Vector player;
+    if (!acc::engine::GetPlayerPosition(player)) return;
+    void* area = acc::engine::GetCurrentArea();
+    if (!area) return;
+    const int here = (area == g_area && g_current >= 0) ? g_current
+                                                        : RegionAt(area, player);
+    if (here < 0) return;
+
+    std::vector<LootSpot> loot;
+    CollectLoot(loot);
+    std::string list;
+    int named = 0;
+    int total = 0;
+    for (const LootSpot& s : loot) {
+        if (RegionAt(area, s.pos) != here) continue;
+        ++total;
+        if (named == kReminderNamed) continue;
+        if (!list.empty()) list += "; ";
+        list += s.name;
+        ++named;
+    }
+    if (total == 0) return;
+    if (total > named) {
+        char more[64];
+        std::snprintf(more, sizeof(more),
+                      acc::strings::Get(Id::FmtRegionHereMore), total - named);
+        list += "; ";
+        list += more;
+    }
+    char buf[640];
+    std::snprintf(buf, sizeof(buf), acc::strings::Get(Id::FmtLootReminder),
+                  list.c_str());
+    g_reminderText    = buf;
+    g_reminderPending = true;
+    g_reminderAtMs    = now + kReminderDelayMs;
+    g_reminderDoor    = door;
+    g_reminderDoorMs  = now;
+    acclog::Write("ExitMemory", "loot reminder queued (region %d, door 0x%08x): %s",
+                  here, door, buf);
 }
 
 namespace {

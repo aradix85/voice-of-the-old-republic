@@ -1227,6 +1227,12 @@ const char* Get(Id id) {
         case Id::KbNameExploreWalkLoot:       return "Ir a lo m\xe1s cercano por registrar";
         case Id::HelpKeyExploreWalk:          return "Ctrl m\xe1s May\xfas m\xe1s N: ir hacia el lugar inexplorado m\xe1s cercano. Alt m\xe1s N: ir al contenedor u objeto por registrar m\xe1s cercano";
         case Id::FmtLockBestSecurity:         return "el mejor del grupo: %s con %d";
+        case Id::FmtRouteVia:                 return "por %s, unos %d metros a pie";
+        case Id::FmtRouteWalk:                return "unos %d metros a pie";
+        case Id::RouteLocked:                 return "detr\xe1s de una puerta cerrada";
+        case Id::FmtDoorLeads:                return "lleva hacia %s";
+        case Id::FmtLootReminder:             return "A\xfan aqu\xed: %s";
+        case Id::EndarTraskDoorOwnCharacter:  return "Tu propio personaje debe abrir esta puerta. Vuelve primero con Tab.";
         case Id::Count_:               return "";
     }
     return "";

@@ -1246,6 +1246,12 @@ const char* Get(Id id) {
         case Id::KbNameExploreWalkLoot:       return "Zum n\xe4""chsten Durchsuchbaren gehen";
         case Id::HelpKeyExploreWalk:          return "Strg, Umschalt und N: zum n\xe4""chsten unerkundeten Ort gehen. Alt und N: zum n\xe4""chsten Beh\xe4lter oder Gegenstand gehen, der noch zu durchsuchen ist";
         case Id::FmtLockBestSecurity:         return "am besten in der Gruppe: %s mit %d";
+        case Id::FmtRouteVia:                 return "\xfc""ber %s, etwa %d Meter zu gehen";
+        case Id::FmtRouteWalk:                return "etwa %d Meter zu gehen";
+        case Id::RouteLocked:                 return "hinter einer verschlossenen T\xfcr";
+        case Id::FmtDoorLeads:                return "f\xfchrt Richtung %s";
+        case Id::FmtLootReminder:             return "Noch hier: %s";
+        case Id::EndarTraskDoorOwnCharacter:  return "Diese T\xfcr muss deine eigene Figur \xf6""ffnen. Wechsle zuerst mit Tab zur\xfc""ck.";
         case Id::Count_:               return "";
     }
     return "";

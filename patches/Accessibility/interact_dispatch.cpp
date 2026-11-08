@@ -9,6 +9,8 @@
 #pragma comment(lib, "user32.lib")
 
 #include "combat_queue.h"   // Phase 3A — action-queue submenu (Shift+H)
+#include "endar_softlock.h"  // Trask may not try the Trask door himself
+#include "exit_memory.h"     // loot reminder when leaving a region
 #include "engine_actionbar.h"
 #include "engine_area.h"
 #include "engine_offsets.h"
@@ -271,6 +273,18 @@ void DispatchInteractImpl(void* target, uint32_t handle, bool forceRadial) {
     } else {
         acclog::Write("Interact", "dispatch creature=%p id=0x%08x name=[%s] pos=?",
             leader, leaderId, leaderName);
+    }
+
+    // The one creature-keyed refusal (see endar_softlock.h — not a sealed-
+    // door shortcut): Trask as leader trying his own door stalls the scene.
+    if (acc::endar::BlockCompanionAttempt(target)) return;
+
+    // Going through a door or an exit: a short, non-blocking reminder of what
+    // is still worth searching in the region being left (spoken a beat after
+    // the walk line, never instead of it).
+    if (!forceRadial && (cat == acc::filter::CycleCategory::Door ||
+                         cat == acc::filter::CycleCategory::Transition)) {
+        acc::exit_memory::RemindLootOnLeaving(target);
     }
 
     // Transitions are TRIGGER regions that fire on walk-IN, not on "use", and

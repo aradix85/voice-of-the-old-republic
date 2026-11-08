@@ -22,6 +22,7 @@
 #include "engine_input.h"
 #include "engine_panels.h"
 #include "engine_player.h"
+#include "exit_memory.h"     // TargetWayInfo — where a door leads, the way there
 #include "filter_objects.h"
 #include "guidance_approach.h"  // ArmApproach / IsApproachInFlight — unified
                                 // walk-to-act tracker (way-blocked + cancel)
@@ -382,10 +383,22 @@ void AnnounceCurrent(const acc::cycle::CategoryListing& listing,
     }
     int metres = static_cast<int>(listing.distances[s.focusedIndex] + 0.5f);
 
-    char itemMsg[192];
-    FormatItemPayload(name, haveYaw, clock, metres, itemMsg, sizeof(itemMsg));
+    char itemMsg[576];
+    const int itemLen =
+        FormatItemPayload(name, haveYaw, clock, metres, itemMsg, sizeof(itemMsg));
+    // World objects: where a door leads, and the way to anything in another
+    // region (the map cycle's pins and hints have no place in the graph).
+    if (!mapCtx && !isPin && !isStatic && itemLen > 0 &&
+        itemLen < static_cast<int>(sizeof(itemMsg))) {
+        const std::string way =
+            acc::exit_memory::TargetWayInfo(s.focusedObj, objPos);
+        if (!way.empty()) {
+            std::snprintf(itemMsg + itemLen, sizeof(itemMsg) - itemLen, ", %s",
+                          way.c_str());
+        }
+    }
 
-    char fullMsg[256];
+    char fullMsg[704];
     if (categoryPrefix && categoryPrefix[0] != '\0') {
         std::snprintf(fullMsg, sizeof(fullMsg),
                       acc::strings::Get(acc::strings::Id::FmtCategoryItem),
@@ -614,9 +627,16 @@ void OnAnnounceFocus() {
         if (haveYaw) clock = ClockPosition(yaw, dx, dy);
     }
 
-    char msg[192];
+    char msg[576];
     if (havePos) {
-        FormatItemPayload(a.name, haveYaw, clock, metres, msg, sizeof(msg));
+        const int len =
+            FormatItemPayload(a.name, haveYaw, clock, metres, msg, sizeof(msg));
+        if (!a.isMapPin && len > 0 && len < static_cast<int>(sizeof(msg))) {
+            const std::string way = acc::exit_memory::TargetWayInfo(a.obj, a.pos);
+            if (!way.empty()) {
+                std::snprintf(msg + len, sizeof(msg) - len, ", %s", way.c_str());
+            }
+        }
     } else {
         std::snprintf(msg, sizeof(msg), "%s", a.name);
     }

@@ -13,6 +13,7 @@
 #include "engine_compass.h"  // ClockPosition — Q/E speaks where, like the , / . cycle
 #include "engine_app.h"     // GetClientAppInternal
 #include "engine_player.h"  // GetPartyMembers, GetPlayerPosition
+#include "exit_memory.h"    // TargetWayInfo — where a door leads, the way there
 #include "filter_objects.h"
 #include "log.h"
 #include "narrated_target.h"
@@ -231,7 +232,7 @@ bool NarrateHandle(uint32_t handle, const char* reason, bool explicitRequest) {
     // "{name}, {clock} o'clock, {metres} metres" shape as the , / . cycle,
     // so both ways of finding a door or a person sound alike. The automatic
     // focus-follow stays short.
-    char located[400];
+    char located[720];
     Vector playerPos{};
     float yaw = 0.0f;
     if (explicitRequest && havePos &&
@@ -248,7 +249,18 @@ bool NarrateHandle(uint32_t handle, const char* reason, bool explicitRequest) {
             ? std::snprintf(located, sizeof(located), fmt, spoken,
                             acc::engine::ClockPosition(yaw, dx, dy), metres)
             : std::snprintf(located, sizeof(located), fmt, spoken, metres);
-        if (n > 0) spoken = located;
+        if (n > 0 && n < static_cast<int>(sizeof(located))) {
+            spoken = located;
+            // Doors: which way they lead and what lies beyond. Anything in
+            // another region: the way there, not just the straight line.
+            if (!isParty) {
+                const std::string way = acc::exit_memory::TargetWayInfo(obj, pos);
+                if (!way.empty()) {
+                    std::snprintf(located + n, sizeof(located) - n, ", %s",
+                                  way.c_str());
+                }
+            }
+        }
     }
     prism::Speak(spoken, /*interrupt=*/true);
 

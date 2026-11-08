@@ -88,6 +88,12 @@ struct LootSpot {
     std::string name;
     Vector      pos      = {0.0f, 0.0f, 0.0f};
     float       distance = 0.0f;  // metres from the player
+    // The way there when it lies in another region ("via Door 2 East, about
+    // 30 metres to walk" / "behind a locked door"), empty in the player's
+    // own region or when the graph cannot tell.
+    std::string way;
+    float       walk      = 0.0f;  // walking metres (straight line if unknown)
+    bool        reachable = true;  // false: only through locked doors / no link
 };
 
 struct Overview {
@@ -101,7 +107,7 @@ struct Overview {
     Vector      stepPos   = {0.0f, 0.0f, 0.0f};  // centre of the first region on the way
     void*       stepDoor  = nullptr;  // closed (unlocked) door on the way into it, or null
     int         lockedAway = 0;    // unexplored regions reachable only through locked doors
-    std::vector<LootSpot> loot;    // nearest first
+    std::vector<LootSpot> loot;    // reachable first, then by walking distance
 };
 
 // False when the player is not in the world.
@@ -110,8 +116,29 @@ bool CollectOverview(Overview& out);
 // The spoken overview (game codepage, localized).
 std::string OverviewText(const Overview& o);
 
-// Ctrl+N (Action::ExploreOverview). Called from the input poll router.
+// The player's region as the walk-in announce speaks it (with where each
+// exit leads and "Here:" when known). Empty outside the world / graph.
+std::string CurrentRegionText();
+
+// Ctrl+N (Action::ExploreOverview): the current region first, then the
+// overview. Called from the input poll router.
 void PollOverviewHotkey();
+
+// Extra words for an explicitly requested target line (Q/E, , / ., `-`):
+//   * a door: which way it leads and what lies beyond, seen from the
+//     player's side ("leads West, to a corridor, visited" / "leads South,
+//     back"), plus the way there when the door is in another region;
+//   * anything else in another region: the way there ("via Door 2 East,
+//     about 30 metres to walk", or "behind a locked door").
+// Empty when there is nothing to add (same region, no graph, view mode).
+// Game codepage, localized.
+std::string TargetWayInfo(void* obj, const Vector& pos);
+
+// Enter on a door or exit (interact dispatch): when the region being left
+// still holds loot, queue a short "Still here: Metal box" a beat after the
+// walk line. Never blocks or replaces the walk; not repeated for the same
+// door within 20 s; dropped if a conversation or panel opens meanwhile.
+void RemindLootOnLeaving(void* target);
 
 // Ctrl+Shift+N (ExploreWalkUnexplored): walk one region toward the nearest
 // unexplored one — through the closed door on the way, opening it, when

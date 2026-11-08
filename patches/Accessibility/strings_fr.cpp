@@ -1226,6 +1226,12 @@ const char* Get(Id id) {
         case Id::KbNameExploreWalkLoot:       return "Aller \xe0 la chose \xe0 fouiller la plus proche";
         case Id::HelpKeyExploreWalk:          return "Ctrl plus Maj plus N : aller vers l'endroit inexplor\xe9 le plus proche. Alt plus N : aller au conteneur ou \xe0 l'objet \xe0 fouiller le plus proche";
         case Id::FmtLockBestSecurity:         return "meilleur du groupe : %s avec %d";
+        case Id::FmtRouteVia:                 return "par %s, environ %d m\xe8tres \xe0 pied";
+        case Id::FmtRouteWalk:                return "environ %d m\xe8tres \xe0 pied";
+        case Id::RouteLocked:                 return "derri\xe8re une porte verrouill\xe9""e";
+        case Id::FmtDoorLeads:                return "m\xe8ne vers %s";
+        case Id::FmtLootReminder:             return "Encore ici : %s";
+        case Id::EndarTraskDoorOwnCharacter:  return "Votre propre personnage doit ouvrir cette porte. Revenez d'abord avec Tab.";
         case Id::Count_:               return "";
     }
     return "";

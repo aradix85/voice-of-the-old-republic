@@ -1225,6 +1225,12 @@ const char* Get(Id id) {
         case Id::KbNameExploreWalkLoot:       return "Walk to the nearest thing to search";
         case Id::HelpKeyExploreWalk:          return "Control plus Shift plus N: walk toward the nearest unexplored place. Alt plus N: walk to the nearest container or item left to search";
         case Id::FmtLockBestSecurity:         return "best in your party: %s with %d";
+        case Id::FmtRouteVia:                 return "via %s, about %d metres to walk";
+        case Id::FmtRouteWalk:                return "about %d metres to walk";
+        case Id::RouteLocked:                 return "behind a locked door";
+        case Id::FmtDoorLeads:                return "leads %s";
+        case Id::FmtLootReminder:             return "Still here: %s";
+        case Id::EndarTraskDoorOwnCharacter:  return "Your own character has to open this door. Switch back with Tab first.";
         case Id::Count_:               return "";
     }
     return "";

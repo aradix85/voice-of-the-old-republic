@@ -1225,6 +1225,12 @@ const char* Get(Id id) {
         case Id::KbNameExploreWalkLoot:       return "Vai alla cosa da perquisire pi\xf9 vicina";
         case Id::HelpKeyExploreWalk:          return "Ctrl pi\xf9 Maiusc pi\xf9 N: vai verso il punto inesplorato pi\xf9 vicino. Alt pi\xf9 N: vai al contenitore o oggetto da perquisire pi\xf9 vicino";
         case Id::FmtLockBestSecurity:         return "il migliore del gruppo: %s con %d";
+        case Id::FmtRouteVia:                 return "da %s, circa %d metri a piedi";
+        case Id::FmtRouteWalk:                return "circa %d metri a piedi";
+        case Id::RouteLocked:                 return "dietro una porta chiusa";
+        case Id::FmtDoorLeads:                return "porta verso %s";
+        case Id::FmtLootReminder:             return "Ancora qui: %s";
+        case Id::EndarTraskDoorOwnCharacter:  return "Questa porta deve aprirla il tuo personaggio. Torna prima con Tab.";
         case Id::Count_:               return "";
     }
     return "";
