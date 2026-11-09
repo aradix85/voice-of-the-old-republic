@@ -36,8 +36,11 @@ this fork: Anouk decides, and may put any of them back on the list.
    says otherwise. `kdev build` green with 0 warnings after every commit.
 4. Never make a failure silent: a guard whose job is to make a failure path
    speak stays.
-5. Work on branch `refactor` (cut from `bridge` at e549e19). Merge into
-   `bridge` only after a family is play-tested; Anouk plays the `bridge` build.
+5. One branch, one build: work directly on `bridge` (Anouk, 2026-11-09; the
+   short-lived `refactor` branch was fast-forwarded into it and deleted).
+   Anouk does not play until the refactoring is finished, so the in-game
+   checks gather at the end; until then every commit must build green and
+   pass the unit and Python tests.
 6. Record every rejected change below with its reason, so it is not raised
    again.
 7. CLAUDE.md of the repo still applies (no tables in chat, blind developer,
@@ -150,9 +153,8 @@ clone and name scans):
 
 ## Log
 
-- 2026-11-09: P0 started, baseline measured, P1 updater removal done on
-  `refactor` (8d2a198, not yet merged to `bridge`: play-test first: start
-  the game, main menu responds, F5 there does nothing). kotor-tools under
-  git with tests (c7a9c41).
+- 2026-11-09: P0 started, baseline measured, P1 updater removal (8d2a198),
+  kotor-tools under git with tests (c7a9c41). All on `bridge` now. In-game
+  check owed at the end: main menu responds, F5 there does nothing.
 - Next: C++ unit-test harness (doctest) and the bridge test script (needs
   the game running), then P3 F1 (door lookup) and F2 (exit_memory split).
