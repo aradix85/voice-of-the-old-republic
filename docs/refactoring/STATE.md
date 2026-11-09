@@ -76,11 +76,16 @@ files with tools/analysis/split_file.py (287ab2e), then made lean: F1's
 SnapshotDoors loop, includes per file, history out of its comments.
 menus_extract split into six files (936c320) and made lean: includes per
 file, history out of comments, four cloned guarded row calls folded into
-one GuardedRow.
+one GuardedRow. minigame_turret split into five files (bfbb7c4) and made
+lean (2d11e0f); DriveSelectedPeg (700 lines, complexity 172) sits alone in
+minigame_turret_peg.cpp: a P5 candidate, but only with an in-game test of
+the turret game.
 
 Careful: never rewrite source files with PowerShell ReadAllText/WriteAllText
 (it decodes UTF-8 and writes '?' for the dashes and umlauts in comments);
-use the Python scripts, which read and write latin-1 byte for byte.
+use the Python scripts, which read and write latin-1 byte for byte. And
+never pipe a script that writes files through `Select-Object -First N`: it
+stops the script once N lines are out.
 
 ## Open
 
@@ -93,7 +98,7 @@ use the Python scripts, which read and write latin-1 byte for byte.
   about 15 files with four spellings of the constant, often followed by
   EngineYawToCompass/CompassToSector/SectorString. One helper in
   engine_compass (bearing of a vector, and its compass word).
-- Next file: minigame_turret.cpp, then menus_listbox.cpp.
+- Next file: menus_listbox.cpp, then minigame_swoop_audio.cpp, prism.cpp.
 - includes_split.py (tmp) should carry an include's continuation comment
   lines with it; a `using namespace` in an internal header needs one header
   of that namespace kept there.
