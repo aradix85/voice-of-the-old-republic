@@ -80,11 +80,6 @@ typedef void (__thiscall* PFN_ForceMoveToPoint)(
 // as g_inFlight / g_watchdog / g_walkBlocked — is the unified approach tracker's
 // job (guidance_approach.{h,cpp}). Callers arm it after a successful dispatch.
 
-float HorizontalDistance(const Vector& a, const Vector& b) {
-    float dx = a.x - b.x;
-    float dy = a.y - b.y;
-    return std::sqrt(dx * dx + dy * dy);
-}
 
 // CSWSObject.area_id — passed as objectId1 to AddMoveToPointAction.
 // KOTOR 2 value from the seeded kotor2_steam_aspyr.db; the whole CSWSObject
@@ -202,7 +197,7 @@ bool WalkTo(const Vector& destination) {
         return false;
     }
 
-    float distToDest = haveStart ? HorizontalDistance(startPos, dest) : -1.0f;
+    float distToDest = haveStart ? DistXY(startPos, dest) : -1.0f;
 
     acclog::Write("Autowalk", "WalkTo dispatch dest=(%.2f,%.2f,%.2f) "
                   "from=(%.2f,%.2f,%.2f) dist=%.2fm action_id=%u "
@@ -252,7 +247,7 @@ bool ForceWalkTo(const Vector& destination) {
         return false;
     }
 
-    float distToDest = haveStart ? HorizontalDistance(startPos, dest) : -1.0f;
+    float distToDest = haveStart ? DistXY(startPos, dest) : -1.0f;
     acclog::Write("Autowalk", "Force-dispatch dest=(%.2f,%.2f,%.2f) "
                   "from=(%.2f,%.2f,%.2f) dist=%.2fm action_id=%u "
                   "(no ret — void)",

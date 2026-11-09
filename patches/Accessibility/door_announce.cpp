@@ -89,9 +89,7 @@ void AnnounceNearbyOpen(uint32_t doorHandle) {
         !acc::engine::GetPlayerPosition(pp)) {
         return;
     }
-    const float dx = dp.x - pp.x;
-    const float dy = dp.y - pp.y;
-    const float dist = std::sqrt(dx * dx + dy * dy);
+    const float dist = DistXY(dp, pp);
     if (dist > kNearbyOpenM) return;
     const DWORD now = GetTickCount();
     if (doorHandle == s_lastNearbyDoor && now - s_lastNearbyAtMs < kNearbyRepeatMs) {
@@ -152,9 +150,7 @@ void PollWalkThrough() {
         !acc::engine::GetPlayerPosition(pp)) {
         return;
     }
-    const float dx   = dp.x - pp.x;
-    const float dy   = dp.y - pp.y;
-    const float dist = std::sqrt(dx * dx + dy * dy);
+    const float dist = DistXY(dp, pp);
     if (dist > kWalkThroughMaxM) {
         acclog::Write("DoorAnnounce", "walk-through 0x%08x: open, but the "
                       "leader is %.1f m away; not walking", h, dist);

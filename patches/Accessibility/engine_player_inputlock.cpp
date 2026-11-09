@@ -160,9 +160,7 @@ void TickPlayerInputRestore() {
         g_sawPending = true;
         Vector pos;
         if (GetPlayerPosition(pos)) {
-            float dx = pos.x - g_progressPos.x;
-            float dy = pos.y - g_progressPos.y;
-            if (!g_haveProgress || (dx * dx + dy * dy) >= kProgressEpsSq) {
+            if (!g_haveProgress || DistXYSq(pos, g_progressPos) >= kProgressEpsSq) {
                 g_progressPos = pos;
                 g_progressAt = now;
                 g_haveProgress = true;

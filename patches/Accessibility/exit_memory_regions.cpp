@@ -117,9 +117,7 @@ std::vector<DoorName> NumberedDoors() {
 
 void NumberDoorExit(ExitMark& e, const std::vector<DoorName>& doors) {
     for (const DoorName& d : doors) {
-        const float dx = d.pos.x - e.pos.x;
-        const float dy = d.pos.y - e.pos.y;
-        if (dx * dx + dy * dy > 0.6f * 0.6f) continue;
+        if (DistXYSq(d.pos, e.pos) > 0.6f * 0.6f) continue;
         if (d.numbered.size() > d.base.size() &&
             e.text.compare(0, d.base.size(), d.base) == 0) {
             e.text = d.numbered + e.text.substr(d.base.size());
@@ -165,9 +163,7 @@ std::string Destination(void* area, int target,
 
 bool NearAny(const Vector& p, const std::vector<Vector>& points, float maxM) {
     for (const Vector& q : points) {
-        const float dx = q.x - p.x;
-        const float dy = q.y - p.y;
-        if (dx * dx + dy * dy <= maxM * maxM) return true;
+        if (DistXYSq(q, p) <= maxM * maxM) return true;
     }
     return false;
 }
@@ -192,12 +188,6 @@ std::string Located(const std::string& subject, const Vector& pos) {
                       subject.c_str(), metres);
     }
     return buf;
-}
-
-float Dist2D(const Vector& a, const Vector& b) {
-    const float dx = a.x - b.x;
-    const float dy = a.y - b.y;
-    return std::sqrt(dx * dx + dy * dy);
 }
 
 }  // namespace acc::exit_memory

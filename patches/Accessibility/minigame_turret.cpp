@@ -1961,10 +1961,7 @@ void CensusFighters(Census& c, const Vector& listener) {
 
         Vector pos;
         if (!ReadFollowerPosition(enemy, pos)) continue;
-        const float dx = pos.x - listener.x;
-        const float dy = pos.y - listener.y;
-        const float dz = pos.z - listener.z;
-        const float distSq = dx * dx + dy * dy + dz * dz;
+        const float distSq = DistXYZSq(pos, listener);
         if (distSq > rangeSq) continue;
         AddToCensus(c, i, pos, distSq, info);
     }
@@ -2030,10 +2027,7 @@ void CensusAreaTargets(Census& c, const Vector& listener) {
 
         Vector pos;
         if (!acc::engine::GetObjectPosition(obj, pos)) continue;
-        const float dx = pos.x - listener.x;
-        const float dy = pos.y - listener.y;
-        const float dz = pos.z - listener.z;
-        AddToCensus(c, slot, pos, dx * dx + dy * dy + dz * dz, info);
+        AddToCensus(c, slot, pos, DistXYZSq(pos, listener), info);
     }
 }
 
@@ -2346,10 +2340,7 @@ extern "C" void __cdecl OnTurretBulletHit(void* hitEvent) {
     Vector centre;
     if (!ReadFollowerPosition(follower, centre)) return;
 
-    const float dx = impact.x - centre.x;
-    const float dy = impact.y - centre.y;
-    const float dz = impact.z - centre.z;
-    const float impactDist   = std::sqrt(dx * dx + dy * dy + dz * dz);
+    const float impactDist   = std::sqrt(DistXYZSq(impact, centre));
     const float sphereRadius = SafeReadFloat(follower, kFollowerSphereRadiusOffset);
 
     // Distinguish our shots landing on a fighter (the hitbox we care about)

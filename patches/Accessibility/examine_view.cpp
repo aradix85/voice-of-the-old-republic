@@ -197,9 +197,7 @@ int Read2DDistanceMeters(void* obj) {
     if (!acc::engine::GetObjectPosition(obj, tgt)) return -1;
     Vector pc{};
     if (!acc::engine::GetPlayerPosition(pc)) return -1;
-    float dx = tgt.x - pc.x;
-    float dy = tgt.y - pc.y;
-    float d = static_cast<float>(std::sqrt(static_cast<double>(dx * dx + dy * dy)));
+    float d = static_cast<float>(std::sqrt(static_cast<double>(DistXYSq(tgt, pc))));
     return static_cast<int>(d + 0.5f);
 }
 

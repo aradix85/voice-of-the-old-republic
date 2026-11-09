@@ -74,17 +74,6 @@ void KeepWhatIsLeft(CategoryListing& l, acc::filter::CycleContext ctx) {
     l = kept;
 }
 
-// Squared horizontal distance — Z deliberately ignored. Pillar 4
-// announcement is for "where is the thing relative to the player on the
-// floor"; vertical separation (e.g. multi-storey rooms) doesn't matter for
-// the clock-position + metres TTS. If a future feature needs Z, change here.
-float HorizontalDistance(const Vector& a, const Vector& b) {
-    float dx = a.x - b.x;
-    float dy = a.y - b.y;
-    // Take the actual sqrt so callers can present metres directly. ~30
-    // sqrt calls per scan is below noise.
-    return std::sqrt(dx * dx + dy * dy);
-}
 
 }  // namespace
 
@@ -240,7 +229,7 @@ bool BuildCategoryListing(acc::filter::CycleCategory category,
             }
             out.objs[out.count]      = obj;
             out.positions[out.count] = pos;
-            out.distances[out.count] = HorizontalDistance(pos, refPos);
+            out.distances[out.count] = DistXY(pos, refPos);
             out.isPin[out.count]     = false;
             out.isStatic[out.count]  = false;
             ++out.count;
@@ -281,7 +270,7 @@ bool BuildCategoryListing(acc::filter::CycleCategory category,
             }
             out.objs[out.count]      = pin;
             out.positions[out.count] = pos;
-            out.distances[out.count] = HorizontalDistance(pos, refPos);
+            out.distances[out.count] = DistXY(pos, refPos);
             out.isPin[out.count]     = true;
             out.isStatic[out.count]  = false;
             ++out.count;
@@ -319,7 +308,7 @@ bool BuildCategoryListing(acc::filter::CycleCategory category,
                 static_cast<const void*>(hints[i]));
             out.positions[out.count] = hints[i]->pos;
             out.distances[out.count] =
-                HorizontalDistance(hints[i]->pos, refPos);
+                DistXY(hints[i]->pos, refPos);
             out.isPin[out.count]     = false;
             out.isStatic[out.count]  = true;
             ++out.count;

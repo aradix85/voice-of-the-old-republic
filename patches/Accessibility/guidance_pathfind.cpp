@@ -19,20 +19,9 @@ constexpr int kMaxNodes = acc::engine::navgraph::kMaxNodes;
 
 using acc::engine::navgraph::PathPointSnapshot;
 
-// Euclidean distance (2D in XY plane; KOTOR areas are layout-flat enough
-// that Z doesn't materially affect path costs and the walkmesh edges in
-// engine_area also work in XY). Used both as edge weight and as A* heuristic.
-float DistXY(const Vector& a, const Vector& b) {
-    float dx = a.x - b.x;
-    float dy = a.y - b.y;
-    return std::sqrt(dx * dx + dy * dy);
-}
-
-float DistXYSq(const Vector& a, const Vector& b) {
-    float dx = a.x - b.x;
-    float dy = a.y - b.y;
-    return dx * dx + dy * dy;
-}
+// Path costs and the A* heuristic use DistXY: KOTOR areas are flat enough
+// that height does not change a path's cost, and the walkmesh edges in
+// engine_area work in XY too.
 
 // Pick the path_point a route should start / end on for `target`.
 //

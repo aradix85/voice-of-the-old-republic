@@ -440,10 +440,7 @@ void NarrateNearestObject(void* area, const Vector& cursor) {
 
         Vector pos;
         if (!acc::engine::GetObjectPosition(obj, pos)) continue;
-        float dx = pos.x - cursor.x;
-        float dy = pos.y - cursor.y;
-        float dz = pos.z - cursor.z;
-        float distSq = dx * dx + dy * dy + dz * dz;
+        float distSq = DistXYZSq(pos, cursor);
         if (distSq > radiusSq) continue;
         if (distSq >= bestDistSq) continue;
 

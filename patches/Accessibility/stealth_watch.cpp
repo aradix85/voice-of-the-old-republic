@@ -70,9 +70,7 @@ int Distance2DMeters(void* target) {
     if (!acc::engine::GetObjectPosition(target, t)) return -1;
     Vector p{};
     if (!acc::engine::GetPlayerPosition(p)) return -1;
-    float dx = t.x - p.x;
-    float dy = t.y - p.y;
-    float d = std::sqrt(dx * dx + dy * dy);
+    float d = DistXY(t, p);
     return static_cast<int>(d + 0.5f);
 }
 

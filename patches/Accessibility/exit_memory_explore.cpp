@@ -215,7 +215,7 @@ void TickExploreChain() {
     if (!acc::engine::GetPlayerPosition(p)) return;
     // A door hop may open the door without a step (the player stood at it);
     // any other hop that left the player where it began made no progress.
-    if (!g_chain.door && Dist2D(p, g_chain.stepFrom) < kChainMinMoveM) {
+    if (!g_chain.door && DistXY(p, g_chain.stepFrom) < kChainMinMoveM) {
         return StopChain("no progress");
     }
     if (g_chain.doorTries >= 2) return StopChain("door did not open");

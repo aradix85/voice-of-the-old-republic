@@ -1358,10 +1358,7 @@ void TickObstacleCues(void* miniGame) {
                      int& aheadCount, int& inRangeCount) -> bool {
         if (hazardPos.y < listener_pos.y - kObstacleForwardMargin) return false;
         ++aheadCount;
-        const float dx = hazardPos.x - listener_pos.x;
-        const float dy = hazardPos.y - listener_pos.y;
-        const float dz = hazardPos.z - listener_pos.z;
-        const float distSq = dx*dx + dy*dy + dz*dz;
+        const float distSq = DistXYZSq(hazardPos, listener_pos);
         if (distSq > kObstacleCueRangeM * kObstacleCueRangeM) return false;
         ++inRangeCount;
         candidates[candidate_count].slot = slot;
@@ -2311,10 +2308,7 @@ void TickAccelpadCues(void* miniGame) {
     // the span, with "follow the tone" spoken and the tone silent.
     const float restU = (bar_detour_slot >= 0) ? kBarStripRestU : kSwoopGuideSilenceU;
     if (have_target && bikeOk && std::fabs(guideErr) > restU) {
-        const float dx = guide_pos.x - listener_pos.x;
-        const float dy = guide_pos.y - listener_pos.y;
-        const float dz = guide_pos.z - listener_pos.z;
-        const float dist = std::sqrt(dx * dx + dy * dy + dz * dz);
+        const float dist = std::sqrt(DistXYZSq(guide_pos, listener_pos));
         Vector cue_pos = guide_pos;
         cue_pos.y = listener_pos.y + kSwoopGuidePanForwardRefM;
         int vol_byte = SwoopVolumeByte(dist, kAccelpadCueRangeM);

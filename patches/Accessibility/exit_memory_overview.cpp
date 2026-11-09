@@ -82,7 +82,7 @@ void CollectLoot(std::vector<LootSpot>& out) {
         s.handle   = acc::engine::GetObjectHandle(obj);
         s.name     = name;
         s.pos      = pos;
-        s.distance = Dist2D(pos, player);
+        s.distance = DistXY(pos, player);
         s.walk     = s.distance;
         s.known    = mapWide || acc::discovery::IsDiscovered(obj);
         out.push_back(std::move(s));
@@ -206,8 +206,8 @@ bool CollectOverview(Overview& o) {
                 acc::engine::GetObjectPosition(door, dp);
                 const float walk =
                     (nearI == g.si)
-                        ? Dist2D(player, dp)
-                        : g.distOpen[nearI] + Dist2D(g.nodes[nearI].centre, dp);
+                        ? DistXY(player, dp)
+                        : g.distOpen[nearI] + DistXY(g.nodes[nearI].centre, dp);
                 if (walk < best) {
                     best          = walk;
                     o.tryDoor     = door;
@@ -227,7 +227,7 @@ bool CollectOverview(Overview& o) {
                 int nearId = kClusterIdNone;
                 int farId  = kClusterIdNone;
                 if (DoorSides(g, dp, nearId, farId)) return;
-                const float d = Dist2D(player, dp);
+                const float d = DistXY(player, dp);
                 const Route r = RouteTo(g, dp);
                 const bool reachable =
                     r.kind == Route::Here || r.kind == Route::Open ||

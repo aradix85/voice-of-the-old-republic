@@ -784,10 +784,7 @@ void SnapshotDoors(void* area) {
         if (g_graph.doors[i].landmarkName[0]) continue;  // freshly set, keep
         for (int j = 0; j < savedCount; ++j) {
             if (!saved[j].name[0]) continue;
-            float dx = saved[j].pos.x - g_graph.doors[i].pos.x;
-            float dy = saved[j].pos.y - g_graph.doors[i].pos.y;
-            float dz = saved[j].pos.z - g_graph.doors[i].pos.z;
-            if (dx * dx + dy * dy + dz * dz < 0.01f) {  // same door (<0.1m)
+            if (DistXYZSq(saved[j].pos, g_graph.doors[i].pos) < 0.01f) {  // same door (<0.1m)
                 std::strncpy(g_graph.doors[i].landmarkName, saved[j].name,
                              sizeof(g_graph.doors[i].landmarkName) - 1);
                 g_graph.doors[i]
@@ -947,9 +944,7 @@ void SnapshotTransitionTriggers(void* area) {
 
         float bestSq = kTransitionAttachMaxM * kTransitionAttachMaxM;
         for (int i = 0; i < g_graph.node_count; ++i) {
-            float dx = g_graph.node_pos[i].x - pos.x;
-            float dy = g_graph.node_pos[i].y - pos.y;
-            float d2 = dx * dx + dy * dy;
+            float d2 = DistXYSq(g_graph.node_pos[i], pos);
             if (d2 < bestSq) { bestSq = d2; rec.nearestNode = i; }
         }
 
@@ -1096,9 +1091,7 @@ int FindDoorNearPoint(const Vector& p, float maxDistM) {
     int   bestIx = -1;
     float bestSq = maxSq;
     for (int i = 0; i < g_graph.door_count; ++i) {
-        float dx = g_graph.doors[i].pos.x - p.x;
-        float dy = g_graph.doors[i].pos.y - p.y;
-        float d2 = dx * dx + dy * dy;
+        float d2 = DistXYSq(g_graph.doors[i].pos, p);
         if (d2 <= bestSq) { bestSq = d2; bestIx = i; }
     }
     return bestIx;
@@ -2859,9 +2852,7 @@ void AttachLandmarksToDoors(void* area) {
         int   bestDoor = -1;
         float bestSq   = 1e30f;
         for (int d = 0; d < g_graph.door_count; ++d) {
-            float dx = g_graph.doors[d].pos.x - lmPos.x;
-            float dy = g_graph.doors[d].pos.y - lmPos.y;
-            float dsq = dx * dx + dy * dy;
+            float dsq = DistXYSq(g_graph.doors[d].pos, lmPos);
             if (dsq < bestSq) {
                 bestSq   = dsq;
                 bestDoor = d;
@@ -3320,9 +3311,7 @@ void AbsorbAdjacentStragglers(const acc::engine::navgraph::NavGraphSnapshot& g,
                     int jr = UFFind(j);
                     if (sizeByRoot[jr] < 2) continue;  // neighbour is not a core
                     if (jr == UFFind(x)) continue;
-                    float dx = g.nodes[x].pos.x - g.nodes[j].pos.x;
-                    float dy = g.nodes[x].pos.y - g.nodes[j].pos.y;
-                    if (dx * dx + dy * dy > kCapSq) continue;
+                    if (DistXYSq(g.nodes[x].pos, g.nodes[j].pos) > kCapSq) continue;
                     if (FindDoorOnEdge(g.nodes[x].pos, g.nodes[j].pos) >= 0) {
                         ++absorbAdjVetoDoor;
                         continue;
@@ -3459,9 +3448,7 @@ void AbsorbStragglersByBoundingBox(void* area,
                 if (bboxSnapRoot[m] != root) continue;
                 float dz = g.nodes[m].pos.z - px.z;
                 if (std::fabs(dz) > kMergeMaxZM) continue;
-                float dx = g.nodes[m].pos.x - px.x;
-                float dy = g.nodes[m].pos.y - px.y;
-                float d2 = dx * dx + dy * dy;
+                float d2 = DistXYSq(g.nodes[m].pos, px);
                 if (d2 < nearestD2) {
                     nearestD2     = d2;
                     nearestMember = m;

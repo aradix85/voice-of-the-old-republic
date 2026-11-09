@@ -219,9 +219,7 @@ void ResetMotion() {
 }
 
 float CentreDistance(const Vector& pos) {
-    const float dx = pos.x - g_pending_centre_pos.x;
-    const float dy = pos.y - g_pending_centre_pos.y;
-    return std::sqrt(dx * dx + dy * dy);
+    return DistXY(pos, g_pending_centre_pos);
 }
 
 // True once the pending centre-rule cluster may speak. Tracks the closest
@@ -496,9 +494,7 @@ DWORD       g_flap_cur_ms      = 0;
 bool IsFlapRepeat(const std::string& text, const Vector& pos, DWORD now) {
     if (text.empty() || text != g_flap_prev_text) return false;
     if ((now - g_flap_prev_ms) >= kFlapWindowMs)  return false;
-    const float dx = pos.x - g_flap_prev_pos.x;
-    const float dy = pos.y - g_flap_prev_pos.y;
-    return (dx * dx + dy * dy) < (kFlapRadiusM * kFlapRadiusM);
+    return DistXYSq(pos, g_flap_prev_pos) < (kFlapRadiusM * kFlapRadiusM);
 }
 
 // Rotate the two-deep spoken-label history. Call wherever a label is
@@ -1011,9 +1007,7 @@ bool IsWorldSpeechGatedImpl();
 bool TryAutoDiscoverMapNote(void* waypoint, const Vector& playerPos) {
     Vector lmPos;
     if (!acc::engine::GetObjectPosition(waypoint, lmPos)) return false;
-    float dx = playerPos.x - lmPos.x;
-    float dy = playerPos.y - lmPos.y;
-    float d2 = dx * dx + dy * dy;
+    float d2 = DistXYSq(playerPos, lmPos);
     if (d2 > kMapNoteAutoDiscoverRangeM * kMapNoteAutoDiscoverRangeM) {
         return false;
     }
@@ -1088,9 +1082,7 @@ void TickProximityLandmarks(const Vector& playerPos) {
     if (g_lm_prox_last_spoken_idx >= 0) {
         int i = g_lm_prox_last_spoken_idx;
         if (i >= 0 && i < g_landmark_count) {
-            float dx = playerPos.x - g_landmarks[i].pos.x;
-            float dy = playerPos.y - g_landmarks[i].pos.y;
-            float d2 = dx * dx + dy * dy;
+            float d2 = DistXYSq(playerPos, g_landmarks[i].pos);
             if (d2 > g_lm_exit_range_m * g_lm_exit_range_m) {
                 acclog::Write("Transition",
                               "landmark proximity re-arm idx=%d "
@@ -1115,9 +1107,7 @@ void TickProximityLandmarks(const Vector& playerPos) {
     for (int i = 0; i < g_landmark_count; ++i) {
         if (g_landmarks[i].name[0] == '\0') continue;
         if (g_landmarks[i].doorMatched)     continue;
-        float dx = playerPos.x - g_landmarks[i].pos.x;
-        float dy = playerPos.y - g_landmarks[i].pos.y;
-        float d2 = dx * dx + dy * dy;
+        float d2 = DistXYSq(playerPos, g_landmarks[i].pos);
         if (d2 < bestD2) {
             bestD2  = d2;
             nearest = i;
@@ -1221,9 +1211,7 @@ bool FindLandmarkNear(const Vector& pos, float rangeM,
     float bestD2 = maxD2;
     for (int i = 0; i < g_landmark_count; ++i) {
         if (g_landmarks[i].name[0] == '\0') continue;
-        float dx = pos.x - g_landmarks[i].pos.x;
-        float dy = pos.y - g_landmarks[i].pos.y;
-        float d2 = dx * dx + dy * dy;
+        float d2 = DistXYSq(pos, g_landmarks[i].pos);
         if (d2 <= bestD2) {
             bestD2 = d2;
             best   = i;

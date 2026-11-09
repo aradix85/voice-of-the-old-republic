@@ -220,11 +220,6 @@ void TrimName(char* s) {
     while (n > 0 && (s[n - 1] == ' ' || s[n - 1] == '.')) s[--n] = '\0';
 }
 
-float DistSq(const Vector& a, const Vector& b) {
-    const float dx = a.x - b.x, dy = a.y - b.y, dz = a.z - b.z;
-    return dx * dx + dy * dy + dz * dz;
-}
-
 // Anything a combat line can be about: creatures, and the doors and
 // placeables (security doors, containers, terminals) the party can attack.
 // The first test round shot a security door — creatures alone found nothing.
@@ -267,7 +262,7 @@ uint32_t FindSubject(const char* name, const Vector& ref, Vector& outPos) {
         if (!handle || !HasName(obj, handle, name)) continue;
         Vector p;
         if (!acc::engine::GetObjectPosition(obj, p)) continue;
-        const float d = DistSq(p, ref);
+        const float d = DistXYZSq(p, ref);
         if (!best || d < bestD) {
             best   = handle;
             bestD  = d;

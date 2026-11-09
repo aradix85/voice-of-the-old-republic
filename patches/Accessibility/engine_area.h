@@ -468,9 +468,7 @@ void* NearestDoor(void* area, const Vector& p, float maxM, Accept accept,
     void* best   = nullptr;
     float bestSq = maxM * maxM;
     ForEachDoor(area, [&](void* door, const Vector& q) {
-        const float dx = q.x - p.x;
-        const float dy = q.y - p.y;
-        const float d2 = dx * dx + dy * dy;
+        const float d2 = DistXYSq(q, p);
         if (d2 > bestSq || !accept(door)) return;
         best   = door;
         bestSq = d2;

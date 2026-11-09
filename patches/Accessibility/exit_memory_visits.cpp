@@ -127,7 +127,7 @@ void MarkNearbySeen() {
         if (other < 0 || g_visited.count(other)) continue;
         ClusterInfo info;
         if (!acc::room_topology::GetClusterInfo(g_area, other, info)) continue;
-        const float d = Dist2D(p, info.centre);
+        const float d = DistXY(p, info.centre);
         if (d > kSeenM) continue;
         RecordVisit(other);
         acclog::Write("ExitMemory", "region %d seen from region %d (%.1f m)",

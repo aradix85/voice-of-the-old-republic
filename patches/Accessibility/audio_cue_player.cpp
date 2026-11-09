@@ -69,13 +69,8 @@ bool IsCueEnabled(NavCue cue) {
     return false;
 }
 
-// 3D matches the engine's pan/falloff; 2D would leak above/below cues.
-float DistanceSquared(const Vector& a, const Vector& b) {
-    float dx = a.x - b.x;
-    float dy = a.y - b.y;
-    float dz = a.z - b.z;
-    return dx * dx + dy * dy + dz * dz;
-}
+// Cue distances are 3D (DistXYZSq), matching the engine's pan and falloff;
+// 2D would leak cues from above or below.
 
 }  // namespace
 
@@ -90,7 +85,7 @@ bool PlayCueAtPosition(NavCue cue,
     }
 
     // Compare squared distances to skip sqrt on the cold path.
-    float distSq  = DistanceSquared(worldPos, listenerPos);
+    float distSq  = DistXYZSq(worldPos, listenerPos);
     float rangeSq = rangeMax * rangeMax;
     if (distSq > rangeSq) {
         acclog::Write("CuePlayer", "drop cue=%s reason=out-of-range "

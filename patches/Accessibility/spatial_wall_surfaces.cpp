@@ -43,14 +43,8 @@ constexpr float kEndpointTolSquared = kEndpointTolMeters * kEndpointTolMeters;
 
 // --- Geometry helpers --------------------------------------------------
 
-// Squared distance between two Vectors in XY only (clustering ignores
-// vertical noise — KOTOR walkmesh edges are flat per-room and a small Z
-// jitter on the seam would otherwise prevent endpoint coincidence).
-float DistanceSquaredXY(const Vector& a, const Vector& b) {
-    float dx = a.x - b.x;
-    float dy = a.y - b.y;
-    return dx * dx + dy * dy;
-}
+// Clustering measures in XY (DistXYSq): walkmesh edges are flat per room,
+// and a small Z jitter on a seam would otherwise keep endpoints apart.
 
 // Returns true if the two edges should belong to the same wall surface:
 // they share an endpoint (within kEndpointTolMeters) AND their direction
@@ -60,10 +54,10 @@ float DistanceSquaredXY(const Vector& a, const Vector& b) {
 // vertical components add noise without information.
 bool EdgesAreSameSurface(const acc::engine::WallEdge& e1,
                          const acc::engine::WallEdge& e2) {
-    bool share_aa = DistanceSquaredXY(e1.a, e2.a) <= kEndpointTolSquared;
-    bool share_ab = DistanceSquaredXY(e1.a, e2.b) <= kEndpointTolSquared;
-    bool share_ba = DistanceSquaredXY(e1.b, e2.a) <= kEndpointTolSquared;
-    bool share_bb = DistanceSquaredXY(e1.b, e2.b) <= kEndpointTolSquared;
+    bool share_aa = DistXYSq(e1.a, e2.a) <= kEndpointTolSquared;
+    bool share_ab = DistXYSq(e1.a, e2.b) <= kEndpointTolSquared;
+    bool share_ba = DistXYSq(e1.b, e2.a) <= kEndpointTolSquared;
+    bool share_bb = DistXYSq(e1.b, e2.b) <= kEndpointTolSquared;
     if (!(share_aa || share_ab || share_ba || share_bb)) return false;
 
     float d1x = e1.b.x - e1.a.x;
@@ -236,7 +230,7 @@ void BuildSurfaceDescriptors() {
 
         auto bumpEndpoint = [&](const Vector& p) {
             for (int k = 0; k < pointCount; ++k) {
-                if (DistanceSquaredXY(points[k].pos, p) <= kEndpointTolSquared) {
+                if (DistXYSq(points[k].pos, p) <= kEndpointTolSquared) {
                     ++points[k].count;
                     return;
                 }

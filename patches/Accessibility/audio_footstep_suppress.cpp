@@ -337,9 +337,7 @@ void TickStuckAnnounce(const Vector& pos, uint64_t now_ms) {
         return;
     }
 
-    const float dx = pos.x - g_progress_checkpoint_pos.x;
-    const float dy = pos.y - g_progress_checkpoint_pos.y;
-    const float distSq = dx * dx + dy * dy;
+    const float distSq = DistXYSq(pos, g_progress_checkpoint_pos);
 
     if (distSq >= kAnnounceDisplacementMetersSq) {
         g_progress_checkpoint_pos = pos;
@@ -437,9 +435,7 @@ void Tick() {
     float wSpeed  = 0.0f;
     if (ref && span_ms > 0) {
         // Z excluded — vertical jitter on uneven walkmesh isn't motion.
-        const float dx = pos.x - ref->pos.x;
-        const float dy = pos.y - ref->pos.y;
-        netDist = sqrtf(dx * dx + dy * dy);
+        netDist = DistXY(pos, ref->pos);
         wSpeed  = netDist / (static_cast<float>(span_ms) * 0.001f);
     }
 

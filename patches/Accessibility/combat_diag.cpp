@@ -192,9 +192,7 @@ bool HostileNearby() {
         if (hp == 0 || hp < -1) continue;
         Vector q;
         if (!acc::engine::GetObjectPosition(obj, q)) continue;
-        const float dx = q.x - p.x;
-        const float dy = q.y - p.y;
-        if (dx * dx + dy * dy <= kIdleEnemyRangeM * kIdleEnemyRangeM) return true;
+        if (DistXYSq(q, p) <= kIdleEnemyRangeM * kIdleEnemyRangeM) return true;
     }
     return false;
 }

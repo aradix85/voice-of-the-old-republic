@@ -324,9 +324,7 @@ bool BuildCache(void* area) {
 // ---- Announce composition ------------------------------------------------
 
 void SpeakIntro(const Vector& playerPos) {
-    float dx = playerPos.x - g_plates[4].center.x;
-    float dy = playerPos.y - g_plates[4].center.y;
-    if (dx * dx + dy * dy > kIntroRadiusM * kIntroRadiusM) return;
+    if (DistXYSq(playerPos, g_plates[4].center) > kIntroRadiusM * kIntroRadiusM) return;
     g_introSpoken = true;
     std::string line(Get(Id::FloorPuzzleIntro));
     // On-demand read hint — name the actual key bound to the board readout

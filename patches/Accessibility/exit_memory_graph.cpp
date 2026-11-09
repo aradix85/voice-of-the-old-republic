@@ -102,7 +102,7 @@ bool BuildGraph(void* area, const Vector& player, Graph& g) {
         const int b = g.IndexOf(l.b);
         if (a < 0 || b < 0) continue;
         const float w =
-            (std::max)(0.5f, Dist2D(g.nodes[a].centre, g.nodes[b].centre));
+            (std::max)(0.5f, DistXY(g.nodes[a].centre, g.nodes[b].centre));
         all[a].emplace_back(b, w);
         all[b].emplace_back(a, w);
         if (l.viaDoor && NearAny(l.doorPos, lockedDoors, kDoorMatchM)) continue;
@@ -155,10 +155,10 @@ Route RouteToIndex(const Graph& g, int t, const Vector& targetPos) {
         const int hop = g.hopOpen[t];
         r.kind = Route::Open;
         r.via  = ExitToward(g, hop, nullptr);
-        float m = Dist2D(g.player, g.nodes[hop].centre) +
+        float m = DistXY(g.player, g.nodes[hop].centre) +
                   (g.distOpen[t] - g.distOpen[hop]) +
-                  Dist2D(g.nodes[t].centre, targetPos);
-        m = (std::max)(m, Dist2D(g.player, targetPos));
+                  DistXY(g.nodes[t].centre, targetPos);
+        m = (std::max)(m, DistXY(g.player, targetPos));
         r.walkM = RoundWalk(m);
         return r;
     }
@@ -207,7 +207,7 @@ bool DoorSides(const Graph& g, const Vector& doorPos, int& nearId, int& farId) {
     // The regions the door joins, from the links recorded through it.
     std::vector<int> sides;
     for (const ClusterLink& l : g.links) {
-        if (!l.viaDoor || Dist2D(l.doorPos, doorPos) > kDoorMatchM) continue;
+        if (!l.viaDoor || DistXY(l.doorPos, doorPos) > kDoorMatchM) continue;
         if (std::find(sides.begin(), sides.end(), l.a) == sides.end()) {
             sides.push_back(l.a);
         }
@@ -243,7 +243,7 @@ bool DoorSides(const Graph& g, const Vector& doorPos, int& nearId, int& farId) {
     } else {
         // No link through it: probe past the door on the line from the
         // player, and accept only a region linked to the near side.
-        const float len = Dist2D(g.player, doorPos);
+        const float len = DistXY(g.player, doorPos);
         if (len < 0.5f) return false;
         const float ux = (doorPos.x - g.player.x) / len;
         const float uy = (doorPos.y - g.player.y) / len;
@@ -276,7 +276,7 @@ std::string DoorBeyond(const Graph& g, const Vector& doorPos, int* outNear) {
     float dy = 0.0f;
     ClusterInfo info;
     if (acc::room_topology::GetClusterInfo(g.area, nearId, info) &&
-        Dist2D(info.centre, doorPos) >= 1.0f) {
+        DistXY(info.centre, doorPos) >= 1.0f) {
         dx = doorPos.x - info.centre.x;
         dy = doorPos.y - info.centre.y;
     } else if (acc::room_topology::GetClusterInfo(g.area, farId, info)) {

@@ -90,9 +90,7 @@ float ResolveProbeZ(const acc::engine::WallEdge* walls, int wallCount,
     for (int w = 0; w < wallCount; ++w) {
         for (int e = 0; e < 2; ++e) {
             const Vector& p = e ? walls[w].b : walls[w].a;
-            float dx = p.x - pos.x;
-            float dy = p.y - pos.y;
-            float sq = dx * dx + dy * dy;
+            float sq = DistXYSq(p, pos);
             if (sq < nearestSq) { nearestSq = sq; nearestZ = p.z; }
             if (sq > radiusSq) continue;
             int key = static_cast<int>(std::floor(p.z / kZBandM));

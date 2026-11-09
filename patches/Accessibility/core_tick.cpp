@@ -435,9 +435,7 @@ void SampleWorldResponse(ULONGLONG now) {
     if (s_have) {
         bool responded = false;
         if (havePos) {
-            const float dx = pos.x - s_pos.x;
-            const float dy = pos.y - s_pos.y;
-            responded = (dx * dx + dy * dy) >=
+            responded = DistXYSq(pos, s_pos) >=
                         (kWorldMoveEpsM * kWorldMoveEpsM);
         }
         if (!responded && haveYaw) {

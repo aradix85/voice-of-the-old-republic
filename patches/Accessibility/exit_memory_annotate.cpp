@@ -107,9 +107,7 @@ std::vector<RegionEntry> RegionEntries(void* area, int cluster, float radiusM,
         }
         Vector pos;
         if (!acc::engine::GetObjectPosition(obj, pos)) continue;
-        const float dx = pos.x - player.x;
-        const float dy = pos.y - player.y;
-        const float dist = std::sqrt(dx * dx + dy * dy);
+        const float dist = DistXY(pos, player);
         if (radiusM > 0.0f && dist > radiusM) continue;
         if (cat == CycleCategory::Npc) {
             if (IsPartyMember(obj, party, partyCount)) continue;

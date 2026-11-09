@@ -31,6 +31,7 @@
 
 #pragma once
 
+#include <cmath>
 #include <cstdint>
 
 // CExoArrayList<T*> — engine container for arrays of pointers.
@@ -51,6 +52,23 @@ struct Vector {
     float y;
     float z;
 };
+
+// Distances in metres. XY: on the floor plan, height ignored (what the player
+// is told, walking distances, matching spots). XYZ: in space (audio falloff).
+inline float DistXYSq(const Vector& a, const Vector& b) {
+    const float dx = a.x - b.x;
+    const float dy = a.y - b.y;
+    return dx * dx + dy * dy;
+}
+
+inline float DistXY(const Vector& a, const Vector& b) {
+    return std::sqrt(DistXYSq(a, b));
+}
+
+inline float DistXYZSq(const Vector& a, const Vector& b) {
+    const float dz = a.z - b.z;
+    return DistXYSq(a, b) + dz * dz;
+}
 
 // CExoString - the engine's string type: heap c_string plus explicit length.
 // Most engine string accessors construct one in place into caller-supplied

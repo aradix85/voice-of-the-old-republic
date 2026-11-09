@@ -171,9 +171,7 @@ float ComputePlayerDistanceMeters(void* targetObject) {
     if (!acc::engine::GetObjectPosition(targetObject, tgt)) return -1.0f;
     Vector pc{};
     if (!acc::engine::GetPlayerPosition(pc)) return -1.0f;
-    float dx = tgt.x - pc.x;
-    float dy = tgt.y - pc.y;
-    return std::sqrt(dx * dx + dy * dy);
+    return DistXY(tgt, pc);
 }
 
 // Appendable composer — writes `fmt`-formatted args into `buf` at the

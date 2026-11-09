@@ -589,10 +589,7 @@ void CalibrateInRange(void* area, const Vector& referencePos,
         if (!ClassifyObject(obj, cue)) continue;
         Vector pos;
         if (!acc::engine::GetObjectPosition(obj, pos)) continue;
-        float dx = pos.x - referencePos.x;
-        float dy = pos.y - referencePos.y;
-        float dz = pos.z - referencePos.z;
-        float distSq = dx * dx + dy * dy + dz * dz;
+        float distSq = DistXYZSq(pos, referencePos);
         if (distSq > rangeSq) continue;
         uint32_t handle = acc::engine::GetObjectHandle(obj);
         if (handle == 0) continue;

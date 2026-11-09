@@ -285,9 +285,7 @@ int ChooseExit(const std::vector<ExitBearing>& exits, void* area,
     if (g_lastExit.valid && g_lastExit.area == area &&
         g_lastExit.clusterId == clusterId) {
         for (int i = 0; i < static_cast<int>(exits.size()); ++i) {
-            float dx = exits[i].pos.x - g_lastExit.pos.x;
-            float dy = exits[i].pos.y - g_lastExit.pos.y;
-            if (dx * dx + dy * dy > 0.01f) continue;
+            if (DistXYSq(exits[i].pos, g_lastExit.pos) > 0.01f) continue;
             if (std::fabs(NormaliseRad(exits[i].yawRad - curYawRad)) <=
                 kStillFacingRad) {
                 outWhy = "cycle";

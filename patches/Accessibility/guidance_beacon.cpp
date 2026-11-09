@@ -24,11 +24,6 @@ struct BeaconState {
 };
 BeaconState g_state;
 
-float DistXY(const Vector& a, const Vector& b) {
-    float dx = a.x - b.x;
-    float dy = a.y - b.y;
-    return std::sqrt(dx * dx + dy * dy);
-}
 
 // ----- Heartbeat distance soft-knee (engine audibility) ---------------
 //

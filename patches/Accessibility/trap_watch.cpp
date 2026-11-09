@@ -248,9 +248,7 @@ void ScanInternal(DWORD now) {
 
         // Proximity warning — detected ground mines only.
         if (t->detected && t->isMine && havePlayerPos) {
-            float dx = playerPos.x - t->pos.x;
-            float dy = playerPos.y - t->pos.y;
-            float d2 = dx * dx + dy * dy;
+            float d2 = DistXYSq(playerPos, t->pos);
             if (t->warnArmed && d2 < kMineWarnEnterM * kMineWarnEnterM) {
                 t->warnArmed = false;
                 char name[96];

@@ -148,9 +148,7 @@ bool ResolveTargetPos(Vector& out) {
 
 // Planar player→target gap, in metres.
 float GapTo(const Vector& tgt, const Vector& pos) {
-    float dx = tgt.x - pos.x;
-    float dy = tgt.y - pos.y;
-    return std::sqrt(dx * dx + dy * dy);
+    return DistXY(tgt, pos);
 }
 
 void MarkWalkStart() {
@@ -675,9 +673,7 @@ void TickApproach() {
         g_st.haveProgress = true;
         return;
     }
-    float dx = pos.x - g_st.lastPos.x;
-    float dy = pos.y - g_st.lastPos.y;
-    if ((dx * dx + dy * dy) >= kProgressEpsSq) {
+    if (DistXYSq(pos, g_st.lastPos) >= kProgressEpsSq) {
         g_st.lastPos       = pos;
         g_st.progressAt    = now;
         g_st.movedSinceArm = true;
