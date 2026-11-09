@@ -1,12 +1,18 @@
 # engine_compass.cpp (56 lines)
 
-Pure math: engine-yaw ↔ compass-yaw conversion, 8-point sector bucketing, and clock-position (12/3/6/9-style) computation for a world-space offset relative to a facing. No engine reads, no state.
+Source: `patches/Accessibility/engine_compass.cpp`
+
+(From engine_compass.h.) Engine yaw ↔ compass yaw ↔ 8-point sector helpers. Pure math, no state.
+
+Frames: Engine  — 0° = +X = East, CCW positive, [0, 360). From ExecuteCommandGetFacing / GetPlayerYawDegrees. Compass — 0° = North, 90° = East, CW positive, [0, 360). What screen readers think in.
+
+EngineYawToCompass is involutive (apply twice = identity); camera_announce relies on this for inverse projection.
+
+Sectors: 0=N 1=NE 2=E 3=SE 4=S 5=SW 6=W 7=NW. Nearest-sector with half-sector offset; no hysteresis (callers wrap with their own).
 
 ## Declarations (in source order)
 
-- L9-11 — `kSectorCount=8`, `kSectorSize=45.0f`, `kHalfSector=22.5f`
-- L15 — `float EngineYawToCompass(float engineYawDeg)` (public) — involutive; camera_announce relies on apply-twice=identity
-- L21 — `int CompassToSector(float compassDeg)` (public) — nearest-sector with half-sector offset, no hysteresis
-- L29 — `int ClockPosition(float playerYawDeg, float dx, float dy)` (public)
-  note: 30° round-to-nearest buckets; ahead bucket returns 12, never 0
-- L40 — `acc::strings::Id SectorString(int sector)` (public) — sector 0..7 → DirNorth..DirNorthwest
+- L15 `float EngineYawToCompass(float engineYawDeg)`
+- L21 `int CompassToSector(float compassDeg)`
+- L29 `int ClockPosition(float playerYawDeg, float dx, float dy)`
+- L40 `acc::strings::Id SectorString(int sector)`

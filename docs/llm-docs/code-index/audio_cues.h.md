@@ -1,9 +1,17 @@
-# audio_cues.h (94 lines)
+# audio_cues.h (117 lines)
 
-Data-only navigation-cue vocabulary: `NavCue` enum plus `GetNavCueResref` mapping each to a ≤16-char engine resref. Covers Pillar-4 per-kind cues (doors split by open-state + material, NPC, container, item, landmark [silent], transition, wall, hazard), guidance/view-mode signals (collision, beacon variants), and the swoop-race minigame's steering/warning cues (shared between the live race and the glossary preview). CResRef truncates silently past 16 chars — a resolution miss is a silent cue, so resrefs must be checked against `build/sounds-extracted-full/`.
+Source: `patches/Accessibility/audio_cues.h`
+
+Navigation-cue vocabulary — resref mapping for the audio slots.
+
+Data-only header. Consumers map enum → resref via GetNavCueResref then call audio::PlayCue / PlayCue3D.
+
+Swapping a resref: change the string literal on the case below. CResRef has a 16-char hard limit (silent truncation past that → resolution miss → silent cue). Resolution is case-insensitive through Override → streamwaves → streamsounds → streammusic → BIF/RIM, so an Override/ WAV with the same resref transparently shadows the stock asset.
+
+Verify a resref resolves before using it: Play3DOneShotSound silently no-ops on a miss. build/sounds-extracted-full/ is the truth table.
 
 ## Declarations (in source order)
 
-- L19 — `enum class NavCue` — DoorOpen/ClosedMetal/ClosedWood/ClosedStone, NpcCreature, ContainerPlaceable, Item, Landmark, TransitionExit, Wall, HazardLedge, Collision, BeaconActive/WaypointReached/DestinationReached, SwoopAccelpadBoost/ObstacleWarn/WallImpact, SwoopSteerLeft/Right/Aligned, SwoopShiftReady
-  note: Landmark maps to empty resref ("") — TTS-only, short-circuits PlayCue3D
-- L64 — `constexpr const char* GetNavCueResref(NavCue cue)` — switch mapping enum → resref string, e.g. DoorOpen→"gui_close", Wall→"as_nt_wtrdrip_09", SwoopSteerLeft→"acc_steer_l" (custom Override WAV)
+- L21 `enum class NavCue`
+- L72 `constexpr const char* GetNavCueResref(NavCue cue)`
+- L112 `inline const char* GetNavCueResrefForGame(NavCue cue)`: Per-game resolution.

@@ -1,55 +1,30 @@
-# swoop_spatial_audio.cpp (1426 lines)
+# minigame_swoop_audio.cpp (2444 lines)
 
-Implements the two per-tick spatial sweeps for the swoop race: obstacle
-proximity loops (one LoopSource per in-range rock, from the 22-slot
-Obstacles pool) and an accelpad "steering guide" (one panned tone toward
-the next gate, plus a lateral steering-magnet that writes the bike's
-tunnel-offset.x directly, from the 30-slot Enemies pool). Both pools are
-read off one global `CSWMiniGameObjectArray` (255 handle slots) resolved
-via AppManager→ClientApp→ClientAppInternal, classified per-slot by calling
-the object's own `AsObstacle`/`AsEnemy` vtable-downcast slots. Cue pan is
-decoupled from loudness: lateral+vertical position stays true but forward
-depth is pinned to a fixed reference so pan encodes only lane error (real
-3D distance drives volume via a manual linear ramp inside a flat
-attenuation band). Also implements a predictive wall-overshoot cue and a
-PD-damped lateral steering magnet (shared `minigame_aim` port from the
-turret assist). Talks to: audio_bus (PlayCue3D), audio_cues (NavCue
-resrefs), audio_loop (LoopSource), engine_player (camera/player position),
-minigame_aim (MagnetGain/MagnetStep/WriteOffsetVector), log.
+Source: `patches/Accessibility/minigame_swoop_audio.cpp`
+
+Swoop race spatial-audio implementation — see swoop_spatial_audio.h.
+
+Split from swoop_race.cpp on 2026-05-27 (large-file-handling pass). The race lifecycle (entry/exit, gear watch, wall collision, acceleration speedometer) stays in swoop_race.cpp; everything that walks the 255-slot CSWMiniGameObjectArray to surface obstacles and accelpads as 3D loops lives here.
 
 ## Declarations (in source order)
 
-- L42-76 — CSWMGObstacle/AurObject offsets + MGO array layout (index@+0x0,
-  objects[255]@+0x4) + vtable downcast slot offsets (AsObstacle=0x20, AsEnemy=0x1c)
-  note: first pass misread +0x44 as a flat array and crashed; corrected via decompiling ExecuteCommandSWMG_GetFollowerPosition
-- L123 — `kAccelpadLoopResref` — trimmed acc_boost.wav (Override), tail-cut to avoid pitch-drop read
-- L137 — `kAccelpadCueRangeM = 300.0f`
-- L162-171 — CSWTrackFollower model-position-read offsets + sphere_radius(+0x84)/speed(+0x98)
-- L227-230 — obstacle cue range/forward-margin/loop-resref constants
-- L295-320 — decoupled pan/volume tuning constants (kSwoopPanForwardRefM=6.0f,
-  flat-band min/max, near/far volume bytes, guide-specific pan depth/silence/floor)
-- L361-380 — retired co-pilot steering constants (lead ticks, EMA smoothing, deadzone,
-  clamp guards) — kept as the smoothing/velocity state the magnet now consumes
-- L431 — `kCoastTicks = 2.5f` — velocity lead for the co-pilot coast/aligned model
-  note: engine-grounded (CSWMiniPlayer decompile): swoop steering is a bank-level clamp, not momentum — real coast is ~1 unit, not the ~8x-inflated old estimate
-- L441-456 — predictive wall-cue constants + fallback combined hit-radius literal
-- L482 — `kSwoopAssistGapU = 16.0f` — the SINGLE difficulty knob: magnet engage radius == cue release band
-- L508-519 — retired discrete steer-tick resrefs/volume (superseded by continuous guide)
-- L557-590 — lateral steering-magnet tuning: engage radius, near/far gain, per-tick
-  step cap, PD brake-ticks, hold-through-crossing window, min race speed gate
-- L618 — `int SwoopVolumeByte(dist, range)` — linear near/far volume ramp
-- L633 — `struct SpatialAudioState` — per-slot obstacle LoopSource array, guide loop,
-  steering EMA/velocity state, crossing-scoring previous-gate cache, diag guards
-- L743 — `void* ResolveMgoArray()` — AppManager+0x4→ClientApp+0x4→ClientAppInternal+0x0
-- L777 — `const char* ReadAurObjectName(aurObject)` — CAurObject vtable[0xc] GetName
-- L800 — `bool ReadTrackFollowerPosition(follower, out)` — mirrors
-  CSWTrackFollower::GetPosition (models.data[0]→vtable[0x64])
-- L830 — `void* CallAsCast(obj, vtableSlotOffset)` — generic AsXxx downcast thunk
-- L849 — `void TickObstacleCues(miniGame)` — per-slot obstacle scan, forward-only
-  filter, range cull, LoopSource start/update/stop, first-fire inventory log
-- L1049 — `void TickAccelpadCues(miniGame)` — finds nearest ahead gate, computes
-  co-pilot proj/coast diagnostics, drives the lateral magnet write, predictive
-  wall-overshoot cue, and the panned steering-guide LoopSource
-  note: crossing-event log interpolates exact lateral miss at fwdGap=0 for ground-truth hit scoring against the live-read combined sphere radius
-- L1395 — `void TickSpatialAudio(miniGame)` — calls both Tick* functions
-- L1400 — `void ResetSpatialAudio()` — clears all per-race state + stops every loop
+- L596 `inline float WallLeadTicks()`
+- L599 `inline float WallEdgeOffsetU()`
+- L769 `inline float AssistGapU()`
+- L777 `inline float ReleaseBand()`: Post-coast miss within the assist gap reads as "on the line" → release/hold: the magnet finishes from here, so the player need not nail dead-center by ear.
+- L834 `inline float MagnetEngageU()`: ----- Lateral steering magnetism (2026-06-22, shared aim-assist port) ------- The console-style "sticky aim" from the shipped turret assist, applied to the swoop bike's ONE steering axis.
+- L891 `inline int SwoopVolumeByte(float dist, float range)`: Linear volume byte for a source at 3D distance `dist` within `range`: full (kSwoopVolNearByte) at the listener, ramping to kSwoopVolFarByte at the range edge.
+- L1044 `const char* ReadAurObjectName(void* aurObject)`: Returns the CAurObject's name pointer (engine-owned, valid for the lifetime of the object), or nullptr on any null link / SEH fault.
+- L1102 `bool TrackAxisUsable(void* miniGame)`
+- L1151 `int ObstacleLoopBudget()`: Cap on how many obstacle loops may sound at once, nearest first.
+- L1158 `bool IsSceneryObstacleName(const char* name)`: The ` _MGE*` scenery objects (see the constants block): the token "_MGE" anywhere in the resref, case-insensitive.
+- L1172 `void ResolveHazardBox(void* aur, const char* name, HazardInfo& hz)`: Resolve and classify one obstacle's collision box (KOTOR 2).
+- L1201 `float MineLateralReach(int m, float bikeZ, float /*playerRadius*/)`: Lateral reach of mine `m` at the bike's ground height: sqrt(R² − dz²) plus slack, R = the measured combined reach (kMineCollisionRadiusU — the live sphere_radius is NOT the collision radius, see there).
+- L1210 `float WidestStripPiece(float lo, float hi, float barY, float bikeZ, float playerRadius, float& outLo, float& outHi)`: One side's strip [lo, hi] minus every mine near the bar.
+- L1240 `void ComputeBarGap(SpatialAudioState::BarInfo& bar, float bikeZ, float playerRadius)`: Fills bar.has_gap / gap_x / gap_side (-1 left strip, +1 right strip).
+- L1261 `void TrackMinePasses(void* player, const Vector& bikePos, float playerRadius)`: Mine-pass log: per mine, the closest 3-D approach while the mine is within kMinePassWindowU ahead or behind, logged once when it falls behind, with the hp before and after.
+- L1297 `void TickObstacleCues(void* miniGame)`
+- L1744 `void TickAccelpadCues(void* miniGame)`
+- L2388 `void TickSpatialAudio(void* miniGame)`
+- L2396 `ParkedBar GetParkedBarSituation()`
+- L2400 `void ResetSpatialAudio()`

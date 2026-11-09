@@ -1,34 +1,39 @@
-# combat_diag.cpp (355 lines)
+# combat_diag.cpp (544 lines)
 
-Implements the state-bit snapshot/delta probe and the four hook-driven event loggers declared in combat_diag.h. `ReadState` pulls combat-mode bit, inner queue size (combat_round.actions), outer queue size (CSWSObject.action_nodes @+0xfc — the one the sighted strip UI reflects), auto-paused, pause-state(0), and the main_interface target handle, each SEH-guarded independently. The `OnCombatRoundAddAction` detour additionally calls into `combat_queue::OnEngineActionAdded` to drive the authoritative "X, Platz N" / "Warteschlange voll" announce, since this hook fires once per genuine add at function entry (never races the queue drain or under-counts on key auto-repeat, unlike the old rising-edge poll).
+Source: `patches/Accessibility/combat_diag.cpp`
+
+(From combat_diag.h.) Combat-queue diagnostic probe.
+
+Per-press snapshot + per-tick delta of the four state bits that decide chain vs overwrite in DoPersonalAction / DoTargetAction:
+
+cm  = CSWCCreature.field200_0x440 & 1     (combat-mode bit) qs  = CSWSCombatRound.actions list size   (queue depth, ignoring 0xFF placeholder) ap  = CClientExoApp::GetAutoPaused() ps  = CClientExoApp::GetPauseState(0) tgt = main_interface.field1_0x64           (current target handle)
+
+Read-only — no engine state is mutated. Logs to acclog under "Combat.Diag". Off when not in a world (no player position).
+
+Wiring points: * Tick()              — per-frame from core_tick. Emits a DELTA line whenever any tracked bit changes. * LogPreFire(label)   — called from each combat-key press path BEFORE the engine dispatches. * LogPostFire(label)  — called AFTER the engine returns (Shift+1..3 and Shift+4..7 only; bare 1..7 fires after our prologue hook returns, so we get the "post" state from the next Tick's DELTA line).
 
 ## Declarations (in source order)
 
-- L15 — `namespace acc::combat_diag`
-- L22 — `constexpr size_t kCSWCCreatureCombatModeOffset = 0x440`
-- L25-26 — `kAddrCClientExoAppGetAutoPaused`, `kAddrCClientExoAppGetPauseState`
-- L30-31 — `kGuiInGameMainInterfaceOffset = 0x90`, `kMainInterfaceTargetHandleOff = 0x64`
-- L36 — `uint8_t ReadCombatModeBit(void* clientLeader)`
-- L47 — `int ReadQueueSize(void* serverCreature)`
-  note: fast path reads internal.count directly, bypassing the node walker
-- L84 — `int ReadOuterQueueSize(void* serverCreature)`
-  note: CExoLinkedList<T> is INLINE at CSWSObject+0xfc, not a pointer — first deref is already the internal ptr
-- L104 — `void* GetExoApp()`
-- L116 — `int CallGetAutoPaused(void* exoApp)`
-- L127 — `int CallGetPauseState(void* exoApp)`
-- L138 — `uint32_t ReadMainInterfaceTarget(void* exoApp)`
-- L160 — `struct State` (cm/qs/oq/ap/ps/tgt)
-- L171 — `void ReadState(State& s)`
-- L192 — `State g_last`, `bool g_armed`
-- L197 — `void Tick()`
-  note: gated on GetPlayerPosition; INIT line on first arm, DELTA lines thereafter
-- L242 — `void LogPreFire(const char* label)`
-- L250 — `void LogPostFire(const char* label)`
-- L264 — `void* GetPlayerCombatRound()`
-- L276 — `const char* RoleTag(void* combatRound)`
-  note: "PLAYER" vs "other" — distinguishes the user's combat round from companion/enemy rounds sharing the same hook
-- L288 — `extern "C" void __cdecl OnCombatRoundAddAction(...)`
-  note: derefs esp+N stack slots per the documented LEA-vs-MOV bug; reads action_type @+0x10; forwards to combat::queue::OnEngineActionAdded
-- L329 — `extern "C" void __cdecl OnCombatRoundRemoveAllActions(void*)`
-- L336 — `extern "C" void __cdecl OnCombatRoundSetCurrentAction(void*, void*)`
-- L350 — `extern "C" void __cdecl OnCombatRoundRemoveLastAction(void*)`
+- L57 `uint8_t ReadCombatModeBit(void* clientLeader)`
+- L76 `int ReadRoundActionCount(void* combatRound)`: Queued-action count on a CSWSCombatRound directly.
+- L100 `int ReadQueueSize(void* serverCreature)`
+- L121 `int ReadOuterQueueSize(void* serverCreature)`: Read the OUTER game-action queue size at CSWSObject.action_nodes @+0xfc.
+- L144 `uint32_t ReadFirstQueuedTarget(void* serverCreature)`: Target (server id) of the first real action queued on the creature's combat round; 0 when nothing is queued or the read faults.
+- L182 `bool HostileNearby()`
+- L208 `int CallGetAutoPaused(void* exoApp)`
+- L219 `int CallGetPauseState(void* exoApp)`
+- L230 `uint32_t ReadMainInterfaceTarget(void* exoApp)`
+- L254 `void ReadState(State& s)`
+- L280 `void Tick()`
+- L354 `bool LeaderIsAttacking(uint32_t targetId)`
+- L361 `void LogPreFire(const char* label)`
+- L369 `void LogPostFire(const char* label)`
+- L383 `void* GetPlayerCombatRound()`: Resolve the player's CSWSCombatRound at hook-fire time so we can tag each ADD/CLEAR event with whether it belongs to the user's creature (vs companion / enemy combat rounds, which also use the same engine surfaces).
+- L399 `const char* RoleTag(void* combatRound)`: Declared in combat_diag_internal.h - combat_queue_hooks.cpp tags its log lines with the same role, so this one helper is not file-static.
+- L406 `extern "C" void __cdecl OnCombatRoundRemoveAllActions(void* this_combatRound)`
+- L441 `extern "C" void __cdecl OnCombatRoundSetCurrentAction(void* this_combatRound, void* esp_byte_addr)`
+- L456 `extern "C" void __cdecl OnCombatRoundRemoveLastAction(void* this_combatRound)`
+- L475 `void __cdecl OnCombatRoundRemoveAllActionsK2(void* thisRound)`
+- L484 `void __cdecl OnCombatRoundSetCurrentActionK2(void* thisRound, void* ebp)`
+- L493 `void __cdecl OnCombatRoundRemoveLastActionK2(void* thisRound)`
+- L512 `void __cdecl OnUseItemRequestK2(void* thisPtr, void* ebp)`

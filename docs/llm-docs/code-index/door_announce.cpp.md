@@ -1,15 +1,23 @@
-# door_announce.cpp (78 lines)
+# door_announce.cpp (251 lines)
 
-Speaks the player's current camera facing the instant a door THEY opened begins to open (KOTOR autoturns the player toward interacted objects, disorienting a blind player). Records the opener id from the `OnDoorOpen` detour trampoline, filters to leader-only on the next Tick, then defers to camera_announce for the actual readout + de-dup. Talks to camera_announce, engine_player.
+Source: `patches/Accessibility/door_announce.cpp`
+
+(From door_announce.h.) Door-open facing readout.
+
+KOTOR autoturns the player to face whatever they interact with, so after opening a door the player has often been rotated (and walked) away from where they thought they were pointing. This announces the player's current camera facing the moment a door BEGINS to open, so the user re-establishes their bearing (and, implicitly, where they came from).
+
+Signal: the CSWSDoor::OpenDoor detour fires at the start of the open (before SetOpenState kicks off the animation), handing us the opener's server object id. Only doors the player-controlled leader opens re-read the facing — a follower / enemy / script opening a door nearby must not fire a readout. Those instead get one short line when the door is near the leader ("Door 1 opens", KOTOR 1): a story door that opens from its own script after the player's attempt would otherwise go unannounced.
+
+De-noising lives in camera_announce::AnnounceCurrentFacing: the same sector spoken by the per-tick direction-change announce within the last second is suppressed, so a close door the player already got a direction cue for stays quiet, while a door reached after walking/turning speaks.
 
 ## Declarations (in source order)
 
-- L17 — `constexpr unsigned int kDedupMs = 1000` — suppresses same-direction readout already spoken by the autoturn's own direction-change announce
-- L20 — `constexpr size_t kGameObjectIdOffset = 0x4` — CGameObject.id
-- L24-25 — `bool s_pending`, `uint32_t s_pendingOpener` — single pending slot, last-writer-wins
-- L27 — `bool ReadServerObjectId(void* serverObj, uint32_t& outId)`
-- L40 — `void NoteDoorOpened(uint32_t openerServerId)` (public)
-- L45 — `void Tick()` (public)
-  note: compares opener id against `GetPlayerServerCreature`'s handle; non-leader opens are skipped and logged
-- L75 — `extern "C" void __cdecl OnDoorOpen(void*, uint32_t openerServerId)`
-  note: CSWSDoor::OpenDoor detour @0x00589ceb, fires at start-of-open before SetOpenState; ESI=CSWSDoor* this (unused), EDI=param_1=opener server id
+- L64 `bool ReadServerObjectId(void* serverObj, uint32_t& outId)`
+- L81 `void AnnounceNearbyOpen(uint32_t doorHandle)`: "Door 1 opens" for a door the leader did not open, near the leader.
+- L114 `void PollWalkThrough()`
+- L166 `void ArmWalkThrough(uint32_t doorHandle)`
+- L177 `void DisarmWalkThrough()`
+- L184 `void NoteDoorOpened(uint32_t openerServerId, uint32_t doorHandle)`
+- L190 `void Tick()`
+- L224 `extern "C" void __cdecl OnDoorOpen(void* serverDoor, uint32_t openerServerId)`: CSWSDoor::OpenDoor detour @0x00589ceb — fires at the START of the open, right where the engine stamps the opener id into the door and is about to call SetOpenState to begin the animation.
+- L237 `void __cdecl OnDoorOpenK2(void* ebp)`

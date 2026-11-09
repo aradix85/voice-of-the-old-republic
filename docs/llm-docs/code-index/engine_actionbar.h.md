@@ -1,20 +1,31 @@
-# engine_actionbar.h (96 lines)
+# engine_actionbar.h (149 lines)
 
-Engine bindings for the player action bar (Aktionsmenü) — CSWGuiMainInterface's 6 personal-action columns, each with an action_button/label/up/down/is_action widget set plus a backing CExoArrayList of variants. Pure read + primitive layer mirroring engine_radial.
+Source: `patches/Accessibility/engine_actionbar.h`
+
+Engine bindings for the player action bar (Aktionsmenü).
+
+Pure read + primitive layer. Mirrors engine_radial: resolve through the standard chain, per-column reads, drive engine widgets via the vtable[15] activate path. actionbar_menu wires this into a navigable Shift+4..Shift+7 submenu.
+
+CSWGuiMainInterface.field45_0x771c[6] — six CSWGuiMainInterfaceAction (stride 0x71C). Each column: +0x000 action_button   — icon (fire = use) +0x1C4 action_label    — text label of current variant +0x388 up_button       — cycle next +0x54C down_button     — cycle prev +0x718 is_action       — 1 when populated
+
+CSWGuiMainInterface.field5_0x74[6] — CExoArrayList<CSWGuiInterfaceAction> stride 0x0C. Source of truth for variant count (PopulateMenus fills from CSWCCreature::GetPersonalActions).
+
+CSWGuiMainInterface::DoPersonalAction @0x0068ad60 — what bare 4..7 hit. param_2 unused — variant chosen by reading *(mi + 0x1bac + slot*4).
 
 ## Declarations (in source order)
 
-- L30 — `constexpr int kColumnCount = 6`
-- L33 — `void* ResolveMainInterface()`
-  note: borrowed pointer — re-resolve each tick, don't cache
-- L39 — `int VariantCount(void* mainInterface, int slot)`
-  note: descriptor list is the source of truth; the is_action field (+0x718) reads pointer garbage and field45 widgets populate lazily on render
-- L43 — `bool ReadVariantLabel(void* mainInterface, int slot, int index, char* outBuf, size_t bufSize)`
-- L47 — `uint32_t ReadVariantActionId(void* mainInterface, int slot, int index)`
-- L52 — `void* GetColumnActionButton(void* mainInterface, int slot)`
-- L62 — `bool SelectVariant(void* mainInterface, int slot, int index)`
-  note: bypasses the engine's labelled arrow handlers — gate on uninitialised is_active, plus OnActionDownArrow is mislabelled (calls CSWGuiTargetActionMenu::SelectNextAction on `this`)
-- L65 — `bool FireSelectedVariant(void* mainInterface, int slot)` — must call SelectVariant first or fires variant 0
-- L91 — `bool PrepareBareDispatch(uint32_t targetClientHandle)`
-  note: targetClientHandle is CLIENT-side (0x80000000 high bit); pass kInvalidObjectId when no narrated target so PopulateMenus leaves hostile-action creature_ids unresolved (dispatch silently no-ops) while self-buff items still fire
-- L93 — `void LogState(void* mainInterface, const char* tag)`
+- L33 `void* ResolveMainInterface()`: Borrowed pointer — re-resolve each tick, don't cache.
+- L39 `int VariantCount(void* mainInterface, int slot)`: Reads field5_0x74[slot].size.
+- L43 `bool ReadVariantLabel(void* mainInterface, int slot, int index, char* outBuf, size_t bufSize)`: CSWGuiInterfaceAction.label CExoString at +0x00, stride 0x38.
+- L47 `uint32_t ReadVariantActionId(void* mainInterface, int slot, int index)`: CSWGuiInterfaceAction +0x08 (ulong).
+- L67 `bool VariantRefusal(void* mainInterface, int slot, int index, uint32_t* outStrRef)`: Will DoPersonalAction refuse this entry, and why?
+- L73 `void* GetColumnActionButton(void* mainInterface, int slot)`: field45_0x771c[slot].action_button — safe to pass to acc::engine:: ReadControlTooltip / ReadGuiString (CSWGuiButton embeds CSWGuiControl at offset 0).
+- L83 `bool SelectVariant(void* mainInterface, int slot, int index)`: Stamps *(mi + 0x1bac + slot*4) = descriptor[index].action_id, then DoPersonalAction reads that field and searches for matching id.
+- L86 `bool FireSelectedVariant(void* mainInterface, int slot)`: Same entry as bare 4..7.
+- L96 `void LogDispatchDiag(void* mainInterface, int slot, int index)`: One log line dumping everything the engine's DoPersonalAction will gate on for this entry — action_id, creature_id (+ whether the client object array resolves it), handler dword, flag word.
+- L100 `bool EntryIsMedicalK2(void* mainInterface, int slot, int index)`: True iff this entry carries KOTOR 2's medical-use handler (the two-step target-pick flow below).
+- L118 `bool SendUseItemRequestK2(uint32_t actionId, void* targetClientCreature)`: KOTOR 2 medical-item use, sent directly.
+- L144 `bool PrepareBareDispatch(uint32_t targetClientHandle)`: Prep engine state so the engine's bare 1..3 / 4..7 dispatch fires against targetClientHandle instead of whatever target was last stamped.
+- L146 `void LogState(void* mainInterface, const char* tag)`
+
+Also 1 constants or variables at namespace scope.

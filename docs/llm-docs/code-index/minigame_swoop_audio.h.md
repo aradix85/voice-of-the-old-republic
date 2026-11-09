@@ -1,14 +1,12 @@
-# swoop_spatial_audio.h (23 lines)
+# minigame_swoop_audio.h (41 lines)
 
-Public surface for the swoop-race continuous spatial-audio sweep: walks
-the global CSWMiniGameObjectArray each tick to drive per-obstacle warning
-loops and an accelpad steering-guide tone. Split out of swoop_race.cpp
-(2026-05-27) purely for file-size management; swoop_race.cpp owns the race
-lifecycle and calls these two entry points.
+Source: `patches/Accessibility/minigame_swoop_audio.h`
+
+Swoop race spatial-audio: continuous obstacle + accelerator-pad proximity cues. Walks the global CSWMiniGameObjectArray each tick, classifies each slot via the AsObstacle / AsEnemy vtable downcasts, drives one LoopSource per in-range obstacle (multi-source warn pulse) and one nearest-only LoopSource for accelerator pads (clean booster channel). See swoop_race.cpp for the race lifecycle, gear watch, and wall-collision detection that drives this module via Tick().
 
 ## Declarations (in source order)
 
-- L11 — `namespace acc::swoop_race`
-- L16 — `void TickSpatialAudio(void* miniGame)`
-  note: safe to call with miniGame == nullptr; listener via GetCameraPosition with GetPlayerPosition fallback
-- L21 — `void ResetSpatialAudio()` — stops all loops; called on race ENTER (defensive) and EXIT
+- L18 `void TickSpatialAudio(void* miniGame)`: Drive obstacle + accelpad proximity loops for the active race.
+- L23 `void ResetSpatialAudio()`: Stop every active loop and clear the per-race diagnostic guards.
+- L37 `enum class ParkedBar`: KOTOR 2: what the parked bike is stuck against, as seen by the obstacle sweep (gear 0, inside a low bar's lateral span, the bar just ahead).
+- L38 `ParkedBar GetParkedBarSituation()`

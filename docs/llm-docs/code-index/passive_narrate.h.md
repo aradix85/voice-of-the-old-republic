@@ -1,15 +1,19 @@
-# passive_narrate.h (50 lines)
+# passive_narrate.h (57 lines)
 
-Public surface for the ShowObject-hook-driven passive/Q-E narration.
-Documents why ShowObject (not polling GetLastTarget) is the hook point:
-last_target is also written by combat AI every round, so per-tick polling
-would race it.
+Source: `patches/Accessibility/passive_narrate.h`
+
+Passive-selection narration.
+
+Hooks CClientExoAppInternal::ShowObject — the engine's single point of user-facing target change (called by DoPassiveSelection's mouse-hover auto-target and SelectNearestObject's Q/E cycle). On a real transition the watcher resolves the handle, classifies it through the six-category nav filter, and speaks the localised name plus a 3D positional cue.
+
+Hook ShowObject rather than poll GetLastTarget because last_target is also written by combat AI (CSWSCreature::CreateNewAttackActions, every round, every queued creature) and per-tick polling races that. ShowObject is only called by user-driven paths, so it's a clean signal.
+
+Does NOT handle focus-loss announce (silent on sentinel transitions), the Q/E cycle itself (cycle_input owns that), or filtering to "interesting" — the engine already decided by calling ShowObject; we just drop non-nav categories.
 
 ## Declarations (in source order)
 
-- L27 — `void OnEngineShowObject(uint32_t handle)`
-  note: updates the Q/E re-announce cache AND drives delta-based ambient narration.
-- L38 — `void RequestQEReannounce(int directionCode)`
-  note: directionCode is the engine's logical Q/E code (204=E, 205=Q), stored for the sentinel-skip retry.
-- L44 — `bool IsInSynthesizedQE()`
-- L47 — `void Tick()`
+- L27 `void OnEngineShowObject(uint32_t handle)`: ShowObject hook entry.
+- L38 `void RequestQEReannounce(int directionCode)`: Arm a Q/E re-announce.
+- L44 `bool IsInSynthesizedQE()`: Returns true while Tick is mid-flight on a synthesized Q/E re-issue.
+- L51 `bool NarrateExplicit(uint32_t serverHandle)`: Speak and stamp a server object exactly like an explicit Q/E landing on it: name and combat brief, clock and distance, narrated target, discovery.
+- L54 `void Tick()`: Per-tick drain of pending Q/E re-announce + sentinel-skip retry.

@@ -1,31 +1,25 @@
-# endar_softlock.cpp (275 lines)
+# endar_softlock.cpp (337 lines)
 
-Endar Spire Command Module (END_M01AA) softlock guard: hangs a rule off the feedback router's generic "locked" report (never off interact dispatch, to avoid suppressing story-trigger door-opens) to speak graduated guidance when the player repeatedly pokes the room5-gated bridge door, plainly explain doors that are genuinely sealed (cut2 battle door, post-sacrifice Trask door), and edge-log the room3/5/7/8/sith/bridge-combat plot-global timeline. Talks to engine_area (resref/globals/tag), engine_player (combat/party state), locked_recall, msg_router, narrated_target, prism, strings.
+Source: `patches/Accessibility/endar_softlock.cpp`
+
+(From endar_softlock.h.) Endar Spire Command Module (END_M01AA) softlock guard + diagnostic net.
+
+The tutorial's room-3 -> room-5 -> bridge sequence is scripted: the west corridor door to the bridge (tag end_door16) only unlocks once the room-5 fight is cleared. If that sequence stalls (e.g. a save/reload mid-cutscene), the door stays locked with no reachable enemies and no in-world explanation, and blind players — guided toward the bridge by the beacon — poke the door repeatedly and give up. This module: 1. Speaks graduated guidance when the player keeps trying end_door16 while room 5 is uncleared (helpful first cue; reload advice after repeats). 2. Edge-logs the plot-state timeline while in the module, so the next stuck report carries the exact sequence that derailed. It never edits engine state, and never stands in for an engine call — narration + logging only.
 
 ## Declarations (in source order)
 
-- L21 — `constexpr char kCommandModule[] = "end_m01aa"`
-- L27 — `constexpr char kRoom5Door[] = "end_door16"` — the only reported softlock chokepoint
-- L35 — `constexpr char kCut2Door[] = "end_door10_cut2"`
-  note: blueprint-unlocked; reaching "locked" here means the engine truly refused — must NEVER be spoken in place of an actual open attempt (v0.6.1 regression)
-- L51 — `constexpr char kTraskDoor[] = "end_door19"`
-  note: locked=1 from load; first "locked" report IS the story trigger (level-up gate), second (companion roster empty) means genuinely sealed
-- L57 — `constexpr int kReloadHintAfterAttempts = 3`
-- L61 — `constexpr DWORD kHintDelayMs = 500` — lands after the engine's own locked bark
-- L64 — `constexpr DWORD kDiagScanIntervalMs = 500`
-- L66-73 — visit state: `g_inModule`, `g_door16Attempts`, `g_spokeBattleHint`, `g_spokeReloadHint`, `g_hasPendingHint`, `g_pendingHint`, `g_pendingHintAtMs`
-- L78 — `struct Snapshot { room3,room5,room7,room8,sith,bridgeCombat,inCombat; operator==; }` — -2 sentinel forces first emit
-- L89 — `bool EqualsCI(const char* a, const char* b)`
-- L99 — `bool IsCommandModule()`
-- L105 — `Snapshot ReadSnapshot()` — via `ReadGlobalNumber` + `IsAnyPartyMemberInCombat`
-- L118 — `void LogSnapshot(const char* why, const Snapshot& s)`
-- L126 — `void ResetVisit()`
-- L138 — `int CompanionCount()` — active companions excluding PC, via `GetPartyMembers`
-- L147 — `void QueueHint(acc::strings::Id which)` — deferred so it follows the router's own "locked" line
-- L155 — `void OnDoorLocked(const char* tag)`
-  note: dispatches per-tag: cut2 (always sealed line), Trask door (only sealed once companion roster is empty), room5 door (graduated battle-hint → reload-hint after kReloadHintAfterAttempts)
-- L216 — `bool RuleEndarDoorLocked(const char* text)`
-  note: router rule; never consumes — reads the acting object from `narrated_target::TryGet`, dispatches to OnDoorLocked by tag
-- L235 — `void RegisterMsgRule()` (public)
-- L239 — `void OnAreaChanged(void*)` (public) — resets visit state on module enter/exit, logs entry snapshot
-- L252 — `void Tick()` (public) — flushes queued hint after kHintDelayMs, throttled diagnostic edge-log of plot-state changes
+- L106 `bool operator==(const Snapshot& o) const`
+- L115 `bool EqualsCI(const char* a, const char* b)`
+- L125 `bool IsCommandModule()`
+- L131 `Snapshot ReadSnapshot()`
+- L145 `void LogSnapshot(const char* why, const Snapshot& s)`
+- L153 `void ResetVisit()`
+- L166 `int CompanionCount()`: Active companions, PC excluded (the engine's party table counts followers only).
+- L175 `void QueueHint(acc::strings::Id which)`: Queue a line to be spoken after the generic "locked" the router is about to emit.
+- L183 `void OnDoorLocked(const char* tag)`: The engine just reported `tag` as locked.
+- L252 `bool RuleEndarDoorLocked(const char* text)`: Feedback-router rule.
+- L271 `void RegisterMsgRule()`
+- L275 `bool WouldBlockCompanionAttempt(void* target)`
+- L289 `bool BlockCompanionAttempt(void* target)`
+- L300 `void OnAreaChanged(void* /*area*/)`
+- L313 `void Tick()`

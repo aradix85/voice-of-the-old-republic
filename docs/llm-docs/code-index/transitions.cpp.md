@@ -1,56 +1,47 @@
-# transitions.cpp (1413 lines)
+# transitions.cpp (1919 lines)
 
-Implements area/room transition narration. Trigger moved off .lyt-room
-ids (2026-05-22) onto wall_topology cluster ids, since K1 rooms flip on
-94-98% of steps in dense areas; cluster ids are spatially stable. Layers:
-flat landmark cache (proximity-scanned, per-area fog-of-war-scaled enter/
-exit ranges, auto-discovery of script-gated map notes), cluster-change
-dedup (text-equality + "flap" return-leg suppression + minor-cluster
-dwell gate for small outdoor slivers), a Platz (multi-node cluster)
-deferred-announce so the label resolves nearer the player's final
-position, and a post-combat/UI-gate refire so a cluster change during
-combat isn't lost. Talks to: wall_topology (LookupAt/BuildForArea/single
-source of truth for perceptual labels), discovery, engine_area,
-engine_panels, combat (IsCombatActive gate), narrated_target, prism.
+Source: `patches/Accessibility/transitions.cpp`
+
+region labels (nav-graph decomposition)
 
 ## Declarations (in source order)
 
-- L53-54 — `g_prev_area`, `g_prev_cluster_id` — last observed area/cluster
-- L60 — `g_module_load_pending` — set in AnnouncePreLoadDestination, cleared on next fresh area
-- L76-78 — cluster stability debounce (kClusterStabilityTicks=5)
-- L101-104 — minor-cluster dwell gate constants (extent<12m, dwell 1800ms)
-  note: added 2026-07-16 — outdoor slivers fired 100+ times vs 3 for the map's real region
-- L130-138 — `struct Landmark` + `g_landmarks[128]` flat cache (name/pos/doorMatched/handle)
-- L158 — `void SpeakArea(void* area)` — area-name announce, interrupt=false
-- L189 — `void RebuildLandmarkCache(void* area)` — scans landmark waypoints w/ map_note_enabled
-- L295-314 — `constexpr kFlapWindowMs/kFlapRadiusM` + `bool IsFlapRepeat(...)`
-  note: suppresses only the RETURN leg of a boundary ping-pong, never a genuinely new label
-- L318 — `void CommitSpokenLabel(text, pos, now)` — rotates 2-deep spoken-label history
-- L367-372 — per-area landmark enter/exit range derived from fog-of-war cell size
-- L383 — `void RecomputeLandmarkRanges()`
-- L423 — `kMapNoteAutoDiscoverRangeM = 5.0f` — proximity auto-enable for script-gated notes
-- L455 — `bool ResolveRoomSpeech(area, worldPos, outBuf, outSource, outClusterIdOpt)`
-  note: two-tier — friendly room name (IsResrefStyleRoomName filtered) then wall_topology shape, gated by the RoomShapes mod-setting toggle
-- L521 — `void LogWallTopoComparison(...)` — diagnostic cross-check log
-- L558 — `void SpeakRoomChange(area, clusterId, worldPos)` — resolves + dedups (text/flap) + Platz-defers or speaks via SpeakUrgent
-- L656 — `void TickPendingPlatz(area, playerPos)` — fires/supersedes the deferred Platz label after kPlatzDelayMs
-- L716 — `void TickGatedClusterRefire(area, playerPos)` — re-speaks current room once the combat/UI gate clears
-- L745 — `bool TryAutoDiscoverMapNote(waypoint, playerPos)` — enables a note the leader is standing on
-- L775 — `void TickLandmarkCacheRecheck(area, playerPos)` — 1s-cadence drift check + rebuild + door-attach
-- L819 — `void TickProximityLandmarks(playerPos)` — nearest-landmark stability + enter/exit hysteresis; skips door-matched entries
-- L913 — `bool IsWorldSpeechGatedImpl()` — combat OR foreground-UI-blocking
-- L922 — `bool IsResrefStyleRoomName(const char* name)`
-- L938 — `bool FindLandmarkNear(pos, rangeM, nameOut, nameBufSize, posOut, outLandmarkIdx)`
-- L968 — `bool IterateLandmarks(cursor, nameOut, nameBufSize, posOut, outLandmarkIdx)`
-- L985 — `void MarkLandmarkClaimedByDoor(landmarkIdx)`
-- L990 — `void Tick()` — movie-foreground guard, player/area resolve + reset-on-loss,
-  area-change branch (rebuilds landmark cache + wall_topology graph, clears narrated_target),
-  proximity landmarks, pending-Platz, gated refire, cluster-change trigger with stability +
-  minor-dwell + open-area seam-holding
-  note: kClusterIdOpenArea collapses to the previous committed cluster id when one exists, to suppress boundary-seam thrash (Kashyyyk Great Walkway)
-- L1307 — `bool IsWorldSpeechGated()`
-- L1311 — `bool IsModuleLoadPending()`
-- L1315 — `void NotifyExternalLoadStarting(const char* reason)`
-- L1326 — `void AnnouncePreLoadDestination(exoStringPtr)` — 2s dedup window, movie-foreground speech suppression
-- L1398 — `extern "C" void OnSetMoveToModuleString(serverApp, arg_addr)` — entry hook @0x004aecd0
-  note: LEA-vs-MOV KPatchManager wrapper bug — arg_addr is the STACK SLOT ADDRESS, must deref once for the real CExoString*
+- L194 `void TrackMotion(const Vector& pos)`
+- L216 `void ResetMotion()`
+- L221 `float CentreDistance(const Vector& pos)`
+- L227 `bool CentreRuleReady(int clusterId, const Vector& pos)`: True once the pending centre-rule cluster may speak.
+- L343 `void SpeakArea(void* area)`
+- L374 `void RebuildLandmarkCache(void* area)`
+- L494 `bool IsFlapRepeat(const std::string& text, const Vector& pos, DWORD now)`: True when speaking `text` at `pos` would be the flap return-leg.
+- L502 `void CommitSpokenLabel(const std::string& text, const Vector& pos, DWORD now)`: Rotate the two-deep spoken-label history.
+- L576 `void RecomputeLandmarkRanges()`
+- L650 `bool ResolveRoomSpeech(void* area, const Vector& worldPos, std::string& outBuf, const char*& outSource, int* outClusterIdOpt = nullptr, std::vector<acc::room_topology::ExitMark>* outExitsOpt = nullptr)`: Resolve the speech at `worldPos` using a two-tier order: 1.
+- L725 `void LogWallTopoComparison(void* area, int roomIndex, const Vector& worldPos, const char* spoken, const char* source)`: Diagnostic — log room_topology's resolution at this position alongside whatever the resolved speech was (room name, shape, or transition compose).
+- L770 `void SpeakPlayerRegionLabel(void* area, const std::string& label, const std::vector<acc::room_topology::ExitMark>& exits)`: Speak a perceptual-region change.
+- L782 `void SpeakRoomChange(void* area, int clusterId, const Vector& worldPos)`
+- L892 `void TickPendingPlatz(void* area, const Vector& playerPos)`: Fire any pending Platz announce whose delay has elapsed.
+- L972 `void TickGatedClusterRefire(void* area, const Vector& playerPos)`: Refire the current room label after a gated cluster change, once the gate (combat / blocking UI) has stayed clear for kGatedRefireDelayMs.
+- L1007 `bool TryAutoDiscoverMapNote(void* waypoint, const Vector& playerPos)`: If `waypoint` (a landmark whose note is still disabled) sits within auto-discover range of the leader, enable it via the engine's own field write.
+- L1035 `void TickLandmarkCacheRecheck(void* area, const Vector& playerPos)`: Detect map notes whose enabled flag flipped since the last cache scan and rebuild.
+- L1079 `void TickProximityLandmarks(const Vector& playerPos)`: Per-tick scan over the landmark cache.
+- L1169 `bool IsWorldSpeechGatedImpl()`: Forward declaration of the public predicate (defined at file scope below namespace).
+- L1178 `bool IsResrefStyleRoomName(const char* name)`
+- L1200 `bool FindLandmarkNear(const Vector& pos, float rangeM, char* nameOut, size_t nameBufSize, Vector& posOut, int* outLandmarkIdx)`
+- L1228 `bool IterateLandmarks(void* area, int& cursor, char* nameOut, size_t nameBufSize, Vector& posOut, int& outLandmarkIdx)`
+- L1258 `void MarkLandmarkClaimedByDoor(int landmarkIdx)`
+- L1277 `void ResetRoomSpeechState()`: Cluster / room-label speech, including the text-equality dedup key and the flap-suppression window.
+- L1292 `void ResetLandmarkProximityState()`: Landmark proximity firing + the recheck cadence timestamp.
+- L1300 `void ResetPendingPlatzState()`: Deferred "Platz" announcement.
+- L1305 `void ResetGatedRefireState()`: Post-gate cluster re-announce (combat / blocking UI swallowed a change).
+- L1310 `void Tick()`
+- L1700 `bool IsWorldSpeechGated()`
+- L1704 `void SpeakRegionLabel(const char* text, const std::vector<acc::room_topology::ExitMark>& exits)`
+- L1711 `bool IsModuleLoadPending()`
+- L1715 `void NotifyExternalLoadStarting(const char* reason)`
+- L1735 `bool LooksLikeResref(const char* s)`: A destination module resref is short printable ASCII — "endar_spire", "tar_m02ac", "101PER".
+- L1754 `bool TryReadExoString(void* base, char* out, size_t outSize)`: `base` is a CExoString* { char* c_string; uint32 length }.
+- L1769 `static void AnnouncePreLoadDest(const char* dest, const char* shape)`: Shared tail of both hooks: dedup, then speak + log the destination.
+- L1806 `void AnnouncePreLoadDestination(void* exoStringPtr)`
+- L1841 `void LatchPreLoadDestinationK2(void* exoStringPtr)`
+- L1878 `extern "C" void __cdecl OnSetMoveToModuleString(void* /*serverApp*/, void* arg_addr)`: CServerExoApp::SetMoveToModuleString — entry hook @0x004aecd0.
+- L1904 `void __cdecl OnSetMoveToModuleStringK2(void* ebp)`

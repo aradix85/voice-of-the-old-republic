@@ -1,26 +1,21 @@
-# menus_keymap.cpp (430 lines)
+# menus_keymap.cpp (482 lines)
 
-Accessibility layer for the ENGINE's Tastaturbelegung/Key-Mapping screen (CSWGuiInGameOptKeyMappings, optkeymapping.gui) — distinct from menus_keybinds (the mod's own configurator). Two-level dispatcher mirroring menus_abilities: tab level ([Bewegung, Spiel, Minigames, OK, Abbrechen, Standard] flat list) then list level (binding rows). Maintains its OWN authoritative row cursor (`s_rowCursor`) because the engine rewrites the listbox's `selection_index` between keypresses via hover-select, which otherwise pins Up/Down to the two rows flanking one stuck index; drives the list via `DriveListBoxSelectionEngine` (real SetSelectedControl) and parks the OS cursor off the list (`ParkCursorToCorner`, deferred to `Tick()` since MoveMouseToPosition recurses through the hover pipeline). After a capture completes, warns if the newly-bound game key also drives a mod hotkey (`WarnIfModBindClash`). Talks to `engine_keymap` (InputIndexToVk, IsKeyUsedByGame), `hotkeys` (FindConflict), `menus_chain` (RebindChain after category switch), `menus_extract` (FromControl row readout), `menus_keybinds` (DisplayName for clash naming), `menus_pending` (QueueActivate for OK/Cancel/Default).
+Source: `patches/Accessibility/menus_keymap.cpp`
+
+Tastaturbelegung screen — see menus_keymap.h for the design rationale.
 
 ## Declarations (in source order)
 
-- L37-40 — `const uintptr_t kAddrSetCaptureEvent/OnFilterMove/OnFilterGame/OnFilterMini` — engine entry points, decompiled from build/re/optkeymappings-keymapbutton
-- L43 — `constexpr size_t kCaptureActiveOff = 0xf2c`
-- L47-53 — `constexpr int kIdListBox/DefaultBtn/AcceptBtn/CancelBtn/FilterMove/FilterGame/FilterMini` — optkeymapping.gui stable IDs
-- L58 — `enum class EntryKind { Category, Button }`; `struct TabEntry { kind, guiId, filterFn }`
-- L64 — `const TabEntry kTabEntries[6]` — 3 category tabs + Accept/Cancel/Default
-- L76-102 — state: `s_drilled, s_panel, s_tabCursor, s_armedRow, s_armedPanel, s_parkPending, s_rowCursor`
-- L104 — `void* FindByGuiId(panel, wantId)` (anonymous ns)
-- L123 — `void* RowAt(panel, index)`
-- L145 — `void SetSelectionIndex(lb, v)` — forces listbox selection_index back to our cursor before each engine-driven step
-- L153 — `int CaptureActive(panel)`
-- L163 — `void SpeakControl(panel, ctrl)` — via FromControl
-- L172 — `void AnnounceTabEntry(panel, idx)`
-- L181 — `bool StepRow(panel, ListBoxNavOp op)` — drives DriveListBoxSelectionEngine, announces landed row
-- L207 — `void SwitchCategory(panel, filterFn)` — calls OnFilter{Move,Game,Mini}
-  note: OnFilter* is an AddEvent(0x27) click handler with BYTES_PURGED=4 (ret 4) despite Ghidra's `(this)`-only signature — the typedef must carry the dummy 4-byte arg or the callee corrupts the caller's frame
-- L216 — `void ArmCapture(panel, row)` — calls SetCaptureEvent
-- L230 — `void WarnIfModBindClash(void* row)` — after the engine applies a bare key to a game action, checks it against mod hotkeys via `hotkeys::FindConflict`
-- L257 — `bool acc::menus::keymap::IsKeyMapPanel(void* panel)`
-- L263 — `void acc::menus::keymap::Tick()` — issues the deferred cursor park; on capture-completion re-announces the row + WarnIfModBindClash
-- L294 — `bool acc::menus::keymap::HandleInput(void* activePanel, param_1, param_2, int& outRv)` — tab-level nav/drill/button-activate; list-level nav/Enter-arm-capture/Esc-undrill; hands every key to the engine while a capture is armed
+- L98 `void* ResolveTabEntry(void* panel, int idx)`: The control a tab entry reads/activates.
+- L137 `void* RowAt(void* panel, short index)`: Row control at `index`, or nullptr if the list is shorter than that.
+- L159 `void SetSelectionIndex(void* lb, short v)`: Force the listbox's selection_index back to OUR cursor before a step.
+- L167 `int CaptureActive(void* panel)`
+- L177 `void SpeakControl(void* panel, void* ctrl)`: Speak a control's text (entry name or "{action}: {key}" row readout).
+- L186 `void AnnounceTabEntry(void* panel, int idx)`
+- L195 `bool StepRow(void* panel, ListBoxNavOp op)`: Step the binding list from OUR remembered cursor and announce the row we land on.
+- L221 `void SwitchCategory(void* panel, int filterIndex)`: Switch the displayed category by calling OnFilter* directly (synchronous, so the listbox is repopulated before we browse it).
+- L249 `void ArmCapture(void* panel, void* row)`
+- L280 `void WarnIfModBindClash(void* row)`: After the engine applies a freshly captured key to a game action, warn if that same physical key also drives a mod hotkey.
+- L307 `bool IsKeyMapPanel(void* panel)`
+- L313 `void Tick()`
+- L346 `bool HandleInput(void* activePanel, int param_1, int param_2, int& outRv)`

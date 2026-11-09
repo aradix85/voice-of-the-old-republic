@@ -1,23 +1,26 @@
-# engine_subscreen.h (99 lines)
+# engine_subscreen.h (108 lines)
 
-Public contract for engine_subscreen.cpp: sub-screen redrill cleanup,
-in-world overlay-pause holds (owner-bitmask, stacking-safe), and the three
-detour entry points (OnSwitchToSWInGameGui, OnHideSWInGameGui,
-OnSetSWGuiStatus).
+Source: `patches/Accessibility/engine_subscreen.h`
+
+CGuiInGame::SwitchToSWInGameGui detour + MessageBoxModal close cleanup.
+
+SwitchToSWInGameGui is the engine's universal "open sub-screen" entry. Without our cleanup, an already-open sub-screen stays alive in panels[] when the user switches to a different one (InGameOptions's OnQuit reorders panels[] without popping). Stale entries accumulate → "menu opens in background" / "Esc fires quit-confirm".
+
+Single-site fix: if a sub-screen is already active when the hook fires, call PrevSWInGameGui first, then let the original push onto clean panels[]. Covers strip-Enter, M/I/J hotkeys, every other invocation.
 
 ## Declarations (in source order)
 
-- L16 — `namespace acc::engine`
-- L20 — `extern bool g_switchHookEverFired`
-- L34 — `void TickInputClassReassert()`
-- L53 — `enum class OverlayPauseOwner : unsigned { UnifiedMenu, CombatQueue, ExamineView, Help, LevelUp }`
-- L60 — `void BeginOverlayPause(OverlayPauseOwner owner)`
-- L61 — `void EndOverlayPause(OverlayPauseOwner owner)`
-- L69 — `bool WorldIsPaused()`
-- L78 — `bool ResumeWorldIfPaused(const char* reason)`
-- L84 — `extern "C" void OnSwitchToSWInGameGui(void*, int guiId)`
-  note: detour @0x0062cf2d, 5-byte cut after EBX load.
-- L90 — `extern "C" void OnHideSWInGameGui(void*, void*)`
-  note: detour @0x0062cba0, 9-byte cut, all-relative operands.
-- L97 — `extern "C" void OnSetSWGuiStatus(void*, void*, void*)`
-  note: detour @0x0062aa00, 5-byte cut; status 1=in-world,2=main menu,3=sub-screen.
+- L34 `void TickInputClassReassert()`: Edge-triggered on modal_stack non-zero → 0.
+- L53 `enum class OverlayPauseOwner`: In-world overlay pause hold.
+- L60 `void BeginOverlayPause(OverlayPauseOwner owner)`
+- L61 `void EndOverlayPause(OverlayPauseOwner owner)`
+- L69 `bool WorldIsPaused()`: True when the in-world simulation is currently frozen by any pause source (manual pause key, combat auto-pause, or one of our overlay holds).
+- L78 `bool ResumeWorldIfPaused(const char* reason)`: Resume the real world pause (CClientExoApp::SetPausedByCombat(0,4,0)) IF the world is currently paused; no-op (returns false) when already running.
+- L84 `extern "" void __cdecl OnSwitchToSWInGameGui(void* thisPtr, int guiId)`: Detour @0x0062cf2d (5-byte cut after EBX = GUI_id is loaded).
+- L90 `extern "" void __cdecl OnHideSWInGameGui(void* thisPtr, void* p1_addr)`: Diagnostic detour at HideSWInGameGui @0x0062cba0.
+- L97 `extern "" void __cdecl OnSetSWGuiStatus(void* thisPtr, void* p1_addr, void* p2_addr)`: Diagnostic detour at SetSWGuiStatus @0x0062aa00.
+- L105 `extern "" void __cdecl OnSwitchToSWInGameGuiK2(void* thisGui, void* ebp)`: KOTOR 2 frame-unpacking wrappers (Batch 2) — the hooks pass ECX (`this`) plus EBP; each wrapper does the frame arithmetic and forwards to the shared handler above.
+- L106 `extern "" void __cdecl OnHideSWInGameGuiK2(void* thisGui, void* ebp)`
+- L107 `extern "" void __cdecl OnSetSWGuiStatusK2(void* thisGui, void* ebp)`
+
+Also 1 constants or variables at namespace scope.

@@ -1,22 +1,17 @@
-# engine_app.cpp (46 lines)
+# engine_app.cpp (96 lines)
 
-Implementation of the three AppManager resolve primitives declared in
-`engine_app.h` — read that entry for the chain, the rationale and the K2-port
-note.
+Source: `patches/Accessibility/engine_app.cpp`
 
-## Shape
+AppManager resolve primitives. See engine_app.h for the chain and the reason this file exists.
 
-Each function is a null-check plus one guarded dereference, layered:
-`GetAppManager()` reads the global, `GetServerApp()` builds on it,
-`GetServerAppInternal()` builds on that. Every one returns nullptr on a null
-link or an SEH fault.
+Each walk gets its own __try rather than sharing one: a fault reading the global is a different situation from a fault reading a facade field, and both have to yield nullptr cleanly to callers that run during engine teardown.
 
-Each walk carries its own `__try` rather than sharing one across the chain: a
-fault reading the `.data` global is a different situation from a fault reading
-a facade field, and both have to degrade to nullptr for callers running during
-engine teardown.
+## Declarations (in source order)
 
-The layering costs one extra pointer read per hop versus a single fused walk.
-That is deliberate — it is one dereference, and it buys callers the ability to
-tell "no AppManager yet" from "AppManager without a server", which
-`engine_subscreen.cpp`'s pause diagnostics rely on.
+- L15 `void* GetAppManager()`
+- L23 `void* GetClientApp()`
+- L35 `void* GetClientAppInternal()`
+- L47 `void* GetClientModule()`
+- L59 `void* GetCamera()`
+- L71 `void* GetServerApp()`
+- L83 `void* GetServerAppInternal()`

@@ -1,18 +1,19 @@
-# combat.h (44 lines)
+# combat.h (45 lines)
 
-Public surface for combat-mode entry/exit narration and the combat-log message-bus glue. Distinguishes `IsCombatActive` (controlled-leader-only global) from `IsPartyInCombat` (encounter-level OR across the party) — callers that must not flip on a mid-fight Tab should prefer the latter. The four `Tick*` functions are cheap/idle no-ops absent activity; each flushes a specific debounced burst (absorb, deflect, merged ability/grenade/force effects).
+Source: `patches/Accessibility/combat.h`
+
+Combat event narration.
+
+Channels: - Combat mode entry/exit — debounced via the turn_announce stability pattern; speaks "Kampf beginnt" / "Kampf beendet". - Combat log — live narration via the OnAppendToMsgBuffer hook (see the msg_router subscriber at the bottom of combat.cpp). TickCombatLog polls CSWGuiInGameMessages.messages_listbox for diagnostic logging only; speech is OFF there because the engine fills that listbox lazily when the review screen opens.
+
+Each Tick is cheap and idle when nothing is happening.
 
 ## Declarations (in source order)
 
-- L16 — `namespace acc::combat`
-- L25 — `bool IsCombatActive()`
-  note: mirrors only the controlled leader's combat bit; flips to peace on Tab to a not-yet-engaged member
-- L26 — `bool IsPartyInCombat()`
-  note: OR of every party member's per-creature combat bit; the stable "encounter active" signal
-- L28 — `void TickCombatMode()`
-  note: debounced begin/end "Kampf beginnt"/"Kampf beendet" cue + menu auto-close
-- L29 — `void TickCombatLog()`
-  note: diagnostic-only poll of the messages listbox; live narration comes from the OnAppendToMsgBuffer hook instead
-- L33 — `void TickCombatAbsorb()`
-- L38 — `void TickCombatDeflect()`
-- L42 — `void TickCombatEffects()`
+- L25 `bool IsCombatActive()`: Cross-feature gating read — false on chain fault (treat as not-in-combat).
+- L26 `bool IsPartyInCombat()`
+- L28 `void TickCombatMode()`
+- L29 `void TickCombatLog()`
+- L33 `void TickCombatAbsorb()`: Flushes a debounced burst of damage-absorption lines into one spoken total.
+- L38 `void TickCombatDeflect()`: Flushes debounced blaster-deflection bursts into one spoken line per deflector (" reflektiert N Schüsse").
+- L42 `void TickCombatEffects()`: Flushes debounced per-target ability/grenade/force-power effects into one merged spoken line each.

@@ -1,15 +1,20 @@
-# combat_strings.cpp (535 lines)
+# combat_strings.cpp (938 lines)
 
-Six `MsgStrings` locale tables (kDe, kEn, kFr, kIt, kEs, kRu) built with positional initialisers matching combat_strings.h's declaration order, plus the `Get()` dispatcher keyed on `acc::strings::GetLanguage()`. Encoding is the game's own codepage — hex escapes are Windows-1252 for de/en/fr/it/es and Windows-1251 for Russian (the exception; `acc::strings::CodepageFor(Lang::Ru)` and `prism::SetSpeechCodepage` handle the split). Each non-DE table carries inline comments documenting per-locale quirks discovered while extracting anchors from that language's dialog.tlk (word order, missing copula, glued multiplier tokens, etc.) — e.g. Italian's "X" krit_x_prefix (multiplier-first), Russian's missing "to be" copula (status_ist_marker uses a `\x01` sentinel that can never occur in TLK text), French's " : " separator style requiring short anchors.
+Source: `patches/Accessibility/combat_strings.cpp`
+
+Combat-message localization table — DE + EN tables.
+
+Engine anchors were extracted from each locale's dialog.tlk via `kdev combat-strings-extract` (the strref→field map lives in CombatStringsExtractCommand.cs); speech-side labels are hand-translated.
+
+Encoding: hex escapes in the *game's* codepage, because the anchors are memcmp'd/strstr'd directly against CExoString bytes. For de/en/fr/it/es that is Windows-1252 (\xFC=ü, \xF6=ö, \xE4=ä, \xDF=ß). kRu and kPl are the exceptions: Russian installs are Windows-1251 and Polish ones Windows-1250, so those escapes must not be read as 1252. acc::strings::CodepageFor(Lang) reports which, and prism::SetSpeechCodepage pins it for the speech path.
+
+Field order in the initialiser MUST match the declaration order in combat_strings.h — we use positional init (no designated initialisers in this codebase, per patch-build script flag set).
 
 ## Declarations (in source order)
 
-- L22 — `namespace acc::combat::loc`
-- L27 — `const MsgStrings kDe` — German, engine-verified against patch-20260521-100345.log
-- L101 — `const MsgStrings kEn` — English; one flagged rough spot (BuildCompact's German word order for "critical")
-- L182 — `const MsgStrings kFr` — French; uses " : " separators instead of word-prefixes
-- L259 — `const MsgStrings kIt` — Italian; krit_x_prefix is bare "X" (multiplier-first word order)
-- L335 — `const MsgStrings kEs` — Spanish; multiplier glued directly to "Crítico" with no space
-- L433 — `const MsgStrings kRu` — Russian, Windows-1251; extracted from Allard 1.72's community-translated TLK which declares LanguageID=0 (English slot) despite being Cyrillic — detected by content-probe (`TlkLooksCyrillic` in core_dllmain.cpp), not the declared ID
-  note: no status-echo copula exists in Russian; status word is skipped rather than mis-captured (see quirk (b) comment)
-- L523 — `const MsgStrings& Get()`
+- L760 `MsgStrings BuildDeK2()`: ---- KOTOR 2 anchor deltas ------------------------------------------------ The K2 German dialog.tlk keeps every combat strref the parser depends on (42042-42150 summary/breakdown block, 1374-1456 save/damage/absorb b...
+- L788 `MsgStrings BuildRuK2()`: The K2 Russian TSLRCM TLK (Workshop item 2143250983, cached 2026-08-12 as dialog_ru_k2.tlk) is a from-scratch re-translation relative to K1's Allard TLK — unlike German's four-anchor drift, nearly every engine anchor ...
+- L828 `MsgStrings BuildFrK2()`: French: the 2004 K2 localization kept nearly all of K1's combat phrasing — only four anchors drift.
+- L839 `MsgStrings BuildItK2()`: Italian: re-translated breakdown vocabulary ("Analisi di ..." replaces K1's "Divisione ..."), new hit/miss verbs, new auto-tags.
+- L868 `MsgStrings BuildEsK2()`: Spanish: re-translated breakdown vocabulary ("Desglose de ..." replaces K1's "Colapso ..."), new hit/miss phrasing; the save line moved its inverted exclamation mark into the type/result separator.
+- L896 `const MsgStrings& Get()`

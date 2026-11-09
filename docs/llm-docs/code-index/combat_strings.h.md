@@ -1,10 +1,16 @@
-# combat_strings.h (133 lines)
+# combat_strings.h (167 lines)
 
-Locale table of engine-side parse anchors (exact substrings the German/English/French/Italian/Spanish/Russian engine emits into the combat message buffer) plus our shortened output labels, consumed by combat.cpp's message-bus rules. Kept separate from strings.h so the user-facing `acc::strings::Id` enum stays about what's spoken, not what the engine says. DE is engine-verified against a real log; other locales were extracted mechanically from each dialog.tlk and reproduce the DE rules byte-for-byte, but want an in-locale capture to fully confirm. Any anchor that doesn't match falls through to raw speech (no regression).
+Source: `patches/Accessibility/combat_strings.h`
+
+Combat-message localization table.
+
+Holds locale-dependent tokens the combat msg-bus rules use: engine- side parse anchors (substrings the engine emits that we scan for) and our shortened output labels (what we speak). Kept separate from strings.h so the speech-only Id enum stays focused on what the user hears, not what the engine says.
+
+Language follows acc::strings::Lang.
+
+All five locales (DE/EN/FR/IT/ES) carry a full anchor set. DE is engine- verified against a real combat log; EN/FR/IT/ES anchors were extracted mechanically from each locale's dialog.tlk (see CombatStringsExtractCommand.cs StrrefMap) and the same rules reproduce the DE reference byte-for-byte, but the non-DE sets still want one in- locale combat capture to confirm (grep `MsgBuf: raw:` vs `emit-*`). Any anchor that doesn't match falls through to raw speech — no regression.
 
 ## Declarations (in source order)
 
-- L21 — `namespace acc::combat::loc`
-- L23 — `struct MsgStrings`
-  note: ~45 const char* fields — engine anchors (phrase_hit, prefix_angriff, absorb_anchor, etc.) then output-side labels (verb_hit, word_critical, short_wuerfel, etc.); field order must match the positional initialisers in combat_strings.cpp
-- L131 — `const MsgStrings& Get()`
+- L23 `struct MsgStrings`
+- L164 `const MsgStrings& Get()`

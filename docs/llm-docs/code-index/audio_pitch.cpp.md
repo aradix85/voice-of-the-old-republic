@@ -1,13 +1,16 @@
-# audio_pitch.cpp (78 lines)
+# audio_pitch.cpp (87 lines)
 
-Pitch-variance neutraliser hook handler + the thread_local scoped-flag mechanism that gates it. `BeginScopedZero`/`EndScopedZero` (called from audio_bus.cpp around PlayOneShotSound/Play3DOneShotSound) bracket exactly the engine calls we issued; `OnCalculatePitchVarianceFrequency` returns the source's unmodified base_frequency instead of the engine's randomised jitter only while the flag is set, so engine-driven plays of the same resref are unaffected. Uses a counter (not bool) so nested calls don't prematurely re-arm jitter; the audio thread's own counter is always 0 so its calls fall through untouched.
+Source: `patches/Accessibility/audio_pitch.cpp`
+
+Pitch-variance neutraliser: scoped to our Play*OneShotSound calls, makes every fire of the same resref land at the same frequency. Engine jitter shifts HRTF response (smearing the perceived spatial position) and blurs per-cue timbre identification.
+
+Detour at 0x005db3d0 (function entry): - 5-byte prologue cut: PUSH ECX; PUSH ESI; PUSH EDI; MOV ESI, ECX (skip_original_bytes=false so the wrapper emits it). - exclude_from_restore=["eax"] so the handler's return survives into the wrapper's TEST EAX,EAX dispatch. - consumed_exit_address=0x005db449 (shared POP/RET epilogue): pops the 12 bytes the cut pushed and RETs with EAX = base_frequency. - Handler returns 0 to fall through (flag clear or bad source) → wrapper lands at hookAddress+5 with the prologue already done.
+
+base_frequency=0 with flag set: return 1 instead of 0 so the wrapper's TEST doesn't route to the fall-through path. Defensive only — sample- derived base_frequency is always positive in practice.
 
 ## Declarations (in source order)
 
-- L31 — `kOffsetBaseFrequency = 0x48` — CExoSoundSourceInternal field offset
-- L35 — `thread_local int t_scoped_zero_depth` — nesting counter
-- L39 — `void BeginScopedZero()`
-- L43 — `void EndScopedZero()`
-- L47 — `bool IsScopedZeroActive()`
-- L53 — `extern "C" int __cdecl OnCalculatePitchVarianceFrequency(void* source)` — hook handler; out-of-scope sounds fall through (return 0), in-scope returns base_frequency (or 1 defensively if 0/bad-pointer); 1Hz heartbeat log
-  note: detour at function entry (5-byte prologue cut, skip_original_bytes=false), exclude_from_restore=["eax"], consumed_exit_address is the shared POP/RET epilogue — see hooks.toml comment above OnCalculatePitchVarianceFrequency for the exact byte-level rationale
+- L43 `void BeginScopedZero()`
+- L47 `void EndScopedZero()`
+- L51 `bool IsScopedZeroActive()`
+- L57 `extern "C" int __cdecl OnCalculatePitchVarianceFrequency(void* source)`

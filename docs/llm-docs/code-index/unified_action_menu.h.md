@@ -1,30 +1,31 @@
-# unified_action_menu.h (94 lines)
+# unified_action_menu.h (122 lines)
 
-Public surface for the unified in-world action menu — one navigable menu
-over BOTH the engine's target-action rows (CSWGuiTargetActionMenu, 3
-categories) and the personal action bar (CSWGuiMainInterface, up to 4
-populated categories), replacing the former radial_menu/target_action_menu/
-actionbar_menu split. Navigation: Left/Right = category, Up/Down = entry
-(clamp), Home/End = first/last entry, Ctrl+Home/End = first/last category,
-Shift+arrow = speak full description, Enter = fire, Esc = cancel. Entry
-points: ArmFromRadial (Shift+Enter), OpenTarget (Shift+1/2/3), OpenPersonal
-(Shift+4/5/6/7); bare 1..7 fire instantly via the engine and never reach
-this module. Engine read/primitive layers live in engine_radial (target)
-and engine_actionbar (personal); this module only orchestrates + speaks.
+Source: `patches/Accessibility/unified_action_menu.h`
+
+Unified in-world action menu — one navigable menu over BOTH the engine's target-action rows (CSWGuiTargetActionMenu, 3 categories) and the player's personal action bar (CSWGuiMainInterface, up to 4 populated categories).
+
+Replaces the former three components (radial_menu / target_action_menu / actionbar_menu): blind users don't need the visual target-vs-personal split the engine renders, so we present one menu whose categories carry the distinction by name.
+
+Navigation (identical for every category): Left / Right        — previous / next category (clamp at the ends) Up / Down           — previous / next entry within the category (clamp) Home / End          — first / last entry of the current category Ctrl+Home / Ctrl+End— first / last category Shift + any arrow   — speak the selected entry's full description, no move Enter               — fire the selected entry; Esc — cancel
+
+Category order, left → right: the target block first (so Shift+Enter lands on Attacks for a hostile creature), then the personal block. Empty categories are skipped.
+
+Entry points: ArmFromRadial  — Shift+Enter (the picker has already opened the radial). OpenTarget     — Shift+1/2/3 (jump to a target category). OpenPersonal   — Shift+4/5/6/7 (jump to a personal column). Bare 1..7 are NOT handled here — the engine fires those instantly; only the Shift gestures open this menu.
+
+Engine read/primitive layers live in engine_radial (target) and engine_actionbar (personal); this module only orchestrates + speaks.
 
 ## Declarations (in source order)
 
-- L36 — `namespace acc::unified_menu`
-- L43 — `bool OpenTarget(int row)`
-  note: requires a focused/narrated target; never falls through to personal
-- L48 — `bool OpenPersonal(int col)`
-  note: always available; folds in the target block if a target is focused
-- L56 — `bool ArmFromRadial(const char* name, uint32_t targetHandle)`
-  note: opens on the first populated TARGET category; returns false (arms nothing) so the caller speaks the existing "no actions" redirect
-- L58 — `bool IsActive()`
-- L65 — `void ReannounceCurrent()` — re-speaks current category after a stacked overlay (combat queue) closes back onto this menu
-- L72 — `bool IsSuspended()` — true while armed but under a blocking engine panel; keeps state + world pause, stops owning input
-- L78 — `void SetForegroundBlocked(bool blocked)` — per-tick panel-stack edge notification; suspends/resumes
-- L84 — `bool HandleInputEvent(int code, int value)` — routed nav/enter/esc/home/end codes; value 0 = release (ignored)
-- L86 — `void ForceDisarm(const char* reason)`
-- L91-92 — `int PersonalSelection(int col)` / `int TargetSelection(int row)` — bare-key announce support, mirrors engine's per-slot selection
+- L43 `bool OpenTarget(int row)`: Open on a specific TARGET category (Shift+1/2/3, row 0..2).
+- L54 `bool OpenPersonal(int col)`: Open on a specific PERSONAL column (Shift+4/5/6/7, col 0..3).
+- L60 `bool OpenAnyPersonal()`: Open the personal block wherever it actually has something, with no column requested.
+- L67 `bool FirePersonal(int col)`: Fire a personal column's currently-selected entry outright, no menu — what bare 8 and 9 do for KOTOR 2's combat-behaviour and forms columns.
+- L75 `bool ArmFromRadial(const char* name, uint32_t targetHandle)`: Arm from the Shift+Enter radial path.
+- L77 `bool IsActive()`
+- L92 `void ReannounceCurrent()`: Re-speak the current category against the live menus, re-locating the cursor on the same slot.
+- L99 `bool IsSuspended()`: True while armed but suspended under a blocking engine panel (a MessageBox or a hotkey-opened sub-screen).
+- L105 `void SetForegroundBlocked(bool blocked)`: Per-tick panel-stack notification, driven by interact_hotkey.
+- L111 `bool HandleInputEvent(int code, int value)`: Routed by interact_hotkey's Win32 poll.
+- L113 `void ForceDisarm(const char* reason)`
+- L118 `int PersonalSelection(int col)`: Bare-key announce support: the user's last-selected index for a personal column / target row, kept in lock-step with the engine's per-slot selection so a bare 1..7 press announces what the engine actually fires.
+- L119 `int TargetSelection(int row)`

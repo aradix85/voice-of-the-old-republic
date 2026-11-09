@@ -1,17 +1,18 @@
-# filter_objects.h (45 lines)
+# filter_objects.h (54 lines)
 
-Header for the Pillar 4 object filter: the CycleCategory enum (six locked
-categories), the pure ObjectMatches predicate over engine_area's
-GameObjectKind, and CycleContext (World vs Map) for fog-of-war-gated map
-cycling.
+Source: `patches/Accessibility/filter_objects.h`
+
+Pillar 4 object filter — six locked categories.
+
+Pure predicate over engine_area's GameObjectKind + sub-state. Sub-state filters: Container needs usable=true OR has_inventory=true; Landmark needs has_map_note=true; Transition needs transition_destination set.
 
 ## Declarations (in source order)
 
-- L11 — `namespace acc::filter`
-- L14 — `enum class CycleCategory : int { Door, Npc, Container, Item, Landmark, Transition, Count_ }`
-- L24 — `const char* CategoryName(CycleCategory c)`
-- L27 — `bool ObjectMatches(void* gameObject, CycleCategory category)`
-- L29 — `CycleCategory NextCategory(CycleCategory c)`
-- L30 — `CycleCategory PrevCategory(CycleCategory c)`
-- L34 — `enum class CycleContext : int { World, Map }`
-- L43 — `bool IsMapCycleable(CycleCategory c)`
+- L15 `enum class CycleCategory`: Cycle order returned by NextCategory / PrevCategory.
+- L27 `const char* CategoryName(CycleCategory c)`: English, for logs.
+- L32 `acc::strings::Id CategoryNameId(CycleCategory c)`: Localised, for speech.
+- L35 `bool ObjectMatches(void* gameObject, CycleCategory category)`: SEH-guarded via engine_area::GetObjectKind.
+- L37 `CycleCategory NextCategory(CycleCategory c)`
+- L38 `CycleCategory PrevCategory(CycleCategory c)`
+- L42 `enum class CycleContext`: World = in-world cycle over CSWSArea object list; Map = same data projected onto the area map, fog-of-war-gated.
+- L51 `bool IsMapCycleable(CycleCategory c)`: Which categories the engine renders as map icons.

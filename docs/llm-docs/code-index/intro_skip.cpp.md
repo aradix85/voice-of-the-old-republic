@@ -1,20 +1,17 @@
-# intro_skip.cpp (124 lines)
+# intro_skip.cpp (163 lines)
 
-Runtime toggle for the launch-time intro movies (biologo/leclogo/legal.bik),
-mirroring installer/IntroMovieDisabler.cs. State lives purely in the
-filesystem: renaming each file to `<name>.bik.disabled` skips it on next
-launch (the engine only plays movies at startup, so this can't affect the
-current session). `GetMoviesDir` resolves `<install>/Movies` from
-`GetModuleFileNameA(nullptr)` so it works regardless of Steam/GoG/custom
-install path. All three files are kept in lockstep by `SetDisabled`.
+Source: `patches/Accessibility/intro_skip.cpp`
+
+(From intro_skip.h.) Runtime-toggle helpers for the launch-time intro movies (biologo / leclogo / legal). Mirrors installer/IntroMovieDisabler.cs on the runtime side so the in-game mod-settings panel can flip the state after install.
+
+State persistence is the filesystem itself — no separate config: * If `Movies/biologo.bik` exists → intros play on next launch. * If `Movies/biologo.bik.disabled` exists → intros are skipped. We only check biologo.bik as the representative; if intros were disabled by the installer all three (biologo / leclogo / legal) were renamed together, and the toggle keeps them in lockstep.
+
+The rename takes effect on the NEXT launch — the engine plays movies only at startup, so a mid-session toggle won't affect the current run. Caller is expected to speak a "takes effect on next launch" cue after flipping.
 
 ## Declarations (in source order)
 
-- L16 — `const char* const kIntroFiles[] = {"biologo.bik","leclogo.bik","legal.bik"}`
-  note: mirror of installer/IntroMovieDisabler.cs::IntroFiles — keep both lists in sync
-- L22 — `constexpr const char* kDisabledSuffix = ".disabled"`
-- L28 — `bool GetMoviesDir(char* out, size_t outSize)` — strips the exe filename from GetModuleFileNameA, appends "\\Movies"
-- L43 — `bool FileExists(const char* path)`
-- L51 — `State CurrentState()` — probes biologo.bik only as representative of all three
-- L73 — `bool SetDisabled(bool disable)`
-  note: per-file rename via MoveFileExA with REPLACE_EXISTING; no-ops files already in the target state; logs renamed/noop/ok counts
+- L42 `const char* const* IntroFiles(int* countOut)`: The list for the game we are running in.
+- L55 `bool GetMoviesDir(char* out, size_t outSize)`: Resolve /Movies/ from the running EXE's location.
+- L70 `bool FileExists(const char* path)`
+- L78 `State CurrentState()`
+- L103 `bool SetDisabled(bool disable)`

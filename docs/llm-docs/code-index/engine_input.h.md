@@ -1,21 +1,26 @@
-# engine_input.h (133 lines)
+# engine_input.h (260 lines)
 
-Engine input-code translation + DirectInput acquire/release control surface (pure read-side plus the SetActive drive primitives). Also carries file-scope (non-namespaced) pre-translation input-code constants used by menu hooks.
+Source: `patches/Accessibility/engine_input.h`
+
+Engine input-code translation. Pure read-side; no engine state access.
 
 ## Declarations (in source order)
 
-- L8 — `const char* InputIndexName(int code)`
-- L13 — `int ManagerTranslateCode(int code)`
-- L29 — `bool EnsureInputAcquired()` — cold-start DirectInput wake, byte-for-byte HideLoadScreen replica
-- L45 — `bool ForceReacquireInput()` — forced 0->1 edge, software equivalent of alt-tab
-- L56 — `bool ReleaseInput()` — deactivate half, makes input mirror foreground
-- L75 — `void RequestInputReacquire()` — set-only, coalescing, safe from any thread
-- L84 — `void RequestInputRelease()` — counterpart for focus-loss
-- L89 — `void DrainPendingReacquire()` — call once per tick from the engine thread
-- L95-98 — `kInputNavUp=0xb6`, `kInputNavDown=0xb7`, `kInputNavLeft=0xb8`, `kInputNavRight=0xb9`
-- L99-103 — `kInputEnter1=0xb5`, `kInputEnter2=0xbb`, `kInputEsc1=0xb4`, `kInputEsc2=0xdf`, `kInputActivate=0x27`
-- L109 — `kInputDefaultAction = 0xef` — keymap.2da `DefaultAction` row (default key R), keyboard twin of Mouse 1
-- L114-115 — `kInputHome=32`, `kInputEnd=33` — raw InputIndices, no [Keymapping] entry in stock ini
-- L121-122 — `kInputCatFirst=0x201`, `kInputCatLast=0x202` — internal routing codes (NOT engine InputIndices), synthesised by interact_hotkey for Ctrl+Home/End category jump
-- L128-132 — `kInputKbLeftShift=24`, `kInputKbRightShift=25`, `kInputKbComma=103`, `kInputKbPeriod=104`, `kInputKbAnnounce=105`
-  note: kInputKbAnnounce keeps `,` `.` `-`/`/` contiguous across QWERTZ/QWERTY
+- L12 `const char* InputIndexName(int code)`: Human-readable name.
+- L17 `int ManagerTranslateCode(int code)`: Translates the four KOTOR logical-action codes CSWGuiManager::HandleInputEvent rewrites before per-panel dispatch.
+- L33 `bool EnsureInputAcquired()`: Cold-start DirectInput wake-up.
+- L49 `bool ForceReacquireInput()`: Force a real SetActive(0)->SetActive(1) edge to re-Acquire the DirectInput devices unconditionally — the software equivalent of an alt-tab.
+- L60 `bool ReleaseInput()`: Release the engine's DirectInput grab via SetActive(0) — the deactivate half.
+- L79 `void RequestInputReacquire()`: Deferred-reacquire request, for focus/window events that arrive on the engine's message-pump thread but at a fragile point (inside the engine's own WM_ACTIVATEAPP / window-recreation handling).
+- L88 `void RequestInputRelease()`: Counterpart for focus-LOSS: request that the next drain releases the engine's DirectInput grab (ReleaseInput).
+- L93 `void DrainPendingReacquire()`: Drains a pending input-acquisition change (no-op if none).
+- L109 `void InstallDirectInputMouseGuard()`: Install the no-mouse crash guard on CExoRawInputInternal::InitializeDirectInputMouse.
+- L141 `void InstallMouseTeardownBlock()`: Stop a failed mouse device from taking the keyboard with it.
+- L148 `bool MouseDeviceUnavailable()`: True once a mouse-device bring-up has failed this session.
+- L163 `void LogDirectInputStateIfChanged()`: ---- DirectInput state probe -------------------------------------------- Walks CExoInput -> CExoInputInternal -> CExoRawInputInternal and logs the active flag plus the interface / keyboard / mouse device pointers whe...
+- L179 `void NoteEngineKeyEvent()`: ---- Engine keyboard liveness ------------------------------------------- Called from both input hooks (the in-world CClientExoAppInternal route and the CSWGuiManager route) whenever the ENGINE delivers a real key PRESS.
+- L182 `unsigned long long LastEngineKeyEventMs()`: GetTickCount64() at the last NoteEngineKeyEvent, 0 if none this session.
+- L190 `bool PollTurnAxis(float* out)`: The engine's own turn-axis value, exactly as UpdateCamera polls it every frame (CExoInput::PollInput(0x11c, class 0), clamped by the caller to [-1, 1] before it reaches AcclTurnCamera).
+- L197 `bool ReadNativeStickAxes(float* x, float* y)`: KOTOR 2 only: the native right-stick pair UpdateCamera reads ahead of the screen-edge test (DirectInput controllers enumerated at start, 20% dead zone, first-seen baseline latch — camera-and-swoop.md "KOTOR 2 twin").
+
+Also 24 constants or variables at namespace scope.

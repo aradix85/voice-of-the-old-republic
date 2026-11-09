@@ -1,11 +1,15 @@
-# audio_cue_player.cpp (117 lines)
+# audio_cue_player.cpp (113 lines)
 
-Pillar-1 single callsite for "play a NavCue at a world position": gates on the per-kind Mod Settings toggle (core_settings pillar1 + WallSounds menu toggle for Wall specifically), gates on squared-distance range, then calls `PlayCue3D` riding the near-field spatial priority group so loudness tracks distance across the ~5m awareness band. Landmark cues are permanently disabled here (TTS-only). Talks to audio_bus, audio_cues, core_settings, menus_modsettings.
+Source: `patches/Accessibility/audio_cue_player.cpp`
+
+(From audio_cue_player.h.) Pillar 1 cue playback — single callsite for "play NavCue at position".
+
+Wraps audio::PlayCue3D with two shared gates: 1. Per-kind toggle from core_settings (Wall, HazardLedge, Door, ...). Guidance/view-mode cues (Collision, Beacon*) are not in the vocabulary and always pass. 2. Awareness-range cap — 3D Euclidean distance from listener. Per-call so Trigger 1 (360°) and Trigger 2 (front cone) can pick independently.
+
+No per-NavCue debounce here — the change detector's per-feature last_cued_distance is the cadence control; layering a global debounce silenced real signal in dense corridors.
 
 ## Declarations (in source order)
 
-- L16 — `const char* CueLabel(NavCue cue)` — English log-only label switch
-- L37 — `bool IsCueEnabled(NavCue cue)` — per-kind toggle dispatch
-  note: Wall additionally ANDs the Mod Settings WallSounds switch; Landmark always returns false (TTS-only, avoids empty-resref PlayCue3D call); Collision/Beacon* always true (owned upstream)
-- L73 — `float DistanceSquared(const Vector&, const Vector&)` — 3D squared distance, avoids sqrt on cold path
-- L82 — `bool PlayCueAtPosition(NavCue, const Vector& worldPos, const Vector& listenerPos, float rangeMax)` — enabled-gate → range-gate → PlayCue3D with GetSpatialCuePriorityGroup(); full-fidelity logging on every drop/play path
+- L16 `const char* CueLabel(NavCue cue)`: English log labels — logs stay English by project rule.
+- L37 `bool IsCueEnabled(NavCue cue)`
+- L77 `bool PlayCueAtPosition(NavCue cue, const Vector& worldPos, const Vector& listenerPos, float rangeMax)`

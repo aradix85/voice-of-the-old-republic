@@ -1,31 +1,25 @@
-# transitions.h (77 lines)
+# transitions.h (99 lines)
 
-Pillar 2 — area + room transition announcements. Poll-based: compares
-area pointer + wall_topology cluster id against the last observation each
-tick and speaks on delta. Pre-load destination announce ("Loading: …")
-goes through the OnSetMoveToModuleString entry hook. Exports the flat
-landmark cache (proximity-based, fog-of-war respecting, NOT keyed by
-.lyt-room) shared by the map cursor, view-mode, and marker auto-name
-modules, plus the module-load-pending latch consumed by other per-tick
-probes to avoid use-after-free during a module swap.
+Source: `patches/Accessibility/transitions.h`
+
+Pillar 2 — area + room transition announcements.
+
+Poll-based. Each Tick: compare area pointer + room index against last observed; speak on delta. First observation after player-load also speaks (gives orientation on game-load / DLL-injection).
+
+Pre-load destination announce ("Loading: <module>") goes through the OnSetMoveToModuleString detour (engine entry @0x004aecd0).
+
+Speech uses interrupt=false — transitions don't talk over in-flight cycle / interact / passive_narrate.
 
 ## Declarations (in source order)
 
-- L17 — `namespace acc::transitions`
-- L19 — `void Tick()`
-- L24 — `void AnnouncePreLoadDestination(void* exoStringPtr)`
-  note: SEH-guarded CExoString* read; deduplicates re-fires within 2s
-- L32 — `bool FindLandmarkNear(const Vector& pos, float rangeM, char* nameOut, size_t nameBufSize, Vector& posOut, int* outLandmarkIdx = nullptr)`
-  note: proximity scan over flat landmark cache; NOT keyed by lyt-room (K1 rooms over-segment)
-- L39 — `bool IterateLandmarks(int& cursor, char* nameOut, size_t nameBufSize, Vector& posOut, int& outLandmarkIdx)`
-  note: cursor=0 on first call; landmarkIdx is opaque key for MarkLandmarkClaimedByDoor
-- L46 — `void MarkLandmarkClaimedByDoor(int landmarkIdx)`
-  note: suppresses per-tick proximity announce when wall_topology already embedded landmark in a cluster label
-- L51 — `bool IsResrefStyleRoomName(const char* name)`
-  note: returns true for KOTOR resref-style names (m\d prefix, "stunt" prefix, or underscore); callers fall through to other tiers
-- L57 — `bool IsWorldSpeechGated()`
-  note: true when combat-active or UI-blocking panel; area-name transitions bypass this gate
-- L66 — `bool IsModuleLoadPending()`
-  note: true between SetMoveToModuleString firing and next fresh area pointer; guards CLYT::LoadLayout use-after-free
-- L75 — `void NotifyExternalLoadStarting(const char* reason)`
-  note: arms the same latch for a save-game LOAD from the menu, which bypasses SetMoveToModuleString; callers must gate on "no live player"
+- L22 `void Tick()`
+- L27 `void AnnouncePreLoadDestination(void* exoStringPtr)`: exoStringPtr = engine's CExoString* (destination resref).
+- L32 `void LatchPreLoadDestinationK2(void* exoStringPtr)`: KOTOR 2 twin.
+- L40 `bool FindLandmarkNear(const Vector& pos, float rangeM, char* nameOut, size_t nameBufSize, Vector& posOut, int* outLandmarkIdx = nullptr)`: Closest landmark waypoint to pos within rangeM.
+- L53 `bool IterateLandmarks(void* area, int& cursor, char* nameOut, size_t nameBufSize, Vector& posOut, int& outLandmarkIdx)`: Walk the cache.
+- L60 `void MarkLandmarkClaimedByDoor(int landmarkIdx)`: room_topology embedded this landmark into a cluster label — suppress the per-tick proximity announce so the same name doesn't fire twice within a second.
+- L65 `bool IsResrefStyleRoomName(const char* name)`: Vanilla CSWSArea.room_names[] entries are .lyt-room ids ("m01aa_10", "stunt_03_main"); mods occasionally supply friendly strings.
+- L71 `bool IsWorldSpeechGated()`: True iff in-world ambient announces (room transitions, region cursor) should stay silent this tick.
+- L77 `void SpeakRegionLabel(const char* text, const std::vector<acc::room_topology::ExitMark>& exits)`: Speaks a perceptual-region label (the walking announce and the view-mode cursor's): through 3D exit descriptions when they are on, each of `exits` sounding from where it leads, else the announcement voice, centred.
+- L87 `bool IsModuleLoadPending()`: True between SetMoveToModuleString firing and the next fresh area pointer surfacing.
+- L96 `void NotifyExternalLoadStarting(const char* reason)`: Arm the module-load latch for a load path the OnSetMoveToModuleString detour doesn't see — specifically a save-game LOAD launched from the menu (the engine reconstructs the whole in-game GUI without routing through Se...

@@ -1,20 +1,23 @@
 # mod_settings_store.cpp (154 lines)
 
-Persistent key=value settings file at `<install>\acc_settings.ini`, derived
-from `acclog::PatchDir()` by stripping the trailing `\patches` component.
-Lazy-loads into an in-memory `std::map` on first access (mutex-guarded),
-rewrites the whole file on every Set (file is tiny). Missing file/key/patch-dir
-all fall back to caller-supplied defaults rather than erroring.
+Source: `patches/Accessibility/mod_settings_store.cpp`
+
+(From mod_settings_store.h.) Persistent mod-settings store.
+
+A tiny `key=value` text file at <install>\acc_settings.ini (next to the logs\ dir), loaded lazily on first access and rewritten in full on every Set (the file is a handful of lines, so a full rewrite is trivial and keeps the on-disk state always consistent).
+
+This exists because the Mod-Einstellungen toggles and the cue-volume slider are otherwise in-memory only — they reset to their defaults every launch. Owners (menus_modsettings for the toggles, audio_bus for the cue volume) pull their persisted value on first use and push back here on change; this module is just typed get/set over the file.
+
+Defaults: a missing key (or a missing/unreadable file) returns the caller- supplied default, so first-run behaviour is unchanged. Thread-safe (one mutex); accesses are main-thread in practice but cheap to guard.
 
 ## Declarations (in source order)
 
-- L18-L21 — statics: `g_mtx`, `g_kv` (std::map<string,string>), `g_loaded`, `g_path[MAX_PATH]`
-- L26-L36 — `bool ResolvePath()` — derives `g_path` from `acclog::PatchDir()`; false if patch dir unknown (very early DLL attach)
-- L39-L69 — `void EnsureLoaded()` — must hold g_mtx; parses `key=value` lines, skips blank/`#`/`;` comments
-- L72-L84 — `void Save()` — must hold g_mtx; full rewrite with header comment
-- L88-L98 — `bool GetBool(const char* key, bool defValue)` — accepts 1/true/on/yes and 0/false/off/no
-- L100-L110 — `int GetInt(const char* key, int defValue)` — strtol, unparseable → default
-- L112-L119 — `void SetBool(const char* key, bool value)`
-- L121-L130 — `void SetInt(const char* key, int value)`
-- L132-L142 — `bool GetStr(const char* key, char* outBuf, int bufSize)`
-- L144-L151 — `void SetStr(const char* key, const char* value)` — stores raw, no escaping
+- L26 `bool ResolvePath()`: \acc_settings.ini, derived from acclog::PatchDir() (= \ patches) by stripping the last path component.
+- L39 `void EnsureLoaded()`: Must hold g_mtx.
+- L72 `void Save()`: Must hold g_mtx.
+- L88 `bool GetBool(const char* key, bool defValue)`
+- L100 `int GetInt(const char* key, int defValue)`
+- L112 `void SetBool(const char* key, bool value)`
+- L121 `void SetInt(const char* key, int value)`
+- L132 `bool GetStr(const char* key, char* outBuf, int bufSize)`
+- L144 `void SetStr(const char* key, const char* value)`

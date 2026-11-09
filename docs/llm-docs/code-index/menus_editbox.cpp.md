@@ -1,23 +1,31 @@
-# menus_editbox.cpp (639 lines)
+# menus_editbox.cpp (652 lines)
 
-Editbox dispatcher + per-tick monitor. Single armed-editbox model (`s_state`) since vanilla KOTOR has exactly one editbox at a time, mirrored across two specs: chargen `CSWGuiNameChargen` and the save-name popup `CSWGuiSaveNamePanel`. Engine consumes keystrokes at the editbox before the manager-level input hook sees them, so text changes are caught by a per-tick strnlen-based diff (`ReadEditbox`/`PollAndAnnounceDiff`) rather than by handling letters/Backspace directly; modal keys (Up/Down re-read, Enter submit, Esc exit) are polled via Win32 (`PollModalKeys`) because they're likewise swallowed by the engine. Talks to `menus_extract` (FromControl for title overrides), `hotkeys` (edge-detect registry), `input_pipeline` (NoteEditboxSubmitClosed to prevent a false in-world interact), `menus_pending`/`menus.h`.
+Source: `patches/Accessibility/menus_editbox.cpp`
+
+editbox dispatcher + per-tick monitor.
+
+See menus_editbox.h for the model (soft edit-mode flag, spec-table over panel kinds, focus-enter speech via FromControl, diff polling here).
+
+Single armed editbox at a time — vanilla KOTOR has exactly one editbox in the entire game (chargen Name's `name_editbox`); the file-static `s_state` reflects that with one spec/panel/editbox triple. If a future mod-introduced second editbox ever appears in the wild and the user can have both panels active simultaneously, this becomes a small array.
 
 ## Declarations (in source order)
 
-- L46 — `struct EditboxPanelSpec { logTag, matches, findEditbox, findSubmitButton, titleOverride }` — one entry per panel kind hosting an editbox
-- L80 — `bool ChargenNameMatches/FindEditbox/FindSubmitButton/TitleOverride(void*)` — CSWGuiNameChargen spec callbacks; title override reads subtitle_label instead of the stale main_title_label
-- L124 — `bool SaveNameMatches/FindEditbox/FindSubmitButton/TitleOverride(void*)` — CSWGuiSaveNamePanel spec callbacks
-- L162 — `constexpr EditboxPanelSpec* kSpecs[]` — the two specs
-- L172 — `struct ArmedState { spec, panel, editbox, editMode, text[64], textLen, rawLenField, shortA, shortB }`
-  note: textLen is strnlen(c_string), NOT the engine's +0x15c field — verified the raw field desyncs on Backspace
-- L189 — `ArmedState s_state` — file-static single-slot arm state
-- L231 — `bool ReadEditbox(editbox, outText, outCap, outLen, outRawLen, outA, outB)` — reads (text, length, shortA/B) from the editbox
-- L254 — `void SnapshotInto(ArmedState&)`
-- L263 — `void SpeakFullText(text, len)` / L275 `void SpeakSingleChar(c)`
-- L284 — `void PollAndAnnounceDiff(ArmedState&)` — diffs text vs last snapshot; ±1-char delta speaks the single inserted/deleted char (assumes append-at-end, no caret tracked), else speaks full new text
-- L353 — `void PollModalKeys(ArmedState&)` — Win32 edge-detect Up/Down (re-read), Enter (drop edit mode only — engine handles submit natively; double-QueueActivate caused a modal-stack lockup, see comment), Esc (soft exit)
-- L434 — `struct PanelMatch { spec, panel }`; `PanelMatch FindMatchingPanel()` — walks manager panels[] for a spec match
-- L457 — `void DisarmIfArmed(reason)`
-- L470 — `bool acc::menus::editbox::TryHandleInput(n, thisPtr, activePanel, param_1, param_2, outRv)` — consumes Esc/Enter/Up/Down/Home/End while armed+editMode; lets letters/Backspace/Left/Right fall to the engine
-- L535 — `void acc::menus::editbox::TickEditboxMonitors()` — arms on focus-enter (speaks "Editbox. <value>", consumes held-key edges via hotkeys::Consume), disarms on focus-leave or panel gone, else runs PollAndAnnounceDiff + PollModalKeys
-- L628 — `const char* acc::menus::editbox::GetTitleOverride(void* panel)` — dispatches to the matching spec's titleOverride
+- L81 `bool ChargenNameMatches(void* panel)`
+- L87 `void* ChargenNameFindEditbox(void* panel)`
+- L92 `void* ChargenNameFindSubmitButton(void* panel)`
+- L102 `const char* ChargenNameTitleOverride(void* panel)`: Substitute the chargen Name panel's title speech: read subtitle_label ("Name") instead of letting the generic walk land on main_title_label ("CHARAKTERAUSWAHL").
+- L125 `bool SaveNameMatches(void* panel)`
+- L131 `void* SaveNameFindEditbox(void* panel)`
+- L136 `void* SaveNameFindSubmitButton(void* panel)`
+- L144 `const char* SaveNameTitleOverride(void* panel)`: Substitute the save-name popup's title speech with its own title_label.
+- L232 `bool ReadEditbox(void* editbox, char* outText, size_t outCap, uint32_t& outLen, uint32_t& outRawLen, short& outA, short& outB)`: Read (text, length, shortA, shortB, rawLen) from the editbox into `out`.
+- L255 `void SnapshotInto(ArmedState& s)`
+- L264 `void SpeakFullText(const char* text, uint32_t len)`
+- L276 `void SpeakSingleChar(char c)`: Speak a single character.
+- L285 `void PollAndAnnounceDiff(ArmedState& s)`
+- L354 `void PollModalKeys(ArmedState& s)`
+- L435 `PanelMatch FindMatchingPanel()`
+- L465 `void DisarmIfArmed(const char* reason)`
+- L478 `bool TryHandleInput(int /*n*/, void* /*thisPtr*/, void* activePanel, int param_1, int param_2, int& outRv)`
+- L546 `void TickEditboxMonitors()`
+- L640 `const char* GetTitleOverride(void* panel)`

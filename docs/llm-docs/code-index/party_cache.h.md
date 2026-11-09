@@ -1,11 +1,13 @@
-# party_cache.h (24 lines)
+# party_cache.h (21 lines)
 
-Declares the party-member-name cache used by the combat message-bus filter.
-Snapshots the same display-name bytes the engine puts into its own message
-buffer, so string comparison stays locale-clean without a separate name-to-id
-map.
+Source: `patches/Accessibility/party_cache.h`
+
+Party-member-name cache.
+
+Used by the combat msg-bus filter to decide whether an incoming "X attacks Y" line targets a party member (PC or active follower). Snapshots names from the engine's display-name accessor — same bytes the engine puts into the message buffer — so comparison is locale- clean without a separate map for party names.
+
+Lazy refresh on IsPartyMember if the cache is older than the backstop (1s). Roster changes only on recruit/swap/dismiss — rare and manual.
 
 ## Declarations (in source order)
 
-- L17 — `bool IsPartyMember(const char* name)` — case-sensitive, byte-exact; lazily refreshes per window
-- L21 — `void InvalidatePartyCache()` — optional forced refresh; time-based backstop catches roster changes regardless
+- L17 `bool IsPartyMember(const char* name)`: Case-sensitive, byte-exact.

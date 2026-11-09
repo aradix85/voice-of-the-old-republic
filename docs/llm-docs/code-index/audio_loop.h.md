@@ -1,14 +1,13 @@
-# audio_loop.h (85 lines)
+# audio_loop.h (126 lines)
 
-Header for `LoopSource`, RAII over `CExoSoundSource` for sustained/looping spatial audio. Documents each Start() parameter's default and override semantics in detail (priority group 0x17 default vs 0xb GUI-click group for menu-pause survival; volume default 0x7f; distance band default 10m/20m vs compressed-scale overrides like the turret peg's 1-20m).
+Source: `patches/Accessibility/audio_loop.h`
+
+Engine-managed looping/3D source — RAII over CExoSoundSource.
+
+Use for sustained spatial audio where PlayCue3D's one-shot model doesn't fit (continuous tones, position-updated sources, anything needing explicit Stop).
+
+Lifecycle: Start → optional UpdatePosition per tick → Stop. Destructor auto-Stops. Single-threaded under OnUpdate.
 
 ## Declarations (in source order)
 
-- L16 — `class LoopSource` — non-copyable
-- L19 — `~LoopSource()` — auto-Stops
-- L49 — `bool Start(const char* resref, const Vector& worldPosition, bool looping=true, bool spatial=true, int priorityGroup=-1, int volumeByte=-1, float maxVolDist=-1.0f, float minVolDist=-1.0f)`
-- L54 — `void UpdatePosition(const Vector&)` — safe no-op if inactive
-- L62 — `void UpdateVolume(int volumeByte)` — used by swoop cues to drive their own loudness curve independent of 3D falloff
-- L64 — `void Stop()` — idempotent
-- L76 — `void SetPitchMultiplier(float multiplier)` — 1.0=unchanged, 2.0=+1 octave; safe no-op until engine creates 3D voice or on 2D sources
-- L78 — `bool IsActive() const`
+- L18 `class LoopSource`

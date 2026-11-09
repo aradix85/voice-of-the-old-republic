@@ -34,10 +34,9 @@ void NoteDoorOpened(uint32_t openerServerId, uint32_t doorHandle);
 // this frame's last-spoken sector. Cheap when idle (one flag check).
 void Tick();
 
-// Enter on a closed door into another area only opens it; going through took
-// a second Enter, and the second press often landed elsewhere (2026-11-09:
-// the "To Upper City South" door opened, the next Enter went to the map note
-// beside it; the Upper City North lift closed again before the second Enter).
+// Walk-through: one Enter takes the player through a closed door into another
+// area. Without it the Enter only opens the door, and a second Enter can land
+// on the map note beside it, or come after a lift has closed again.
 // interact_dispatch arms this for such a door; when the door is open within
 // the window and the leader is still beside it, Tick hands the door back to
 // the interact dispatch, whose open-door path walks the leader through.

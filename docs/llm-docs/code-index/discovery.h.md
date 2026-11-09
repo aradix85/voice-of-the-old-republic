@@ -1,14 +1,20 @@
 # discovery.h (64 lines)
 
-Middle tier of object cycling: records organically-narrated static/named objects per area and persists the index in the save, so the everyday `,`/`.` cycle resurfaces known objects without extended/map-side spoilers. Storage lives on the player creature's CSWSScriptVarTable. Keys are locale-independent (`N~tag` / `S~tag~ordinal`); names are regenerated live at cycle time. Access: discovery is the DEFAULT in-world cycle filter; "Extended cycling" setting widens back to everything-on-map.
+Source: `patches/Accessibility/discovery.h`
+
+Discovery-driven cycling — the middle tier of object cycling.
+
+Records which static/named objects the blind player has had narrated ORGANICALLY (passive ShowObject focus, Q/E line-of-sight, room-shape landmark callouts) and persists that index per-map IN THE SAVE, so the everyday in-world cycle (`,`/`.`) can resurface known objects without the spoilers/noise of the extended/map-side tier.
+
+Storage primitive: named string vars on the player creature's CSWSScriptVarTable (engine_scriptvar.*; one var per area keyed by area tag). The index holds locale-independent KEYS only — never names; spoken names are regenerated live at cycle time.
+
+Key model (stable across reload — positions/tags are fixed per area-load): * Named NPCs   — "N~<objTag>", eligible only when the tag is UNIQUE among creatures in the area (generic/duplicate mobs excluded). * Static (door / container / landmark / transition) — "S~<objTag>~<ord>", where <ord> is the deterministic north-to-south ordinal among area objects sharing the same category + tag (mirrors cycle_input's PositionLess). Tags repeat for static objects, so the ordinal disambiguates. * World items + generic enemies are OUT of scope (mobile / respawn / vanish) — DeriveKey returns ineligible, so they're never recorded or surfaced in the discovery tier.
+
+Access: discovery is the DEFAULT filter for the in-world cycle. The existing "Extended cycling" mod setting, when ON, widens the same keys back to the full everything-on-map set (cycle_state consults the setting).
 
 ## Declarations (in source order)
 
-- L40 — `void OnAreaChanged(void* area)`
-  note: idempotent on same area; actual save-var read deferred to Tick()
-- L45 — `void Tick()`
-  note: per-tick driver from core_tick; deferred load once player creature is stable
-- L56 — `void Record(void* gameObject)`
-  note: called ONLY from organic narration sites, plus one internal auto-seed exception for combat-critical placeables
-- L61 — `bool IsDiscovered(void* gameObject)`
-  note: false until the area's set has reconciled from the save
+- L40 `void OnAreaChanged(void* area)`: Area-change reconciliation hook.
+- L45 `void Tick()`: Per-tick driver (called from core_tick).
+- L56 `void Record(void* gameObject)`: Record `gameObject` as organically discovered.
+- L61 `bool IsDiscovered(void* gameObject)`: True iff `gameObject` is in the current area's discovered set.

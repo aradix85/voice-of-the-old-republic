@@ -1,27 +1,28 @@
-# discovery.cpp (337 lines)
+# discovery.cpp (397 lines)
 
-Per-area "organically discovered" object index, persisted into the save via one CSWSScriptVarTable string var per area (`ACC_DISC_<areaTag>`), keyed by locale-independent tags (`N~<tag>` for unique NPCs, `S~<tag>~<northToSouthOrdinal>` for static objects). Backs the default in-world `,`/`.` cycle tier (discovery.h documents the model). Talks to engine_area (iteration/tag/position), engine_player, engine_scriptvar, filter_objects (category classification).
+Source: `patches/Accessibility/discovery.cpp`
+
+(From discovery.h.) Discovery-driven cycling — the middle tier of object cycling.
+
+Records which static/named objects the blind player has had narrated ORGANICALLY (passive ShowObject focus, Q/E line-of-sight, room-shape landmark callouts) and persists that index per-map IN THE SAVE, so the everyday in-world cycle (`,`/`.`) can resurface known objects without the spoilers/noise of the extended/map-side tier.
+
+Storage primitive: named string vars on the player creature's CSWSScriptVarTable (engine_scriptvar.*; one var per area keyed by area tag). The index holds locale-independent KEYS only — never names; spoken names are regenerated live at cycle time.
+
+Key model (stable across reload — positions/tags are fixed per area-load): * Named NPCs   — "N~<objTag>", eligible only when the tag is UNIQUE among creatures in the area (generic/duplicate mobs excluded). * Static (door / container / landmark / transition) — "S~<objTag>~<ord>", where <ord> is the deterministic north-to-south ordinal among area objects sharing the same category + tag (mirrors cycle_input's PositionLess). Tags repeat for static objects, so the ordinal disambiguates. * World items + generic enemies are OUT of scope (mobile / respawn / vanish) — DeriveKey returns ineligible, so they're never recorded or surfaced in the discovery tier.
+
+Access: discovery is the DEFAULT filter for the in-world cycle. The existing "Extended cycling" mod setting, when ON, widens the same keys back to the full everything-on-map set (cycle_state consults the setting).
 
 ## Declarations (in source order)
 
-- L23-30 — module state: `g_areaTag`, `g_varName`, `g_keys` (vector<string>), `g_area`, `g_loaded`, `g_creature`, `g_settle`
-- L36 — `constexpr int kSettleTicks = 60` — ~1s wait for stable player-creature pointer before reading save var (avoids racing CSWSObject::LoadObjectState)
-- L39-40 — `constexpr size_t kMaxKeys = 400`, `kReadBufSize = 16384`
-- L45 — `bool PositionLess(const Vector& a, const Vector& b)` — north-to-south total order, mirrors cycle_input::PositionLess
-- L52 — `const acc::filter::CycleCategory kEligible[]` — Door, Npc, Container, Landmark, Transition
-- L60 — `acc::filter::CycleCategory Classify(void* obj)`
-- L70 — `bool DeriveKey(void* obj, void* area, std::string& outKey)`
-  note: NPC key requires the tag to be unique among area creatures (dedups generic mobs); static key appends a rank computed via PositionLess among same-category/same-tag peers
-- L126 — `bool Contains(const std::string& key)`
-- L133 — `void LoadFromSave()` — parses `;`-joined string var into g_keys
-- L156 — `void Persist()` — re-serializes g_keys back into the save var
-- L174-196 — `struct AreaSeed`, `kSeedTagsStaM45ab/ac/ad[]`, `kAreaSeeds[]`
-  note: combat-critical Star Forge placeables (turret computers, droid terminals, captive Jedi) auto-recorded on area load so mid-fight cycling reaches them without a prior discovery walk
-- L201 — `void ApplySeeds()`
-- L232 — `void OnAreaChanged(void* area)` (public)
-  note: per-area key = module resref (stable/language-independent) preferred over the area GFF Tag (defaults to useless "untitled"); idempotent on same area+key; defers the actual save-var read to Tick()
-- L269 — `void Tick()` (public)
-  note: requires the SAME non-null player-creature pointer for kSettleTicks consecutive ticks before LoadFromSave+ApplySeeds
-- L288 — `void Record(void* gameObject)` (public)
-  note: self-syncs area via OnAreaChanged if transitions hasn't fired yet; drops (does not record) during the pre-load settle window to avoid clobbering saved data; caps at kMaxKeys with a one-time warn
-- L320 — `bool IsDiscovered(void* gameObject)` (public)
+- L57 `bool PositionLess(const Vector& a, const Vector& b)`: North-to-south total order — mirrors cycle_input::PositionLess so the discovery ordinal matches the spoken "Nordpfad 3" numbering the player already hears.
+- L72 `acc::filter::CycleCategory Classify(void* obj)`
+- L82 `bool DeriveKey(void* obj, void* area, std::string& outKey)`: Derive the locale-independent per-area key for `obj`, or return false when the object is ineligible (item / non-nav / non-unique NPC / no tag).
+- L138 `bool Contains(const std::string& key)`
+- L151 `int MergeVar(const char* varName)`: Read one save var and append its ';'-separated keys to g_keys, skipping duplicates and honouring the cap.
+- L174 `void LoadFromSave()`
+- L207 `void Persist()`
+- L252 `void ApplySeeds()`: Record every area object whose tag is on the current area's seed list.
+- L283 `void OnAreaChanged(void* area)`
+- L329 `void Tick()`
+- L348 `void Record(void* gameObject)`
+- L380 `bool IsDiscovered(void* gameObject)`

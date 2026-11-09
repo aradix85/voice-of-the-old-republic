@@ -1,17 +1,20 @@
-# menus_galaxymap.cpp (200 lines)
+# menus_galaxymap.cpp (205 lines)
 
-Accessibility layer for the galaxy/star-map travel screen (CSWGuiInGameGalaxyMap). Rather than exposing the image-only planet-hotspot buttons through the generic chain, drives the engine's own `HandleInputEvent` directly at address 0x00695980 so its native NextPlanet/PrevPlanet handlers (which already skip unavailable/unselectable planets per CSWPartyTable) do the filtering for us. Up/Down cycle planets and re-announce LBL_PLANETNAME; Enter travels; Esc cancels; Shift+Down peeks LBL_DESC. First-sight (`Tick`) speaks a fixed title + current planet once per panel instance via a single-slot latch (`s_announcedPanel`). Talks to `engine_manager` (panels[] walk), `menus_pending` (QueueGalaxyInput defers the dispatch), `prism`.
+Source: `patches/Accessibility/menus_galaxymap.cpp`
+
+(From menus_galaxymap.h.) Galaxy / star-map travel screen accessibility (CSWGuiInGameGalaxyMap, galaxymap.gui — opened from the Ebon Hawk navigation console).
+
+The panel is a single-axis "cycle one planet, then Travel / Cancel" surface. Its planet hotspots are image-only CSWGuiButtons with empty captions (they render as "control N" through the generic chain), and the real selection state lives server-side on CSWPartyTable, NOT on the panel — so the generic chain can neither name the planets nor tell which are hidden.
+
+Instead we drive the engine's own CSWGuiInGameGalaxyMap::HandleInputEvent, whose NextPlanet/PrevPlanet handlers already skip planets the party table reports as unavailable (not yet revealed) or unselectable (can't travel there now). Up/Down cycle the reachable planets and announce each name from LBL_PLANETNAME; Enter travels (accept), Esc cancels (back); Shift+Down reads LBL_DESC (handled via peek_description). First sight speaks a fixed title plus the current planet name.
 
 ## Declarations (in source order)
 
-- L24 — `constexpr size_t kPlanetNameLabelOffset = 0x1ca4`, `kDescriptionLabelOffset = 0x1de4` — CSWGuiInGameGalaxyMap field offsets, SIZE 0x2550
-- L35 — `constexpr int kEngineAccept/Cancel/Prev/Next` — engine HandleInputEvent codes (0x27/0x28/0x2f/0x30)
-- L42 — `bool ReadLabel(panel, labelOffset, outBuf, bufSize)` (anonymous ns) — SEH-wrapped gui_string read
-- L55 — `void AnnouncePlanetName(panel, interrupt)`
-- L66 — `void* s_announcedPanel` — first-sight latch (singleton panel)
-- L68 — `void* FindGalaxyMapInPanels()` — walks manager panels[] for PanelKind::InGameGalaxyMap
-- L85 — `bool acc::menus::galaxymap::IsGalaxyMapPanel(void* panel)`
-- L89 — `bool acc::menus::galaxymap::TryHandleInput(activePanel, param_1, param_2, rv)` — owns Up/Down/Enter/Esc + other nav keys (no-op re-announce); consumes on both edges so chain nav never walks unnamed planet buttons
-- L142 — `bool acc::menus::galaxymap::SpeakDescription(void* panel)` — Shift+Down peek of LBL_DESC
-- L154 — `void acc::menus::galaxymap::DispatchInput(panel, engineCode, announcePlanet)` — deferred engine call via the pending-op drain; calls HandleInputEvent by fixed address, SEH-guarded
-- L178 — `void acc::menus::galaxymap::Tick()` — first-sight announce (title + current planet), latch clears when the map closes
+- L49 `bool ReadLabel(void* panel, size_t labelOffset, char* outBuf, size_t bufSize)`: Read a CSWGuiLabel's rendered text (gui_string) at the given panel-relative offset into outBuf.
+- L62 `void AnnouncePlanetName(void* panel, bool interrupt)`
+- L75 `void* FindGalaxyMapInPanels()`
+- L81 `bool IsGalaxyMapPanel(void* panel)`
+- L85 `bool TryHandleInput(void* activePanel, int param_1, int param_2, int& rv)`
+- L140 `bool SpeakDescription(void* panel)`
+- L152 `void DispatchInput(void* panel, int engineCode, bool announcePlanet)`
+- L181 `void Tick()`

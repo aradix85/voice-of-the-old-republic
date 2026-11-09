@@ -1,13 +1,9 @@
-# GameProcess.cs (72 lines)
+# GameProcess.cs (73 lines)
 
-Shared helpers for inspecting and terminating the running `swkotor.exe` process. Used by `ApplyCommand`, `CleanCommand`, `KillCommand`, `DumpTextCommand`.
+Source: `tools/kdev/Core/GameProcess.cs`
 
 ## Declarations (in source order)
 
-- L8 — `static class GameProcess`
-- L10 — `const string ExeName = "swkotor.exe"`
-- L11 — `const string ProcessName = "swkotor"`
-- L12 — `const int WaitForExitMs = 5000`
-- L14 — `sealed record KillSummary(int FoundCount, int KilledCount, int FailedCount)` — `AllKilled`, `NothingToKill` computed properties
-- L23 — `bool IsRunning()`
-- L29 — `KillSummary KillAll()` — kills every `swkotor` process tree, waits up to 5s each, logs per-PID progress
+- L8 `public static class GameProcess`: Shared helpers for inspecting and terminating the running KOTOR process.
+- L14 `public sealed record KillSummary(int FoundCount, int KilledCount, int FailedCount)`
+- L30 `public static KillSummary KillAll(string processName = ProcessName)`: Terminates every running instance of the given game and waits for them to exit.

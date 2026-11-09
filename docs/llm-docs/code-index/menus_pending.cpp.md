@@ -1,28 +1,34 @@
-# menus_pending.cpp (802 lines)
+# menus_pending.cpp (1114 lines)
 
-Single-slot deferred menu-operation queue: input handlers across the menu
-modules call `Queue*` to stage one op (cursor move, click, activate, equip
-select/commit, workbench slot select/upgrade-commit/picker-cancel, slider,
-store trade, galaxy-map input, pazaak wager input); `Drain(gm)` runs once per
-tick from the update loop and dispatches deep engine calls that are unsafe to
-run mid-input-dispatch. Talks to `engine_manager`/`engine_offsets` (control
-offsets, CExoArrayList), `menus_chain` (chain invalidate/validate after
-Activate), `menus_journal`/`menus_listbox`/`menus_store`/`menus_galaxymap`/
-`pazaak.h` for per-panel post-dispatch repair, and `prism`/`log` for
-speech/diagnostics.
+Source: `patches/Accessibility/menus_pending.cpp`
+
+deferred menu-side operation queue.
+
+(why ops are deferred, single-slot queue, ClickAt as combined move+click).
+
+Body of `Drain` mirrors the original `TickPendingOps` block in menus.cpp: same dispatch order (cursor warp → click → activate → equip-select → equip-commit → slider), same engine entry points, same diagnostic log lines. The only behavioural change is at the queue level — every Queue* uniformly debounces against `IsPending()`, where the old code's per-site debounce subsets were inconsistent (e.g. EquipPicker Enter checked EquipSelect/Commit, but Slider Left/Right didn't).
 
 ## Declarations (in source order)
 
-- L43-L59 — `enum class Kind`: MoveCursor, ClickAt, Activate, EquipSelect, EquipCommit, WorkbenchSlotSelect, WorkbenchUpgradeCommit, WorkbenchPickerCancel, SliderInput, StoreItemActivate, GalaxyInput, WagerInput
-  note: `PrevSWInGameGui` from an earlier revision is gone; `WorkbenchPickerCancel`, `GalaxyInput`, `WagerInput` are new since the last index refresh
-- L61-L69 — `struct PendingOp { kind, x, y, a, b, c, code }`
-- L71 — `PendingOp g_op` — the single queue slot
-- L76-L77 — `kVtableHandleInputEvent=15`, `PFN_ControlHandleInputEvent` typedef (local copy; ODR-safe duplicate of menus.cpp's)
-- L79-L81 — `void Reset()`
-- L85-L182 — `Queue*` family (QueueMoveCursor, QueueClickAt, QueueActivate, QueueEquipSelect, QueueEquipCommit, QueueWorkbenchSlotSelect, QueueWorkbenchUpgradeCommit, QueueWorkbenchPickerCancel, QueueSliderInput, QueueStoreItemActivate, QueueGalaxyInput, QueueWagerInput)
-  note: every Queue* returns false if `g_op.kind != Kind::None` (uniform debounce, replacing the old code's inconsistent per-site subsets)
-- L184-L186 — `bool IsPending()`
-- L188-L799 — `void Drain(void* gm)`: snapshot-then-clear-then-dispatch switch over `Kind`
-  note: Activate branch raises `is_active` 0→1 only (never clobbers non-zero engine bookkeeping — 5→1 clobber caused a CSWRoomSurfaceMesh crash once), nulls the chain entry only for InGameLevelUp (self-destroying Annehmen button), and repairs Journal Sort/Swap + chargen sub-screen chain invalidation post-dispatch
-  note: WorkbenchSlotSelect infers install/remove/no-match by diffing `field35_0x2f74[slot_idx]` before/after and looks up the slot's TLK name via `kAddrUpgradeSlotTypeTable`
-  note: GalaxyInput and WagerInput branches are thin forwards to `menus::galaxymap::DispatchInput` / `pazaak::DispatchWagerInput`
+- L68 `uint32_t RaiseIsActiveIfZero(void* control)`: Raise a control's is_active flag from 0 to 1 and return what it was.
+- L118 `void Reset()`
+- L130 `void* ReadUpgradeSlotInstalled(void* panel)`: K2: the installed-mod pointer (field35) of the currently-open upgrade slot.
+- L148 `bool IsUpgradePickerNoneRow(void* row)`: K2: true iff `row` is the engine's "-" none/remove picker entry (key -1).
+- L160 `bool QueueMoveCursor(int x, int y, void* target)`
+- L169 `bool QueueClickAt(int x, int y, void* target)`
+- L178 `bool QueueActivate(void* target)`
+- L185 `bool QueueEquipSelect(void* panel, void* slot)`
+- L193 `bool QueueEquipCommit(void* panel, void* row, void* btn)`
+- L202 `bool QueueEquipPickerCancel(void* panel)`
+- L209 `bool QueueWorkbenchSlotSelect(void* panel, void* slot)`
+- L217 `bool QueueWorkbenchUpgradeCommit(void* panel, void* row, void* btnAssemble)`
+- L226 `bool QueueWorkbenchUpgradeInstallK2(void* panel, void* row)`
+- L234 `bool QueueWorkbenchPickerCancel(void* panel)`
+- L241 `bool QueueSliderInput(void* target, int code)`
+- L249 `bool QueueStoreItemActivate(void* panel, void* row)`
+- L257 `bool QueueCraftRowCommit(void* panel, void* listBox, void* row)`
+- L266 `bool QueueGalaxyInput(void* panel, int engineCode, bool announcePlanet)`
+- L275 `bool QueueWagerInput(void* panel, int code)`
+- L283 `bool IsPending()`
+- L297 `bool EngineOpsReady(Kind kind)`: Are the engine addresses this op needs actually resolved for the running build?
+- L328 `void Drain(void* gm)`

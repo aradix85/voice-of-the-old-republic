@@ -1,9 +1,9 @@
-# core_settings.cpp (16 lines)
+# core_settings.cpp (17 lines)
 
-Trivial accessor: returns a static default-constructed `NavSettings` instance. All actual defaults live as in-class member initialisers in core_settings.h, so tuning a value means editing one line there, not here. Placeholder for a future Phase 7 config-file-backed mutable version behind the same `Get()` signature.
+Source: `patches/Accessibility/core_settings.cpp`
+
+(From core_settings.h.) Nav-system settings — minimal stub. Consumers go through Get() so the future user-options UI is a single-file swap. Behaviour-as-locked-design (bearing frame, cycle sort order, etc.) stays in consumer code.
 
 ## Declarations (in source order)
 
-- L3 — `namespace acc::core`
-- L5 — `const NavSettings& Get()`
-  note: static-storage default instance; signature is locked for the eventual config-backed replacement
+- L5 `const NavSettings& Get()`

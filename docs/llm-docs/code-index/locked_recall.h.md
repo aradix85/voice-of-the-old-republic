@@ -1,15 +1,18 @@
 # locked_recall.h (53 lines)
 
-Header for the locked-object story-bark recall module. Explains the problem:
-the engine's flavour bark for WHY a door/container is locked plays once and
-is then game-side guarded, so a blind player who misses it never hears it
-again — only the unhelpful generic "This object is locked" repeats. This
-module captures and replays that bark per-object.
+Source: `patches/Accessibility/locked_recall.h`
+
+Locked-object story-bark recall.
+
+Story-locked doors and containers explain themselves only once. The engine's generic "This object is locked" feedback (strref 1437) fires on every failed open, but the flavour bark that says WHY ("Security lock. Access code required." — an ownerless BarkBubble raised by the object's fail-to-open script) plays a single time and is then guarded off game-side. A blind player who misses that first bark never hears the reason again; the door just keeps repeating the unhelpful generic line.
+
+This module caches each locked object's story bark the first time it fires, keyed by the object's (stable) narrated-target handle, and replays it on subsequent locked interactions with the same object.
+
+Wiring: * RegisterMsgRule() — adds the strref-1437 rule to the feedback router (msg_router). The rule never consumes the line (the generic "locked" still speaks); it notes the interacted object and, on a repeat attempt, queues the cached explanation for replay. * MaybeCapture()    — called from the BarkBubble handler for every fresh bark; stores an ownerless bark as the explanation for the most-recently locked object. * Tick()            — flushes a queued replay (one line, after the generic "locked" line the router already spoke this frame).
 
 ## Declarations (in source order)
 
-- L32 — `void RegisterMsgRule()` — call once alongside other Register*MsgRules() at router bootstrap
-- L40 — `bool IsGenericLockedMessage(const char* text)`
-  note: shared so other router rules can hang area-specific door guidance off the engine's own locked report rather than intercepting interact dispatch (see interact_hotkey.cpp's WARNING on why that distinction matters); false until the TLK is live
-- L46 — `void MaybeCapture(const char* barkText, bool ownerless)` — no-op unless within the capture window and no cached explanation exists yet
-- L50 — `void Tick()` — flushes a queued replay after the router's own "locked" line
+- L32 `void RegisterMsgRule()`: Register the strref-1437 feedback rule with the message router.
+- L40 `bool IsGenericLockedMessage(const char* text)`: True when `text` is the engine's generic "This object is locked." feedback (strref 1437, resolved through the TLK so it stays language-independent).
+- L46 `void MaybeCapture(const char* barkText, bool ownerless)`: Offer a freshly-surfaced bark for capture.
+- L50 `void Tick()`: Flush a queued replay.

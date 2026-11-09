@@ -1,19 +1,17 @@
-# engine_levelup.h (49 lines)
+# engine_levelup.h (54 lines)
 
-Level-up screen trigger. Calls `CGuiInGame::ShowLevelUpGUI` @0x0062dc00
-(same surface the Charakterblatt btn_levelup click reaches via
-`CSWGuiInGameCharacter::ShowLevelUpGUI` @0x006b0bb0). Works without the
-InGameCharacter panel constructed. Talks to engine_panels (foreground/panel
-queries) and engine_subscreen (overlay pause while the wizard is open).
+Source: `patches/Accessibility/engine_levelup.h`
+
+Level-up screen trigger.
+
+Calls CGuiInGame::ShowLevelUpGUI @0x0062dc00 — same surface the Charakterblatt btn_levelup click reaches via CSWGuiInGameCharacter::ShowLevelUpGUI @0x006b0bb0. Going through the CGuiInGame variant works without the InGameCharacter panel constructed; the engine surfaces the level-up panel from the CGuiInGame singleton.
+
+param_1 unknown — Ghidra has no decompile (.text packed). Passing 0 is the current guess; iterate if wrong.
 
 ## Declarations (in source order)
 
-- L15 — `namespace acc::engine_levelup`
-- L24 — `bool PlayerCanLevelUp()`
-  note: mirrors CSWSCreatureStats::CanLevelUp; false is the conservative default when the leader can't be resolved.
-- L31 — `bool TriggerLevelUp()`
-  note: refuses (false, level_up_mode untouched) when PlayerCanLevelUp() is false — the engine's ShowLevelUpGUI only gates on level_up_mode, which is forced to 1, so without this guard XP is never actually checked and the wizard opens endlessly.
-- L41 — `void TickLevelUpPause()`
-  note: per-frame maintenance; releases the BeginOverlayPause(LevelUp) freeze once the wizard panel is observed gone. Inert when no pause is held.
-- L47 — `bool IsOpeningLevelUp()`
-  note: true only during the synchronous ShowLevelUpGUI dispatch — lets SkillInfoBoxTitleOverride speak the level-up hint before HasActiveLevelUpPanel() would report true.
+- L24 `bool PlayerCanLevelUp()`: True iff the active leader has actually earned the next level, per the engine's own CSWSCreatureStats::CanLevelUp @0x005a6810 — the same predicate that drives the Charakterblatt btn_levelup enabled state (checks level...
+- L28 `bool CreatureCanLevelUp(void* serverCreature)`: Same predicate for any server creature (party members).
+- L35 `bool TriggerLevelUp()`: True iff chain resolved + dispatched without SEH.
+- L45 `void TickLevelUpPause()`: Per-frame maintenance for the level-up overlay pause.
+- L51 `bool IsOpeningLevelUp()`: True only during the synchronous ShowLevelUpGUI dispatch, when the wizard's SkillInfoBox sub-panel first-sight fires before the wizard is on the modal stack (so HasActiveLevelUpPanel() is not yet true).

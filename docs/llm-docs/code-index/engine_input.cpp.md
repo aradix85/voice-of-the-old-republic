@@ -1,22 +1,29 @@
-# engine_input.cpp (236 lines)
+# engine_input.cpp (862 lines)
 
-Engine keyboard-code name lookup, KOTOR's internal logical-action-code translation table, and the three DirectInput acquire/release primitives (EnsureInputAcquired / ForceReacquireInput / ReleaseInput) that fix cold-start and post-load keyboard-death bugs, plus a coalescing deferred-drain mechanism for focus-event callers (diag_focus.cpp) that can't safely call SetActive re-entrantly from inside a wndproc. Talks to log, engine_rebase.
+Source: `patches/Accessibility/engine_input.cpp`
+
+device fields moved by 4 bytes in K2
 
 ## Declarations (in source order)
 
-- L17 — `constexpr uintptr_t kAddrExoInputGlobal = 0x007a39e4` — engine's CExoInput facade global (SYMBOL ExoInput)
-- L23 — `const uintptr_t kAddrCExoInputSetActive = R(0x005df540)` — CExoInput::SetActive(this, active)
-- L25 — `typedef void(__thiscall* PFN_CExoInputSetActive)(void*, int)`
-- L32 — `const char* InputIndexName(int code)` (public)
-  note: static 132-entry table lifted from Lane's InputIndices enum SARIF; -1→"INPUTDEVICE_NONE", 0xCE→"LOGICAL_TAB" special-cased
-- L113 — `int ManagerTranslateCode(int code)` (public)
-  note: mirrors CSWGuiManager::HandleInputEvent's inline switch (decompiled @0x0040c8e0): 0xb4/0xdf→F2(cancel), 0xb5/0xbb→F1(confirm), 0xb6-0xb9→nav-up/down/next/prev (user-configurable, can't be named generically)
-- L125 — `bool EnsureInputAcquired()` (public)
-  note: replicates HideLoadScreen's activate call byte-for-byte (SetActive(1)); idempotent by engine design
-- L147 — `bool ForceReacquireInput()` (public)
-  note: drives a real SetActive(0)->SetActive(1) edge — SetActive(1) alone no-ops when the active flag is stuck at 1 with DirectInput actually unacquired
-- L173 — `bool ReleaseInput()` (public)
-  note: SetActive(0) on focus-loss so keyboard input mirrors foreground (engine acquires at background cooperative level by default, which bleeds nav keys into the game while windowed and unfocused)
-- L210 — `std::atomic<int> g_pendingInputState` — 0=none, 1=acquire, 2=release; last-writer-wins
-- L213/217 — `void RequestInputReacquire()`, `void RequestInputRelease()` (public)
-- L221 — `void DrainPendingReacquire()` (public) — call once per tick on the engine thread
+- L215 `const char* TeardownSiteName(int index, int total)`
+- L235 `void WriteJmpRel32(uint8_t* at, uintptr_t target)`: JMP rel32.
+- L248 `const char* InputIndexNameRaw(int code)`
+- L321 `const char* InputIndexName(int code)`: Public wrapper.
+- L351 `int ManagerTranslateCode(int code)`: CSWGuiManager::HandleInputEvent receives KOTOR-internal "logical action" codes for navigation / system keys and translates them to InputIndices values via two inline switch statements before dispatching to the active ...
+- L363 `void InstallDirectInputMouseGuard()`
+- L495 `void __fastcall MouseInitFailedInsteadOfTeardown(void* rawInput, void* /*edx*/)`: Stand-in for CExoRawInputInternal::ShutDownDirectInput, reached only from the failure branches of InitializeDirectInputMouse (the engine's own shutdown path still calls the real thing).
+- L534 `void InstallMouseTeardownBlock()`
+- L618 `bool MouseDeviceUnavailable()`
+- L635 `bool ReadDiSnapshot(DiSnapshot* out)`
+- L665 `void LogDirectInputStateIfChanged()`
+- L702 `bool EnsureInputAcquired()`
+- L724 `bool ForceReacquireInput()`
+- L750 `bool ReleaseInput()`
+- L781 `bool PollTurnAxis(float* out)`
+- L798 `bool ReadNativeStickAxes(float* x, float* y)`
+- L831 `void NoteEngineKeyEvent()`
+- L835 `unsigned long long LastEngineKeyEventMs()`
+- L839 `void RequestInputReacquire()`
+- L843 `void RequestInputRelease()`
+- L847 `void DrainPendingReacquire()`

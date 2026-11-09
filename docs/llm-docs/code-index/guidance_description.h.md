@@ -1,11 +1,15 @@
-# guidance_description.h (31 lines)
+# guidance_description.h (32 lines)
 
-Header for the turn-by-turn route readout. Documents the output shape
-("Route to door: 5 metres north, 4 metres north-east, ..., no transition")
-and the same-sector merge / sub-1m fold rules implemented in the .cpp.
+Source: `patches/Accessibility/guidance_description.h`
+
+Turn-by-turn TTS readout of a computed path.
+
+Output shape: "Route to door: 5 metres north, 4 metres north-east, 6 metres east, no transition."
+
+Each segment is the displacement between consecutive waypoints. Same- sector segments merge so a long corridor doesn't read as five "north". Sub-1m segments fold into the next (noise from "nearest path_point is 30cm from player" stays out).
+
+Transition suffix: "1 transition" when the destination is a transition trigger, else "no transition". User knows their walk will cross-load.
 
 ## Declarations (in source order)
 
-- L21 — `namespace acc::guidance::description`
-- L25 — `bool Speak(const Vector& playerPos, const std::vector<Vector>& waypoints, const char* targetName, bool isTransition, bool interrupt)`
-  note: empty waypoint list speaks the localised "no path" phrase.
+- L25 `bool Speak(const Vector& playerPos, const std::vector<Vector>& waypoints, const char* targetName, bool isTransition, bool interrupt)`: targetName is caller-resolved.

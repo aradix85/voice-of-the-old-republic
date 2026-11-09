@@ -1,26 +1,29 @@
-# GitHubClient.cs (433 lines)
+# GitHubClient.cs (536 lines)
 
-HTTP client for downloading the accessibility .kpatch, HoloPatcher, and (via raw git-tree APIs) K1CP's export-ignored tslpatchdata directory from GitHub. Two download paths per asset: a PRIMARY redirect-based path (github.com/.../releases/download/... or /releases/latest, which does NOT count against the unauthenticated 60-req/hour api.github.com rate limit — important for users behind CGNAT/VPN), and an API FALLBACK (api.github.com with Accept: application/octet-stream) used only when the redirect host fails, e.g. during a partial GitHub outage. `ListTreeBlobsAsync` + `DownloadRawAsync` reconstruct directories GitHub's source-archive omits via `.gitattributes export-ignore` by walking the git tree API and pulling file contents from raw.githubusercontent.com (not subject to export-ignore), with atomic `.partial`-then-rename writes and exponential backoff retry on transient errors. Talks to Config (asset/repo names) and Logger.
+Source: `installer/KotorAccessibilityInstaller/GitHubClient.cs`
 
 ## Declarations (in source order)
 
-- L16 — `public class GitHubClient : IDisposable`
-- L20 — `GitHubClient()` — 5-min HttpClient timeout, custom User-Agent
-- L27 — `Task<string> GetLatestModVersionAsync(string repoUrl)` — resolves latest tag, strips leading v/V
-- L48 — `Task<string> DownloadKPatchAsync(...)` — thin wrapper over DownloadReleaseAssetAsync
-- L57 — `Task<string> DownloadReleaseAssetAsync(string repoUrl, string assetName, Action<int> progress)` — resolves latest tag then downloads
-- L78 — `Task<string> DownloadReleaseAssetByTagAsync(...)` — used for HoloPatcher (pinned tag, since "latest" on that repo is the Toolset not the patcher)
-- L107 — `Task<string> DownloadTaggedAssetAsync(...)` — direct release-download URL first, falls back to L136 on HttpRequestException/TaskCanceledException/IOException
-- L136 — `Task DownloadViaApiAssetAsync(...)` — outage-resilient path via release JSON + asset API url
-- L170 — `Task<string> ResolveLatestTagAsync(string repoUrl)` — redirect-first, API fallback
-- L185 — `Task<string> ResolveLatestTagViaRedirectAsync(...)` — reads final RequestUri after HttpClient auto-redirect from /releases/latest
-- L198 — `Task<string> ResolveLatestTagViaApiAsync(...)`
-- L218 — `static string FindAssetApiUrl(string json, string assetName)` — substring match on asset name, returns API url (not browser_download_url)
-- L238 — `public sealed class GitBlobEntry { Path, Sha, Size }`
-- L255 — `Task<List<GitBlobEntry>> ListTreeBlobsAsync(string owner, string repo, string commitSha, string subdirPath)`
-  note: throws if GitHub reports `truncated=true` (>100k entries / >7MB) — caller must switch strategy
-- L299 — `Task<string> ResolveSubtreeShaAsync(...)` — walks the commit root tree to find a subdir's tree SHA
-- L331 — `Task DownloadRawAsync(string url, string destPath, int maxAttempts = 4)` — retries 5xx/429/408 with backoff, writes via `.partial` + atomic rename
-- L385 — `static TimeSpan BackoffDelay(int attempt)` — 250/500/1000/2000 ms
-- L394 — `Task DownloadFileAsync(HttpRequestMessage request, string destinationPath, Action<int> progress)` — streaming copy with percent-progress callback
-- L430 — `void Dispose()`
+- L16 `public class GitHubClient : IDisposable`: Handles downloading the .kpatch from the mod's GitHub releases.
+- L40 `public static string BuildLatestDownloadUrl(string repoUrl, string assetName)`: The ROLLING download URL for an asset on whichever release currently carries the "Latest" badge, e.g.
+- L52 `public async Task<string> DownloadTextAsync(string url, TimeSpan timeout)`: Fetches a small text asset.
+- L79 `public Task DownloadToPathAsync(string url, string destPath,`: Streams a URL to an explicit destination path with percent progress and cancellation.
+- L84 `public async Task<string> GetLatestModVersionAsync(string repoUrl)`
+- L105 `public async Task<string> DownloadKPatchAsync(string repoUrl, string assetName, Action<int> progress = null)`
+- L114 `public async Task<string> DownloadReleaseAssetAsync(string repoUrl, string assetName, Action<int> progress = null)`: Download a named release asset from the latest release of a GitHub repo.
+- L135 `public async Task<string> DownloadReleaseAssetByTagAsync(string repoUrl, string tag, string assetName, Action<int> progress = null)`: Download a named release asset from a specific tagged release.
+- L169 `private async Task<string> DownloadTaggedAssetAsync(string repoUrl, string tag, string assetName, Action<int> progress)`: ----- Download path (rate-limit-free primary, API fallback) ------------ Both download entry points funnel here.
+- L205 `private async Task DownloadViaApiAssetAsync(`: Outage fallback: resolve the asset's API url from the release JSON and download it with Accept: application/octet-stream (which 302-redirects to the storage backend).
+- L245 `private async Task<string> ResolveLatestTagAsync(string repoUrl)`: Resolve a repo's latest release tag.
+- L280 `private async Task<string> ResolveLatestTagViaRedirectAsync(string repoUrl)`
+- L293 `private async Task<string> ResolveLatestTagViaApiAsync(string repoUrl)`
+- L313 `private static string FindAssetApiUrl(string json, string assetName)`: Find the asset whose "name" contains and return its API "url" (api.github.com/.../releases/assets/&lt;id&gt;) — NOT browser_download_url.
+- L333 `public sealed class GitBlobEntry`: One entry in a recursive git tree listing — a blob (file) and its path relative to the queried subtree root.
+- L350 `public async Task<List<GitBlobEntry>> ListTreeBlobsAsync(`: Lists every blob under in the repo at the given commit.
+- L394 `private async Task<string> ResolveSubtreeShaAsync(string owner, string repo, string commitSha, string subdirPath)`
+- L426 `public async Task DownloadRawAsync(string url, string destPath, int maxAttempts = 4)`: Downloads a single file from a raw URL with retry on transient (5xx / 429 / network) errors.
+- L480 `private static TimeSpan BackoffDelay(int attempt)`
+- L483 `private static string Shorten(string sha)`
+- L486 `private Task DownloadFileAsync(string url, string destinationPath, Action<int> progress = null,`
+- L495 `private async Task DownloadFileAsync(HttpRequestMessage request, string destinationPath,`: Cancellation is honoured per buffer, which is what makes a Cancel button on an 85 MB download mean something: one that only took effect once the transfer had finished would be indistinguishable from one that did nothing.
+- L533 `public void Dispose()`

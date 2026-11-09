@@ -1,15 +1,20 @@
-# engine_options.cpp (108 lines)
+# engine_options.cpp (97 lines)
 
-Implementation of engine_options.h. No leading comment block.
+Source: `patches/Accessibility/engine_options.cpp`
+
+(From engine_options.h.) CClientOptions helpers — currently the "Mouse Look" toggle.
+
+Chain: *kAddrAppManagerPtr → +0x4 CClientExoApp* → +0x4 Internal* → +0x4 CClientOptions* → +0x8 int bitfield, bit 1 (mask 0x2) = mouse_look.
+
+Bitfield layout at +0x8 (5 bits in one int — preserve siblings on write): bit 0 auto_level bit 1 mouse_look bit 2 autosave bit 3 minigame_yaxis bit 4 combat_movement
+
+User-facing swkotor.ini "Mouse Look=N" matches CClientOptions.mouse_look exclusively. CSWCameraOnAStick.mouseCameraRotateToggle @+0xb0 is a different struct (runtime camera state) — distinct from the user setting.
 
 ## Declarations (in source order)
 
-- L9 — `namespace acc::engine`
-- L14 — `void* GetClientOptions()`
-  note: walks AppManager → CClientExoApp → CClientExoAppInternal → CClientOptions; distinct chain from GetPlayerServerObject's.
-- L37 — `bool GetMouseLook(bool& out)`
-- L51 — `bool GetActionMenuAutoPause(bool& out)`
-- L65 — `namespace { bool WriteMouseLook(void* options, bool enabled) }` (anonymous)
-  note: read-modify-write preserving sibling bits in the +0x8 bitfield.
-- L84 — `bool SetMouseLook(bool enabled)`
-- L90 — `bool ToggleMouseLook(bool& outNew)`
+- L13 `void* GetClientOptions()`: CClientExoAppInternal → CClientOptions.
+- L25 `bool GetMouseLook(bool& out)`
+- L39 `bool GetActionMenuAutoPause(bool& out)`
+- L55 `bool WriteMouseLook(void* options, bool enabled)`
+- L72 `bool SetMouseLook(bool enabled)`
+- L78 `bool ToggleMouseLook(bool& outNew)`

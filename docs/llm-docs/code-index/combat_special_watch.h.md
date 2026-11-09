@@ -1,9 +1,13 @@
-# combat_special_watch.h (21 lines)
+# combat_special_watch.h (24 lines)
 
-The "you can act now" tactical audio heartbeat. Counts party-wide "specials" (any queued action that isn't a routine hostile auto-attack) each tick; a falling edge to zero fires immediately, and while it stays at zero a 6-second heartbeat repeats. A first-round quiet gate keeps the opening ~6s silent so "Kampf beginnt" gets clean air. Resets across combat enter/exit.
+Source: `patches/Accessibility/combat_special_watch.h`
+
+Specials-queue heartbeat — "you can act now" cue.
+
+Walks every party member's combat_round.actions each tick, counts party-wide "specials" (anything not a routine auto-attack against a hostile creature: action_type != 1, or action_type == 1 with attack_feat != 0, or non-Creature target). Filters out the engine's 0xFF placeholder head.
+
+Edge trigger on ≥1 → 0 while in combat fires the cue immediately (the cue is kCueResref in the .cpp, currently c_drdastro_hit2; gui_actqueue was tried and rejected as too soft). 6s heartbeat repeats while specials stay at 0 in continued combat. First-round gate keeps the first ~6s silent so "Kampf beginnt" has clean air. Auto-resets across combat enter/exit.
 
 ## Declarations (in source order)
 
-- L16 — `namespace acc::combat::special_watch`
-- L19 — `void Tick()`
-  note: cheap out of combat (one chain walk); call after combat::TickCombatMode
+- L21 `void Tick()`: Cheap out of combat (one chain walk).

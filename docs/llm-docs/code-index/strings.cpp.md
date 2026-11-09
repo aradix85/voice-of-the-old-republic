@@ -1,19 +1,20 @@
-# strings.cpp (43 lines)
+# strings.cpp (50 lines)
 
-Tiny language-selection shim on top of the per-language `lang_xx::Get(Id)`
-tables (strings_de/en/es/fr/it/ru.cpp). Holds the single global `g_lang`
-(default `Lang::De` per user direction — a Phase 7 options UI will add a
-runtime toggle; `SetLanguage` is currently the only switch). `Get(Id)`
-dispatches to the active language's table; `CodepageFor` maps each Lang to its
-Windows codepage — 1252 for the Western-European set, 1251 pinned for Russian
-so a Russian KOTOR install running on non-Russian Windows doesn't garble via
-CP_ACP.
+Source: `patches/Accessibility/strings.cpp`
+
+(From strings.h.) User-facing string table.
+
+Layer: i18n/ — sits between the speech path (cycle_input, future announce paths) and Prism. Centralises every string the user hears so language swaps + wording changes happen in one place.
+
+Logs stay English regardless of the active language: developer-readable log lines (acc::filter::CategoryName etc.) are NOT routed through this table. Only spoken strings use Get().
+
+Encoding: source files use 7-bit ASCII for English and Windows-1252 hex escapes (e.g. "T\xFCr") for German, so the literal bytes already match Prism's ANSI overload (which calls MultiByteToWideChar(CP_ACP) — CP_ACP = Windows-1252 on a German Windows install). UTF-8 source would also work but only if the build script sets /utf-8 explicitly, which create-patch.bat does not.
+
+Format-string IDs use printf-style placeholders. The argument order is stable across languages (`%s` first for the name, `%d` for clock, `%d` for metres) — German just keeps the same order with different unit words and the "auf X Uhr" navigation idiom.
 
 ## Declarations (in source order)
 
-- L9 — `Lang g_lang = Lang::De`
-- L12 — `void SetLanguage(Lang l)` / L13 `Lang GetLanguage()`
-- L15 — `const char* Get(Id id)`
-  note: dispatches to lang_en/de/fr/it/es/ru::Get(id); returns "" on unhandled Lang
-- L27 — `unsigned CodepageFor(Lang l)`
-  note: 1252 for En/De/Fr/It/Es, 1251 for Ru (must be pinned, not CP_ACP)
+- L12 `void SetLanguage(Lang l)`
+- L13 `Lang GetLanguage()`
+- L15 `const char* Get(Id id)`
+- L28 `unsigned CodepageFor(Lang l)`

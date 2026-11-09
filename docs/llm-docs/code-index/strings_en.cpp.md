@@ -1,14 +1,11 @@
-# strings_en.cpp (844 lines)
+# strings_en.cpp (1245 lines)
 
-English translation table for `acc::strings::Id` (strings.h). Plain 7-bit
-ASCII throughout — no encoding concerns. One exhaustive `switch (id)` in enum
-order, mirroring strings_de.cpp's structure/section comments but as the
-non-default fallback language (German is the default active `Lang`). No
-`default:` case; unmatched/`Id::Count_` falls through to the trailing
-`return ""`.
+Source: `patches/Accessibility/strings_en.cpp`
+
+English string table. Plain ASCII ? no escape sequences needed.
+
+See strings.h for the encoding convention and string-id semantics.
 
 ## Declarations (in source order)
 
-- L7 — `namespace acc::strings::lang_en`
-- L9 — `const char* Get(Id id)`
-  note: exhaustive switch, one case per Id in strings.h enum order; string literals not indexed per task rules
+- L9 `const char* Get(Id id)`

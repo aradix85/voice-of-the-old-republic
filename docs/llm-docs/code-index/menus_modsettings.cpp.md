@@ -1,37 +1,57 @@
-# menus_modsettings.cpp (791 lines)
+# menus_modsettings.cpp (1329 lines)
 
-Implements the entirely-virtual "Mod Einstellungen" submenu reached from a sentinel chain entry injected into InGameOptions/MainMenuOptions. Owns the sentinel pointer, per-option toggle bits (persisted via `mod_settings_store`), a nested Audio-glossary sub-submenu (delayed 750ms cue playback so speech doesn't bleed over the sample, via a self-managed `LoopSource` riding priority group 0xb to survive the in-game pause), a Slider row kind (CueVolume routed to `audio_bus`, UrgentVolume to `prism`), a Submenu row kind that pivots into either the Audio glossary or the nested `menus_keybinds` configurator, and a foreground-divergence auto-close guard (silently releases input when the engine pushes a modal like an Alt+F4 quit-confirm over the parent). Talks to `audio_bus`, `audio_cues`, `audio_loop`, `intro_skip` (SkipIntros is filesystem-backed, not a toggle bit), `menus_chain` (RebindChain on close), `menus_keybinds`, `mod_settings_store`.
+Source: `patches/Accessibility/menus_modsettings.cpp`
+
+virtual mod-settings submenu.
+
+See menus_modsettings.h for the design summary. This TU owns the sentinel pointer, the toggle bits, and the input router.
 
 ## Declarations (in source order)
 
-- L34 — `char s_rootSentinel` — never-deref'd sentinel byte; its address is the virtual chain entry's `control`
-- L49 — `bool s_toggles[Option::Count]` — in-memory toggle defaults (ExtendedCycling off, RoomShapes/WallSounds on, HumanSubtitles off, TurretAutoAim off, SkipIntros/CueVolume/UrgentVolume/Keybindings/AudioGlossary unused slots)
-- L97-117 — submenu state: `s_open, s_focused, s_parentPanel, s_fgAtOpen, s_glossaryOpen, s_glossaryFocused, s_keybindsOpen, s_pendingValid, s_pendingFireAt, s_pendingCue`
-- L118 — `constexpr DWORD kGlossaryDelayMs = 750`
-- L127 — `acc::audio::LoopSource s_glossaryPreview` — self-managed non-looping 2D source for glossary/cue-volume auditioning
-- L129 — `enum class RowKind { Toggle, Submenu, Slider }`
-- L141-143 — `constexpr int kCueVolumeStep = 10`, `kCueVolumePreviewGroup = 0x0b`, `kCueVolumePreviewCue`
-- L149 — `int GetSliderPercent(Option)` / L157 `void SetSliderPercent(Option, percent)` — route by Option to audio_bus or prism
-- L165 — `struct OptionSpec { option, label, kind }`; L171 `constexpr OptionSpec k_options[10]`
-- L192 — `const char* PersistKey(Option opt)` — ini-key mapping for the 5 persisted toggles
-- L206 — `void EnsureTogglesLoaded()` — pulls acc_settings.ini values once, lazily
-- L223 — `struct GlossaryEntry { cue, label }`; L228 `constexpr GlossaryEntry k_glossary[19]` — NavCue → label table (Landmark cue omitted — silent by design)
-- L254 — `const char* StateText(int optionIdx)` — SkipIntros reads the filesystem state live instead of s_toggles
-- L281 — `void SpeakFocusedOption()` — Toggle/Slider/Submenu row formats
-- L306 — `void SpeakFocusedGlossaryEntry()`
-- L318 — `void CancelPendingGlossaryCue()`
-- L338 — `bool ForegroundDivergedFromParent()` — baseline is s_fgAtOpen snapshot, not s_parentPanel, so the InGameOptions strip-on-top steady state doesn't false-fire
-- L351 — `void* acc::menus::modsettings::GetRootAnchor()` / L355 `bool IsRootAnchor(control)`
-- L359 — `void acc::menus::modsettings::ForEachRootAnchor(panel, callback, userData)` — sortCy=9000 (last chain stop), sortCx=180 (matches Options column)
-- L384 — `bool acc::menus::modsettings::ExtractRootLabel(outBuf, bufSize)`
-- L398 — `bool acc::menus::modsettings::IsOpen()`
-- L402 — `void acc::menus::modsettings::OpenSubMenu(void* parentPanel)` — snapshots s_fgAtOpen, speaks title + first option
-- L434 — `void acc::menus::modsettings::Close()` — speaks "closed", rebinds chain on parent
-- L466 — `void AutoCloseSilent()` — used on foreground divergence; skips speech and parent rebind (the new panel announces itself)
-- L486 — `void OpenGlossarySubMenu()` / L504 `void CloseGlossarySubMenu()`
-- L530 — `void AdjustSlider(int delta)` — clamps 0..100, plays cue-volume preview via s_glossaryPreview or a SpeakUrgent sample for UrgentVolume
-- L563 — `bool HandleInputRoot(int keyCode)` — Left/Right adjusts Slider rows, Up/Down steps focus (clamp not wrap), Enter dispatches by RowKind (Submenu pivots, Slider replays at delta=0, SkipIntros does a filesystem rename, else flips + persists a toggle), Esc calls Close()
-- L648 — `bool HandleInputGlossary(int keyCode)` — Up/Down/Enter (arms delayed cue)/Esc (CloseGlossarySubMenu)
-- L691 — `bool acc::menus::modsettings::HandleInput(int keyCode)` — auto-closes on foreground divergence, else routes to keybinds/glossary/root; unhandled GUI keys are still swallowed (Left/Right/Home/End/Activate) so the parent panel can't react underneath the open submenu
-- L745 — `void acc::menus::modsettings::Tick()` — drives keybinds::Tick() and the glossary's delayed-fire cue (wrap-safe signed-subtract deadline check), rides priority group 0xb for pause-survival
-- L780 — `bool acc::menus::modsettings::GetToggle(Option option)`
+- L214 `const char* ReadmeLangCode(acc::strings::Lang l)`: ISO code used in the published readme filenames (docs/README.
+- L230 `const char* BuildReadmeUrl(char* buf, size_t bufSize)`: Build the readme URL for the language the mod is currently speaking in.
+- L262 `int GetSliderValue(Option opt)`
+- L278 `void SetSliderValue(Option opt, int value)`
+- L295 `bool IsRateOffsetSlider(Option opt)`: True for the combat speed rows, whose value is an offset, not a percent.
+- L300 `bool CombatSliderChannel(Option opt, Channel& out)`: The positional channel a combat slider tunes (for its preview), or false.
+- L311 `void SliderRange(Option opt, int& lo, int& hi)`: The range a Slider row clamps to.
+- L324 `int SliderStep(Option opt)`: Amount a single Left/Right press moves the given Slider row by.
+- L377 `const OptionSpec& Spec(Option opt)`: Spec for `opt`.
+- L476 `const NestedView* NestedViewFor(Option pivot)`: The nested view in front, or nullptr on the root list.
+- L489 `RowView CurrentView()`
+- L494 `int& CurrentFocus()`
+- L500 `Option FocusedOption()`: Option under the cursor in the active view, or Option::Count when the view is empty or the index has gone out of range.
+- L511 `const char* PersistKey(Option opt)`: Stable acc_settings.ini keys for the toggles that persist across launches.
+- L530 `void EnsureTogglesLoaded()`: Pull persisted toggle values into s_toggles once, on first access.
+- L582 `size_t VoiceCount(Option opt)`: The two voice-choice rows: which SAPI voice the announcement channel (UrgentVoice) or the compass channel (CompassVoice) speaks with.
+- L586 `size_t GetVoiceId(Option opt)`
+- L590 `void SetVoiceId(Option opt, size_t id)`
+- L595 `bool IsCompassRow(Option opt)`
+- L604 `void SpeakSample(Option opt)`: Sample line for a voice or slider row, spoken on the channel that row tunes so it comes out in the voice, loudness and pace just chosen.
+- L619 `const char* VoiceText(Option opt)`: Value text for a voice-choice row: the voice's name.
+- L629 `const char* StateText(Option opt)`
+- L659 `void SpeakFocusedOption(bool interrupt = true)`: Speak the current focused option.
+- L699 `void SpeakFocusedGlossaryEntry()`: Speak the current focused glossary entry — just the localised name.
+- L711 `void CancelPendingGlossaryCue()`: Cancel any pending delayed glossary playback.
+- L731 `bool ForegroundDivergedFromParent()`: True iff the engine pushed a new panel on top of whatever was foreground when the submenu opened — typically a MessageBoxModal raised by Alt+F4 / quit-confirm, but also any other engine modal the user hits while the s...
+- L744 `void* GetRootAnchor()`
+- L748 `bool IsRootAnchor(void* control)`
+- L752 `void ForEachRootAnchor(void* panel, bool (*callback)(void* sentinel, int sortCx, int sortCy, void* userData), void* userData)`
+- L777 `bool ExtractRootLabel(char* outBuf, size_t bufSize)`
+- L791 `bool IsOpen()`
+- L795 `void OpenSubMenu(void* parentPanel)`
+- L824 `void Close()`
+- L859 `void AutoCloseSilent()`: Silent auto-close used when the engine pushes a new panel (MessageBoxModal etc.) in front of our parent.
+- L882 `void OpenGlossarySubMenu()`: Open the nested Audio glossary submenu and announce its title + first row.
+- L900 `void CloseGlossarySubMenu()`: Close the glossary submenu, returning the user to the root.
+- L919 `void OpenNestedView(const NestedView& view)`: Open a nested list view (announcement voice, compass voice, combat announcements) and announce its title + first row.
+- L931 `void CloseNestedView()`: Close it, returning the user to the view it was opened from.
+- L951 `bool OpenExternalUrl(const char* url)`: Hand `url` to the default browser.
+- L966 `void ActivateLinkRow(Option opt)`: Enter on a Link row: open the URL, then speak the outcome.
+- L998 `void AdjustSlider(int delta)`: Adjust the focused Slider row by delta (clamped to its range), re-announce it, and play an audible preview at the new setting so the user hears what they just dialled in.
+- L1044 `void AdjustVoice(int delta)`: Step the focused voice row (announcement or compass voice) by `delta` places in Prism's SAPI voice list, clamped at both ends (no wrap — same rule as the row ladder, and the repeated name is the boundary cue).
+- L1068 `bool HandleInputList(int keyCode)`: Input for whichever option list is in front — the root list, or the announcement-voice submenu.
+- L1181 `bool HandleInputGlossary(int keyCode)`
+- L1226 `bool HandleInput(int keyCode)`
+- L1280 `void Tick()`
+- L1317 `bool GetToggle(Option option)`

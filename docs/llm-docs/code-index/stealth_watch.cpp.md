@@ -1,27 +1,16 @@
-# stealth_watch.cpp (145 lines)
+# stealth_watch.cpp (149 lines)
 
-Implements the stealth-distance readout. Reads
-`CSWSCreature.stealth_mode` (byte at +0x4d1, Lane-named, confirmed against the
-Ghidra RE database) off the player's server creature each tick; on leader
-stealth engage it requires the current `narrated_target` slot to be a live,
-non-map-pin hostile creature (`examine_view::IsHostileCreature`), computes 2D
-floor-plane distance (matches the examine panel's readout), and speaks the
-bare integer via `prism::SpeakUrgent` whenever it moves by >= 1m (fine-grained
-because stealth movement is slow), gated by a 250ms floor between utterances.
-A silent first-tick baseline per newly-acquired focus avoids echoing the name
-narration that just spoke. Talks to engine_player, examine_view,
-narrated_target, prism.
+Source: `patches/Accessibility/stealth_watch.cpp`
+
+(From stealth_watch.h.) Stealth distance readout.
+
+While the active leader has Stealth mode engaged AND a hostile creature is the current narrated-target focus, speak the 2-D distance (bare number, in metres) each time it changes by at least kStepMeters as the gap closes or widens. Purpose: a blind player sneaking toward an enemy hears the closing distance, so they know when they are inside Sneak Attack range (< 10 m, where a strike from stealth lands the passive bonus damage).
+
+Silent in all normal play — the module is inert unless the leader is actually stealthed AND a hostile creature is focused. Reads only (leader stealth_mode byte, focus distance); no hooks, driven from the per-tick dispatcher.
 
 ## Declarations (in source order)
 
-- L23 — `constexpr size_t kCreatureStealthModeOffset = 0x4d1`
-- L28 — `constexpr int kStepMeters = 1`
-- L31 — `constexpr ULONGLONG kMinSpeakGapMs = 250`
-- L33-38 — statics: `g_prevStealth, g_baselineHandle, g_lastAnnounced, g_lastSpeakMs, g_focusHandle, g_lastLoggedDist`
-- L40 — `bool ReadLeaderStealth(void* leader)`
-  note: SEH-guarded raw byte read
-- L50 — `void ResetBaseline()`
-- L63 — `int Distance2DMeters(void* target)`
-  note: -1 on unresolved position
-- L76 — `void Tick()`
-  note: full-fidelity per-integer-distance diagnostic log regardless of throttle, per log-no-rate-limits
+- L45 `bool ReadLeaderStealth(void* leader)`
+- L55 `void ResetBaseline()`
+- L68 `int Distance2DMeters(void* target)`: Rounded 2-D (floor-plane) distance in metres between the leader and target, matching the examine panel's distance readout.
+- L79 `void Tick()`

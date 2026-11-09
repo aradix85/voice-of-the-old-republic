@@ -1,19 +1,23 @@
-# pazaak.h (59 lines)
+# minigame_pazaak.h (104 lines)
 
-Public surface for the Pazaak board driver. Per-tick: locate the live board
-panel, announce state deltas, poll keyboard play; no-op when no board is
-active. Wired ahead of the in-world/menu pollers in `core_tick::Dispatch` so
-it can `Consume()` shared keys first.
+Source: `patches/Accessibility/minigame_pazaak.h`
+
+Pazaak minigame accessibility (CSWGuiPazaakGame board).
+
+Per-tick driver: locate the live Pazaak board panel, announce state deltas (draws, plays, stands, set/match results) and poll keyboard play. No-op when no board is active. Wired into core_tick::Dispatch ahead of the in-world / menu pollers so it can Consume() the shared keys (Tab / Enter / arrows / Esc) before those pollers sample them.
+
+See docs/pazaak-investigation.md for the full reverse-engineering.
 
 ## Declarations (in source order)
 
-- L23 — `enum class CardContext { Committed, Hand, Collection }`
-  note: controls how a +/- flip card's sign is spoken (decided/undecided/current).
-- L28 — `void FormatCardLabel(int index, int flip, CardContext ctx, char* out, size_t n)`
-  note: shared by the board game and the side-deck builder (menus_pazaakdeck).
-- L33 — `bool IsBoardForeground()`
-- L38 — `bool TryHandleInput(void* activePanel, int param_1, int param_2, int& rv)`
-  note: called from menus.cpp's CSWGuiManager::HandleInputEvent hook ahead of the generic chain.
-- L46-47 — `constexpr int kWagerLessCode = 0x2f; kWagerMoreCode = 0x30`
-- L54 — `void DispatchWagerInput(void* panel, int code)`
-- L56 — `void Tick()`
+- L23 `enum class CardContext`: Card-label context for FormatCardLabel: Committed — a board card with a decided sign (flip cards show their face).
+- L35 `void FormatCardLabel(int index, int flip, CardContext ctx, char* out, size_t n, int value = 0)`: Synthesize a localized card label from the card index (see §5 of docs/pazaak-investigation.md) into `out`.
+- L42 `bool IsSignChoiceCard(int index)`: True iff `index` is one of KOTOR 2's ±-faced cards, i.e.
+- L47 `bool IsBoardForeground()`: True iff the Pazaak board is the current foreground panel (updated each Tick).
+- L52 `bool TryHandleInput(void* activePanel, int param_1, int param_2, int& rv)`: Manager-hook input handler for the board's arrow-zone navigator.
+- L71 `enum class PadAction`: The two board actions a gamepad has to carry itself.
+- L78 `bool TryHandlePadAction(PadAction a)`
+- L99 `void DispatchWagerInput(void* panel, int code)`: Drive a wager-popup less/more step by calling CSWGuiWagerPopup:: HandleInputEvent(panel, code, 1) directly — the same path the engine's own button-push callbacks take.
+- L101 `void Tick()`
+
+Also 2 constants or variables at namespace scope.

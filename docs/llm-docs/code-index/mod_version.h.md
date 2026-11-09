@@ -1,9 +1,9 @@
-# mod_version.h (16 lines)
+# mod_version.h (14 lines)
 
-Single source of truth for the installed mod version string, bumped together
-with `manifest.toml`'s `[patch].version` on every release. Read by
-`core_dllmain.cpp`'s startup greeting.
+Source: `patches/Accessibility/mod_version.h`
 
-## Declarations (in source order)
+Single source of truth for the installed mod version. Bumped together with manifest.toml [patch].version on every release.
 
-- L13 — `constexpr const char* kModVersion = "0.6.3"`
+Read by: - core_dllmain.cpp's "loaded, version X" greeting
+
+Also 1 constants or variables at namespace scope.

@@ -1,15 +1,20 @@
-# swoop_race.h (35 lines)
+# minigame_swoop_race.h (52 lines)
 
-Public surface for the swoop-race minigame accessibility module: a per-tick
-poll of `CSWCArea.mini_game`, entry/exit narration, and hand-off to
-`swoop_spatial_audio` for continuous obstacle/accelpad cues. Documents the
-CSWMiniGame/CSWMiniPlayer offsets used by the .cpp and the detection
-rationale (engine pointer, not area-tag, because CSWMiniGame is shared with
-the turret minigame — distinguished by `type` 1 vs 2).
+Source: `patches/Accessibility/minigame_swoop_race.h`
+
+Swoop race minigame accessibility.
+
+Polls CSWCArea.mini_game (+0x264) once per tick. Null→non-null transition speaks the entry opener + keybind cheat sheet; inverse speaks the exit cue. Continuous obstacle / accelerator-pad cues layer on top once the obstacle array's offset inside CSWMiniGame is locked (a first-fire diagnostic dump captures candidate bytes).
+
+Detection via the engine pointer (not area-tag prefix): the engine sets mini_game when the minigame controller constructs at module-load, so the transition is one-shot and unambiguous. Tag matching would miss user-added modules and fire on dialog-only swoop screens that look like the platform but aren't the actual race.
+
+CSWMiniGame: +0x24 player, +0x28 area, +0x30 enemy_count, +0x48 obstacle_count, +0x80 type (1=swoop, 2=turret — engine- confirmed from CSWMiniGame::Load, which only ever sets type to 1 or 2; the turret/gunner game is handled by turret_game.cpp), +0xbc lateral_acceleration. CSWMiniPlayer (extends CSWTrackFollower → CSWMiniGameObject): +0x1c4 Vector offset (lateral/vertical in tunnel frame), +0x1d8/+0x1dc min/max_speed.
+
+All reads SEH-guarded.
 
 ## Declarations (in source order)
 
-- L28 — `namespace acc::swoop_race`
-- L31 — `void Tick()`
-  note: no-op when not in a minigame; called every engine tick
-- L33 — `bool IsActive()`
+- L31 `void Tick()`: No-op when not in a minigame; cheap when idle.
+- L33 `bool IsActive()`
+- L44 `bool TryShift()`: Shift up a gear.
+- L49 `bool TryJump()`: KOTOR 2 only (KOTOR 1 has no jump): run the OnBrake track script, the jump.

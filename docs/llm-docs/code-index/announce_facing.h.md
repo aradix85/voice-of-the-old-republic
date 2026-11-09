@@ -1,7 +1,15 @@
-# announce_facing.h (24 lines)
+# announce_facing.h (25 lines)
 
-Public interface for the facing-readout hotkey: direction on the compass voice, then area (world) or room (map) on the screen reader. Camera (not character) facing is used because A/D rotates the camera and W only snaps the character on commit — every other orient cue references camera direction.
+Source: `patches/Accessibility/announce_facing.h`
+
+On-demand facing readout (AltGr / Right Alt; the pad's right trigger).
+
+In the world: the camera's facing as a compass direction word ("Facing north"), then the area the player stands in. On the map screen: the facing in map-frame degrees plus the direction word, then the room. The facing half speaks on the compass voice and the place half follows on the screen reader once it has finished (prism::SpeakCompassThen), so the heading never runs into the area description.
+
+Camera (not character) because A/D rotates the camera and W only snaps the character on commit — the camera direction is what every other orient cue references, so a manual readout on a different frame would disagree with the last sector word the user heard.
+
+Win32 polling because AltGr is unbound in stock kotor.ini and the engine keymap drops unbound scancodes before our manager hook sees them.
 
 ## Declarations (in source order)
 
-- L22 — `void PollWin32()` — Win32-polled entry point (AltGr unbound in kotor.ini, engine keymap drops unbound scancodes)
+- L22 `void PollWin32()`

@@ -1,20 +1,19 @@
-# probe_camera_state.cpp (161 lines)
+# probe_camera_state.cpp (135 lines)
 
-One-shot F12 diagnostic dump that reads the engine's cached camera yaw
-(`CSWCModule + 0x98`, written by `AcclTurnCamera`) plus the camera's world
-orientation quaternion, player yaw, and this mod's own dead-reckoned camera
-estimate (`camera_announce::TryGetCameraEngineYawDegrees`), all converted to
-compass degrees via `engine_compass::EngineYawToCompass`. Purpose: cross-check
-units/frame/offset between the engine's true camera yaw and the mod's
-dead-reckoning so `camera_announce` can be validated or corrected.
+Source: `patches/Accessibility/probe_camera_state.cpp`
+
+(From probe_camera_state.h.) Camera-state probe — F12 reads the engine's cached camera yaw at CSWCModule + 0x98 and logs it alongside character yaw and our dead-reckoned camera estimate.
+
+Purpose: characterise the relationship between the engine's true camera yaw (the value updated by CSWCModule::AcclTurnCamera @0x640090 on every A/D keyboard rotation) and our compass-frame dead-reckoning in camera_announce. Logged data lets us deduce the unit (radians vs degrees), the frame (CCW from +X vs CW from N vs other), and any constant offset.
+
+Reachability chain (per swkotor.exe.h): *kAddrAppManagerPtr -> AppManager +0x04 -> CClientExoApp +0x04 -> CClientExoAppInternal +0x18 -> CSWCModule +0x98 -> float (cached camera yaw, written by AcclTurnCamera)
+
+AcclTurnCamera decomp (verified 2026-05-11): fVar2 = param_1 + *(float *)(iVar3 + 0x40); *(float *)(iVar3 + 0x40) = fVar2;       // authoritative yaw at deeper struct this->field31_0x98 = fVar2;              // cache on CSWCModule (this probe)
+
+Hotkey: F12 (unbound in stock kotor.ini).
 
 ## Declarations (in source order)
 
-- L19-27 — chain-walk offsets `kClientInternalModuleOffset=0x18; kCSWCModuleCameraYawOffset=0x98; kCSWPlayerControlCameraOffset=0x08; kCameraYawOffsetA=0x90; kCameraYawOffsetB=0x94; kCameraYawOffsetC=0x40`
-  note: A/B/C are candidate yaw-offset fields referenced in Control_UpdateCameraDesiredOrientation, logged for back-comparison rather than trusted.
-- L30 — `void* GetClientInternal()`
-- L46 — `void* GetCSWCModule(void* clientInternal)`
-- L57 — `void* GetPlayerControlCamera(void* clientInternal)`
-- L72 — `template<T> T SafeRead(void* base, size_t offset, T fallback)`
-- L85 — `void PollWin32()`
-  note: reads camera quaternion at modCamera+0x88 (engine layout w,x,y,z — w first) and position at +0x7c; yaw computed via the shared engine_compass::GetCameraYawRadians helper (an earlier `2*atan2(qz,qw)` read the wrong quaternion fields).
+- L31 `void* GetPlayerControlCamera(void* clientInternal)`
+- L47 `T SafeRead(void* base, size_t offset, T fallback)`
+- L59 `void PollWin32()`

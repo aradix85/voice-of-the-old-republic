@@ -1,24 +1,19 @@
-# strings_ru.cpp (868 lines)
+# strings_ru.cpp (1283 lines)
 
-Russian translation table for `acc::strings::Id` (strings.h) — a
-machine-translated draft flagged for a native-speaker pass (same quality bar
-as the fr/it/es tables); contributors can safely edit only the quoted text.
-Windows-1251 hex escapes for Cyrillic (NOT UTF-8, NOT Windows-1252 — the
-build has no `/utf-8` flag, and Russian is deliberately pinned to codepage
-1251 via `CodepageFor(Lang::Ru)` + `prism::SetSpeechCodepage`, independent of
-the host Windows locale, so it still speaks correctly on a German/English
-Windows). Escapes were generated from UTF-8 source rather than typed by hand;
-split-literal trick (`"\xE9""e"`-style) reused from strings_es.cpp wherever a
-hex escape is followed by a literal hex digit. Format placeholders (`%s`/`%d`/
-`%u`) keep the same positional order as English — wording, not argument order,
-absorbs Russian's different word order. One exhaustive `switch (id)` in enum
-order; no `default:`, falls through to the trailing `return ""`. Combat speech
-is instead fed by `combat_strings.cpp::kRu`, sourced from Allard's
-community-translation dialog.tlk (which declares English LanguageID 0 despite
-being Cyrillic — see strings.h's `Lang::Ru` note on content-based detection).
+Source: `patches/Accessibility/strings_ru.cpp`
+
+Russian string table.
+
+Machine-translated draft, same quality bar as strings_fr/it/es.cpp and flagged for a native-speaker pass. Contributors: correcting wording here is safe and self-contained -- only the text inside the quotes should change.
+
+Encoding: Windows-1251 hex escapes for Cyrillic. NOT UTF-8 and NOT Windows-1252. The build does not pass /utf-8, and the bytes are widened with an explicit codepage rather than CP_ACP precisely so that a Russian install still speaks correctly on a German or English Windows. acc::strings::CodepageFor(Lang::Ru) returns 1251 and core_dllmain pins it through prism::SetSpeechCodepage at startup.
+
+Escapes were generated from UTF-8 source, not typed by hand. Where a hex escape is followed by a literal hex digit the string is split with "" so the escape cannot swallow it (the same trick strings_es.cpp uses).
+
+Format placeholders (%s / %d / %u) keep the SAME ORDER as the English table -- callers pass arguments positionally and do not reorder per language. Russian word order differs from English in places; where the natural phrasing would need a different argument order, the wording was adjusted instead of the placeholders.
+
+Combat speech is fed by combat_strings.cpp::kRu (engine anchors extracted from Allard's dialog.tlk); this table covers the Id::* speech path.
 
 ## Declarations (in source order)
 
-- L29 — `namespace acc::strings::lang_ru`
-- L31 — `const char* Get(Id id)`
-  note: exhaustive switch, one case per Id in strings.h enum order; string literals not indexed per task rules
+- L31 `const char* Get(Id id)`

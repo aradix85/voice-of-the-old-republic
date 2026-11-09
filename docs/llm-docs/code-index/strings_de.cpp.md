@@ -1,19 +1,13 @@
-# strings_de.cpp (863 lines)
+# strings_de.cpp (1266 lines)
 
-German translation table for `acc::strings::Id` (strings.h). Default active
-language (`SetLanguage` defaults to `Lang::De`). One giant `switch (id)`
-covering every Id in enum order, each returning a Windows-1252-encoded
-literal (`\xE4`=a-umlaut, `\xF6`=o-umlaut, `\xFC`=u-umlaut, `\xDF`=sharp-s,
-`\xC4/\xD6/\xDC`=uppercase umlauts) — the raw bytes pass through unchanged
-because Prism's ANSI overload widens via `CP_ACP`, which is Windows-1252 on a
-German Windows install. Notable idiom choices: navigation direction uses "auf
-X Uhr" (not bare "X Uhr", which would read as time-of-day); empty-category
-phrases use the plural noun form ("Keine Türen", not "Keine Tür"). No
-`default:` case — falls through to the function's trailing `return ""` for
-any `Id::Count_` or (in practice unreachable) unmatched value.
+Source: `patches/Accessibility/strings_de.cpp`
+
+German string table.
+
+Encoding: Windows-1252 hex escapes for non-ASCII (\xE4=?, \xF6=?, \xFC=?, \xDF=?, \xC4=?, \xD6=?, \xDC=?). Prism's ANSI overload converts from CP_ACP via MultiByteToWideChar; on a German Windows install CP_ACP = Windows-1252, so the literal bytes here pass through unchanged. UTF-8 source would also work but only with /utf-8 set, and the patch build script (create-patch.bat) doesn't pass that flag.
+
+Direction frame: German nav uses "auf X Uhr" ("at X o'clock") rather than the English "X o'clock" ? the bare "X Uhr" form would read as time-of-day. Plurals: empty-state phrases use the plural form (T\xFCren, not T\xFCr) since "Keine T\xFCr in Reichweite" sounds odd.
 
 ## Declarations (in source order)
 
-- L17 — `namespace acc::strings::lang_de`
-- L19 — `const char* Get(Id id)`
-  note: exhaustive switch, one case per Id in strings.h enum order; string literals not indexed per task rules
+- L19 `const char* Get(Id id)`

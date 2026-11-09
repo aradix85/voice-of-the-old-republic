@@ -1,22 +1,21 @@
 # guidance_description.cpp (194 lines)
 
-Turn-by-turn TTS readout of a computed waypoint path: builds merged compass-
-sector segments (SegmentBuilder folds consecutive same-sector hops so a long
-corridor reads as one "20 metres north" instead of five short ones; sub-1m
-hops accumulate into a pending bucket rather than being classified) and
-speaks "Route to <target>: total <N>m: <seg1>, <seg2>, ... <transition
-note>." Handles empty-path ("no path") and already-there (all-sub-threshold)
-cases. Talks to engine_compass (EngineYawToCompass/CompassToSector) and
-prism.
+Source: `patches/Accessibility/guidance_description.cpp`
+
+(From guidance_description.h.) Turn-by-turn TTS readout of a computed path.
+
+Output shape: "Route to door: 5 metres north, 4 metres north-east, 6 metres east, no transition."
+
+Each segment is the displacement between consecutive waypoints. Same- sector segments merge so a long corridor doesn't read as five "north". Sub-1m segments fold into the next (noise from "nearest path_point is 30cm from player" stays out).
+
+Transition suffix: "1 transition" when the destination is a transition trigger, else "no transition". User knows their walk will cross-load.
 
 ## Declarations (in source order)
 
-- L12 — `namespace acc::guidance::description`
-- L16 — `constexpr float kMinSegmentMeters = 1.0f`
-- L20 — `struct Segment { int sector; float dist; }`
-- L29 — `int CompassSectorOf(float dx, float dy)`
-- L42 — `class SegmentBuilder` — `AddHop`, `Segments()`, `Pending()`
-  note: sub-threshold hops accumulate in pending_ and attach to whichever segment (same-sector merge or new) follows.
-- L85 — `int FormatSegment(const Segment&, char* outBuf, size_t)`
-- L97 — `int TotalMetres(const std::vector<Segment>&, float pending)`
-- L107 — `bool Speak(const Vector& playerPos, const std::vector<Vector>& waypoints, const char* targetName, bool isTransition, bool interrupt)` — public
+- L28 `int CompassSectorOf(float dx, float dy)`: Compute the 8-point compass sector of a displacement vector.
+- L43 `void AddHop(float dx, float dy)`
+- L73 `const std::vector<Segment>& Segments() const`
+- L75 `float Pending() const`
+- L84 `int FormatSegment(const Segment& seg, char* outBuf, size_t outBufSize)`: Format one segment as "{rounded metres} Meter {DirectionWord}".
+- L96 `int TotalMetres(const std::vector<Segment>& segs, float pending)`: Sum the rounded segment distances.
+- L106 `bool Speak(const Vector& playerPos, const std::vector<Vector>& waypoints, const char* targetName, bool isTransition, bool interrupt)`

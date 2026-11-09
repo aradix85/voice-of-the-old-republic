@@ -1,33 +1,19 @@
-# tutorial_popup.cpp (234 lines)
+# tutorial_popup.cpp (253 lines)
 
-Implements the synthetic tutorial popup. Calls
-`CGuiInGame::ShowTutorialWindow` directly (bypasses the funnel's "no
-tutorials during dialogue" gate, since it doesn't check field45_0xb4),
-clears the tutorial once-shown bitfield for a repurposed fixed reason
-(0x2a = row 42 = Movement_Keys, chosen because it's shown once at game
-start and never again naturally), configures the box as a real tutorial
-via `SetTutorialReason`, and sets its VISIBLE text to the line's original
-strref via `SetMessage(strref)` while the SPOKEN text is routed
-separately through `SyntheticHint()`. Issues its own pause
-(`SetPauseState` + audio unmute on release) like other modal popups.
-Talks to: engine_manager (GUI manager panel stack), engine_panels
-(ResolveGuiInGame, IdentifyPanel), log.
+Source: `patches/Accessibility/tutorial_popup.cpp`
+
+(From tutorial_popup.h.) On-demand tutorial popup for the voice-acted Endar-Spire tutorial lines (Trask / end_pop*). Those lines stay suppressed during their Basic VO; when the dialogue reaches a reply prompt (the game's own break), we mount a REAL engine tutorial popup carrying the keyboard hint, so it pauses and dismisses exactly like a stock game tutorial.
+
+Mechanism (see scratchpad trask_popup_recipe.md / docs): * Clear the tutorial once-shown bit for a fixed reason, then call CGuiInGame::ShowTutorialWindow directly (bypasses the funnel's "no tutorials during dialogue" gate) to mount the box. * Set the box's visible text to the line's original strref (mouse wording) via CSWGuiMessageBox::SetMessage(strref) — mirrors the Surface-1 split. * Route the SPOKEN text to our keyboard hint via the synthetic flag below (the existing TutorialBox reader in menus_monitors honours it).
 
 ## Declarations (in source order)
 
-- L20-34 — engine addresses: ShowTutorialWindow@0x0062f4a0, SetMessage(strref)@0x006249d0
-  (NOT the CExoString overload, which destroys its arg), SetTutorialReason@0x006aa900
-- L36-51 — CGuiInGame.tutorial_box offset(+0xa0), row byte(+0x994), once-shown
-  bitfield base(+0xba8), `kSyntheticReason = 0x2a`
-- L54-62 — pause primitives: SetPauseState@0x004ae9a0, SetSoundMode@0x005d5e80 (unmute on release)
-- L69-75 — module state: `s_pendingHints[4096]` (accumulator), `s_pendingStrref`,
-  `s_active`/`s_activeHintBuf`/`s_activeHint`, `s_paused`
-- L77 — `void SetPause(bool on)` — SEH-guarded; unmutes audio on release
-- L101 — `bool TutorialBoxPresent()` — scans GUI manager panel stack (first 16) for TutorialBox
-- L117 — `void FirePopup(strref, hint)` — sets s_active BEFORE mounting (so suppression
-  gates key on it), clears once-shown bit, mounts + configures the box, pauses
-- L168 — `bool PendingContainsHint(hint)` — de-dupes adjacent lines sharing one hint
-- L181 — `void RecordPendingHint(strref, hint)` — newline-accumulates; first line's strref drives visible text
-- L201 — `bool FirePendingAtReplyBreak()` — moves accumulator to active buffer, calls FirePopup
-- L217-218 — `bool SyntheticActive()` / `const char* SyntheticHint()`
-- L220 — `void PollDismiss()` — detects TutorialBoxPresent() going false, clears state, unpauses
+- L103 `void SetPause(bool on)`
+- L130 `bool TutorialBoxPresent()`: Is a TutorialBox panel currently in the GUI manager's stack?
+- L135 `void FirePopup(uint32_t strref, const char* hint)`
+- L187 `static bool PendingContainsHint(const char* hint)`: True if `hint` is already one of the newline-separated segments accumulated this break.
+- L200 `void RecordPendingHint(uint32_t strref, const char* hint)`
+- L220 `bool FirePendingAtReplyBreak()`
+- L236 `bool SyntheticActive()`
+- L237 `const char* SyntheticHint()`
+- L239 `void PollDismiss()`

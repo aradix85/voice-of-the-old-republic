@@ -1,44 +1,37 @@
-# menus_chain.h (212 lines)
+# menus_chain.h (259 lines)
 
-Declares the chain-navigation abstraction: a flat, visually-sorted list of
-focusable controls on the current panel that arrow keys walk top-to-bottom.
-Owns the chain array/cursor state, tab-cluster detection, and the three
-click-offset compensations (tab-y, equip-slot-y, class-icon-x) needed because
-cursor-warp hit-testing on several panels resolves one row/column off from
-the intended target. Speech utilities and modal/focus state stay in
-menus.cpp; this header is the seam between the two.
+Source: `patches/Accessibility/menus_chain.h`
+
+Chain-navigation state + helpers.
+
+The chain is the menu mod's central abstraction: a flat, visually- sorted list of focusable controls on the current panel that arrow keys walk top-to-bottom.
+
+What lives here: the chain array + cursor, tab-cluster detection, click-offset compensations (tab-y / equip-slot-y / class-icon-x), the geometry helpers that build + walk it.
+
+What stays in menus.cpp: speech utilities (AnnounceControl, AnnouncePanelTitle), IsModalPopupPanel, focus/monitor state. Those either don't depend on chain state or are written from OnSetActiveControl which stays.
 
 ## Declarations (in source order)
 
-- L18 — `namespace acc::menus::chain`
-- L21 — `struct ChainEntry { void* control; int cx, cy; bool textOnly; int virtualKind; }`
-  note: textOnly = non-activatable body text (modal popups); virtualKind non-zero = sentinel entry (e.g. mod-settings root), not a real engine control
-- L40 — `constexpr int kVirtualMod_SettingsRoot = 1`
-- L50 — `constexpr int kMaxChainEntries = 512`
-  note: sized for a hoarder's full Inventory/Store listbox; rebind is O(n²) but runs only on panel-open/content-change, not per tick
-- L55-58 — `extern ChainEntry g_chain[]` / `g_chainPanel` / `g_chainIndex` / `g_chainCount`
-- L64-66 — `extern void* g_tabbedPanel` / `int g_tabsStart` / `g_tabsCount`
-- L78-79 — `extern int g_equipSlotClickOffsetY` / `g_classIconClickOffsetX`
-- L87 — `int ComputeTabClickOffsetY(void* panel)`
-  note: computed on demand (not at rebind time) to dodge a rebind-before-detect race
-- L94 — `void RebindChain(void* panel)`
-- L106 — `void RebindChainPreserveIndex(void* panel)`
-  note: used after in-place listbox repopulate (e.g. Store sell/buy) so cursor position survives a row's removal
-- L119 — `void InvalidateChain()`
-  note: must be called before the engine frees a panel's children — dangling g_chain entries otherwise crash (dump swkotor.exe.18312.dmp)
-- L123 — `void ResetTabbedState()`
-- L127 — `void ValidateTabbedPanel()`
-- L138 — `void ValidateChainPanel()`
-  note: guards against a dangling g_chainPanel after commit-style buttons synchronously destroy their parent panel (dump swkotor.exe(1).31052.dmp)
-- L144 — `bool DetectTabsCluster(void* panel, int& outStart, int& outCount)`
-- L148 — `bool IsTabButton(void* control)`
-- L153 — `void* FindAdjacentArrow(void* panel, void* focused, bool toRight)`
-- L160-161 — `void* FindCloseButton(void* panel)` / `void* FindCancelButton(void* panel)`
-  note: cancel-first probe order routes Esc on confirm dialogs to the safe option
-- L164 — `int FindChainEntry(void* control)`
-- L168 — `void* ReadPanelActiveControl(void* panel)`
-- L179 — `void WalkChildren(const char* label, void* parent, size_t offset, const char* kindName = nullptr)`
-- L186 — `void HandleEsc(void* activePanel, int code, int val, bool& consumed)`
-- L192 — `void HandleLeftRight(void* activePanel, int code, int val, bool& consumed)`
-- L199 — `void HandleNavStep(void* activePanel, int code, int val, bool& consumed)`
-- L209 — `void HandleEnterActivation(void* activePanel, int code, int val, bool& consumed)`
+- L21 `struct ChainEntry`: One chain entry = one navigable target on the current panel.
+- L118 `int ComputeTabClickOffsetY(void* panel)`: Tab-cluster Y pitch for cursor-warp hit-test compensation.
+- L125 `void RebindChain(void* panel)`: (Re)bind the chain to the currently focused panel.
+- L137 `void RebindChainPreserveIndex(void* panel)`: Same as RebindChain, but after the rebuild restore the chain cursor to the position it held before the call (clamped to chainCount-1).
+- L150 `void InvalidateChain()`: Drop all chain state without rebuilding.
+- L154 `void ResetTabbedState()`: Reset tabbed-mode state (tab cluster fields).
+- L158 `void ValidateTabbedPanel()`: Per-tick guard against a dangling g_tabbedPanel.
+- L169 `void ValidateChainPanel()`: Post-FireActivate guard against a dangling g_chainPanel.
+- L183 `bool ChainPanelIdentityHolds()`: True while the object at g_chainPanel is still the panel we bound to.
+- L189 `bool DetectTabsCluster(void* panel, int& outStart, int& outCount)`: Detect Options-style layout: CSWGuiListBox at controls[0] with controls.size > 0, followed by a contiguous cluster of buttons.
+- L193 `bool IsTabButton(void* control)`: True if `control` is one of the current tabbed panel's tab buttons.
+- L198 `void* FindAdjacentArrow(void* panel, void* focused, bool toRight)`: Find the empty-text navigable neighbour at the same y-row in panel.controls — the cycle-arrow flanker around a value-display button.
+- L207 `void* FindCloseButton(void* panel)`: Heuristic finders for the back-out / cancel buttons used by the Esc handler.
+- L208 `void* FindCancelButton(void* panel)`
+- L211 `int FindChainEntry(void* control)`: Linear scan of g_chain for `control`.
+- L215 `void* ReadPanelActiveControl(void* panel)`: Read panel.activeControl.
+- L226 `void WalkChildren(const char* label, void* parent, size_t offset, const char* kindName = nullptr)`: Diagnostic dump of a parent's CExoArrayList children.
+- L233 `void HandleEsc(void* activePanel, int code, int val, bool& consumed)`: Esc dispatch — routes press-edge Esc on chain-bound panels through the store override, the workbench-upgrade override, or the generic sub-dialog / modal-popup close path.
+- L239 `void HandleLeftRight(void* activePanel, int code, int val, bool& consumed)`: Left/Right dispatch — slider in/decrement on focused sliders, cycle-arrow flanker activation otherwise (with a portrait-panel override).
+- L246 `void HandleNavStep(void* activePanel, int code, int val, bool& consumed)`: Up/Down/Home/End chain step — advances g_chainIndex, runs the per-row announce + chargen sync + cursor warp pipeline, logs the step.
+- L256 `void HandleEnterActivation(void* activePanel, int code, int val, bool& consumed)`: Enter on the focused chain entry — classifies the target (virtual / tab button / equip slot / workbench-upgrade slot / store item / journal row / text-only / default) and queues the right pending op (mod-settings open...
+
+Also 11 constants or variables at namespace scope.

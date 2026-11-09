@@ -1,40 +1,28 @@
-# spatial_wall_surfaces.cpp (476 lines)
+# spatial_wall_surfaces.cpp (548 lines)
 
-Implements wall caching + surface clustering. `RebuildForArea` calls
-`engine::BuildAreaWallCache` twice (once into the real buffer, once with
-null/0 to get the true pre-filter discovered count for overflow detection),
-then runs `ClusterEdgesIntoSurfaces` (O(N^2 alpha(N)) union-find over
-`EdgesAreSameSurface` pair tests — fine at ~900 edges, runs once per area
-load) and `BuildSurfaceDescriptors` (reduces each cluster to a straight
-segment by finding its two degree-1 endpoints; classifies anomalies — closed
-loops, Y/X-forks, multi-elevation 3D features — with sampled diagnostic log
-dumps). `SegmentCrossesSurface` does 2D XY segment-vs-segment intersection
-against every non-degenerate surface, returning the closest hit — mirrors the
-audio wall-cue model exactly (same clustered representation).
+Source: `patches/Accessibility/spatial_wall_surfaces.cpp`
+
+(From spatial_wall_surfaces.h.) Wall cache + surface clustering.
+
+The walkmesh stores wall geometry as many short edges (Endar Spire corridors are ~0.7-1m per edge). For change-detection purposes that produces permanent chatter as the player walks parallel to a wall: each edge's closest-point distance jumps when the player passes its endpoint, even though the physical wall surface hasn't changed distance. We solve this by clustering adjacent collinear edges into "surfaces" at area-load time, so consumers can track distance per surface rather than per edge.
+
+Cluster rule: two edges merge if they share an endpoint (within kEndpointTolMeters) AND their direction vectors agree within kSurfaceCollinearityCosThreshold. Cross-room merging is intentional — KOTOR's "room" is an internal .lyt segmentation and a physical wall regularly spans multiple rooms. The geometric tests decide alone.
+
+Each clustered surface is also reduced to a single straight segment (two extreme endpoints + unit direction + length) so room_topology doesn't have to re-merge the edge soup.
 
 ## Declarations (in source order)
 
-- L14 — `acc::engine::WallEdge g_walls[kMaxWallEdges]; int g_wall_count`
-- L20 — `int g_edge_surface_id[kMaxWallEdges]`
-- L23 — `int g_surface_count`
-- L28 — `WallSurfaceDesc g_surface_descriptors[kMaxWallSurfaces]`
-- L36 — `constexpr float kSurfaceCollinearityCosThreshold = 0.966f`
-  note: cos(15deg); tight enough to keep 90deg L-junctions distinct
-- L41 — `constexpr float kEndpointTolMeters = 0.05f` (+ kEndpointTolSquared)
-- L49 — `float DistanceSquaredXY(const Vector& a, const Vector& b)`
-- L61 — `bool EdgesAreSameSurface(const WallEdge& e1, const WallEdge& e2)`
-  note: shared endpoint (XY, within tol) AND collinear direction; degenerate (near-zero-length) edges accepted
-- L93 — `int UfFind(int i)` / L101 `void UfUnion(int i, int j)`
-  note: iterative union-by-rank + path compression over g_uf_parent/g_uf_rank
-- L121 — `void ClusterEdgesIntoSurfaces()`
-  note: cross-room merging is intentional (.lyt segmentation != physical wall); overflow degrades extra clusters into surface 0
-- L183 — `constexpr int kMaxPointsPerSurface = 64`
-- L185 — `void BuildSurfaceDescriptors()`
-  note: per-surface endpoint dedup table; free-endpoint count 2 = happy path segment, else anomaly-classified (0/1/3/4/5+/overflow) with multi-elevation (Z spread > 0.5m) tracked separately as "not a bug"; samples first 4 anomalies with edge dumps to log
-- L368 — `void Clear()`
-- L373 — `void RebuildForArea(void* area)`
-  note: overflow check compares pre-seam-filter discovered count vs kMaxWallEdges
-- L400-413 — `GetWallBuffer / GetEdgeSurfaceIdBuffer / GetWallCount / GetSurfaceCount`
-- L416 — `bool GetSurfaceDesc(int idx, WallSurfaceDesc& outDesc)`
-- L424 — `bool SegmentCrossesSurface(const Vector& a, const Vector& b, Vector& outHitPoint)`
-  note: parametric 2D line intersection (t,u in [0,1]); returns the smallest-t hit across all surfaces
+- L55 `bool EdgesAreSameSurface(const acc::engine::WallEdge& e1, const acc::engine::WallEdge& e2)`: Returns true if the two edges should belong to the same wall surface: they share an endpoint (within kEndpointTolMeters) AND their direction vectors are roughly collinear (cosine within kSurfaceCollinearityCosThreshold).
+- L87 `int UfFind(int i)`
+- L95 `void UfUnion(int i, int j)`
+- L115 `void ClusterEdgesIntoSurfaces()`: Cluster the cached wall edges (g_walls[0..g_wall_count-1]) into connected-and-collinear surfaces.
+- L179 `void BuildSurfaceDescriptors()`
+- L367 `void Clear()`
+- L373 `void RebuildForArea(void* area)`
+- L414 `const acc::engine::WallEdge* GetWallBuffer()`
+- L418 `const int* GetEdgeSurfaceIdBuffer()`
+- L422 `int GetWallCount()`
+- L426 `int GetSurfaceCount()`
+- L430 `bool GetSurfaceDesc(int idx, WallSurfaceDesc& outDesc)`
+- L438 `bool SegmentCrossesSurface(const Vector& a, const Vector& b, Vector& outHitPoint)`
+- L490 `int FloorZCandidatesAt(float x, float y, float* outZ, int maxOut)`

@@ -1,17 +1,13 @@
-# strings_es.cpp (846 lines)
+# strings_es.cpp (1247 lines)
 
-Spanish translation table for `acc::strings::Id` (strings.h). Windows-1252
-hex escapes for accented/punctuation characters (`\xE1/\xE9/\xED/\xF3/\xFA`
-lowercase accents, `\xF1`=n-tilde, `\xBF`=inverted-question-mark, `\xA1`=
-inverted-exclamation, plus uppercase variants) — bytes pass through unchanged
-via Prism's `CP_ACP` ANSI overload on a Spanish Windows install. One
-exhaustive `switch (id)` in enum order; no `default:` case, falls through to
-the trailing `return ""`. Combat speech (attack/save callouts) is instead fed
-by `combat_strings.cpp::kEs`, sourced from `dialog_es.tlk` engine anchors —
-this file covers only the `Id::*` mod-speech path.
+Source: `patches/Accessibility/strings_es.cpp`
+
+Spanish string table.
+
+Encoding: Windows-1252 hex escapes for non-ASCII (\xE1=?, \xE9=?, \xED=?, \xF3=?, \xFA=?, \xF1=?, \xFC=?, \xC1=?, \xC9=?, \xCD=?, \xD3=?, \xDA=?, \xD1=?, \xBF=?, \xA1=?). Prism's ANSI overload converts from CP_ACP via MultiByteToWideChar; on a Spanish Windows install CP_ACP = Windows-1252, so the literal bytes pass through unchanged.
+
+Combat speech is fed by combat_strings.cpp::kEs (engine anchors extracted from dialog_es.tlk); this table covers the Id::* speech path.
 
 ## Declarations (in source order)
 
-- L16 — `namespace acc::strings::lang_es`
-- L18 — `const char* Get(Id id)`
-  note: exhaustive switch, one case per Id in strings.h enum order; string literals not indexed per task rules
+- L18 `const char* Get(Id id)`

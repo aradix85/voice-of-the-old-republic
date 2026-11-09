@@ -1,18 +1,57 @@
-# menus_extract.cpp (1897 lines)
+# menus_extract.cpp (2503 lines)
 
-Implements `FromControl`, the control-text "announce ladder" — the single function every focus/chain-step/monitor path calls to get a control's spoken text. Tries (in order): virtual-anchor short-circuits (mod-settings root sentinel), per-kind virtual-row formatters (charsheet stat rows, credits row, equip-stat rows, pazaak deck/wager widgets, journal quest-items button, keybinding rows), tooltip, button/buttontoggle/label/labelhilight text, slider (with sibling-label category lookup), editbox, single-row listbox content, PartySelection portrait resolver, speculative vtable-override reads for known label/button subclasses that hide behind an overridden `AsLabel`/`AsButton`, then a long series of per-kind hardcoded fallbacks (InGameMenu icon strip, equip slot buttons, in-game map prev/next-note buttons, workbench upgrade slot names + occupancy, chargen class-selection icon cache, chargen portrait cycle value), and finally a spatial sibling-label fallback plus cycle-category-prefix and toggle-state/disabled-suffix appends. Heavy use of SEH (`__try`/`__except`) around raw struct reads since many of these are speculative offsets on possibly-mismatched vtables. Talks to `engine_panels`, `engine_reads`, `engine_player`, `menus_charsheet`, `menus_credits`, `menus_equipstats`, `menus_pazaakdeck`, `menus_modsettings`, `menus_internal` (seam helpers).
+Source: `patches/Accessibility/menus_extract.cpp`
+
+control text extraction (the announce ladder).
+
+FromControl and its three extract-only helpers (FindSiblingLabel, IsCycleFlankerArrow, LookupCycleCategory) lifted out of menus.cpp. Helpers shared with chain navigation (IsChainNavigable, IsClassSelectionIcon, ClassLabelCache*, GetControlCenter) and the focused-panel pointer (g_currentPanel) cross the seam via menus_internal.h.
+
+FromControl itself is the ladder: it does no extraction of its own, it runs the Try* steps in order and applies the three announce suffixes. Each step's rationale lives at that step's definition in the anonymous namespace below, under the number it had when the ladder was one function.
 
 ## Declarations (in source order)
 
-- L51 — `typedef PFN_CSWCCreatureGetPortraitId/GetPortrait` — thiscall typedefs for the chargen portrait accessors
-- L70 — `constexpr const char* kPortraitByRow[32]` — chargen portrait row → baseresref fallback table (rows 12/13 nullptr = T3/Carth, unreachable via chargen cycle)
-- L92 — `struct CycleCategoryEntry { control, category[128] }`; `s_cycleCategories[16]`, `s_cycleCategoryCount` — cache of (cycle-control → category name) captured before the engine overwrites the button's CExoString with the new value
-- L100 — `const char* LookupCycleCategory(void* control)` (anonymous ns)
-- L129 — `bool IsCycleFlankerArrow(panel, control)` — detects image-only `[◀]`/`[▶]` buttons flanking a cycle value-display, to suppress the sibling-label fallback for them
-- L200 — `const char* FindSiblingLabel(panel, control, outBuf, bufSize)` — spatial nearest-label search (same-row-left, or above/below within tolerance)
-- L290 — `bool IsSoundOptionsMovieSlider(panel, control)` — fingerprints optionssound.gui by slider-id set {1,4,7,8} to fix the stock mislabelled "Video volume" slider
-- L325 — `kWagerCurrentValueOffset`, `kWagerMaxLabelGuiId`; `void* FindWagerMaxLabel(panel)`; `bool ExtractWagerRow(panel, maxLabel, outBuf, bufSize)` — Pazaak wager popup virtual top-row (live wager + max + credits, newline-flattened)
-- L385 — `void acc::menus::extract::ResetCycleCategoryCache()` / L389 `CaptureCycleCategory(control, category)` — upsert semantics so a panel-specific override can replace the generic capture
-- L410 — `const char* acc::menus::extract::FromControl(control, outBuf, bufSize, ownerPanel)` — the announce ladder; see summary. Ends with cycle-category prefix (skipped if identical to value — capture-timing guard) and toggle-state / "disabled" suffix appends (InGameLevelUp/CharGen key on bit 3 SetEnabled instead of bit 1)
-  note: section 7b (PartySelection portraits) reads `selected` at control+0x1c4 as ground truth over the stale +0x44c partyId snapshot
-- L1883 — `void acc::menus::extract::ForEachWagerRowAnchor(panel, callback, userData)` — registers the Pazaak wager virtual row (sortCy=1, top of chain)
+- L126 `int PortraitVariantRank(uint32_t row)`: 1-based position of `row` inside its own (gender, family) group, or 0 when the row isn't one this game's table knows.
+- L157 `bool EmitText(char* outBuf, size_t bufSize, const char* text)`: Hand `text` back to the caller, TRUNCATING when it does not fit.
+- L184 `const char* LookupCycleCategory(void* control)`
+- L213 `bool IsCycleFlankerArrow(void* panel, void* control)`: True for image-only buttons that flank a cycle value-display button at the same y-row (e.g.
+- L286 `const char* FindSiblingLabel(void* panel, void* control, char* outBuf, size_t bufSize)`: Find the closest label-like sibling of `control` on the panel.
+- L403 `bool IsSoundOptionsMovieSlider(void* panel, void* control)`: Identify the movie-volume slider on optionssound.gui.
+- L446 `void* FindWagerMaxLabel(void* panel)`: LBL_MAXIMUM / BTN_LESS / BTN_MORE all resolve through the popup's own ctor-bound members (WagerPopupPanel* in menus_internal.cpp); the two games' .gui ids for them survive only as those resolvers' GuiIdMismatch tripwi...
+- L452 `bool ExtractWagerRow(void* panel, void* maxLabel, char* outBuf, size_t bufSize)`: Format "Einsatz N.
+- L517 `void* ResolveOwnerPanel(void* control, void* ownerPanel)`: Resolve the panel that owns `control`.
+- L526 `const char* TryCharsheetStatRow(void* control, void* owner, char* outBuf, size_t bufSize)`: Character-sheet stat rows on InGameCharacter.
+- L549 `const char* TryCreditsRow(void* control, void* owner, char* outBuf, size_t bufSize)`: Credits row (Inventory + Store).
+- L571 `const char* TryEquipStatRow(void* control, void* owner, char* outBuf, size_t bufSize)`: Equip stat rows (Vitality, Defense, Attack, Damage).
+- L593 `const char* TryPazaakDeckCard(void* control, void* owner, char* outBuf, size_t bufSize)`: Pazaak side-deck builder card widgets (CSWGuiPazaakStart).
+- L615 `const char* TryPazaakWager(void* control, void* owner, char* outBuf, size_t bufSize)`: Pazaak wager popup (CSWGuiWagerPopup).
+- L644 `const char* TryJournalQuestItemsButton(void* control, void* owner, char* outBuf, size_t bufSize)`: Journal quest-items button.
+- L666 `const char* TryKeyBindingRow(void* control, void* owner, char* outBuf, size_t bufSize)`: Keyboard-mapping row (CSWGuiKeyMapButton).
+- L720 `const char* TryVirtualRowAnchor(void* control, void* ownerPanel, char* outBuf, size_t bufSize)`: 0.
+- L754 `const char* TryTooltip(void* control, char* outBuf, size_t bufSize)`: 1.
+- L778 `const char* TryButton(void* control, char* outBuf, size_t bufSize)`: 2.
+- L794 `const char* TryButtonToggle(void* control, char* outBuf, size_t bufSize)`: 3.
+- L809 `const char* TryLabel(void* control, char* outBuf, size_t bufSize)`: 4.
+- L824 `const char* TryLabelHilight(void* control, char* outBuf, size_t bufSize)`: 5.
+- L862 `const char* TrySlider(void* control, void* owner, char* outBuf, size_t bufSize)`: 6.
+- L904 `const char* TryEditbox(void* control, char* outBuf, size_t bufSize)`: 6b.
+- L949 `const char* TrySingleRowListBox(void* control, char* outBuf, size_t bufSize)`: 7.
+- L1034 `const char* TryPartyPortrait(void* control, char* outBuf, size_t bufSize, bool& claimedVtable)`: 7b.
+- L1132 `const char* TrySpeculativeVtableRead(void* control, char* outBuf, size_t bufSize)`: 8.
+- L1295 `const char* TryInGameMenuIcon(void* control, void* owner, char* outBuf, size_t bufSize)`: 9a.
+- L1464 `const char* TryEquipSlot(void* control, void* owner, char* outBuf, size_t bufSize)`
+- L1575 `const char* TryInGameMapArrow(void* control, void* owner, char* outBuf, size_t bufSize)`: 9b2.
+- L1649 `const char* TryWorkbenchSlot(void* control, void* owner, char* outBuf, size_t bufSize)`
+- L1795 `const char* TryWorkbenchCreateItemsButton(void* control, void* owner, char* outBuf, size_t bufSize)`: 9b4.
+- L1862 `const char* TryClassSelectionIcon(void* control, void* owner, char* outBuf, size_t bufSize)`: 9c.
+- L1956 `const char* TryPortraitCharGenArrow(void* control, void* owner, char* outBuf, size_t bufSize)`: 9d.
+- L2150 `bool IsPanelDirectChild(void* panel, void* control)`: True when `control` sits directly in panel.controls[].
+- L2178 `const char* TryItemEntryRow(void* control, char* outBuf, size_t bufSize)`: 9.
+- L2232 `const char* TrySiblingLabel(void* control, void* owner, char* outBuf, size_t bufSize)`: 10.
+- L2271 `void ApplyCycleCategoryPrefix(void* control, char* outBuf, size_t bufSize)`: Cycle value-display prefix.
+- L2283 `void AppendToggleSuffix(void* control, char* outBuf, size_t bufSize)`: Append element-state suffix for toggles.
+- L2320 `void AppendDisabledSuffix(void* control, void* ownerPanel, char* outBuf, size_t bufSize)`: Append "nicht verfügbar" / "unavailable" suffix when the focused button is engine-disabled.
+- L2372 `void ResetCycleCategoryCache()`
+- L2376 `void CaptureCycleCategory(void* control, const char* category)`
+- L2397 `const char* FromControl(void* control, char* outBuf, size_t bufSize, void* ownerPanel)`
+- L2467 `bool ReadEquipSlotItemName(void* panel, void* slotBtn, char* outBuf, size_t bufSize)`
+- L2489 `void ForEachWagerRowAnchor(void* panel, bool (*callback)(void* labelControl, int sortCy, void* userData), void* userData)`

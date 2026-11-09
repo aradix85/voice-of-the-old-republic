@@ -1,40 +1,39 @@
-# engine_radial.h (149 lines)
+# engine_radial.h (150 lines)
 
-Engine bindings for CSWGuiTargetActionMenu (KOTOR's radial). Pure read +
-primitives. The radial is embedded in CSWGuiMainInterface at +0xBC, not a
-top-level panel. Documents the PopulateMenus wrapper/inner split, TAM
-layout (+0x00 action_lists[3], +0x24 field1[12] selected-action-id per
-target_type×row, +0x54 target_actions[3], +0x15AC main_interface back-ptr,
-+0x15CC name_label, +0x1AEA target_type), and all engine entry points
-(SelectNextAction/SelectPrevAction/DoTargetAction).
+Source: `patches/Accessibility/engine_radial.h`
+
+Engine bindings for CSWGuiTargetActionMenu (KOTOR's radial).
+
+Pure read + primitives. The radial isn't a top-level CSWGuiPanel — it lives embedded in CSWGuiMainInterface at +0xBC. picker::Drive falls here when the default-action descriptor is empty.
+
+PopulateMenus chain — one call populates both surfaces: CSWGuiMainInterface::PopulateMenus @0x00689d80 (wrapper): player    = GetSWParty()->GetPlayerCharacter() gameObj   = CClientExoApp::GetGameObject(field1_0x64) swcTarget = gameObj->vtable->AsSWCObject(gameObj) ^^ REQUIRED downcast. Raw CGameObject* trips /GS canary on subsequent SelectNext/Prev/DoTargetAction. 1. fills field5_0x74[0..5] via GetPersonalActions(player, i) 2. inner PopulateMenus @0x00689410 fills the radial's action_lists[0..2] via GetTargetActions(player, swc, row)
+
+CSWGuiTargetActionMenu layout (at MainInterface + 0xBC): +0x0000  CExoArrayList<CSWGuiInterfaceAction> action_lists[3]  (3×0x0C) +0x0024  int field1[12]   ← 4 target_types × 3 rows. Each int is the selected action_id; -1 = row default. SelectNext/Prev mutate, inner PopulateMenus + DoTargetAction read. +0x0054  CSWGuiMainInterfaceAction target_actions[3]   (3×0x71C) +0x15A8  CSWGuiMainInterface* main_interface +0x15CC  CSWGuiLabel name_label +0x1AE4  ulong  failure_reason_strref +0x1AEA  byte   target_type — indexes field1[]
+
+CSWGuiMainInterfaceAction (0x71C): +0x000 action_button (visible label at +0x16C) +0x1C4 action_label +0x388 up_button +0x54C down_button +0x718 is_action (1 = row populated)
+
+CSWGuiInterfaceAction (0x38): +0x00 CExoString label +0x08 ulong action_id +0x0c void* action_function +0x1c ulong creature_id (action target) +0x20 CResRef icon
+
+Engine entry points (all __thiscall, ECX = TAM*, single int row arg): SelectNextAction @0x006865b0 SelectPrevAction @0x00686680 DoTargetAction   @0x00689610
 
 ## Declarations (in source order)
 
-- L54 — `namespace acc::engine_radial`
-- L56 — `constexpr int kRowCount = 3`
-- L58 — `void* ResolveTargetActionMenu()`
-  note: borrowed pointer; re-resolve each tick.
-- L63 — `int RowActionCount(void* tam, int row)`
-  note: action_lists[row].size; max-across-rows==0 is the "menu gone" signal.
-- L67 — `bool ReadRowActionLabel(void* tam, int row, char* outBuf, size_t bufSize)`
-- L71 — `bool ReadTargetName(void* tam, char* outBuf, size_t bufSize)`
-- L74 — `void LogState(void* tam, const char* tag)`
-- L79 — `void LogStateWide(void* tam, const char* tag)`
-  note: LogState + field1[12] + per-row embedded buttons + action_lists[r].data[0] peek even when size==0.
-- L84 — `bool SelectNextActionInRow(void* tam, int row)`
-- L85 — `bool SelectPrevActionInRow(void* tam, int row)`
-- L86 — `bool DispatchRowAction(void* tam, int row)`
-- L93 — `bool SelectActionInRow(void* tam, int row, int index)`
-  note: stamps field1[target_type*3+row] = action_lists[row].data[index].action_id; mirrors engine_actionbar::SelectVariant so submenus keep a shadow index across PopulateMenus rebuilds.
-- L101 — `uint32_t ReadRowActionIdAtIndex(void* tam, int row, int index)`
-  note: by POSITION, unlike ReadSelectedRowActionId which uses engine field1 tracking; paired with FindRowIndexByActionId to carry a selection across a rebuild by identity.
-- L105 — `int FindRowIndexByActionId(void* tam, int row, uint32_t actionId)`
-- L118 — `int RetargetRowActions(void* tam, int row, uint32_t targetClientHandle)`
-  note: overwrites creature_id on EVERY descriptor in action_lists[row] — the engine re-bakes lists against its current cursor target while the unified menu sits open, so a dispatch seconds after arming would otherwise fire at the wrong object (Machtbruch-on-Malak bug). Raw field write only, safe from the poll context where RePopulate is not.
-- L122 — `void* GetRowActionButton(void* tam, int row)`
-- L132 — `uint32_t ReadSelectedRowActionId(void* tam, int row)`
-  note: resolves via field1[target_type*3+row], falls back to data[0]; same descriptor the item-variant Shift+arrow peek uses.
-- L138 — `void LogTargetDiag(uint32_t targetClient, const char* tag)`
-  note: resolves target via GetGameObject, downcasts, logs per-class fields GetTargetActions checks (door: cannot_bash/can_use_actions/is_hostile/state + server-side Security gate + leader's Security skill).
-- L147 — `bool IsCreatureClientTarget(uint32_t handle)`
-  note: used to decide whether the 3 target rows are the named Attacks/Force-Powers/Items categories (creature) or per-object actions (door/placeable/trigger).
+- L59 `void* ResolveTargetActionMenu()`: Borrowed pointer; re-resolve each tick.
+- L63 `int RowActionCount(void* tam, int row)`: action_lists[row].size.
+- L67 `bool ReadRowActionLabel(void* tam, int row, char* outBuf, size_t bufSize)`: Reads target_actions[row].action_button via the gui_string path with inline CExoString + TLK strref fallback.
+- L71 `bool ReadTargetName(void* tam, char* outBuf, size_t bufSize)`: name_label at TAM+0x15CC — sanity check (always populated post- PopulateMenus via SetNameLabel @0x00685af0).
+- L74 `void LogState(void* tam, const char* tag)`: Hex dump + parsed action_lists + per-row is_action / button text.
+- L79 `void LogStateWide(void* tam, const char* tag)`: LogState + field1[12] + per-row embedded buttons (action/label/up/down) + action_lists[r].data[0] peek even when size==0 (engine may buffer without committing size).
+- L84 `bool SelectNextActionInRow(void* tam, int row)`: Each: SEH-wrapped, false on null TAM / out-of-range / fault.
+- L85 `bool SelectPrevActionInRow(void* tam, int row)`
+- L86 `bool DispatchRowAction (void* tam, int row)`
+- L93 `bool SelectActionInRow(void* tam, int row, int index)`: Stamps field1[target_type*3 + row] = action_lists[row].data[index] .action_id.
+- L101 `uint32_t ReadRowActionIdAtIndex(void* tam, int row, int index)`: action_lists[row].data[index].action_id — by POSITION, unlike ReadSelectedRowActionId which goes through the engine's field1 selection tracking.
+- L105 `int FindRowIndexByActionId(void* tam, int row, uint32_t actionId)`: Index of the descriptor in action_lists[row] whose action_id matches, -1 when absent (or actionId == 0 / fault).
+- L118 `int RetargetRowActions(void* tam, int row, uint32_t targetClientHandle)`: Overwrites the creature_id (+0x1c) of EVERY descriptor in action_lists[row] with targetClientHandle.
+- L122 `void* GetRowActionButton(void* tam, int row)`: target_actions[row].action_button.
+- L132 `uint32_t ReadSelectedRowActionId(void* tam, int row)`: action_id of the descriptor currently shown for target_actions[row].
+- L138 `void LogTargetDiag(uint32_t targetClient, const char* tag)`: Resolves targetClient via GetGameObject, downcasts, logs per-class fields GetTargetActions checks (doors: cannot_bash/can_use_actions/ is_hostile/state).
+- L147 `bool IsCreatureClientTarget(uint32_t handle)`: True iff `handle` resolves to a CSWCCreature (hostile creature).
+
+Also 1 constants or variables at namespace scope.

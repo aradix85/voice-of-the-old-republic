@@ -1,22 +1,34 @@
-# camera_orient.cpp (361 lines)
+# camera_orient.cpp (675 lines)
 
-Camera-orient hotkey (N key) state machine: either rotates to face the active guidance beacon's current target, or advances one cardinal CW (N→E→S→W→N) otherwise. Drive mechanism is synthesised SendInput keypresses of the player's *bound* turn key (scancode from engine_keymap::TurnScancode, honouring rebinds) — calling the engine's AcclTurnCamera directly from an out-of-band tick was tried and does not reliably move the chase-cam, since its accumulator is only consumed inside the engine's own per-frame UpdateCamera. A single in-flight `Rotation` struct tracks target yaw with rate-based predictive release: each tick samples yaw+timestamp and projects time-to-target, releasing the key ~40ms early (kReleaseLookaheadMs) to absorb SendInput→DirectInput→engine pipeline latency. Handles overshoot (engine ignored input, wrong-direction travel) and timeout (3s) as release reasons too. Talks to camera_announce (yaw source + arbitration), engine_keymap, guidance_beacon, hotkeys.
+Source: `patches/Accessibility/camera_orient.cpp`
+
+(From camera_orient.h.) Camera-orient hotkey (N).
+
+- Beacon armed   → rotate to face the beacon's current heartbeat target. - Otherwise       → face an exit of the player's region (room_topology's exit points, real bearing from the player): the one nearest the camera heading, then clockwise on each further press while the player stays in the region and still faces the exit N last turned to. - No region/exits → advance one cardinal CW (N → E → S → W → N). A turn that stays inside one compass sector is silent on purpose: nothing heard means the heading was already right (user decision 2026-10-30).
+
+Drive mechanism, first choice: the snap — the free-roam camera's one-shot desired-orientation request (a yaw the camera takes on its next update and then clears; nothing in the engine writes it). Turns in a frame or two. Fallback when the active camera never takes it (combat camera) or the build has no address for it: the key-hold turn below.
+
+Key-hold turn: synthesised keypresses of the player's *bound* turn key via SendInput with KEYEVENTF_SCANCODE, so the engine's own UpdateCamera runs its full poll-axis → turn → apply pass exactly as if the key were held. The scancode comes from engine_keymap::TurnScancode() (read from swkotor.ini [Keymapping]), so a turn rebind is honoured — the only change from the old hardcoded A/D. (Calling the engine's AcclTurnCamera directly from our out-of-band tick was tried and does not reliably move the chase-cam.) A closed-loop arrival check via the engine's own yaw read releases the key.
+
+camera_announce stays muted while IsActive() is true and announces the final direction once the rotation lands, if the sector changed.
 
 ## Declarations (in source order)
 
-- L22-23 — chain offsets (`kClientInternalModuleOffset`=0x18, `kCSWCModuleCameraOffset`=0x40) — CClientExoAppInternal→CSWCModule→camera
-- L41 — `struct Rotation` — active flag, holdScan, debugKey, targetEngineYawRad, initialAbsDeltaRad (overshoot ref), startedMs, prevYawRad/prevTickMs/haveRateSample (rate window)
-- L56-72 — release/arrival tuning (`kReleaseLookaheadMs`=40ms, `kFallbackArrivalRad`≈2.9°, `kMinRateRadPerMs`, `kTimeoutMs`=3000)
-- L81 — `void* SafeDeref(void* base, size_t offset)` — SEH-guarded pointer chase
-- L91 — `void* GetModule()` — walks AppManager→ClientApp→ClientExoAppInternal→CSWCModule chain
-- L106 — `bool ReadCurrentEngineYawRad(void* camera, float& out)` — prefers camera_announce's position-derived yaw (single-valued); falls back to GetCameraYawRadians quaternion path
-  note: quaternion path historically misread wrong fields (engine y/z instead of correct ones), which is why it looked "multi-valued" and was abandoned before being fixed
-- L123 — `void* GetCamera()`
-- L129 — `void SendKey(WORD scan, bool down)` — SendInput with KEYEVENTF_SCANCODE
-- L137 — `float NormaliseRad(float r)` — wraps to (-π, π]
-- L143 — `float CompassDegToEngineRad(float compassDeg)`
-- L150 — `float NextCardinalCompassDeg(float currentCompassDeg)` — next CW cardinal (N→E→S→W)
-- L162 — `void ReleaseAndDisarm(const char* reason, float curYawRad)` — SendKey up + logs final direction (camera_announce speaks it once IsActive() drops)
-- L190 — `bool IsActive()` — true if g_rot.active OR the hotkey is currently held
-  note: covers the rising-edge tick itself, since camera_announce::Tick runs before this in core_tick order
-- L195 — `void Tick()` — in-flight: camera-lost abort, rate-projected arrival/overshoot/timeout decision; rising-edge: arms rotation toward beacon target or next cardinal, computes turn direction from engine-frame delta sign, synthesises keydown
+- L132 `bool WriteDesiredOrientation(float deg)`
+- L143 `bool ReadDesiredOrientationPending(bool& pending)`: False on no address / fault.
+- L161 `bool ReadCurrentEngineYawRad(float& out)`: Prefer camera_announce's position-derived yaw — atan2(player - camera) is single-valued, the quaternion path returns antipodal readings 360° apart and breaks the arrival check.
+- L177 `void SendKey(WORD scan, bool down)`
+- L186 `float NormaliseRad(float r)`
+- L192 `float CompassDegToEngineRad(float compassDeg)`
+- L225 `bool CollectExitBearings(const Vector& playerPos, void*& outArea, int& outClusterId, std::vector<ExitBearing>& out)`
+- L261 `int NextExitClockwise(const std::vector<ExitBearing>& exits, int fromIdx)`: Next exit clockwise from `fromYawRad` (engine frame is CCW+, so clockwise = decreasing yaw).
+- L283 `int ChooseExit(const std::vector<ExitBearing>& exits, void* area, int clusterId, float curYawRad, const char*& outWhy)`: Pick the exit to turn to: - still in the region of the last N turn and still facing that exit → the next one clockwise (the cycle); - otherwise the exit nearest the camera heading, however small the offset — N lines t...
+- L315 `float NextCardinalCompassDeg(float currentCompassDeg)`: Next cardinal in CW order (N → E → S → W → N).
+- L327 `void ReleaseAndDisarm(const char* reason, float curYawRad)`
+- L355 `void LogLanding()`: One line per turn once the coast has finished: where the camera actually stopped against the target.
+- L369 `bool ArmKeyTurn(float targetEngineYawRad, float curYawRad, const char* mode)`: Start a key-hold turn toward the target.
+- L414 `void TickKeyTurn(void* camera)`: In-flight key-hold turn: the predictive-release state machine.
+- L487 `bool StartSnap(float targetEngineYawRad, float curYawRad, const char* mode)`: Issue the snap.
+- L509 `void TickSnap(void* camera)`: In-flight snap: wait for the camera to take the request, then for the heading to show it.
+- L573 `bool IsActive()`: Covers the window g_rot.active alone misses: the rising-edge tick itself, since camera_announce::Tick runs before us in core_tick and would otherwise speak the pre-rotation sector on the frame N is pressed.
+- L578 `void Tick()`

@@ -1,24 +1,19 @@
-# probe_audio_frame.cpp (105 lines)
+# probe_audio_frame.cpp (110 lines)
 
-Diagnostic probe characterising the relationship between the mod's compass
-frame and the engine's 3D audio listener frame. F10 advances through 8
-compass sectors, firing a 3D positional cue ("gui_open") 5m from the player
-in each direction while speaking the expected direction name; F11 always
-fires fixed-North, used to test whether listener orientation is camera- or
-character-anchored (compare pans across camera rotation). Talks to
-`audio_bus` (PlayCue3D), `engine_compass` (SectorString), `engine_player`
-(GetPlayerPosition), `hotkeys`, `prism`.
+Source: `patches/Accessibility/probe_audio_frame.cpp`
+
+(From probe_audio_frame.h.) Audio-frame diagnostic probe.
+
+F10 advances through the 8 compass sectors (N → NE → E → SE → S → SW → W → NW → repeat), emitting a 3D-positional cue at 5m from the player in each direction and speaking the spoken-direction name via Prism. The user listens for whether the audio pan matches the spoken direction.
+
+Purpose: characterise the relationship between our compass frame (used by the beacon description, camera_announce, turn_announce) and the engine's 3D audio listener frame. Pillar 3 beacon testing uncovered a mismatch where the user perceived the heartbeat as coming from a different direction than the description implied. We don't know which axis the engine treats as "listener forward" — this probe lets the user report the actual perceived direction for each compass sector, from which we can build a compensation matrix or confirm there's no mismatch at all.
+
+Cue resref: "gui_open" — distinct from BeaconActive's "gui_check" so the user can audibly separate probe fires from any in-flight beacon.
+
+Hotkey choice: F10 — unbound in stock kotor.ini. Same Win32-polling rationale as the other unbound probes.
 
 ## Declarations (in source order)
 
-- L21-22 — `constexpr float kProbeDistance = 5.0f; kPi = 3.14159265358979f`
-- L27 — `constexpr const char* kProbeResref = "gui_open"`
-  note: chosen distinct from any nav cue and from BeaconActive's "gui_check" so probe fires are audibly distinguishable.
-- L29 — `int g_nextDirection`
-  note: advances 0..7 each F10 press.
-- L39 — `Vector OffsetFor(int sector)`
-  note: compass convention 0=N(+Y) CW; X=sin(compass), Y=cos(compass).
-- L53 — `void FireProbe(int sector, const char* tag)`
-  note: no-ops silently (logged) when no player is loaded.
-- L85 — `void PollWin32()`
-  note: F10 = ProbeAudioCycle (advancing sector), F11 = ProbeAudioFire (fixed-North).
+- L39 `Vector OffsetFor(int sector)`: Compute the world-space offset 5m in compass sector `sector` from origin.
+- L53 `void FireProbe(int sector, const char* tag)`: Fire a probe at compass sector `sector` (0..7) relative to the player, with the supplied diagnostic-tag in logs and TTS.
+- L90 `void PollWin32()`

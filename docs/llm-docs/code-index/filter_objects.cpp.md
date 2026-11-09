@@ -1,22 +1,16 @@
-# filter_objects.cpp (90 lines)
+# filter_objects.cpp (105 lines)
 
-Single source of truth for "is this a Pillar 4 vocabulary object" — the six
-locked cycle categories (Door/Npc/Container/Item/Landmark/Transition).
-ObjectMatches excludes the player's own creature (self at listener position,
-no useful spatial info) and defers to engine_area's GetObjectKind plus
-sub-state predicates (IsUsablePlaceable, IsLandmarkWaypoint,
-IsTransitionTrigger). Transition additionally excludes floor_puzzle's plate
-triggers (they structurally pass IsTransitionTrigger but are puzzle
-machinery). IsMapCycleable narrows to Landmark only, matching
-CSWGuiMapHider::Draw's engine-rendered icon set.
+Source: `patches/Accessibility/filter_objects.cpp`
+
+(From filter_objects.h.) Pillar 4 object filter — six locked categories.
+
+Pure predicate over engine_area's GameObjectKind + sub-state. Sub-state filters: Container needs usable=true OR has_inventory=true; Landmark needs has_map_note=true; Transition needs transition_destination set.
 
 ## Declarations (in source order)
 
-- L6 — `namespace acc::filter`
-- L8 — `const char* CategoryName(CycleCategory c)`
-- L21 — `bool ObjectMatches(void* gameObject, CycleCategory category)`
-  note: excludes GetPlayerServerCreature() explicitly; every consumer (cycle, T1/T2, passive_narrate) inherits this.
-- L66 — `CycleCategory NextCategory(CycleCategory c)`
-- L71 — `CycleCategory PrevCategory(CycleCategory c)`
-- L77 — `bool IsMapCycleable(CycleCategory c)`
-  note: derived from decompiled CSWGuiMapHider::Draw @0x006943d0 — only waypoints with map_note_enabled render as map icons.
+- L8 `const char* CategoryName(CycleCategory c)`
+- L21 `acc::strings::Id CategoryNameId(CycleCategory c)`
+- L35 `bool ObjectMatches(void* gameObject, CycleCategory category)`
+- L80 `CycleCategory NextCategory(CycleCategory c)`
+- L85 `CycleCategory PrevCategory(CycleCategory c)`
+- L91 `bool IsMapCycleable(CycleCategory c)`

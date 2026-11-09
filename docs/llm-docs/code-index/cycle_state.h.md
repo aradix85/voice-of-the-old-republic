@@ -1,21 +1,23 @@
-# cycle_state.h (95 lines)
+# cycle_state.h (96 lines)
 
-Pillar 4 cycle state — single source of truth for "what's currently in the cycle". Cycle scope is always a whole-area listing sorted by distance (not `.lyt` rooms, which over-segment K1 into spatially-meaningless slivers). World and Map contexts keep independent `CycleState` singletons (independent focus, independent default category — Map defaults to Landmark since Door etc. aren't map-cycleable). `CategoryListing` entries can be a real game object, a user-placed `CSWCMapPin*`, or a shipped curated static hint (`map_shipped_hints::ShippedHint*`) — `isPin`/`isStatic` discriminate, at most one set per entry.
+Source: `patches/Accessibility/cycle_state.h`
+
+Pillar 4 cycle state — current category + focused-object tracking.
+
+Single source of truth for "what's currently in the cycle". Input, announce, and guidance all go through this surface.
+
+Cycle scope: whole-area listings sorted by distance. .lyt-rooms over-segment K1 into spatially-meaningless slivers, so they're not used for narrowing.
 
 ## Declarations (in source order)
 
-- L15 — `namespace acc::cycle`
-- L27 — `struct CategoryListing`
-  note: kMaxObjects=64; parallel arrays objs/positions/distances/isPin/isStatic
-- L42 — `struct CycleState` — category/focusedObj/focusedIndex
-  note: LOCAL cursor state only; the global activation target lives in acc::narrated_target
-- L48 — `CycleState& GetState(acc::filter::CycleContext ctx = World)`
-- L57 — `bool BuildCategoryListing(acc::filter::CycleCategory category, CategoryListing& out, acc::filter::CycleContext ctx = World)`
-  note: ctx=Map filters to map-cycleable categories + fog-of-war gate; ctx=World applies discovery-tier filtering instead
-- L63 — `void* CycleNextItem(...)`, L66 `CyclePrevItem(...)`
-  note: boundary clamp, no wrap
-- L72 — `void* CycleFirstItem(...)`, L75 `CycleLastItem(...)`
-- L82 — `bool CycleNextCategory(...)`, L85 `CyclePrevCategory(...)`
-  note: empty-category silent skip — scans up to 6 sibling categories
-- L91 — `bool RefreshCurrentListing(CategoryListing& outListing, acc::filter::CycleContext ctx = World)`
-  note: re-finds the previously-focused object in the new sort order; resets to closest if it's gone
+- L27 `struct CategoryListing`: Per-category listing.
+- L42 `struct CycleState`: World and Map keep independent focus.
+- L48 `CycleState& GetState(acc::filter::CycleContext ctx = acc::filter::CycleContext::World)`
+- L57 `bool BuildCategoryListing(acc::filter::CycleCategory category, CategoryListing& out, acc::filter::CycleContext ctx = acc::filter::CycleContext::World)`: Build sorted-by-distance listing for `category`.
+- L63 `void* CycleNextItem(const CategoryListing& listing, acc::filter::CycleContext ctx = acc::filter::CycleContext::World)`: Boundaries clamp (no wrap).
+- L66 `void* CyclePrevItem(const CategoryListing& listing, acc::filter::CycleContext ctx = acc::filter::CycleContext::World)`
+- L72 `void* CycleFirstItem(const CategoryListing& listing, acc::filter::CycleContext ctx = acc::filter::CycleContext::World)`: Jump straight to the first (closest) / last (farthest) item of the listing.
+- L75 `void* CycleLastItem(const CategoryListing& listing, acc::filter::CycleContext ctx = acc::filter::CycleContext::World)`
+- L82 `bool CycleNextCategory(CategoryListing& outListing, acc::filter::CycleContext ctx = acc::filter::CycleContext::World)`: Empty-category silent skip: scans up to 6 sibling categories until a non-empty one is found.
+- L85 `bool CyclePrevCategory(CategoryListing& outListing, acc::filter::CycleContext ctx = acc::filter::CycleContext::World)`
+- L91 `bool RefreshCurrentListing(CategoryListing& outListing, acc::filter::CycleContext ctx = acc::filter::CycleContext::World)`: Re-find previously-focused object in the new sorted order; if it's gone, reset to closest.

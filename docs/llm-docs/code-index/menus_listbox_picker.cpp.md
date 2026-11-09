@@ -1,20 +1,37 @@
-# menus_listbox_picker.cpp (305 lines)
+# menus_listbox_picker.cpp (530 lines)
 
-Armed-picker state and per-tick monitors for the two "select a row, then commit it into a slot" panels: the equipment picker (equip.gui LB_ITEMS) and the workbench upgrade picker (upgrade.gui LB_ITEMS). Split out of `menus_listbox.cpp` 2026-07-29 (Phase-2 candidate 23, narrowed form). Eleven of the thirteen listbox specs are stateless; these two carry a *mode* — they ARM when the user activates a slot button and while armed steal arrow keys from the panel's own button chain. That armed flag, its bound panel pointer, and the one-shot cursor-park latch are the only mutable state the whole listbox subsystem owns, so they live here with the monitors that watch them. The SPECS themselves stayed in `menus_listbox.cpp` with the other eleven — moving them would have forced the private `ListBoxPanelSpec` struct into a shared header. Spec callbacks reach this state through the `menus_listbox.h` accessors, which is what `menus.cpp` already did from outside.
+Source: `patches/Accessibility/menus_listbox_picker.cpp`
 
-Cursor-park mechanism: both pickers set `useEngineSelect`, so arrows drive the engine's own `CSWGuiListBox::SetSelectedControl` (real highlight + native multipage scroll) rather than a raw `selection_index` write. The engine re-selects whatever row sits under the mouse every frame (`HandleMouseMove` → `SetSelectedControl`), silently reverting those writes; parking the OS cursor on the panel's BTN_BACK makes the hover-select inert. The park is deferred to the monitor (Update tick) rather than done at arm time because `MoveMouseToPosition` recurses back through the hover pipeline and must stay off the input-dispatch stack.
+Armed-picker state and per-tick monitors for the two "select a row, then commit it into a slot" panels: the equipment picker (equip.gui LB_ITEMS) and the workbench upgrade picker (upgrade.gui LB_ITEMS).
+
+Why these two are a pair, and why they are not in menus_listbox.cpp ------------------------------------------------------------------- Thirteen panels are driven by the spec table in menus_listbox.cpp. Eleven of them are stateless: the spec matches a panel, arrows drive its listbox, Enter commits, done. These two are the exception — they carry a mode. A picker ARMS when the user activates a slot button, and while armed it steals the arrow keys away from the panel's own button chain; when it disarms, arrows go back to the chain. That armed flag, the panel pointer it is bound to, and the one-shot cursor-park latch are the only mutable state the whole listbox subsystem owns.
+
+State wants an owner, so it lives here with the two monitors that watch it per tick. The specs themselves stay in menus_listbox.cpp next to the other eleven — splitting two of thirteen specs out would have forced the private ListBoxPanelSpec struct into a shared header and left the dispatcher's probe table pointing at entries in another file. The spec callbacks reach this state through the accessors in menus_listbox.h instead, which is what menus.cpp already did from the outside.
+
+The armed flag is the ENGINE's, not ours ---------------------------------------- Both panels already carry a "picker open" bit that the engine raises when it opens the item zone and clears when it closes it — kEquipPickerOpenFlagOff and kUpgradePickerOpenFlagOff. Crucially, on the equip screen the same call that raises the bit (ShowDescription(1)) is what clears the interactive bit on all nine slot buttons and labels, and the same call that clears it (CloseDescription → ShowDescription(0)) is what puts them back. So the bit is not merely a good proxy for "the picker is up" — it is the exact predicate that decides whether the slots underneath are usable.
+
+This file used to keep its own bool alongside it, raised at keypress time and cleared at keypress time, while the engine's moved a tick later when the queued op drained. Every gap between the two produced a wrong answer, and one of them was permanent: Escape cleared OUR flag and never told the engine, so the engine's bit stayed set, the slot buttons stayed disabled, and every slot announced "unavailable" for the rest of the panel's life (K2 patch-20260817-065149.log, K1 patch-20260813-204335.log). The commit path had the same bug in miniature — one tick of "unavailable" between our disarm and OnOKPressed draining.
+
+So: read the bit, never copy it. The only local state left is an ARM LATCH per picker, covering the one tick between queueing the engine's open call and the engine raising its own bit; it is self-limiting (the monitor drops it as soon as the bit appears, or as soon as the queued op has drained without one, which is also what happens when the slot had no items and the engine popped a message box instead). Plus the one-shot cursor park, which is an action to perform rather than a state to agree about.
+
+The cursor-park mechanism ------------------------- Both pickers set useEngineSelect, i.e. arrows drive the engine's own CSWGuiListBox::SetSelectedControl rather than a raw selection_index write, so the user gets a real row highlight and native multipage scrolling. The catch is that the engine re-selects whatever row sits under the mouse on every frame (HandleMouseMove -> SetSelectedControl), which silently reverts our writes. Parking the OS cursor on the panel's BTN_BACK — clear of the list — makes that hover-select inert. The park is deferred to the monitor rather than done at arm time because MoveMouseToPosition recurses back through the hover pipeline and must stay off the input-dispatch stack.
 
 ## Declarations (in source order)
 
-- Picker state (anonymous ns): `s_equipPickerActive/Panel/ParkPending`, `s_workbenchUpgradePickerActive/Panel/ParkPending`
-- Accessors (public, declared in `menus_listbox.h`): `IsEquipPickerArmed`, `EquipPickerPanel`, `ArmEquipPicker`, `DisarmEquipPicker`, `IsWorkbenchUpgradePickerArmed`, `WorkbenchUpgradePickerPanel`, `ArmWorkbenchUpgradePicker`, `DisarmWorkbenchUpgradePicker`
-- `struct EquipSelState { listBox, lastSelection }` — the equip monitor's row-change tracker
-- `bool ParkPickerCursorOffList(panel, backBtnId, tag)` — warps the OS cursor to BTN_BACK; returns true once issued so the caller clears its park-pending latch
-- `void MonitorEquipPickerSelection()` — disarm on panel-gone, one-shot cursor park, per-tick row-change announce. Announce lives here rather than in the spec's `announce` callback because the engine also moves the selection on its own (scroll, hover, the commit itself); watching the index per tick catches every move.
-  note: row 0 is the protoitem template, hidden from nav (`minSel=1`), so spoken position is `selIdx` as-is over `rowCount-1`
-- `void MonitorWorkbenchUpgradePicker()` — disarm on panel-gone, one-shot cursor park, plus a per-frame selection trace kept from the lightsabercrystalcrash investigation (`acclog::Trace` folds steady values to one line, so it costs no spam)
-- `void acc::menus::listbox::TickPickerMonitors()` — fanned out from `TickListboxMonitors` so `menus.cpp` keeps one listbox-side tick entry point
-
-## Talks to
-
-`engine_panels` (`FindPanelByKind`, `IdentifyPanel`), `engine_manager` (`MoveMouseToPosition`), `menus_internal` (`FindControlById`, `GetControlCenter`, the equip + workbench .gui IDs), `menus_extract` (`FromControl` row text), `strings`, `prism`.
+- L105 `bool ReadPickerOpenBit(void* panel, size_t fieldOff)`: Bit 0 of a panel's picker-open field.
+- L121 `bool IsEquipPickerArmed()`: Both IsArmed queries are PURE — they are called from the input dispatcher, the extractor's disabled-suffix path and the msg-router rule, several times per frame, and a query that mutated the latch would make the answe...
+- L128 `void* EquipPickerPanel()`
+- L133 `void ArmEquipPicker(void* panel, void* slotBtn)`
+- L143 `void ClearEquipPickerArmLatch()`: "We are done driving this picker." Deliberately does NOT clear the engine's bit — the engine clears it itself when the commit or cancel we queued reaches CloseDescription, and the slots are genuinely still disabled un...
+- L149 `bool IsWorkbenchUpgradePickerArmed()`
+- L156 `void* WorkbenchUpgradePickerPanel()`
+- L162 `void ArmWorkbenchUpgradePicker(void* panel)`
+- L167 `void ClearWorkbenchUpgradeArmLatch()`
+- L196 `bool ParkPickerCursorOffList(void* panel, void* backBtn, const char* tag)`: Warp the OS cursor onto the panel's BTN_BACK so it sits OFF the LB_ITEMS list while a picker is armed — see the cursor-park note in the file header.
+- L213 `void TraceEquipPickerOpenField(void* panel, bool armed)`: Raw read of the equip panel's picker-open field for the diagnostic trace.
+- L238 `void SpeakStillEquippedAfterRefusal(void* panel, void* slotBtn)`: The engine refused to open the picker — its "no items for this slot" modal is what the user just heard (the ContentChange monitor speaks it).
+- L262 `void MonitorEquipPickerSelection()`: Equip picker: retire the arm latch, run the one-shot cursor park, and speak row changes.
+- L408 `void MonitorWorkbenchUpgradePicker()`: Workbench upgrade picker: retire the arm latch and run the one-shot cursor park.
+- L510 `bool RuleSuppressEquipPreviewFeedback(const char* text)`: Message-buffer rule: mute the engine's feedback while the equip picker is up.
+- L519 `void RegisterPickerMsgRules()`
+- L524 `void TickPickerMonitors()`

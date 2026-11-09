@@ -1,26 +1,18 @@
-# menus_chargen_skills.cpp (277 lines)
+# menus_chargen_skills.cpp (151 lines)
 
-Mirror of menus_chargen_attr.cpp for the chargen Skills panel
-(CSWGuiSkillsCharGen): mirrors skill_button → skill_label text into the
-cycle-category cache, syncs chain focus into `selected_skill_index`, and
-speaks a per-row cost suffix + description on chain step. Cost is computed
-via the engine's `IsClassSkill` predicate (1 = class skill, 2 = cross-class)
-rather than read from a label, matching the same refresh-timing avoidance
-used in the Attributes panel. No D&D modifier concept here (skills only have
-rank + flat cost).
+Source: `patches/Accessibility/menus_chargen_skills.cpp`
+
+chargen Fähigkeiten panel tweaks. See menus_chargen_skills.h for the design rationale.
 
 ## Declarations (in source order)
 
-- L20 — `namespace acc::menus::chargen_skills`
-- L22 — `bool IsChargenSkillsPanel(void* panel)`
-- L27 — `int SkillIndexFromButton(void* panel, void* control)`
-- L35 — `void SyncSelectedSkillFromChainFocus()`
-- L66 — `void CaptureLabelsIfApplicable(void* panel)`
-- L104 — `int RowPitchForCursorWarp(void* panel, void* control)`
-- L117 — `typedef PFN_IsClassSkill` / `int ReadEngineSkillCost(void* panel, int skillIdx)` (anonymous ns)
-- L135 — `void AnnounceChainStepSuffix(void* panel, void* control)`
-- L160 — `bool AnnounceChainStepDescription(void* panel, void* control)`
-  note: calls the engine's OnEnterPointsButton with the FOCUSED button — bypasses the hover hit-test, which is reliably off-by-one on this panel due to label overlap
-- L239 — `bool IsChargenSkillsDescriptionListbox(void* listBox)`
-- L248 — `bool AnnounceValueChange(void* panel, void* control)`
-  note: omits both label and cost from the re-announce — cost is constant per skill, already heard in the chain-step suffix
+- L38 `bool IsChargenSkillsPanel(void* panel)`
+- L42 `int SkillIndexFromButton(void* panel, void* control)`
+- L46 `void SyncSelectedSkillFromChainFocus()`
+- L50 `void CaptureLabelsIfApplicable(void* panel)`
+- L54 `int RowPitchForCursorWarp(void* panel, void* control)`
+- L67 `int ReadEngineSkillCost(void* panel, int skillIdx)`
+- L89 `void AnnounceChainStepSuffix(void* panel, void* control)`
+- L114 `bool AnnounceChainStepDescription(void* panel, void* control)`
+- L118 `bool IsChargenSkillsDescriptionListbox(void* listBox)`
+- L122 `bool AnnounceValueChange(void* panel, void* control)`

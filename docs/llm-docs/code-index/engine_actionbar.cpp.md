@@ -1,30 +1,33 @@
-# engine_actionbar.cpp (313 lines)
+# engine_actionbar.cpp (461 lines)
 
-Read + drive primitives for the player action bar (CSWGuiMainInterface personal-action columns), mirroring engine_radial/engine_picker's chain-resolution pattern. Backs actionbar_menu's Shift+4..7 navigable submenu. Talks to engine_player (AppManager chain), engine_rebase (address rebasing), log.
+Source: `patches/Accessibility/engine_actionbar.cpp`
+
+(From engine_actionbar.h.) Engine bindings for the player action bar (Aktionsmenü).
+
+Pure read + primitive layer. Mirrors engine_radial: resolve through the standard chain, per-column reads, drive engine widgets via the vtable[15] activate path. actionbar_menu wires this into a navigable Shift+4..Shift+7 submenu.
+
+CSWGuiMainInterface.field45_0x771c[6] — six CSWGuiMainInterfaceAction (stride 0x71C). Each column: +0x000 action_button   — icon (fire = use) +0x1C4 action_label    — text label of current variant +0x388 up_button       — cycle next +0x54C down_button     — cycle prev +0x718 is_action       — 1 when populated
+
+CSWGuiMainInterface.field5_0x74[6] — CExoArrayList<CSWGuiInterfaceAction> stride 0x0C. Source of truth for variant count (PopulateMenus fills from CSWCCreature::GetPersonalActions).
+
+CSWGuiMainInterface::DoPersonalAction @0x0068ad60 — what bare 4..7 hit. param_2 unused — variant chosen by reading *(mi + 0x1bac + slot*4).
 
 ## Declarations (in source order)
 
-- L16/19 — `kGuiInGameMainInterfaceOffset = 0x90`, `kInternalGuiInGameOffset = 0x040`
-- L27 — `kSelectedActionIdArrayOffset = 0x1bac` — 6 int32s, one per column, "currently-selected variant action_id"
-- L32-35 — `kPersonalListsOffset=0x74`, stride `0x0C`, data/size sub-offsets — CExoArrayList<CSWGuiInterfaceAction>[6]
-- L38-40 — `kIfActionLabelOffset=0x00`, `kIfActionIdOffset=0x08`, `kIfActionStride=0x38`
-- L45 — `const uintptr_t kAddrDoPersonalAction = R(0x0068ad60)`
-- L51 — `const uintptr_t kAddrSetMainInterfaceTarget = R(0x0062b000)` — thin forwarder to CSWGuiMainInterface::SetTarget
-- L58 — `const uintptr_t kAddrRePopulateMainInterface = R(0x0062b050)` — forwards to PopulateMenus@0x00689d80
-- L60-69 — `PFN_DoPersonalAction`, `PFN_SetMainInterfaceTarget`, `PFN_RePopulateMainInterface` typedefs
-  note: SetMainInterfaceTarget callee purges 8 bytes though only param_1 is used — single-arg typedef under-pushes and corrupts caller frame; requires a matching padded second dword
-- L72/84/95/106 — `GetClientExoApp`, `GetClientExoAppInternal`, `GetGuiInGame`, `GetMainInterface` — local chain helpers
-- L117/128 — `ReadInt32`, `ReadPtr` — SEH-guarded raw field readers
-- L140 — `void* DescriptorAddr(void* mi, int slot, int index)`
-- L157 — `bool ReadCExoStringLocal(void* base, size_t offset, char* outBuf, size_t bufSize)`
-- L183 — `void* ResolveMainInterface()` (public)
-- L190 — `int VariantCount(void* mi, int slot)` (public) — reads field5_0x74[slot].size
-- L200 — `bool ReadVariantLabel(...)` (public)
-- L209 — `uint32_t ReadVariantActionId(...)` (public)
-- L217 — `void* GetColumnActionButton(void* mi, int slot)` (public) — field45_0x771c[6], stride 0x71C
-- L228 — `bool SelectVariant(void* mi, int slot, int index)` (public)
-  note: stamps kSelectedActionIdArrayOffset with the descriptor's action_id — bypasses the labelled OnActionUp/DownArrowPressed handlers (gate on uninitialised is_active; OnActionDownArrow is mislabelled)
-- L244 — `bool FireSelectedVariant(void* mi, int slot)` (public) — calls DoPersonalAction; param_2 unused
-- L260 — `void LogState(void* mi, const char* tag)` (public)
-- L277 — `bool PrepareBareDispatch(uint32_t targetClientHandle)` (public)
-  note: runs SetMainInterfaceTarget + RePopulateMainInterface synchronously so bare 1..7 dispatch fires against a freshly-Q/E-selected target (Q/E alone only writes field1_0x64, doesn't repopulate — stale action_lists creature_ids otherwise silently bail dispatch)
+- L121 `bool ReadInt32(void* base, size_t offset, int32_t* out)`: Local chain helpers (same shape as engine_radial / engine_picker).
+- L132 `void* ReadPtr(void* base, size_t offset)`
+- L144 `void* DescriptorAddr(void* mi, int slot, int index)`: Address of the descriptor list entry at `index` within slot's personal-actions list.
+- L161 `bool ReadCExoStringLocal(void* base, size_t offset, char* outBuf, size_t bufSize)`: CExoString (c_string + length) read with NUL-termination guarantee.
+- L189 `void* ResolveMainInterface()`: Kept as this module's public name — nine callers, including input_pipeline.cpp.
+- L193 `int VariantCount(void* mi, int slot)`
+- L203 `bool ReadVariantLabel(void* mi, int slot, int index, char* outBuf, size_t bufSize)`
+- L212 `bool VariantRefusal(void* mi, int slot, int index, uint32_t* outStrRef)`
+- L263 `uint32_t ReadVariantActionId(void* mi, int slot, int index)`
+- L271 `void LogDispatchDiag(void* mi, int slot, int index)`
+- L313 `bool EntryIsMedicalK2(void* mi, int slot, int index)`
+- L322 `bool SendUseItemRequestK2(uint32_t actionId, void* targetClientCreature)`
+- L363 `void* GetColumnActionButton(void* mi, int slot)`
+- L376 `bool SelectVariant(void* mi, int slot, int index)`
+- L392 `bool FireSelectedVariant(void* mi, int slot)`
+- L408 `void LogState(void* mi, const char* tag)`
+- L425 `bool PrepareBareDispatch(uint32_t targetClientHandle)`

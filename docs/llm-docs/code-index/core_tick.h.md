@@ -1,8 +1,12 @@
-# core_tick.h (13 lines)
+# core_tick.h (43 lines)
 
-Mod-wide per-tick dispatcher interface. Owns the `OnUpdate` hook (`CSWGuiManager::Update` @0x0040ce76); one `Dispatch()` call fans out to every subsystem in a fixed, explicit order.
+Source: `patches/Accessibility/core_tick.h`
+
+Mod-wide per-tick dispatcher.
+
+Owns the OnUpdate hook (CSWGuiManager::Update @ 0x0040ce76). Fans out to each subsystem in a fixed order — explicit calls in Dispatch() so the file reads as the canonical "what fires per tick" list.
 
 ## Declarations (in source order)
 
-- L9 — `namespace acc::tick`
-- L11 — `void Dispatch()`
+- L13 `void Dispatch()`
+- L40 `DWORD NowMs()`: Timestamp of the tick currently being dispatched, in milliseconds, wrapping at 2^32 exactly like GetTickCount — so it drops into the existing `now - then >= window` idiom unchanged.

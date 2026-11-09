@@ -1,24 +1,24 @@
-# engine_picker.h (143 lines)
+# engine_picker.h (150 lines)
 
-Engine action picker — drives the game's context-sensitive action
-dispatcher for an arbitrary target without moving the cursor. Documents the
-4-step mechanism (SetMainInterfaceTarget, GetDefaultActions, click-gate
-write, HandleMouseClickInWorld) and the CSWGuiInterfaceAction layout at
-+0x4c8. Talks to engine_area, engine_player (input-disable), engine_radial
-(diagnostics + ReanchorRadial's populate chain).
+Source: `patches/Accessibility/engine_picker.h`
+
+Engine action picker — drive the game's context-sensitive action dispatcher for an arbitrary target.
+
+Engine-only: sets up engine state, calls engine entry points, returns observation. No menu state, no speech.
+
+Mechanism: when the cursor hovers an in-world object, the engine's DoPassiveSelection + GetDefaultActions pipeline computes the appropriate default action (open / talk / Security / Bash / Disable Trap / ...). A left-click dispatches via HandleMouseClickInWorld reading a descriptor at this+0x4c8.
+
+Our cycle picks targets without moving the cursor, so +0x4c8 stays tied to the last hover. We replicate the cursor setup explicitly: 1. CGuiInGame.main_interface.field1_0x64 = targetClient 2. GetDefaultActions(this) — populates +0x4c8 / +0x4cc 3. Engine click gate (last_target = last_clicked_on_target = hover_target = X) 4. HandleMouseClickInWorld(this) — engine runs the picker
+
+Engine surfaces: HandleMouseClickInWorld @0x00620350 GetDefaultActions       @0x00620620 SetMainInterfaceTarget  @0x0062b000 CSWGuiInterfaceAction layout: +0x00 CExoString label    ("Sicherheit", "Öffnen", ...) +0x08 ulong     action_id (0x404 noop, 0x3ea talk, 0x3f7 use, 0x3f5 bash, 0x3f2 door toggle, 0x3f4 disable mine, ...) +0x0c void*     action_function +0x1c ulong     target_id (client-side, with 0x80000000) +0x20 CResRef   icon
 
 ## Declarations (in source order)
 
-- L38 — `namespace acc::picker`
-- L52 — `inline bool IsWalkToActVerb(uint32_t action_id)`
-  note: talk(0x3ea)/door(0x3f2)/mine(0x3f4)/bash(0x3f5)/use-open(0x3f7) — composite walk-then-act verbs; Drive() leaves input ENABLED for these so the engine's native server-side approach isn't suppressed (fixes the distant-talk/distant-loot freeze). 0x404 noop deliberately excluded.
-- L66 — `struct ActionSnapshot`
-  note: radial_opened true means count==0 or forceRadial caused PopulateMenus to open the radial instead of dispatching.
-- L104 — `bool Drive(uint32_t targetServerHandle, ActionSnapshot* outSnapshot, bool forceRadial = false, bool populateOnly = false)`
-  note: forceRadial bypasses default-action dispatch (Shift+Enter). populateOnly runs only the read half (SetMainInterfaceTarget + GetDefaultActions + snapshot + radial fallback) and skips the click-gate + HandleMouseClickInWorld dispatch, letting the caller choose the dispatch primitive per verb.
-- L118 — `bool ReanchorRadial(uint32_t targetServerHandle)`
-  note: re-runs Drive's force-radial setup (SetMainInterfaceTarget + GetDefaultActions + PopulateMenus) with no diagnostics, so the radial input handler can call it every keypress to override cursor drift re-pointing the target-action menu.
-- L123 — `bool ReadCurrent(ActionSnapshot* outSnapshot)`
-  note: reads +0x4c8 without driving anything — observes the engine's own picker (cursor-hover / passive-selection) for diagnostics.
-- L141 — `bool InitiateDialog(uint32_t targetServerHandle)`
-  note: calls CSWCCreature::ActionInitiateDialog @0x0060f620 directly on the target NPC, bypassing HandleMouseClickInWorld's first-click-vs-confirm gate (which otherwise needs two Enter presses to talk); leaves player input enabled — the engine walks-then-talks server-side.
+- L58 `inline bool IsWalkToActVerb(uint32_t action_id)`: Walk-to-act world verbs that GetDefaultActions emits for targets the PC must approach before acting: 0x3ea talk, 0x3f7 use/open, 0x3f5 bash, 0x3f2 door toggle, 0x3f4 disable mine.
+- L72 `struct ActionSnapshot`: Snapshot of the first descriptor at +0x4c8 after GetDefaultActions.
+- L110 `bool Drive(uint32_t targetServerHandle, ActionSnapshot* outSnapshot, bool forceRadial = false, bool populateOnly = false)`: targetServerHandle = server-side id (engine::GetObjectHandle).
+- L124 `bool ReanchorRadial(uint32_t targetServerHandle)`: Re-assert the radial's target and rebuild the engine target-action menu for it, WITHOUT dispatching.
+- L129 `bool ReadCurrent(ActionSnapshot* outSnapshot)`: Read +0x4c8 without driving anything — observe the engine's own picker (cursor-hover or passive-selection-driven) for diagnostics or refined narration of what Enter would pick now.
+- L147 `bool InitiateDialog(uint32_t targetServerHandle)`: Start a conversation with the target DIRECTLY via CSWCCreature::Action- InitiateDialog @0x0060f620 — the function HandleMouseClickInWorld's confirm branch calls.
+
+Also 1 constants or variables at namespace scope.

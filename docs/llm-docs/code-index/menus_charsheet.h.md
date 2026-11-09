@@ -1,19 +1,15 @@
-# menus_charsheet.h (71 lines)
+# menus_charsheet.h (68 lines)
 
-Public surface for the character-sheet (Charakterblatt) opener + virtual
-stat-row chain entries. Drives both ends of the virtual chain: RebindChain
-(menus_chain.cpp) inserts text-only entries at the anchor labels'
-synthetic y-positions, and FromControl (menus_extract.cpp) routes through
-`ExtractStatRow` so the user hears a composed phrase ("Stärke 14, +2")
-rather than the bare label text.
+Source: `patches/Accessibility/menus_charsheet.h`
+
+character sheet stat rows.
+
+CSWGuiInGameCharacter has 17+ inline labels (class / level / HP / FP / XP / 6 attributes + their pre-formatted modifiers / alignment slider). None of them is IsChainNavigable, so this module surfaces them as virtual, text-only chain entries the user arrows through — each read as a composed localised phrase ("Stärke 14, +2").
+
+Opening the panel speaks its name only ("Charakterblatt"), from the generic sub-screen announce in menus_monitors.cpp. There is deliberately NO read-everything-on-open path: an earlier opener that composed all 12 rows into one line was removed once the rows became arrow-reachable, and the generic content-fingerprint monitor is silent on this kind for the same reason (it spoke the value labels as bare context-free numbers — "14", "120000"). The fingerprint is still TRACKED for this kind, because a content change is what rebinds the chain when Tab swaps the displayed party member and the Force-points row appears or disappears.
 
 ## Declarations (in source order)
 
-- L20 — `namespace acc::menus::charsheet`
-- L27 — `void MaybeAnnounce(void* panel)`
-  note: self-gates on PanelKind::InGameCharacter
-- L48 — `bool ExtractStatRow(void* panel, void* labelControl, char* outBuf, size_t bufSize)`
-  note: re-reads live label text every call — reflects character-cycling or level-up changes immediately
-- L55 — `bool IsStatRowAnchor(void* panel, void* labelControl)`
-- L65 — `void ForEachStatRowAnchor(void* panel, callback, userData)`
-  note: anchors emitted in spec-table order; RebindChain uses sortCy to force logical reading order
+- L45 `bool ExtractStatRow(void* panel, void* labelControl, char* outBuf, size_t bufSize)`: Per-row formatted speech for one Charakterblatt value label.
+- L52 `bool IsStatRowAnchor(void* panel, void* labelControl)`: True iff `labelControl` is a known stat-row anchor in `panel`.
+- L62 `void ForEachStatRowAnchor(void* panel, bool (*callback)(void* labelControl, int sortCy, void* userData), void* userData)`: Iterate all stat-row anchor pointers for `panel`.

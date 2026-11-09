@@ -1,17 +1,21 @@
-# guidance_beacon.h (48 lines)
+# guidance_beacon.h (49 lines)
 
-Header for the audio-beacon nav guide (Pillar 3 Mode B). Documents the three
-cues (BeaconActive heartbeat, BeaconWaypointReached, BeaconDestinationReached)
-and the single-area-only scope (a transition destination goes stale on
-module swap; user re-arms in the new area). Singleton — Ctrl+- toggles.
+Source: `patches/Accessibility/guidance_beacon.h`
+
+Audio beacon — drives Pillar 1 3D cues along a pathfinder waypoint sequence. Pillar 3 Mode B's "audio guide" half.
+
+Cues: BeaconActive             — heartbeat between waypoints, 3D-positioned at the NEXT waypoint so pan/attenuation point the user that way. BeaconWaypointReached    — on reaching next waypoint; advances cursor. BeaconDestinationReached — after the final waypoint; disarms.
+
+First cut is single-area only. If the destination is a transition, the engine swaps modules when the player walks through it; beacon state goes stale and the user re-arms in the new area.
+
+Singleton — StartBeacon supersedes any prior. Ctrl+- toggles.
 
 ## Declarations (in source order)
 
-- L23 — `namespace acc::guidance::beacon`
-- L27 — `constexpr float kReachToleranceMeters = 3.0f`
-- L30 — `constexpr unsigned int kHeartbeatMs = 800`
-- L34 — `void StartBeacon(const std::vector<Vector>& waypoints)` — empty vector cancels
-- L36 — `void CancelBeacon()`
-- L38 — `bool IsActive()`
-- L42 — `bool GetCurrentTarget(Vector& out)`
-- L46 — `void Tick()`
+- L34 `void StartBeacon(const std::vector<Vector>& waypoints)`: Empty `waypoints` cancels.
+- L36 `void CancelBeacon()`
+- L38 `bool IsActive()`
+- L42 `bool GetCurrentTarget(Vector& out)`: World position of the waypoint currently being steered toward (false when no beacon armed / path drained).
+- L46 `void Tick()`: Per-tick driver.
+
+Also 2 constants or variables at namespace scope.

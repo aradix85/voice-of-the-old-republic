@@ -1,24 +1,21 @@
-# engine_options.h (51 lines)
+# engine_options.h (64 lines)
 
-CClientOptions helpers — Mouse Look toggle and the Action Menu auto-pause
-setting. Documents the chain AppManager → +0x4 CClientExoApp → +0x4
-Internal → +0x4 CClientOptions* → +0x8 int bitfield (5 bits: auto_level,
-mouse_look, autosave, minigame_yaxis, combat_movement) plus a SEPARATE
-bit_flags_2 (+0x14) that carries the AutoPause options.
+Source: `patches/Accessibility/engine_options.h`
+
+CClientOptions helpers — currently the "Mouse Look" toggle.
+
+Chain: *kAddrAppManagerPtr → +0x4 CClientExoApp* → +0x4 Internal* → +0x4 CClientOptions* → +0x8 int bitfield, bit 1 (mask 0x2) = mouse_look.
+
+Bitfield layout at +0x8 (5 bits in one int — preserve siblings on write): bit 0 auto_level bit 1 mouse_look bit 2 autosave bit 3 minigame_yaxis bit 4 combat_movement
+
+User-facing swkotor.ini "Mouse Look=N" matches CClientOptions.mouse_look exclusively. CSWCameraOnAStick.mouseCameraRotateToggle @+0xb0 is a different struct (runtime camera state) — distinct from the user setting.
 
 ## Declarations (in source order)
 
-- L19 — `namespace acc::engine`
-- L22 — `bool GetMouseLook(bool& out)`
-- L31 — `bool GetActionMenuAutoPause(bool& out)`
-  note: bit_flags_2 (+0x14) bit 0xf (mask 0x8000) — a DIFFERENT bitfield from mouse_look's +0x8; mirrors CSWGuiMainInterface::OnTargetUpArrowPressed/OnActionUpArrowPressed's own gate; off by default.
-- L35 — `void* GetClientOptions()`
-  note: exposed for diagnostic probes; production code should use Get/Set/ToggleMouseLook.
-- L37 — `bool SetMouseLook(bool enabled)`
-- L40 — `bool ToggleMouseLook(bool& outNew)`
-  note: read-modify-write; false on either failure; outNew = new value on success.
-- L44 — `constexpr unsigned int kClientAppOptionsOffset      = 0x4`
-- L45 — `constexpr unsigned int kClientOptionsBitFieldOffset = 0x8`
-- L46 — `constexpr unsigned int kClientOptionsMouseLookMask  = 0x2`
-- L50 — `constexpr unsigned int kClientOptionsAutoPauseFlagsOffset    = 0x14`
-- L51 — `constexpr unsigned int kClientOptionsActionMenuAutoPauseMask = 0x8000`
+- L24 `bool GetMouseLook(bool& out)`: False on chain failure or SEH; out untouched.
+- L33 `bool GetActionMenuAutoPause(bool& out)`: "Action Menu" auto-pause option (AutoPause options screen).
+- L37 `void* GetClientOptions()`: Resolved CClientOptions* for diagnostic probes.
+- L39 `bool SetMouseLook(bool enabled)`
+- L42 `bool ToggleMouseLook(bool& outNew)`: Read-modify-write.
+
+Also 5 constants or variables at namespace scope.
