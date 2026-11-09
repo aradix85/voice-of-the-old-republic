@@ -224,6 +224,11 @@ def main() -> None:
             m = re.match(r"(struct|class|union|enum(?:\s+class)?)\s+(\w+)", t)
             if t.startswith("#define"):
                 st["kind"], st["name"] = "const", t.split()[1].split("(")[0]
+            elif re.match(r"enum\s*(:\s*\w+\s*)?\{", t):  # anonymous enum
+                st["kind"], st["name"] = "type", None
+                body = t[t.index("{") + 1:t.rindex("}")]
+                st["enumerators"] = [IDENT.match(e.strip()).group(0)
+                                     for e in body.split(",") if e.strip()]
             elif m and (t.endswith("};") or t.endswith(";")) and "(" not in t.split(m.group(2))[0]:
                 st["kind"], st["name"] = "type", m.group(2)
                 if m.group(1).startswith("enum") and "{" in t:
@@ -402,6 +407,9 @@ def main() -> None:
     for f in funcs:  # marks shared definitions whose default arguments move
         if funcs[f]["shared"]:
             signature(f)
+
+    def is_inline_shared(f: str) -> bool:
+        return funcs[f]["shared"] and C(funcs[f]["sig"]).lstrip().startswith("inline ")
     written = {}
     ns = cfg.get("namespace", "acc::" + module)
     for key, spec in cfg["files"].items():
@@ -424,7 +432,8 @@ def main() -> None:
             body += ["}  // namespace", ""]
         if exported[key]:
             body += exported[key] + [""]
-        for f in sorted([f for f in funcs if funcs[f]["file"] == key and f not in local_fns],
+        for f in sorted([f for f in funcs if funcs[f]["file"] == key and f not in local_fns
+                         and not is_inline_shared(f)],
                         key=lambda g: funcs[g]["start"]):
             body += fn_lines(f) + [""]
         body += [f"}}  // namespace {ns}", ""]
@@ -435,8 +444,12 @@ def main() -> None:
            "", "#pragma once", "", f'#include "{module}.h"', ""] + includes + \
           ["", f"namespace {ns} {{", ""] + hdr_body + ["", "// Helpers shared across the files, by the file that defines them."]
     for key in cfg["files"]:
-        ps = [signature(f) for f in sorted(funcs, key=lambda g: funcs[g]["start"])
-              if funcs[f]["file"] == key and funcs[f]["shared"]]
+        ps = []
+        for f in sorted(funcs, key=lambda g: funcs[g]["start"]):
+            if funcs[f]["file"] != key or not funcs[f]["shared"]:
+                continue
+            # An inline function other files call must be defined in the header.
+            ps += ([""] + fn_lines(f)) if is_inline_shared(f) else [signature(f)]
         if ps:
             fname = f"{module}.cpp" if key == "" else f"{module}_{key}.cpp"
             hdr += ["", f"// {fname}"] + ps
