@@ -121,6 +121,8 @@ push to the branch is built by GitHub Actions and published as the pre-release
   game.
 - The in-game updater is gone: F5 on the main menu no longer checks for or
   installs the maker's releases.
+- The code is being reorganised into smaller parts with less duplication,
+  and has unit tests; play is meant to stay the same.
 - Log only: the patch log can be read while the game runs; lock lines name a
   door's OnFailToOpen script.
 
@@ -327,7 +329,11 @@ push to the branch is built by GitHub Actions and published as the pre-release
   row and README remark went with it.
 - `tools/analysis/`: scripts that measure the patch source (function length
   and complexity with lizard, clones, include cycles, single-use functions,
-  same-named helpers across files). See `docs/refactoring/STATE.md`.
+  same-named helpers across files), plan a split, and generate the code index.
+- Refactoring (in progress): large files split into one job per file
+  (exit_memory so far), duplicated helpers merged (door lookup, distances,
+  case folding), unused functions removed. Unit tests (doctest, `tests/unit`,
+  `tools/tests/run_unit_tests.ps1`) run on every build.
 - Log only: the patch log is opened shared for reading, so it can be followed
   while the game runs.
 
