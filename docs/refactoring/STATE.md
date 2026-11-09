@@ -81,7 +81,11 @@ lean (2d11e0f); DriveSelectedPeg (700 lines, complexity 172) sits alone in
 minigame_turret_peg.cpp: a P5 candidate, but only with an in-game test of
 the turret game. menus_listbox split by panel into nine files (e7ea186),
 each panel's spec defined in its file and declared extern, then lean
-(1815b86).
+(1815b86). minigame_swoop_audio split into five files (879e9ff) and made
+lean (8837b88): dead probe and co-pilot code out; the retired steering
+ticks and the forwarding GetNavCueResrefForGame removed (8c1b675).
+TickAccelpadCues and TickObstacleCues stay whole: P5 candidates, only
+with an in-game test of the swoop race.
 
 Careful: never rewrite source files with PowerShell ReadAllText/WriteAllText
 (it decodes UTF-8 and writes '?' for the dashes and umlauts in comments);
@@ -101,11 +105,11 @@ prefix (menus_listbox_picker.cpp).
 - F12 engine yaw of a vector: `atan2(dy, dx) * 57.29...` written out in
   about 15 files with four spellings of the constant, often followed by
   EngineYawToCompass/CompassToSector/SectorString. One helper in
-  engine_compass (bearing of a vector, and its compass word).
-- Next file: minigame_swoop_audio.cpp, then prism.cpp, pad_input.cpp.
-- includes_split.py (tmp) should carry an include's continuation comment
-  lines with it; a `using namespace` in an internal header needs one header
-  of that namespace kept there.
+  engine_compass (bearing of a vector, and its compass word). kRadToDeg is
+  defined in many files: one constant with it.
+- Stale file names in comments (swoop_race.cpp, swoop_spatial_audio.h,
+  turret_game.cpp and others from before the minigame_ prefix): one pass.
+- Next file: prism.cpp, then pad_input.cpp, transitions.cpp.
 - F2b: share the save-variable code of exit_memory with discovery.cpp.
 - F3 menus_chargen_feats / menus_powers_levelup: about 15 same-named
   functions, 22 cloned blocks; one chart-grid module (check K2 plans).
