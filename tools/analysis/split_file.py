@@ -138,7 +138,12 @@ def main() -> None:
             continue
         if depth == 0 and n in fn_at:
             fn = fn_at[n]
-            name = fn.name.split("::")[-1]
+            # Name relative to the module namespace; "Census::Reset" is a member
+            # function defined at namespace scope.
+            name = fn.name
+            ns_prefix = cfg.get("namespace", "acc::" + module) + "::"
+            if name.startswith(ns_prefix):
+                name = name[len(ns_prefix):]
             start = n
             # take back the comment lines directly above from the open chunk
             while cur and is_comment(L(cur[-1])) and cur[-1] == start - 1:
@@ -147,7 +152,8 @@ def main() -> None:
             if name not in target:
                 sys.exit(f"geen bestemming voor functie {name} (regel {n})")
             funcs[name] = {"start": start, "sig": fn.start_line, "end": fn.end_line,
-                           "region": region(), "file": target[name]}
+                           "region": region(), "file": target[name],
+                           "method": "::" in name}
             elements.append(("func", name))
             n = fn.end_line + 1
             continue
@@ -309,7 +315,8 @@ def main() -> None:
             k += 1
         text = re.sub(r"\s+", " ", " ".join(parts)).strip()
         if re.search(r"\([^)]*=", text):
-            sys.exit(f"standaardargument in de definitie van {f}: met de hand regelen")
+            # Default arguments move to the prototype; the definition drops them.
+            v["strip_defaults"] = k
         return text + ";"
 
     # Emit.
@@ -347,7 +354,13 @@ def main() -> None:
 
     def fn_lines(f: str) -> list[str]:
         v = funcs[f]
-        return [L(k) for k in range(v["start"], v["end"] + 1)]
+        out_lines = []
+        for k in range(v["start"], v["end"] + 1):
+            line = L(k)
+            if "strip_defaults" in v and v["sig"] <= k <= v["strip_defaults"]:
+                line = re.sub(r"\s*=\s*[^,()=]+(?=[,)])", "", line)
+            out_lines.append(line)
+        return out_lines
 
     # Everything before the first namespace from the first #include on (the
     # includes with their comments, file-wide using declarations) goes to the
@@ -366,14 +379,24 @@ def main() -> None:
     def fmt_desc(desc: str) -> list[str]:
         return ["// " + x if x else "//" for x in desc.split("\n")]
 
+    for f in funcs:  # marks shared definitions whose default arguments move
+        if funcs[f]["shared"]:
+            signature(f)
     written = {}
     ns = cfg.get("namespace", "acc::" + module)
     for key, spec in cfg["files"].items():
         name = f"{module}.cpp" if key == "" else f"{module}_{key}.cpp"
         head = top_comment if spec.get("desc") is None else fmt_desc(spec["desc"])
         body = head + ["", f'#include "{module}_internal.h"', "", f"namespace {ns} {{", ""]
+        def class_in_header(f: str) -> bool:
+            o = owner.get(f.split("::")[0])
+            if o is not None and o.dest not in ("H", funcs[f]["file"]):
+                print(f"LET OP: {f} staat in een ander bestand dan zijn klasse")
+            return o is not None and o.dest == "H"
+
         local_fns = [f for f in funcs if funcs[f]["file"] == key and funcs[f]["region"] == "anon"
-                     and not funcs[f]["shared"]]
+                     and not funcs[f]["shared"]
+                     and not (funcs[f]["method"] and class_in_header(f))]
         if out[key] or local_fns:
             body += ["namespace {", ""] + out[key] + [""]
             for f in sorted(local_fns, key=lambda g: funcs[g]["start"]):

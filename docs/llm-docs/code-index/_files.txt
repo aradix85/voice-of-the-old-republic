@@ -256,6 +256,12 @@ patches/Accessibility/minigame_swoop_race.cpp
 patches/Accessibility/minigame_swoop_race.h
 patches/Accessibility/minigame_turret.cpp
 patches/Accessibility/minigame_turret.h
+patches/Accessibility/minigame_turret_arena.cpp
+patches/Accessibility/minigame_turret_census.cpp
+patches/Accessibility/minigame_turret_internal.h
+patches/Accessibility/minigame_turret_peg.cpp
+patches/Accessibility/minigame_turret_state.cpp
+patches/Accessibility/minigame_turret_targets.cpp
 patches/Accessibility/mod_settings_store.cpp
 patches/Accessibility/mod_settings_store.h
 patches/Accessibility/mod_version.h
