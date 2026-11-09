@@ -45,6 +45,7 @@
 #include "party_status.h"
 #include "prism.h"
 #include "same_name_suffix.h"
+#include "strfmt.h"
 
 #pragma comment(lib, "ws2_32.lib")
 #pragma comment(lib, "bcrypt.lib")
@@ -802,10 +803,9 @@ void HandleClient(SOCKET c) {
     std::string target = line.substr(sp1 + 1, sp2 - sp1 - 1);
 
     // Token check (header names are case-insensitive).
-    std::string lower = req.substr(0, req.find("\r\n\r\n"));
-    for (auto& ch : lower) ch = static_cast<char>(tolower(static_cast<unsigned char>(ch)));
-    std::string want = "x-kotor-bridge: " + g_token;
-    for (auto& ch : want) ch = static_cast<char>(tolower(static_cast<unsigned char>(ch)));
+    const std::string lower =
+        acc::strfmt::ToLowerAscii(req.substr(0, req.find("\r\n\r\n")));
+    const std::string want = acc::strfmt::ToLowerAscii("x-kotor-bridge: " + g_token);
     if (lower.find(want) == std::string::npos) {
         SendResponse(c, 403, "{\"error\":\"missing or wrong X-Kotor-Bridge token\"}");
         return;

@@ -23,14 +23,6 @@ constexpr float kProbeSteps[] = {0.0f, 1.5f, 3.0f, 5.0f, 8.0f};
 
 }  // namespace
 
-std::string ToLowerAscii(const char* s) {
-    std::string out = s ? s : "";
-    for (char& c : out) {
-        if (c >= 'A' && c <= 'Z') c = static_cast<char>(c - 'A' + 'a');
-    }
-    return out;
-}
-
 int RegionAt(void* area, const Vector& p) {
     std::string label;
     int sig = 0;

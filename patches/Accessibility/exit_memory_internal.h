@@ -19,6 +19,7 @@
 #include <vector>
 #include <windows.h>           // GetTickCount (loot reminder timing)
 #include "filter_objects.h"
+#include "strfmt.h"            // ToLowerAscii
 
 namespace acc::exit_memory {
 
@@ -28,6 +29,7 @@ using acc::room_topology::ClusterLink;
 using acc::room_topology::ClusterSummary;
 using acc::room_topology::ExitMark;
 using acc::room_topology::kClusterIdNone;
+using acc::strfmt::ToLowerAscii;
 
 extern void* g_area;
 extern std::string g_areaKey;  // lower-case module resref
@@ -133,7 +135,6 @@ struct Route {
 // Helpers shared across the modules, by the file that defines them.
 
 // exit_memory_regions.cpp
-std::string ToLowerAscii(const char* s);
 int RegionAt(void* area, const Vector& p);
 std::set<int> LinkedRegions(void* area, int self);
 int RegionBehind(void* area, int self, const std::set<int>& linked, const Vector& from, const Vector& exitPos);

@@ -11,6 +11,7 @@
 #include "engine_scriptvar.h" // Get/SetPlayerVarString
 #include "filter_objects.h"   // ObjectMatches / CycleCategory
 #include "log.h"
+#include "strfmt.h"           // ToLowerAscii / ToUpperAscii
 
 namespace acc::discovery {
 
@@ -47,21 +48,8 @@ constexpr size_t kReadBufSize = 16384;
 // independent discovery sets. Folding to lower case is the canonical form;
 // the upper fold exists only to locate pre-normalization sets during the
 // one-time migration in LoadFromSave.
-std::string ToLowerAscii(const std::string& s) {
-    std::string out = s;
-    for (char& c : out) {
-        if (c >= 'A' && c <= 'Z') c = static_cast<char>(c - 'A' + 'a');
-    }
-    return out;
-}
-
-std::string ToUpperAscii(const std::string& s) {
-    std::string out = s;
-    for (char& c : out) {
-        if (c >= 'a' && c <= 'z') c = static_cast<char>(c - 'a' + 'A');
-    }
-    return out;
-}
+using acc::strfmt::ToLowerAscii;
+using acc::strfmt::ToUpperAscii;
 
 // North-to-south total order — mirrors cycle_input::PositionLess so the
 // discovery ordinal matches the spoken "Nordpfad 3" numbering the player

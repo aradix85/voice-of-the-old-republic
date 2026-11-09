@@ -38,6 +38,7 @@
 #include "menus_pazaakdeck.h"
 #include "menus_internal.h"
 #include "menus_modsettings.h"
+#include "strfmt.h"   // AsciiLower
 #include "strings.h"
 #include "engine_rebase.h"
 #include "engine_offsets_select.h"
@@ -159,12 +160,7 @@ bool EmitText(char* outBuf, size_t bufSize, const char* text) {
     return outBuf[0] != '\0';
 }
 
-// ASCII-only tolower. <cctype>'s is locale-sensitive and takes an int; the
-// resrefs we classify are pure ASCII stems, and KOTOR 2's portraits.2da
-// mixes case within one column ("po_pmha01" beside "po_PMHA05").
-char AsciiLower(char c) {
-    return (c >= 'A' && c <= 'Z') ? static_cast<char>(c - 'A' + 'a') : c;
-}
+using acc::strfmt::AsciiLower;  // KOTOR 2's portraits.2da mixes case
 
 // Cycle-category cache. Cycle widgets render as `[◀] value [▶]`; on each
 // activation the engine rewrites the middle button's CExoString to the

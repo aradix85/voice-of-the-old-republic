@@ -115,10 +115,12 @@ clone and name scans):
 ### P1 — Remove what is not needed (YAGNI)
 - [x] In-game updater (update_checker*, F5 in the main menu, its strings in
   seven languages, keybind row, README remark, code-index entries).
-- [ ] The five single-occurrence functions: combat_query ReadEffectCount,
+- [x] The five single-occurrence functions removed (defined, never called;
+  not in hooks.toml or exports.def): combat_query ReadEffectCount,
   dialog_speech ShouldSuppressNpcLine, AreaObjectIterator::SnapshotSize,
-  menus_crafting ReadListBoxSelection, probe_camera_distance SafeCallZoom.
-  Verify each (hooks.toml, exports.def, function pointers) before removal.
+  menus_crafting ReadListBoxSelection, probe_camera_distance SafeCallZoom
+  (with its address constant and function type). The rebase-table entry
+  for 0x006401D0 stays: it is engine data, not code.
 
 ### P2 — Tests and quality gates
 - [x] Python (kotor-tools, c7a9c41): ruff, mypy and pytest configured in
@@ -156,7 +158,9 @@ clone and name scans):
   DistSq, DistanceSquared to check for 3-D) and `dx * dx + dy * dy` written
   out in about 43 places in 42 files. One pair DistXY/DistXYSq next to
   struct Vector (engine_offsets_types.h). Own commit across the code base.
-- [ ] F11 ToLowerAscii in discovery.cpp and exit_memory_regions.cpp: one.
+- [x] F11 ASCII case folding: strfmt.h AsciiLower/AsciiUpper/ToLowerAscii/
+  ToUpperAscii replace the copies in discovery.cpp, exit_memory_regions.cpp,
+  menus_extract.cpp and the two tolower loops in bridge.cpp.
 - [x] F2 exit_memory.cpp split by job (see "Done" below).
 - [ ] F2b Share the save-variable code of exit_memory_visits.cpp (Persist,
   LoadVisited) and exit_memory_area_doors.cpp with discovery.cpp Persist.
@@ -287,6 +291,7 @@ internal header too. Proposed modules, public API unchanged
   all on values that can really be null or none; no SEH): the gains are in
   the maker's files. ClosedDoorNear and DoorNear now give the nearest door
   within 1.5 m instead of the first one found.
-- Next: F10 and F11 (codebase-wide small helpers), P1 single-use functions,
-  then the C++ unit-test harness (doctest) for the pure parts (save-var
+- 23:00: P1 single-use functions removed; F11 case folding in strfmt.h.
+- Next: F10 (distance in the plane, codebase-wide), then the C++ unit-test
+  harness (doctest) for the pure parts (save-var
   formats, ShortestPaths, RoundWalk), then room_topology.cpp.
