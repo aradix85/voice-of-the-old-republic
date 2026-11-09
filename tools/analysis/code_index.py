@@ -244,10 +244,10 @@ def main() -> None:
                 d = description(read_lines(p[:-4] + ".h"))
                 sibling = f"(From {os.path.basename(p[:-4])}.h.) {d}" if d else ""
             with open(os.path.join(target, os.path.basename(p) + ".md"), "w",
-                      encoding="utf-8", newline="\n") as f:
+                      encoding="utf-8", newline="\r\n") as f:
                 f.write(page(p, rel, sibling))
             listed.append(rel)
-    with open(os.path.join(OUT, "_files.txt"), "w", encoding="utf-8", newline="\n") as f:
+    with open(os.path.join(OUT, "_files.txt"), "w", encoding="utf-8", newline="\r\n") as f:
         f.write("\n".join(listed) + "\n")
     print(f"{len(listed)} pages in {os.path.relpath(OUT, REPO)}")
 

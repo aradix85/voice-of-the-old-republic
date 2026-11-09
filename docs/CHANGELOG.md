@@ -331,7 +331,7 @@ push to the branch is built by GitHub Actions and published as the pre-release
   and complexity with lizard, clones, include cycles, single-use functions,
   same-named helpers across files), plan a split, and generate the code index.
 - Refactoring (in progress): large files split into one job per file
-  (exit_memory so far), duplicated helpers merged (door lookup, distances,
+  (exit_memory and room_topology so far, with `tools/analysis/split_file.py`), duplicated helpers merged (door lookup, distances,
   case folding), unused functions removed. Unit tests (doctest, `tests/unit`,
   `tools/tests/run_unit_tests.ps1`) run on every build.
 - Log only: the patch log is opened shared for reading, so it can be followed
