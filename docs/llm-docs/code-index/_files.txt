@@ -228,7 +228,16 @@ patches/Accessibility/menus_keymap.cpp
 patches/Accessibility/menus_keymap.h
 patches/Accessibility/menus_listbox.cpp
 patches/Accessibility/menus_listbox.h
+patches/Accessibility/menus_listbox_container.cpp
+patches/Accessibility/menus_listbox_dialog.cpp
+patches/Accessibility/menus_listbox_equip.cpp
+patches/Accessibility/menus_listbox_internal.h
+patches/Accessibility/menus_listbox_messages.cpp
+patches/Accessibility/menus_listbox_others.cpp
 patches/Accessibility/menus_listbox_picker.cpp
+patches/Accessibility/menus_listbox_saveload.cpp
+patches/Accessibility/menus_listbox_skillinfo.cpp
+patches/Accessibility/menus_listbox_workbench.cpp
 patches/Accessibility/menus_modsettings.cpp
 patches/Accessibility/menus_modsettings.h
 patches/Accessibility/menus_monitors.cpp

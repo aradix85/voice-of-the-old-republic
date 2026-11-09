@@ -264,7 +264,12 @@ def main() -> None:
     for ch in chunks:
         for nm in ch.names:
             owner[nm] = ch
+    exports = cfg.get("export", {})   # constant name -> file that defines it
     for ch in chunks:
+        ch.export = bool(ch.names & set(exports))
+        if ch.export:
+            ch.dest = exports[next(iter(ch.names & set(exports)))]
+            continue
         if ch.stmts and ch.stmts[0]["kind"] == "proto":
             ch.dest = funcs[ch.stmts[0]["name"]]["file"]
             continue
@@ -274,7 +279,7 @@ def main() -> None:
     while changed:
         changed = False
         for ch in chunks:
-            if ch.dest in ("H", "?") or (ch.stmts and ch.stmts[0]["kind"] == "proto"):
+            if ch.dest in ("H", "?") or ch.export or (ch.stmts and ch.stmts[0]["kind"] == "proto"):
                 continue
             users = {o.dest for o in chunks if o is not ch and o.uses & ch.names}
             users |= {funcs[f]["file"] for f in funcs if fbody[f] & ch.names}
@@ -284,7 +289,7 @@ def main() -> None:
             if ch.dest == "H":
                 for nm in ch.uses:
                     o = owner.get(nm)
-                    if o and o.dest not in ("H",) and not (o.stmts and o.stmts[0]["kind"] == "proto"):
+                    if o and o.dest not in ("H",) and not o.export and not (o.stmts and o.stmts[0]["kind"] == "proto"):
                         o.dest, changed = "H", True
     for ch in chunks:
         if ch.dest == "?":
@@ -295,9 +300,16 @@ def main() -> None:
     header_uses = set().union(*[ch.uses for ch in chunks if ch.dest == "H"]) if chunks else set()
     protos_text = {ch.stmts[0]["name"]: ch.stmts[0]["text"]
                    for ch in chunks if ch.stmts and ch.stmts[0]["kind"] == "proto"}
+    pub_path = os.path.join(folder, f"{module}.h")
+    public_text = open(pub_path, encoding="latin-1").read() if os.path.exists(pub_path) else ""
     for f, v in funcs.items():
         users = {funcs[g]["file"] for g in funcs if g != f and f in fbody[g]}
-        v["shared"] = v["region"] == "anon" and (bool(users - {v["file"]}) or f in header_uses)
+        users |= {ch.dest for ch in chunks if ch.dest not in ("H", "drop") and f in ch.uses}
+        # Outside the anonymous namespaces but not in the module's header: it
+        # still needs a prototype when another file calls it.
+        declared = v["region"] == "named" and (v["method"] or
+                                               re.search(rf"\b{f}\s*\(", public_text))
+        v["shared"] = not declared and (bool(users - {v["file"]}) or f in header_uses)
     for ch in chunks:  # a shared function's forward declaration becomes its prototype
         if ch.stmts and ch.stmts[0]["kind"] == "proto" and funcs[ch.stmts[0]["name"]]["shared"]:
             ch.dest = "drop"
@@ -346,8 +358,16 @@ def main() -> None:
             elif k not in var_lines:
                 sink.append(L(k))
 
+    exported = collections.defaultdict(list)   # file key -> exported definitions
     for el in elements:
-        if el[0] == "chunk" and el[1].dest == "H":
+        if el[0] == "chunk" and el[1].export:
+            # Defined in its file (named namespace), declared extern in the header.
+            emit_chunk(el[1], exported[el[1].dest])
+            for st in el[1].stmts:
+                m = re.match(r"(?:static\s+)?(?:constexpr|const)\s+(.+?)\s+(\w+)\s*=", st["text"])
+                if m:
+                    hdr_body.append(f"extern const {m.group(1)} {m.group(2)};")
+        elif el[0] == "chunk" and el[1].dest == "H":
             emit_chunk(el[1], hdr_body)
         elif el[0] == "chunk" and el[1].dest not in ("drop",):
             emit_chunk(el[1], out[el[1].dest])
@@ -402,6 +422,8 @@ def main() -> None:
             for f in sorted(local_fns, key=lambda g: funcs[g]["start"]):
                 body += fn_lines(f) + [""]
             body += ["}  // namespace", ""]
+        if exported[key]:
+            body += exported[key] + [""]
         for f in sorted([f for f in funcs if funcs[f]["file"] == key and f not in local_fns],
                         key=lambda g: funcs[g]["start"]):
             body += fn_lines(f) + [""]
