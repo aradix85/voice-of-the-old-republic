@@ -3,6 +3,14 @@
 
 #include "menus_listbox_internal.h"
 
+#include "engine_offsets.h"
+#include "engine_panels.h"
+#include "engine_reads.h"
+#include "log.h"
+#include "menus_extract.h"
+#include "prism.h"
+#include "engine_offsets_select.h"
+
 namespace acc::menus::listbox {
 
 namespace {
@@ -52,7 +60,7 @@ constexpr size_t kScriptSelectOptionDescOffset  = 0;
 // CSWGuiMessageBox.listbox_message at +0x67c. The engine populates the
 // rows from a local object cache when ShowExamineBox(handle, 0) is called
 // (vtable[27] on the listbox does the populate-from-object — verified
-// 2026-05-22 from the ShowExamineBox decomp). Up/Down speak each row;
+// from the ShowExamineBox decomp). Up/Down speak each row;
 // Enter / Esc let the engine's HandleInputEvent handle close natively
 // (Schliess. and Abbrechen buttons both call HideExamineBox).
 // ============================================================================

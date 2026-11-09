@@ -4,6 +4,17 @@
 
 #include "menus_listbox_internal.h"
 
+#include "engine_game.h"     // IsKotor2 — K2 one-step upgrade install
+#include "engine_offsets.h"
+#include "log.h"
+#include "menus.h"           // SpeakIfChanged (empty-state dedup)
+#include "menus_extract.h"
+#include "menus_chain.h"      // chain focus: the K2 save/load selection sync
+#include "prism.h"
+#include "engine_player.h"   // GetPlayerPosition — world-live check
+#include "transitions.h"     // NotifyExternalLoadStarting — load-latch arm
+#include "engine_offsets_select.h"
+
 namespace acc::menus::listbox {
 
 namespace {
@@ -20,7 +31,7 @@ void* s_pendingInfoPanel = nullptr;
 // Load and Cancel — hang off Enter and Esc. KOTOR 2's version of the screen
 // has five buttons (Cancel, Load, Delete, Switch Characters, Cloud Saves),
 // and walking them is how the player reaches the last three; enabling the
-// spec there swallowed the arrow keys and lost them (reported 2026-08-13,
+// spec there swallowed the arrow keys and lost them (reported,
 // immediately after the id fix made the spec match K2 for the first time).
 //
 // K2 keeps ordinary chain navigation over rows AND buttons — the arrangement
@@ -235,7 +246,7 @@ void AnnounceK2SaveLoadInfo() {
 // saves (grouped by the savenfo PCNAME field). BTN_FILTER's engine handler
 // advances a character index, destroys every row control, and rebuilds the
 // list for the next character — which leaves the chain the user walks full
-// of freed rows ("randomly one save per character", reported 2026-08-25).
+// of freed rows ("randomly one save per character", reported).
 // Nothing on the panel is per-row about WHO was switched to either; the
 // engine writes the active character's name into LBL_PCNAME.
 //

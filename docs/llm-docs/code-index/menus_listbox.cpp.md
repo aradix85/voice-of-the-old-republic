@@ -1,4 +1,4 @@
-# menus_listbox.cpp (298 lines)
+# menus_listbox.cpp (304 lines)
 
 Source: `patches/Accessibility/menus_listbox.cpp`
 
@@ -12,11 +12,11 @@ The two armed pickers (equipment, workbench upgrade) keep their SPECS here with 
 
 ## Declarations (in source order)
 
-- L66 `bool DispatchKeyDownEdge(const ListBoxPanelSpec& spec, void* panel, int param_1)`
-- L160 `void LogStandard(int n, void* thisPtr, int param_1, int param_2, bool consumed)`
-- L183 `void SpeakRowAndPosition(const ListBoxNavResult& r)`: The plain " , N von M" announce.
-- L196 `bool TryHandleInput(int n, void* thisPtr, void* activePanel, int param_1, int param_2, int& outRv)`
-- L245 `int FindListBoxRowIndex(void* listbox, void* control)`: Index of `control` among the listbox's row children, or -1.
-- L265 `bool SetListBoxSelectedControl(void* listbox, int index)`: The engine's own selection commit — real row highlight, native scroll, and the onSelectionChanged work the preview labels depend on.
-- L277 `void TickListboxMonitors()`
-- L286 `const char* GetTitleOverride(void* panel)`
+- L72 `bool DispatchKeyDownEdge(const ListBoxPanelSpec& spec, void* panel, int param_1)`
+- L166 `void LogStandard(int n, void* thisPtr, int param_1, int param_2, bool consumed)`
+- L189 `void SpeakRowAndPosition(const ListBoxNavResult& r)`: The plain " , N von M" announce.
+- L202 `bool TryHandleInput(int n, void* thisPtr, void* activePanel, int param_1, int param_2, int& outRv)`
+- L251 `int FindListBoxRowIndex(void* listbox, void* control)`: Index of `control` among the listbox's row children, or -1.
+- L271 `bool SetListBoxSelectedControl(void* listbox, int index)`: The engine's own selection commit — real row highlight, native scroll, and the onSelectionChanged work the preview labels depend on.
+- L283 `void TickListboxMonitors()`
+- L292 `const char* GetTitleOverride(void* panel)`

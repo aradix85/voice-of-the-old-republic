@@ -10,25 +10,9 @@
 #include <cstdio>
 #include <cstring>
 
-#include "engine_game.h"     // IsKotor2 — K2 one-step upgrade install
 #include "engine_input.h"
-#include "engine_manager.h"
-#include "engine_offsets.h"
-#include "engine_panels.h"
-#include "engine_levelup.h"  // IsOpeningLevelUp — SkillInfoBox title override
-#include "engine_reads.h"
-#include "hotkeys.h"
-#include "log.h"
-#include "menus.h"           // SpeakIfChanged (empty-state dedup)
-#include "menus_extract.h"
-#include "menus_chain.h"      // chain focus: the K2 save/load selection sync
 #include "menus_internal.h"
-#include "menus_pending.h"
 #include "strings.h"
-#include "prism.h"
-#include "engine_player.h"   // GetPlayerPosition — world-live check
-#include "transitions.h"     // NotifyExternalLoadStarting — load-latch arm
-#include "engine_offsets_select.h"
 
 using namespace acc::engine;  // IdentifyPanel, PanelKind, kInput*, etc.
 
@@ -175,7 +159,7 @@ struct ListBoxPanelSpec {
     // node's stale row objects (the panel and listbox live for the whole
     // conversation): the selection moved and clicked but no reply text
     // existed anywhere to speak, which read as "dialogue options are
-    // broken" (userlogs/zack078dialoguesnotspeaking, 2026-08-24).
+    // broken" (a user report).
     // nullptr = always live (every non-dialog spec).
     bool (*navLive)(void* panel);
     // Optional Left/Right handler, dir -1 / +1, for panels that stack several

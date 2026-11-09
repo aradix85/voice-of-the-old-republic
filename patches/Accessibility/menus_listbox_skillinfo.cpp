@@ -3,6 +3,16 @@
 
 #include "menus_listbox_internal.h"
 
+#include "engine_manager.h"
+#include "engine_offsets.h"
+#include "engine_panels.h"
+#include "engine_levelup.h"  // IsOpeningLevelUp — SkillInfoBox title override
+#include "engine_reads.h"
+#include "log.h"
+#include "menus_extract.h"
+#include "prism.h"
+#include "engine_offsets_select.h"
+
 namespace acc::menus::listbox {
 
 namespace {

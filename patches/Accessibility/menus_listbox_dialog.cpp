@@ -2,6 +2,10 @@
 
 #include "menus_listbox_internal.h"
 
+#include "engine_offsets.h"
+#include "engine_panels.h"
+#include "engine_offsets_select.h"
+
 namespace acc::menus::listbox {
 
 namespace {
@@ -47,7 +51,7 @@ void* DialogFindRepliesLb(void* p) {
 // reply row, not selectability), which was the "shown disabled but actually
 // available" bug. Both are gone now that the poll is the only speaker.
 //
-// IMPORTANT scope note (2026-08-25): in CINEMATIC dialogs these specs only
+// IMPORTANT scope note: in CINEMATIC dialogs these specs only
 // ever see nav keys while the NPC line is playing (the dialog panel is
 // foreground then). Once the replies are live, the entry-text overlay panel
 // is foreground, the chain declines it, and the keys fall through to the

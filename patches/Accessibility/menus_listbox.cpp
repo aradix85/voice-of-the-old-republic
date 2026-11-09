@@ -16,6 +16,12 @@
 
 #include "menus_listbox_internal.h"
 
+#include "engine_offsets.h"
+#include "log.h"
+#include "menus.h"           // SpeakIfChanged (empty-state dedup)
+#include "menus_extract.h"
+#include "prism.h"
+
 namespace acc::menus::listbox {
 
 namespace {
