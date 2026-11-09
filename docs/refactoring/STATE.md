@@ -39,6 +39,20 @@ this fork: Anouk decides, and may put any of them back on the list.
 - Target per file: one job, a header comment that says what that job is,
   roughly 600 lines or less (data tables such as strings_*.cpp excepted).
   "Per function" means per job, not one file per C++ function.
+- Lean as well as split (Anouk, 22:12): duplicate code, needless defensive
+  code and window dressing go. Each module gets two commits: first the move
+  only (same lines, other place; checked with a line comparison), then a
+  lean commit with the same behaviour. Lean means: one SEH layer, in the
+  code that reads engine memory, and none above it; no guard that re-checks
+  what its caller already guarantees; no comment that only restates the
+  code, and no history in comments (dates, "used to"): git keeps that.
+  Comments that carry engine knowledge (why an offset, what the engine does)
+  stay. Rule 4 below still holds.
+- Inside a module: what only one file uses stays local to that file
+  (anonymous namespace); only what files share goes into the internal
+  header, and shared mutable state is defined in one `<module>_state.cpp`.
+- The changelog only records user-facing changes; a pure move or lean
+  commit gets no entry.
 
 ## Rules of engagement
 
@@ -81,6 +95,11 @@ clone and name scans):
   cycles between headers. 5 functions whose name occurs only once.
 - Our own additions since v0.9.1: 54 files, +6,047 lines, mostly
   exit_memory.cpp (+2,212) and bridge.cpp (+1,015).
+- Without strings_*.cpp (tmp script defensief.py, 22:15): 65,707 code
+  lines, 40,617 comment lines, 10,086 blank. 581 __try blocks, 3,225
+  one-line guard returns (`if (...) return/continue/break;`), 437 comment
+  lines with a date. Estimate for the lean commits: 10-20% fewer code lines
+  and clearly fewer comment lines; measured per module before and after.
 
 ## Work plan
 
@@ -117,16 +136,22 @@ clone and name scans):
   save-variable formats (ACC_VISIT, ACC_EXIT), ShortestPaths, RoundWalk,
   compass/clock words. Needs that logic moved out of SEH-heavy files.
 - [ ] Static analysis pass (MSVC /analyze or cppcheck) and triage.
+- [ ] Code index: docs/llm-docs/code-index is hand-written and stale (about
+  90 source files without an entry, 8 entries for files that no longer
+  exist, door_announce.h.md misses ArmWalkThrough). Replace it with a script
+  that generates it from the sources (header comment, declarations with
+  line numbers), so it cannot drift; until then new files get no entry.
+- [ ] Includes: each split module includes everything the original file
+  did, through its internal header. Prune per file (include what you use)
+  in the lean commit.
 
 ### P3 — Duplication (verify each before changing)
 - [ ] F1 Door lookup near a point: exit_memory DoorNear, ClosedDoorNear,
   TransitionDoorNear, LockedDoorPositions; interact_dispatch landmark-to-door;
   room_topology AttachLandmarksToDoors. One engine_area helper.
-- [ ] F2 exit_memory.cpp (about 2,100 lines, seven jobs): visited regions
-  and save variables, region graph and routes, doorway slivers, region
-  annotations and door contents, overview, loot, explore walk. Split by job
-  after measuring the cross-call matrix; share the save-variable code with
-  discovery.cpp Persist.
+- [x] F2 exit_memory.cpp split by job (see "Done" below).
+- [ ] F2b Share the save-variable code of exit_memory_visits.cpp (Persist,
+  LoadVisited) and exit_memory_area_doors.cpp with discovery.cpp Persist.
 - [ ] F3 menus_chargen_feats.cpp and menus_powers_levelup.cpp: about 15
   functions with the same name and 22 cloned blocks (chart navigation,
   binding, description, cell status). One shared chart-grid module. Check
@@ -176,6 +201,27 @@ engine_area.cpp, unified_action_menu.cpp, combat_log.cpp, and on down the
 size list of analyse.py. The duplication families (F1-F9) are taken along
 when their files are split.
 
+### Done: exit_memory.cpp split (move commit)
+
+Ten files instead of one, public API unchanged (exit_memory.h). Line
+comparison with the original: only includes, namespace lines, prototypes,
+extern declarations, file header comments and section markers differ.
+- exit_memory_internal.h (198): shared types (DoorName, Arrival,
+  ExploreChain, Graph, Route), shared constants, extern state, and the
+  prototypes of the helpers files share, grouped by defining file.
+- exit_memory_state.cpp (21): the shared state.
+- exit_memory_regions.cpp (204): region at a point, behind an exit, linked
+  regions, map notes per region, door numbering, destination text.
+- exit_memory_doors.cpp (93): door lookups near a point (F1 still to do:
+  fold these together with interact_dispatch and room_topology into one
+  engine_area helper).
+- exit_memory_visits.cpp (210), exit_memory_graph.cpp (411),
+  exit_memory_annotate.cpp (346), exit_memory_area_doors.cpp (192),
+  exit_memory_overview.cpp (462), exit_memory_explore.cpp (231).
+21 helpers became file-local; 25 are shared. Migration script (not kept):
+%TEMP%\claude_split\split2.py; tools/analysis/skeleton.py prints a file's
+non-function lines and function ranges, which the item list was made from.
+
 ### Design: exit_memory.cpp (2,212 lines, 65 functions, 54 file-scope data)
 
 split_plan (--kern 6) puts BuildGraph, Dist2D, IndexOf, RegionAt and the
@@ -224,7 +270,9 @@ internal header too. Proposed modules, public API unchanged
 - 2026-11-09 22:00: Anouk chose splitting by job everywhere and reopened the
   maker's rejections; tools/analysis/split_plan.py added; exit_memory design
   written above.
-- Next: execute the exit_memory split per the design (F1 door lookup with
-  it), then the C++ unit-test harness (doctest) for the pure parts that the
-  split frees (save-var formats, ShortestPaths, RoundWalk), then
-  room_topology.cpp.
+- 2026-11-09 22:20: exit_memory.cpp split into ten files (move only), kdev
+  build green with 0 warnings. Anouk asked for lean commits as well
+  (duplication, defensive code, window dressing); decision recorded above.
+- Next: the lean commit for exit_memory (F1 door lookup, includes, guards,
+  comments), then the C++ unit-test harness (doctest) for the pure parts
+  (save-var formats, ShortestPaths, RoundWalk), then room_topology.cpp.

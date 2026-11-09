@@ -2445,7 +2445,7 @@ enum class Id : int {
     ChargenBtnAccept,
     ChargenBtnBack,
 
-    // ---- Exit memory (exit_memory.cpp). Appended to an exit entry of the
+    // ---- Exit memory (exit_memory_*.cpp). Appended to an exit entry of the
     //      player's region label with a comma; exits are then joined with
     //      "; " so these commas do not read as extra exits.
     ExitAnnoNew,              // "new"      — region behind the exit not visited yet
