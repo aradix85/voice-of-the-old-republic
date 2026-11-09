@@ -8,6 +8,7 @@
 #include "engine_compass.h"
 #include "engine_player.h"     // position, yaw, party, player creature
 #include "log.h"
+#include "shortest_paths.h"
 #include "strings.h"
 #include "view_mode.h"         // routes are from the player, not the cursor
 
@@ -16,9 +17,10 @@ namespace acc::exit_memory {
 namespace {
 
 // Walking distances are spoken rounded to this many metres.
-constexpr float kWalkRoundM  = 5.0f;
+constexpr int kWalkRoundM = 5;
 
-using Adjacency = std::vector<std::vector<std::pair<int, float>>>;
+using acc::paths::Adjacency;
+using acc::paths::ShortestPaths;
 
 // TransitionSliverOwner state: the last answer, reused for a short while
 // (the cluster tick asks every frame).
@@ -34,42 +36,6 @@ int         g_sliverLogged = kClusterIdNone;
 constexpr DWORD kSliverCacheMs    = 2000;
 // A lift cab or a doorway; anything wider is a real place.
 constexpr float kSliverMaxExtentM = 10.0f;
-
-void ShortestPaths(const Adjacency& adj, int start, std::vector<float>& dist,
-                   std::vector<int>& firstHop) {
-    const int n = static_cast<int>(adj.size());
-    dist.assign(n, kFar);
-    firstHop.assign(n, -1);
-    if (start < 0 || start >= n) return;
-    std::vector<bool> done(n, false);
-    dist[start] = 0.0f;
-    for (;;) {
-        int u = -1;
-        float best = kFar;
-        for (int i = 0; i < n; ++i) {
-            if (!done[i] && dist[i] < best) {
-                best = dist[i];
-                u = i;
-            }
-        }
-        if (u < 0) break;
-        done[u] = true;
-        for (const auto& edge : adj[u]) {
-            const int v = edge.first;
-            const float nd = dist[u] + edge.second;
-            if (nd < dist[v]) {
-                dist[v] = nd;
-                firstHop[v] = (u == start) ? v : firstHop[u];
-            }
-        }
-    }
-}
-
-int RoundWalk(float m) {
-    const int step = static_cast<int>(kWalkRoundM);
-    const int r = static_cast<int>(m / kWalkRoundM + 0.5f) * step;
-    return r < step ? step : r;
-}
 
 }  // namespace
 
@@ -159,7 +125,7 @@ Route RouteToIndex(const Graph& g, int t, const Vector& targetPos) {
                   (g.distOpen[t] - g.distOpen[hop]) +
                   DistXY(g.nodes[t].centre, targetPos);
         m = (std::max)(m, DistXY(g.player, targetPos));
-        r.walkM = RoundWalk(m);
+        r.walkM = acc::paths::RoundWalk(m, kWalkRoundM);
         return r;
     }
     r.kind = g.distAll[t] < kFar ? Route::Locked : Route::Unreachable;

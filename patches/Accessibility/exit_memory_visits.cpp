@@ -8,6 +8,7 @@
 #include "engine_player.h"     // position, yaw, party, player creature
 #include "engine_scriptvar.h"  // visited regions in the save
 #include "log.h"
+#include "save_points.h"
 
 namespace acc::exit_memory {
 
@@ -38,19 +39,15 @@ DWORD g_seenAt = 0;
 
 void Persist() {
     if (!g_saveLoaded || g_varName.empty() || !g_area) return;
-    std::string val;
-    size_t n = 0;
+    std::vector<acc::save_points::Spot> spots;
     for (int id : g_visited) {
         ClusterInfo info;
         if (!acc::room_topology::GetClusterInfo(g_area, id, info)) continue;
-        char buf[32];
-        std::snprintf(buf, sizeof(buf), "%ld,%ld", std::lround(info.centre.x),
-                      std::lround(info.centre.y));
-        if (!val.empty()) val.push_back(';');
-        val += buf;
-        if (++n >= kMaxSavedRegions) break;
+        spots.push_back(acc::save_points::At(info.centre));
+        if (spots.size() >= kMaxSavedRegions) break;
     }
-    acc::engine::SetPlayerVarString(g_varName.c_str(), val.c_str());
+    acc::engine::SetPlayerVarString(g_varName.c_str(),
+                                    acc::save_points::Format(spots).c_str());
 }
 
 void RecordVisit(int id) {
@@ -65,30 +62,19 @@ void LoadVisited() {
     std::set<int> saved;
     int entries = 0;
     if (acc::engine::GetPlayerVarString(g_varName.c_str(), buf, sizeof(buf))) {
-        const char* p = buf;
-        while (*p) {
-            char* end = nullptr;
-            const long x = std::strtol(p, &end, 10);
-            if (end == p || *end != ',') break;
-            p = end + 1;
-            const long y = std::strtol(p, &end, 10);
-            if (end == p) break;
-            p = end;
+        for (const acc::save_points::Spot& s : acc::save_points::Parse(buf)) {
             ++entries;
-            int best = kClusterIdNone;
+            const Vector at{static_cast<float>(s.x), static_cast<float>(s.y), 0.0f};
+            int   best   = kClusterIdNone;
             float bestSq = kSavedMatchM * kSavedMatchM;
             for (const ClusterSummary& c : clusters) {
-                const float dx = c.centre.x - static_cast<float>(x);
-                const float dy = c.centre.y - static_cast<float>(y);
-                const float d2 = dx * dx + dy * dy;
+                const float d2 = DistXYSq(c.centre, at);
                 if (d2 <= bestSq) {
                     bestSq = d2;
-                    best = c.id;
+                    best   = c.id;
                 }
             }
             if (best >= 0) saved.insert(best);
-            if (*p == ';') ++p;
-            else if (*p) break;
         }
     }
     bool newSinceEntry = false;

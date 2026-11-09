@@ -19,6 +19,7 @@
 #include <vector>
 #include <windows.h>           // GetTickCount (loot reminder timing)
 #include "filter_objects.h"
+#include "shortest_paths.h"      // kUnreachable
 #include "strfmt.h"            // ToLowerAscii
 
 namespace acc::exit_memory {
@@ -88,7 +89,8 @@ struct ExploreChain {
 };
 extern ExploreChain g_chain;
 
-constexpr float kFar = 1e30f;
+// "No way" in the region graph, and the start value of a nearest-search.
+constexpr float kFar = acc::paths::kUnreachable;
 
 // Door exits carry the door's own position (room_topology::ExitPoint). Give
 // such an exit the same number the Q/E and , / . cycles use ("Door 2"), so

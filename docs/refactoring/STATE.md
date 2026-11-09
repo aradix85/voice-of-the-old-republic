@@ -133,10 +133,15 @@ clone and name scans):
 - [ ] Bridge test script: with the game running, every path answers, the
   JSON has the expected fields, /state, /objects, /rooms and /overview agree
   with each other and with kotor_kaart.py.
-- [ ] C++ unit tests: doctest (single header in third_party), a small test
-  executable built by a script, for engine-free logic. First candidates: the
-  save-variable formats (ACC_VISIT, ACC_EXIT), ShortestPaths, RoundWalk,
-  compass/clock words. Needs that logic moved out of SEH-heavy files.
+- [x] C++ unit tests: doctest 2.4.11 in third_party/doctest, tests in
+  tests/unit, built and run by `pwsh -File tools/tests/run_unit_tests.ps1`
+  (MSVC x86, /std:c++17, /W3 /WX; also a step in the GitHub build). 19
+  tests: save_points (the ACC_VISIT/ACC_EXIT format, moved out of
+  exit_memory into an engine-free file), shortest_paths (Dijkstra and
+  RoundWalk, likewise), strfmt, the distance helpers, engine_compass. A
+  file under test must build without the game; the script lists them.
+  Grow this with every split: pure logic found in a file goes to an
+  engine-free file with tests.
 - [ ] Static analysis pass (MSVC /analyze or cppcheck) and triage.
 - [ ] Code index: docs/llm-docs/code-index is hand-written and stale (about
   90 source files without an entry, 8 entries for files that no longer
@@ -203,8 +208,9 @@ clone and name scans):
    each, and what goes into the internal header.
 3. Move code only (cut and paste, no logic change), keep the namespace,
    fix includes. One source file per commit.
-4. `kdev build` with 0 warnings, the tests, and analyse.py before and
-   after (code lines equal apart from headers and includes).
+4. `kdev build` with 0 warnings, the unit tests
+   (tools/tests/run_unit_tests.ps1), and analyse.py before and after (code
+   lines equal apart from headers and includes).
 5. Update the code index (docs/llm-docs/code-index/<file>.md) for every
    new or changed file, and ARCHITECTURE.md where a module's place changes.
 
@@ -295,5 +301,7 @@ internal header too. Proposed modules, public API unchanged
   within 1.5 m instead of the first one found.
 - eb43055: P1 single-use functions removed; 504c33e: F11 case folding in
   strfmt.h. Then F10 distances.
-- Next: the C++ unit-test harness (doctest) for the pure parts (save-var
-  formats, ShortestPaths, RoundWalk), then room_topology.cpp.
+- 631eb0b: F10 distances. Then the unit tests (save_points.cpp and
+  shortest_paths.cpp split off exit_memory; save_points::Put now drops the
+  oldest door spots beyond 60 instead of the newest).
+- Next: the generated code index, then room_topology.cpp.

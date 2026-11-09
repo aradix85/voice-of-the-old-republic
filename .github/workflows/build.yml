@@ -55,6 +55,10 @@ jobs:
           & tools/kdev/bin/Release/net10.0/win-x64/kdev.exe build
           if ($LASTEXITCODE -ne 0) { throw "kdev build failed ($LASTEXITCODE)" }
 
+      - name: Unit tests
+        shell: pwsh
+        run: pwsh -File tools/tests/run_unit_tests.ps1
+
       - name: Extract accessibility.dll
         shell: pwsh
         run: |

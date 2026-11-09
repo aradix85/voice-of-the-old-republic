@@ -10,6 +10,7 @@
 #include "engine_scriptvar.h"  // visited regions in the save
 #include "log.h"
 #include "same_name_suffix.h"
+#include "save_points.h"
 
 namespace acc::exit_memory {
 
@@ -20,43 +21,27 @@ constexpr float kExitMatchM      = 6.0f;
 // A map note this close to a door into another area names that way out
 // ("To Lower City"), not something inside the area.
 constexpr float kExitNoteM       = 10.0f;
-constexpr DWORD kSummaryEveryMs  = 3000;
-constexpr int   kSummaryMaxNames = 4;
-constexpr int   kMaxExitEntries  = 60;
+constexpr DWORD  kSummaryEveryMs  = 3000;
+constexpr int    kSummaryMaxNames = 4;
+constexpr size_t kMaxExitEntries  = 60;
+// A remembered spot this close (whole metres) is the same door: replaced.
+constexpr long   kSameSpotM       = 2;
 
-struct ExitEntry {
-    long        x = 0;
-    long        y = 0;
-    std::string to;
-};
+using acc::save_points::Spot;
 
 std::string ExitVarName(const std::string& key) { return "ACC_EXIT_" + key; }
 
 std::string SumVarName(const std::string& key)  { return "ACC_SUM_" + key; }
 
-std::vector<ExitEntry> ReadExits(const std::string& areaKey) {
-    std::vector<ExitEntry> out;
-    if (areaKey.empty()) return out;
+// The door spots of `areaKey` with the module each leads to.
+std::vector<Spot> ReadExits(const std::string& areaKey) {
+    if (areaKey.empty()) return {};
     static char buf[4096];
     if (!acc::engine::GetPlayerVarString(ExitVarName(areaKey).c_str(), buf,
                                          sizeof(buf))) {
-        return out;
+        return {};
     }
-    const char* p = buf;
-    while (*p) {
-        char* end = nullptr;
-        ExitEntry e;
-        e.x = std::strtol(p, &end, 10);
-        if (end == p || *end != ',') break;
-        p = end + 1;
-        e.y = std::strtol(p, &end, 10);
-        if (end == p || *end != '=') break;
-        p = end + 1;
-        while (*p && *p != ';') e.to.push_back(*p++);
-        if (!e.to.empty()) out.push_back(e);
-        if (*p == ';') ++p;
-    }
-    return out;
+    return acc::save_points::Parse(buf);
 }
 
 // Remember that the door at `pos` in `areaKey` leads to module `toKey`,
@@ -64,40 +49,18 @@ std::vector<ExitEntry> ReadExits(const std::string& areaKey) {
 void RecordExit(const std::string& areaKey, const Vector& pos,
                 const std::string& toKey) {
     if (areaKey.empty() || toKey.empty()) return;
-    std::vector<ExitEntry> all = ReadExits(areaKey);
-    const long px = std::lround(pos.x);
-    const long py = std::lround(pos.y);
-    std::string val;
-    int n = 0;
-    for (const ExitEntry& e : all) {
-        const long dx = e.x - px;
-        const long dy = e.y - py;
-        if (dx * dx + dy * dy <= 4) continue;  // same spot: replaced below
-        if (++n >= kMaxExitEntries) break;
-        char buf[96];
-        std::snprintf(buf, sizeof(buf), "%ld,%ld=%s;", e.x, e.y, e.to.c_str());
-        val += buf;
-    }
-    char buf[96];
-    std::snprintf(buf, sizeof(buf), "%ld,%ld=%s", px, py, toKey.c_str());
-    val += buf;
-    acc::engine::SetPlayerVarString(ExitVarName(areaKey).c_str(), val.c_str());
+    std::vector<Spot> all = ReadExits(areaKey);
+    acc::save_points::Put(all, acc::save_points::At(pos, toKey), kSameSpotM,
+                          kMaxExitEntries);
+    acc::engine::SetPlayerVarString(ExitVarName(areaKey).c_str(),
+                                    acc::save_points::Format(all).c_str());
 }
 
 // The module remembered for the door spot nearest `doorPos`, empty if none.
 std::string ExitTargetAt(const std::string& areaKey, const Vector& doorPos) {
-    std::string best;
-    float bestSq = kExitMatchM * kExitMatchM;
-    for (const ExitEntry& e : ReadExits(areaKey)) {
-        const float dx = static_cast<float>(e.x) - doorPos.x;
-        const float dy = static_cast<float>(e.y) - doorPos.y;
-        const float d2 = dx * dx + dy * dy;
-        if (d2 <= bestSq) {
-            bestSq = d2;
-            best = e.to;
-        }
-    }
-    return best;
+    const std::vector<Spot> all = ReadExits(areaKey);
+    const Spot* s = acc::save_points::Nearest(all, doorPos, kExitMatchM);
+    return s ? s->value : std::string();
 }
 
 // The map notes of the current area that are not a way out, as the cycles
