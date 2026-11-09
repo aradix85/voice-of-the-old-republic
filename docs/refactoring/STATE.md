@@ -30,6 +30,11 @@ rejections are advice only, Anouk decides.
   mypy and pytest, and a bridge test script against the running game.
 - One branch, `bridge`; Anouk plays again only when the refactoring is done,
   so the in-game checks come at the end.
+- Speech (Anouk, 2026-11-10): NVDA only, with braille, through the NVDA
+  Controller Client; Prism goes, and with it the SAPI voices (urgent and
+  compass). NVDA not running = silent. Out as well: positional speech and
+  the exploration sounds (doors, walls, objects, beacons, collisions) where
+  text already covers them. The minigame audio (swoop race, turret) stays.
 
 ## Rules
 
@@ -97,6 +102,28 @@ prefix (menus_listbox_picker.cpp).
 
 ## Open
 
+- NVDA-only speech (decision above), one commit each, in this order:
+  A. Positional speech out: positional_speech, eloquence_render,
+     nvda_config, audio_wav, probe_memory_sound (F11 probes),
+     LoopSource::StartFromMemory, prism Render*/NoteSpokenElsewhere/
+     ActiveScreenReader/OffsetRatePercent; callers combat_log (speak
+     centred), core_tick, pad_input, transitions (SpeakExitList,
+     LastExitLeadMs), menus_modsettings rows (persistence is keyed by name,
+     so enum rows can go), strings_*, docs (positional-speech.md,
+     in-memory-sound-resource.md, user docs).
+  B. SAPI voices out: SpeakUrgent/SpeakOnUrgentChannel/SpeakCompass/
+     SpeakCompassThen become Speak (interrupt) or one joined line;
+     menus_modsettings voice and compass rows, SubtitleSapi,
+     AllViaScreenReader; prism_urgent/compass go.
+  C. Prism replaced by the NVDA Controller Client (x86 DLL, speak, cancel,
+     braille), module renamed (prism:: to speech::, 91 includes);
+     installer ships nvdaControllerClient32.dll instead of prism.dll and
+     removes the old files on upgrade; kdev install too.
+  D. Exploration sounds out where text covers them (audio_cues NavCue door/
+     wall/item/beacon/collision, audio_cue_player, guidance_beacon, the
+     WallSounds toggle, view_mode/cycle_input/map_ui_cursor/passive_narrate
+     cues): check each for a text equivalent first. Minigame audio
+     (audio_bus, audio_loop, swoop, turret) stays.
 - room_topology: pure logic to engine-free files with tests (octant
   helpers; the bits E=0 counter-clockwise could become compass order N=0
   clockwise like engine_compass, which would also simplify
