@@ -511,22 +511,6 @@ bool ResolveBarkSpeaker(void* barkPanel, SpeakerInfo& out) {
     return FillSpeakerFromServerObject(speaker, out);
 }
 
-// ---- Suppression decision ------------------------------------------------
-//
-// True iff the engine's currently playing the line in player-language VO
-// AND the user has asked us not to read those subtitles. We resolve the
-// speaker, classify by appearance, and check the toggle. Conservative: any
-// resolution failure / unknown appearance returns false (speak the line).
-bool ShouldSuppressNpcLine() {
-    if (acc::menus::modsettings::GetToggle(
-            acc::menus::modsettings::Option::HumanSubtitles)) {
-        return false;  // toggle ON = user wants human subtitles spoken
-    }
-    SpeakerInfo info;
-    if (!ResolveDialogSpeaker(info)) return false;
-    return IsSuppressibleSpeaker(info);
-}
-
 // ---- Channel decision ----------------------------------------------------
 //
 // Every line this TU speaks IS a subtitle — the NPC line, its skill-check

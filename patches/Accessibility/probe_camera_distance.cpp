@@ -40,7 +40,6 @@ const size_t kBehZOffsetOffset     = acc::off::Todo(0x120);
 const uintptr_t kAddrCameraGetDist = acc::addr::Pick(0x0045C1D0, 0x00481990);
 const uintptr_t kAddrCameraGetYaw = acc::addr::Pick(0x0045C170, 0x004818F0);
 const uintptr_t kAddrCameraGetPitch = acc::addr::Pick(0x0045C1A0, 0x00481940);
-const uintptr_t kAddrZoomCamera = acc::addr::R(0x006401D0);
 
 // Camera-tuning globals identified via ListSymbolsByName.java. Read-only in
 // the probe — logged on snapshot so we can correlate a stomped clamp with
@@ -63,7 +62,6 @@ const uintptr_t kAddrCameraInterpDistAmt = acc::addr::TodoGlobal(0x007A243C);
 const uintptr_t kAddrCameraFreeStyle     = acc::addr::TodoGlobal(0x00833938);
 
 typedef float (__thiscall* PFN_CameraGetFloat)(void* this_);
-typedef void (__thiscall* PFN_ZoomCamera)(void* this_, float delta);
 typedef void* (__thiscall* PFN_CameraGetBehavior)(void* this_, unsigned int tag);
 
 // ----- Chain walk -----------------------------------------------------------
@@ -142,16 +140,6 @@ float SafeCallGetFloat(uintptr_t addr, void* this_) {
         return fn(this_);
     } __except (EXCEPTION_EXECUTE_HANDLER) {
         return 0.0f;
-    }
-}
-
-void SafeCallZoom(void* module, float delta) {
-    if (!module) return;
-    __try {
-        auto fn = reinterpret_cast<PFN_ZoomCamera>(kAddrZoomCamera);
-        fn(module, delta);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        // swallow
     }
 }
 

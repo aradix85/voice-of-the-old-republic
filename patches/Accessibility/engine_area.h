@@ -442,8 +442,6 @@ public:
     // treats some as sentinel during area-unload bookkeeping).
     void* Next();
 
-    int   SnapshotSize() const { return size_; }
-
 private:
     uint32_t* handles_;
     int       size_;

@@ -195,26 +195,6 @@ void BriefAppend(BriefBuf& b, const char* fmt, ...) {
     if (b.off > b.cap) b.off = b.cap;
 }
 
-// Read the runtime-effects array length on CSWSObject.effects @+0x124
-// (CExoArrayList<CSWSEffect*>). Cheap and tells us "is this creature
-// affected right now". We don't enumerate the effects themselves in the
-// skeleton — the per-effect name resolution path is an "open" item per
-// docs/combat-system.md Pillar 2 §"Open".
-int ReadEffectCount(void* serverObject) {
-    if (!serverObject) return 0;
-    __try {
-        auto* lst = reinterpret_cast<CExoArrayList*>(
-            reinterpret_cast<unsigned char*>(serverObject) +
-            kObjectEffectsOffset);
-        if (!lst) return 0;
-        int s = lst->size;
-        if (s < 0 || s > 0x4000) return 0;
-        return s;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return 0;
-    }
-}
-
 // Read the creature's effect-icon row (CSWSCreature.effect_icons — the
 // exact icon list the sighted portrait renders; see engine_offsets.h) and
 // join the localized icon names. Returns the number of names written, 0

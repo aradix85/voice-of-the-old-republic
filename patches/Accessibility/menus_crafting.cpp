@@ -198,18 +198,6 @@ int RowIndexIn(void* listBox, void* row) {
     }
 }
 
-// The engine's own selected-row index for a listbox, -1 on fault.
-int ReadListBoxSelection(void* listBox) {
-    if (!listBox) return -1;
-    __try {
-        return *reinterpret_cast<short*>(
-            reinterpret_cast<unsigned char*>(listBox) +
-            kListBoxSelectionIndexOffset);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return -1;
-    }
-}
-
 bool WriteListBoxSelection(void* listBox, int index) {
     if (!listBox || index < 0) return false;
     __try {
