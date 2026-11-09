@@ -6,7 +6,7 @@ CONFIG names the source file, the module and, per new file, its description
 and the functions it gets:
 
     {"source": "patches/Accessibility/room_topology.cpp",
-     "module": "room_topology",
+     "module": "room_topology",          ("namespace" if not acc::<module>)
      "files": {"":      {"desc": null, "functions": ["Reset", ...]},
                "doors": {"desc": "Door snapshots ...", "functions": [...]}}}
 
@@ -349,13 +349,17 @@ def main() -> None:
         v = funcs[f]
         return [L(k) for k in range(v["start"], v["end"] + 1)]
 
-    includes = [L(k) for k in preamble if L(k).startswith("#include")
-                and f'"{module}.h"' not in L(k)]
-    top_comment = []
-    for k in preamble:
-        if L(k).startswith("#"):
-            break
-        top_comment.append(L(k))
+    # Everything before the first namespace from the first #include on (the
+    # includes with their comments, file-wide using declarations) goes to the
+    # internal header; the module's own header is included there anyway.
+    head_end = next((k for k in range(1, len(lines) + 1)
+                     if re.match(r"\s*namespace\s+[\w:]+\s*\{", C(k))), len(lines))
+    pre = [k for k in preamble if k < head_end]
+    first_inc = next((i for i, k in enumerate(pre) if L(k).startswith("#")), len(pre))
+    includes = [L(k) for k in pre[first_inc:] if f'"{module}.h"' not in L(k)]
+    while includes and not includes[-1].strip():
+        includes.pop()
+    top_comment = [L(k) for k in pre[:first_inc]]
     while top_comment and not top_comment[-1].strip():
         top_comment.pop()
 
@@ -363,7 +367,7 @@ def main() -> None:
         return ["// " + x if x else "//" for x in desc.split("\n")]
 
     written = {}
-    ns = "acc::" + module
+    ns = cfg.get("namespace", "acc::" + module)
     for key, spec in cfg["files"].items():
         name = f"{module}.cpp" if key == "" else f"{module}_{key}.cpp"
         head = top_comment if spec.get("desc") is None else fmt_desc(spec["desc"])

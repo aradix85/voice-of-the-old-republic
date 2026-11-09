@@ -204,6 +204,12 @@ patches/Accessibility/menus_equipstats.cpp
 patches/Accessibility/menus_equipstats.h
 patches/Accessibility/menus_extract.cpp
 patches/Accessibility/menus_extract.h
+patches/Accessibility/menus_extract_chargen.cpp
+patches/Accessibility/menus_extract_controls.cpp
+patches/Accessibility/menus_extract_icons.cpp
+patches/Accessibility/menus_extract_internal.h
+patches/Accessibility/menus_extract_rows.cpp
+patches/Accessibility/menus_extract_workbench.cpp
 patches/Accessibility/menus_focus.cpp
 patches/Accessibility/menus_focus.h
 patches/Accessibility/menus_focus_k2.cpp
