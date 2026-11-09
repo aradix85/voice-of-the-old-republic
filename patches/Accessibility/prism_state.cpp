@@ -5,19 +5,6 @@
 
 namespace prism {
 
-HMODULE       g_prismLib       = nullptr;
-PrismContext* g_prismCtx       = nullptr;
-PrismBackend* g_prismNormal    = nullptr;
-PrismBackend* g_prismSapi      = nullptr;
-bool          g_initTried      = false;
-bool          g_normalReady    = false;
-bool          g_sapiReady      = false;
-size_t g_sapiVoiceCurrent = static_cast<size_t>(-1);
-size_t g_sapiVoiceCount   = 0;
-char g_sapiVoiceName[160] = {0};
-bool g_sapiVoiceLoaded    = false;
-int  g_sapiRatePercent = kSapiRateDefaultPercent;
-bool g_sapiRateLoaded  = false;
 PFN_prism_init                  pPrism_init                   = nullptr;
 PFN_prism_shutdown              pPrism_shutdown               = nullptr;
 PFN_prism_registry_exists       pPrism_registry_exists        = nullptr;
@@ -41,12 +28,18 @@ PFN_prism_backend_get_voice_name pPrism_backend_get_voice_name = nullptr;
 PFN_prism_backend_get_voice     pPrism_backend_get_voice      = nullptr;
 PFN_prism_backend_name          pPrism_backend_name           = nullptr;
 PFN_prism_backend_speak_to_memory pPrism_backend_speak_to_memory = nullptr;
-char s_lastSpoken[4096] = {0};
-bool s_suppressNextCapture = false;
-PrismBackend* g_prismCompass       = nullptr;
-bool          g_compassReady       = false;
-size_t        g_compassVoiceCurrent = static_cast<size_t>(-1);
-RenderBackend g_renderSapi    = {"SAPI",    kPrismBackendIdSapi,    nullptr, false, {}};
-RenderBackend g_renderOneCore = {"OneCore", kPrismBackendIdOneCore, nullptr, false, {}};
+
+PrismContext* g_prismCtx     = nullptr;
+PrismBackend* g_prismNormal  = nullptr;
+PrismBackend* g_prismSapi    = nullptr;
+PrismBackend* g_prismCompass = nullptr;
+bool          g_normalReady  = false;
+bool          g_sapiReady    = false;
+bool          g_compassReady = false;
+
+size_t g_sapiVoiceCurrent = kNoVoice;
+size_t g_sapiVoiceCount   = 0;
+
+PercentSetting g_sapiRate = {"UrgentRatePercent", kSapiRateDefaultPercent, false};
 
 }  // namespace prism

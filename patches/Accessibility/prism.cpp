@@ -1,6 +1,6 @@
-// Speech bridge — Prism only.
-//
-// Two dispatch paths:
+// Speech bridge — Prism only. This file loads prism.dll, picks the normal
+// backend and holds the normal and urgent entry points; the other channels
+// and helpers are in the prism_*.cpp files.
 //
 //   Speak / Silence       → "normal" backend (NVDA / JAWS / ZDSR / OneCore /
 //                            ... whichever screen reader Prism picks at
@@ -17,11 +17,7 @@
 //                            user has moved dialogue onto this channel.
 //   SpeakCompass          → a second SAPI instance with its own voice,
 //                            volume and rate, for the camera-turn compass
-//                            readout. Same NVDA bypass as SpeakUrgent; falls
-//                            back to it when the instance is missing.
-//   SpeakCompassThen      → a compass line, then a normal-channel line once
-//                            the compass voice has finished (Tick releases
-//                            it). The facing key: direction, then area.
+//                            readout (prism_compass.cpp).
 //
 // Braille: Tolk's Tolk_Output spoke and brailled in one call; Prism splits
 // those. The normal channel therefore dispatches through DispatchNormal —
@@ -30,10 +26,13 @@
 // SAPI alerts to the normal backend's braille channel, since SAPI has no
 // braille display of its own.
 //
-// All Prism functions are resolved at runtime via LoadLibrary +
-// GetProcAddress so a missing prism.dll degrades silently (no speech).
+// prism.dll is loaded at runtime, so a missing one leaves the mod silent
+// instead of failing to load.
 
 #include "prism_internal.h"
+
+#include "log.h"
+#include "menus_modsettings.h"   // "Speak everything with the screen reader"
 
 namespace prism {
 
@@ -43,8 +42,7 @@ namespace {
 // backend's reader is genuinely reachable — every Windows backend recomputes it
 // on each call (NVDA queries its RPC endpoint, SAPI asks COM for the SpVoice
 // class object, ZDSR and BoyPC scan the process list). Unlike a successful
-// initialize() it is trustworthy; PickNormal explains why that distinction
-// decides whether the mod speaks at all.
+// initialize() it is trustworthy; BackendIsUsable explains why that matters.
 constexpr uint64_t kPrismFeatureSupportedAtRuntime = 1ull << 0;
 constexpr uint64_t kPrismFeatureSupportsSpeak      = 1ull << 2;
 // Braille-only entry point (prism_backend_braille).
@@ -53,11 +51,12 @@ constexpr uint64_t kPrismFeatureSupportsBraille    = 1ull << 4;
 // Tolk_Output equivalent.
 constexpr uint64_t kPrismFeatureSupportsOutput     = 1ull << 5;
 
-// MSVC delay-load helper exceptions. A backend whose vendor DLL is present but
-// exports a mismatched symbol set raises PROC_NOT_FOUND; a missing DLL raises
-// MOD_NOT_FOUND. Both are normally fatal — see the SEH guards below.
+// MSVC delay-load helper exceptions — see the SEH guards below.
 constexpr DWORD kVcppDelayLoadModNotFound  = 0xC06D007E;
 constexpr DWORD kVcppDelayLoadProcNotFound = 0xC06D007F;
+
+HMODULE g_prismLib  = nullptr;
+bool    g_initTried = false;
 
 // Braille channels the normal backend advertised when it was adopted. Either
 // flag can latch off later if a call comes back NOT_IMPLEMENTED — an older
@@ -66,19 +65,28 @@ bool g_normalSupportsOutput  = false;  // combined speak+braille call (Tolk_Outp
 bool g_normalSupportsBraille = false;  // braille-only call
 
 // L"NVDA" / L"SAPI" / ... — filled at Init time so ActiveScreenReader can
-// hand back a stable wide-string pointer without doing the conversion on
-// every call. L"none" if no backend resolved.
+// hand back a stable wide-string pointer.
 wchar_t g_activeNameW[64] = L"none";
 
 template <typename T>
-bool Resolve(HMODULE lib, T& fn, const char* name, bool required = true) {
+bool Resolve(HMODULE lib, T& fn, const char* name) {
     fn = reinterpret_cast<T>(GetProcAddress(lib, name));
-    if (!fn && required) {
-        acclog::Write("Speech", "GetProcAddress(%s) failed", name);
-        return false;
-    }
+    if (!fn) acclog::Write("Speech", "GetProcAddress(%s) failed", name);
     return fn != nullptr;
 }
+
+// ---- SEH guards around prism backend calls -----------------------------
+//
+// Some screen-reader backends delay-load a vendor DLL inside their
+// initialize() path (ZDSR → ZDSRAPI.dll, PC-Talker → PCTKUSR.dll, BoyPC →
+// BoyCtrl.dll, ...). When the user has that reader installed at a DLL version
+// whose export set doesn't match what prism.dll was built against, the MSVC
+// delay-load helper raises a structured exception (PROC_NOT_FOUND /
+// MOD_NOT_FOUND) that would crash the game at startup. Prism's own
+// acquire_best guards each initialize() and skips a faulting backend; these
+// wrappers guard the registry and initialize calls this module makes itself.
+// They hold only PODs and raw pointers — MSVC forbids __try in a function that
+// needs C++ object unwinding — so the callers log the returned fault code.
 
 // Returns acquire_best's backend, or null. *outCode is the SEH code if a fault
 // was caught (0 on a clean null/success).
@@ -92,33 +100,35 @@ PrismBackend* SehAcquireBest(PrismContext* ctx, DWORD* outCode) {
     }
 }
 
+// Create a fresh backend instance by id, SEH-guarded.
+PrismBackend* SehCreate(PrismContext* ctx, PrismBackendId id, DWORD* outCode) {
+    *outCode = 0;
+    __try {
+        return pPrism_registry_create(ctx, id);
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        *outCode = GetExceptionCode();
+        return nullptr;
+    }
+}
+
 // True iff this backend can speak AND its reader is reachable right now.
 //
-// A successful initialize() is not enough, which is the whole reason this
-// check exists. Prism 0.16.5's NVDA backend returns success when NVDA is not
-// running: its testIfRunning check sits behind an RPC interface query that
-// itself fails when there is no server to answer, so with NVDA absent the
-// check is skipped and start-up counts as successful. NVDA holds the highest
-// priority of any backend, so it won acquire_best on every machine and then
-// refused every utterance with BACKEND_NOT_AVAILABLE — total silence for
-// anyone running JAWS, Narrator, ZDSR or nothing at all. Upstream fixed that
-// in 0.17.x, but the gate stays: it costs one call, it is correct either way,
-// and it is the only thing standing between a user and silence if a deployed
-// prism.dll turns out to be older than the one we ship.
+// A successful initialize() is not enough: Prism 0.16.5's NVDA backend
+// returned success when NVDA was not running, and as the highest-priority
+// backend it then won acquire_best and refused every utterance — total
+// silence for anyone running JAWS, Narrator, ZDSR or nothing at all. Fixed
+// upstream in 0.17.x; the gate costs one call and is correct either way.
 bool BackendIsUsable(PrismBackend* be) {
-    if (!be || !pPrism_backend_get_features) return be != nullptr;
+    if (!be) return false;
     const uint64_t want = kPrismFeatureSupportsSpeak | kPrismFeatureSupportedAtRuntime;
     return (pPrism_backend_get_features(be) & want) == want;
 }
 
 // Install `be` as the normal backend and record which braille channels it
 // offers, so Speak can reach a braille display and not just the synthesizer.
-// Without get_features (older prism.dll) both flags stay off and dispatch
-// degrades to plain speak — exactly the pre-braille behaviour.
 void AdoptNormal(PrismBackend* be) {
     g_prismNormal = be;
-    const uint64_t features =
-        pPrism_backend_get_features ? pPrism_backend_get_features(be) : 0;
+    const uint64_t features = pPrism_backend_get_features(be);
     g_normalSupportsOutput  = (features & kPrismFeatureSupportsOutput)  != 0;
     g_normalSupportsBraille = (features & kPrismFeatureSupportsBraille) != 0;
 }
@@ -129,21 +139,15 @@ void AdoptNormal(PrismBackend* be) {
 // its braille half is a no-op), so only the braille bit says whether a display
 // can actually be reached.
 const char* BrailleModeText() {
-    if (!g_normalSupportsBraille)
-        return "no braille";
-    return (g_normalSupportsOutput && pPrism_backend_output)
-               ? "braille via output()"
-               : "braille supported";
+    if (!g_normalSupportsBraille) return "no braille";
+    return g_normalSupportsOutput ? "braille via output()" : "braille supported";
 }
 
-// Sends one announcement to the normal backend on every channel it offers.
-// Tolk's Tolk_Output spoke and brailled in one call; Prism splits those, so a
-// backend advertising SUPPORTS_OUTPUT gets prism_backend_output (the direct
-// equivalent) and the rest get speak plus, where supported, a braille flash
-// message. An older prism.dll without the output export (null pointer) takes
-// the speak path from the start.
+// Sends one announcement to the normal backend on every channel it offers: a
+// backend advertising SUPPORTS_OUTPUT gets prism_backend_output, the rest get
+// speak plus, where supported, a braille flash message.
 PrismError DispatchNormal(const char* utf8, bool interrupt) {
-    if (g_normalSupportsOutput && pPrism_backend_output) {
+    if (g_normalSupportsOutput) {
         PrismError rc = pPrism_backend_output(g_prismNormal, utf8, interrupt);
         if (rc != kPrismErrNotImplemented) return rc;
 
@@ -160,6 +164,11 @@ PrismError DispatchNormal(const char* utf8, bool interrupt) {
     return rcSpeak;
 }
 
+void SpeakNormalUtf8(const char* utf8, bool interrupt) {
+    const PrismError rc = DispatchNormal(utf8, interrupt);
+    if (rc != kPrismOk) acclog::Trace("Speech", "normal dispatch rc=%d; dropping utterance", rc);
+}
+
 // Walk the registry ourselves and take the first backend that is live and
 // initialises. Registry order is descending priority, so this reproduces
 // acquire_best's ordering — which cannot simply be called again, because it
@@ -170,13 +179,6 @@ PrismError DispatchNormal(const char* utf8, bool interrupt) {
 // this walk is the path that reaches ZDSR / PC-Talker / BoyPC, and skipping
 // them outright is stronger than relying on the SEH guard to survive them.
 PrismBackend* WalkForLiveBackend() {
-    if (!pPrism_registry_count || !pPrism_registry_id_at || !pPrism_backend_get_features) {
-        acclog::Write("Speech",
-                      "prism.dll lacks the registry-walk exports; cannot look "
-                      "past acquire_best's choice");
-        return nullptr;
-    }
-
     const size_t count = pPrism_registry_count(g_prismCtx);
     for (size_t i = 0; i < count; ++i) {
         const PrismBackendId id = pPrism_registry_id_at(g_prismCtx, i);
@@ -184,7 +186,6 @@ PrismBackend* WalkForLiveBackend() {
 
         DWORD seh = 0;
         PrismBackend* be = SehAcquire(g_prismCtx, id, &seh);
-        if (!be) continue;
         if (!BackendIsUsable(be)) continue;
 
         const PrismError rc = SehInitialize(be, &seh);
@@ -195,7 +196,7 @@ PrismBackend* WalkForLiveBackend() {
                           SehCodeName(seh), seh);
             continue;
         }
-        if (rc != kPrismOk && rc != kPrismErrAlreadyInitialized) {
+        if (!InitOk(rc)) {
             acclog::Write("Speech",
                           "backend reported itself live but initialize failed "
                           "rc=%d; trying the next one", rc);
@@ -221,13 +222,13 @@ bool TryAcquireNormal() {
                       "walking the registry instead", SehCodeName(seh), seh);
     }
 
-    if (best && BackendIsUsable(best)) {
+    if (BackendIsUsable(best)) {
         AdoptNormal(best);
         return true;
     }
 
     if (best) {
-        const char* nameA = pPrism_backend_name ? pPrism_backend_name(best) : nullptr;
+        const char* nameA = pPrism_backend_name(best);
         acclog::Write("Speech",
                       "acquire_best chose %s but its reader is not running; "
                       "walking the registry", nameA ? nameA : "?");
@@ -245,29 +246,6 @@ bool TryAcquireNormal() {
 
 }  // namespace
 
-// ---- SEH guards around prism backend calls -----------------------------
-//
-// Some screen-reader backends delay-load a vendor DLL inside their
-// initialize() path (ZDSR → ZDSRAPI.dll, PC-Talker → PCTKUSR.dll, BoyPC →
-// BoyCtrl.dll, ...). When the user has that reader installed but at a DLL
-// version whose export set doesn't match what prism.dll was built against,
-// the MSVC delay-load helper raises a structured exception
-// (0xC06D007F PROC_NOT_FOUND / 0xC06D007E MOD_NOT_FOUND). Unhandled it
-// crashes the game at startup before any speech — reported by a pl-PL beta
-// tester with ZDSR installed.
-//
-// The root fix lives in prism itself: BackendRegistry::acquire_best /
-// create_best now SEH-guard each backend's initialize() and skip a faulting
-// one (third_party/prism/source/backends/backend_registry.cpp). So we let
-// prism own backend selection — the normal channel is a single acquire_best
-// call and nothing here reimplements prism's priority walk. These wrappers
-// remain for two narrow reasons: (1) a thin belt-and-suspenders net around
-// that one acquire_best call, in case a deployed prism.dll predates the fix;
-// (2) the explicit SAPI-acquire path for the urgent channel, which calls
-// acquire + initialize directly. The helpers hold only PODs / raw pointers —
-// MSVC forbids __try in a function that needs C++ object unwinding, and
-// logging (which builds temporaries) must therefore stay in the callers, which
-// read the returned fault code.
 const char* SehCodeName(DWORD code) {
     switch (code) {
         case kVcppDelayLoadModNotFound:  return "delay-load module-not-found";
@@ -288,17 +266,6 @@ PrismBackend* SehAcquire(PrismContext* ctx, PrismBackendId id, DWORD* outCode) {
     }
 }
 
-// Create a fresh backend instance by id, SEH-guarded.
-PrismBackend* SehCreate(PrismContext* ctx, PrismBackendId id, DWORD* outCode) {
-    *outCode = 0;
-    __try {
-        return pPrism_registry_create(ctx, id);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        *outCode = GetExceptionCode();
-        return nullptr;
-    }
-}
-
 // Initialize one backend, SEH-guarded. Returns the PrismError, or
 // kPrismErrUnknown with *outCode set if a fault was caught.
 PrismError SehInitialize(PrismBackend* be, DWORD* outCode) {
@@ -311,13 +278,22 @@ PrismError SehInitialize(PrismBackend* be, DWORD* outCode) {
     }
 }
 
+// A fresh, initialised instance of backend `id`; null on failure, with the
+// PrismError and any SEH code left for the caller's log.
+PrismBackend* CreateBackend(PrismBackendId id, PrismError* rc, DWORD* seh) {
+    *rc = kPrismErrUnknown;
+    PrismBackend* be = SehCreate(g_prismCtx, id, seh);
+    if (!be) return nullptr;
+    *rc = SehInitialize(be, seh);
+    return (*seh == 0 && InitOk(*rc)) ? be : nullptr;
+}
+
 // Mirrors text to the braille display through the normal backend, when it has
 // one. Quiet by design: braille is supplementary on this path, so a failure
 // must never cost speech or spam the log — only a NOT_IMPLEMENTED is noted,
 // once, when latching the capability off. `utf8` must already be UTF-8.
 void BrailleNormal(const char* utf8) {
-    if (!g_normalSupportsBraille || !pPrism_backend_braille || !g_prismNormal)
-        return;
+    if (!g_normalSupportsBraille || !g_prismNormal) return;
     PrismError rc = pPrism_backend_braille(g_prismNormal, utf8);
     if (rc == kPrismErrNotImplemented) {
         // Advertised but not really there — e.g. a ZDSRAPI predating its
@@ -353,71 +329,40 @@ bool Init() {
     char prevDir[MAX_PATH] = {0};
     DWORD prevLen = GetDllDirectoryA(MAX_PATH, prevDir);
     SetDllDirectoryA(patchDir);
-
     g_prismLib = LoadLibraryA(path);
+    const DWORD loadErr = GetLastError();
+    SetDllDirectoryA(prevLen > 0 ? prevDir : nullptr);
     if (!g_prismLib) {
         acclog::Write("Speech",
-                      "LoadLibrary(%s) failed err=%lu; running silent",
-                      path, GetLastError());
-        SetDllDirectoryA(prevLen > 0 ? prevDir : nullptr);
+                      "LoadLibrary(%s) failed err=%lu; running silent", path, loadErr);
         return false;
     }
-    SetDllDirectoryA(prevLen > 0 ? prevDir : nullptr);
 
-    bool ok =
-        Resolve(g_prismLib, pPrism_init,                  "prism_init")                  &&
-        Resolve(g_prismLib, pPrism_shutdown,              "prism_shutdown")              &&
-        Resolve(g_prismLib, pPrism_registry_exists,       "prism_registry_exists")       &&
-        Resolve(g_prismLib, pPrism_registry_acquire,      "prism_registry_acquire")      &&
-        Resolve(g_prismLib, pPrism_registry_acquire_best, "prism_registry_acquire_best") &&
-        Resolve(g_prismLib, pPrism_backend_initialize,    "prism_backend_initialize")    &&
-        Resolve(g_prismLib, pPrism_backend_speak,         "prism_backend_speak")         &&
-        Resolve(g_prismLib, pPrism_backend_stop,          "prism_backend_stop")          &&
-        Resolve(g_prismLib, pPrism_backend_name,          "prism_backend_name");
+    const bool ok =
+        Resolve(g_prismLib, pPrism_init,                    "prism_init")                    &&
+        Resolve(g_prismLib, pPrism_shutdown,                "prism_shutdown")                &&
+        Resolve(g_prismLib, pPrism_registry_exists,         "prism_registry_exists")         &&
+        Resolve(g_prismLib, pPrism_registry_count,          "prism_registry_count")          &&
+        Resolve(g_prismLib, pPrism_registry_id_at,          "prism_registry_id_at")          &&
+        Resolve(g_prismLib, pPrism_registry_acquire,        "prism_registry_acquire")        &&
+        Resolve(g_prismLib, pPrism_registry_acquire_best,   "prism_registry_acquire_best")   &&
+        Resolve(g_prismLib, pPrism_registry_create,         "prism_registry_create")         &&
+        Resolve(g_prismLib, pPrism_backend_get_features,    "prism_backend_get_features")    &&
+        Resolve(g_prismLib, pPrism_backend_initialize,      "prism_backend_initialize")      &&
+        Resolve(g_prismLib, pPrism_backend_speak,           "prism_backend_speak")           &&
+        Resolve(g_prismLib, pPrism_backend_output,          "prism_backend_output")          &&
+        Resolve(g_prismLib, pPrism_backend_braille,         "prism_backend_braille")         &&
+        Resolve(g_prismLib, pPrism_backend_stop,            "prism_backend_stop")            &&
+        Resolve(g_prismLib, pPrism_backend_is_speaking,     "prism_backend_is_speaking")     &&
+        Resolve(g_prismLib, pPrism_backend_set_rate,        "prism_backend_set_rate")        &&
+        Resolve(g_prismLib, pPrism_backend_set_volume,      "prism_backend_set_volume")      &&
+        Resolve(g_prismLib, pPrism_backend_set_voice,       "prism_backend_set_voice")       &&
+        Resolve(g_prismLib, pPrism_backend_count_voices,    "prism_backend_count_voices")    &&
+        Resolve(g_prismLib, pPrism_backend_get_voice_name,  "prism_backend_get_voice_name")  &&
+        Resolve(g_prismLib, pPrism_backend_get_voice,       "prism_backend_get_voice")       &&
+        Resolve(g_prismLib, pPrism_backend_name,            "prism_backend_name")            &&
+        Resolve(g_prismLib, pPrism_backend_speak_to_memory, "prism_backend_speak_to_memory");
     if (!ok) return false;
-    // set_rate / set_voice / count_voices are optional — older Prism builds
-    // may lack the exports, and backends without the matching SUPPORTS_*
-    // capability return an error at call time. SpeakUrgent stays functional
-    // either way; voice selection just no-ops.
-    (void)Resolve(g_prismLib, pPrism_backend_set_rate,     "prism_backend_set_rate",
-                  /*required=*/false);
-    (void)Resolve(g_prismLib, pPrism_backend_set_volume,   "prism_backend_set_volume",
-                  /*required=*/false);
-    (void)Resolve(g_prismLib, pPrism_backend_set_voice,    "prism_backend_set_voice",
-                  /*required=*/false);
-    (void)Resolve(g_prismLib, pPrism_backend_count_voices, "prism_backend_count_voices",
-                  /*required=*/false);
-    (void)Resolve(g_prismLib, pPrism_backend_get_voice_name, "prism_backend_get_voice_name",
-                  /*required=*/false);
-    (void)Resolve(g_prismLib, pPrism_backend_get_voice,    "prism_backend_get_voice",
-                  /*required=*/false);
-    // Without it SpeakCompassThen cannot tell when the compass voice is done
-    // and speaks its whole line on the normal channel instead.
-    (void)Resolve(g_prismLib, pPrism_backend_is_speaking, "prism_backend_is_speaking",
-                  /*required=*/false);
-    // Braille entry points — optional so an older prism.dll (pre-0.17.x)
-    // still loads and speaks; DispatchNormal falls back to plain speak when
-    // either pointer is null.
-    (void)Resolve(g_prismLib, pPrism_backend_output,       "prism_backend_output",
-                  /*required=*/false);
-    (void)Resolve(g_prismLib, pPrism_backend_braille,      "prism_backend_braille",
-                  /*required=*/false);
-    // Optional so an older prism.dll still loads and speaks. Without them the
-    // liveness gate degrades to acquire_best's unchecked answer — logged by
-    // WalkForLiveBackend rather than failing silently.
-    (void)Resolve(g_prismLib, pPrism_backend_get_features, "prism_backend_get_features",
-                  /*required=*/false);
-    // Render-to-PCM for positional speech; RenderUrgentToMemory reports false
-    // without it.
-    (void)Resolve(g_prismLib, pPrism_backend_speak_to_memory, "prism_backend_speak_to_memory",
-                  /*required=*/false);
-    // Render-only backend instances (EnsureRenderBackend); no renders without.
-    (void)Resolve(g_prismLib, pPrism_registry_create,      "prism_registry_create",
-                  /*required=*/false);
-    (void)Resolve(g_prismLib, pPrism_registry_count,       "prism_registry_count",
-                  /*required=*/false);
-    (void)Resolve(g_prismLib, pPrism_registry_id_at,       "prism_registry_id_at",
-                  /*required=*/false);
 
     // NULL config on purpose — see the PFN_prism_init declaration.
     g_prismCtx = pPrism_init(nullptr);
@@ -433,7 +378,6 @@ bool Init() {
     if (g_normalReady) {
         const char* nameA = pPrism_backend_name(g_prismNormal);
         if (!nameA) nameA = "?";
-        // Cache wide name for ActiveScreenReader() callers.
         MultiByteToWideChar(CP_UTF8, 0, nameA, -1, g_activeNameW,
                             sizeof(g_activeNameW) / sizeof(g_activeNameW[0]));
         acclog::Write("Speech",
@@ -450,43 +394,16 @@ bool IsAvailable() {
     return g_normalReady;
 }
 
-// Self-log every Speak call so the patch log carries one canonical record of
-// what the screen reader was asked to say, in chronological order. "[!]"
-// prefix marks interrupt=true so the audit shows when speech preempted
-// in-flight output. Trace dedups consecutive identical strings.
+// Every Speak call is logged so the patch log carries one canonical record of
+// what the screen reader was asked to say, in order. "[!]" marks
+// interrupt=true. Trace dedups consecutive identical strings.
 void Speak(const wchar_t* text, bool interrupt) {
     if (!g_normalReady || !text || !*text) return;
     if (interrupt) DropCompassFollowUp("interrupted");
-
-    // Audit log: convert to UTF-8 once so long strings print in full.
-    char stack_audit[512];
-    char* audit = stack_audit;
-    char* heap_audit = nullptr;
-    int needed = WideCharToMultiByte(CP_UTF8, 0, text, -1, nullptr, 0,
-                                     nullptr, nullptr);
-    if (needed > (int)sizeof(stack_audit)) {
-        heap_audit = (char*)malloc((size_t)needed);
-        if (heap_audit) audit = heap_audit;
-        else needed = (int)sizeof(stack_audit);  // fall back: truncated log
-    }
-    int conv = WideCharToMultiByte(CP_UTF8, 0, text, -1, audit, needed,
-                                   nullptr, nullptr);
-    if (conv > 0) {
-        acclog::Trace("Speech.spoke", "%s%s", interrupt ? "[!] " : "", audit);
-    }
+    const std::string utf8 = WideToUtf8(text);
+    if (!utf8.empty()) acclog::Trace("Speech.spoke", "%s%s", interrupt ? "[!] " : "", utf8.c_str());
     CaptureSpokenW(text);
-
-    // Speech path: re-use the UTF-8 buffer we just built for the audit log
-    // when it succeeded; otherwise allocate a fresh small one. Prism backends
-    // expect UTF-8.
-    if (conv > 0) {
-        PrismError rc = DispatchNormal(audit, interrupt);
-        if (rc != kPrismOk) {
-            acclog::Trace("Speech",
-                          "normal dispatch rc=%d; dropping utterance", rc);
-        }
-    }
-    if (heap_audit) free(heap_audit);
+    if (!utf8.empty()) SpeakNormalUtf8(utf8.c_str(), interrupt);
 }
 
 void Speak(const char* text, bool interrupt) {
@@ -494,35 +411,10 @@ void Speak(const char* text, bool interrupt) {
     if (interrupt) DropCompassFollowUp("interrupted");
     acclog::Trace("Speech.spoke", "%s%s", interrupt ? "[!] " : "", text);
     CaptureSpoken(text);
-
-    // Game codepage → UTF-8 via heap when needed. Chargen skill descriptions
-    // are ~600+ narrow chars, so we size dynamically.
-    char stack_buf[1024];
-    char* buf = stack_buf;
-    char* heap_buf = nullptr;
-    // 4× worst-case expansion (a single-byte codepoint emits at most 3 UTF-8
-    // bytes; we keep a small safety margin) + NUL.
-    size_t need_cap = strlen(text) * 4 + 1;
-    if (need_cap > sizeof(stack_buf)) {
-        heap_buf = (char*)malloc(need_cap);
-        if (!heap_buf) return;
-        buf = heap_buf;
-    }
-    if (ReencodeAcpToUtf8(text, buf, heap_buf ? need_cap : sizeof(stack_buf))) {
-        PrismError rc = DispatchNormal(buf, interrupt);
-        if (rc != kPrismOk) {
-            acclog::Trace("Speech",
-                          "normal dispatch rc=%d; dropping utterance", rc);
-        }
-    }
-    if (heap_buf) free(heap_buf);
+    const std::string utf8 = ToUtf8(text);
+    if (!utf8.empty()) SpeakNormalUtf8(utf8.c_str(), interrupt);
 }
 
-// SpeakUrgent core. The voice is backend state, set once from the user's
-// persisted choice (ApplySapiVoice / SetUrgentVoiceId) rather than per
-// utterance, so nothing here touches it. `interrupt` is true for every
-// cross-cancel announce (the original callers); SpeakOnUrgentChannel passes
-// it through so a caller that emits consecutive lines keeps them queued.
 // Mod settings -> "Speak everything with the screen reader": the urgent
 // (SAPI) and compass voices step aside and every line goes to the normal
 // screen-reader channel instead.
@@ -531,6 +423,10 @@ bool AllViaScreenReader() {
         acc::menus::modsettings::Option::AllViaScreenReader);
 }
 
+// SpeakUrgent core. The voice is backend state, set from the user's persisted
+// choice rather than per utterance. `interrupt` is true for every cross-cancel
+// announce; SpeakOnUrgentChannel passes it through so a caller that emits
+// consecutive lines keeps them queued.
 void SpeakUrgentImpl(const char* text, bool interrupt) {
     if (!g_normalReady || !text || !*text) return;
     if (AllViaScreenReader()) {
@@ -538,44 +434,20 @@ void SpeakUrgentImpl(const char* text, bool interrupt) {
         return;
     }
 
-    // Capture before the dispatch, not inside the rc==kPrismOk branch: the
-    // one-shot suppress flag has to be consumed by exactly this call whether
-    // or not the backend accepted the utterance, otherwise a dropped urgent
-    // line would leave the flag armed and swallow the NEXT real capture.
+    // Capture before the dispatch: the one-shot suppress flag has to be
+    // consumed by exactly this call whether or not the backend accepts the
+    // utterance, otherwise a dropped urgent line would leave the flag armed
+    // and swallow the NEXT real capture.
     CaptureSpoken(text);
 
-    // Re-encode CP_ACP → UTF-8 before dispatch. See ReencodeAcpToUtf8 doc
-    // comment for the rc=13 (INVALID_UTF8) failure mode this guards.
-    // Sized dynamically, like the normal channel: a dialogue subtitle routed
-    // here via SpeakOnUrgentChannel runs to ~500 narrow chars, which a fixed
-    // 512-byte buffer cannot hold once a non-ASCII line expands into UTF-8.
-    char utf8Stack[512];
-    char*  utf8Buf  = utf8Stack;
-    char*  utf8Heap = nullptr;
-    size_t utf8Cap  = sizeof(utf8Stack);
-    size_t utf8Need = strlen(text) * 4 + 1;
-    if (utf8Need > sizeof(utf8Stack)) {
-        utf8Heap = (char*)malloc(utf8Need);
-        if (utf8Heap) {
-            utf8Buf = utf8Heap;
-            utf8Cap = utf8Need;
-        }
-    }
-    const char* speakText = text;
-    if (ReencodeAcpToUtf8(text, utf8Buf, utf8Cap)) {
-        speakText = utf8Buf;
-    }
-    // If re-encode failed we still attempt the dispatch with the original
-    // bytes — for pure-ASCII strings the byte sequence is identical to
-    // UTF-8, so the dispatch succeeds and we don't lose the announce just
-    // because the conversion happened to overflow the buffer.
+    // A failed re-encode still dispatches the original bytes: for pure ASCII
+    // they are identical to UTF-8.
+    const std::string utf8 = ToUtf8(text);
+    const char* speakText = utf8.empty() ? text : utf8.c_str();
 
-    // Prefer SAPI: bypasses NVDA's typed-character cancel — the whole point
-    // of this entry point. If SAPI didn't acquire (no Prism SAPI backend
-    // registered on this system, init failed, etc.) fall back to the normal
-    // backend so the announce still lands somewhere.
+    // Prefer SAPI: it bypasses NVDA's typed-character cancel — the whole point
+    // of this entry point. Without SAPI the normal backend takes the line.
     const char* tag = g_sapiReady ? "[SAPI]" : "[normal-fallback]";
-
     PrismError rc;
     if (g_sapiReady) {
         rc = pPrism_backend_speak(g_prismSapi, speakText, interrupt);
@@ -584,25 +456,18 @@ void SpeakUrgentImpl(const char* text, bool interrupt) {
         // speech fallback this cannot say the text twice.
         BrailleNormal(speakText);
     } else {
-        // The normal-backend fallback goes through DispatchNormal so the
-        // alert reaches a braille display the same way ordinary speech does.
         rc = DispatchNormal(speakText, interrupt);
     }
     if (rc == kPrismOk) {
-        // Log the original CP_ACP text so the patch log stays readable
-        // in the same encoding as every other log line.
         acclog::Trace("Speech.spoke", "%s %s", tag, text);
     } else {
-        // Do NOT fall back to the normal backend on a SAPI rc!=0. SAPI
-        // dispatches asynchronously; by the time rc!=0 returns SAPI may
-        // already be mid-utterance, and routing the same string to the
-        // normal backend would produce double-speak. Drop the utterance;
-        // the next SpeakUrgent call retries naturally.
+        // No fallback to the normal backend on a SAPI error: SAPI dispatches
+        // asynchronously and may already be mid-utterance, so the same line on
+        // the screen reader would be double speech. The next call retries.
         acclog::Trace("Speech",
                       "SpeakUrgent: %s dispatch rc=%d; "
                       "dropping utterance (no double-speak fallback)", tag, rc);
     }
-    if (utf8Heap) free(utf8Heap);
 }
 
 void SpeakUrgent(const char* text) {
@@ -614,8 +479,8 @@ void NoteSpokenElsewhere(const char* text) {
     acclog::Trace("Speech.spoke", "[positional] %s", text);
     CaptureSpoken(text);
     if (!g_normalReady) return;
-    std::vector<char> utf8(strlen(text) * 4 + 1);
-    if (ReencodeAcpToUtf8(text, utf8.data(), utf8.size())) BrailleNormal(utf8.data());
+    const std::string utf8 = ToUtf8(text);
+    if (!utf8.empty()) BrailleNormal(utf8.c_str());
 }
 
 void SpeakOnUrgentChannel(const char* text, bool interrupt) {

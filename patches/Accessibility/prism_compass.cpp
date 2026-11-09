@@ -1,19 +1,31 @@
 // The compass channel: a second SAPI instance with its own voice, volume and
 // rate for the camera-turn readout, and the follow-up line spoken on the normal
 // channel once the compass voice has finished.
+//
+// A voice of its own lets the player tell a heading from an announcement by
+// the voice alone, and neither cuts the other off — each instance owns its own
+// SpVoice and audio stream. prism_registry_create builds it fresh;
+// prism_registry_acquire would hand back the urgent channel's cached one.
+//
+// Volume, rate and voice persist like the urgent channel's, the voice by name.
+// Without a saved voice the channel takes kCompassDefaultVoiceId, or the first
+// voice that is not the urgent one when that id is missing or is the urgent
+// voice itself: the default only has to sound different from the
+// announcements. It is re-derived each launch until the player chooses one.
 
 #include "prism_internal.h"
+
+#include "log.h"
+#include "mod_settings_store.h"
 
 namespace prism {
 
 namespace {
 
-// A persisted percent [0,100], pulled from the store on first access.
-struct PercentSetting {
-    const char* key;
-    int         value;   // the default until loaded
-    bool        loaded;
-};
+constexpr size_t      kCompassDefaultVoiceId = 2;
+constexpr const char* kCompassVoiceKey       = "CompassVoiceName";
+
+size_t         g_compassVoiceCurrent = kNoVoice;
 PercentSetting g_compassVolume = {"CompassVolumePercent", 100, false};
 PercentSetting g_compassRate   = {"CompassRatePercent", kSapiRateDefaultPercent, false};
 
@@ -32,50 +44,12 @@ constexpr DWORD kFollowUpStartGraceMs = 600;
 constexpr DWORD kFollowUpMaxWaitMs    = 6000;
 constexpr DWORD kFollowUpGapMs        = 150;
 
-int ClampPercent(int v) { return v < 0 ? 0 : (v > 100 ? 100 : v); }
-
-int LoadPercent(PercentSetting& s) {
-    if (!s.loaded) {
-        s.loaded = true;
-        s.value  = ClampPercent(acc::settings::GetInt(s.key, s.value));
-    }
-    return s.value;
-}
-
-void StorePercent(PercentSetting& s, int v) {
-    s.loaded = true;
-    s.value  = ClampPercent(v);
-    acc::settings::SetInt(s.key, s.value);
-}
-
-// Push the compass volume and rate to its instance. No-op until created.
 void ApplyCompassLevels() {
-    if (!g_prismCompass) return;
-    const float vol  = static_cast<float>(LoadPercent(g_compassVolume)) / 100.0f;
-    const float rate = static_cast<float>(LoadPercent(g_compassRate)) / 100.0f;
-    const PrismError vrc = pPrism_backend_set_volume
-        ? pPrism_backend_set_volume(g_prismCompass, vol) : kPrismErrNotImplemented;
-    const PrismError rrc = pPrism_backend_set_rate
-        ? pPrism_backend_set_rate(g_prismCompass, rate) : kPrismErrNotImplemented;
-    acclog::Write("Speech", "SAPI compass volume %d%% (rc=%d), rate %d%% (rc=%d)",
-                  g_compassVolume.value, vrc, g_compassRate.value, rrc);
+    ApplyLevels(g_prismCompass, g_compassVolume, g_compassRate, "compass");
 }
 
-// Make the compass instance speak with voice `voiceId`. Cached like
-// EnsureSapiVoice; false when out of range or SAPI refuses.
-bool EnsureCompassVoice(size_t voiceId) {
-    if (!g_prismCompass || !pPrism_backend_set_voice) return false;
-    if (voiceId >= g_sapiVoiceCount) return false;
-    if (voiceId == g_compassVoiceCurrent) return true;
-    PrismError rc = pPrism_backend_set_voice(g_prismCompass, voiceId);
-    if (rc != kPrismOk) {
-        acclog::Trace("Speech",
-                      "prism_backend_set_voice(compass, %zu) rc=%d "
-                      "(staying on voice %zu)", voiceId, rc, g_compassVoiceCurrent);
-        return false;
-    }
-    g_compassVoiceCurrent = voiceId;
-    return true;
+bool SetCompassVoice(size_t voiceId) {
+    return SetVoiceCached(g_prismCompass, g_compassVoiceCurrent, voiceId, "compass");
 }
 
 size_t DefaultCompassVoiceId() {
@@ -92,12 +66,12 @@ size_t DefaultCompassVoiceId() {
 // the urgent channel has settled its own voice (the default steers around it).
 void ApplyCompassVoice() {
     if (g_sapiVoiceCount == 0) return;
-    char saved[sizeof(g_sapiVoiceName)] = {0};
+    char saved[kVoiceNameMax] = {0};
     if (acc::settings::GetStr(kCompassVoiceKey, saved, static_cast<int>(sizeof(saved))) &&
         saved[0]) {
         const size_t id = FindSapiVoiceByNameUtf8(saved);
-        if (id != static_cast<size_t>(-1)) {
-            if (EnsureCompassVoice(id)) {
+        if (id != kNoVoice) {
+            if (SetCompassVoice(id)) {
                 acclog::Write("Speech", "SAPI compass voice set to [%s] (id %zu)", saved, id);
             }
             return;
@@ -106,10 +80,21 @@ void ApplyCompassVoice() {
                       "persisted compass voice [%s] not installed; using the default", saved);
     }
     const size_t id = DefaultCompassVoiceId();
-    if (EnsureCompassVoice(id)) {
+    if (SetCompassVoice(id)) {
         acclog::Write("Speech", "SAPI compass voice defaulted to id %zu (urgent is %zu)",
                       id, g_sapiVoiceCurrent);
     }
+}
+
+// How long the compass voice takes to say `text`, silence trimmed (renders
+// come back gated); 0 when it cannot be measured. A render costs one game
+// frame at most (0-31 ms logged for lines this short).
+DWORD CompassSpeechMs(const char* text) {
+    char voice[kVoiceNameMax] = {};
+    if (!FetchSapiVoiceNameUtf8(g_compassVoiceCurrent, voice, sizeof(voice))) return 0;
+    RenderedSpeech r;
+    if (!RenderSapiVoiceToMemory(voice, LoadPercent(g_compassRate), text, r)) return 0;
+    return static_cast<DWORD>(r.samples.size() / r.channels * 1000 / r.sampleRate);
 }
 
 }  // namespace
@@ -117,28 +102,24 @@ void ApplyCompassVoice() {
 // Create the compass instance. Needs the urgent SAPI channel up first: it
 // supplies the voice list and the urgent voice the default steers around.
 bool TryCreateCompass() {
-    if (!g_sapiReady || !pPrism_registry_create) {
+    if (!g_sapiReady) {
         acclog::Write("Speech",
                       "compass channel unavailable; the compass speaks on the "
                       "announcement voice");
         return false;
     }
+    PrismError rc = kPrismOk;
     DWORD seh = 0;
-    PrismBackend* be = SehCreate(g_prismCtx, kPrismBackendIdSapi, &seh);
-    PrismError rc = be ? SehInitialize(be, &seh) : kPrismErrUnknown;
-    if (!be || seh || (rc != kPrismOk && rc != kPrismErrAlreadyInitialized)) {
+    PrismBackend* be = CreateBackend(kPrismBackendIdSapi, &rc, &seh);
+    if (!be) {
         acclog::Write("Speech",
                       "compass channel failed (rc=%d seh=0x%08lX); the compass "
                       "speaks on the announcement voice", rc, seh);
         return false;
     }
     g_prismCompass = be;
-    if (pPrism_backend_get_voice) {
-        size_t cur = 0;
-        if (pPrism_backend_get_voice(g_prismCompass, &cur) == kPrismOk) {
-            g_compassVoiceCurrent = cur;
-        }
-    }
+    size_t cur = 0;
+    if (pPrism_backend_get_voice(g_prismCompass, &cur) == kPrismOk) g_compassVoiceCurrent = cur;
     ApplyCompassLevels();
     ApplyCompassVoice();
     acclog::Write("Speech", "compass channel ready (second SAPI instance)");
@@ -167,8 +148,8 @@ void SpeakCompass(const char* text) {
     }
     if (!g_normalReady || !text || !*text) return;
     CaptureSpoken(text);
-    std::vector<char> utf8(strlen(text) * 4 + 1);
-    const char* speakText = ReencodeAcpToUtf8(text, utf8.data(), utf8.size()) ? utf8.data() : text;
+    const std::string utf8 = ToUtf8(text);
+    const char* speakText = utf8.empty() ? text : utf8.c_str();
     PrismError rc = pPrism_backend_speak(g_prismCompass, speakText, /*interrupt=*/true);
     BrailleNormal(speakText);
     if (rc == kPrismOk) {
@@ -178,40 +159,19 @@ void SpeakCompass(const char* text) {
     }
 }
 
-// How long the compass voice takes to say `text`, silence trimmed (renders
-// come back gated); 0 when it cannot be measured. A render costs one game
-// frame at most (0-31 ms logged for lines this short).
-static DWORD CompassSpeechMs(const char* text) {
-    char voice[sizeof(g_sapiVoiceName)] = {};
-    if (!FetchSapiVoiceNameUtf8(g_compassVoiceCurrent, voice, sizeof(voice))) return 0;
-    RenderedSpeech r;
-    if (!RenderOn(g_renderSapi, voice, RateFromPercent(LoadPercent(g_compassRate)), 1.0f, text, r))
-        return 0;
-    return static_cast<DWORD>(r.samples.size() / r.channels * 1000 / r.sampleRate);
-}
-
 void SpeakCompassThen(const char* text, const char* followUp) {
-    if (AllViaScreenReader() && text && *text) {
-        if (followUp && *followUp) {
-            const std::string both = std::string(text) + "\n" + followUp;
-            Speak(both.c_str(), /*interrupt=*/true);
-        } else {
-            Speak(text, /*interrupt=*/true);
-        }
-        return;
-    }
     if (!followUp || !*followUp) {
         SpeakCompass(text);
         return;
     }
-    if (!g_normalReady || !text || !*text) return;
+    if (!text || !*text) return;
     const std::string line = std::string(text) + "\n" + followUp;
-    if (!g_compassReady || !pPrism_backend_is_speaking) {
-        // No second voice to take turns with: one line on the screen reader,
-        // as before the compass voice existed.
+    if (AllViaScreenReader() || !g_compassReady) {
+        // No second voice to take turns with: one line on the screen reader.
         Speak(line.c_str(), /*interrupt=*/true);
         return;
     }
+    if (!g_normalReady) return;
     const DWORD speechMs = CompassSpeechMs(text);
     // The follow-up lands on the screen reader; clear it now so the compass
     // line does not play over something stale still being read there.
@@ -254,7 +214,7 @@ void Tick() {
                   why, g_compassFollowUpSpeechMs);
     std::string followUp;
     followUp.swap(g_compassFollowUp);
-    s_suppressNextCapture = true;  // LastSpoken already holds the whole line
+    SuppressNextCapture();  // LastSpoken already holds the whole line
     Speak(followUp.c_str(), /*interrupt=*/false);
 }
 
@@ -281,16 +241,15 @@ size_t CompassVoiceCount() {
 }
 
 size_t GetCompassVoiceId() {
-    if (g_compassVoiceCurrent >= g_sapiVoiceCount) return 0;
-    return g_compassVoiceCurrent;
+    return g_compassVoiceCurrent < g_sapiVoiceCount ? g_compassVoiceCurrent : 0;
 }
 
 void SetCompassVoiceId(size_t voiceId) {
     if (!g_compassReady || voiceId >= g_sapiVoiceCount) return;
     // Cut the sample still playing first — see SetUrgentVoiceId.
-    if (pPrism_backend_stop) pPrism_backend_stop(g_prismCompass);
-    if (!EnsureCompassVoice(voiceId)) return;
-    char utf8[sizeof(g_sapiVoiceName)];
+    pPrism_backend_stop(g_prismCompass);
+    if (!SetCompassVoice(voiceId)) return;
+    char utf8[kVoiceNameMax];
     if (!FetchSapiVoiceNameUtf8(voiceId, utf8, sizeof(utf8))) return;
     acc::settings::SetStr(kCompassVoiceKey, utf8);
     acclog::Write("Speech", "SAPI compass voice -> [%s] (id %zu)", utf8, voiceId);

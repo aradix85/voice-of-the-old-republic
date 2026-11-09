@@ -3,6 +3,9 @@
 
 #include "prism_internal.h"
 
+#include "bridge.h"   // spoken-line ring buffer for the local bridge
+#include "log.h"
+
 namespace prism {
 
 namespace {
@@ -10,81 +13,58 @@ namespace {
 // Active narrow-text codepage. Both our own string tables and the engine's
 // CExoString payload are in the *game's* codepage, not necessarily the OS one:
 // a Russian install is Windows-1251 even on a German or English Windows, where
-// CP_ACP is 1252. Defaulting to CP_ACP keeps the pre-existing en/de/fr/it/es
-// behaviour byte-for-byte (those are all 1252, which is what CP_ACP resolves to
-// on their users' systems); SetSpeechCodepage pins it explicitly once the
-// language is known. See DetectLanguageFromTlk in core_dllmain.cpp.
+// CP_ACP is 1252. Defaulting to CP_ACP keeps en/de/fr/it/es byte-for-byte
+// (those are all 1252, which is what CP_ACP resolves to on their users'
+// systems); SetSpeechCodepage pins it explicitly once the language is known.
+// See DetectLanguageFromTlk in core_dllmain.cpp.
 UINT g_speechCodepage = CP_ACP;
+
+// Last-utterance capture, held in the game codepage — the same bytes the
+// caller handed us — so consumers can re-widen with the codepage of their
+// choice. Sized well above kAnnounceTextMax (1024) so we never truncate an
+// utterance the speech path itself carried in full; over-long text is
+// truncated rather than dropped.
+char s_lastSpoken[4096] = {0};
+bool s_suppressNextCapture = false;
+
+// `text` in codepage `cp`; empty when it cannot be converted. Best-fit
+// characters are allowed: an approximation beats losing the line.
+std::string Narrow(const wchar_t* text, UINT cp) {
+    const int n = WideCharToMultiByte(cp, 0, text, -1, nullptr, 0, nullptr, nullptr);
+    if (n <= 0) return {};
+    std::string out(static_cast<size_t>(n), '\0');
+    if (WideCharToMultiByte(cp, 0, text, -1, &out[0], n, nullptr, nullptr) <= 0) return {};
+    out.resize(static_cast<size_t>(n) - 1);
+    return out;
+}
+
+// `in` from codepage `from` to codepage `to`, through UTF-16.
+std::string Recode(const char* in, UINT from, UINT to) {
+    const int n = MultiByteToWideChar(from, 0, in, -1, nullptr, 0);
+    if (n <= 0) return {};
+    std::wstring wide(static_cast<size_t>(n), L'\0');
+    if (MultiByteToWideChar(from, 0, in, -1, &wide[0], n) <= 0) return {};
+    return Narrow(wide.c_str(), to);
+}
 
 }  // namespace
 
 // Game codepage → UTF-8. Prism's SAPI backend strict-validates UTF-8 and
-// returns PRISM_ERROR_INVALID_UTF8 on any non-UTF-8 lead byte. The NVDA backend
-// also strings text through simdutf-style validators in places. So any
-// non-ASCII byte (German umlauts, Cyrillic, ...) is an invalid UTF-8 lead →
-// whole utterance dropped without this re-encode.
-//
-// Writes a NUL-terminated UTF-8 string into `outBuf`. Returns true on success.
-bool ReencodeAcpToUtf8(const char* in, char* outBuf, size_t outBufSize) {
-    if (!in || !outBuf || outBufSize == 0) return false;
-    const UINT cp = g_speechCodepage;
-    int wideLen = MultiByteToWideChar(cp, 0, in, -1, nullptr, 0);
-    if (wideLen <= 0) return false;
-    wchar_t wStack[256];
-    wchar_t* w = wStack;
-    wchar_t* wHeap = nullptr;
-    if (static_cast<size_t>(wideLen) > sizeof(wStack) / sizeof(wStack[0])) {
-        wHeap = (wchar_t*)malloc(static_cast<size_t>(wideLen) * sizeof(wchar_t));
-        if (!wHeap) return false;
-        w = wHeap;
-    }
-    int gotWide = MultiByteToWideChar(cp, 0, in, -1, w, wideLen);
-    if (gotWide <= 0) {
-        if (wHeap) free(wHeap);
-        return false;
-    }
-    int needed = WideCharToMultiByte(CP_UTF8, 0, w, -1, nullptr, 0, nullptr, nullptr);
-    if (needed <= 0 || static_cast<size_t>(needed) > outBufSize) {
-        if (wHeap) free(wHeap);
-        return false;
-    }
-    int got = WideCharToMultiByte(CP_UTF8, 0, w, -1, outBuf,
-                                  static_cast<int>(outBufSize),
-                                  nullptr, nullptr);
-    if (wHeap) free(wHeap);
-    return got > 0;
+// returns PRISM_ERROR_INVALID_UTF8 on any non-UTF-8 lead byte, and the NVDA
+// backend runs text through UTF-8 validators too, so without this every line
+// with a non-ASCII byte (umlauts, Cyrillic, ...) would be dropped.
+std::string ToUtf8(const char* gameText) {
+    return Recode(gameText, g_speechCodepage, CP_UTF8);
 }
 
-// Mirror of the above: Prism hands voice names back in UTF-8, and everything
-// downstream of us (speech dispatch, the composed UI line) works in the game
-// codepage. Fails rather than truncating, same contract as ReencodeAcpToUtf8.
-bool ReencodeUtf8ToGameCodepage(const char* in, char* outBuf, size_t outBufSize) {
-    if (!in || !outBuf || outBufSize == 0) return false;
-    int wideLen = MultiByteToWideChar(CP_UTF8, 0, in, -1, nullptr, 0);
-    if (wideLen <= 0) return false;
-    wchar_t wStack[256];
-    wchar_t* w = wStack;
-    wchar_t* wHeap = nullptr;
-    if (static_cast<size_t>(wideLen) > sizeof(wStack) / sizeof(wStack[0])) {
-        wHeap = (wchar_t*)malloc(static_cast<size_t>(wideLen) * sizeof(wchar_t));
-        if (!wHeap) return false;
-        w = wHeap;
-    }
-    int gotWide = MultiByteToWideChar(CP_UTF8, 0, in, -1, w, wideLen);
-    if (gotWide <= 0) {
-        if (wHeap) free(wHeap);
-        return false;
-    }
-    int needed = WideCharToMultiByte(g_speechCodepage, 0, w, -1, nullptr, 0,
-                                     nullptr, nullptr);
-    if (needed <= 0 || static_cast<size_t>(needed) > outBufSize) {
-        if (wHeap) free(wHeap);
-        return false;
-    }
-    int got = WideCharToMultiByte(g_speechCodepage, 0, w, -1, outBuf,
-                                  static_cast<int>(outBufSize), nullptr, nullptr);
-    if (wHeap) free(wHeap);
-    return got > 0;
+// Prism hands voice names back in UTF-8; everything downstream of us (speech
+// dispatch, the composed UI line) works in the game codepage.
+std::string FromUtf8(const char* utf8) {
+    return Recode(utf8, CP_UTF8, g_speechCodepage);
+}
+
+std::string WideToUtf8(const wchar_t* text) {
+    return Narrow(text, CP_UTF8);
 }
 
 void CaptureSpoken(const char* text) {
@@ -92,26 +72,14 @@ void CaptureSpoken(const char* text) {
         s_suppressNextCapture = false;
         return;
     }
-    if (!text) return;
     strncpy_s(s_lastSpoken, text, _TRUNCATE);
     ::acc::bridge::RecordSpoken(s_lastSpoken);
 }
 
-// Wide path: fold back to the game codepage so LastSpoken() has one encoding
-// regardless of which overload produced it. WC_NO_BEST_FIT_CHARS is
-// deliberately NOT set — a best-fit approximation is better than losing the
-// utterance for a codepoint the game codepage can't represent.
+// Folded back to the game codepage, so LastSpoken() has one encoding whichever
+// overload produced it.
 void CaptureSpokenW(const wchar_t* text) {
-    if (s_suppressNextCapture) {
-        s_suppressNextCapture = false;
-        return;
-    }
-    if (!text) return;
-    int got = WideCharToMultiByte(g_speechCodepage, 0, text, -1, s_lastSpoken,
-                                  (int)sizeof(s_lastSpoken), nullptr, nullptr);
-    if (got <= 0) s_lastSpoken[0] = '\0';
-    s_lastSpoken[sizeof(s_lastSpoken) - 1] = '\0';
-    ::acc::bridge::RecordSpoken(s_lastSpoken);
+    CaptureSpoken(Narrow(text, g_speechCodepage).c_str());
 }
 
 void SetSpeechCodepage(unsigned codepage) {
