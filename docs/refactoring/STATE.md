@@ -105,7 +105,12 @@ prefix (menus_listbox_picker.cpp).
 - NVDA-only speech (decision above). A+B done: positional speech and the
   SAPI voices are out (one commit). Still to do:
   C. Prism replaced by the NVDA Controller Client (x86 DLL, speak, cancel,
-     braille), module renamed (prism:: to speech::, 91 includes);
+     braille), module renamed (prism:: to speech::, 91 includes). The DLL
+     and header are already in git: third_party/tolk/x86/
+     nvdaControllerClient32.dll, third_party/tolk/include/nvdaController.h
+     (Tolk.dll there is a leftover: remove). Drop the Prism SAPI
+     workarounds then too (focus_guard SAPI worker windows, diag_focus
+     apartment probe, speech_clipboard note, transitions 1300/1771);
      installer ships nvdaControllerClient32.dll instead of prism.dll and
      removes the old files on upgrade; kdev install too.
   D. Exploration sounds out where text covers them (audio_cues NavCue door/
