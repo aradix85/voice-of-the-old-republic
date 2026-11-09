@@ -68,6 +68,10 @@ push to the branch is built by GitHub Actions and published as the pre-release
 - Ctrl+L walks to the nearest container or item left to search and opens it.
 - Small open slivers of the same space within 6 metres count as seen.
 - Focusing a door says which way it leads and what lies beyond it.
+- A door to a room you have visited says who and what is still there, or
+  "nothing left".
+- A door into another area you have been through names the map notes inside
+  it, so two areas with the same name can be told apart.
 - A door into another area no longer says "to a dead end".
 - Anything in another region gives the walking route to it, or "behind a
   locked door".
@@ -124,6 +128,19 @@ push to the branch is built by GitHub Actions and published as the pre-release
   visited"; "South, back") and number doors like the cycles ("Door 4 North").
 - "Here:" lists what is in the region whether you have heard it or not, and
   never names you.
+- A door whose far side you have visited adds who and what is still there,
+  in the door's target line and in the region announcement: "Door 3, leads
+  East, to a room, visited, Matrik", or "nothing left" once everything there
+  is searched. People (not the party, not the dead), containers that still
+  hold something and items on the ground, at most three named. It follows
+  the visited regions kept in the save, so it holds after loading.
+- A door into another area you have been through names the map notes of
+  that area ("Taris - Lower City Apartments, Matrik's Apartment" against
+  "..., Selven's Apartment"): the game gives Taris' two apartment blocks the
+  same name. Kept in the save per area (`ACC_EXIT_<area>` for which door led
+  where, `ACC_SUM_<area>` for the notes seen there), recorded only when you
+  arrive at a door that leads back to the area you left, so a loaded save
+  does not count as a walk through a door.
 - Visited regions are stored in a save variable per area (`ACC_VISIT_<area>`)
   by region centre, so they survive saving, loading and game updates.
 - Ctrl+N (exploration overview) starts with the current region, then the
