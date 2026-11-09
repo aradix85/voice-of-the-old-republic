@@ -13,20 +13,13 @@
 #include <vector>
 #include "engine_area.h"        // AreaObjectIterator, GetObjectKind, GameObjectKind::Door, GetObjectPosition, kDoorTransitionDestOffset, SegmentCrossesWalkmesh
 #include "engine_navgraph.h"
-#include "engine_reads.h"       // ExtractTextOrStrRef — transition-destination loc-string read
-#include "log.h"
-#include "spatial_change_detector.h"  // GetCachedWalls — seam-filtered perimeter cache
-#include "wall_probe.h"         // the wall system this module reads (Phase-1 split)
-#include "strfmt.h"             // Format — heap-backed printf, never truncates announcements
+#include "wall_probe.h"         // the wall system this module reads
 #include "strings.h"
-#include "transitions.h"        // IterateLandmarks + MarkLandmarkClaimedByDoor — landmark→door matching pass
 
 namespace acc::room_topology {
 
-// The walkmesh-probe primitives moved to wall_probe.{h,cpp} in the Phase-1
-// structure pass: they are the wall system ("is there a wall, how far"),
-// this module is the room-shape system that consumes them. Brought back
-// into unqualified scope so the call sites below read as they did.
+// The walkmesh probes of wall_probe ("is there a wall, how far"), which this
+// room-shape system consumes.
 using acc::wall_probe::ProbeDistance;
 using acc::wall_probe::IsAlcoveAlongAxis;
 using acc::wall_probe::ProbeClearance8;
@@ -74,7 +67,7 @@ constexpr float kMergeMaxZM = 1.0f;
 // the engine's edges define what is actually contiguous. See the Pass 1
 // body for the full rationale + Slums adjacency audit.
 //
-// Threshold rationale (measured 2026-06-09, Slums vs Manaan Östliches
+// Threshold rationale (measured on the Slums and Manaan Östliches
 // Zentrum): a pure corridor X-junction has at most as many long rays as
 // it has arms, so its over-8m count tops out at ~3-5; a genuinely open
 // room needs its surrounding walls pulled back and reaches 6-8. Setting
@@ -151,9 +144,9 @@ constexpr int kMaxDoors = 128;
 // transition destination). Outdoor maps (Lehon beaches) use these instead
 // of doors for area exits: the walkmesh simply ends inside the trigger
 // polygon, so the nav graph sees a dead end there and the cluster label
-// said "Sackgasse" at the very spot that leaves the area (2026-07-16
-// Südlicher Strand session — the only walk-through exit spoke as a dead
-// end for 40 minutes). Snapshotted once per build like doors; each record
+// said "Sackgasse" at the very spot that leaves the area (the Südlicher
+// Strand's only walk-through exit). Snapshotted once per build like doors;
+// each record
 // binds to its nearest nav node so Pass 3 can voice the transition as a
 // named exit of that node's cluster.
 struct TransitionRecord {

@@ -4,6 +4,8 @@
 
 #include "room_topology_internal.h"
 
+#include "log.h"
+
 namespace acc::room_topology {
 
 namespace {

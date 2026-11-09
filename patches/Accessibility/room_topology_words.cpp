@@ -4,6 +4,8 @@
 
 #include "room_topology_internal.h"
 
+#include "strfmt.h"             // Format — heap-backed printf, never truncates announcements
+
 namespace acc::room_topology {
 
 namespace {
@@ -200,7 +202,7 @@ std::string RenderDoorDirection(int doorIdx, const char* dirWord) {
 //     the northern-half octant word ("Nord-Ost") — but that word IS a
 //     direction name, so by ear it read as "one exit, north-east" and
 //     hid the south-west continuation entirely. On the Südlicher
-//     Strand (2026-07-16 session) the abbreviated NE–SW connector
+//     Strand the abbreviated NE–SW connector
 //     between the two Kreuzungen was the only route to the beach, and
 //     its south-west end was never voiced.
 //   - non-opposite octants = asymmetric / L-shaped corridor → both
@@ -217,7 +219,7 @@ std::string RenderDoorDirection(int doorIdx, const char* dirWord) {
 // that direction word is wrapped "Sackgasse %s", same as junction
 // dead-end octants. Without the marker the Peragus Minenschächte droid
 // pocket announced as a plain "Ost" exit and the player searched the
-// east wall for a way out that never existed (2026-08-11 session).
+// east wall for a way out that never existed.
 // `posA` / `posB` are where each end leads (ExitPoint); when the two
 // ends are named separately they are noted as exits (NoteExit). The
 // single axis word names the run, not an end, so its ends are noted
@@ -279,7 +281,7 @@ std::string RenderCorridorAxis(int bitA, int doorA, bool deadA,
         second = bitA; secondDoor = doorA; secondDead = deadA;
         secondRamp = rampA; secondPos = posA;
     }
-    // Passable end first (2026-08-26): the corridor form "Sackgasse
+    // Passable end first: the corridor form "Sackgasse
     // Nord, Süd" and the standalone dead-end form "Sackgasse, Nord"
     // differ only by comma position — near-indistinguishable through a
     // screen reader, with opposite meanings for the marked direction.
@@ -328,9 +330,8 @@ std::string RenderCorridorAxis(int bitA, int doorA, bool deadA,
 
 // Render one direction entry. When `markDeadEnd` is set, the direction
 // word is wrapped via FmtMapCursorJunctionDeadEndExit ("Sackgasse %s") so
-// the user knows that exit doesn't lead onward (option 1 from the
-// 2026-05-13 Dias-cluster discussion — junctions whose edges include
-// degree-1 stubs should call them out). Prefix form mirrors the door
+// the user knows that exit doesn't lead onward (junctions whose edges
+// include degree-1 stubs call them out). Prefix form mirrors the door
 // rewrite ("Tür %s nach %s") so every special exit reads NOUN-then-
 // direction within the junction list.
 std::string DirEntry(acc::strings::Id dirId, bool markDeadEnd,

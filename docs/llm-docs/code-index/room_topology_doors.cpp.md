@@ -6,8 +6,8 @@ Doors and area transitions in the region graph: the door and transition snapshot
 
 ## Declarations (in source order)
 
-- L43 `int FindDoorNearPoint(const Vector& p, float maxDistM)`: Find the door nearest to `p` within `maxDistM`.
-- L71 `void SnapshotDoors(void* area)`: Collect every CSWSDoor in the area into g_graph.doors.
+- L47 `int FindDoorNearPoint(const Vector& p, float maxDistM)`: Find the door nearest to `p` within `maxDistM`.
+- L75 `void SnapshotDoors(void* area)`: Collect every CSWSDoor in the area into g_graph.doors.
 - L181 `void SnapshotTransitionTriggers(void* area)`: Collect every walk-through area-transition trigger into g_graph.transitions.
 - L276 `int FindDoorOnEdge(const Vector& a, const Vector& b)`: Door-on-edge test.
 - L323 `EdgeResult ClassifyEdge(void* areaForDiag, const Vector& a, const Vector& b, const char* callerCtx)`: Classify a nav-graph segment AB against walls + doors.

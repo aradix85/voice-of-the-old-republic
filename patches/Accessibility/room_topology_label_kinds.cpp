@@ -3,6 +3,9 @@
 
 #include "room_topology_internal.h"
 
+#include "log.h"
+#include "strfmt.h"             // Format — heap-backed printf, never truncates announcements
+
 namespace acc::room_topology {
 
 namespace {

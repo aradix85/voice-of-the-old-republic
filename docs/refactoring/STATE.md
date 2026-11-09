@@ -71,11 +71,22 @@ door-near-point helper (F1); five never-called functions removed (eb43055);
 case folding in strfmt.h (F11, 504c33e); distance helpers next to Vector
 (F10, 631eb0b); unit tests with save_points and shortest_paths taken out of
 exit_memory (3c61b4d); generated code index (b957a29); updater removed
-(8d2a198); kotor-tools tests (c7a9c41).
+(8d2a198); kotor-tools tests (c7a9c41). room_topology split into eleven
+files with tools/analysis/split_file.py (287ab2e), then made lean: F1's
+SnapshotDoors loop, includes per file, history out of its comments.
 
 ## Open
 
-- room_topology.cpp: see the design below.
+- room_topology: pure logic to engine-free files with tests (octant
+  helpers; the bits E=0 counter-clockwise could become compass order N=0
+  clockwise like engine_compass, which would also simplify
+  kOctantEmitOrder). 39 of 55 functions are shared through the internal
+  header: the pipeline really is one; accept.
+- F12 engine yaw of a vector: `atan2(dy, dx) * 57.29...` written out in
+  about 15 files with four spellings of the constant, often followed by
+  EngineYawToCompass/CompassToSector/SectorString. One helper in
+  engine_compass (bearing of a vector, and its compass word).
+- Next file: menus_extract.cpp (2,506 lines).
 - F2b: share the save-variable code of exit_memory with discovery.cpp.
 - F3 menus_chargen_feats / menus_powers_levelup: about 15 same-named
   functions, 22 cloned blocks; one chart-grid module (check K2 plans).
@@ -98,29 +109,12 @@ exit_memory (3c61b4d); generated code index (b957a29); updater removed
   untested features in brief.md), end report against the baseline, delete
   this file, short changelog note.
 
-## Next design: room_topology.cpp (4,485 lines, 55 functions)
+## Splitting a file
 
-Held together by g_graph, kMaxNodes and ten helpers (AppendListEntry,
-ClassifyCluster, ClassifyEdge, Degree, ExitPoint, FindDoorOnEdge,
-HasGraphForArea, NoteExit, RenderDoorDirection, UFFind). Public API
-(room_topology.h) unchanged:
-- room_topology_internal.h: graph struct, g_graph, region kinds, shared
-  constants and helpers.
-- room_topology.cpp: Reset, BuildForArea (the pipeline), the public
-  queries, DumpGraphToLog.
-- room_topology_doors.cpp: door and transition snapshots with their retry,
-  AttachLandmarksToDoors, FindDoorOnEdge, FindDoorNearPoint, ClassifyEdge.
-- room_topology_merge.cpp: union-find and the merge passes.
-- room_topology_shape.cpp: shape features, centroid axis,
-  PassClassifyClusters.
-- room_topology_words.cpp: octants, exit entries, door direction, corridor
-  axis, far-end suffix: the words of a label.
-- room_topology_label.cpp: the label per region kind (ClassifyAs*,
-  demotions, junction, ClassifyClusterShape, ClassifyCluster).
-- room_topology_diag.cpp: the four diagnostic log functions.
-Tool first: tools/analysis/split_file.py, the exit_memory migration script
-made general (function-to-module map; data follow their users; a free
-comment block travels with the item after it).
+`python tools/analysis/split_file.py CONFIG.json` (format in its docstring;
+the configs are not kept). After it, the project includes of the internal
+header go to the files that use them (a small script did this for
+room_topology; the compiler catches a miss).
 
 ## Rejected
 

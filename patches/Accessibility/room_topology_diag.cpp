@@ -3,6 +3,9 @@
 
 #include "room_topology_internal.h"
 
+#include "log.h"
+#include "spatial_change_detector.h"  // GetCachedWalls — seam-filtered perimeter cache
+
 namespace acc::room_topology {
 
 // Per-door diagnostic dump. Position + transition string + geometry

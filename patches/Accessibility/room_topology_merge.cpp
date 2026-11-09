@@ -3,6 +3,8 @@
 
 #include "room_topology_internal.h"
 
+#include "log.h"
+
 namespace acc::room_topology {
 
 namespace {
@@ -11,9 +13,7 @@ namespace {
 // into one cluster. K1 corridors are authored as 5-15 degree-2 patrol
 // nodes ~3-5m apart along a single axis; without merging each becomes
 // its own cluster and a 15m hallway re-announces "Korridor Ost-West"
-// 3+ times as the player walks it. The 2026-05-21 evening logs showed
-// "Korridor Ost-West" spoken 13x, "Korridor Nord, West" 12x, etc.
-// (docs/room-shape-improvements.md item 1).
+// 3+ times as the player walks it (one corridor label was heard 13 times).
 //
 // A node is "straight" iff its two outgoing edge vectors point in
 // roughly opposite directions (cos(angle) <= kCorridorStraightCosMax).

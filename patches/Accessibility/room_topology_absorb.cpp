@@ -4,14 +4,12 @@
 
 #include "room_topology_internal.h"
 
+#include "log.h"
+
 namespace acc::room_topology {
 
 namespace {
 
-// (The old density-based merge — pack ≥N nav nodes within 3m → one
-// cluster — was retired 2026-06-09. It was a crude proxy for "small
-// enclosed room"; the clearance probe now measures room-shape directly
-// and the space rule subsumes it.)
 // Pass 2 / straggler absorb — folds a degree-≤2 corner/spoke into an
 // adjacent multi-node core (the merged successor of the old hub + bbox
 // absorption passes). It targets the K1 "two-hub star" small-room pattern

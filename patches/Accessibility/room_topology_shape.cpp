@@ -4,6 +4,9 @@
 
 #include "room_topology_internal.h"
 
+#include "log.h"
+#include "spatial_change_detector.h"  // GetCachedWalls — seam-filtered perimeter cache
+
 namespace acc::room_topology {
 
 namespace {
@@ -34,10 +37,8 @@ constexpr int   kRoomMinMidRays   = 3;
 // doorway node). This flag, like nodeOpen, no longer drives a merge rule of
 // its own — it marks the node as SPACE for the unified Pass 1 space rule.
 //
-// (Replaced the old density pass (1b): density — ≥N nav nodes within 3m —
-// was a crude proxy for "packed small room"; the clearance probe measures
-// room-shape directly. The validated 2026-06-09 harvest fires it where
-// small rooms are (Ebon Hawk 21, Apartments 9) and not outdoors (Slums 3).)
+// Measured: it fires where small rooms are (Ebon Hawk 21, Apartments 9) and
+// not outdoors (Slums 3).
 // Area geometry cue: the only shape we speak for a "Bereich" is its long
 // axis, and only when the space is clearly elongated. At the cluster
 // centroid the full extent across each of the 4 axes is the sum of its
@@ -52,14 +53,14 @@ constexpr float kAxisElongRatio = 1.8f;
 // "Kreuzung". The word "Kreuzung" promises a decision point a few steps
 // wide; the Lehon Südlicher Strand rock-web cluster spans 46m and its
 // re-announcement on every re-entry from a fringe channel read as
-// discovering a new crossing each time — four phantom crossings in 80s
-// (2026-08-11). Step-scale merged hubs (double junctions, ~5m) stay
+// discovering a new crossing each time — four phantom crossings in 80s.
+// Step-scale merged hubs (double junctions, ~5m) stay
 // Kreuzung. Sized between the biggest legitimate crossing (<10m) and
 // the smallest observed zone-web (46m); node-bbox under-reads true
 // footprint, so 15m of node spread is already a place, not a point.
 constexpr float kJunctionZoneExtentMeters = 15.0f;
 
-// Width half of the zone-scale rule (2026-08-26, Ebon-Hawk hull). For
+// Width half of the zone-scale rule (Ebon-Hawk hull). For
 // clusters with fewer than three exits, zone-scale LENGTH alone isn't
 // enough to call a space a place — a corridor is long by nature. The
 // min-side test is the discriminator: vanilla hallways run 2.5-3m wide,
@@ -120,7 +121,7 @@ void ComputeNodeShapeFeatures(const acc::engine::navgraph::NavGraphSnapshot& g,
         // opening dropped the nearest wall from the cache, the lift
         // latched onto a multi-storey anomaly edge 4m overhead and the
         // all-clear probe reclassified a Sackgasse pocket as open space
-        // (Minenschächte node 76, 2026-08-11).
+        // (Minenschächte node 76).
         probePos.z = acc::wall_probe::ResolveProbeZ(cw, cwCount, probePos);
         nodeFloorZ[i] = probePos.z;
         float r[8];
@@ -188,7 +189,7 @@ void ComputeNodeShapeFeatures(const acc::engine::navgraph::NavGraphSnapshot& g,
             r[0], r[1], r[2], r[3], r[4], r[5], r[6], r[7]);
     }
 
-    // Per-node dead-end verdict (2026-08-26). "Does the walkmesh agree
+    // Per-node dead-end verdict. "Does the walkmesh agree
     // that this degree-1 node terminates a region?" — asked once, here,
     // with the other node-local shape facts, instead of four times in
     // the classification pass from three different probe origins.
@@ -249,7 +250,7 @@ void ComputeNodeShapeFeatures(const acc::engine::navgraph::NavGraphSnapshot& g,
 // probes (ComputeNodeShapeFeatures). Preferred over a single probe at
 // the centroid, which is what this used to be: the centroid of a
 // corridor sits mid-run, and mid-run is exactly where a crossing
-// corridor opens up. Citadel Station Wohnmodul 082 Ost (2026-09-14),
+// corridor opens up. Citadel Station Wohnmodul 082 Ost,
 // the Apartmentkomplex-C corridor: 11 nodes spanning 23m east-west,
 // 9 of them boxed to ~9m north-south, but the centroid landed on the
 // entrance corridor crossing it and its N-S rays ran 50m through the

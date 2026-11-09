@@ -5,6 +5,11 @@
 
 #include "room_topology_internal.h"
 
+#include "engine_reads.h"       // ExtractTextOrStrRef — transition-destination loc-string read
+#include "log.h"
+#include "spatial_change_detector.h"  // GetCachedWalls — seam-filtered perimeter cache
+#include "transitions.h"        // IterateLandmarks + MarkLandmarkClaimedByDoor — landmark→door matching pass
+
 namespace acc::room_topology {
 
 namespace {
@@ -38,8 +43,7 @@ constexpr int kDoorRetryCapTicks           = 60;
 // index or -1. Used as the belt-and-braces fallback in ClassifyEdge:
 // if SegmentCrossesWalkmesh reports a wall hit AND a door lives within
 // 1m of the hit point, treat the edge as Door rather than Blocked —
-// catches the rare "door inside solid walkmesh" authoring case (memory
-// caveat from the 2026-05-20 design discussion).
+// catches the rare "door inside solid walkmesh" authoring case.
 int FindDoorNearPoint(const Vector& p, float maxDistM) {
     if (g_graph.door_count <= 0) return -1;
     float maxSq  = maxDistM * maxDistM;
@@ -99,18 +103,16 @@ void SnapshotDoors(void* area) {
     g_graph.door_count = 0;
     if (!area) return;
 
-    acc::engine::AreaObjectIterator iter(area);
-    void* obj = nullptr;
-    while ((obj = iter.Next()) != nullptr) {
+    bool truncated = false;
+    acc::engine::ForEachDoor(area, [&](void* obj, const Vector& pos) {
         if (g_graph.door_count >= kMaxDoors) {
-            acclog::Write("WallTopo",
-                          "SnapshotDoors: hit kMaxDoors=%d — truncating",
-                          kMaxDoors);
-            break;
-        }
-        int kind = acc::engine::GetObjectKind(obj);
-        if (kind != static_cast<int>(acc::engine::GameObjectKind::Door)) {
-            continue;
+            if (!truncated) {
+                acclog::Write("WallTopo",
+                              "SnapshotDoors: hit kMaxDoors=%d — truncating",
+                              kMaxDoors);
+            }
+            truncated = true;
+            return;
         }
         // Cosmetic doors are non-interactive set dressing — the engine
         // offers no actions on them. In the room-shape system a cosmetic
@@ -121,9 +123,7 @@ void SnapshotDoors(void* area) {
         // which is the truth. Real doors are unaffected — including the K2
         // static-but-locked ones IsDoorCosmetic re-classifies as real; those
         // ARE a way through (once unlocked) and must read as doors.
-        if (acc::engine::IsDoorCosmetic(obj)) continue;
-        Vector pos;
-        if (!acc::engine::GetObjectPosition(obj, pos)) continue;
+        if (acc::engine::IsDoorCosmetic(obj)) return;
 
         DoorRecord& rec = g_graph.doors[g_graph.door_count];
         rec.pos                 = pos;
@@ -148,7 +148,7 @@ void SnapshotDoors(void* area) {
             kDoorLocNameOffset + 4,
             rec.locName, sizeof(rec.locName));
         ++g_graph.door_count;
-    }
+    });
 
     // Restore the landmark attribution saved above. A door that already
     // carries a name this pass keeps it; otherwise match by position
@@ -203,7 +203,7 @@ void SnapshotTransitionTriggers(void* area) {
         // GIT XPosition/YPosition the Geometry list is authored against),
         // not where the player crosses it. Transition polygons are long
         // strips across a corridor mouth, so the origin can sit many
-        // metres from the crossing (Wohnmodul 082 Ost 2026-09-14: origin
+        // metres from the crossing (Wohnmodul 082 Ost: origin
         // 8m east of the actual crossing, voiced as "Übergang Ost" for a
         // south-west exit). The polygon centroid is what the bearing and
         // the nearest-node attach must use; origin only as fallback.
@@ -419,7 +419,7 @@ EdgeResult ClassifyEdge(void* areaForDiag,
 // waypoints), the first-iterated one wins and the second logs a
 // conflict line. Tuning the rule beyond first-come needs evidence first.
 //
-// Threshold rationale: 5.0m (raised from 3.0m, 2026-08-12). Full-module
+// Threshold rationale: 5.0m. Full-module
 // extraction of both games' GITs: median map-note→nearest-door distance is
 // 5.2m in K1 and 9.1m in K2 — K2 authors place notes behind the doorway
 // (room side), not on it, so 3.0m attached only 14% of K2 notes (36% K1).

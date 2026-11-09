@@ -1,22 +1,21 @@
-// Wall-topology decomposition — see room_topology.h for goal + algorithm.
-//
-// EXPERIMENTAL — alternative-direction-calculation-system branch.
-//
-// Path 3 (2026-05-13) consumes the engine's per-area nav graph (the same
-// path_points / path_connections fields the engine itself uses for AI
-// pathfinding) and classifies each node by its CSR-adjacency degree:
+// The region graph of an area (see room_topology.h for its purpose). It is
+// built from the engine's per-area nav graph (the same path_points /
+// path_connections fields the engine itself uses for AI pathfinding); each
+// node is classified by its CSR-adjacency degree:
 //   - degree 1               → dead end pointing at its single neighbour
 //   - degree 2, same room    → corridor (axis defined by both neighbours)
 //   - degree 2, cross-room   → transition (doorway between two rooms)
 //   - degree ≥ 3             → junction (comma-separated octant list)
 //
-// Previous revisions (face-graph flood-fill, parallel-pair sweep) all
-// failed empirically on K1's authoring style — see commit history on this
-// branch. The nav graph is what BioWare ships, and the engine itself
-// trusts it for path solving, so we're operating on the same ground truth
-// the level designers were aware of.
+// The nav graph is what BioWare ships and the engine trusts for path
+// solving, the same ground truth the level designers worked with. Nodes are
+// then merged into regions and each region labelled. This file holds the
+// pipeline (BuildForArea), Reset and the public queries.
 
 #include "room_topology_internal.h"
+
+#include "log.h"
+#include "spatial_change_detector.h"  // GetCachedWalls — seam-filtered perimeter cache
 
 namespace acc::room_topology {
 
@@ -389,7 +388,7 @@ bool LookupAt(void* area, const Vector& worldPos,
     // get absorbed by the core-merge / straggler-absorb passes upstream,
     // or lose on distance to a real labelled cluster).
     //
-    // Wall-reachability filter (added 2026-05-20, originally for the
+    // Wall-reachability filter (made for the
     // Endar Spire starting room speaking corridor labels from the
     // *adjacent* hallway): test segment (worldPos → candidate.pos)
     // against the seam-filtered perimeter wall cache. Applied
