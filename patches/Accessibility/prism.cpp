@@ -32,43 +32,12 @@
 //
 // All Prism functions are resolved at runtime via LoadLibrary +
 // GetProcAddress so a missing prism.dll degrades silently (no speech).
-#include "prism.h"
 
-#include <windows.h>
-#include <cstdio>
-#include <cstring>
-#include <string>
-#include <type_traits>
-
-#include "bridge.h"   // spoken-line ring buffer for the local bridge
-#include "log.h"
-#include "mod_settings_store.h"  // persist the SAPI urgent-volume slider
-#include "menus_modsettings.h"   // "Speak everything with the screen reader"
+#include "prism_internal.h"
 
 namespace prism {
 
 namespace {
-
-// Subset of Prism's C ABI we use. Matches third_party/prism-dist/include/prism.h
-// verbatim. We declare the function-pointer types here rather than including
-// prism.h so the patch DLL build has no header dependency on the upstream tree.
-typedef struct PrismContext PrismContext;
-typedef struct PrismBackend PrismBackend;
-typedef uint64_t PrismBackendId;
-typedef int PrismError;  // 0 == PRISM_OK
-
-constexpr PrismError kPrismOk                     = 0;
-// The backend has no implementation of the entry point — e.g. braille on a
-// speech-only backend, or ZDSR running against a ZDSRAPI that predates its
-// Braille export.
-constexpr PrismError kPrismErrNotImplemented      = 3;
-constexpr PrismError kPrismErrAlreadyInitialized  = 15;  // see PrismError enum
-constexpr PrismError kPrismErrBackendNotAvailable = 16;
-constexpr PrismError kPrismErrUnknown             = 17;  // sentinel for SEH faults
-constexpr uint64_t  kPrismBackendIdSapi           = 0x1D6DF72422CEEE66ull;
-// FNV-1a of "OneCore", Prism's backend_catalog.h (the same hash yields the
-// SAPI id above).
-constexpr uint64_t  kPrismBackendIdOneCore        = 0x6797D32F0D994CB4ull;
 
 // PrismBackendFeature bits. IS_SUPPORTED_AT_RUNTIME is set only while the
 // backend's reader is genuinely reachable — every Windows backend recomputes it
@@ -90,275 +59,16 @@ constexpr uint64_t kPrismFeatureSupportsOutput     = 1ull << 5;
 constexpr DWORD kVcppDelayLoadModNotFound  = 0xC06D007E;
 constexpr DWORD kVcppDelayLoadProcNotFound = 0xC06D007F;
 
-// Default SAPI speech rate for the urgent channel, in the percent the
-// Mod-settings slider speaks. Prism maps [0.0..1.0] to SAPI's -10..+10 with
-// 0.5 = SAPI default (midpoint-linear); 80% lands at roughly SAPI +6 —
-// distinctly faster than out-of-the-box SAPI so urgent map-cursor /
-// region-cursor / walking cues don't drag during continuous WASD panning,
-// still well within intelligibility for the bundled Microsoft voices. The
-// user can move it either way from the announcement-speed slider.
-constexpr int kSapiRateDefaultPercent = 80;
-
-// prism_init takes a void* and is always handed nullptr. It reads nothing from
-// a NULL config and falls back to the global backend registry, which is exactly
-// what we want — and that avoids declaring PrismConfig at all. That struct is
-// version-specific in a way no single declaration survives: in 0.16.5 it was a
-// lone version byte and prism_init required version == PRISM_CONFIG_VERSION
-// exactly; in 0.17.3 it carries a registry pointer, an availability callback
-// plus userdata, three uint32 tuning fields and a bool, and the check relaxed
-// to ">". A config built for either version is rejected outright by the other.
-// prism_config_init is deliberately not resolved for the same reason: it
-// returns PrismConfig by value, so its calling convention changes shape with
-// the struct — under 0.17.3 it returns through a hidden pointer this code
-// would never pass, which corrupts the stack rather than failing cleanly.
-typedef PrismContext*  (__cdecl* PFN_prism_init)(void*);
-typedef void           (__cdecl* PFN_prism_shutdown)(PrismContext*);
-typedef bool           (__cdecl* PFN_prism_registry_exists)(PrismContext*, PrismBackendId);
-typedef size_t         (__cdecl* PFN_prism_registry_count)(PrismContext*);
-typedef PrismBackendId (__cdecl* PFN_prism_registry_id_at)(PrismContext*, size_t);
-typedef PrismBackend*  (__cdecl* PFN_prism_registry_acquire)(PrismContext*, PrismBackendId);
-typedef PrismBackend*  (__cdecl* PFN_prism_registry_acquire_best)(PrismContext*);
-// A FRESH backend instance, never the cached one acquire hands out.
-typedef PrismBackend*  (__cdecl* PFN_prism_registry_create)(PrismContext*, PrismBackendId);
-typedef uint64_t       (__cdecl* PFN_prism_backend_get_features)(PrismBackend*);
-typedef PrismError     (__cdecl* PFN_prism_backend_initialize)(PrismBackend*);
-typedef PrismError     (__cdecl* PFN_prism_backend_speak)(PrismBackend*, const char*, bool);
-typedef PrismError     (__cdecl* PFN_prism_backend_output)(PrismBackend*, const char*, bool);
-typedef PrismError     (__cdecl* PFN_prism_backend_braille)(PrismBackend*, const char*);
-typedef PrismError     (__cdecl* PFN_prism_backend_stop)(PrismBackend*);
-typedef PrismError     (__cdecl* PFN_prism_backend_is_speaking)(PrismBackend*, bool*);
-typedef PrismError     (__cdecl* PFN_prism_backend_set_rate)(PrismBackend*, float);
-typedef PrismError     (__cdecl* PFN_prism_backend_set_volume)(PrismBackend*, float);
-typedef PrismError     (__cdecl* PFN_prism_backend_set_voice)(PrismBackend*, size_t);
-typedef PrismError     (__cdecl* PFN_prism_backend_count_voices)(PrismBackend*, size_t*);
-typedef PrismError     (__cdecl* PFN_prism_backend_get_voice_name)(PrismBackend*, size_t, const char**);
-typedef PrismError     (__cdecl* PFN_prism_backend_get_voice)(PrismBackend*, size_t*);
-typedef const char*    (__cdecl* PFN_prism_backend_name)(PrismBackend*);
-// Render-to-PCM. The callback receives interleaved float samples; sample_count
-// counts every channel's samples (frames × channels), per the SAPI backend.
-typedef void           (__cdecl* PFN_PrismAudioCallback)(void* userdata, const float* samples,
-                                                         size_t sample_count, size_t channels,
-                                                         size_t sample_rate);
-typedef PrismError     (__cdecl* PFN_prism_backend_speak_to_memory)(PrismBackend*, const char*,
-                                                                   PFN_PrismAudioCallback, void*);
-
-HMODULE       g_prismLib       = nullptr;
-PrismContext* g_prismCtx       = nullptr;
-PrismBackend* g_prismNormal    = nullptr;   // NVDA / JAWS / OneCore / ... — chosen by acquire_best
-PrismBackend* g_prismSapi      = nullptr;   // urgent channel; SAPI bypass
-bool          g_initTried      = false;
-bool          g_normalReady    = false;
-bool          g_sapiReady      = false;
-
 // Braille channels the normal backend advertised when it was adopted. Either
 // flag can latch off later if a call comes back NOT_IMPLEMENTED — an older
 // vendor client DLL can advertise a bit its export set cannot honour.
 bool g_normalSupportsOutput  = false;  // combined speak+braille call (Tolk_Output equivalent)
 bool g_normalSupportsBraille = false;  // braille-only call
 
-// Tracks the SAPI voice id last applied via prism_backend_set_voice. SIZE_MAX
-// = "unknown / not yet set"; first call will always issue set_voice so the
-// backend's state matches our cache. Voice swap costs nothing in steady state
-// — we only call set_voice when the requested id differs.
-size_t g_sapiVoiceCurrent = static_cast<size_t>(-1);
-// Cached voice count so out-of-range requests fall back silently instead of
-// asking SAPI for a voice it doesn't have. 0 = not enumerated / no voices.
-size_t g_sapiVoiceCount   = 0;
-
-// The urgent channel's voice, persisted BY NAME rather than by index: SAPI
-// numbers voices in enumeration order, so installing or removing any voice
-// renumbers the rest and a saved index would land the user on a different
-// voice — quite possibly one speaking a different language. The name is
-// stored in Prism's own encoding (UTF-8), which is what the id lookup
-// compares against. Empty = never chosen; the channel keeps SAPI's default.
-constexpr const char* kSapiVoiceKey = "UrgentVoiceName";
-char g_sapiVoiceName[160] = {0};
-bool g_sapiVoiceLoaded    = false;
-
-void EnsureSapiVoiceLoaded() {
-    if (g_sapiVoiceLoaded) return;
-    g_sapiVoiceLoaded = true;
-    if (!acc::settings::GetStr(kSapiVoiceKey, g_sapiVoiceName,
-                               static_cast<int>(sizeof(g_sapiVoiceName)))) {
-        g_sapiVoiceName[0] = '\0';
-    }
-}
-
-// User-facing SAPI urgent-channel volume, percent [0,100]; 100 = SAPI full.
-// Backed by the persistent store (acc_settings.ini) so it survives relaunch,
-// lazily pulled on first access. Prism maps the float arg of set_volume to
-// [0.0..1.0] (same convention as set_rate), so the byte we hand over is
-// percent/100. The slider in Mod-Einstellungen drives this via
-// SetUrgentVolumePercent. (ApplySapiVolume lives below the function-pointer
-// block — it needs pPrism_backend_set_volume.)
-constexpr const char* kSapiVolumeKey   = "UrgentVolumePercent";
-int  g_sapiVolumePercent = 100;
-bool g_sapiVolumeLoaded  = false;
-
-void EnsureSapiVolumeLoaded() {
-    if (g_sapiVolumeLoaded) return;
-    g_sapiVolumeLoaded = true;
-    int v = acc::settings::GetInt(kSapiVolumeKey, 100);
-    if (v < 0)   v = 0;
-    if (v > 100) v = 100;
-    g_sapiVolumePercent = v;
-}
-
-// Same shape for the urgent-channel speech rate — persisted percent [0,100],
-// pushed to the backend through ApplySapiRate. The default is
-// kSapiRateDefaultPercent, the rate the channel ran at before the slider
-// existed, so an install that never touches the row sounds unchanged.
-constexpr const char* kSapiRateKey = "UrgentRatePercent";
-int  g_sapiRatePercent = kSapiRateDefaultPercent;
-bool g_sapiRateLoaded  = false;
-
-void EnsureSapiRateLoaded() {
-    if (g_sapiRateLoaded) return;
-    g_sapiRateLoaded = true;
-    int v = acc::settings::GetInt(kSapiRateKey, kSapiRateDefaultPercent);
-    if (v < 0)   v = 0;
-    if (v > 100) v = 100;
-    g_sapiRatePercent = v;
-}
-
 // L"NVDA" / L"SAPI" / ... — filled at Init time so ActiveScreenReader can
 // hand back a stable wide-string pointer without doing the conversion on
 // every call. L"none" if no backend resolved.
 wchar_t g_activeNameW[64] = L"none";
-
-PFN_prism_init                  pPrism_init                   = nullptr;
-PFN_prism_shutdown              pPrism_shutdown               = nullptr;
-PFN_prism_registry_exists       pPrism_registry_exists        = nullptr;
-PFN_prism_registry_count        pPrism_registry_count         = nullptr;
-PFN_prism_registry_id_at        pPrism_registry_id_at         = nullptr;
-PFN_prism_registry_acquire      pPrism_registry_acquire       = nullptr;
-PFN_prism_registry_acquire_best pPrism_registry_acquire_best  = nullptr;
-PFN_prism_registry_create       pPrism_registry_create        = nullptr;
-PFN_prism_backend_get_features  pPrism_backend_get_features   = nullptr;
-PFN_prism_backend_initialize    pPrism_backend_initialize     = nullptr;
-PFN_prism_backend_speak         pPrism_backend_speak          = nullptr;
-PFN_prism_backend_output        pPrism_backend_output         = nullptr;
-PFN_prism_backend_braille       pPrism_backend_braille        = nullptr;
-PFN_prism_backend_stop          pPrism_backend_stop           = nullptr;
-PFN_prism_backend_is_speaking   pPrism_backend_is_speaking    = nullptr;
-PFN_prism_backend_set_rate      pPrism_backend_set_rate       = nullptr;
-PFN_prism_backend_set_volume    pPrism_backend_set_volume     = nullptr;
-PFN_prism_backend_set_voice     pPrism_backend_set_voice      = nullptr;
-PFN_prism_backend_count_voices  pPrism_backend_count_voices   = nullptr;
-PFN_prism_backend_get_voice_name pPrism_backend_get_voice_name = nullptr;
-PFN_prism_backend_get_voice     pPrism_backend_get_voice      = nullptr;
-PFN_prism_backend_name          pPrism_backend_name           = nullptr;
-PFN_prism_backend_speak_to_memory pPrism_backend_speak_to_memory = nullptr;
-
-// Push g_sapiVolumePercent to the live SAPI backend. Safe to call any time;
-// no-ops if the backend isn't acquired yet or the export is missing (older
-// Prism builds / backends without SUPPORTS_SET_VOLUME). Does NOT gate on
-// g_sapiReady so it can run mid-acquire (when g_prismSapi is set but the
-// ready flag hasn't flipped).
-void ApplySapiVolume() {
-    if (!g_prismSapi || !pPrism_backend_set_volume) return;
-    EnsureSapiVolumeLoaded();
-    float vol = static_cast<float>(g_sapiVolumePercent) / 100.0f;
-    PrismError rc = pPrism_backend_set_volume(g_prismSapi, vol);
-    if (rc != kPrismOk) {
-        acclog::Write("Speech",
-                      "prism_backend_set_volume(SAPI, %.2f) rc=%d "
-                      "(SAPI staying at default volume)", vol, rc);
-    } else {
-        acclog::Write("Speech",
-                      "SAPI urgent volume set to %d%% (%.2f, 0.0=mute, "
-                      "1.0=full)", g_sapiVolumePercent, vol);
-    }
-}
-
-// Push g_sapiRatePercent to the live SAPI backend. Mirror of ApplySapiVolume,
-// including the "safe any time, no-op until acquired" contract: older Prism
-// builds without prism_backend_set_rate simply leave SAPI at its own rate.
-void ApplySapiRate() {
-    if (!g_prismSapi || !pPrism_backend_set_rate) return;
-    EnsureSapiRateLoaded();
-    float rate = static_cast<float>(g_sapiRatePercent) / 100.0f;
-    PrismError rc = pPrism_backend_set_rate(g_prismSapi, rate);
-    if (rc != kPrismOk) {
-        acclog::Write("Speech",
-                      "prism_backend_set_rate(SAPI, %.2f) rc=%d "
-                      "(SAPI staying at default rate)", rate, rc);
-    } else {
-        acclog::Write("Speech",
-                      "SAPI urgent rate set to %d%% (%.2f, 0.0=slowest, "
-                      "0.5=SAPI default, 1.0=fastest)",
-                      g_sapiRatePercent, rate);
-    }
-}
-
-// Make the SAPI backend speak with voice `voiceId`. Cached so consecutive
-// calls with the same id are free. Out-of-range / unsupported silently no-op
-// and leave the current voice in place. Returns false only on a hard set_voice
-// error so the caller can log; the speak still proceeds with whatever voice
-// SAPI currently has. Gated on g_prismSapi rather than g_sapiReady, like
-// ApplySapiVolume, so the persisted choice can be applied mid-acquire.
-bool EnsureSapiVoice(size_t voiceId) {
-    if (!g_prismSapi || !pPrism_backend_set_voice) return false;
-    if (g_sapiVoiceCount != 0 && voiceId >= g_sapiVoiceCount) return false;
-    if (voiceId == g_sapiVoiceCurrent) return true;
-    PrismError rc = pPrism_backend_set_voice(g_prismSapi, voiceId);
-    if (rc != kPrismOk) {
-        acclog::Trace("Speech",
-                      "prism_backend_set_voice(SAPI, %zu) rc=%d "
-                      "(staying on voice %zu)", voiceId, rc, g_sapiVoiceCurrent);
-        return false;
-    }
-    g_sapiVoiceCurrent = voiceId;
-    return true;
-}
-
-// Copy voice `voiceId`'s name into outBuf as UTF-8 — Prism's own encoding,
-// and what the persisted setting stores. The pointer Prism hands back aliases
-// a backend-owned string that the NEXT get_voice_name call overwrites, so the
-// copy has to happen before anything else asks for a name.
-bool FetchSapiVoiceNameUtf8(size_t voiceId, char* outBuf, size_t bufSize) {
-    if (!g_prismSapi || !pPrism_backend_get_voice_name) return false;
-    if (!outBuf || bufSize == 0) return false;
-    if (g_sapiVoiceCount != 0 && voiceId >= g_sapiVoiceCount) return false;
-    const char* name = nullptr;
-    PrismError rc = pPrism_backend_get_voice_name(g_prismSapi, voiceId, &name);
-    if (rc != kPrismOk || !name) return false;
-    snprintf(outBuf, bufSize, "%s", name);
-    return outBuf[0] != '\0';
-}
-
-// Index of the voice named `utf8Name`, or SIZE_MAX when the machine no longer
-// has it (uninstalled voice, moved save file, language pack removed).
-size_t FindSapiVoiceByNameUtf8(const char* utf8Name) {
-    if (!utf8Name || !*utf8Name) return static_cast<size_t>(-1);
-    char probe[sizeof(g_sapiVoiceName)];
-    for (size_t i = 0; i < g_sapiVoiceCount; ++i) {
-        if (!FetchSapiVoiceNameUtf8(i, probe, sizeof(probe))) continue;
-        if (strcmp(probe, utf8Name) == 0) return i;
-    }
-    return static_cast<size_t>(-1);
-}
-
-// Apply the persisted voice choice to the freshly-acquired backend. Runs once
-// per launch from TryAcquireSapi, after the voice count is known. A name that
-// no longer resolves is left in the store rather than cleared — the voice may
-// come back on the next launch, and silently forgetting the user's choice is
-// worse than one log line.
-void ApplySapiVoice() {
-    EnsureSapiVoiceLoaded();
-    if (!g_sapiVoiceName[0]) return;
-    size_t id = FindSapiVoiceByNameUtf8(g_sapiVoiceName);
-    if (id == static_cast<size_t>(-1)) {
-        acclog::Write("Speech",
-                      "persisted SAPI voice [%s] not installed; "
-                      "staying on the default voice", g_sapiVoiceName);
-        return;
-    }
-    if (EnsureSapiVoice(id)) {
-        acclog::Write("Speech", "SAPI urgent voice set to [%s] (id %zu)",
-                      g_sapiVoiceName, id);
-    }
-}
 
 template <typename T>
 bool Resolve(HMODULE lib, T& fn, const char* name, bool required = true) {
@@ -368,152 +78,6 @@ bool Resolve(HMODULE lib, T& fn, const char* name, bool required = true) {
         return false;
     }
     return fn != nullptr;
-}
-
-// Active narrow-text codepage. Both our own string tables and the engine's
-// CExoString payload are in the *game's* codepage, not necessarily the OS one:
-// a Russian install is Windows-1251 even on a German or English Windows, where
-// CP_ACP is 1252. Defaulting to CP_ACP keeps the pre-existing en/de/fr/it/es
-// behaviour byte-for-byte (those are all 1252, which is what CP_ACP resolves to
-// on their users' systems); SetSpeechCodepage pins it explicitly once the
-// language is known. See DetectLanguageFromTlk in core_dllmain.cpp.
-UINT g_speechCodepage = CP_ACP;
-
-// Game codepage → UTF-8. Prism's SAPI backend strict-validates UTF-8 and
-// returns PRISM_ERROR_INVALID_UTF8 on any non-UTF-8 lead byte. The NVDA backend
-// also strings text through simdutf-style validators in places. So any
-// non-ASCII byte (German umlauts, Cyrillic, ...) is an invalid UTF-8 lead →
-// whole utterance dropped without this re-encode.
-//
-// Writes a NUL-terminated UTF-8 string into `outBuf`. Returns true on success.
-bool ReencodeAcpToUtf8(const char* in, char* outBuf, size_t outBufSize) {
-    if (!in || !outBuf || outBufSize == 0) return false;
-    const UINT cp = g_speechCodepage;
-    int wideLen = MultiByteToWideChar(cp, 0, in, -1, nullptr, 0);
-    if (wideLen <= 0) return false;
-    wchar_t wStack[256];
-    wchar_t* w = wStack;
-    wchar_t* wHeap = nullptr;
-    if (static_cast<size_t>(wideLen) > sizeof(wStack) / sizeof(wStack[0])) {
-        wHeap = (wchar_t*)malloc(static_cast<size_t>(wideLen) * sizeof(wchar_t));
-        if (!wHeap) return false;
-        w = wHeap;
-    }
-    int gotWide = MultiByteToWideChar(cp, 0, in, -1, w, wideLen);
-    if (gotWide <= 0) {
-        if (wHeap) free(wHeap);
-        return false;
-    }
-    int needed = WideCharToMultiByte(CP_UTF8, 0, w, -1, nullptr, 0, nullptr, nullptr);
-    if (needed <= 0 || static_cast<size_t>(needed) > outBufSize) {
-        if (wHeap) free(wHeap);
-        return false;
-    }
-    int got = WideCharToMultiByte(CP_UTF8, 0, w, -1, outBuf,
-                                  static_cast<int>(outBufSize),
-                                  nullptr, nullptr);
-    if (wHeap) free(wHeap);
-    return got > 0;
-}
-
-// Mirror of the above: Prism hands voice names back in UTF-8, and everything
-// downstream of us (speech dispatch, the composed UI line) works in the game
-// codepage. Fails rather than truncating, same contract as ReencodeAcpToUtf8.
-bool ReencodeUtf8ToGameCodepage(const char* in, char* outBuf, size_t outBufSize) {
-    if (!in || !outBuf || outBufSize == 0) return false;
-    int wideLen = MultiByteToWideChar(CP_UTF8, 0, in, -1, nullptr, 0);
-    if (wideLen <= 0) return false;
-    wchar_t wStack[256];
-    wchar_t* w = wStack;
-    wchar_t* wHeap = nullptr;
-    if (static_cast<size_t>(wideLen) > sizeof(wStack) / sizeof(wStack[0])) {
-        wHeap = (wchar_t*)malloc(static_cast<size_t>(wideLen) * sizeof(wchar_t));
-        if (!wHeap) return false;
-        w = wHeap;
-    }
-    int gotWide = MultiByteToWideChar(CP_UTF8, 0, in, -1, w, wideLen);
-    if (gotWide <= 0) {
-        if (wHeap) free(wHeap);
-        return false;
-    }
-    int needed = WideCharToMultiByte(g_speechCodepage, 0, w, -1, nullptr, 0,
-                                     nullptr, nullptr);
-    if (needed <= 0 || static_cast<size_t>(needed) > outBufSize) {
-        if (wHeap) free(wHeap);
-        return false;
-    }
-    int got = WideCharToMultiByte(g_speechCodepage, 0, w, -1, outBuf,
-                                  static_cast<int>(outBufSize), nullptr, nullptr);
-    if (wHeap) free(wHeap);
-    return got > 0;
-}
-
-// ---- Last-utterance capture ---------------------------------------------
-//
-// Held in the game codepage — the same bytes the caller handed us — so
-// consumers can re-widen with the codepage of their choice. Sized well above
-// kAnnounceTextMax (1024) so we never truncate an utterance the speech path
-// itself carried in full; over-long text is truncated rather than dropped.
-char s_lastSpoken[4096] = {0};
-bool s_suppressNextCapture = false;
-
-void CaptureSpoken(const char* text) {
-    if (s_suppressNextCapture) {
-        s_suppressNextCapture = false;
-        return;
-    }
-    if (!text) return;
-    strncpy_s(s_lastSpoken, text, _TRUNCATE);
-    ::acc::bridge::RecordSpoken(s_lastSpoken);
-}
-
-// Wide path: fold back to the game codepage so LastSpoken() has one encoding
-// regardless of which overload produced it. WC_NO_BEST_FIT_CHARS is
-// deliberately NOT set — a best-fit approximation is better than losing the
-// utterance for a codepoint the game codepage can't represent.
-void CaptureSpokenW(const wchar_t* text) {
-    if (s_suppressNextCapture) {
-        s_suppressNextCapture = false;
-        return;
-    }
-    if (!text) return;
-    int got = WideCharToMultiByte(g_speechCodepage, 0, text, -1, s_lastSpoken,
-                                  (int)sizeof(s_lastSpoken), nullptr, nullptr);
-    if (got <= 0) s_lastSpoken[0] = '\0';
-    s_lastSpoken[sizeof(s_lastSpoken) - 1] = '\0';
-    ::acc::bridge::RecordSpoken(s_lastSpoken);
-}
-
-// ---- SEH guards around prism backend calls -----------------------------
-//
-// Some screen-reader backends delay-load a vendor DLL inside their
-// initialize() path (ZDSR → ZDSRAPI.dll, PC-Talker → PCTKUSR.dll, BoyPC →
-// BoyCtrl.dll, ...). When the user has that reader installed but at a DLL
-// version whose export set doesn't match what prism.dll was built against,
-// the MSVC delay-load helper raises a structured exception
-// (0xC06D007F PROC_NOT_FOUND / 0xC06D007E MOD_NOT_FOUND). Unhandled it
-// crashes the game at startup before any speech — reported by a pl-PL beta
-// tester with ZDSR installed.
-//
-// The root fix lives in prism itself: BackendRegistry::acquire_best /
-// create_best now SEH-guard each backend's initialize() and skip a faulting
-// one (third_party/prism/source/backends/backend_registry.cpp). So we let
-// prism own backend selection — the normal channel is a single acquire_best
-// call and nothing here reimplements prism's priority walk. These wrappers
-// remain for two narrow reasons: (1) a thin belt-and-suspenders net around
-// that one acquire_best call, in case a deployed prism.dll predates the fix;
-// (2) the explicit SAPI-acquire path for the urgent channel, which calls
-// acquire + initialize directly. The helpers hold only PODs / raw pointers —
-// MSVC forbids __try in a function that needs C++ object unwinding, and
-// logging (which builds temporaries) must therefore stay in the callers, which
-// read the returned fault code.
-const char* SehCodeName(DWORD code) {
-    switch (code) {
-        case kVcppDelayLoadModNotFound:  return "delay-load module-not-found";
-        case kVcppDelayLoadProcNotFound: return "delay-load proc-not-found";
-        case EXCEPTION_ACCESS_VIOLATION: return "access-violation";
-        default:                         return "structured-exception";
-    }
 }
 
 // Returns acquire_best's backend, or null. *outCode is the SEH code if a fault
@@ -526,301 +90,6 @@ PrismBackend* SehAcquireBest(PrismContext* ctx, DWORD* outCode) {
         *outCode = GetExceptionCode();
         return nullptr;
     }
-}
-
-// Acquire one specific backend by id, SEH-guarded.
-PrismBackend* SehAcquire(PrismContext* ctx, PrismBackendId id, DWORD* outCode) {
-    *outCode = 0;
-    __try {
-        return pPrism_registry_acquire(ctx, id);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        *outCode = GetExceptionCode();
-        return nullptr;
-    }
-}
-
-// Create a fresh backend instance by id, SEH-guarded.
-PrismBackend* SehCreate(PrismContext* ctx, PrismBackendId id, DWORD* outCode) {
-    *outCode = 0;
-    __try {
-        return pPrism_registry_create(ctx, id);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        *outCode = GetExceptionCode();
-        return nullptr;
-    }
-}
-
-// Initialize one backend, SEH-guarded. Returns the PrismError, or
-// kPrismErrUnknown with *outCode set if a fault was caught.
-PrismError SehInitialize(PrismBackend* be, DWORD* outCode) {
-    *outCode = 0;
-    __try {
-        return pPrism_backend_initialize(be);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        *outCode = GetExceptionCode();
-        return kPrismErrUnknown;
-    }
-}
-
-// Render one utterance to memory, SEH-guarded. Same contract as SehInitialize.
-PrismError SehSpeakToMemory(PrismBackend* be, const char* utf8, PFN_PrismAudioCallback cb,
-                            void* userdata, DWORD* outCode) {
-    *outCode = 0;
-    __try {
-        return pPrism_backend_speak_to_memory(be, utf8, cb, userdata);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        *outCode = GetExceptionCode();
-        return kPrismErrUnknown;
-    }
-}
-
-// Copies the rendered block out of Prism's buffer, which is only valid for
-// the duration of the callback.
-void __cdecl CollectRenderedSpeech(void* userdata, const float* samples, size_t sampleCount,
-                                   size_t channels, size_t sampleRate) {
-    auto* out = static_cast<RenderedSpeech*>(userdata);
-    out->samples.assign(samples, samples + sampleCount);
-    out->channels   = channels;
-    out->sampleRate = sampleRate;
-}
-
-// Acquire the SAPI backend explicitly and bump its rate. Returns true iff the
-// backend is fully initialised and ready to receive prism_backend_speak.
-bool TryAcquireSapi() {
-    if (!pPrism_registry_exists(g_prismCtx, kPrismBackendIdSapi)) {
-        acclog::Write("Speech",
-                      "SAPI backend not in registry; SpeakUrgent will fall "
-                      "back to the normal backend");
-        return false;
-    }
-    DWORD seh = 0;
-    g_prismSapi = SehAcquire(g_prismCtx, kPrismBackendIdSapi, &seh);
-    if (!g_prismSapi) {
-        if (seh) {
-            acclog::Write("Speech",
-                          "prism_registry_acquire(SAPI) faulted (%s 0x%08lX)",
-                          SehCodeName(seh), seh);
-        } else {
-            acclog::Write("Speech", "prism_registry_acquire(SAPI) returned NULL");
-        }
-        return false;
-    }
-    PrismError rc = SehInitialize(g_prismSapi, &seh);
-    // acquire_best initialises eagerly; explicit acquire requires initialize().
-    // ALREADY_INITIALIZED is non-fatal — we just got a cached instance.
-    if (seh) {
-        acclog::Write("Speech",
-                      "prism_backend_initialize(SAPI) faulted (%s 0x%08lX)",
-                      SehCodeName(seh), seh);
-        g_prismSapi = nullptr;
-        return false;
-    }
-    if (rc != kPrismOk && rc != kPrismErrAlreadyInitialized) {
-        acclog::Write("Speech",
-                      "prism_backend_initialize(SAPI) failed rc=%d", rc);
-        g_prismSapi = nullptr;
-        return false;
-    }
-
-    // Apply the persisted urgent-channel sliders to the freshly-acquired
-    // backend. The Ensure*Loaded helpers pull the saved values (defaults:
-    // kSapiRateDefaultPercent rate, 100% volume) so the user's last choice
-    // carries across launches.
-    ApplySapiRate();
-    ApplySapiVolume();
-
-    // Cache voice count so the voice picker and every range check can work
-    // off it — cheaper than a round trip per query.
-    if (pPrism_backend_count_voices) {
-        size_t count = 0;
-        PrismError vrc = pPrism_backend_count_voices(g_prismSapi, &count);
-        if (vrc == kPrismOk) {
-            g_sapiVoiceCount = count;
-            acclog::Write("Speech", "SAPI voice count = %zu", count);
-        } else {
-            acclog::Write("Speech",
-                          "prism_backend_count_voices(SAPI) rc=%d "
-                          "(voice selection unavailable)",
-                          vrc);
-        }
-    }
-
-    // Seed the cached index from whatever voice SAPI is already on, so the
-    // picker opens on the real current voice instead of guessing 0 — and so
-    // EnsureSapiVoice's "already there" short-circuit tells the truth.
-    if (pPrism_backend_get_voice) {
-        size_t cur = 0;
-        if (pPrism_backend_get_voice(g_prismSapi, &cur) == kPrismOk) {
-            g_sapiVoiceCurrent = cur;
-        }
-    }
-
-    // Then honour the user's persisted choice, if they have made one.
-    ApplySapiVoice();
-    return true;
-}
-
-// ---- Compass channel ------------------------------------------------------
-//
-// A second speaking SAPI instance, so the compass readout while turning has a
-// voice of its own: the player tells a heading from an announcement by the
-// voice alone, and neither cuts the other off — each instance owns its own
-// SpVoice and audio stream. prism_registry_create builds it fresh;
-// prism_registry_acquire would hand back the urgent channel's cached one. Both
-// instances enumerate the same SAPI tokens, so voice ids and names are shared
-// with the urgent picker (g_sapiVoiceCount, FetchSapiVoiceNameUtf8).
-//
-// Volume, rate and voice persist like the urgent channel's, the voice by name.
-// Without a saved voice the channel takes kCompassDefaultVoiceId, or the first
-// voice that is not the urgent one when that id is missing or is the urgent
-// voice itself: the default only has to sound different from the
-// announcements. It is re-derived each launch until the player chooses one.
-PrismBackend* g_prismCompass       = nullptr;
-bool          g_compassReady       = false;
-size_t        g_compassVoiceCurrent = static_cast<size_t>(-1);
-constexpr size_t      kCompassDefaultVoiceId = 2;
-constexpr const char* kCompassVoiceKey       = "CompassVoiceName";
-
-// A persisted percent [0,100], pulled from the store on first access.
-struct PercentSetting {
-    const char* key;
-    int         value;   // the default until loaded
-    bool        loaded;
-};
-PercentSetting g_compassVolume = {"CompassVolumePercent", 100, false};
-PercentSetting g_compassRate   = {"CompassRatePercent", kSapiRateDefaultPercent, false};
-
-int ClampPercent(int v) { return v < 0 ? 0 : (v > 100 ? 100 : v); }
-
-int LoadPercent(PercentSetting& s) {
-    if (!s.loaded) {
-        s.loaded = true;
-        s.value  = ClampPercent(acc::settings::GetInt(s.key, s.value));
-    }
-    return s.value;
-}
-
-void StorePercent(PercentSetting& s, int v) {
-    s.loaded = true;
-    s.value  = ClampPercent(v);
-    acc::settings::SetInt(s.key, s.value);
-}
-
-// Push the compass volume and rate to its instance. No-op until created.
-void ApplyCompassLevels() {
-    if (!g_prismCompass) return;
-    const float vol  = static_cast<float>(LoadPercent(g_compassVolume)) / 100.0f;
-    const float rate = static_cast<float>(LoadPercent(g_compassRate)) / 100.0f;
-    const PrismError vrc = pPrism_backend_set_volume
-        ? pPrism_backend_set_volume(g_prismCompass, vol) : kPrismErrNotImplemented;
-    const PrismError rrc = pPrism_backend_set_rate
-        ? pPrism_backend_set_rate(g_prismCompass, rate) : kPrismErrNotImplemented;
-    acclog::Write("Speech", "SAPI compass volume %d%% (rc=%d), rate %d%% (rc=%d)",
-                  g_compassVolume.value, vrc, g_compassRate.value, rrc);
-}
-
-// Make the compass instance speak with voice `voiceId`. Cached like
-// EnsureSapiVoice; false when out of range or SAPI refuses.
-bool EnsureCompassVoice(size_t voiceId) {
-    if (!g_prismCompass || !pPrism_backend_set_voice) return false;
-    if (voiceId >= g_sapiVoiceCount) return false;
-    if (voiceId == g_compassVoiceCurrent) return true;
-    PrismError rc = pPrism_backend_set_voice(g_prismCompass, voiceId);
-    if (rc != kPrismOk) {
-        acclog::Trace("Speech",
-                      "prism_backend_set_voice(compass, %zu) rc=%d "
-                      "(staying on voice %zu)", voiceId, rc, g_compassVoiceCurrent);
-        return false;
-    }
-    g_compassVoiceCurrent = voiceId;
-    return true;
-}
-
-size_t DefaultCompassVoiceId() {
-    const size_t urgent = g_sapiVoiceCurrent;
-    if (kCompassDefaultVoiceId < g_sapiVoiceCount && kCompassDefaultVoiceId != urgent)
-        return kCompassDefaultVoiceId;
-    for (size_t i = 0; i < g_sapiVoiceCount; ++i) {
-        if (i != urgent) return i;
-    }
-    return 0;
-}
-
-// The saved voice if it is still installed, else the default. Runs once, after
-// the urgent channel has settled its own voice (the default steers around it).
-void ApplyCompassVoice() {
-    if (g_sapiVoiceCount == 0) return;
-    char saved[sizeof(g_sapiVoiceName)] = {0};
-    if (acc::settings::GetStr(kCompassVoiceKey, saved, static_cast<int>(sizeof(saved))) &&
-        saved[0]) {
-        const size_t id = FindSapiVoiceByNameUtf8(saved);
-        if (id != static_cast<size_t>(-1)) {
-            if (EnsureCompassVoice(id)) {
-                acclog::Write("Speech", "SAPI compass voice set to [%s] (id %zu)", saved, id);
-            }
-            return;
-        }
-        acclog::Write("Speech",
-                      "persisted compass voice [%s] not installed; using the default", saved);
-    }
-    const size_t id = DefaultCompassVoiceId();
-    if (EnsureCompassVoice(id)) {
-        acclog::Write("Speech", "SAPI compass voice defaulted to id %zu (urgent is %zu)",
-                      id, g_sapiVoiceCurrent);
-    }
-}
-
-// Create the compass instance. Needs the urgent SAPI channel up first: it
-// supplies the voice list and the urgent voice the default steers around.
-bool TryCreateCompass() {
-    if (!g_sapiReady || !pPrism_registry_create) {
-        acclog::Write("Speech",
-                      "compass channel unavailable; the compass speaks on the "
-                      "announcement voice");
-        return false;
-    }
-    DWORD seh = 0;
-    PrismBackend* be = SehCreate(g_prismCtx, kPrismBackendIdSapi, &seh);
-    PrismError rc = be ? SehInitialize(be, &seh) : kPrismErrUnknown;
-    if (!be || seh || (rc != kPrismOk && rc != kPrismErrAlreadyInitialized)) {
-        acclog::Write("Speech",
-                      "compass channel failed (rc=%d seh=0x%08lX); the compass "
-                      "speaks on the announcement voice", rc, seh);
-        return false;
-    }
-    g_prismCompass = be;
-    if (pPrism_backend_get_voice) {
-        size_t cur = 0;
-        if (pPrism_backend_get_voice(g_prismCompass, &cur) == kPrismOk) {
-            g_compassVoiceCurrent = cur;
-        }
-    }
-    ApplyCompassLevels();
-    ApplyCompassVoice();
-    acclog::Write("Speech", "compass channel ready (second SAPI instance)");
-    return true;
-}
-
-// The normal-channel line SpeakCompassThen holds back until the compass voice
-// has said its words, so the two voices take turns instead of talking at once.
-// SAPI reports "speaking" only once audio starts, so a voice not yet heard
-// gets a start grace before it counts as finished; the cap releases the line
-// even if the voice never reports done. The gap after the measured words
-// covers the voice's leading silence (~65 ms) plus a short pause.
-std::string g_compassFollowUp;
-DWORD       g_compassFollowUpSince    = 0;
-bool        g_compassFollowUpHeard    = false;
-DWORD       g_compassFollowUpHeardAt  = 0;
-DWORD       g_compassFollowUpSpeechMs = 0;  // 0 = unmeasured: wait for the voice to finish
-constexpr DWORD kFollowUpStartGraceMs = 600;
-constexpr DWORD kFollowUpMaxWaitMs    = 6000;
-constexpr DWORD kFollowUpGapMs        = 150;
-
-// Forget a waiting follow-up: newer speech has made it stale.
-void DropCompassFollowUp(const char* why) {
-    if (g_compassFollowUp.empty()) return;
-    acclog::Trace("Speech", "compass follow-up dropped (%s)", why);
-    g_compassFollowUp.clear();
 }
 
 // True iff this backend can speak AND its reader is reachable right now.
@@ -865,24 +134,6 @@ const char* BrailleModeText() {
     return (g_normalSupportsOutput && pPrism_backend_output)
                ? "braille via output()"
                : "braille supported";
-}
-
-// Mirrors text to the braille display through the normal backend, when it has
-// one. Quiet by design: braille is supplementary on this path, so a failure
-// must never cost speech or spam the log — only a NOT_IMPLEMENTED is noted,
-// once, when latching the capability off. `utf8` must already be UTF-8.
-void BrailleNormal(const char* utf8) {
-    if (!g_normalSupportsBraille || !pPrism_backend_braille || !g_prismNormal)
-        return;
-    PrismError rc = pPrism_backend_braille(g_prismNormal, utf8);
-    if (rc == kPrismErrNotImplemented) {
-        // Advertised but not really there — e.g. a ZDSRAPI predating its
-        // Braille export.
-        g_normalSupportsBraille = false;
-        acclog::Write("Speech",
-                      "normal backend advertises braille but reports "
-                      "NotImplemented; braille off for this backend");
-    }
 }
 
 // Sends one announcement to the normal backend on every channel it offers.
@@ -993,6 +244,90 @@ bool TryAcquireNormal() {
 }
 
 }  // namespace
+
+// ---- SEH guards around prism backend calls -----------------------------
+//
+// Some screen-reader backends delay-load a vendor DLL inside their
+// initialize() path (ZDSR → ZDSRAPI.dll, PC-Talker → PCTKUSR.dll, BoyPC →
+// BoyCtrl.dll, ...). When the user has that reader installed but at a DLL
+// version whose export set doesn't match what prism.dll was built against,
+// the MSVC delay-load helper raises a structured exception
+// (0xC06D007F PROC_NOT_FOUND / 0xC06D007E MOD_NOT_FOUND). Unhandled it
+// crashes the game at startup before any speech — reported by a pl-PL beta
+// tester with ZDSR installed.
+//
+// The root fix lives in prism itself: BackendRegistry::acquire_best /
+// create_best now SEH-guard each backend's initialize() and skip a faulting
+// one (third_party/prism/source/backends/backend_registry.cpp). So we let
+// prism own backend selection — the normal channel is a single acquire_best
+// call and nothing here reimplements prism's priority walk. These wrappers
+// remain for two narrow reasons: (1) a thin belt-and-suspenders net around
+// that one acquire_best call, in case a deployed prism.dll predates the fix;
+// (2) the explicit SAPI-acquire path for the urgent channel, which calls
+// acquire + initialize directly. The helpers hold only PODs / raw pointers —
+// MSVC forbids __try in a function that needs C++ object unwinding, and
+// logging (which builds temporaries) must therefore stay in the callers, which
+// read the returned fault code.
+const char* SehCodeName(DWORD code) {
+    switch (code) {
+        case kVcppDelayLoadModNotFound:  return "delay-load module-not-found";
+        case kVcppDelayLoadProcNotFound: return "delay-load proc-not-found";
+        case EXCEPTION_ACCESS_VIOLATION: return "access-violation";
+        default:                         return "structured-exception";
+    }
+}
+
+// Acquire one specific backend by id, SEH-guarded.
+PrismBackend* SehAcquire(PrismContext* ctx, PrismBackendId id, DWORD* outCode) {
+    *outCode = 0;
+    __try {
+        return pPrism_registry_acquire(ctx, id);
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        *outCode = GetExceptionCode();
+        return nullptr;
+    }
+}
+
+// Create a fresh backend instance by id, SEH-guarded.
+PrismBackend* SehCreate(PrismContext* ctx, PrismBackendId id, DWORD* outCode) {
+    *outCode = 0;
+    __try {
+        return pPrism_registry_create(ctx, id);
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        *outCode = GetExceptionCode();
+        return nullptr;
+    }
+}
+
+// Initialize one backend, SEH-guarded. Returns the PrismError, or
+// kPrismErrUnknown with *outCode set if a fault was caught.
+PrismError SehInitialize(PrismBackend* be, DWORD* outCode) {
+    *outCode = 0;
+    __try {
+        return pPrism_backend_initialize(be);
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        *outCode = GetExceptionCode();
+        return kPrismErrUnknown;
+    }
+}
+
+// Mirrors text to the braille display through the normal backend, when it has
+// one. Quiet by design: braille is supplementary on this path, so a failure
+// must never cost speech or spam the log — only a NOT_IMPLEMENTED is noted,
+// once, when latching the capability off. `utf8` must already be UTF-8.
+void BrailleNormal(const char* utf8) {
+    if (!g_normalSupportsBraille || !pPrism_backend_braille || !g_prismNormal)
+        return;
+    PrismError rc = pPrism_backend_braille(g_prismNormal, utf8);
+    if (rc == kPrismErrNotImplemented) {
+        // Advertised but not really there — e.g. a ZDSRAPI predating its
+        // Braille export.
+        g_normalSupportsBraille = false;
+        acclog::Write("Speech",
+                      "normal backend advertises braille but reports "
+                      "NotImplemented; braille off for this backend");
+    }
+}
 
 bool Init() {
     if (g_initTried) return g_normalReady;
@@ -1154,15 +489,6 @@ void Speak(const wchar_t* text, bool interrupt) {
     if (heap_audit) free(heap_audit);
 }
 
-void SetSpeechCodepage(unsigned codepage) {
-    if (codepage == 0) return;
-    if (g_speechCodepage == codepage) return;
-    g_speechCodepage = static_cast<UINT>(codepage);
-    acclog::Write("Speech", "narrow-text codepage set to %u", codepage);
-}
-
-unsigned GetSpeechCodepage() { return g_speechCodepage; }
-
 void Speak(const char* text, bool interrupt) {
     if (!g_normalReady || !text || !*text) return;
     if (interrupt) DropCompassFollowUp("interrupted");
@@ -1200,12 +526,12 @@ void Speak(const char* text, bool interrupt) {
 // Mod settings -> "Speak everything with the screen reader": the urgent
 // (SAPI) and compass voices step aside and every line goes to the normal
 // screen-reader channel instead.
-static bool AllViaScreenReader() {
+bool AllViaScreenReader() {
     return acc::menus::modsettings::GetToggle(
         acc::menus::modsettings::Option::AllViaScreenReader);
 }
 
-static void SpeakUrgentImpl(const char* text, bool interrupt) {
+void SpeakUrgentImpl(const char* text, bool interrupt) {
     if (!g_normalReady || !text || !*text) return;
     if (AllViaScreenReader()) {
         Speak(text, interrupt);
@@ -1296,362 +622,6 @@ void SpeakOnUrgentChannel(const char* text, bool interrupt) {
     SpeakUrgentImpl(text, interrupt);
 }
 
-// The compass instance's counterpart of SpeakUrgentImpl: always interrupts,
-// mirrors to braille, never falls back to another voice on a dispatch error
-// (SAPI may already be mid-utterance — same double-speak reasoning).
-void SpeakCompass(const char* text) {
-    DropCompassFollowUp("newer compass line");
-    if (AllViaScreenReader()) {
-        Speak(text, /*interrupt=*/true);
-        return;
-    }
-    if (!g_compassReady) {
-        SpeakUrgentImpl(text, /*interrupt=*/true);
-        return;
-    }
-    if (!g_normalReady || !text || !*text) return;
-    CaptureSpoken(text);
-    std::vector<char> utf8(strlen(text) * 4 + 1);
-    const char* speakText = ReencodeAcpToUtf8(text, utf8.data(), utf8.size()) ? utf8.data() : text;
-    PrismError rc = pPrism_backend_speak(g_prismCompass, speakText, /*interrupt=*/true);
-    BrailleNormal(speakText);
-    if (rc == kPrismOk) {
-        acclog::Trace("Speech.spoke", "[compass] %s", text);
-    } else {
-        acclog::Trace("Speech", "SpeakCompass: dispatch rc=%d; dropping utterance", rc);
-    }
-}
-
-// Shared body of the RenderXToMemory entry points. `tag` names the backend in
-// the log line.
-static bool RenderWith(PrismBackend* be, const char* tag, const char* text,
-                       RenderedSpeech& out) {
-    out = RenderedSpeech{};
-    std::vector<char> utf8(strlen(text) * 4 + 1);
-    if (!ReencodeAcpToUtf8(text, utf8.data(), utf8.size())) return false;
-
-    const DWORD start = GetTickCount();
-    DWORD seh = 0;
-    PrismError rc = SehSpeakToMemory(be, utf8.data(), CollectRenderedSpeech, &out, &seh);
-    const DWORD elapsed = GetTickCount() - start;
-    if (seh != 0) {
-        acclog::Write("Speech", "render[%s] faulted (%s 0x%08lX)", tag, SehCodeName(seh), seh);
-        return false;
-    }
-    if (rc != kPrismOk || out.samples.empty() || out.channels == 0 || out.sampleRate == 0) {
-        acclog::Write("Speech", "render[%s] failed rc=%d samples=%zu ch=%zu rate=%zu (%lu ms)",
-                      tag, rc, out.samples.size(), out.channels, out.sampleRate, elapsed);
-        return false;
-    }
-    acclog::Write("Speech", "render[%s] ok: %zu samples, %zu ch, %zu Hz, %.2f s audio in %lu ms [%s]",
-                  tag, out.samples.size(), out.channels, out.sampleRate,
-                  static_cast<double>(out.samples.size() / out.channels) / out.sampleRate,
-                  elapsed, text);
-    return true;
-}
-
-// Render-only backends: separate instances that never speak aloud. A render on
-// the urgent channel's own SAPI voice would queue behind (and block the game
-// on) whatever that voice is still saying — SAPI's speak-to-memory is a
-// synchronous Speak on the same SpVoice. prism_registry_create builds a fresh
-// instance; prism_registry_acquire would hand back the cached urgent one.
-// Created on first use, on the game thread, and only ever used there.
-struct RenderBackend {
-    const char*   tag;
-    uint64_t      id;
-    PrismBackend* be;
-    bool          tried;
-    char          voice[160];   // last voice selected, to log only changes
-};
-static RenderBackend g_renderSapi    = {"SAPI",    kPrismBackendIdSapi,    nullptr, false, {}};
-static RenderBackend g_renderOneCore = {"OneCore", kPrismBackendIdOneCore, nullptr, false, {}};
-
-static PrismBackend* EnsureRenderBackend(RenderBackend& r) {
-    if (r.tried) return r.be;
-    r.tried = true;
-    if (!g_prismCtx || !pPrism_registry_create || !pPrism_registry_exists(g_prismCtx, r.id)) {
-        acclog::Write("Speech", "render[%s] backend: unavailable", r.tag);
-        return nullptr;
-    }
-    DWORD seh = 0;
-    PrismBackend* be = SehCreate(g_prismCtx, r.id, &seh);
-    PrismError rc = be ? SehInitialize(be, &seh) : kPrismErrUnknown;
-    if (be && (rc == kPrismOk || rc == kPrismErrAlreadyInitialized)) r.be = be;
-    acclog::Write("Speech", "render[%s] backend: %s (rc=%d seh=0x%08lX)", r.tag,
-                  r.be ? "ready" : "failed", rc, seh);
-    return r.be;
-}
-
-// Does Prism's voice name `name` denote the voice described as `wanted`?
-// Equal, or `wanted` begins with `name` + " ": OneCore lists "Microsoft
-// Stefan" for the registry token whose display string is "Microsoft Stefan -
-// German (Germany)", while SAPI names match the token string exactly.
-static bool VoiceNameMatches(const char* name, const char* wanted) {
-    const size_t n = strlen(name);
-    if (n == 0 || strncmp(name, wanted, n) != 0) return false;
-    return wanted[n] == '\0' || wanted[n] == ' ';
-}
-
-// Point `r` at the first voice matching `wanted` (UTF-8). Voices are backend
-// state, so this runs every render; a handful of names, cheap.
-static bool SelectVoice(RenderBackend& r, const char* wanted) {
-    if (!pPrism_backend_count_voices || !pPrism_backend_get_voice_name ||
-        !pPrism_backend_set_voice) {
-        return false;
-    }
-    size_t count = 0;
-    if (pPrism_backend_count_voices(r.be, &count) != kPrismOk) return false;
-    for (size_t i = 0; i < count; ++i) {
-        const char* name = nullptr;
-        if (pPrism_backend_get_voice_name(r.be, i, &name) != kPrismOk || !name) continue;
-        if (!VoiceNameMatches(name, wanted)) continue;
-        if (pPrism_backend_set_voice(r.be, i) != kPrismOk) return false;
-        if (strcmp(r.voice, name) != 0) {
-            snprintf(r.voice, sizeof(r.voice), "%s", name);
-            acclog::Write("Speech", "render[%s] voice [%s] (id %zu)", r.tag, name, i);
-        }
-        return true;
-    }
-    acclog::Write("Speech", "render[%s]: none of %zu voices matches [%s]", r.tag, count, wanted);
-    return false;
-}
-
-// Prism rate (0..1, 0.5 = the voice's default) from a percent.
-static float RateFromPercent(int percent) {
-    if (percent < 0)   percent = 0;
-    if (percent > 100) percent = 100;
-    return static_cast<float>(percent) / 100.0f;
-}
-
-// One render on a render-only backend. `voice` null = the backend's default.
-static bool RenderOn(RenderBackend& r, const char* voice, float rate, float volume,
-                     const char* text, RenderedSpeech& out) {
-    out = RenderedSpeech{};
-    if (!pPrism_backend_speak_to_memory || !text || !*text) return false;
-    if (!EnsureRenderBackend(r)) return false;
-    if (voice && !SelectVoice(r, voice)) return false;
-    if (pPrism_backend_set_rate)   pPrism_backend_set_rate(r.be, rate);
-    if (pPrism_backend_set_volume) pPrism_backend_set_volume(r.be, volume);
-    return RenderWith(r.be, r.tag, text, out);
-}
-
-bool RenderUrgentToMemory(const char* text, int ratePercent, RenderedSpeech& out) {
-    // The urgent channel's voice on the render-only instance, at full volume:
-    // the urgent-volume slider is tuned for centred speech at system level,
-    // not for a line inside the game's mix — positional speech sets its own.
-    char voice[sizeof(g_sapiVoiceName)] = {};
-    const bool haveVoice = g_sapiVoiceCurrent != static_cast<size_t>(-1) &&
-                           FetchSapiVoiceNameUtf8(g_sapiVoiceCurrent, voice, sizeof(voice));
-    EnsureSapiRateLoaded();
-    return RenderOn(g_renderSapi, haveVoice ? voice : nullptr,
-                    RateFromPercent(ratePercent >= 0 ? ratePercent : g_sapiRatePercent),
-                    1.0f, text, out);
-}
-
-bool RenderSapiVoiceToMemory(const char* voiceName, int ratePercent, const char* text,
-                             RenderedSpeech& out) {
-    if (!voiceName) { out = RenderedSpeech{}; return false; }
-    return RenderOn(g_renderSapi, voiceName, ratePercent >= 0 ? RateFromPercent(ratePercent) : 0.5f,
-                    1.0f, text, out);
-}
-
-bool RenderOneCoreToMemory(const char* voiceName, int ratePercent, const char* text,
-                           RenderedSpeech& out) {
-    if (!voiceName) { out = RenderedSpeech{}; return false; }
-    return RenderOn(g_renderOneCore, voiceName,
-                    ratePercent >= 0 ? RateFromPercent(ratePercent) : 0.5f, 1.0f, text, out);
-}
-
-// How long the compass voice takes to say `text`, silence trimmed (renders
-// come back gated); 0 when it cannot be measured. A render costs one game
-// frame at most (0-31 ms logged for lines this short).
-static DWORD CompassSpeechMs(const char* text) {
-    char voice[sizeof(g_sapiVoiceName)] = {};
-    if (!FetchSapiVoiceNameUtf8(g_compassVoiceCurrent, voice, sizeof(voice))) return 0;
-    RenderedSpeech r;
-    if (!RenderOn(g_renderSapi, voice, RateFromPercent(LoadPercent(g_compassRate)), 1.0f, text, r))
-        return 0;
-    return static_cast<DWORD>(r.samples.size() / r.channels * 1000 / r.sampleRate);
-}
-
-void SpeakCompassThen(const char* text, const char* followUp) {
-    if (AllViaScreenReader() && text && *text) {
-        if (followUp && *followUp) {
-            const std::string both = std::string(text) + "\n" + followUp;
-            Speak(both.c_str(), /*interrupt=*/true);
-        } else {
-            Speak(text, /*interrupt=*/true);
-        }
-        return;
-    }
-    if (!followUp || !*followUp) {
-        SpeakCompass(text);
-        return;
-    }
-    if (!g_normalReady || !text || !*text) return;
-    const std::string line = std::string(text) + "\n" + followUp;
-    if (!g_compassReady || !pPrism_backend_is_speaking) {
-        // No second voice to take turns with: one line on the screen reader,
-        // as before the compass voice existed.
-        Speak(line.c_str(), /*interrupt=*/true);
-        return;
-    }
-    const DWORD speechMs = CompassSpeechMs(text);
-    // The follow-up lands on the screen reader; clear it now so the compass
-    // line does not play over something stale still being read there.
-    (void)pPrism_backend_stop(g_prismNormal);
-    SpeakCompass(text);
-    // Ctrl+R copies the whole readout, not just the half spoken last.
-    CaptureSpoken(line.c_str());
-    g_compassFollowUp         = followUp;
-    g_compassFollowUpSince    = GetTickCount();
-    g_compassFollowUpHeard    = false;
-    g_compassFollowUpSpeechMs = speechMs;
-}
-
-void Tick() {
-    if (g_compassFollowUp.empty()) return;
-    const DWORD now    = GetTickCount();
-    const DWORD waited = now - g_compassFollowUpSince;
-    const char* why    = "wait cap";
-    if (waited < kFollowUpMaxWaitMs) {
-        bool speaking = false;
-        if (pPrism_backend_is_speaking(g_prismCompass, &speaking) == kPrismOk && speaking) {
-            if (!g_compassFollowUpHeard) {
-                g_compassFollowUpHeard   = true;
-                g_compassFollowUpHeardAt = now;
-            }
-            // The voice still counts as speaking through the silence it pads
-            // every line with (~380 ms for Stefan); with the words measured,
-            // the follow-up goes once they are over instead.
-            if (g_compassFollowUpSpeechMs == 0 ||
-                now - g_compassFollowUpHeardAt < g_compassFollowUpSpeechMs + kFollowUpGapMs)
-                return;
-            why = "compass words over";
-        } else if (!g_compassFollowUpHeard && waited < kFollowUpStartGraceMs) {
-            return;
-        } else {
-            why = g_compassFollowUpHeard ? "compass voice finished" : "compass voice never started";
-        }
-    }
-    acclog::Trace("Speech", "compass follow-up released after %lu ms (%s, words %lu ms)", waited,
-                  why, g_compassFollowUpSpeechMs);
-    std::string followUp;
-    followUp.swap(g_compassFollowUp);
-    s_suppressNextCapture = true;  // LastSpoken already holds the whole line
-    Speak(followUp.c_str(), /*interrupt=*/false);
-}
-
-void SetUrgentVolumePercent(int percent) {
-    if (percent < 0)   percent = 0;
-    if (percent > 100) percent = 100;
-    g_sapiVolumeLoaded  = true;  // we are the authoritative value now
-    g_sapiVolumePercent = percent;
-    acc::settings::SetInt(kSapiVolumeKey, percent);  // persist across launches
-    ApplySapiVolume();  // push to the live backend (no-op if not ready)
-}
-
-int GetUrgentVolumePercent() {
-    EnsureSapiVolumeLoaded();
-    return g_sapiVolumePercent;
-}
-
-void SetUrgentRatePercent(int percent) {
-    if (percent < 0)   percent = 0;
-    if (percent > 100) percent = 100;
-    g_sapiRateLoaded  = true;  // we are the authoritative value now
-    g_sapiRatePercent = percent;
-    acc::settings::SetInt(kSapiRateKey, percent);  // persist across launches
-    ApplySapiRate();  // push to the live backend (no-op if not ready)
-}
-
-int GetUrgentRatePercent() {
-    EnsureSapiRateLoaded();
-    return g_sapiRatePercent;
-}
-
-size_t UrgentVoiceCount() {
-    return g_sapiVoiceCount;
-}
-
-bool GetUrgentVoiceName(size_t voiceId, char* outBuf, size_t bufSize) {
-    if (!outBuf || bufSize == 0) return false;
-    outBuf[0] = '\0';
-    char utf8[sizeof(g_sapiVoiceName)];
-    if (!FetchSapiVoiceNameUtf8(voiceId, utf8, sizeof(utf8))) return false;
-    if (!ReencodeUtf8ToGameCodepage(utf8, outBuf, bufSize)) {
-        // Non-representable characters in the player's codepage — the raw
-        // UTF-8 still names the voice recognisably for anything ASCII, which
-        // every shipped Microsoft voice name is.
-        snprintf(outBuf, bufSize, "%s", utf8);
-    }
-    return outBuf[0] != '\0';
-}
-
-size_t GetUrgentVoiceId() {
-    if (g_sapiVoiceCount == 0) return 0;
-    if (g_sapiVoiceCurrent >= g_sapiVoiceCount) return 0;
-    return g_sapiVoiceCurrent;
-}
-
-void SetUrgentVoiceId(size_t voiceId) {
-    if (voiceId >= g_sapiVoiceCount) return;
-    // Cut any sample still playing before the swap. SAPI re-queries the
-    // output format as part of SetVoice, and doing that against a device
-    // mid-utterance is the one way this call fails — which would leave the
-    // picker reading the old voice back and looking stuck under a fast
-    // Left/Right walk. The caller speaks a fresh sample straight after, so
-    // there is nothing worth preserving.
-    if (g_prismSapi && pPrism_backend_stop) pPrism_backend_stop(g_prismSapi);
-    if (!EnsureSapiVoice(voiceId)) return;
-    // Persist by name, not by index — see kSapiVoiceKey.
-    EnsureSapiVoiceLoaded();
-    char utf8[sizeof(g_sapiVoiceName)];
-    if (!FetchSapiVoiceNameUtf8(voiceId, utf8, sizeof(utf8))) return;
-    snprintf(g_sapiVoiceName, sizeof(g_sapiVoiceName), "%s", utf8);
-    acc::settings::SetStr(kSapiVoiceKey, g_sapiVoiceName);
-    acclog::Write("Speech", "SAPI urgent voice -> [%s] (id %zu)",
-                  g_sapiVoiceName, voiceId);
-}
-
-void SetCompassVolumePercent(int percent) {
-    StorePercent(g_compassVolume, percent);
-    ApplyCompassLevels();
-}
-
-int GetCompassVolumePercent() {
-    return LoadPercent(g_compassVolume);
-}
-
-void SetCompassRatePercent(int percent) {
-    StorePercent(g_compassRate, percent);
-    ApplyCompassLevels();
-}
-
-int GetCompassRatePercent() {
-    return LoadPercent(g_compassRate);
-}
-
-size_t CompassVoiceCount() {
-    return g_compassReady ? g_sapiVoiceCount : 0;
-}
-
-size_t GetCompassVoiceId() {
-    if (g_compassVoiceCurrent >= g_sapiVoiceCount) return 0;
-    return g_compassVoiceCurrent;
-}
-
-void SetCompassVoiceId(size_t voiceId) {
-    if (!g_compassReady || voiceId >= g_sapiVoiceCount) return;
-    // Cut the sample still playing first — see SetUrgentVoiceId.
-    if (pPrism_backend_stop) pPrism_backend_stop(g_prismCompass);
-    if (!EnsureCompassVoice(voiceId)) return;
-    char utf8[sizeof(g_sapiVoiceName)];
-    if (!FetchSapiVoiceNameUtf8(voiceId, utf8, sizeof(utf8))) return;
-    acc::settings::SetStr(kCompassVoiceKey, utf8);
-    acclog::Write("Speech", "SAPI compass voice -> [%s] (id %zu)", utf8, voiceId);
-}
-
 void Silence() {
     if (!g_normalReady) return;
     acclog::Trace("Speech.spoke", "(silenced)");
@@ -1665,10 +635,6 @@ const wchar_t* ActiveScreenReader() {
     if (!g_normalReady) return L"none";
     return g_activeNameW;
 }
-
-const char* LastSpoken() { return s_lastSpoken; }
-
-void SuppressNextCapture() { s_suppressNextCapture = true; }
 
 void Shutdown() {
     // Deliberately do not free backends / shut down the context here —

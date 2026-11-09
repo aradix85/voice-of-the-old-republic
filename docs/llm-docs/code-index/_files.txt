@@ -308,6 +308,12 @@ patches/Accessibility/positional_speech.cpp
 patches/Accessibility/positional_speech.h
 patches/Accessibility/prism.cpp
 patches/Accessibility/prism.h
+patches/Accessibility/prism_compass.cpp
+patches/Accessibility/prism_internal.h
+patches/Accessibility/prism_render.cpp
+patches/Accessibility/prism_state.cpp
+patches/Accessibility/prism_text.cpp
+patches/Accessibility/prism_urgent.cpp
 patches/Accessibility/probe_audio_frame.cpp
 patches/Accessibility/probe_audio_frame.h
 patches/Accessibility/probe_camera_distance.cpp

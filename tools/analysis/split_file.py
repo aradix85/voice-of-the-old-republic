@@ -145,16 +145,21 @@ def main() -> None:
             if name.startswith(ns_prefix):
                 name = name[len(ns_prefix):]
             start = n
+            if cur and cur[-1] == start - 1 and re.match(r"\s*template\s*<", L(cur[-1])):
+                start = cur.pop()
             # take back the comment lines directly above from the open chunk
             while cur and is_comment(L(cur[-1])) and cur[-1] == start - 1:
                 start = cur.pop()
             close_chunk()
             if name not in target:
                 sys.exit(f"geen bestemming voor functie {name} (regel {n})")
-            funcs[name] = {"start": start, "sig": fn.start_line, "end": fn.end_line,
-                           "region": region(), "file": target[name],
-                           "method": "::" in name}
-            elements.append(("func", name))
+            key, i = name, 2   # overloads: Speak, Speak#2, ... (same file)
+            while key in funcs:
+                key, i = f"{name}#{i}", i + 1
+            funcs[key] = {"start": start, "sig": fn.start_line, "end": fn.end_line,
+                          "region": region(), "file": target[name],
+                          "method": "::" in name}
+            elements.append(("func", key))
             n = fn.end_line + 1
             continue
         if depth == 0 and re.match(r"namespace\s*\{$", c):
@@ -308,13 +313,14 @@ def main() -> None:
     pub_path = os.path.join(folder, f"{module}.h")
     public_text = open(pub_path, encoding="latin-1").read() if os.path.exists(pub_path) else ""
     for f, v in funcs.items():
-        users = {funcs[g]["file"] for g in funcs if g != f and f in fbody[g]}
-        users |= {ch.dest for ch in chunks if ch.dest not in ("H", "drop") and f in ch.uses}
+        b = f.split("#")[0]
+        users = {funcs[g]["file"] for g in funcs if g != f and b in fbody[g]}
+        users |= {ch.dest for ch in chunks if ch.dest not in ("H", "drop") and b in ch.uses}
         # Outside the anonymous namespaces but not in the module's header: it
         # still needs a prototype when another file calls it.
         declared = v["region"] == "named" and (v["method"] or
-                                               re.search(rf"\b{f}\s*\(", public_text))
-        v["shared"] = not declared and (bool(users - {v["file"]}) or f in header_uses)
+                                               re.search(rf"\b{b}\s*\(", public_text))
+        v["shared"] = not declared and (bool(users - {v["file"]}) or b in header_uses)
     for ch in chunks:  # a shared function's forward declaration becomes its prototype
         if ch.stmts and ch.stmts[0]["kind"] == "proto" and funcs[ch.stmts[0]["name"]]["shared"]:
             ch.dest = "drop"
@@ -330,7 +336,8 @@ def main() -> None:
                 break
             parts.append(s)
             k += 1
-        text = re.sub(r"\s+", " ", " ".join(parts)).strip()
+        # A static function another file calls loses its internal linkage.
+        text = re.sub(r"^static\s+", "", re.sub(r"\s+", " ", " ".join(parts)).strip())
         if re.search(r"\([^)]*=", text):
             # Default arguments move to the prototype; the definition drops them.
             v["strip_defaults"] = k
@@ -384,6 +391,8 @@ def main() -> None:
             line = L(k)
             if "strip_defaults" in v and v["sig"] <= k <= v["strip_defaults"]:
                 line = re.sub(r"\s*=\s*[^,()=]+(?=[,)])", "", line)
+            if k == v["sig"] and v["shared"]:
+                line = re.sub(r"^static\s+", "", line)
             out_lines.append(line)
         return out_lines
 
