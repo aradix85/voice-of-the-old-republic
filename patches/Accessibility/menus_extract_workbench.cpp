@@ -2,6 +2,12 @@
 
 #include "menus_extract_internal.h"
 
+#include "engine_area.h"        // GetObjectDisplayNameByHandle
+#include "engine_game.h"        // IsKotor2 — K1-only portraits.2da row table
+#include "engine_panels.h"
+#include "log.h"
+#include "strings.h"
+
 namespace acc::menus::extract {
 
 namespace {

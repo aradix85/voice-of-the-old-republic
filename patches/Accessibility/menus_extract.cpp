@@ -1,19 +1,20 @@
 // control text extraction (the announce ladder).
 //
-// FromControl and its three extract-only helpers (FindSiblingLabel,
-// IsCycleFlankerArrow, LookupCycleCategory) lifted out of menus.cpp.
-// Helpers shared with chain navigation (IsChainNavigable,
-// IsClassSelectionIcon, ClassLabelCache*, GetControlCenter) and the
-// focused-panel pointer (g_currentPanel) cross the seam via
-// menus_internal.h.
-//
-// FromControl itself is the ladder: it does no extraction of its own, it
-// runs the Try* steps in order and applies the three announce suffixes.
-// Each step's rationale lives at that step's definition in the anonymous
-// namespace below, under the number it had when the ladder was one
-// function.
+// FromControl is the ladder: it does no extraction of its own, it runs the
+// Try* steps in order (one file per kind of control, menus_extract_*.cpp)
+// and applies the three announce suffixes. Each step's rationale lives at
+// its definition, under its step number. Helpers shared with chain
+// navigation (IsChainNavigable, IsClassSelectionIcon, ClassLabelCache*,
+// GetControlCenter) and the focused-panel pointer (g_currentPanel) come
+// from menus_internal.h.
 
 #include "menus_extract_internal.h"
+
+#include "engine_manager.h"
+#include "engine_panels.h"
+#include "menus_listbox.h"      // IsEquipPickerArmed / IsWorkbenchUpgradePickerArmed
+#include "menus_modsettings.h"
+#include "strings.h"
 
 namespace acc::menus::extract {
 
@@ -163,8 +164,8 @@ void AppendDisabledSuffix(void* control, void* ownerPanel,
 // Hand `text` back to the caller, TRUNCATING when it does not fit. Returns
 // false only when there is genuinely nothing to say.
 //
-// Every per-kind step used to do this as `if (len + 1 <= bufSize) memcpy(...)`
-// — which meant a caller's buffer size decided whether a control HAS a name,
+// A plain `if (len + 1 <= bufSize) memcpy(...)` per step would let a
+// caller's buffer size decide whether a control HAS a name,
 // not merely how much of it you hear. The two probe call sites pass 64 bytes
 // and only test the return value (FindAdjacentArrow, SquashCycleFlankers), so
 // any control whose label ran past 63 characters read as text-less to them

@@ -4,6 +4,9 @@
 
 #include "menus_extract_internal.h"
 
+#include "log.h"
+#include "strings.h"
+
 namespace acc::menus::extract {
 
 namespace {
@@ -453,7 +456,7 @@ const char* TryEditbox(void* control, char* outBuf, size_t bufSize) {
 //
 //    For multi-row listboxes (skills, inventory, save list, journal
 //    entries, etc.) we return nullptr — the engine's SetActiveControl
-//    auto-focus on a multi-row listbox used to read every row
+//    auto-focus on a multi-row listbox would read every row
 //    concatenated into one blob ("Computerkenntnisse  Sprengstoff…"
 //    on every Fähigkeiten open). Row-by-row navigation via the
 //    ListBoxPanelSpec / chain handlers is the only correct way to
@@ -568,8 +571,8 @@ const char* TryItemEntryRow(void* control, char* outBuf, size_t bufSize) {
 //    defeating both the chain squash and FindAdjacentArrow.
 //
 //    `owner` is FromControl's ResolveOwnerPanel result — the panel that
-//    actually holds this control — NOT the g_currentPanel global this
-//    used to read. Those two diverge whenever a panel is pushed without
+//    actually holds this control — NOT the g_currentPanel global.
+//    Those two diverge whenever a panel is pushed without
 //    firing CSWGuiPanel::SetActiveControl, which is the norm for KOTOR
 //    2's chargen wizard steps: g_currentPanel stayed on custpnl_p (the
 //    step list) while the user navigated abchrgen_p / skchrgen_p. Both
@@ -596,9 +599,9 @@ const char* TrySiblingLabel(void* control, void* owner,
                             char* outBuf, size_t bufSize) {
     const char* source = nullptr;
     // Liveness-filtered — both callees walk panel+kPanelControlsOffset, and a
-    // module load leaves g_currentPanel pointing at a freed panel (crash
-    // analysed 2026-08-02, swkotor2.exe.51156.dmp: opening Equipment right
-    // after an area transition faulted on data[0] of the reused block).
+    // module load leaves g_currentPanel pointing at a freed panel (opening
+    // Equipment right after an area transition crashed on data[0] of the
+    // reused block).
     // ResolveOwnerPanel already applied that filter to `owner`.
     void* panel = owner;
     if (panel && IsChainNavigable(control) &&

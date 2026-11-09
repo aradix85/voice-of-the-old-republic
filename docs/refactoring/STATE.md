@@ -74,6 +74,13 @@ exit_memory (3c61b4d); generated code index (b957a29); updater removed
 (8d2a198); kotor-tools tests (c7a9c41). room_topology split into eleven
 files with tools/analysis/split_file.py (287ab2e), then made lean: F1's
 SnapshotDoors loop, includes per file, history out of its comments.
+menus_extract split into six files (936c320) and made lean: includes per
+file, history out of comments, four cloned guarded row calls folded into
+one GuardedRow.
+
+Careful: never rewrite source files with PowerShell ReadAllText/WriteAllText
+(it decodes UTF-8 and writes '?' for the dashes and umlauts in comments);
+use the Python scripts, which read and write latin-1 byte for byte.
 
 ## Open
 
@@ -86,7 +93,10 @@ SnapshotDoors loop, includes per file, history out of its comments.
   about 15 files with four spellings of the constant, often followed by
   EngineYawToCompass/CompassToSector/SectorString. One helper in
   engine_compass (bearing of a vector, and its compass word).
-- Next file: menus_extract.cpp (2,506 lines).
+- Next file: minigame_turret.cpp, then menus_listbox.cpp.
+- includes_split.py (tmp) should carry an include's continuation comment
+  lines with it; a `using namespace` in an internal header needs one header
+  of that namespace kept there.
 - F2b: share the save-variable code of exit_memory with discovery.cpp.
 - F3 menus_chargen_feats / menus_powers_levelup: about 15 same-named
   functions, 22 cloned blocks; one chart-grid module (check K2 plans).

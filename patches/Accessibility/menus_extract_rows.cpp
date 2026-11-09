@@ -4,6 +4,14 @@
 
 #include "menus_extract_internal.h"
 
+#include "engine_panels.h"
+#include "menus_charsheet.h"
+#include "menus_credits.h"
+#include "menus_equipstats.h"
+#include "menus_pazaakdeck.h"
+#include "strings.h"
+#include "engine_offsets_select.h"
+
 namespace acc::menus::extract {
 
 namespace {
@@ -64,24 +72,27 @@ bool ExtractWagerRow(void* panel, void* maxLabel, char* outBuf, size_t bufSize) 
     return outBuf[0] != '\0';
 }
 
+// One SEH-guarded call of a screen model's row extractor: `tag` (the source
+// named in the log) when it produced text, else null.
+const char* GuardedRow(bool (*extract)(void*, void*, char*, size_t),
+                       void* owner, void* control, char* outBuf, size_t bufSize,
+                       const char* tag) {
+    __try {
+        if (extract(owner, control, outBuf, bufSize) && outBuf[0] != '\0') return tag;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+    }
+    return nullptr;
+}
+
 // Character-sheet stat rows on InGameCharacter.
 const char* TryCharsheetStatRow(void* control, void* owner,
                                 char* outBuf, size_t bufSize) {
-    const char* source = nullptr;
-    if (owner && IdentifyPanel(owner) ==
-            PanelKind::InGameCharacter &&
-        acc::menus::charsheet::IsStatRowAnchor(owner, control)) {
-        __try {
-            if (acc::menus::charsheet::ExtractStatRow(
-                    owner, control, outBuf, bufSize) &&
-                outBuf[0] != '\0') {
-                source = "perkind-charsheet-row";
-            }
-        } __except (EXCEPTION_EXECUTE_HANDLER) {
-            source = nullptr;
-        }
+    if (!owner || IdentifyPanel(owner) != PanelKind::InGameCharacter ||
+        !acc::menus::charsheet::IsStatRowAnchor(owner, control)) {
+        return nullptr;
     }
-    return source;
+    return GuardedRow(&acc::menus::charsheet::ExtractStatRow, owner, control,
+                      outBuf, bufSize, "perkind-charsheet-row");
 }
 
 // Credits row (Inventory + Store). IsCreditsRowAnchor self-gates on
@@ -90,20 +101,11 @@ const char* TryCharsheetStatRow(void* control, void* owner,
 // control is the panel's credits_value_label inline member.
 const char* TryCreditsRow(void* control, void* owner,
                           char* outBuf, size_t bufSize) {
-    const char* source = nullptr;
-    if (owner &&
-        acc::menus::credits::IsCreditsRowAnchor(owner, control)) {
-        __try {
-            if (acc::menus::credits::ExtractCreditsRow(
-                    owner, control, outBuf, bufSize) &&
-                outBuf[0] != '\0') {
-                source = "perkind-credits-row";
-            }
-        } __except (EXCEPTION_EXECUTE_HANDLER) {
-            source = nullptr;
-        }
+    if (!owner || !acc::menus::credits::IsCreditsRowAnchor(owner, control)) {
+        return nullptr;
     }
-    return source;
+    return GuardedRow(&acc::menus::credits::ExtractCreditsRow, owner, control,
+                      outBuf, bufSize, "perkind-credits-row");
 }
 
 // Equip stat rows (Vitality, Defense, Attack, Damage). Same
@@ -112,20 +114,11 @@ const char* TryCreditsRow(void* control, void* owner,
 // attack formatting internally.
 const char* TryEquipStatRow(void* control, void* owner,
                             char* outBuf, size_t bufSize) {
-    const char* source = nullptr;
-    if (owner &&
-        acc::menus::equipstats::IsEquipStatRowAnchor(owner, control)) {
-        __try {
-            if (acc::menus::equipstats::ExtractEquipStatRow(
-                    owner, control, outBuf, bufSize) &&
-                outBuf[0] != '\0') {
-                source = "perkind-equipstat-row";
-            }
-        } __except (EXCEPTION_EXECUTE_HANDLER) {
-            source = nullptr;
-        }
+    if (!owner || !acc::menus::equipstats::IsEquipStatRowAnchor(owner, control)) {
+        return nullptr;
     }
-    return source;
+    return GuardedRow(&acc::menus::equipstats::ExtractEquipStatRow, owner, control,
+                      outBuf, bufSize, "perkind-equipstat-row");
 }
 
 // Pazaak side-deck builder card widgets (CSWGuiPazaakStart). The
@@ -134,20 +127,9 @@ const char* TryEquipStatRow(void* control, void* owner,
 // already-selected state).
 const char* TryPazaakDeckCard(void* control, void* owner,
                               char* outBuf, size_t bufSize) {
-    const char* source = nullptr;
-    if (owner &&
-        IdentifyPanel(owner) == PanelKind::PazaakStart) {
-        __try {
-            if (acc::menus::pazaakdeck::ExtractCardLabel(
-                    owner, control, outBuf, bufSize) &&
-                outBuf[0] != '\0') {
-                source = "perkind-pazaakdeck";
-            }
-        } __except (EXCEPTION_EXECUTE_HANDLER) {
-            source = nullptr;
-        }
-    }
-    return source;
+    if (!owner || IdentifyPanel(owner) != PanelKind::PazaakStart) return nullptr;
+    return GuardedRow(&acc::menus::pazaakdeck::ExtractCardLabel, owner, control,
+                      outBuf, bufSize, "perkind-pazaakdeck");
 }
 
 // Pazaak wager popup (CSWGuiWagerPopup). BTN_LESS / BTN_MORE are

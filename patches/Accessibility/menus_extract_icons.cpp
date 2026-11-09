@@ -4,6 +4,15 @@
 
 #include "menus_extract_internal.h"
 
+#include "engine_area.h"        // GetObjectDisplayNameByHandle
+#include "engine_game.h"        // IsKotor2 — K1-only portraits.2da row table
+#include "engine_panels.h"
+#include "engine_player.h"      // PartyTableIsNPCAvailable / *Selectable /
+#include "log.h"
+#include "strings.h"
+#include "engine_rebase.h"
+#include "engine_offsets_select.h"
+
 namespace acc::menus::extract {
 
 namespace {
@@ -25,7 +34,7 @@ namespace {
 //     appended weapL2, weapR2 — and the per-slot equipped-item handle is
 //     the parallel array entry at kEquipPanelSlotItemIdsOffset + 4*index.
 //     The TLK strrefs are the same in both games' dialog.tlk (verified
-//     against the K2 TLK 2026-08-02).
+//     against the K2 TLK).
 //
 //     Both weapon sets carry a set qualifier on KOTOR 2, not just the
 //     second one: the two rows are otherwise identical ("Linke Waffe"
@@ -96,8 +105,8 @@ const char* TryPartyPortrait(void* control, char* outBuf, size_t bufSize,
     const char* source = nullptr;
     claimedVtable = false;
     // IsPartyPortrait guards the vtable read: the walked control array can
-    // hold a non-null GARBAGE entry (KOTOR 2 chargen name panel, WER offset
-    // 0x198511, 2026-08-01 — the crash was an unguarded read here).
+    // hold a non-null GARBAGE entry (KOTOR 2 chargen name panel: an
+    // unguarded read here crashed).
     if (!IsPartyPortrait(control)) return nullptr;
     claimedVtable = true;
     // `selected` is the LIVE flag every toggle flips — the ground truth as
@@ -397,7 +406,7 @@ const char* TryInGameMenuIcon(void* control, void* owner,
             // Slot 4 is messages on KOTOR 1 but the party screen on KOTOR 2:
             // its SwitchToSWInGameGui (0x007CA550) maps id 4 to the
             // PartySelection slot, and 48625 is K2's caption for it (48624 is
-            // empty). It read "Messages" until 2026-10-30. The literal is the
+            // empty). The literal is the
             // KOTOR 1 lookup-failure fallback.
             { 4, 48223u,      48625u, "Nachrichten"   },     // messages / party
             { 5, 48218u,      48627u, "Auftr\xe4ge"   },     // journal
@@ -561,7 +570,7 @@ const char* TryEquipSlot(void* control, void* owner,
 // 9b2. Per-kind label fallback for the in-game map (CSWGuiInGameMap).
 //     The panel has two image-only buttons on either side of the map
 //     render — `up_button` at struct offset +0xab0 and `down_button`
-//     at +0xc74 (verified 2026-05-12 via the GoG xml MEMBER offsets +
+//     at +0xc74 (verified via the GoG xml MEMBER offsets +
 //     Ghidra decomp of the panel's OnUpArrowPressed @0x006927b0 and
 //     OnDownArrowPressed @0x006927c0 which both dispatch
 //     CSWGuiPanel::HandleInputEvent(0x31/0x32, 1) → the InGameMap

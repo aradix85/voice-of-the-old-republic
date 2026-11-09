@@ -1,4 +1,4 @@
-# menus_extract_chargen.cpp (422 lines)
+# menus_extract_chargen.cpp (428 lines)
 
 Source: `patches/Accessibility/menus_extract_chargen.cpp`
 
@@ -6,6 +6,6 @@ Character creation: the class selection icons and the portrait arrows (with the 
 
 ## Declarations (in source order)
 
-- L76 `int PortraitVariantRank(uint32_t row)`: 1-based position of `row` inside its own (gender, family) group, or 0 when the row isn't one this game's table knows.
-- L138 `const char* TryClassSelectionIcon(void* control, void* owner, char* outBuf, size_t bufSize)`: 9c.
-- L232 `const char* TryPortraitCharGenArrow(void* control, void* owner, char* outBuf, size_t bufSize)`: 9d.
+- L82 `int PortraitVariantRank(uint32_t row)`: 1-based position of `row` inside its own (gender, family) group, or 0 when the row isn't one this game's table knows.
+- L144 `const char* TryClassSelectionIcon(void* control, void* owner, char* outBuf, size_t bufSize)`: 9c.
+- L238 `const char* TryPortraitCharGenArrow(void* control, void* owner, char* outBuf, size_t bufSize)`: 9d.

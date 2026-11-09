@@ -3,6 +3,12 @@
 
 #include "menus_extract_internal.h"
 
+#include "engine_game.h"        // IsKotor2 — K1-only portraits.2da row table
+#include "engine_panels.h"
+#include "log.h"
+#include "strfmt.h"   // AsciiLower
+#include "strings.h"
+
 namespace acc::menus::extract {
 
 namespace {
@@ -260,7 +266,7 @@ const char* TryPortraitCharGenArrow(void* control, void* owner,
                 // (+0xa8 CSWCObject.portrait, +0x14/+0x24 CSWCPlayer-style)
                 // and on the panel (+0x1238 portrait_id) all stay zero
                 // through cycling — only the engine accessors return live
-                // values (verified 2026-05-09 in patch-20260509-053256.log).
+                // values (verified in the patch log).
                 //
                 // GetPortrait fills a CResRef (16-byte char[]) with the
                 // baseresref string for the currently-selected portrait,

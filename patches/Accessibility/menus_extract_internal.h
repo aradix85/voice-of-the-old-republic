@@ -10,33 +10,12 @@
 #include <cstdio>
 #include <cstring>
 
-#include "engine_area.h"        // GetObjectDisplayNameByHandle
-#include "engine_game.h"        // IsKotor2 — K1-only portraits.2da row table
-#include "engine_manager.h"
-#include "engine_offsets.h"
-#include "engine_panels.h"
-#include "engine_player.h"      // PartyTableIsNPCAvailable / *Selectable /
-                                // GetPartyNpcNameForSlot
-#include "engine_reads.h"
-#include "log.h"
-#include "menus_charsheet.h"
-#include "menus_credits.h"
-#include "menus_listbox.h"      // IsEquipPickerArmed / IsWorkbenchUpgradePickerArmed
-                                // — an armed picker clears the panel buttons'
-                                // interactive bit; see AppendDisabledSuffix
-#include "menus_equipstats.h"
-#include "menus_pazaakdeck.h"
+#include "engine_reads.h"       // declares acc::engine for the using directive
 #include "menus_internal.h"
-#include "menus_modsettings.h"
-#include "strfmt.h"   // AsciiLower
-#include "strings.h"
-#include "engine_rebase.h"
-#include "engine_offsets_select.h"
 
 using namespace acc::engine;
 
-// Bring shared seam helpers into unqualified scope so the function bodies
-// read as they did when everything lived in menus.cpp.
+// Helpers of the menus module, used unqualified.
 using acc::menus::detail::IsChainNavigable;
 using acc::menus::detail::IsClassSelectionIcon;
 using acc::menus::detail::ClassLabelCacheLookup;
