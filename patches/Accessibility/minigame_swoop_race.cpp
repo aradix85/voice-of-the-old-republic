@@ -276,15 +276,10 @@ constexpr int kGearGlobalMin = 0;
 constexpr int kGearGlobalMax = 5;
 constexpr const char* kGearGlobalName = "MIN_RACE_GEAR";
 
-// Reuse the turret minigame's "entered killable range" cue — same meaning to
-// the player (a window just opened), already mixed and volume-grouped. See
-// turret_game.cpp kRangeCueResref. Resref centralised in audio_cues.h so the
-// audio glossary auditions the same sample.
-// Resolved per game at fire time: KOTOR 2's archives lack the K1 sample (the
-// whole first K2 round had a silent shift cue) — see GetNavCueResrefForGame.
-inline const char* ShiftReadyCueResref() {
-    return acc::audio::GetNavCueResrefForGame(acc::audio::NavCue::SwoopShiftReady);
-}
+// Resref centralised in audio_cues.h so the audio glossary auditions the same
+// sample.
+constexpr const char* kShiftReadyCueResref =
+    acc::audio::GetNavCueResref(acc::audio::NavCue::SwoopShiftReady);
 
 // Exit-debounce. After we lose the latched pointer, hold off announcing
 // EXIT until the loss persists for this many consecutive ticks. The
@@ -1034,7 +1029,7 @@ void TickShiftReady(void* miniGame) {
     if (speed <= gate) return;
 
     g_state.shift_ready_announced = true;
-    acc::audio::PlayCue(ShiftReadyCueResref());
+    acc::audio::PlayCue(kShiftReadyCueResref);
     acclog::Write("SwoopRace",
                   "shift-ready cue: gear=%d speed=%.2f > gate=%.2f (max=%.2f)",
                   gear, speed, gate, maxSpeed);

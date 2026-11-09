@@ -1288,9 +1288,7 @@ void Tick() {
     if (static_cast<int32_t>(now - s_pendingFireAt) < 0) return;
     acc::audio::NavCue cue = s_pendingCue;
     s_pendingValid = false;
-    // Per-game resolution: KOTOR 2's archives lack the K1 shift-ready sample,
-    // so the glossary must audition what the race will actually play.
-    const char* resref = acc::audio::GetNavCueResrefForGame(cue);
+    const char* resref = acc::audio::GetNavCueResref(cue);
     // Audition through a self-managed CExoSoundSource (non-looping, 2D)
     // rather than CExoSound::PlayOneShotSound. 2D + non-spatial so the
     // sample plays centred, matching how the main-menu glossary sounds —

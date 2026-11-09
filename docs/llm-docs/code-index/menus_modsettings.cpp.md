@@ -1,4 +1,4 @@
-# menus_modsettings.cpp (1329 lines)
+# menus_modsettings.cpp (1327 lines)
 
 Source: `patches/Accessibility/menus_modsettings.cpp`
 
@@ -54,4 +54,4 @@ See menus_modsettings.h for the design summary. This TU owns the sentinel pointe
 - L1181 `bool HandleInputGlossary(int keyCode)`
 - L1226 `bool HandleInput(int keyCode)`
 - L1280 `void Tick()`
-- L1317 `bool GetToggle(Option option)`
+- L1315 `bool GetToggle(Option option)`

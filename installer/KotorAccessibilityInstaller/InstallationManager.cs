@@ -106,8 +106,8 @@ namespace KotorAccessibilityInstaller
         public static IReadOnlyList<string> OverrideAssetNames => OverrideAssets;
 
         // Override assets earlier versions shipped and current ones do not.
-        // acc_steer_l / acc_steer_r were the discrete directional steering ticks,
-        // retired when the steering magnet replaced that guide (see the csproj).
+        // acc_steer_l / acc_steer_r were the swoop race's directional steering
+        // ticks.
         //
         // They matter because removal is driven by the list of what we install
         // TODAY, so anything we ever shipped and then stopped shipping becomes

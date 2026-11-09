@@ -87,11 +87,9 @@
     <EmbeddedResource Include="Resources\acc_turret_loop.wav" />
     <EmbeddedResource Include="Resources\acc_turret_lock.wav" />
     <EmbeddedResource Include="Resources\acc_turret_tick.wav" />
-    <!-- Swoop-race "on the line" rising tone (swoop_spatial_audio.cpp, resref
-         acc_steer_ok): the centred blip that confirms the bike has reached a
-         pad. The earlier panned acc_steer_l / acc_steer_r directional ticks were
-         retired when the steering magnet replaced the discrete co-pilot guide,
-         so only this aligned cue is still played. -->
+    <!-- Swoop-race "on the pad" rising tone (minigame_swoop_audio_accelpad.cpp,
+         resref acc_steer_ok): the centred blip that confirms the bike has
+         reached a pad. -->
     <EmbeddedResource Include="Resources\acc_steer_ok.wav" />
     <!-- Swoop-race "shift up now" chirp (audio_cues.h SwoopShiftReady, resref
          acc_shift): a byte-identical copy of the 0.2 s astromech attack chirp

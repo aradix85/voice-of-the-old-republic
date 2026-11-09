@@ -329,9 +329,9 @@ Round-2 additions (`minigame_swoop_audio.cpp` / `minigame_swoop_race.cpp`):
 - Magnet disabled while `MIN_RACE_GEAR` is 0 (post-hit relaunch).
 - Finish: `MIN_RACE_GEAR == 6` (the heartbeat's own finish write) is the
   primary trigger on both games; the coast-to-a-stop fallback is K1-only.
-- Shift-ready cue resolves per game (`GetNavCueResrefForGame`): K2 plays
-  `c_drdasasin_atk1` because `c_drdastro_atk1` does not exist in K2's archives
-  (the whole first K2 round had a silent cue, not a speed problem).
+- Shift-ready cue: `c_drdastro_atk1` is not key-indexed in K2's archives, so
+  the mod ships it as `Override\acc_shift.wav` for both games (see
+  audio_cues.h).
 - Stuck hint: no forward progress for 6 s in gear 0 after the launch → one
   spoken escape instruction (steer aside, then Space and W together).
 

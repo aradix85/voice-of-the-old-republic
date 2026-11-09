@@ -1,4 +1,4 @@
-# audio_cues.h (117 lines)
+# audio_cues.h (96 lines)
 
 Source: `patches/Accessibility/audio_cues.h`
 
@@ -12,6 +12,5 @@ Verify a resref resolves before using it: Play3DOneShotSound silently no-ops on 
 
 ## Declarations (in source order)
 
-- L21 `enum class NavCue`
-- L72 `constexpr const char* GetNavCueResref(NavCue cue)`
-- L112 `inline const char* GetNavCueResrefForGame(NavCue cue)`: Per-game resolution.
+- L19 `enum class NavCue`
+- L60 `constexpr const char* GetNavCueResref(NavCue cue)`

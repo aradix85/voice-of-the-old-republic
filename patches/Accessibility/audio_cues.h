@@ -14,8 +14,6 @@
 
 #pragma once
 
-#include "engine_game.h"  // IsKotor2 — GetNavCueResrefForGame
-
 namespace acc::audio {
 
 enum class NavCue {
@@ -38,30 +36,20 @@ enum class NavCue {
     BeaconActive,
     BeaconWaypointReached,
     BeaconDestinationReached,
-    // Swoop race minigame — playback paths in swoop_race.cpp and
-    // swoop_spatial_audio.cpp use GetNavCueResref for these so the
-    // glossary preview and the live race fire the same sample.
+    // Swoop race minigame — minigame_swoop_race.cpp and minigame_swoop_audio*
+    // use GetNavCueResref for these so the glossary preview and the live race
+    // fire the same sample.
     SwoopAccelpadBoost,     // acc_boost (panned racing-line steering guide)
     SwoopObstacleWarn,      // cb_gr_boncehard2 (short metallic grenade-bounce;
-                            //   looped = constant un-ignorable clicking. Replaced
-                            //   mgs_hover_07l, a quiet sustained hover drone whose
-                            //   faint attack got lost in the ~0.7s in-range window)
+                            //   looped = constant un-ignorable clicking)
     SwoopWallImpact,        // mgs_sith_hit1 (side-wall thump one-shot)
-    // Co-pilot discrete-command steering (experimental, 2026-06-21). A
-    // repeating directional tick (panned AND pitched to the side to steer) +
-    // a single rising "on the line, release" tone — replaces the continuous
-    // panned guide. Custom synthesised WAVs (Override\acc_steer_*.wav): loud,
-    // short tones, since the stock UI clicks first tried were far too quiet
-    // (gui_invselect RMS 3.3% vs these ~44%). Low pitch = left, high = right,
-    // so direction is carried by pitch as well as pan (pan alone localises
-    // poorly in the race — the weakness that sank the old guide).
-    SwoopSteerLeft,         // acc_steer_l  (low square tick — steer LEFT)
-    SwoopSteerRight,        // acc_steer_r  (high square tick — steer RIGHT)
-    SwoopSteerAligned,      // acc_steer_ok (rising tone — on the line / release)
-    // "You can shift up a gear now" cue (swoop_race.cpp TickShiftReady). Was a
-    // bare literal there; centralised here so the glossary can audition it.
+    // A custom synthesised WAV (Override\acc_steer_ok.wav): loud and short,
+    // since stock UI clicks are far too quiet in the race (gui_invselect RMS
+    // 3.3% against ~44%).
+    SwoopSteerAligned,      // acc_steer_ok (rising tone — on the pad)
+    // "You can shift up a gear now" (minigame_swoop_race.cpp TickShiftReady).
     SwoopShiftReady,        // acc_shift (the 0.2 s astromech chirp c_drdastro_atk1,
-                            //   shipped under our own resref — see the resolver note)
+                            //   shipped under our own resref, see below)
     // KOTOR 2 only in practice (K1's bike cannot jump): a low bar that spans the
     // bike's lane is close enough that a jump pressed now clears it
     // (minigame_swoop_audio.cpp, the hazard sweep). One-shot per bar.
@@ -91,8 +79,6 @@ constexpr const char* GetNavCueResref(NavCue cue) {
         case NavCue::SwoopAccelpadBoost:       return "acc_boost";
         case NavCue::SwoopObstacleWarn:        return "cb_gr_boncehard2";
         case NavCue::SwoopWallImpact:          return "mgs_sith_hit1";
-        case NavCue::SwoopSteerLeft:           return "acc_steer_l";
-        case NavCue::SwoopSteerRight:          return "acc_steer_r";
         case NavCue::SwoopSteerAligned:        return "acc_steer_ok";
         case NavCue::SwoopShiftReady:          return "acc_shift";
         case NavCue::SwoopJumpNow:             return "mgs_warnbust";
@@ -100,17 +86,10 @@ constexpr const char* GetNavCueResref(NavCue cue) {
     return "";
 }
 
-// Per-game resolution. Kept as the single seam for a cue whose sample differs
-// per game; currently none does. History: the shift-ready cue was the vanilla
+// Every cue resolves the same in both games. acc_shift is the vanilla chirp
 // c_drdastro_atk1, which KOTOR 2 ships only in streamsounds\ (not key-indexed,
-// so the engine's resref lookup fails — silent for the whole first K2 swoop
-// round, patch-20260914-163810). The K2 fallback c_drdasasin_atk1 is 0.87 s
-// against the chirp's 0.20 s — "too long" at the gear change, and it masked
-// the guide tone at the mine after the gear-5 shift (rounds 14/15). The chirp
-// now ships as the Override asset acc_shift.wav (byte-identical in both
-// games' streamsounds), so both games hear the same short beep.
-inline const char* GetNavCueResrefForGame(NavCue cue) {
-    return GetNavCueResref(cue);
-}
+// so its resref lookup fails); its K2 sibling c_drdasasin_atk1 is 0.87 s
+// against 0.20 s, too long at the gear change. Shipped as Override\acc_shift.wav,
+// both games hear the same short beep.
 
 }  // namespace acc::audio
