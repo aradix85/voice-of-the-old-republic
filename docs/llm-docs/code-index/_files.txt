@@ -295,6 +295,16 @@ patches/Accessibility/qe_ring.cpp
 patches/Accessibility/qe_ring.h
 patches/Accessibility/room_topology.cpp
 patches/Accessibility/room_topology.h
+patches/Accessibility/room_topology_absorb.cpp
+patches/Accessibility/room_topology_diag.cpp
+patches/Accessibility/room_topology_doors.cpp
+patches/Accessibility/room_topology_internal.h
+patches/Accessibility/room_topology_label.cpp
+patches/Accessibility/room_topology_label_kinds.cpp
+patches/Accessibility/room_topology_merge.cpp
+patches/Accessibility/room_topology_shape.cpp
+patches/Accessibility/room_topology_state.cpp
+patches/Accessibility/room_topology_words.cpp
 patches/Accessibility/same_name_suffix.cpp
 patches/Accessibility/same_name_suffix.h
 patches/Accessibility/save_crash_guard.cpp
