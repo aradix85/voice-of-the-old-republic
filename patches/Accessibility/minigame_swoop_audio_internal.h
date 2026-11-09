@@ -10,30 +10,18 @@
 #include <cstdint>
 #include <cstddef>
 
-#include "audio_bus.h"        // PlayCue3D — co-pilot directional / aligned
-                              //     one-shots (discrete steering commands)
 #include "audio_cues.h"       // NavCue + GetNavCueResref (centralised
                               //     resref vocabulary — Audio glossary
                               //     and live race fire the same samples)
 #include "audio_loop.h"       // LoopSource — sustained warning per
                               //     obstacle / nearest-pad cue
-#include "engine_area.h"      // ReadGlobalNumber — MIN_RACE_GEAR gates the magnet
-#include "engine_game.h"      // IsKotor2 — obstacle-density concurrency budget
-#include "engine_offsets.h"   // Vector
-#include "engine_player.h"    // GetCameraPosition (primary listener
-                              //     anchor — engine swaps the player
-                              //     creature during the race, so
-                              //     GetPlayerPosition is fallback)
 #include "minigame_aim.h"     // shared offset read/write + magnetism (the
                               //     turret aim-assist port — lateral steering)
-#include "log.h"
 #include "engine_offsets_select.h"
 
 namespace acc::swoop_race {
 
-// SEH read primitives + minigame-object-array resolution are shared across
-// the minigame TUs (see minigame_aim.h). Brought into unqualified scope so
-// the dense reads below read as they did when each file had its own copy.
+// Shared SEH reads and minigame-object-array helpers (minigame_aim.h).
 using acc::minigame::SafeReadPtr;
 using acc::minigame::SafeReadU32;
 using acc::minigame::SafeReadFloat;
@@ -45,11 +33,9 @@ using acc::minigame::ReadFollowerModelGob;
 using acc::minigame::ReadGobBoundingBox;
 using acc::minigame::ReadGobPartBoundingBox;
 
-// ----- Global minigame-object-array layout (Ghidra-confirmed 2026-05-24).
+// ----- Global minigame-object-array layout.
 //
-// The first pass mistakenly treated CSWMiniGame+0x44 as a pointer to a
-// flat obstacle array; live read returned obstacle[1]=0x00000001 and
-// crashed on dereference. The correct path comes from decompiling
+// From decompiling
 // CSWVirtualMachineCommands::ExecuteCommandSWMG_GetFollowerPosition
 // @0x5cc280 + CSWMiniGameObjectArray::GetMiniGameObject @0x66bf30:
 //
@@ -69,9 +55,8 @@ using acc::minigame::ReadGobPartBoundingBox;
 // Each returns the same `this` pointer downcast to the requested
 // concrete subclass, or null if it isn't that type. So enumerating
 // "all obstacles" = walk 255 slots, call vtable[0x20] thiscall on each
-// non-null slot, keep the non-null returns. We make two such passes
-// per tick — one for obstacles (rocks/debris), one for enemies
-// (accelerator pads).
+// non-null slot, keep the non-null returns. Two such passes per tick: one
+// for obstacles (rocks/debris), one for enemies (accelerator pads, K2 mines).
 //
 // KOTOR 2: identical, and so is the 255. Three independent witnesses in its own
 // code — CSWMiniGameObject's ctor @0x00833000 registers itself with
@@ -87,29 +72,8 @@ constexpr int    kMgoArraySlotCount             = 255;
 constexpr size_t kVtableSlotAsObstacle          = 0x20;
 constexpr size_t kVtableSlotAsEnemy             = 0x1c;
 
-// Accelpads use the SAME multi-source pass as obstacles — every in-range
-// pad gets its own continuously-playing loop.
-//
-// SUPERSEDED — nearest-only (one loop at a time). It was adopted because
-// the first multi-pad pass blurred: under the old UNIFORM 1:9 compression
-// lateral pan was squashed to ±2 m, so 3-4 pads all sounded centred and
-// smeared together. With anisotropic projection (true lateral) each pad
-// now pans to its real lane, so concurrent pads are spatially distinct.
-// Nearest-only also caused the audible cue to teleport side-to-side at
-// every hand-off and gave no approach ramp (a pad popped in already at
-// full volume at ~112 m). Per-slot loops fix both: a passed pad dies
-// behind you, a new one fades in faint at the far edge, and the pads
-// between play continuously — confirmed via patch-20260620-114139.log
-// analysis. If the stage gets cluttered, cap to the nearest N (the band
-// already floors distant pads, so a cap loses little).
-// Position retrieval for a CSWMiniEnemy (and any CSWTrackFollower):
-// the engine's CSWTrackFollower::GetPosition @0x0066d5d0 walks
-//   followers->models.data[0] → vtable[+0x64] → returns Vector* world pos
-// We replicate that path here. Offset 0x68 is the CExoArrayList<undefined4>
-// `models` field in CSWTrackFollower (after the CSWMiniGameObject base
-// 0x60 + mini_game ptr 0x4 + field2_0x64 0x4).
-// CSWTrackFollower combat/physics scalars (shared layout with the turret —
-// turret_game.cpp reads sphere_radius at the same offset). sphere_radius is the
+// CSWTrackFollower combat/physics scalars (the turret reads sphere_radius at
+// the same offset). sphere_radius is the
 // engine's real hit primitive: the accelpad hit test is a swept sphere-vs-sphere
 // at player.sphere_radius + pad.sphere_radius (swoop-accelpad-hit-model.md), so
 // we read BOTH live and sum them for the CROSS scoring rather than hard-coding a
@@ -122,18 +86,7 @@ const size_t kFollowerSphereRadiusOffset    = acc::off::Same(0x84);  // float
 const size_t kFollowerHpOffset              = acc::off::Same(0x8c);  // u32 (mine-pass log; witnesses in minigame_swoop_race.cpp)
 const size_t kFollowerSpeedOffset           = acc::off::Same(0x98);  // float
 
-// ----- Lateral-pan diagnostic (added 2026-06-20) -----
-//
-// To tune the accelpad pan we need the lateral geometry the engine
-// actually pans on, none of which was in the log before (pan tuning was
-// blind): the listener (camera) X, the bike's own world X, the player's
-// tunnel-frame lane X, and the nearest-ahead pad's lateral error +
-// resulting pan angle. The open question this answers: does the chase
-// camera strafe sideways with the bike — so aligning the bike centres
-// the cue — or stay near lane centre, so steering barely moves the pan?
-// Compare listenerX against bikeWorldX across a run: if they track, the
-// pan reference is sound and the problem is the sample / concurrency; if
-// listenerX stays put while bikeWorldX swings, the pan can never centre.
+// ----- Player and lane offsets -----
 //
 // Engine confirmed (docs/llm-docs/swoop-accelpad-hit-model.md): hit band
 // is player.Sphere_Radius + pad.Sphere_Radius (Taris 6.0, Tatooine /
@@ -149,13 +102,12 @@ const size_t kMiniPlayerOffsetVectorOffset  = acc::off::Pick(0x1c4, 0x1f4);
 // minigame_swoop_race.cpp has the witnesses). With offset.z it gives the
 // remaining flight time, which the bar-aware guide turns into a landing point.
 const size_t kMiniGameJumpVelocityOffset    = acc::off::Kotor2Only(0x118);
-constexpr float  kRadToDeg                       = 57.2957795f;
 
 // ----- KOTOR 2 hazard geometry (bounding-box classification) -----
 //
 // K2's tracks are not rock fields. The offline atlas of the three tracks'
 // obstacle models (docs/llm-docs/swoop-k2-controls-and-jump.md section 7) and
-// the first K2 round (patch-20260914-163810) showed three kinds of "obstacle":
+// the first K2 round showed three kinds of "obstacle":
 //   * lane-edge POSTS — 90 of Citadel's 105 objects, one pair every 100 units,
 //     origins at x=-30/+28 with a 16-unit-tall "hitbump" mesh at |x| 18..25.
 //     Only touchable when hugging a wall; sounding them was the "enormous
@@ -169,7 +121,7 @@ constexpr float  kRadToDeg                       = 57.2957795f;
 //   * SCENERY — the `<track>_MGE*` hangar / shuttle dressing (six on Citadel).
 //     Their origins sit ~1000 units below the track and their hitbump box,
 //     folded into world space, lands mid-lane at y 798 / 829 / 1294 / 2460
-//     / 2460 / 6002 — where nothing collides: round 4 (patch-20260915-075412)
+//     / 2460 / 6002 — where nothing collides: round 4
 //     drove through the "full-lane block" at y 1294 on the ground with no
 //     hit, while the warn loop played for it and for the two "blocks" just
 //     before the first bar. Those phantom loops were what made the bars sound
@@ -187,9 +139,8 @@ constexpr float kBarLaneMarginU     = 2.5f;   // bike sphere radius 2 + slack
 // Speed units → world units per second. The follower's speed field is not
 // world u/s: the bike covers 0.665 world units per second per speed unit,
 // measured over 56 one-second windows at speeds 30–250 in round 12
-// (patch-20260915-150225; 0.665–0.668 in every speed bucket). Every
-// time-to-contact below is in REAL seconds through this factor; before it
-// existed the "1.0 s" lead was really 1.5 s.
+// (0.665–0.668 in every speed bucket). Every time-to-contact below is in
+// REAL seconds through this factor.
 constexpr float kSpeedToWorldPerSec = 0.665f;
 // Jump physics (onjump.ncs: SWMG_SetJumpSpeed(30), gravity 45.8): the arc
 // z(t) = 30t - 22.9t^2 lands at kJumpAirSec and is above a 6.3-unit bar for
@@ -203,13 +154,11 @@ constexpr float kAirborneZ            = 0.25f;  // offset.z above this = in the 
 // The cue means "press NOW": it fires kJumpCueLeadSec before the bar, so the
 // press window (0.26–1.05 s before the bar) opens 0.55 s after the beep and
 // closes 1.34 s after it. Round 12's presses came 0.75–1.27 s after the beep
-// (five bars), one of them just past the old window's end (MGC03, landed
-// short of MGC04) — hence 0.1 s more lead than the 1.5 s that had been tuned
-// by ear. (1.35 speed-units = 2.0 s real was tried in round 3: the player
-// pressed within 0.1 s of the beep and landed just short of the bar.)
-// The jump itself is the player's: the mod never presses it (an auto-jump was
-// built and removed the same day at the user's request — cues inform, they
-// do not play). If the bike is airborne from an early press and touches down
+// (five bars); at a 1.5 s lead one of them fell past the window's end (MGC03,
+// landed short of MGC04). A 2.0 s lead was too early: the player pressed
+// within 0.1 s of the beep and landed just short of the bar.
+// The jump itself is the player's: the mod never presses it (the player's
+// call: cues inform, they do not play). If the bike is airborne from an early press and touches down
 // with the bar still inside the window, the beep repeats once ("again").
 constexpr float kJumpCueLeadSec     = 1.6f;
 constexpr float kJumpCueMinLeadSec  = 0.38f;  // too late to help below this
@@ -229,9 +178,8 @@ constexpr float kPairMinWindowSec   = 0.3f;
 // at the strip's real lateral offset, like the guide tone, so the angle says
 // HOW FAR ("jump, or steer that far"); a bar with no strip (full lane, the
 // ±13 centre bars, or a strip closed by a mine — MGC06/MGC08) sits in the
-// middle ("you must jump"). The side alone was asked for by the player after
-// round 6 (patch-20260915-090027); the distance after round 14 (a fixed hard
-// pan said "left" for a 4 u lean and a 12 u swing alike).
+// middle ("you must jump"). A fixed hard pan said "left" for a 4 u lean and
+// a 12 u swing alike.
 constexpr const char* kJumpNowCueResref =
     acc::audio::GetNavCueResref(acc::audio::NavCue::SwoopJumpNow);
 
@@ -248,9 +196,6 @@ struct HazardInfo {
 };
 constexpr const char* kObstacleWarnLoopResref =
     acc::audio::GetNavCueResref(acc::audio::NavCue::SwoopObstacleWarn);
-// SUPERSEDED — earlier samples tried:
-// "v_dur_shldred"  — Duros voice; routed to voice bus, way too quiet
-// "mgs_warnbust"   — one-shot warning used before the loop refactor
 
 // ----- Decoupled cue: lateral→pan, real distance→loudness -----
 //
@@ -269,8 +214,9 @@ constexpr const char* kObstacleWarnLoopResref =
 //      reads as a clear pan. Crucially the reference is CONSTANT, not the
 //      real (or a compressed real) distance — so the pan is stable: it
 //      moves only when you steer or the pad's lane differs from yours,
-//      never lurching as the pad passes. That kills the overshoot the
-//      forward-compression builds had (pan inflating as forward shrank).
+//      never lurching as the pad passes. (A compressed real distance
+//      inflates the pan as the target nears, which made players overshoot;
+//      the true distance makes far targets a ~2° whisper.)
 //
 //   2. LOUDNESS (how soon / approach speed) ← REAL distance.
 //      Driven by us via LoopSource::UpdateVolume on a linear curve over
@@ -284,13 +230,11 @@ constexpr const char* kObstacleWarnLoopResref =
 //
 //   kSwoopPanForwardRefM — fixed depth the pan is read against. Smaller =
 //      stronger pan (a given lane offset reads as a wider angle), AND a
-//      steeper gradient near centre — which is the point. 6 m (was 12 m,
-//      tuned down 2026-06-20): the pan-diagnostic run showed ~10 of 22
-//      pad misses were undershoots, stopping 6-11 units short because at
-//      12 m "sounds centred" spanned wider than the ±5 unit catch band
-//      (5 units off was only ~24°). At 6 m the same 5-unit error reads
-//      ~40° and 1 unit reads ~9.5° (vs 4.8° before) — roughly double the
-//      near-centre sensitivity, so the band between "aligned" and "close"
+//      steeper gradient near centre — which is the point. 6 m: at 12 m
+//      ~10 of 22 pad misses were undershoots, stopping 6-11 units short,
+//      because "sounds centred" spanned wider than the ±5 unit catch band
+//      (5 units off read only ~24°). At 6 m the same 5-unit error reads
+//      ~40° and 1 unit ~9.5° — double the near-centre sensitivity, so the band between "aligned" and "close"
 //      is far more audible. Shared by obstacle + accelpad cues so the two
 //      stay on one coherent projection (an obstacle and a pad at the same
 //      lateral offset pan identically). Trade-off: far targets saturate to
@@ -301,17 +245,6 @@ constexpr const char* kObstacleWarnLoopResref =
 //   kSwoopVolNearByte / kSwoopVolFarByte — linear loudness ramp endpoints:
 //      near → full, far (dist = cue range) → ~⅓. Raise the far byte if
 //      distant pads are too quiet to localise; lower it for more contrast.
-//
-// SUPERSEDED:
-//   - 1:9 UNIFORM compression — squashed lateral pan to ±2 m, too weak to
-//     hit pads by intent (patch-20260620-104051.log).
-//   - TRUE position + 5/200 band — too quiet (patch-20260620-111927.log).
-//   - Forward 1:10 + 3/30 band — nearly silent (max_vol too small).
-//   - Forward 1:15 + 15/30 band — loud, but compression inflated the pan
-//     angle → overshoot ("steer, hit wall, it passes").
-//   - TRUE position + flat band + manual volume — honest, no overshoot,
-//     but true pan made far targets a ~2° whisper: not localisable
-//     (patch-20260620-122348.log). Hence the fixed-depth pan reference.
 constexpr float       kSwoopPanForwardRefM = 6.0f;
 constexpr float       kSwoopFlatBandMaxM   = 350.0f;
 constexpr float       kSwoopFlatBandMinM   = 400.0f;
@@ -321,81 +254,35 @@ constexpr int         kSwoopVolFarByte     = 50;
 // the 6 m shared depth above). Opened to 10 m so the pan angle spreads MAGNITUDE
 // across the lane — "how far to swing" — for the big alternating gates: at 10 m a
 // 12 u offset reads ~50°, a 35 u offset ~74°, so far gates stay distinguishable
-// instead of both saturating to hard-pan. The shared depth was tuned DOWN to 6 m
-// for near-centre precision; the magnet now owns near centre, so the guide is
-// free to optimise for far-gate magnitude. (Larger = more linear magnitude, less
+// instead of both saturating to hard-pan. The magnet owns near centre, so the
+// guide optimises for far-gate magnitude. (Larger = more linear magnitude, less
 // near-centre angle — fine, the deadzone + magnet cover near centre.)
 constexpr float       kSwoopGuidePanForwardRefM = 10.0f;
 // The guide rests (goes silent) only when you're essentially ON the pad — within
 // this lateral error, roughly the catch radius — NOT across the whole assist
-// gap. First cut silenced it within the full 12 u gap, but most steering is small
-// nudges (< 12 u), so the tone fell silent during exactly the common case and
-// you were "listening for something and hearing nothing". A small rest zone keeps
-// the tone present for all real steering and only quiets when truly locked on.
+// gap: most steering is small nudges, and a tone that rests across the gap falls
+// silent in exactly that case ("listening for something and hearing nothing").
 constexpr float       kSwoopGuideSilenceU   = 5.0f;
 // Volume floor for the guide so distant gates stay clearly audible — the shared
 // distance curve ramps down toward ~⅓ at range, which let the tone blend into the
 // race mix. Floored here so the guide always cuts through (the cue slider still
 // scales it).
-constexpr int         kSwoopGuideMinVolByte = 118;  // 90 until 2026-09-15: "a bit too quiet" in the K2 mix
+constexpr int         kSwoopGuideMinVolByte = 118;  // 90 was too quiet in the K2 mix
 
-// ----- Co-pilot discrete-command steering (experimental, 2026-06-21) --------
-//
-// The continuous panned guide (above) made the PLAYER the controller of a
-// high-inertia, delayed plant — and that loop is unstable: the 2026-06-20
-// 222843 log shows the bike overshooting and oscillating around even the easy
-// first pad (reached the lane ~0.75 s early, then sailed 6 units past it). No
-// re-encoding of "where to go" fixes that, because the instability is in the
-// human-in-the-loop, not the information.
-//
-// The co-pilot takes the control DECISION off the player. Code runs the
-// controller every tick and issues discrete, pre-timed commands:
-//   coast = smoothed_vel * kCoastTicks  — where the bike drifts to if you
-//                                         RELEASE the steer key now (your
-//                                         reaction delay + the bike's inertial
-//                                         stop, bundled into one lead term).
-//   proj  = padErr - coast              — the lane miss AFTER that coast.
-//   |proj| <= kReleaseBand → ALIGNED (release now; you coast onto the pad).
-//   proj > 0  → steer RIGHT;  proj < 0 → steer LEFT.
-// The player does only coarse hold/release; code owns the hard part (WHEN to
-// stop). The loop stays closed in code (real bike X re-read each tick), so an
-// early/late reaction just re-issues the command — robust to coast-model error.
-enum {
-    kSteerCmdLeft    = -1,
-    kSteerCmdNone    = 0,
-    kSteerCmdRight   = 1,
-    kSteerCmdAligned = 2,
-};
 // Track-axis probe verdict — see TrackAxisUsable.
 enum {
     kAxisUndecided = 0,
     kAxisAccepted  = 1,
     kAxisRejected  = 2,
 };
-// Lead term, in ticks of current lateral velocity — predicts where the bike
-// drifts if you release the steer key now.
-//
-// Engine grounding (decompiled 2026-06-22, CSWMiniPlayer::{AdjustPosition,
-// Control,DoInertia,KeepInTunnel}): swoop steering is a BANK LEVEL clamped to
-// [-10,+10] (AdjustPosition.field10_0x1d0), NOT a momentum accumulator, and the
-// only lateral "inertia" is collision-plane bump inertia (DoInertia, gated on
-// CSWMiniGame::use_inertia and only non-zero at a wall). Mid-lane there is
-// essentially no momentum to coast on. Live traces confirm it: lateral velocity
-// reverses in ~5-8 ticks and the real post-release coast is ~1 unit — whereas
-// the old vel*8 model predicted ~13 (patch-20260622 slot 26: predicted 12.8 u,
-// actual ~1 u). That ~10x overestimate fired the "aligned/release" cue 10-20 u
-// short of the pad on 29% of gates — the dominant miss cause (Flaw 1).
-//
-// So this is a small velocity lead, NOT a stopping-distance estimate. RAISE a
-// little if the bike still overshoots; do NOT restore the old large value.
-//
-// Probe 2026-06-22: raised 1.0 -> 2.5. With 1.0 the controller held "steer" all
-// the way to ~2u and the bike overshot to the wall on 32% of ticks (up from
-// 22%). Releasing a bit earlier should cut the wall-slamming and still land
-// inside the 8u catch (real coast ~1u, so an aligned call near ~6u still lands
-// ~5u). If this reintroduces undershoot, step back toward ~1.5.
-constexpr float       kCoastTicks    = 2.5f;
-// ----- Predictive overshoot / wall cue (2026-06-22) -------------------------
+// Engine grounding (CSWMiniPlayer::{AdjustPosition,Control,DoInertia,
+// KeepInTunnel}): swoop steering is a BANK LEVEL clamped to [-10,+10]
+// (AdjustPosition.field10_0x1d0), NOT a momentum accumulator, and the only
+// lateral "inertia" is collision-plane bump inertia (DoInertia, gated on
+// CSWMiniGame::use_inertia and only non-zero at a wall). Live traces: lateral
+// velocity reverses in ~5-8 ticks and the real post-release coast is ~1 unit.
+
+// ----- Predictive overshoot / wall cue -------------------------
 // Fire the existing wall-impact sound ~kWallLeadTicks BEFORE the bike pins,
 // instead of on contact, so the player starts re-steering that much sooner (you
 // can't out-react the pin, but you waste less time stuck against the wall). Lead
@@ -413,7 +300,7 @@ constexpr float       kWallEdgeOffsetU  = 20.0f;  // lane half-width in tunnel-o
 // shorten the pin: it fires at the post line, not the clamp, with a ~0.4 s
 // lead (12 ticks) instead of 0.1 s. The overshoot guard still applies (only
 // when moving away from the target pad), so a deliberate swing toward a
-// side-lane pad at 11 stays silent. Round 6 (patch-20260915-090027) drifted
+// side-lane pad at 11 stays silent. Round 6 drifted
 // from 18 to 20 at speed 155 with no cue at all.
 constexpr float       kWallLeadTicksK2  = 35.0f;   // ~1.2 s at 30 ticks/s (20 = 0.3-0.7 s before every post hit of round 11, not enough)
 constexpr float       kWallEdgeOffsetK2U = 16.0f;
@@ -422,11 +309,9 @@ constexpr float       kWallMinVel       = 0.5f;   // ignore slow drift (u/tick)
 constexpr ULONGLONG   kWallCueDebounceMs = 400;   // don't machine-gun while pinned
 constexpr float       kWallCuePanM      = 5.0f;   // ±pan of the cue to the wall side
 // KOTOR 2 wall LOOP. One thump at a predicted crossing was not enough: round
-// 7 (patch-20260915-091337) took 22 of 26 hits on the posts — six arriving
-// at the wall 0.7 s after a thump the player did not register, sixteen
-// relaunching from a park at |x| = 20 (the first build's gear-0 "pinned"
-// thump stopped on every relaunch, so it was one thump, silence, crash).
-// Player's call (2026-09-15): warn earlier and continuously, no rail. So on
+// 7 took 22 of 26 hits on the posts — six arriving at the wall 0.7 s after a
+// thump the player did not register, sixteen relaunching from a park at
+// |x| = 20. Player's call: warn earlier and continuously, no rail. So on
 // K2 the wall thump is a LOOP on the wall's side that runs while the bike is
 // in the outer band (|x| >= kWallBandU — pads sit at 11, the post contact
 // line is 16.3) or projected to reach the post line within the lead, and
@@ -438,7 +323,7 @@ constexpr float       kWallBandU        = 12.5f;
 // and on the diagonals between pads (126 at x 1.5 / y 320 on the centre
 // lane between the first two pads; 141, 142, 145 on the diagonals). The
 // player steering by the pad tone follows the straight line to the next pad
-// and runs over them: round 9 (patch-20260915-142030) took four mines in one
+// and runs over them: round 9 took four mines in one
 // race, 420 of 600 hit points, more than every post and bar together. A
 // sighted player sees the mine and bends the line; this bends the tone. When
 // a mine lies within kMineClearU of the straight line from the bike to the
@@ -476,7 +361,7 @@ constexpr float       kReJumpSec        = kJumpReactionSec + kJumpOverBarFromSec
 // The free side is not free: Citadel puts a mine in the gap beside every
 // left-free half-bar but MGC04 (MGC03: x -2.7 twelve units before the bar;
 // MGC06: x -7.2 nine units after; MGC08: x -8.8 nineteen after). Round 13
-// (patch-20260915-162510) drove into the MGC03 and MGC06 mines five times in
+// drove into the MGC03 and MGC06 mines five times in
 // three races at the plain "bar end minus 5" target. So each half-bar's
 // free side is a STRIP: from the bar's end (kBarFreeClearU) to the post
 // contact line (kPostContactU, less slack), minus every mine within
@@ -495,8 +380,8 @@ constexpr float       kBarStripSlackU   = 1.0f;   // beyond posts / mine reach
 constexpr float       kBarStripMinU     = 3.0f;   // narrower = not a path = no free side
 constexpr float       kBarStripWideU    = 8.0f;   // at least this: aim at the bar-near edge
 constexpr float       kBarMineWindowU   = 40.0f;  // mine within this of the bar's front edge
-// Mine collision reach, MEASURED (round 14, patch-20260915-203307, `mine
-// pass:` lines): every mine reports sphere_radius 2.0 like a pad, but a hit
+// Mine collision reach, MEASURED (round 14, `mine pass:` lines): every mine
+// reports sphere_radius 2.0 like a pad, but a hit
 // was recorded at a 3-D distance of 5.09 u and a clean grounded pass at
 // 6.20 u, and three flights 9 u above a mine at 3.3 u lateral were clean —
 // so the test is spherical about the mine's origin with a combined reach
@@ -539,15 +424,11 @@ constexpr float       kWallLoopPanM     = 8.0f;   // lateral offset of the loop 
 constexpr float       kWallLoopFwdM     = 2.0f;   // slight forward so it reads beside, not behind
 constexpr const char* kWallCueResref =
     acc::audio::GetNavCueResref(acc::audio::NavCue::SwoopWallImpact);
-// FALLBACK combined accel-pad hit radius (player.Sphere_Radius +
-// pad.Sphere_Radius) for the CROSS hit= flag. The scoring now reads BOTH radii
-// LIVE off the engine (player + nearest pad, at +0x84) and sums them, so the flag
-// matches the real swept sphere-vs-sphere test on whatever track/mod is loaded —
-// no per-track literal to keep in sync. This constant is used only if a radius
-// read faults. Reference values: stock Taris 6 (player 3 + pad 3), stock
-// Tatooine/Manaan 5, our widened Tatooine .are 8 (player 3 + pad 5).
-// See swoop-accelpad-hit-model.md.
-constexpr float       kAccelpadHitRadiusU = 8.0f;
+// Fallback combined accel-pad hit radius for the CROSS hit= flag, used only
+// when a live sphere_radius read faults (the scoring sums player + pad radius,
+// the engine's swept sphere-vs-sphere test). Stock: Taris 6 (player 3 + pad 3),
+// Tatooine/Manaan 5. See swoop-accelpad-hit-model.md.
+constexpr float       kAccelpadHitRadiusU = 6.0f;
 
 // ============================================================================
 // Module state. Single-threaded under the engine OnUpdate tick.
@@ -559,29 +440,20 @@ struct SpatialAudioState {
     // return null for mismatches), never both, so the two arrays don't
     // overlap on any one slot. Auto-cleans at DLL unload via RAII.
     acc::audio::LoopSource obstacle_loops[kMgoArraySlotCount];
-    // The panned steering-guide tone (acc_boost). Pan setpoint = the look-ahead
-    // pure-pursuit controller in TickAccelpadCues; centred = on the line.
+    // The panned steering-guide tone (acc_boost), aimed at the next gate or
+    // the active detour point; centred = on the line.
     acc::audio::LoopSource accelpad_line_loop;
-    // Low-pass state for the panned steering offset (eased toward the damped,
-    // deadzoned err each tick; snapped on pad handoff).
-    // Lateral-velocity tracking for the PD damping term: bike world X last tick
-    // and the smoothed per-tick lateral velocity.
+    // Bike world X last tick and the smoothed per-tick lateral velocity (the
+    // magnet's brake and the wall cues).
     float prev_bike_x      = 0.0f;
     bool  have_prev_bike_x = false;
     float smoothed_vel     = 0.0f;
-    // The pad slot targeted last tick — when it changes (a pad crossed) we snap
-    // the pan instead of easing, so no stale carry-over into the next approach.
+    // The pad slot targeted last tick; a change means a gate was crossed.
     int   prev_ahead_slot    = -1;
-    // Co-pilot command state (experimental). steer_cmd is the last command
-    // issued (kSteerCmd*); last_steer_tick_ms paced the (now retired) directional
-    // tick. Retained for the steering-guide diagnostic.
-    int       steer_cmd          = kSteerCmdNone;
     // Panned-guide aligned confirmation: whether the guide tone was sounding
     // (off-pad) last tick, so we fire one centred "on track, stop steering" blip
     // on the steering→locked transition. Re-arms when you steer off again.
     bool      guide_was_active    = false;
-    // Next-gate preview: the ahead_slot we've already announced the follow-on
-    // gate for, so the heads-up fires once per gate.
     // Predictive overshoot/wall cue debounce: last time we fired the early
     // wall-impact sound, so it doesn't machine-gun while the bike sits pinned.
     ULONGLONG last_wall_cue_ms    = 0;
@@ -594,8 +466,7 @@ struct SpatialAudioState {
     ULONGLONG last_magnet_log_ms  = 0;
     // Crossing-event scoring: last tick's targeted gate + its lateral miss and
     // forward gap, so when the target changes we can interpolate the EXACT
-    // lateral miss at fwdGap=0 (ground-truth hit, vs the noisy periodic copilot
-    // samples). prev_ahead_slot above is reused as the gate id.
+    // lateral miss at fwdGap=0. prev_ahead_slot above is the gate id.
     bool      have_prev_ahead    = false;
     float     prev_ahead_posX    = 0.0f;
     float     prev_ahead_posY    = 0.0f;
@@ -649,21 +520,6 @@ struct SpatialAudioState {
 
 extern SpatialAudioState g_state;
 
-// Helpers shared across the files, by the file that defines them.
-
-// minigame_swoop_audio.cpp
-
-// ----- Next-gate preview (2026-06-21) ---------------------------------------
-//
-// The geometry proves the gates are reachable (worst 39 u lateral jump needs
-// ~7 ticks; the forward gap gives 8-18) — what kills the tight ones is that the
-// co-pilot only revealed the next gate AT the handoff, so the player's ~6-tick
-// reaction delay ate the front of the window. Preview fixes that the way a
-// sighted player does: a soft, single heads-up of the FOLLOWING gate's
-// direction, fired once you're settled on the current gate, so the direction is
-// pre-loaded before the loud steer-now ticks start. Same pitch language (low =
-// left, high = right) but quieter — "get ready", not "act".
-
 // Linear volume byte for a source at 3D distance `dist` within `range`:
 // full (kSwoopVolNearByte) at the listener, ramping to kSwoopVolFarByte
 // at the range edge. Clamped to the endpoints outside [0, range].
@@ -677,6 +533,10 @@ inline int SwoopVolumeByte(float dist, float range) {
     if (vb > kSwoopVolNearByte) vb = kSwoopVolNearByte;
     return vb;
 }
+
+// Helpers shared across the files, by the file that defines them.
+
+// minigame_swoop_audio.cpp
 const char* ReadAurObjectName(void* aurObject);
 
 // minigame_swoop_audio_obstacles.cpp

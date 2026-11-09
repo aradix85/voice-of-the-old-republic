@@ -1,12 +1,14 @@
-// Swoop race spatial-audio implementation — see swoop_spatial_audio.h.
+// Swoop race spatial audio, core: track-axis guard and the public entry
+// points of minigame_swoop_audio.h.
 //
-// Split from swoop_race.cpp on 2026-05-27 (large-file-handling pass).
 // The race lifecycle (entry/exit, gear watch, wall collision,
-// acceleration speedometer) stays in swoop_race.cpp; everything that
+// acceleration speedometer) lives in minigame_swoop_race.cpp; everything that
 // walks the 255-slot CSWMiniGameObjectArray to surface obstacles and
 // accelpads as 3D loops lives here.
 
 #include "minigame_swoop_audio_internal.h"
+
+#include "log.h"
 
 namespace acc::swoop_race {
 
@@ -34,36 +36,13 @@ namespace {
 // dump so the obstacle inventory is still logged on entry.
 constexpr size_t kAurVtableSlotGetName          = 0xc;
 
-// ============================================================================
-// SEH-guarded primitive reads. Same pattern as the rest of engine_*.
-// ============================================================================
-// ============================================================================
-// MGO array + AsXxx vtable downcasts + per-type position reads.
-// ============================================================================
-// Resolve the global CSWMiniGameObjectArray via:
-//   *0x7a39fc (AppManager) +0x4
-//     -> CClientExoApp +0x4
-//       -> CClientExoAppInternal +0x0  (= the array itself)
-// Call an MGO object's vtable[slotOffset] AsXxx() thiscall. Returns
-// the call's return value (which is `this` for the matching subclass
-// or null otherwise). All __thiscall convention — ECX gets `this`, no
-// stack args.
 // CAurObject vtable[+0xc] — returns the obstacle's name string (lives
 // in the underlying Gob/Model — same accessor sighted UI uses via
 // CSWMGObstacle::GetName).
 typedef const char* (__thiscall* PFN_GetAurName)(void* this_);
 
-// Read the world position of a CSWTrackFollower (i.e. a CSWMiniEnemy)
-// by mirroring CSWTrackFollower::GetPosition @0x0066d5d0:
-//   followers->models.data[0] → vtable[+0x64](this, Vector* outBuf)
-//     returns Vector*  (typically writes through outBuf, sometimes
-//                       returns a pointer to a member Vector)
-// Returns false on any null link, empty models array, or SEH fault.
 // ============================================================================
-// Continuous obstacle-proximity cues.
-// ============================================================================
-// ============================================================================
-// Track-axis guard (added with the KOTOR 2 port, 2026-08-15).
+// Track-axis guard.
 // ============================================================================
 //
 // Everything in this file assumes the track's FORWARD direction is world +Y and
@@ -147,7 +126,7 @@ const char* ReadAurObjectName(void* aurObject) {
 }
 
 // ============================================================================
-// Public entry points (declared in swoop_spatial_audio.h).
+// Public entry points.
 // ============================================================================
 
 void TickSpatialAudio(void* miniGame) {
@@ -179,7 +158,6 @@ void ResetSpatialAudio() {
     g_state.have_prev_bike_x      = false;
     g_state.smoothed_vel          = 0.0f;
     g_state.prev_ahead_slot       = -1;
-    g_state.steer_cmd             = kSteerCmdNone;
     g_state.guide_was_active      = false;
     g_state.last_wall_cue_ms      = 0;
     g_state.wall_loop.Stop();

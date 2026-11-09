@@ -1,4 +1,4 @@
-# minigame_swoop_audio_internal.h (690 lines)
+# minigame_swoop_audio_internal.h (550 lines)
 
 Source: `patches/Accessibility/minigame_swoop_audio_internal.h`
 
@@ -6,14 +6,14 @@ Internal to the minigame_swoop_audio module (minigame_swoop_audio*.cpp); no othe
 
 ## Declarations (in source order)
 
-- L238 `enum HazardClass`
-- L240 `enum HazardState`
-- L241 `struct HazardInfo`
-- L555 `struct SpatialAudioState`: Module state.
-- L670 `inline int SwoopVolumeByte(float dist, float range)`: Linear volume byte for a source at 3D distance `dist` within `range`: full (kSwoopVolNearByte) at the listener, ramping to kSwoopVolFarByte at the range edge.
-- L680 `const char* ReadAurObjectName(void* aurObject)`
-- L683 `void TrackMinePasses(void* player, const Vector& bikePos, float playerRadius)`: minigame_swoop_audio_obstacles.cpp
-- L684 `void TickObstacleCues(void* miniGame)`
-- L687 `void TickAccelpadCues(void* miniGame)`: minigame_swoop_audio_accelpad.cpp
+- L186 `enum HazardClass`
+- L188 `enum HazardState`
+- L189 `struct HazardInfo`
+- L436 `struct SpatialAudioState`: Module state.
+- L526 `inline int SwoopVolumeByte(float dist, float range)`: Linear volume byte for a source at 3D distance `dist` within `range`: full (kSwoopVolNearByte) at the listener, ramping to kSwoopVolFarByte at the range edge.
+- L540 `const char* ReadAurObjectName(void* aurObject)`: minigame_swoop_audio.cpp
+- L543 `void TrackMinePasses(void* player, const Vector& bikePos, float playerRadius)`: minigame_swoop_audio_obstacles.cpp
+- L544 `void TickObstacleCues(void* miniGame)`
+- L547 `void TickAccelpadCues(void* miniGame)`: minigame_swoop_audio_accelpad.cpp
 
-Also 83 constants or variables at namespace scope.
+Also 80 constants or variables at namespace scope.

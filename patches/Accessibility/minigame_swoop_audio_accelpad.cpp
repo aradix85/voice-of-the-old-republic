@@ -3,6 +3,13 @@
 
 #include "minigame_swoop_audio_internal.h"
 
+#include "audio_bus.h"
+#include "engine_area.h"      // ReadGlobalNumber: MIN_RACE_GEAR gates the magnet
+#include "engine_game.h"
+#include "engine_player.h"    // listener: the camera; the engine swaps the
+                              //     player creature during the race
+#include "log.h"
+
 namespace acc::swoop_race {
 
 namespace {
@@ -22,23 +29,13 @@ namespace {
 // File ships in Override\ rather than as a renamed engine resource
 // so it doesn't collide with any vanilla use of mgs_basethrust03.
 // Engine ResLoader checks Override → BIF, so a bare "acc_boost"
-// resref resolves to our trimmed sample.
-//
-// SUPERSEDED candidates (kept for A/B):
-//   mgs_basethrust03 — same timbre but the descending tail read as
-//                      pitch-drop / wrong direction; trim fixed it
-//   mgs_pwrup        — fired clean but timbre wasn't ideal
-//   mgs_thrustloop01 — 5+ s sustained drone; only quiet attack got
-//                      airtime in the 1-2 s window, read as unhearable
+// resref resolves to our trimmed sample. (mgs_thrustloop01 is a 5+ s drone
+// whose quiet attack is all that plays in the 1-2 s window: inaudible.)
 constexpr const char* kAccelpadLoopResref =
     acc::audio::GetNavCueResref(acc::audio::NavCue::SwoopAccelpadBoost);
 
-// Same 300 m horizon as obstacles (raised from 200 m on 2026-06-20 —
-// 200 m gave too little time to "pendel in" on the pan at gear 3). The
-// masking concern from the first pass (30 concurrent thrust loops
-// drowning obstacles) is already solved by the nearest-only policy
-// below; range no longer needs to be a secondary mitigation. Reaction
-// time (first-audible lead) at 300 m:
+// Same 300 m horizon as obstacles (200 m left too little time to settle on
+// the pan at gear 3). Reaction time (first-audible lead) at 300 m:
 //   gear 1 (max 70 u/s):  ~4.3 s
 //   gear 2 (max 120 u/s): ~2.5 s
 //   gear 3 (max 190 u/s): ~1.6 s
@@ -46,48 +43,31 @@ constexpr const char* kAccelpadLoopResref =
 // the band floor (kSwoopCueMinVolDistM). Change both together.
 constexpr float       kAccelpadCueRangeM        = 300.0f;
 
-// ----- Steering-guide controller (2026-06-20 rework) ------------------------
+// ----- Steering guide ------------------------
 //
-// The guide is the SAME panned tone as before (acc_boost, kAccelpadLoopResref)
-// — what changed is HOW its pan setpoint is computed: a look-ahead pure-pursuit
-// controller (below) instead of the old "line at the bike's current depth",
-// which overshot.
+// The guide is a panned acc_boost tone (kAccelpadLoopResref) aimed at the next
+// gate, or at the mine / bar detour point when one is active.
 //
 // Why not the game's own engine hum (the SpaghettiKart design): it is not a
-// reachable engine-owned source. RE this session found the bike's engine loop
+// reachable engine-owned source. The bike's engine loop
 // would live at player+0x144 (CSWTrackFollower "Engine" slot, SetSoundName/
 // Set3D), BUT the swoop Player's <Engine> resref is EMPTY in all three area
 // GFFs (m03/m17/m26 — only the pads carry a Death sound), so SetSoundName makes
 // no source and player+0x144 is always null (confirmed live: src=0/playing=-1
-// across a whole race, patch-20260620-160229.log). The hum you hear is a
+// across a whole race). The hum you hear is a
 // model-attached sound the engine moves with the bike, not a follower source
 // we can address — so we keep panning our own acc_boost tone instead.
 // The pads are scattered GATES (they alternate nearly full-lane: 112→81→119→
 // 97…), not a smooth racing line — so we aim straight at the next pad's lane,
 // not at an interpolated line between pads (that points at the mid-lane, the
-// WRONG way; it sent the guide opposite the gate — patch-20260620-212526.log).
+// WRONG way).
 //
-// The bike has real lateral inertia (engine CSWMiniPlayer::DoInertia), but the
-// cue does NOT try to predict around it (see below) — predicting off a noisy
-// velocity pulled the bike off pads it had reached.
+// The tone does not predict around the bike's motion (predicting off a noisy
+// velocity pulled the bike off pads it had reached); the velocity brake lives
+// in the magnet (kSwoopMagnetBrakeTicks).
 //
-// PD cue (2026-06-21): err = padErr − kSteerLeadTicks·velocity, where padErr =
-// padLane − bikeX. The velocity term is the BRAKE — as you build speed toward a
-// pad it pushes err the OTHER way ("counter-steer now"), so you bleed off the
-// bike's lateral momentum before you arrive instead of sailing past into the
-// wall. The brake is ALLOWED to reverse sign; that reversal IS the cue to stop
-// overshooting. (An earlier anti-reversal clamp suppressed exactly this and the
-// bike overshot to the wall even at crawl speed — ...222112.log first-pad trace.)
-//
-// The thing that must NOT happen is the brake pulling you off a pad you're
-// PARKED on. That's handled by the settle gate: it fires only when you are on
-// the lane AND barely moving (kSteerSettleVel). Centred-but-still-sliding does
-// NOT settle, so the brake survives when you need it. (The prior versions
-// settled on centre alone, which is why the brake was lost mid-slide.)
-// EMA on the noisy per-tick velocity. Raised 0.30->0.50 (2026-06-22, Flaw 5):
-// with the coast lead cut to ~1 tick (kCoastTicks), velocity no longer feeds a
-// x8 amplifier, so the heavy smoothing that was hiding per-tick noise is no
-// longer needed — and its ~3-tick lag hurt responsiveness more than the noise.
+// EMA on the noisy per-tick velocity. Light smoothing: heavier smoothing's
+// ~3-tick lag hurts responsiveness more than the noise does.
 constexpr float kSteerVelSmooth  = 0.50f;
 constexpr float kSteerVelClamp   = 8.0f;   // reject one-tick bike-X glitches
 // Clamp on the steer error (the panned magnitude) and on how far a pad may sit
@@ -96,9 +76,9 @@ constexpr float kSteerVelClamp   = 8.0f;   // reject one-tick bike-X glitches
 // poisoned the smoothed pan to 1695 for ~12 ticks). Both are hard guards.
 constexpr float kMaxPadLateral   = 60.0f;
 
-// ----- The assist gap: the ONE difficulty knob (2026-06-23) ------------------
+// ----- The assist gap: the ONE difficulty knob ------------------
 //
-// Accessibility intent (user, 2026-06-23): keep the SAME challenge a sighted
+// Accessibility intent (the player's call): keep the SAME challenge a sighted
 // player has — the assist must fill only the gap the player cannot close by ear,
 // never drive for them. So there is a single lateral tolerance, in lane-units,
 // that means BOTH:
@@ -112,10 +92,8 @@ constexpr float kMaxPadLateral   = 60.0f;
 //
 // ONE knob for difficulty: smaller → the player must steer more precisely by ear
 // and fails more (closer to the sighted challenge); larger → the magnet covers
-// more. Was an implicit 28u magnet + 4u cue band (magnet did ~everything; cue
-// still nagged for dead-center). 16u (2026-06-23, raised from 12u): log analysis
-// of a 28.5s run showed 5 "near-miss" gates at 9-14u — the player got that close
-// by ear but the magnet (weak at its outer edge) couldn't finish in time. 16u
+// more. 16u: a logged 28.5 s run had five near-miss gates at 9-14u that the
+// player reached by ear but the magnet (weak at its outer edge) couldn't finish. 16u
 // pulls those inside reach while the 16-23u medium gates still demand a real
 // swing, so challenge stays. Still well inside the ±20 lane. Drop toward ~8 for
 // more bite. (The hit itself is still the engine's swept sphere test — this is
@@ -126,47 +104,31 @@ constexpr float       kSwoopAssistGapU = 16.0f;
 // with the Taris-tuned 16 u the next pad was ALWAYS inside the engage gap the
 // moment the previous one was passed: the magnet made every lane change, the
 // guide tone rested ~90 % of the race and 23 of 23 pads were caught with the
-// player only shifting and jumping (round 5, patch-20260915-083506). The
-// magnet also walked the bike into every mine and half-bar on a pad lane. At
+// player only shifting and jumping (round 5). The magnet also walked the bike into every mine and half-bar on a pad lane. At
 // 6 u a one-lane hop needs the player to swing ≥ 5 u toward it by ear before
 // the pull engages; the magnet still lands the last stretch (K2's catch
 // radius is 4 u — player 2 + pad 2 — against K1's 6). Same knob, per game.
 constexpr float       kSwoopAssistGapK2U = 6.0f;
 
-// Directional-tick geometry (camera-relative, mirroring the proven wall-impact
-// pan path) and cadence. Lateral ±pan at a slight forward depth gives a hard
-// but slightly-ahead L/R image (atan2(8,2) ≈ 76°), and the 3D distance
-// (≈8.3 m) sits in the audible 5-10 m band — cues closer than ~5 m attenuate
-// oddly (see the wall-impact notes: 3 m was inaudible).
-// The aligned/release blip is centred (no pan), so it needs real forward depth
-// to clear the near-field dead zone; 7 m keeps it audible and within range.
+// The on-pad "aligned" blip is centred (no pan), so it needs real forward depth
+// to clear the near-field dead zone (cues closer than ~5 m attenuate oddly; 3 m
+// was inaudible); 7 m keeps it audible and within range.
 constexpr float       kSteerAlignedFwdM = 7.0f;
-// Directional ticks carry the side in BOTH pitch (low=left, high=right) and
-// pan, so a missed pan read is backed up by pitch. Aligned is a centred rising
-// tone. All three are loud custom WAVs — see audio_cues.h.
 constexpr const char* kSteerAlignedResref =
     acc::audio::GetNavCueResref(acc::audio::NavCue::SwoopSteerAligned);
-// Per-cue base volume (0..127). The synthesised tones are hot (RMS ~44-48%);
-// the global cue slider still scales this. Lowered 96->67 (-30%) then 67->54
-// (-20% more, 2026-06-22, both by user request) — the constant directional
-// beeping was too loud against the race mix now that the steering magnet carries
-// the actual catching.
+// Base volume (0..127) of the hot synthesised tone (RMS ~44-48%), set by the
+// player's request; the global cue slider still scales it.
 constexpr uint8_t     kSteerCueVolume = 54;
 
-// Gains raised 2026-06-23 (0.06->0.15 far, 0.35->0.50 near) to compensate for
-// the removed widened-pad Override: the hit radius drops 8u -> vanilla 5u, so the
-// magnet must pull "reached ~8u" down to "crosses <=5u" — closing ~3 extra units.
-// At 8u the pull goes 1.6 -> ~2.6 u/tick, recovering the catches that landed in
-// the old 5-8u band. (Net forgiveness ~unchanged: same ~8u effective window, now
-// via active pull to the real vanilla target instead of a fattened target.)
+// Gains sized for the vanilla 5u hit radius: the magnet pulls a bike that reached
+// ~8u down to <=5u (about 2.6 u/tick at 8u), an effective window of ~8u.
 constexpr float kSwoopMagnetGainFar   = 0.15f;  // pull at the engage edge
 constexpr float kSwoopMagnetGainNear  = 0.50f;  // pull dead-on the lane (turret-level)
-// Per-tick cap. The 2026-06-22 lateral-authority probe measured the PLAYER's own
-// bank at ~85 u/s peak (~4.7 u/tick at the ~18 Hz swoop tick), p90 ~46-56 u/s.
-// Raised 3.5->5.0 (2026-06-23) — just ABOVE the player's peak — so the magnet can
-// ARREST an overshoot against a still-held steer key. The trace showed last-second
-// misses are overshoots (you reach the pad then sail past while holding the key);
-// at 3.5 (< player 4.7) the magnet lost that tug-of-war. Contained to near-pad
+// Per-tick cap. A per-tick lateral trace measured the PLAYER's own bank at
+// ~85 u/s peak (~4.7 u/tick at the ~18 Hz swoop tick), p90 ~46-56 u/s. 5.0 sits
+// just ABOVE the player's peak so the magnet can ARREST an overshoot against a
+// still-held steer key: last-second misses are overshoots (you reach the pad then
+// sail past while holding the key), and below 4.7 the magnet loses that tug-of-war. Contained to near-pad
 // overshoot (engages only within the gap; brake only counter-pulls on inward
 // velocity), so the player keeps full control elsewhere.
 constexpr float kSwoopMagnetMaxStepU  = 5.0f;   // per-tick cap (lane-units)
@@ -175,7 +137,7 @@ constexpr float kSwoopMagnetMaxStepU  = 5.0f;   // per-tick cap (lane-units)
 // reach the pad — bleeding the overshoot momentum raw position pull can't. Small
 // lead (1.5 ticks): enough to anticipate overshoot, not so much you undershoot.
 constexpr float kSwoopMagnetBrakeTicks = 1.5f;
-// Hold-through-crossing window (item 2): within this many seconds of reaching a
+// Hold-through-crossing window: within this many seconds of reaching a
 // gate's forward position, the pull ramps to fully sticky regardless of lateral
 // error, so anticipatory drift toward the next (often opposite-lane) gate can't
 // peel the bike off this gate before it scores. Seconds (not units) so the
@@ -186,14 +148,6 @@ constexpr float kSwoopMagnetHoldSec   = 0.35f;
 // uselessly and spam the heartbeat log. Gate it on the bike actually moving.
 // Live: start hold reads speed=0; gear 1 launches to ~9 then 30+ u/s.
 constexpr float kSwoopMinRaceSpeed    = 1.0f;   // u/s; below this the race hasn't launched
-
-// ----- Lateral-authority probe (temporary diagnostic, 2026-06-22) -----------
-// Per-tick, unthrottled trace of the bike's lateral state (tag "SwoopProbe"),
-// so we can measure the TRUE per-tick lateral velocity the throttled copilot /
-// magnet logs can't. Used to size the magnet's hold/finish tuning and the
-// rock-repel step. Flip to false (or delete the probe block in TickAccelpadCues)
-// once the authority number is captured — it is a measurement aid, not a feature.
-constexpr bool  kSwoopLateralProbe    = true;
 
 inline float WallLeadTicks() {
     return acc::game::IsKotor2() ? kWallLeadTicksK2 : kWallLeadTicks;
@@ -207,18 +161,12 @@ inline float AssistGapU() {
     return acc::game::IsKotor2() ? kSwoopAssistGapK2U : kSwoopAssistGapU;
 }
 
-// Post-coast miss within the assist gap reads as "on the line" → release/hold:
-// the magnet finishes from here, so the player need not nail dead-center by ear.
-// (Was 4u — inside the catch radius, demanding a released coast land the hit on
-// its own. The magnet lands it now; the cue only has to get you into the gap.)
-inline float ReleaseBand() { return AssistGapU(); }
-
-// ----- Lateral steering magnetism (2026-06-22, shared aim-assist port) -------
+// ----- Lateral steering magnetism -------
 //
 // The console-style "sticky aim" from the shipped turret assist, applied to the
 // swoop bike's ONE steering axis. The three advisory-cue models (object-in-
 // world, ideal-line, co-pilot) all plateaued at ~34% gates because they left
-// the PLAYER as the controller of a sub-second full-lane swing — informing
+// the PLAYER as the controller of a sub-second full-lane swing; informing
 // better can't beat a too-small time budget. Magnetism instead WRITES the
 // control field (offset.x at +0x1c4, the bike's lateral lane coord) toward the
 // next gate's lane: gentle far, sticky near, capped per tick, BLENDED on top of
@@ -232,21 +180,13 @@ inline float ReleaseBand() { return AssistGapU(); }
 // offset→world sign is a known +1 (no calibration needed, unlike the turret's
 // rotated gun aim). Mid-lane lateral inertia is ~nil (the ±10 bank is not a
 // momentum accumulator; real post-release coast ~1 u — see swoop_steering
-// notes), so a written offset.x lands cleanly without an inertia model.
-//
-// UNVERIFIED IN-GAME: this assumes writing offset.x steers the bike the same way
-// writing it aims the turret gun (engine re-integrates offset each tick, so the
-// write sticks). The throttled SwoopAssist log reports offsetX before/after +
-// bikeX so the first test confirms the write takes and the bike tracks it. If it
-// is clobbered, switch the write target to the bank level (AdjustPosition
-// field10_0x1d0) instead.
+// notes), so a written offset.x lands cleanly without an inertia model. The
+// throttled SwoopAssist log reports offsetX before/after and bikeX.
 //
 // kSwoopMagnetEngageU — engage only when the next gate is within this lateral
 //   error (lane is ±20; gates jump up to ~40 apart). Beyond it, no pull — the
-//   player initiates the swing, as with the turret's engage angle. Now bound to
-//   the shared assist gap (was a standalone 28u, near full-lane, so the magnet
-//   did almost everything → the race steered itself). At the gap (12u) the magnet
-//   is a final-approach gap-filler: the player must close the lane down to the
+//   player initiates the swing, as with the turret's engage angle. Bound to the
+//   shared assist gap, so the magnet is a final-approach gap-filler: the player must close the lane down to the
 //   gap by ear, and only then does the magnet quietly finish it. This is THE
 //   loosening lever — see kSwoopAssistGapU. (Tune the gap, not this.)
 inline float MagnetEngageU() { return AssistGapU(); }  // lane-units; magnetism engages within
@@ -254,7 +194,7 @@ inline float MagnetEngageU() { return AssistGapU(); }  // lane-units; magnetism 
 }  // namespace
 
 // ============================================================================
-// Accelerator-pad STEERING GUIDE — continuous panned tone (2026-06-23).
+// Accelerator-pad STEERING GUIDE — continuous panned tone.
 //
 // A single looping tone (acc_boost) panned to the NEXT gate's lateral offset, so
 // you "drive toward the sound": the pan DIRECTION says which way and the pan
@@ -273,17 +213,9 @@ inline float MagnetEngageU() { return AssistGapU(); }  // lane-units; magnetism 
 // when you're essentially ON the pad, where the magnet finishes the last units.
 // It stays present for all real steering (including small nudges) so you never
 // "listen for nothing"; it quiets only when you're locked on. Division of labour:
-// you do the coarse positioning by ear, the magnet closes the final gap. (First
-// cut rested across the whole assist gap, which silenced the common small-nudge
-// case — fixed 2026-06-23.)
-//
-// History: this REPLACES the discrete left/right "co-pilot" ticks (retired
-// 2026-06-23). An earlier continuous PD pure-pursuit version oscillated because
-// the PLAYER had to null the pan precisely on a high-inertia bike (an unstable
-// human-in-the-loop). That precondition is gone now that the magnet closes the
-// final gap — the player only needs coarse magnitude, which is exactly what pan
-// gives for free. (Also dead: an interpolated pad-to-pad line — pads alternate
-// full-lane, so it pointed mid-lane, the WRONG side, ...212526.log.)
+// you do the coarse positioning by ear, the magnet closes the final gap. So the
+// player never has to null the pan precisely on the bike (a human-in-the-loop
+// that oscillates); coarse magnitude is what pan gives for free.
 //
 // Pad world positions come from each CSWMiniEnemy's first model via vtable[+0x64]
 // (ReadFollowerPosition); pads are reached via the AsEnemy (vtable[0x1c])
@@ -347,10 +279,9 @@ void TickAccelpadCues(void* miniGame) {
         if (!ReadFollowerPosition(enemy, pos)) continue;
 
         // Pad or mine? Both are CSWMiniEnemy on KOTOR 2 (211TEL: 23 pads +
-        // 24 mines, models mgf_acpad / mgf_mine01). The first K2 round's
-        // co-pilot locked the bike onto two mines and drove it into them
-        // (gear 2->1 at y=392, 3->1 at y=745) because everything in this pool
-        // was a "pad". The model name is the discriminator the track scripts
+        // 24 mines, models mgf_acpad / mgf_mine01); treated as pads, mines
+        // become steering targets and the bike is driven into them. The model
+        // name is the discriminator the track scripts
         // use too (accelpad.ncs looks for "MGM" in the hit object's name).
         void* modelGob = ReadFollowerModelGob(enemy);
         const char* modelName = ReadAurObjectName(modelGob);
@@ -409,14 +340,8 @@ void TickAccelpadCues(void* miniGame) {
     }
 
     // ----- Lateral velocity (units/tick), smoothed + clamped. -----
-    // probeRawDx: the UNCLAMPED per-tick world-X delta, captured for the
-    // lateral-authority probe below (the smoothing path clamps + filters it).
-    float probeRawDx   = 0.0f;
-    bool  probeHadPrev = false;
     if (bikeOk) {
         if (g_state.have_prev_bike_x) {
-            probeRawDx   = bikePos.x - g_state.prev_bike_x;
-            probeHadPrev = true;
             float v = bikePos.x - g_state.prev_bike_x;
             if (v >  kSteerVelClamp) v =  kSteerVelClamp;
             if (v < -kSteerVelClamp) v = -kSteerVelClamp;
@@ -431,8 +356,7 @@ void TickAccelpadCues(void* miniGame) {
     // its last in-front sample (prev_ahead_fwdGap > 0, prev_ahead_padErr) and we
     // can recompute its geometry from THIS tick's bike position (fwdGap now <= 0)
     // — so interpolate the exact lateral miss at fwdGap=0. That is the engine's
-    // real hit test (|miss| <= ~6 on Taris), unambiguous, unlike the periodic
-    // copilot samples that land ~4 u before the true crossing.
+    // real hit test (|miss| <= ~6 on Taris).
     if (bikeOk && g_state.have_prev_ahead &&
         ahead_slot != g_state.prev_ahead_slot && g_state.prev_ahead_slot >= 0) {
         const float fwdGap_now = g_state.prev_ahead_posY - refY;
@@ -465,18 +389,16 @@ void TickAccelpadCues(void* miniGame) {
             // game's accelpad script plays a sound (both disassembled — speed
             // ×1.05, accel ×1.1, and on KOTOR 2 +100 hit points; the "boost"
             // animation is the only feedback, visual). With the magnet
-            // catching every pad (23 of 23 in round 5, patch-20260915-083506)
-            // the guide tone rests almost the whole race, so by ear nothing
+            // catching every pad (23 of 23 in round 5) the guide tone rests
+            // almost the whole race, so by ear nothing
             // said a pad had been scored at all — "I rarely hear an
             // accelpad". Same sample as the guide so the identity is obvious.
             if (caught) acc::audio::PlayCue(kAccelpadLoopResref);
         }
     }
 
-    // ----- Co-pilot command (experimental). -----
-    // padErr/fwdGap are always the TRUE nearest-gate values — scoring (the CROSS
-    // interpolation) and the preview both rely on them, so they must not move.
-    // coast = where the bike drifts if you release now. proj = post-coast miss.
+    // padErr/fwdGap are always the TRUE nearest-gate values: the CROSS
+    // interpolation relies on them, so the detours below must not move them.
     // ----- Virtual target after the last pad (see kVirtualTargetAheadU):
     // straight ahead of the bike, so the mine-aware line below keeps working
     // to the finish. The magnet is gated off for it unless a detour is active.
@@ -665,30 +587,14 @@ void TickAccelpadCues(void* miniGame) {
         g_state.detour_slot = detour_slot;
     }
 
-    int   desired = kSteerCmdNone;
-    float coast   = 0.0f;
-    float proj    = 0.0f;
-    if (have_target) {
-        coast = g_state.smoothed_vel * kCoastTicks;
-        proj  = padErr - coast;
-        if (proj >  ReleaseBand())      desired = kSteerCmdRight;
-        else if (proj < -ReleaseBand()) desired = kSteerCmdLeft;
-        else                            desired = kSteerCmdAligned;
-    }
-
-    // The steering command is no longer rendered as discrete L/R ticks — the
-    // continuous panned guide loop (below) now carries direction AND magnitude.
-    // `desired` is still computed (above) for the diagnostic log; `now` is kept
-    // for the wall-cue debounce; steer_cmd retains the last intended direction.
     const ULONGLONG now = GetTickCount64();
-    g_state.steer_cmd = desired;
 
     // ----- Lateral steering magnetism (shared aim-assist facility). -----
     // Nudge the bike's lane (offset.x at +0x1c4) toward the next gate's lane:
     // gentle far, sticky near, capped per tick, blended on top of the player's
     // own steering. offset.x maps 1:1 to world-X, so the corrective step is the
     // world lateral error (padErr) directly, sign +1 (no calibration). See the
-    // constants block for the engine grounding and the in-game-verification plan.
+    // constants block for the engine grounding.
     // `tunnel` IS the offset Vector (+0x1c4) read above; we replace only its x.
     // Gear gate: no pull in gear 0. After a KOTOR 2 collision the bike sits in
     // gear 0 in front of whatever it hit, and the first K2 round showed the
@@ -698,7 +604,6 @@ void TickAccelpadCues(void* miniGame) {
     // gear global is 0 exactly then (and before the first launch, where the
     // speed gate already held). Both games' scripts maintain the global.
     const bool inGear = acc::engine::ReadGlobalNumber("MIN_RACE_GEAR") >= 1;
-    bool probeMagnetWrote = false;
     if (have_target && bikeOk && tunOk && player && inGear &&
         (!virtualTarget || detour_slot >= 0) &&
         bikeSpeed > kSwoopMinRaceSpeed &&
@@ -707,13 +612,13 @@ void TickAccelpadCues(void* miniGame) {
             kSwoopMagnetGainFar, kSwoopMagnetGainNear, kSwoopMagnetMaxStepU};
         float t = 1.0f - std::fabs(guideErr) / MagnetEngageU();
         if (t < 0.0f) t = 0.0f;
-        // Hold-through-crossing (item 2): in the last kSwoopMagnetHoldSec before
+        // Hold-through-crossing: in the last kSwoopMagnetHoldSec before
         // this gate's forward position is reached, ramp the pull to fully sticky
         // (t->1) regardless of lateral error, so anticipatory drift toward the
         // NEXT gate can't peel the bike off this one before it scores. Speed-
         // scaled (time-to-cross) so the window is the same in every gear. Targets
         // the "dead-on then drifted out" + "engaged but didn't finish" misses
-        // (22 of 31, 2026-06-22 probe).
+        // (22 of 31 misses in one traced run).
         if (fwdGap > 0.0f && bikeSpeed > 1.0f) {
             const float ttc = fwdGap / bikeSpeed;                  // seconds to crossing
             if (ttc < kSwoopMagnetHoldSec) {
@@ -734,11 +639,9 @@ void TickAccelpadCues(void* miniGame) {
         Vector newOff = tunnel;
         newOff.x = newOffX;
         acc::minigame::WriteOffsetVector(player, newOff);
-        probeMagnetWrote = true;
 
-        const ULONGLONG nowMag = GetTickCount64();
-        if (nowMag - g_state.last_magnet_log_ms >= 1000) {
-            g_state.last_magnet_log_ms = nowMag;
+        if (now - g_state.last_magnet_log_ms >= 1000) {
+            g_state.last_magnet_log_ms = now;
             acclog::Write("SwoopAssist",
                           "magnet slot=%d padErr=%.2f vel=%.2f brakedErr=%.2f "
                           "gain=%.2f offX %.2f->%.2f bikeX=%.2f padX=%.2f fwdGap=%.1f",
@@ -746,21 +649,6 @@ void TickAccelpadCues(void* miniGame) {
                           gain, tunnel.x, newOffX,
                           bikePos.x, ahead_pos.x, fwdGap);
         }
-    }
-
-    // ----- Lateral-authority probe (per-tick, unthrottled). -----
-    // Full-fidelity per-frame trace so analysis can measure the TRUE per-tick
-    // lateral velocity. dX = unclamped world-X delta this tick; mag = whether the
-    // magnet wrote (so samples with mag=0 AND |padErr|>engage isolate the player's
-    // own bank authority). spd lets us check whether authority scales with speed.
-    // See kSwoopLateralProbe.
-    if (kSwoopLateralProbe && bikeOk && probeHadPrev) {
-        acclog::Write("SwoopProbe",
-                      "ms=%llu bikeX=%.2f tunnelX=%.2f dX=%.3f spd=%.1f "
-                      "padErr=%.2f fwdGap=%.1f mag=%d slot=%d",
-                      GetTickCount64(), bikePos.x, tunnel.x, probeRawDx,
-                      bikeSpeed, padErr, fwdGap, probeMagnetWrote ? 1 : 0,
-                      ahead_slot);
     }
 
     // ----- Predictive overshoot / wall cue. -----
@@ -851,9 +739,9 @@ void TickAccelpadCues(void* miniGame) {
     bool guide_active = false;
     // Rest radius: the pad's catch radius for a pad, but a strip target is
     // only 5 u past the bar's end, so resting 5 u short of it leaves the bike
-    // still touching the bar with nothing to hear — round 17
-    // (patch-20260915-213959, 21:42:44) sat 2.5 u off the MGC04 strip, inside
-    // the span, with "follow the tone" spoken and the tone silent.
+    // still touching the bar with nothing to hear — round 17 sat 2.5 u off
+    // the MGC04 strip, inside the span, with "follow the tone" spoken and the
+    // tone silent.
     const float restU = (bar_detour_slot >= 0) ? kBarStripRestU : kSwoopGuideSilenceU;
     if (have_target && bikeOk && std::fabs(guideErr) > restU) {
         const float dist = std::sqrt(DistXYZSq(guide_pos, listener_pos));
@@ -882,7 +770,7 @@ void TickAccelpadCues(void* miniGame) {
     // "you're on track, you can stop steering." The panned tone's silence alone
     // was ambiguous (off? blended out? actually locked?); this makes the rest
     // state a positive cue. Fires once per approach (on the transition), re-arms
-    // when you steer off again. Reuses the retired co-pilot's aligned sample.
+    // when you steer off again.
     if (have_target && g_state.guide_was_active && !guide_active) {
         Vector cue = listener_pos;                      // centred — no pan
         cue.y = listener_pos.y + kSteerAlignedFwdM;
@@ -894,24 +782,22 @@ void TickAccelpadCues(void* miniGame) {
     g_state.guide_was_active = guide_active;
 
     // ----- Steering-guide diagnostic -----
-    // cmd: -1 left, +1 right, 2 aligned, 0 none (intended direction). guide=1
-    // when the panned tone is sounding (off-line, outside the assist gap), 0 when
-    // silent (within the gap / no target — magnet handing off).
+    // guide=1 when the panned tone is sounding, 0 when it rests (on the pad /
+    // no target).
     if (have_target) {
         acclog::Trace("SwoopRace",
                       "guide: padX=%.2f bikeX=%.2f padErr=%.2f vel=%.2f "
-                      "coast=%.2f proj=%.2f cmd=%d guide=%d fwdGap=%.1f "
-                      "tunnelX=%s%.2f",
+                      "guide=%d fwdGap=%.1f tunnelX=%s%.2f",
                       ahead_pos.x, bikePos.x, padErr, g_state.smoothed_vel,
-                      coast, proj, desired, guide_active ? 1 : 0, fwdGap,
+                      guide_active ? 1 : 0, fwdGap,
                       tunOk ? "" : "FAULT:", tunOk ? tunnel.x : 0.0f);
     }
 
     acclog::Trace("SwoopRace",
                   "accelpad scan: slots=%d accelpads=%d ahead=%d aheadSlot=%d "
-                  "cmd=%d refY=%.1f",
+                  "refY=%.1f",
                   slots_seen, accelpads_found, accelpads_ahead, ahead_slot,
-                  g_state.steer_cmd, refY);
+                  refY);
 
     // Remember this tick's targeted gate for next tick's crossing interpolation.
     if (have_target) {

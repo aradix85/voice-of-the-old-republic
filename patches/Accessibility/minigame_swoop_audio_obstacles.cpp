@@ -4,6 +4,13 @@
 
 #include "minigame_swoop_audio_internal.h"
 
+#include "audio_bus.h"
+#include "engine_area.h"
+#include "engine_game.h"
+#include "engine_player.h"    // listener: the camera; the engine swaps the
+                              //     player creature during the race
+#include "log.h"
+
 namespace acc::swoop_race {
 
 namespace {
@@ -38,20 +45,15 @@ const size_t kAurObjectPositionOffset       = acc::off::Pick(0x78, 0xa4);
 //                            of advance warning at the top observed bike
 //                            speed (~190 units/s in gear 3 on Taris), so
 //                            the user has time to choose a lane before
-//                            the obstacle arrives. Earlier 30 m was sized
-//                            like the in-world Pillar-1 walls and gave
-//                            only ~150 ms warning — confirmed too late by
-//                            the user 2026-05-24.
+//                            the obstacle arrives (30 m gave ~150 ms: too
+//                            late).
 //
 //   kObstacleWarnLoopResref — engine sample looped for each obstacle.
 //                            cb_gr_boncehard2 — a short metallic grenade-bounce
 //                            SFX with steady pitch/volume, so looping it reads as
 //                            a constant metallic clicking that can't be ignored
-//                            in the ~0.7s in-range window. Replaced mgs_hover_07l,
-//                            a quiet sustained hover drone whose faint attack was
-//                            lost in that window (the "obstacles easy to ignore"
-//                            bug — the same long-drone problem the accelpad loop
-//                            sample was trimmed to fix).
+//                            in the ~0.7s in-range window (a sustained drone's
+//                            faint attack is lost in that window).
 //
 //   kObstacleForwardMargin — obstacles whose Y (forward axis on the
 //                            tunnel track — the bike moves from low Y to
@@ -335,10 +337,8 @@ void TickObstacleCues(void* miniGame) {
         Vector pos;
         if (!SafeReadVector(aur, kAurObjectPositionOffset, pos)) continue;
 
-        // Read the obstacle's name via CAurObject's GetName vtable
-        // accessor. Used for the first-fire inventory log; cue routing
-        // is no longer name-based (rocks and accelpads are in different
-        // engine pools — see the "Object pool split" comment at top).
+        // The obstacle's name, for the first-fire inventory log and the K2
+        // classification (rocks and accelpads are in different engine pools).
         const char* name = ReadAurObjectName(aur);
 
         // ---- KOTOR 2: classify by collision box (see the constants block). ----
@@ -551,9 +551,6 @@ void TickObstacleCues(void* miniGame) {
 
     for (int c = 0; c < sounding; ++c) {
         const int i = candidates[c].slot;
-        // Single cue sample for all obstacles. Accelpads are no longer
-        // routed through this sweep (they live in the enemies pool —
-        // see TickAccelpadCues).
         const char* resref = kObstacleWarnLoopResref;
 
         // Decoupled cue: lateral (X) + vertical (Z) true, forward (Y)
