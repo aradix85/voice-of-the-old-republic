@@ -74,7 +74,7 @@
 #include "menus_internal.h"
 #include "menus_pending.h"   // IsPending — bounds the arm latch to the queued open
 #include "msg_router.h"      // preview-feedback suppression rule
-#include "prism.h"
+#include "speech.h"
 #include "strings.h"
 
 using namespace acc::engine;  // PanelKind, FindPanelByKind, kAddr*/kMgr*
@@ -248,7 +248,7 @@ void SpeakStillEquippedAfterRefusal(void* panel, void* slotBtn) {
     snprintf(msg, sizeof(msg),
              acc::strings::Get(acc::strings::Id::FmtEquipStillEquipped),
              itemName);
-    prism::Speak(msg, /*interrupt=*/false);
+    acc::speech::Speak(msg, /*interrupt=*/false);
     acclog::Write("EquipPicker",
                   "refused open follow-up: slot item=\"%s\" still equipped "
                   "(panel=%p slot=%p)", itemName, panel, slotBtn);
@@ -396,7 +396,7 @@ void MonitorEquipPickerSelection() {
     snprintf(msg, sizeof(msg),
              acc::strings::Get(acc::strings::Id::FmtContainerItemAt),
              rowText, userPos, userTotal);
-    prism::Speak(msg, /*interrupt=*/false);
+    acc::speech::Speak(msg, /*interrupt=*/false);
     acclog::Write("Menus.EquipPicker", "row lb=%p sel=%d (was %d) text=\"%s\"",
                   lb, selIdx, prev, rowText);
 }

@@ -23,7 +23,7 @@
 #include "menus_keybinds.h"      // DisplayName — name the clashing mod action
 #include "menus_nav.h"           // ClampedCursorStep — clamp-never-wrap convention
 #include "menus_pending.h"       // QueueActivate (click-sim for OK/Cancel/Default)
-#include "prism.h"
+#include "speech.h"
 #include "strings.h"
 #include "engine_rebase.h"
 #include "engine_offsets_select.h"
@@ -179,7 +179,7 @@ void SpeakControl(void* panel, void* ctrl) {
     char buf[256];
     if (acc::menus::extract::FromControl(ctrl, buf, sizeof(buf), panel) &&
         buf[0] != '\0') {
-        prism::Speak(buf, /*interrupt=*/true);
+        acc::speech::Speak(buf, /*interrupt=*/true);
     }
 }
 
@@ -296,7 +296,7 @@ void WarnIfModBindClash(void* row) {
     char line[224];
     snprintf(line, sizeof(line),
              acc::strings::Get(acc::strings::Id::FmtKeymapModConflict), name);
-    prism::Speak(line, /*interrupt=*/false);
+    acc::speech::Speak(line, /*interrupt=*/false);
     acclog::Write("Menus.KeyMap",
                   "new game bind vk=0x%02x clashes with mod action %s",
                   vk, acc::hotkeys::Name(clash));
@@ -449,7 +449,7 @@ bool HandleInput(void* activePanel, int param_1, int param_2, int& outRv) {
                 reinterpret_cast<unsigned char*>(row) + kKeyMapButtonUnchangeableOff);
         } __except (EXCEPTION_EXECUTE_HANDLER) { fixed = 1; }
         if (fixed != 0) {
-            prism::Speak(acc::strings::Get(acc::strings::Id::KeyBindNotChangeable),
+            acc::speech::Speak(acc::strings::Get(acc::strings::Id::KeyBindNotChangeable),
                          /*interrupt=*/true);
             outRv = 1;
             return true;
@@ -462,7 +462,7 @@ bool HandleInput(void* activePanel, int param_1, int param_2, int& outRv) {
         char prompt[192];
         snprintf(prompt, sizeof(prompt),
                  acc::strings::Get(acc::strings::Id::FmtKeyBindCapture), action);
-        prism::Speak(prompt, /*interrupt=*/true);
+        acc::speech::Speak(prompt, /*interrupt=*/true);
         acclog::Write("Menus.KeyMap", "capture armed row=%p action=\"%s\"", row, action);
         outRv = 1;
         return true;

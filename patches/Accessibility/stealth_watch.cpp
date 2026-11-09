@@ -10,7 +10,7 @@
 #include "examine_view.h"     // IsHostileCreature
 #include "log.h"
 #include "narrated_target.h"
-#include "prism.h"
+#include "speech.h"
 #include "engine_offsets_select.h"
 
 namespace acc::stealth_watch {
@@ -140,7 +140,7 @@ void Tick() {
 
     char buf[16];
     std::snprintf(buf, sizeof(buf), "%d", dist);
-    prism::Speak(buf, /*interrupt=*/true);
+    acc::speech::Speak(buf, /*interrupt=*/true);
     g_lastAnnounced = dist;
     g_lastSpeakMs   = now;
 }

@@ -21,7 +21,7 @@
 #include "same_name_suffix.h"
 #include "spectator_scene.h" // Endar Spire scripted spectator-battle cue
 #include "strings.h"
-#include "prism.h"
+#include "speech.h"
 #include "engine_rebase.h"
 #include "engine_game.h"
 
@@ -269,7 +269,7 @@ bool NarrateHandle(uint32_t handle, const char* reason, bool explicitRequest) {
     // line a second later, so the player heard nothing of it. Queue behind
     // the bark instead; an explicit Q/E press still interrupts.
     const bool behindBark = !explicitRequest && acc::engine::HasActiveBarkBubble();
-    prism::Speak(spoken, /*interrupt=*/!behindBark);
+    acc::speech::Speak(spoken, /*interrupt=*/!behindBark);
 
     uint32_t serverHandle = acc::engine::GetObjectHandle(obj);
     acc::narrated_target::Stamp(obj, serverHandle);
@@ -349,7 +349,7 @@ void OnEngineShowObject(uint32_t handle) {
                 // first-attempt branch (one fresh retry per user press).
                 const char* msg = acc::strings::Get(
                     acc::strings::Id::CycleNoTarget);
-                prism::Speak(msg, /*interrupt=*/true);
+                acc::speech::Speak(msg, /*interrupt=*/true);
                 acclog::Write("PassiveNarrate",
                     "Q/E retry -> sentinel (0x%08x -> 0x%08x), spoke [%s]",
                     prev, handle, msg);

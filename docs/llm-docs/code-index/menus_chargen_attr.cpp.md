@@ -14,7 +14,7 @@ chargen attributes panel tweaks. See menus_chargen_attr.h for the design rationa
 - L63 `int ParseAbilityValueText(const char* text)`: Parse the engine-rendered ability value text ("8", "10", "18") into an int.
 - L83 `int ComputeAbilityModifier(int value)`: D&D 3.5 ability modifier: floor((value - 10) / 2).
 - L98 `int ReadEngineAbilityCost(void* panel, int currentValue)`
-- L120 `void FormatModifier(int mod, char* outBuf, size_t bufSize)`: Render the modifier with sign so it reads correctly through Prism: positive gets an explicit "+", zero is bare "0" (engine renders this as bare "-" which sounds broken), negative carries its own sign already.
+- L120 `void FormatModifier(int mod, char* outBuf, size_t bufSize)`: Render the modifier with sign so it reads correctly through NVDA: positive gets an explicit "+", zero is bare "0" (engine renders this as bare "-" which sounds broken), negative carries its own sign already.
 - L132 `bool AnnounceChainStepDescription(void* panel, void* control)`
 - L136 `bool IsChargenAttributesDescriptionListbox(void* listBox)`
 - L140 `void AnnounceChainStepSuffix(void* panel, void* control)`

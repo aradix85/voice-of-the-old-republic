@@ -30,7 +30,7 @@
                              // has, as opposed to what we managed to bind
 #include "pad_quickmenu.h"   // the KOTOR 1 Y menu (K2 uses the engine's own)
 #include "peek_description.h" // OnShiftReleased — Y is the pad's peek modifier
-#include "prism.h"           // Silence — the cancel a pad press has no
+#include "speech.h"           // Silence — the cancel a pad press has no
                              // keystroke to trigger
 #include "strings.h"
 #include "unified_action_menu.h"
@@ -393,7 +393,7 @@ bool InWorldSurface() {
 // call sites to interrupt=true, would also change keyboard behaviour and break
 // the announcements that intentionally queue.
 void NoteNavPress() {
-    prism::Silence();
+    acc::speech::Silence();
 }
 
 // Route a logical nav / activate / cancel code into whichever in-DLL overlay

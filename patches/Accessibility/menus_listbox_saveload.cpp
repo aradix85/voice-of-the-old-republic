@@ -10,7 +10,7 @@
 #include "menus.h"           // SpeakIfChanged (empty-state dedup)
 #include "menus_extract.h"
 #include "menus_chain.h"      // chain focus: the K2 save/load selection sync
-#include "prism.h"
+#include "speech.h"
 #include "engine_player.h"   // GetPlayerPosition — world-live check
 #include "transitions.h"     // NotifyExternalLoadStarting — load-latch arm
 #include "engine_offsets_select.h"
@@ -76,7 +76,7 @@ void SaveLoadAnnounce(void* /*lb*/, const ListBoxNavResult& r) {
                  acc::strings::Get(acc::strings::Id::FmtSaveLoadRowNoLoc),
                  rowText, r.newSel + 1, r.rowCount);
     }
-    prism::Speak(msg, /*interrupt=*/false);
+    acc::speech::Speak(msg, /*interrupt=*/false);
 }
 
 void SaveLoadLogExtra(char* out, size_t outN, const ListBoxNavResult& r) {
@@ -322,7 +322,7 @@ void MonitorK2SaveLoadCharacterSwap() {
         snprintf(msg, sizeof(msg),
                  acc::strings::Get(acc::strings::Id::FmtSaveLoadCharacter),
                  name, rows);
-        prism::Speak(msg, /*interrupt=*/false);
+        acc::speech::Speak(msg, /*interrupt=*/false);
         acclog::Write("SaveLoad",
                       "K2 character swap -> idx=%d rows=%d name=\"%s\"; chain rebound",
                       idx, rows, name);

@@ -14,7 +14,7 @@
 #include "guidance_autowalk.h"// CancelMovement
 #include "interact_dispatch.h" // DispatchInteract — re-fire a talk after a rescue walk
 #include "log.h"
-#include "prism.h"
+#include "speech.h"
 #include "spectator_scene.h" // Endar Spire scripted spectator-battle cue
 #include "strings.h"
 
@@ -498,7 +498,7 @@ void OnBlocked(DWORD stalledMs) {
         // generic "way blocked" for the dramatic in-world line so the repeat
         // reinforces "you can't reach them, press on to the bridge".
         if (acc::spectator::IsScriptedBattleSoldier(g_st.targetObj)) {
-            prism::Speak(acc::spectator::DramaticLine(), /*interrupt=*/true);
+            acc::speech::Speak(acc::spectator::DramaticLine(), /*interrupt=*/true);
             acclog::Write("Approach",
                 "blocked on scripted-battle soldier -> [%s]",
                 acc::spectator::DramaticLine());
@@ -510,7 +510,7 @@ void OnBlocked(DWORD stalledMs) {
                 std::snprintf(msg, sizeof(msg),
                               acc::strings::Get(acc::strings::Id::FmtCompanionInTheWay),
                               who);
-                prism::Speak(msg, /*interrupt=*/true);
+                acc::speech::Speak(msg, /*interrupt=*/true);
                 acclog::Write("Approach", "blocked with %s at the target -> [%s]",
                               who, msg);
             } else if (!g_st.movedSinceArm &&
@@ -522,7 +522,7 @@ void OnBlocked(DWORD stalledMs) {
                 std::snprintf(msg, sizeof(msg), "%s. %s",
                               acc::strings::Get(acc::strings::Id::InteractWayBlocked),
                               tail);
-                prism::Speak(msg, /*interrupt=*/true);
+                acc::speech::Speak(msg, /*interrupt=*/true);
                 acclog::Write("Approach", "blocked with %s beside the PC -> [%s]",
                               who, msg);
             } else if (ResolveTargetPos(tgt) && g_st.name[0]) {
@@ -530,7 +530,7 @@ void OnBlocked(DWORD stalledMs) {
             } else {
                 std::snprintf(msg, sizeof(msg), "%s",
                               acc::strings::Get(acc::strings::Id::InteractWayBlocked));
-                prism::Speak(msg, /*interrupt=*/true);
+                acc::speech::Speak(msg, /*interrupt=*/true);
             }
         }
     }
@@ -638,7 +638,7 @@ void TickApproach() {
             g_st.pauseHintSpoken = true;
             const char* hint =
                 acc::strings::Get(acc::strings::Id::GuidancePausedHint);
-            prism::Speak(hint, /*interrupt=*/false);
+            acc::speech::Speak(hint, /*interrupt=*/false);
             acclog::Write("Approach", "world paused while armed -> [%s] name=[%s]",
                           hint, g_st.name);
         }
@@ -796,7 +796,7 @@ bool CancelByMovement() {
         acc::engine::SetGlobalDialogState(0);
     }
     const char* msg = acc::strings::Get(acc::strings::Id::MovementCancelled);
-    prism::Speak(msg, /*interrupt=*/true);
+    acc::speech::Speak(msg, /*interrupt=*/true);
     acclog::Write("Approach", "movement-cancel — owner=%d isDialog=%d "
         "inputDisabled=%d name=[%s] (manual control reclaimed)",
         static_cast<int>(g_st.owner), g_st.isDialog ? 1 : 0,
@@ -833,7 +833,7 @@ void SpeakWayBlocked(const char* name, const Vector& targetPos) {
         std::snprintf(msg, sizeof(msg), "%s",
                       acc::strings::Get(acc::strings::Id::InteractWayBlocked));
     }
-    prism::Speak(msg, /*interrupt=*/true);
+    acc::speech::Speak(msg, /*interrupt=*/true);
     acclog::Write("Approach", "way blocked -> [%s]", msg);
 }
 

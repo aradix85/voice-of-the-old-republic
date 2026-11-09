@@ -5,7 +5,7 @@
 #include "engine_rebase.h"
 #include "engine_reads.h"
 #include "log.h"
-#include "prism.h"
+#include "speech.h"
 
 #include <cstddef>
 #include <cstdint>
@@ -145,7 +145,7 @@ void SpeakDescription(void* panel, void* focusedRow) {
         return;
     }
 
-    prism::Speak(text, /*interrupt=*/true);
+    acc::speech::Speak(text, /*interrupt=*/true);
 
     // Single-line log: collapse embedded newlines so the German
     // "<Planet>:\n<body>" form fits on one line for grep.

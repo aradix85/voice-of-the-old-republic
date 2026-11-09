@@ -33,7 +33,7 @@
 #include "engine_panels.h"    // IdentifyPanel, PanelKind
 #include "hotkeys.h"
 #include "log.h"
-#include "prism.h"
+#include "speech.h"
 #include "strings.h"
 #include "engine_rebase.h"
 #include "engine_offsets_select.h"
@@ -310,7 +310,7 @@ void FormatCard(const CardView& c, bool inHand, char* out, size_t n) {
 }
 
 void Say(const char* s, bool interrupt = false) {
-    if (s && s[0]) prism::Speak(s, interrupt);
+    if (s && s[0]) acc::speech::Speak(s, interrupt);
 }
 
 // ---- On-demand readouts (c / t) ------------------------------------------

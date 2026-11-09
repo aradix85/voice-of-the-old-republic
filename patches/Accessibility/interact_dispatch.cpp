@@ -27,7 +27,7 @@
 #include "log.h"
 #include "narrated_target.h"
 #include "strings.h"
-#include "prism.h"
+#include "speech.h"
 #include "unified_action_menu.h"  // one menu for target + personal actions
                             // while active (lay-off 5)
 
@@ -169,7 +169,7 @@ void OnInteract(bool forceRadial) {
         if (acc::narrated_target::TryGet(slot) && slot.isMapPin) {
             const char* msg = acc::strings::Get(
                 acc::strings::Id::MapPinInteractHint);
-            prism::Speak(msg, /*interrupt=*/true);
+            acc::speech::Speak(msg, /*interrupt=*/true);
             acclog::Write("Interact",
                           "%s -> [%s] (map-pin focus, no interact)",
                           forceRadial ? "Shift+Enter" : "Enter", msg);
@@ -183,7 +183,7 @@ void OnInteract(bool forceRadial) {
     if (!target || handle == 0) {
         const char* msg = acc::strings::Get(
             acc::strings::Id::GuidanceNoFocus);
-        prism::Speak(msg, /*interrupt=*/true);
+        acc::speech::Speak(msg, /*interrupt=*/true);
         acclog::Write("Interact", "%s -> [%s] no target",
                       forceRadial ? "Shift+Enter" : "Enter", msg);
         return;
@@ -200,7 +200,7 @@ void DispatchInteractImpl(void* target, uint32_t handle, bool forceRadial) {
         // isn't ambiguous (cf. `feedback_never_silence_fallback_announcement`).
         const char* msg = acc::strings::Get(
             acc::strings::Id::GuidanceNoFocus);
-        prism::Speak(msg, /*interrupt=*/true);
+        acc::speech::Speak(msg, /*interrupt=*/true);
         acclog::Write("Interact", "DispatchInteract called with no target "
             "(forceRadial=%d) -> [%s]",
             forceRadial ? 1 : 0, msg);
@@ -348,7 +348,7 @@ void DispatchInteractImpl(void* target, uint32_t handle, bool forceRadial) {
             char tmsg[192];
             std::snprintf(tmsg, sizeof(tmsg),
                           acc::strings::Get(PreRollFor(cat)), name);
-            prism::Speak(tmsg, /*interrupt=*/true);
+            acc::speech::Speak(tmsg, /*interrupt=*/true);
             // Coord walk leaves input enabled, so the tracker doesn't own input
             // restore (matches the cycle WalkTo path).
             ArmInteractApproach(name, target, /*inputDisabled=*/false,
@@ -381,7 +381,7 @@ void DispatchInteractImpl(void* target, uint32_t handle, bool forceRadial) {
             char dmsg[192];
             std::snprintf(dmsg, sizeof(dmsg),
                           acc::strings::Get(acc::strings::Id::FmtWalkingTo), name);
-            prism::Speak(dmsg, /*interrupt=*/true);
+            acc::speech::Speak(dmsg, /*interrupt=*/true);
             ArmInteractApproach(name, target, /*inputDisabled=*/false,
                                 /*isDialog=*/false);
             acclog::Write("Interact", "Enter -> [%s] open door via WalkTo(coord) "
@@ -463,7 +463,7 @@ void DispatchInteractImpl(void* target, uint32_t handle, bool forceRadial) {
                 ? acc::strings::Get(acc::strings::Id::FmtInteractNoActionsRedirect)
                 : acc::strings::Get(acc::strings::Id::FmtInteractNoActions);
             std::snprintf(msg, sizeof(msg), fmt, name);
-            prism::Speak(msg, /*interrupt=*/true);
+            acc::speech::Speak(msg, /*interrupt=*/true);
         } else {
             // ArmAfterPopulate spoke; build a placeholder for the log line
             // so the existing "engine_label=[…]" diagnostic still has a
@@ -475,12 +475,12 @@ void DispatchInteractImpl(void* target, uint32_t handle, bool forceRadial) {
             msg, sizeof(msg),
             acc::strings::Get(acc::strings::Id::FmtInteractEngine),
             snap.label, name);
-        prism::Speak(msg, /*interrupt=*/true);
+        acc::speech::Speak(msg, /*interrupt=*/true);
     } else {
         std::snprintf(
             msg, sizeof(msg),
             acc::strings::Get(PreRollFor(cat)), name);
-        prism::Speak(msg, /*interrupt=*/true);
+        acc::speech::Speak(msg, /*interrupt=*/true);
     }
 
     acclog::Write("Interact", "%s -> [%s] target=%p handle=0x%08x cat=%s "
@@ -614,7 +614,7 @@ void DispatchInteractImpl(void* target, uint32_t handle, bool forceRadial) {
     std::snprintf(failMsg, sizeof(failMsg),
                   acc::strings::Get(acc::strings::Id::FmtInteractFailed),
                   name);
-    prism::Speak(failMsg, /*interrupt=*/true);
+    acc::speech::Speak(failMsg, /*interrupt=*/true);
     acclog::Write("Interact", "dispatch FAILED (handleUsable=%d dispatchHandle="
         "0x%08x) -> [%s]", handleUsable ? 1 : 0, dispatchHandle, failMsg);
 }
@@ -664,7 +664,7 @@ void AnnounceBarePersonalKey(int slot) {
                       acc::strings::Get(
                           acc::strings::Id::FmtActionBarColumnEmpty),
                       slot + 1);
-        prism::Speak(msg, /*interrupt=*/true);
+        acc::speech::Speak(msg, /*interrupt=*/true);
         acclog::Write("ActionBar", "bare key slot=%d variants=0 -> [%s]",
             slot, msg);
         return;
@@ -686,7 +686,7 @@ void AnnounceBarePersonalKey(int slot) {
                       acc::strings::Get(
                           acc::strings::Id::FmtActionBarColumnEmpty),
                       slot + 1);
-        prism::Speak(msg, /*interrupt=*/true);
+        acc::speech::Speak(msg, /*interrupt=*/true);
         acclog::Write("ActionBar", "bare key slot=%d variants=%d idx=%d "
             "label=empty -> [%s]",
             slot, nVar, idx, msg);
@@ -750,7 +750,7 @@ void AnnounceBareTargetKey(int row) {
                       acc::strings::Get(
                           acc::strings::Id::FmtActionBarColumnEmpty),
                       row + 1);
-        prism::Speak(msg, /*interrupt=*/true);
+        acc::speech::Speak(msg, /*interrupt=*/true);
         acclog::Write("ActionBar", "bare target row=%d count=%d label=[%s] -> [%s]",
             row, count, label, msg);
         return;

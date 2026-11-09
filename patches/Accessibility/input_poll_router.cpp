@@ -37,7 +37,7 @@
 #include "input_pipeline.h"
 #include "log.h"
 #include "strings.h"
-#include "prism.h"
+#include "speech.h"
 #include "unified_action_menu.h"
 #include "view_mode.h"
 
@@ -224,7 +224,7 @@ void PollHotkey() {
             // owns the foreground). See patch-20260530-112606.log — twelve
             // Shift+L presses in four seconds pushed panels.size 3 → 25.
             if (acc::engine::HasActiveLevelUpPanel()) {
-                prism::Speak(
+                acc::speech::Speak(
                     acc::strings::Get(acc::strings::Id::LevelUpAlreadyOpen),
                     /*interrupt=*/true);
                 acclog::Write("Interact",
@@ -234,7 +234,7 @@ void PollHotkey() {
                 // hasn't earned the next level (or is level-capped). Without
                 // this the forced level_up_mode=1 opened the wizard anyway,
                 // letting the player level up endlessly.
-                prism::Speak(
+                acc::speech::Speak(
                     acc::strings::Get(acc::strings::Id::LevelUpNotReady),
                     /*interrupt=*/true);
                 acclog::Write("Interact",
@@ -242,12 +242,12 @@ void PollHotkey() {
             } else {
                 const char* opener = acc::strings::Get(
                     acc::strings::Id::LevelUpOpen);
-                prism::Speak(opener, /*interrupt=*/true);
+                acc::speech::Speak(opener, /*interrupt=*/true);
                 bool ok = acc::engine_levelup::TriggerLevelUp();
                 acclog::Write("Interact", "Shift+L -> [%s] level-up dispatch ok=%d",
                     opener, ok ? 1 : 0);
                 if (!ok) {
-                    prism::Speak(
+                    acc::speech::Speak(
                         acc::strings::Get(acc::strings::Id::LevelUpFailed),
                         /*interrupt=*/true);
                 }
@@ -437,7 +437,7 @@ void PollHotkey() {
             } else {
                 std::snprintf(msg, sizeof(msg), "%s", snap.label);
             }
-            prism::Speak(msg, /*interrupt=*/true);
+            acc::speech::Speak(msg, /*interrupt=*/true);
             acclog::Write("Interact", "R native-default announce -> [%s] "
                 "action=0x%x target=0x%08x", msg, snap.action_id,
                 snap.target_id);

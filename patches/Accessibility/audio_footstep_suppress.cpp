@@ -12,7 +12,7 @@
 #include "engine_offsets.h"
 #include "engine_player.h"
 #include "log.h"
-#include "prism.h"
+#include "speech.h"
 #include "spatial_change_detector.h"
 #include "strings.h"
 #include "engine_game.h"
@@ -253,7 +253,7 @@ void RunStuckProbe(const Vector& pos) {
         freeDir[7] ? 1 : 0, blockBy[7],
         buf);
 
-    prism::Speak(buf, /*interrupt=*/true);
+    acc::speech::Speak(buf, /*interrupt=*/true);
 }
 
 // Fires when walking but oscillating: cumulative path length to net

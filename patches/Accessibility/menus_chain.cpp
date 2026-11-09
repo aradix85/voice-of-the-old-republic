@@ -33,7 +33,7 @@
 #include "menus_pazaakdeck.h"
 #include "menus_crafting.h"  // IsHiddenCraftingListBox — K2 crafting view filter
 #include "menus_store.h"
-#include "prism.h"
+#include "speech.h"
 #include "strings.h"
 #include "engine_offsets_select.h"
 
@@ -162,11 +162,11 @@ void SpeakLevelUpDoStepFirst() {
             snprintf(msg, sizeof(msg),
                      acc::strings::Get(acc::strings::Id::FmtLevelUpDoStepFirst),
                      name);
-            prism::Speak(msg, /*interrupt=*/false);
+            acc::speech::Speak(msg, /*interrupt=*/false);
             return;
         }
     }
-    prism::Speak(acc::strings::Get(acc::strings::Id::LevelUpStepLocked),
+    acc::speech::Speak(acc::strings::Get(acc::strings::Id::LevelUpStepLocked),
                  /*interrupt=*/false);
 }
 

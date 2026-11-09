@@ -6,7 +6,7 @@ Combat-message localization table — DE + EN tables.
 
 Engine anchors were extracted from each locale's dialog.tlk via `kdev combat-strings-extract` (the strref→field map lives in CombatStringsExtractCommand.cs); speech-side labels are hand-translated.
 
-Encoding: hex escapes in the *game's* codepage, because the anchors are memcmp'd/strstr'd directly against CExoString bytes. For de/en/fr/it/es that is Windows-1252 (\xFC=ü, \xF6=ö, \xE4=ä, \xDF=ß). kRu and kPl are the exceptions: Russian installs are Windows-1251 and Polish ones Windows-1250, so those escapes must not be read as 1252. acc::strings::CodepageFor(Lang) reports which, and prism::SetSpeechCodepage pins it for the speech path.
+Encoding: hex escapes in the *game's* codepage, because the anchors are memcmp'd/strstr'd directly against CExoString bytes. For de/en/fr/it/es that is Windows-1252 (\xFC=ü, \xF6=ö, \xE4=ä, \xDF=ß). kRu and kPl are the exceptions: Russian installs are Windows-1251 and Polish ones Windows-1250, so those escapes must not be read as 1252. acc::strings::CodepageFor(Lang) reports which, and acc::speech::SetSpeechCodepage pins it for the speech path.
 
 Field order in the initialiser MUST match the declaration order in combat_strings.h — we use positional init (no designated initialisers in this codebase, per patch-build script flag set).
 

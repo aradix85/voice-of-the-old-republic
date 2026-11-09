@@ -11,7 +11,7 @@
 #include "hotkeys.h"
 #include "log.h"
 #include "menus_nav.h"        // ClampedCursorStep — clamp-never-wrap convention
-#include "prism.h"
+#include "speech.h"
 #include "strings.h"
 
 namespace acc::menus::keybinds {
@@ -165,11 +165,11 @@ const ActionEntry* FindEntry(A action) {
 // ----- Speech ---------------------------------------------------------------
 void SpeakCategory(bool interrupt) {
     if (g_catCursor == kResetIndex) {
-        prism::Speak(T(S::KeybindResetAll), interrupt);
+        acc::speech::Speak(T(S::KeybindResetAll), interrupt);
         return;
     }
     if (g_catCursor < 0 || g_catCursor >= kCategoryCount) return;
-    prism::Speak(T(kCategories[g_catCursor].name), interrupt);
+    acc::speech::Speak(T(kCategories[g_catCursor].name), interrupt);
 }
 
 void SpeakActionRow(bool interrupt) {
@@ -179,7 +179,7 @@ void SpeakActionRow(bool interrupt) {
     char line[192];
     snprintf(line, sizeof(line), T(S::FmtKeyBinding),
              T(e.name), acc::hotkeys::Describe(e.action));
-    prism::Speak(line, interrupt);
+    acc::speech::Speak(line, interrupt);
 }
 
 // ----- Capture --------------------------------------------------------------
@@ -215,7 +215,7 @@ void ArmCapture() {
     g_capturing = true;
     char line[224];
     snprintf(line, sizeof(line), T(S::FmtKeybindCapturePrompt), T(e.name));
-    prism::Speak(line, /*interrupt=*/true);
+    acc::speech::Speak(line, /*interrupt=*/true);
     acclog::Write("Keybinds", "capture armed for %s",
                   acc::hotkeys::Name(e.action));
 }
@@ -238,7 +238,7 @@ void ApplyCapturedKey(int vk) {
         char line[224];
         snprintf(line, sizeof(line), T(S::FmtKeybindConflictMod),
                  ce ? T(ce->name) : "?");
-        prism::Speak(line, /*interrupt=*/true);
+        acc::speech::Speak(line, /*interrupt=*/true);
         acclog::Write("Keybinds", "conflict: vk=0x%02x req=%u clashes with %s",
                       vk, (unsigned)req, Name(clash));
         SnapshotKeys();  // re-baseline so the held keys don't re-fire; await next
@@ -251,7 +251,7 @@ void ApplyCapturedKey(int vk) {
     // both the hardcoded quick keys AND the player's configurable swkotor.ini
     // binds, so this warns on the full game keymap, not just the few hardcoded.
     if (req == 0 && acc::engine_keymap::IsKeyUsedByGame(vk)) {
-        prism::Speak(T(S::KeybindConflictEngine), /*interrupt=*/true);
+        acc::speech::Speak(T(S::KeybindConflictEngine), /*interrupt=*/true);
         acclog::Write("Keybinds", "conflict: bare vk=0x%02x bound by the game",
                       vk);
         SnapshotKeys();
@@ -269,7 +269,7 @@ void ApplyCapturedKey(int vk) {
     char line[192];
     snprintf(line, sizeof(line), T(S::FmtKeybindRebound),
              T(e.name), Describe(e.action));
-    prism::Speak(line, /*interrupt=*/true);
+    acc::speech::Speak(line, /*interrupt=*/true);
     acclog::Write("Keybinds", "rebound %s -> vk=0x%02x req=%u forbid=%u",
                   Name(e.action), vk, (unsigned)req, (unsigned)forbid);
 }
@@ -295,7 +295,7 @@ void Open() {
     // changes the player made in the engine's Key Mapping screen this session.
     acc::engine_keymap::ReloadGameConfig();
     acclog::Write("Keybinds", "configurator opened");
-    prism::Speak(T(S::KeybindsOpened), /*interrupt=*/true);
+    acc::speech::Speak(T(S::KeybindsOpened), /*interrupt=*/true);
     SpeakCategory(/*interrupt=*/false);
 }
 
@@ -332,7 +332,7 @@ bool HandleInput(int keyCode) {
         if (enter) {
             if (g_catCursor == kResetIndex) {
                 acc::hotkeys::ResetUserBindings();
-                prism::Speak(T(S::KeybindResetDone), /*interrupt=*/true);
+                acc::speech::Speak(T(S::KeybindResetDone), /*interrupt=*/true);
                 return true;
             }
             g_curCat    = g_catCursor;
@@ -382,7 +382,7 @@ void Tick() {
     bool escDown = (GetAsyncKeyState(VK_ESCAPE) & 0x8000) != 0;
     if (escDown && !g_snap[VK_ESCAPE]) {
         g_capturing = false;
-        prism::Speak(T(S::KeybindCaptureCancelled), /*interrupt=*/true);
+        acc::speech::Speak(T(S::KeybindCaptureCancelled), /*interrupt=*/true);
         SpeakActionRow(/*interrupt=*/false);  // re-anchor on the row
         acclog::Write("Keybinds", "capture cancelled");
         return;

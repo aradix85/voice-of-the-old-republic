@@ -10,7 +10,7 @@
 #include "log.h"
 #include "msg_router.h"
 #include "narrated_target.h" // the object the locked feedback refers to
-#include "prism.h"
+#include "speech.h"
 #include "strings.h"
 
 namespace acc::endar {
@@ -290,7 +290,7 @@ bool BlockCompanionAttempt(void* target) {
     if (!WouldBlockCompanionAttempt(target)) return false;
     const char* line =
         acc::strings::Get(acc::strings::Id::EndarTraskDoorOwnCharacter);
-    prism::Speak(line, /*interrupt=*/true);
+    acc::speech::Speak(line, /*interrupt=*/true);
     acclog::Write("Endar.Softlock",
         "%s attempted with Trask as leader -> not dispatched, [%s]",
         kTraskDoor, line);
@@ -314,7 +314,7 @@ void Tick() {
     // Flush a queued hint once its delay elapses (follows the locked bark).
     if (g_hasPendingHint && GetTickCount() >= g_pendingHintAtMs) {
         const char* line = acc::strings::Get(g_pendingHint);
-        prism::Speak(line, /*interrupt=*/false);
+        acc::speech::Speak(line, /*interrupt=*/false);
         acclog::Write("Endar.Softlock", "speak hint -> [%s]", line);
         g_hasPendingHint = false;
     }

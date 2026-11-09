@@ -1,4 +1,4 @@
-# menus_editbox.cpp (652 lines)
+# menus_editbox.cpp (651 lines)
 
 Source: `patches/Accessibility/menus_editbox.cpp`
 
@@ -21,11 +21,11 @@ Single armed editbox at a time — vanilla KOTOR has exactly one editbox in the 
 - L232 `bool ReadEditbox(void* editbox, char* outText, size_t outCap, uint32_t& outLen, uint32_t& outRawLen, short& outA, short& outB)`: Read (text, length, shortA, shortB, rawLen) from the editbox into `out`.
 - L255 `void SnapshotInto(ArmedState& s)`
 - L264 `void SpeakFullText(const char* text, uint32_t len)`
-- L276 `void SpeakSingleChar(char c)`: Speak a single character.
-- L285 `void PollAndAnnounceDiff(ArmedState& s)`
-- L354 `void PollModalKeys(ArmedState& s)`
-- L435 `PanelMatch FindMatchingPanel()`
-- L465 `void DisarmIfArmed(const char* reason)`
-- L478 `bool TryHandleInput(int /*n*/, void* /*thisPtr*/, void* activePanel, int param_1, int param_2, int& outRv)`
-- L546 `void TickEditboxMonitors()`
-- L640 `const char* GetTitleOverride(void* panel)`
+- L275 `void SpeakSingleChar(char c)`: Speak a single character as a one-char string; NVDA reads single chars per its "characters" verbosity setting.
+- L284 `void PollAndAnnounceDiff(ArmedState& s)`
+- L353 `void PollModalKeys(ArmedState& s)`
+- L434 `PanelMatch FindMatchingPanel()`
+- L464 `void DisarmIfArmed(const char* reason)`
+- L477 `bool TryHandleInput(int /*n*/, void* /*thisPtr*/, void* activePanel, int param_1, int param_2, int& outRv)`
+- L545 `void TickEditboxMonitors()`
+- L639 `const char* GetTitleOverride(void* panel)`

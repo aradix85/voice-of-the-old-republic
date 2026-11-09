@@ -47,7 +47,7 @@
 #include "engine_area.h"      // GetCurrentArea + GetClientArea chain,
                               //   AreaObjectIterator + object accessors
 #include "log.h"
-#include "prism.h"
+#include "speech.h"
 #include "strings.h"          // Get(TurretGameStarted/Controls/Ended)
 #include "engine_game.h"
 
@@ -163,13 +163,13 @@ void AnnounceEntry() {
     char buf[256];
     std::snprintf(buf, sizeof(buf), "%s %s",
                   opener ? opener : "", controls ? controls : "");
-    prism::Speak(buf, /*interrupt=*/true);
+    acc::speech::Speak(buf, /*interrupt=*/true);
     acclog::Write("Turret", "spoke entry: [%s]", buf);
 }
 
 void AnnounceExit() {
     const char* msg = acc::strings::Get(acc::strings::Id::TurretGameEnded);
-    if (msg && *msg) prism::Speak(msg, /*interrupt=*/true);
+    if (msg && *msg) acc::speech::Speak(msg, /*interrupt=*/true);
     acclog::Write("Turret", "spoke exit: [%s]", msg ? msg : "");
 }
 

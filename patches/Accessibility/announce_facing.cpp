@@ -13,7 +13,7 @@
 #include "log.h"
 #include "strfmt.h"
 #include "strings.h"
-#include "prism.h"
+#include "speech.h"
 #include "transitions.h"
 #include "room_topology.h"
 
@@ -101,7 +101,7 @@ void AnnounceWorldFacing() {
     // The area on its own line, so the heading does not run into the area's
     // own direction words.
     if (haveCluster) facing += "\n" + clusterBuf;
-    prism::Speak(facing.c_str(), /*interrupt=*/true);
+    acc::speech::Speak(facing.c_str(), /*interrupt=*/true);
     acclog::Write("AnnounceFacing", "world -> [%s] (camYaw=%.1f, deg=%d, sector=\"%s\")",
                   facing.c_str(), engineYaw, degrees, sector);
 }
@@ -193,7 +193,7 @@ void AnnounceMapFacing() {
         line += "\n";
         line += roomBuf;
     }
-    prism::Speak(line.c_str(), /*interrupt=*/true);
+    acc::speech::Speak(line.c_str(), /*interrupt=*/true);
     acclog::Write("AnnounceFacing", "map -> [%s] (camYaw=%.1f, mapYawCCW=%.1f, deg=%d)",
                   line.c_str(), camYawDeg, mapYawCCW, degrees);
 }

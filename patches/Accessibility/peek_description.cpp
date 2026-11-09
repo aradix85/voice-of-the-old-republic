@@ -15,7 +15,7 @@
 #include "menus_internal.h"   // panel-member control resolvers
 #include "menus_listbox.h"    // IsEquipPickerArmed
 #include "pad_input.h"        // PeekModifierHeld — Y is the pad's Shift
-#include "prism.h"
+#include "speech.h"
 #include "strings.h"          // WorkbenchSlotPeekEmpty
 
 #include <cctype>
@@ -108,7 +108,7 @@ bool SpeakItemBlocks(void* item, bool down) {
 
     char spoken[4096];
     TrimCopy(spoken, sizeof(spoken), g_blockPtrs[g_blockIdx]);
-    prism::Speak(spoken, /*interrupt=*/true);
+    acc::speech::Speak(spoken, /*interrupt=*/true);
     acclog::Write("Peek.Blocks",
                   "item=%p block %d/%d (was %d) text=\"%s\"",
                   item, g_blockIdx, g_blockCount, prev, spoken);
@@ -354,7 +354,7 @@ bool HandleWorkbenchSlotTooltip(void* panel, void* control, bool down) {
     void* installed =
         acc::engine::GetWorkbenchSlotInstalledItem(panel, control);
     if (!installed) {
-        prism::Speak(
+        acc::speech::Speak(
             acc::strings::Get(acc::strings::Id::WorkbenchSlotPeekEmpty),
             /*interrupt=*/true);
         acclog::Write("Peek.Workbench",
@@ -375,7 +375,7 @@ bool HandleWorkbenchSlotTooltip(void* panel, void* control, bool down) {
     if (acc::engine::ExtractTextOrStrRef(installed, kItemLocNameOffset,
                                          kItemLocNameOffset + 4, text,
                                          sizeof(text)) && text[0]) {
-        prism::Speak(text, /*interrupt=*/true);
+        acc::speech::Speak(text, /*interrupt=*/true);
         acclog::Write("Peek.Workbench",
                       "panel=%p control=%p item=%p name-fallback=\"%s\"",
                       panel, control, installed, text);
@@ -492,9 +492,9 @@ bool HandleItemTooltip(acc::engine::PanelKind kind,
                          acc::strings::Get(
                              acc::strings::Id::WorkbenchPickerInstalled),
                          wb);
-                prism::Speak(marked, /*interrupt=*/true);
+                acc::speech::Speak(marked, /*interrupt=*/true);
             } else {
-                prism::Speak(wb, /*interrupt=*/true);
+                acc::speech::Speak(wb, /*interrupt=*/true);
             }
             acclog::Write("Peek.Workbench",
                           "panel=%s saber picker sel=%d/%d row=%p installed=%d "
@@ -649,7 +649,7 @@ bool SpeakItemRowDescription(void* row) {
                       row, item);
         return false;
     }
-    prism::Speak(text, /*interrupt=*/true);
+    acc::speech::Speak(text, /*interrupt=*/true);
     acclog::Write("Peek.Item", "row=%p item=%p text=\"%s\"", row, item, text);
     return true;
 }
@@ -770,7 +770,7 @@ bool HandleShiftArrow(int param_1, int param_2, void* activePanel,
             char tip[8192];
             if (acc::engine::ReadControlTooltip(focusedControl, tip,
                                                 sizeof(tip))) {
-                prism::Speak(tip, /*interrupt=*/true);
+                acc::speech::Speak(tip, /*interrupt=*/true);
                 acclog::Write("Peek.Control",
                               "panel=%s control=%p tooltip=\"%s\"",
                               acc::engine::PanelKindName(kind),
@@ -830,7 +830,7 @@ bool HandleShiftArrow(int param_1, int param_2, void* activePanel,
     if (src) {
         // interrupt=true: each press is a discrete read; fast double-
         // press should land on the latest block, not queue both.
-        prism::Speak(text, /*interrupt=*/true);
+        acc::speech::Speak(text, /*interrupt=*/true);
         acclog::Write("Peek", "panel=%s block %d/%d (was %d) src=%s text=\"%s\"",
                       acc::engine::PanelKindName(kind),
                       g_blockIdx, rowCount, prev, src, text);

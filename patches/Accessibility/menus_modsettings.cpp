@@ -23,7 +23,7 @@
 #include "menus_keybinds.h"  // nested keybind configurator submenu
 #include "menus_nav.h"       // ClampedCursorStep — shared Up/Down/Home/End ladder
 #include "mod_settings_store.h"  // persist toggles across launches
-#include "prism.h"
+#include "speech.h"
 #include "strings.h"
 
 #pragma comment(lib, "shell32.lib")  // ShellExecuteA
@@ -370,7 +370,7 @@ void SpeakFocusedOption(bool interrupt = true) {
     } else {
         snprintf(line, sizeof(line), "%s", name);
     }
-    prism::Speak(line, interrupt);
+    acc::speech::Speak(line, interrupt);
     acclog::Write("ModSettings", "speak focused idx=%d \"%s\"", s_focused, line);
 }
 
@@ -381,7 +381,7 @@ void SpeakFocusedGlossaryEntry() {
     if (s_glossaryFocused < 0 || s_glossaryFocused >= k_glossaryCount) return;
     const char* name =
         acc::strings::Get(k_glossary[s_glossaryFocused].label);
-    prism::Speak(name, /*interrupt=*/true);
+    acc::speech::Speak(name, /*interrupt=*/true);
     acclog::Write("ModSettings", "glossary speak focused idx=%d \"%s\"",
                   s_glossaryFocused, name);
 }
@@ -491,7 +491,7 @@ void OpenSubMenu(void* parentPanel) {
     // Two-part open speech: "Mod settings opened" then the first
     // option. The title interrupts the chain-step tail; the option
     // queues right after.
-    prism::Speak(
+    acc::speech::Speak(
         acc::strings::Get(acc::strings::Id::ModSettingsOpened),
         /*interrupt=*/true);
     SpeakFocusedOption(/*interrupt=*/false);
@@ -510,7 +510,7 @@ void Close() {
     void* parent = s_parentPanel;
     s_parentPanel = nullptr;
     s_fgAtOpen    = nullptr;
-    prism::Speak(
+    acc::speech::Speak(
         acc::strings::Get(acc::strings::Id::ModSettingsClosed),
         /*interrupt=*/true);
     // Rebind the chain on the parent panel so the next arrow press
@@ -554,11 +554,11 @@ void OpenGlossarySubMenu() {
     s_glossaryFocused = 0;
     CancelPendingGlossaryCue();
     acclog::Write("ModSettings", "glossary opened");
-    prism::Speak(
+    acc::speech::Speak(
         acc::strings::Get(acc::strings::Id::ModSettingsAudioGlossaryOpened),
         /*interrupt=*/true);
     if (k_glossaryCount > 0) {
-        prism::Speak(
+        acc::speech::Speak(
             acc::strings::Get(k_glossary[s_glossaryFocused].label),
             /*interrupt=*/false);
     }
@@ -616,7 +616,7 @@ void ActivateLinkRow(Option opt) {
         url = BuildReadmeUrl(readmeUrl, sizeof(readmeUrl));
     }
     const bool ok = OpenExternalUrl(url);
-    prism::Speak(
+    acc::speech::Speak(
         acc::strings::Get(ok ? acc::strings::Id::ModSettingLinkOpened
                              : acc::strings::Id::ModSettingLinkFailed),
         /*interrupt=*/true);
@@ -720,7 +720,7 @@ bool HandleInputList(int keyCode) {
                 : (wantDisable
                     ? acc::strings::Get(acc::strings::Id::ModSettingSkipIntrosOnNextLaunch)
                     : acc::strings::Get(acc::strings::Id::ModSettingPlayIntrosOnNextLaunch));
-            prism::Speak(followup, /*interrupt=*/false);
+            acc::speech::Speak(followup, /*interrupt=*/false);
             return true;
         }
         const int idx = static_cast<int>(opt);

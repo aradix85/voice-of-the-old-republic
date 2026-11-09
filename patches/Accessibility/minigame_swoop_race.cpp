@@ -32,7 +32,7 @@
 #include "log.h"
 #include "audio_bus.h"        // PlayCue — non-positional "you can shift now" cue
 #include "audio_cues.h"       // NavCue + GetNavCueResref (shift-ready resref)
-#include "prism.h"
+#include "speech.h"
 #include "strings.h"          // Get(SwoopRaceStarted/Controls/Ended) +
                               //     FmtSwoopRaceGear
 #include "minigame_swoop_audio.h"  // TickSpatialAudio + ResetSpatialAudio
@@ -760,7 +760,7 @@ void AnnounceGear(int gear, const char* why) {
     const char* fmt = acc::strings::Get(acc::strings::Id::FmtSwoopRaceGear);
     if (fmt && *fmt) {
         std::snprintf(buf, sizeof(buf), fmt, gear);
-        prism::Speak(buf, /*interrupt=*/true);
+        acc::speech::Speak(buf, /*interrupt=*/true);
     }
     acclog::Write("SwoopRace", "gear -> %d (%s)", gear, why);
 }
@@ -944,7 +944,7 @@ void TickStuckHint(void* miniGame) {
             break;
     }
     const char* msg = acc::binding_hints::Text(id);
-    if (msg && *msg) prism::Speak(msg, /*interrupt=*/true);
+    if (msg && *msg) acc::speech::Speak(msg, /*interrupt=*/true);
     acclog::Write("SwoopRace", "stuck hint: no progress for %llums at y=%.1f "
                   "(gear=%d speed=%.1f tunnelX=%.1f) [%s]",
                   now - g_state.progress_mark_ms, cam.y, gear, speed,
@@ -1068,7 +1068,7 @@ void AnnounceEntry() {
     std::snprintf(buf, sizeof(buf), "%s %s",
                   opener   ? opener   : "",
                   controls ? controls : "");
-    prism::Speak(buf, /*interrupt=*/true);
+    acc::speech::Speak(buf, /*interrupt=*/true);
     acclog::Write("SwoopRace", "spoke entry: [%s]", buf);
 }
 
@@ -1100,7 +1100,7 @@ void SpeakRaceEndMessage() {
     if (!msg) msg = acc::strings::Get(acc::strings::Id::SwoopRaceEnded);
     if (msg && *msg) {
         if (g_state.wrecked || !g_state.have_race_time) {
-            prism::Speak(msg, /*interrupt=*/true);   // a wreck: say it now
+            acc::speech::Speak(msg, /*interrupt=*/true);   // a wreck: say it now
         } else {
             // The time waits out the finish sound (see kRaceEndSpeakDelayMs);
             // FlushRaceEndSpeech speaks it from the tick, or at once on exit.
@@ -1122,7 +1122,7 @@ void FlushRaceEndSpeech(bool force) {
     if (!g_state.race_end_pending) return;
     if (!force && GetTickCount64() < g_state.race_end_due_ms) return;
     g_state.race_end_pending = false;
-    prism::Speak(g_state.race_end_msg, /*interrupt=*/true);
+    acc::speech::Speak(g_state.race_end_msg, /*interrupt=*/true);
     acclog::Write("SwoopRace", "spoke race time%s: [%s]",
                   force ? " (flushed on exit)" : "", g_state.race_end_msg);
 }

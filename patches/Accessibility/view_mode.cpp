@@ -25,7 +25,7 @@
 #include "narrated_target.h"
 #include "spatial_change_detector.h"
 #include "strings.h"
-#include "prism.h"
+#include "speech.h"
 #include "transitions.h"
 #include "room_topology.h"
 
@@ -134,7 +134,7 @@ void EnterViewMode() {
     g_state.region_last_spoken_text.clear();
 
     g_state.active = true;
-    prism::Speak(acc::strings::Get(acc::strings::Id::ViewModeOn),
+    acc::speech::Speak(acc::strings::Get(acc::strings::Id::ViewModeOn),
                 /*interrupt=*/true);
     acclog::Write("ViewMode", "ENTER cursor=(%.2f,%.2f,%.2f) yaw=%.1f",
         pos.x, pos.y, pos.z, yaw);
@@ -144,7 +144,7 @@ void ExitViewMode() {
     bool restored = acc::engine::SetPlayerInputEnabled(true);
     g_state.active = false;
     // Engine reclaims the listener from the camera next frame; no write here.
-    prism::Speak(acc::strings::Get(acc::strings::Id::ViewModeOff),
+    acc::speech::Speak(acc::strings::Get(acc::strings::Id::ViewModeOff),
                 /*interrupt=*/true);
     acclog::Write("ViewMode", "EXIT restored=%d", restored ? 1 : 0);
 }
@@ -467,7 +467,7 @@ void NarrateNearestObject(void* area, const Vector& cursor) {
                       acc::strings::Get(acc::filter::CategoryNameId(bestCat)));
     }
 
-    prism::Speak(name, /*interrupt=*/true);
+    acc::speech::Speak(name, /*interrupt=*/true);
     g_state.hover_last_spoken = bestHandle;
 
     // Unified activation slot — Enter / Shift+Enter / Shift+- / Ctrl+- /
@@ -555,7 +555,7 @@ void ProcessPendingDispatch() {
         if (!acc::narrated_target::TryGet(slot)) {
             const char* msg = acc::strings::Get(
                 acc::strings::Id::GuidanceNoFocus);
-            prism::Speak(msg, /*interrupt=*/true);
+            acc::speech::Speak(msg, /*interrupt=*/true);
             acclog::Write("ViewMode", "%s deferred -> [%s] (hover stale at dispatch) "
                 "elapsed=%lums",
                 keyTag, msg, static_cast<unsigned long>(elapsed));
@@ -573,7 +573,7 @@ void ProcessPendingDispatch() {
     // WalkTo's queue path stays asleep after view mode's sustained
     // SetEnabled(false); ForceMoveToPoint dispatches directly.
     const char* preroll = acc::strings::Get(acc::strings::Id::GuidingToPoint);
-    prism::Speak(preroll, /*interrupt=*/true);
+    acc::speech::Speak(preroll, /*interrupt=*/true);
 
     bool ok = acc::guidance::ForceWalkTo(cursor_pos);
     acclog::Write("ViewMode", "%s deferred -> ForceWalkTo cursor=(%.2f,%.2f,%.2f) ok=%d "

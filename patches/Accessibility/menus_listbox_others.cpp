@@ -8,7 +8,7 @@
 #include "engine_reads.h"
 #include "log.h"
 #include "menus_extract.h"
-#include "prism.h"
+#include "speech.h"
 #include "engine_offsets_select.h"
 
 namespace acc::menus::listbox {
@@ -117,7 +117,7 @@ void ScriptSelectAnnounce(void* /*lb*/, const ListBoxNavResult& r) {
     snprintf(msg, sizeof(msg),
              acc::strings::Get(acc::strings::Id::FmtContainerItemAt),
              rowText, r.newSel + 1, r.rowCount);
-    prism::Speak(msg, /*interrupt=*/false);
+    acc::speech::Speak(msg, /*interrupt=*/false);
 }
 
 // Per-row enrichment: speak the behaviour's description. The engine only
@@ -141,7 +141,7 @@ void ScriptSelectEnrichRow(void* panel, const ListBoxNavResult& r) {
             id * kScriptSelectOptionStride + kScriptSelectOptionDescOffset);
         char desc[1024];
         if (LookupTlk(descStrref, desc, sizeof(desc)) && desc[0] != '\0') {
-            prism::Speak(desc, /*interrupt=*/false);
+            acc::speech::Speak(desc, /*interrupt=*/false);
             acclog::Write("ScriptSelect",
                           "desc id=%d strref=%u (first 80: \"%.80s\")",
                           id, descStrref, desc);

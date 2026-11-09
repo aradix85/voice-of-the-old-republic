@@ -19,7 +19,7 @@
 #include "minigame_turret.h"
 #include "narrated_target.h"
 #include "passive_narrate.h"
-#include "prism.h"
+#include "speech.h"
 #include "spatial_change_detector.h"  // GetCachedWalls
 #include "strings.h"
 
@@ -144,7 +144,7 @@ bool HandlePress(int direction) {
 
     if (cands.empty()) {
         acc::narrated_target::Clear();
-        prism::Speak(acc::strings::Get(acc::strings::Id::CycleNoTarget),
+        acc::speech::Speak(acc::strings::Get(acc::strings::Id::CycleNoTarget),
                      /*interrupt=*/true);
         acclog::Write("QERing", "dir=%d: no candidates (combat=%d)", direction,
                       combat ? 1 : 0);

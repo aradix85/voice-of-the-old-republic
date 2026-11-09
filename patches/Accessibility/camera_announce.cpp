@@ -16,7 +16,7 @@
                       // regardless of focus.
 #include "log.h"
 #include "strings.h"
-#include "prism.h"
+#include "speech.h"
 
 namespace acc::camera_announce {
 
@@ -374,7 +374,7 @@ void Tick() {
 
     auto id = acc::engine::SectorString(sector);
     const char* phrase = acc::strings::Get(id);
-    prism::Speak(phrase, /*interrupt=*/true);
+    acc::speech::Speak(phrase, /*interrupt=*/true);
     acclog::Write("CameraAnnounce", "sector %d -> %d (%s); camCompass=%.1f "
         "(rot=%.0f°/s %s fg=%d)",
         s_lastSpokenSector, sector, phrase, camCompass, rotDps, reason,
@@ -414,7 +414,7 @@ bool AnnounceCurrentFacing(unsigned int dedupMs) {
     // keypress that opened the door trips NVDA's typed-char cancel (which
     // ignores priority), so route around it the same way the A/D-held turn
     // announce does.
-    prism::Speak(phrase, /*interrupt=*/true);
+    acc::speech::Speak(phrase, /*interrupt=*/true);
     acclog::Write("CameraAnnounce",
         "facing readout: sector %d (%s) camCompass=%.1f", sector, phrase,
         camCompass);

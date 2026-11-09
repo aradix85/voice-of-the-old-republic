@@ -182,7 +182,7 @@ bool IsPhysicalF1();
 //
 // xinput1_4 / 1_3 / 9_1_0 are resolved at run time via LoadLibrary, never
 // linked: a delay-load import that fails to resolve takes the process down
-// with 0xC06D007F (see project_prism_backend_delayload_crash).
+// with 0xC06D007F.
 //
 // Each trigger does two jobs — alone it is a button, held it is a modifier for
 // the shoulder beside it and for the other trigger:

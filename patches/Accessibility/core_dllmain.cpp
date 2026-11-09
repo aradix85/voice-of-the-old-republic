@@ -1,7 +1,7 @@
 // DLL entry + lazy-init plumbing.
 //
 // DllMain runs under the loader lock — no LoadLibrary, no COM init, no
-// file I/O here. Prism is initialised lazily on the first hook fire;
+// file I/O here. Speech is initialised lazily on the first hook fire;
 // that same once-only init detects the user's installed language from
 // dialog.tlk and selects the matching strings + combat-anchor tables
 // (and speech codepage) before the first utterance — on both games.
@@ -20,7 +20,7 @@
 #include "engine_keymap.h"
 #include "log.h"
 #include "mod_version.h"
-#include "prism.h"
+#include "speech.h"
 #include "save_crash_guard.h"
 #include "strings.h"
 #include "engine_rebase.h"
@@ -167,7 +167,7 @@ acc::strings::Lang DetectLanguageFromTlk() {
 
 // First hook to fire runs it; subsequent calls are no-ops. Speaks a
 // "loaded, version X" greeting so the user knows the patch is active.
-void EnsurePrismInitialized() {
+void EnsureSpeechInitialized() {
     static bool done = false;
     if (done) return;
     done = true;
@@ -179,15 +179,15 @@ void EnsurePrismInitialized() {
     // codepage must be pinned from the detected language before the greeting
     // below, so the very first utterance is already widened correctly. Russian
     // is CP1251 and Polish CP1250 — neither may go through CP_ACP; see
-    // prism::SetSpeechCodepage. File I/O is safe at every caller (all speech
-    // surfaces fire well past loader lock, same argument as prism::Init's
+    // acc::speech::SetSpeechCodepage. File I/O is safe at every caller (all speech
+    // surfaces fire well past loader lock, same argument as acc::speech::Init's
     // LoadLibrary).
     {
         const acc::strings::Lang lang = DetectLanguageFromTlk();
         acc::strings::SetLanguage(lang);
-        prism::SetSpeechCodepage(acc::strings::CodepageFor(lang));
+        acc::speech::SetSpeechCodepage(acc::strings::CodepageFor(lang));
     }
-    if (prism::Init()) {
+    if (acc::speech::Init()) {
         // Localised: this is the first thing every player hears on every
         // launch, so it must follow the configured language like all other
         // spoken strings. It used to be a hardcoded English literal.
@@ -195,7 +195,7 @@ void EnsurePrismInitialized() {
         snprintf(greeting, sizeof(greeting),
                  acc::strings::Get(acc::strings::Id::FmtModLoadedVersion),
                  acc::kModVersion);
-        prism::Speak(greeting, /*interrupt=*/true);
+        acc::speech::Speak(greeting, /*interrupt=*/true);
     }
 }
 
@@ -243,8 +243,8 @@ void EnsureSessionBringup() {
     // see the note at its install site.
     acc::save_guard::InstallSaveScreenshotGuard();
     // Language detection + codepage pinning happen inside
-    // EnsurePrismInitialized, before its greeting.
-    EnsurePrismInitialized();
+    // EnsureSpeechInitialized, before its greeting.
+    EnsureSpeechInitialized();
     // Baseline snapshot of the game ini + install-root DLLs so every support
     // bundle from now on carries the user's full config without needing a
     // follow-up "what's in your ini?" round-trip. Picks swkotor2.ini on
@@ -260,12 +260,6 @@ void EnsureSessionBringup() {
     // it is asked first, so this call is about doing it once, up front, with
     // the table dumped to the log where support can read it.
     acc::engine_keymap::Rebuild();
-    // Apartment probe — see diag_focus.h. prism.dll's SAPI backend
-    // calls CoInitializeEx internally; if it picks MTA on the engine's
-    // main thread (where the engine's own message loop + DirectInput
-    // dispatch live) that conflicts with anything else on the thread
-    // that wants STA, and shows up as "fine until first focus loss".
-    acc::focus_guard::LogComApartment("post_prism_init");
     // Spin up the focus-probe polling thread now (rather than at
     // MainMenu first-sight) so we catch focus events during intro-movie
     // playback + the SWMovieWindow → Render Window handoff that
@@ -281,7 +275,7 @@ void EnsureSessionBringup() {
 }
 
 // CSWRules::CSWRules construction detour (hooks.toml @ 0x00552c9a).
-// First fire is the "patch alive" signal and Prism-init trigger (which
+// First fire is the "patch alive" signal and speech-init trigger (which
 // also detects the user's installed language). File I/O is safe here
 // (we're well past loader lock by the time CSWRules runs).
 extern "C" void __cdecl OnRulesInit(void* /*rulesThis*/) {
@@ -349,7 +343,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD reason, LPVOID) {
             // unpacked image makes the site verifiable here.
             acc::engine::InstallKeyboardStreamResync();
         }
-        // Prism init deferred — loader lock.
+        // Speech init deferred — loader lock.
     }
     return TRUE;
 }

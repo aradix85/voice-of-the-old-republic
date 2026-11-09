@@ -15,7 +15,7 @@
 #include "log.h"
 #include "menus_extract.h"
 #include "strings.h"
-#include "prism.h"
+#include "speech.h"
 
 using acc::menus::detail::DriveListBoxSelection;
 using acc::menus::detail::ListBoxNavOp;
@@ -316,7 +316,7 @@ void AnnounceDetail(void* panel, const char* prefix, bool withStats) {
                    kAbilitiesTotalValueLabelOffset, msg, sizeof(msg));
     }
 
-    if (msg[0]) prism::Speak(msg, /*interrupt=*/true);
+    if (msg[0]) acc::speech::Speak(msg, /*interrupt=*/true);
     acclog::Write("Menus.Abilities", "announce msg=\"%s\"", msg);
 }
 
@@ -328,7 +328,7 @@ void SpeakTabName(void* panel, int tab) {
     else if (tab == 2) btnOff = kAbilitiesFeatsButtonOffset;
     char tabName[128] = {0};
     if (ReadLabel(panel, btnOff, tabName, sizeof(tabName))) {
-        prism::Speak(tabName, /*interrupt=*/true);
+        acc::speech::Speak(tabName, /*interrupt=*/true);
     }
     acclog::Write("Menus.Abilities", "tab-level tab=%d name=\"%s\"", tab, tabName);
 }

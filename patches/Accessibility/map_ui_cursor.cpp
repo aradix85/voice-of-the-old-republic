@@ -30,7 +30,7 @@
 #include "map_shipped_hints.h"        // shipped curated hints in the hover scan
 #include "map_user_markers.h"         // IsUserMarkerPin — fog-exempt marker id
 #include "strings.h"
-#include "prism.h"
+#include "speech.h"
 #include "transitions.h"
 #include "room_topology.h"            // nav-graph region lookup — same source
 #include "engine_offsets_select.h"
@@ -772,7 +772,7 @@ void Tick() {
                 if (acc::engine::GetAreaDisplayName(area, nameBuf,
                                                    sizeof(nameBuf)) &&
                     nameBuf[0] != '\0') {
-                    prism::Speak(nameBuf, /*interrupt=*/false);
+                    acc::speech::Speak(nameBuf, /*interrupt=*/false);
                     acclog::Write("MapCursor", "area name=\"%s\"", nameBuf);
                 }
             }
@@ -1063,7 +1063,7 @@ void Tick() {
                         combined += ". ";
                         combined += shapeTextLocal;
                     }
-                    prism::Speak(combined.c_str(), /*interrupt=*/true);
+                    acc::speech::Speak(combined.c_str(), /*interrupt=*/true);
                     acclog::Write("MapCursor",
                                   "speak %s=\"%s\" tag=\"%s\" "
                                   "shape=\"%s\" haveText=%d "
@@ -1270,7 +1270,7 @@ void Tick() {
                         speakStr += ". ";
                         speakStr += shapeTextLocal;
                     }
-                    prism::Speak(speakStr.c_str(), /*interrupt=*/true);
+                    acc::speech::Speak(speakStr.c_str(), /*interrupt=*/true);
                     acclog::Write("MapCursor",
                                   "speak ambient kind=%s key=%d "
                                   "text=\"%s\" shape=\"%s\" "

@@ -23,15 +23,15 @@
 #include "narrated_target.h" // clear on area transition
 #include "same_name_suffix.h"   // Reset() on area transition
 #include "strings.h"
-#include "prism.h"
+#include "speech.h"
 #include "room_topology.h"      // single source of truth for perceptual-
 #include "engine_game.h"
                                 // region labels (nav-graph decomposition)
 
 // Forward decl from core_dllmain.cpp. The OnSetMoveToModuleString detour
-// below calls this so Prism is loaded if a transition fires before any
+// below calls this so speech is loaded if a transition fires before any
 // menu / focus event has run the same call.
-void EnsurePrismInitialized();
+void EnsureSpeechInitialized();
 
 namespace acc::transitions {
 
@@ -350,7 +350,7 @@ void SpeakArea(void* area) {
     std::snprintf(speech, sizeof(speech),
                   acc::strings::Get(acc::strings::Id::FmtTransitionArea),
                   nameBuf);
-    prism::Speak(speech, /*interrupt=*/false);
+    acc::speech::Speak(speech, /*interrupt=*/false);
     acclog::Write("Transition", "area -> '%s' (areaPtr=%p)", nameBuf, area);
 }
 
@@ -1129,7 +1129,7 @@ void TickProximityLandmarks(const Vector& playerPos) {
                       "gated, state advanced silently",
                       g_landmarks[nearest].name, nearest, std::sqrt(bestD2));
     } else {
-        prism::Speak(g_landmarks[nearest].name, /*interrupt=*/true);
+        acc::speech::Speak(g_landmarks[nearest].name, /*interrupt=*/true);
         acclog::Write("Transition",
                       "landmark proximity -> '%s' (idx=%d dist=%.2fm)",
                       g_landmarks[nearest].name, nearest, std::sqrt(bestD2));
@@ -1294,11 +1294,8 @@ void Tick() {
     // Stay completely silent + hands-off while an engine movie owns the
     // foreground (intro logos, stunt cutscene movies like 03.bik at the
     // Leviathan capture). KOTOR's movie player aborts its play queue if
-    // windows/focus churn during playback — a SAPI speech-worker window
-    // spun up by an announce here can trigger that abort, which surfaces
-    // as the game closing instead of starting the next queued movie
-    // (patch-20260601-210737.log: 03.bik played, the process exited
-    // before movie #2). We touch NO state and don't advance g_prev_area,
+    // windows/focus churn during playback, which surfaces as the game
+    // closing instead of starting the next queued movie. We touch NO state and don't advance g_prev_area,
     // so the area-change branch below re-fires cleanly on the first tick
     // after the movie ends — the "Bereich: …" announce is deferred, not
     // dropped. The main loop is usually frozen during playback anyway;
@@ -1685,7 +1682,7 @@ bool IsWorldSpeechGated() {
 }
 
 void SpeakRegionLabel(const char* text) {
-    prism::Speak(text, /*interrupt=*/true);
+    acc::speech::Speak(text, /*interrupt=*/true);
 }
 
 bool IsModuleLoadPending() {
@@ -1765,8 +1762,7 @@ static void AnnouncePreLoadDest(const char* dest, const char* shape) {
 
     // If a movie is already on screen when this fires, suppress the
     // "Lade: …" speech for the same reason Tick() goes silent during
-    // playback — don't spin up a SAPI worker window that can abort the
-    // engine's movie queue. The latch above is already set, so per-tick
+    // playback. The latch above is already set, so per-tick
     // probes stay gated regardless.
     if (acc::bringup_announce::IsMoviePlaying()) {
         acclog::Write("Transition",
@@ -1779,7 +1775,7 @@ static void AnnouncePreLoadDest(const char* dest, const char* shape) {
     std::snprintf(speech, sizeof(speech),
                   acc::strings::Get(acc::strings::Id::FmtTransitionLoading),
                   dest);
-    prism::Speak(speech, /*interrupt=*/false);
+    acc::speech::Speak(speech, /*interrupt=*/false);
     acclog::Write("Transition", "pre-load -> '%s' [%s]", dest, shape);
 }
 
@@ -1860,7 +1856,7 @@ extern "C" void __cdecl OnSetMoveToModuleString(void* /*serverApp*/,
     // Gate cleared for KOTOR 2 in Batch 3 — but only the KOTOR 1 hook routes
     // here (with the LEA'd slot address); KOTOR 2 arrives through
     // OnSetMoveToModuleStringK2 below with the CExoString* value directly.
-    EnsurePrismInitialized();
+    EnsureSpeechInitialized();
 
     void* exoStringPtr = nullptr;
     __try {

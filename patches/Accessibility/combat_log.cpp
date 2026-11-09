@@ -27,7 +27,7 @@
 #include "menus_extract.h"
 #include "same_name_suffix.h"
 #include "strings.h"
-#include "prism.h"
+#include "speech.h"
 #include "transitions.h"
 #include "unified_action_menu.h"
 
@@ -737,7 +737,7 @@ bool MaybeSpeakStatusUrgent(const char* victim, const char* status) {
     const auto& L = acc::combat::loc::Get();
     char line[160];
     snprintf(line, sizeof(line), "%s%s%s", victim, L.status_ist_marker, status);
-    prism::Speak(line, /*interrupt=*/true);
+    acc::speech::Speak(line, /*interrupt=*/true);
     acc::msg::Router::Instance().LogEmit("emit-status-urgent", line);
     return true;
 }
@@ -1174,7 +1174,7 @@ bool RuleBedrohung(const char* text) {
 // waiting behind it.
 bool RuleKill(const char* text) {
     if (!strstr(text, acc::combat::loc::Get().kill_marker)) return false;
-    prism::Speak(text, /*interrupt=*/true);
+    acc::speech::Speak(text, /*interrupt=*/true);
     return true;  // claimed: speech handled here
 }
 

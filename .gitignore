@@ -85,7 +85,8 @@ Thumbs.db
 #   KotorMessageInjector: https://github.com/LaneDibello/KotorMessageInjector
 #   KotOR_IO: https://github.com/LaneDibello/KotOR_IO
 #   DLZ-Tool: https://github.com/Lane-Dibello/DLZ-Tool
-# Tolk (third_party/tolk/) is kept — LGPL distribution requirement.
+# The NVDA controller client (third_party/nvda/) is kept — LGPL distribution
+# requirement.
 #
 # Kotor-Patch-Manager is intentionally NOT ignored: we vendor it so our
 # framework modifications travel with normal commits. The upstream commit
@@ -96,16 +97,6 @@ Thumbs.db
 # dsoal — read-only reference clone; we ship the prebuilt binaries
 # bundled in the installer Resources/ folder, not the source.
 /third_party/dsoal/
-
-# Prism — vendored source clone at third_party/prism/ for rebuildability,
-# vendored prebuilt artifacts at third_party/prism-dist/ for kdev apply.
-# Build trees + clone metadata are throwaway; the prebuilt artifacts ARE
-# committed so the patch ships without requiring users to build Prism.
-/third_party/prism/build_*/
-/third_party/prism/.git/
-/third_party/prism/.github/
-/third_party/prism/.cache/
-/third_party/prism/gdextension/godot-cpp/
 
 # Third-party game translations kept locally for testing. Redistributing
 # someone else's translation is not ours to do, and the archives are large

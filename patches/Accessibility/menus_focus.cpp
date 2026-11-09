@@ -16,7 +16,7 @@
 #include <cstring>
 
 #include "log.h"
-#include "prism.h"
+#include "speech.h"
 #include "menus.h"
 #include "menus_focus.h"
 #include "menus_internal.h"
@@ -100,7 +100,7 @@ static void AnnouncePanelTitle(void* panel) {
         acclog::Write("Menus.PanelWalk",
                       "title parent=%p (spec override) text=\"%s\"",
                       panel, override);
-        prism::Speak(override, /*interrupt=*/false);
+        acc::speech::Speak(override, /*interrupt=*/false);
         return;
     }
 
@@ -112,7 +112,7 @@ static void AnnouncePanelTitle(void* panel) {
         acclog::Write("Menus.PanelWalk",
                       "title parent=%p (editbox spec override) text=\"%s\"",
                       panel, override);
-        prism::Speak(override, /*interrupt=*/false);
+        acc::speech::Speak(override, /*interrupt=*/false);
         return;
     }
 
@@ -124,7 +124,7 @@ static void AnnouncePanelTitle(void* panel) {
         acclog::Write("Menus.PanelWalk",
                       "title parent=%p (powers_levelup override) text=\"%s\"",
                       panel, override);
-        prism::Speak(override, /*interrupt=*/false);
+        acc::speech::Speak(override, /*interrupt=*/false);
         return;
     }
 
@@ -191,7 +191,7 @@ static void AnnouncePanelTitle(void* panel) {
         acclog::Write("Menus.PanelWalk",
                       "title parent=%p (main menu override) text=\"%s\"",
                       panel, title);
-        prism::Speak(title, /*interrupt=*/false);
+        acc::speech::Speak(title, /*interrupt=*/false);
         return;
     }
 
@@ -271,7 +271,7 @@ static void AnnouncePanelTitle(void* panel) {
             acclog::Write("Menus.PanelWalk", "title parent=%p label=%p "
                           "text=\"%s\" bit_flags=0x%x",
                           panel, child, text, flags);
-            prism::Speak(text, /*interrupt=*/false);
+            acc::speech::Speak(text, /*interrupt=*/false);
             return;
         }
     }

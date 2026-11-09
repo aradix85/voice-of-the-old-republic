@@ -13,7 +13,7 @@
                                     // device fields moved by 4 bytes in K2
 #include "engine_rebase.h"
 #include "pad_input.h"   // CodeHint — the KOTOR 2 pad shares this numbering
-#include "prism.h"
+#include "speech.h"
 #include "strings.h"
 
 namespace acc::engine {
@@ -694,7 +694,7 @@ void LogDirectInputStateIfChanged() {
             "DirectInput: the engine released its keyboard device — no key "
             "press can reach the game from here, and SetActive cannot "
             "re-acquire a device that no longer exists; warning the player");
-        prism::Speak(
+        acc::speech::Speak(
             acc::strings::Get(acc::strings::Id::InputKeyboardLost), /*interrupt=*/true);
     }
 }

@@ -6,7 +6,7 @@
 // it applies just as much to a long journal entry, an awkwardly spelled NPC or
 // planet name, or a quest description worth pasting into notes.
 //
-// Ctrl+R puts prism::LastSpoken() on the Windows clipboard as CF_UNICODETEXT and
+// Ctrl+R puts acc::speech::LastSpoken() on the Windows clipboard as CF_UNICODETEXT and
 // speaks a short confirmation. Deliberately NOT dialog-specific: whatever the
 // screen reader said last is what gets copied, so the same key works in a
 // conversation, in the journal, on a character sheet, and in the world.

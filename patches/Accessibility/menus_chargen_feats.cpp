@@ -17,7 +17,7 @@
 #include "menus_pending.h"
 #include "menus_skillflow_nav.h"
 #include "strings.h"
-#include "prism.h"
+#include "speech.h"
 
 using namespace acc::engine;  // kInput*, ReadGuiString, ExtractTextOrStrRefIndirect
 
@@ -343,7 +343,7 @@ void AnnounceFocused(void* panel) {
             snprintf(btnText, sizeof(btnText), "%s",
                      acc::strings::Get(br.labelId));
         }
-        prism::Speak(btnText, /*interrupt=*/false);
+        acc::speech::Speak(btnText, /*interrupt=*/false);
         acclog::Write("ChargenFeats",
                       "focus button %s target=%p text=\"%s\"",
                       br.logTag, btn, btnText);
@@ -371,11 +371,11 @@ void AnnounceFocused(void* panel) {
              acc::strings::Get(
                  acc::strings::Id::FmtChargenFeatChartCell),
              name, sw);
-    prism::Speak(head, /*interrupt=*/false);
+    acc::speech::Speak(head, /*interrupt=*/false);
 
     char desc[1024];
     if (ReadDescription(panel, desc, sizeof(desc)) && desc[0] != '\0') {
-        prism::Speak(desc, /*interrupt=*/false);
+        acc::speech::Speak(desc, /*interrupt=*/false);
     }
 
     acclog::Write("ChargenFeats",

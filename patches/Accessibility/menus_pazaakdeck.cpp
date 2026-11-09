@@ -22,7 +22,7 @@
 #include "menus_internal.h"  // PazaakStartPanel* — engine-member control resolution
 #include "menus_pending.h"   // QueueActivate (Play button)
 #include "minigame_pazaak.h"          // FormatCardLabel, CardContext
-#include "prism.h"
+#include "speech.h"
 #include "strings.h"
 #include "engine_rebase.h"
 #include "engine_offsets_select.h"
@@ -222,7 +222,7 @@ int RowLength(void* panel, int row) {
     return acc::game::IsKotor2() ? 2 : 1;
 }
 
-void Speak(const char* s) { if (s && s[0]) prism::Speak(s, /*interrupt=*/true); }
+void Speak(const char* s) { if (s && s[0]) acc::speech::Speak(s, /*interrupt=*/true); }
 
 void AnnounceFocus(void* panel) {
     using namespace acc::strings;

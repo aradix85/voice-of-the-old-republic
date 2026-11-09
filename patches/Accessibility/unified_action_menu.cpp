@@ -23,7 +23,7 @@
 #include "menus_speak.h"
 #include "narrated_target.h"
 #include "strings.h"
-#include "prism.h"
+#include "speech.h"
 
 namespace acc::unified_menu {
 
@@ -365,7 +365,7 @@ void SpeakCategory(void* tam, void* mi, const char* prefix) {
     } else {
         std::snprintf(msg, sizeof(msg), "%s", cat);
     }
-    prism::Speak(msg, /*interrupt=*/true);
+    acc::speech::Speak(msg, /*interrupt=*/true);
     acclog::Write("UnifiedMenu", "speak cat=%d kind=%s slot=%d count=%d idx=%d "
         "-> [%s]", g.curCat,
         c.kind == CatKind::Target ? "target" : "personal",
@@ -599,7 +599,7 @@ bool OpenTarget(int row) {
     if (handle == 0) {
         // No focused target — Shift+1/2/3 are explicit target openers, so
         // say "kein Fokus" rather than dropping into the personal block.
-        prism::Speak(acc::strings::Get(acc::strings::Id::GuidanceNoFocus),
+        acc::speech::Speak(acc::strings::Get(acc::strings::Id::GuidanceNoFocus),
                      /*interrupt=*/true);
         acclog::Write("UnifiedMenu", "OpenTarget row=%d — no narrated target", row);
         return false;
@@ -623,7 +623,7 @@ bool OpenTarget(int row) {
         std::snprintf(msg, sizeof(msg),
                       acc::strings::Get(acc::strings::Id::FmtActionBarColumnEmpty),
                       g.reqSlot + 1);
-        prism::Speak(msg, /*interrupt=*/true);
+        acc::speech::Speak(msg, /*interrupt=*/true);
         acclog::Write("UnifiedMenu", "OpenTarget row=%d empty (target=0x%08x)",
             g.reqSlot, g.targetHandle);
         // A menu still armed from an earlier open (possibly against a
@@ -748,7 +748,7 @@ bool OpenPersonalImpl(int col, bool requested) {
     // back.
     BuildCategoryList(tam, mi);  // tam==nullptr → personal block only
     if (g.catCount == 0) {
-        if (emptyNotice[0]) prism::Speak(emptyNotice, /*interrupt=*/true);
+        if (emptyNotice[0]) acc::speech::Speak(emptyNotice, /*interrupt=*/true);
         acclog::Write("UnifiedMenu", "OpenPersonal col=%d — no populated "
             "category anywhere; not arming", g.reqSlot);
         return false;
@@ -802,14 +802,14 @@ if (outOfCombat) {
     // overlay release already unpaused silently) speak an explicit close
     // confirmation so the close is never silent.
     if (!acc::engine::ResumeWorldIfPaused("unified-esc")) {
-        prism::Speak(acc::strings::Get(acc::strings::Id::ActionMenuClosed),
+        acc::speech::Speak(acc::strings::Get(acc::strings::Id::ActionMenuClosed),
                      /*interrupt=*/true);
     }
 } else if (!wasPaused) {
     // In combat: unchanged. Esc keeps the tactical pause exactly as
     // before — ForceDisarm → EndOverlayPause resumes only the pause we
     // owned; the encounter's own pause is untouched.
-    prism::Speak(acc::strings::Get(acc::strings::Id::ActionMenuClosed),
+    acc::speech::Speak(acc::strings::Get(acc::strings::Id::ActionMenuClosed),
                  /*interrupt=*/true);
 }
 }
@@ -938,11 +938,11 @@ void DescribeSelectedEntry(void* tam, void* mi, const Cat& cur, int sel) {
     if (actionId &&
         acc::engine::ResolveActionDescriptionFromActionId(
             actionId, text, sizeof(text))) {
-        prism::Speak(text, /*interrupt=*/true);
+        acc::speech::Speak(text, /*interrupt=*/true);
         acclog::Write("UnifiedMenu", "Shift+nav action_id=0x%x desc=\"%s\"",
             actionId, text);
     } else {
-        prism::Speak(acc::strings::Get(acc::strings::Id::NoTooltipAvailable),
+        acc::speech::Speak(acc::strings::Get(acc::strings::Id::NoTooltipAvailable),
                      /*interrupt=*/true);
         acclog::Write("UnifiedMenu", "Shift+nav action_id=0x%x no desc",
             actionId);
@@ -1016,13 +1016,13 @@ void SpeakRefusal(uint32_t strref) {
         text[0]) {
         acclog::Write("UnifiedMenu", "refused — speaking engine reason "
                       "strref=0x%x [%s]", strref, text);
-        prism::Speak(text, /*interrupt=*/false);
+        acc::speech::Speak(text, /*interrupt=*/false);
         return;
     }
     acclog::Write("UnifiedMenu",
                   "refused — no usable engine reason (strref=0x%x); generic "
                   "line", strref);
-    prism::Speak(acc::strings::Get(acc::strings::Id::ActionRefused),
+    acc::speech::Speak(acc::strings::Get(acc::strings::Id::ActionRefused),
                  /*interrupt=*/false);
 }
 
@@ -1119,9 +1119,9 @@ void SpeakMedPickerRow(bool withTitle) {
         std::snprintf(msg, sizeof(msg),
                       acc::strings::Get(acc::strings::Id::FmtMedPickerApplyTo),
                       g.med.names[g.med.sel]);
-        prism::Speak(msg, /*interrupt=*/true);
+        acc::speech::Speak(msg, /*interrupt=*/true);
     } else {
-        prism::Speak(g.med.names[g.med.sel], /*interrupt=*/true);
+        acc::speech::Speak(g.med.names[g.med.sel], /*interrupt=*/true);
     }
 }
 
@@ -1138,7 +1138,7 @@ bool FireMedicalDirect(void* mi, const Cat& c, int sel, void* targetCre,
         acclog::Write("UnifiedMenu",
                       "medical %s fire aborted (aid=0x%08x cre=%p)",
                       how, aid, targetCre);
-        prism::Speak(acc::strings::Get(acc::strings::Id::ActionRefused),
+        acc::speech::Speak(acc::strings::Get(acc::strings::Id::ActionRefused),
                      /*interrupt=*/false);
         return false;
     }
@@ -1226,7 +1226,7 @@ bool HandleMedPickerInput(int code) {
         g.med.active = false;
         acclog::Write("UnifiedMenu", "medpicker esc — back to entry");
         if (g.med.itemLabel[0])
-            prism::Speak(g.med.itemLabel, /*interrupt=*/true);
+            acc::speech::Speak(g.med.itemLabel, /*interrupt=*/true);
         return true;
     }
     switch (code) {
@@ -1387,7 +1387,7 @@ bool FirePersonal(int col) {
                 acc::strings::Get(acc::strings::Id::FmtActionBarColumnEmpty),
                 col + 1);
         }
-        prism::Speak(msg, /*interrupt=*/true);
+        acc::speech::Speak(msg, /*interrupt=*/true);
         acclog::Write("UnifiedMenu", "FirePersonal col=%d empty -> [%s]",
                       col, msg);
         return false;
@@ -1402,7 +1402,7 @@ bool FirePersonal(int col) {
 
     char label[128] = "";
     ReadLabel(/*tam=*/nullptr, mi, c, sel, label, sizeof(label));
-    if (label[0]) prism::Speak(label, /*interrupt=*/true);
+    if (label[0]) acc::speech::Speak(label, /*interrupt=*/true);
 
     bool refused = false;
     const uint32_t refusalStrRef = PendingRefusalStrRef(mi, c, sel, &refused);
@@ -1464,7 +1464,7 @@ bool HandleInputEvent(int code, int value) {
         std::snprintf(msg, sizeof(msg),
                       acc::strings::Get(acc::strings::Id::FmtInteractNoActions),
                       g.targetName);
-        prism::Speak(msg, /*interrupt=*/true);
+        acc::speech::Speak(msg, /*interrupt=*/true);
         acclog::Write("UnifiedMenu", "all categories empty after reanchor; disarming");
         ForceDisarm("empty");
         return true;

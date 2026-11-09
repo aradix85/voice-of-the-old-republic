@@ -8,7 +8,7 @@
 // Windows-1252 -- a and c and e and l and n and s and z with their diacritics
 // do not exist in 1252 at all, so this table cannot be written the way the
 // German or French ones are. acc::strings::CodepageFor(Lang::Pl) returns 1250
-// and core_dllmain pins it through prism::SetSpeechCodepage before the first
+// and core_dllmain pins it through acc::speech::SetSpeechCodepage before the first
 // utterance, which is what makes a Polish install speak correctly on an
 // English or German Windows.
 //

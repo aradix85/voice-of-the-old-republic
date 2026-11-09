@@ -11,7 +11,7 @@
 #include "log.h"
 #include "menus_extract.h"
 #include "menus_pending.h"
-#include "prism.h"
+#include "speech.h"
 
 namespace acc::menus::listbox {
 
@@ -53,7 +53,7 @@ void ContainerAnnounce(void* /*lb*/, const ListBoxNavResult& r) {
         snprintf(msg, sizeof(msg),
                  acc::strings::Get(acc::strings::Id::FmtContainerItemAt),
                  rowText, r.newSel + 1, r.rowCount);
-        prism::Speak(msg, /*interrupt=*/false);
+        acc::speech::Speak(msg, /*interrupt=*/false);
         // Append stack count when the row holds a stackable item with
         // more than one copy. Stays silent on stack_size <= 1 so weapons
         // / armour don't drag "1 StÃ¼ck" through every announce.
@@ -63,7 +63,7 @@ void ContainerAnnounce(void* /*lb*/, const ListBoxNavResult& r) {
             snprintf(suffix, sizeof(suffix),
                      acc::strings::Get(acc::strings::Id::FmtItemStackSuffix),
                      stack);
-            prism::Speak(suffix, /*interrupt=*/false);
+            acc::speech::Speak(suffix, /*interrupt=*/false);
         }
         int charges = acc::engine::ReadItemRowCharges(r.row);
         if (charges >= 0) {
@@ -71,7 +71,7 @@ void ContainerAnnounce(void* /*lb*/, const ListBoxNavResult& r) {
             snprintf(suffix, sizeof(suffix),
                      acc::strings::Get(acc::strings::Id::FmtItemChargeSuffix),
                      charges);
-            prism::Speak(suffix, /*interrupt=*/false);
+            acc::speech::Speak(suffix, /*interrupt=*/false);
         }
     }
 }
@@ -148,12 +148,12 @@ void MonitorContainerSelection() {
         s_containerSelState.listBox       = lb;
         s_containerSelState.lastSelection = selIdx;
         if (rowCount <= 0) {
-            prism::Speak(acc::strings::Get(acc::strings::Id::ContainerEmpty),
+            acc::speech::Speak(acc::strings::Get(acc::strings::Id::ContainerEmpty),
                         /*interrupt=*/false);
             acclog::Write("Menus.Container", "monitor armed: panel=%p lb=%p empty initialSel=%d",
                           containerPanel, lb, selIdx);
         } else if (rowCount == 1) {
-            prism::Speak(acc::strings::Get(acc::strings::Id::ContainerOneItem),
+            acc::speech::Speak(acc::strings::Get(acc::strings::Id::ContainerOneItem),
                         /*interrupt=*/false);
             acclog::Write("Menus.Container", "monitor armed: panel=%p lb=%p count=1 initialSel=%d",
                           containerPanel, lb, selIdx);
@@ -162,7 +162,7 @@ void MonitorContainerSelection() {
             snprintf(msg, sizeof(msg),
                      acc::strings::Get(acc::strings::Id::FmtContainerItems),
                      rowCount);
-            prism::Speak(msg, /*interrupt=*/false);
+            acc::speech::Speak(msg, /*interrupt=*/false);
             acclog::Write("Menus.Container", "monitor armed: panel=%p lb=%p count=%d initialSel=%d",
                           containerPanel, lb, rowCount, selIdx);
         }
@@ -196,14 +196,14 @@ void MonitorContainerSelection() {
     snprintf(msg, sizeof(msg),
              acc::strings::Get(acc::strings::Id::FmtContainerItemAt),
              rowText, selIdx + 1, rowCount);
-    prism::Speak(msg, /*interrupt=*/false);
+    acc::speech::Speak(msg, /*interrupt=*/false);
     int stack = acc::engine::ReadItemRowStackCount(row);
     if (stack > 1) {
         char suffix[64];
         snprintf(suffix, sizeof(suffix),
                  acc::strings::Get(acc::strings::Id::FmtItemStackSuffix),
                  stack);
-        prism::Speak(suffix, /*interrupt=*/false);
+        acc::speech::Speak(suffix, /*interrupt=*/false);
     }
     int charges = acc::engine::ReadItemRowCharges(row);
     if (charges >= 0) {
@@ -211,7 +211,7 @@ void MonitorContainerSelection() {
         snprintf(suffix, sizeof(suffix),
                  acc::strings::Get(acc::strings::Id::FmtItemChargeSuffix),
                  charges);
-        prism::Speak(suffix, /*interrupt=*/false);
+        acc::speech::Speak(suffix, /*interrupt=*/false);
     }
     acclog::Write("Menus.Container", "row lb=%p sel=%d (was %d) text=\"%s\" stack=%d charges=%d",
                   lb, selIdx, prev, rowText, stack, charges);

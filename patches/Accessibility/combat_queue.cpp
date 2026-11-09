@@ -21,7 +21,7 @@
 #include "log.h"
 #include "same_name_suffix.h" // AppendSuffix for same-LocName disambiguator
 #include "strings.h"
-#include "prism.h"
+#include "speech.h"
 #include "transitions.h"      // IsModuleLoadPending — gate during cutscene-load
                               // transient (engine LYT loader use-after-free)
 #include "unified_action_menu.h"  // IsActive / ReannounceCurrent — return to the
@@ -482,7 +482,7 @@ void SpeakRow(int idx) {
     std::snprintf(msg, sizeof(msg),
                   acc::strings::Get(acc::strings::Id::FmtQueueRow),
                   row.charName, verb, tgtName, idx + 1, g_state.count);
-    prism::Speak(msg, /*interrupt=*/true);
+    acc::speech::Speak(msg, /*interrupt=*/true);
     acclog::Write("Combat.Queue",
                   "row %d/%d char=[%s] type=%u target=0x%08x verb=[%s] "
                   "tgt=[%s]",
@@ -614,7 +614,7 @@ void TickNoOpWatch() {
     acclog::Write("Combat.Queue",
                   "user fire produced no queue add within %ums — announcing "
                   "that nothing happened", kNoOpVerdictMs);
-    prism::Speak(acc::strings::Get(acc::strings::Id::ActionRefused),
+    acc::speech::Speak(acc::strings::Get(acc::strings::Id::ActionRefused),
                  /*interrupt=*/false);
 }
 
@@ -669,7 +669,7 @@ void OnEngineActionAdded(void* combatRound, void* action) {
                       acc::strings::Get(acc::strings::Id::FmtFireAtPosition),
                       label, preCount + 1);
     }
-    prism::Speak(msg, /*interrupt=*/true);
+    acc::speech::Speak(msg, /*interrupt=*/true);
     acclog::Write("Combat.Queue",
                   "engine-add slot=%d full=%d label=[%s] -> [%s]",
                   preCount + 1, preCount >= 4 ? 1 : 0, label, msg);
@@ -709,7 +709,7 @@ void ForceDisarm(const char* reason) {
 bool Open() {
     int count = BuildRows();
     if (count <= 0) {
-        prism::Speak(acc::strings::Get(acc::strings::Id::QueueEmpty),
+        acc::speech::Speak(acc::strings::Get(acc::strings::Id::QueueEmpty),
                     /*interrupt=*/true);
         acclog::Write("Combat.Queue", "Open — party queue empty; not arming");
         return false;
@@ -723,7 +723,7 @@ bool Open() {
     std::snprintf(msg, sizeof(msg),
                   acc::strings::Get(acc::strings::Id::FmtQueueOpen),
                   count);
-    prism::Speak(msg, /*interrupt=*/true);
+    acc::speech::Speak(msg, /*interrupt=*/true);
     acclog::Write("Combat.Queue", "ARMED rows=%d -> [%s]", count, msg);
 
     SpeakRow(0);
@@ -736,13 +736,13 @@ void ClearAllAndClose() {
     // and the pad's chord arrives from the poll slot rather than from inside
     // HandleInputEvent's own refresh.
     if (BuildRows() <= 0) {
-        prism::Speak(acc::strings::Get(acc::strings::Id::QueueEmpty),
+        acc::speech::Speak(acc::strings::Get(acc::strings::Id::QueueEmpty),
                      /*interrupt=*/true);
         ForceDisarm("queue-emptied");
         return;
     }
     const bool ok = ClearAllRows();
-    prism::Speak(acc::strings::Get(ok ? acc::strings::Id::QueueCleared
+    acc::speech::Speak(acc::strings::Get(ok ? acc::strings::Id::QueueCleared
                                       : acc::strings::Id::QueueRemoveFailed),
                  /*interrupt=*/true);
     acclog::Write("Combat.Queue", "clear-all ok=%d", ok ? 1 : 0);
@@ -758,7 +758,7 @@ bool HandleInputEvent(int code, int value) {
     // remove against a stale row.
     int count = BuildRows();
     if (count <= 0) {
-        prism::Speak(acc::strings::Get(acc::strings::Id::QueueEmpty),
+        acc::speech::Speak(acc::strings::Get(acc::strings::Id::QueueEmpty),
                     /*interrupt=*/true);
         ForceDisarm("queue-emptied");
         return true;
@@ -794,7 +794,7 @@ bool HandleInputEvent(int code, int value) {
 
             bool ok = RemoveRow(g_state.focusIdx);
             if (!ok) {
-                prism::Speak(acc::strings::Get(
+                acc::speech::Speak(acc::strings::Get(
                                 acc::strings::Id::QueueRemoveFailed),
                             /*interrupt=*/true);
                 return true;
@@ -804,7 +804,7 @@ bool HandleInputEvent(int code, int value) {
                           acc::strings::Get(
                               acc::strings::Id::FmtQueueRemoved),
                           verb);
-            prism::Speak(msg, /*interrupt=*/true);
+            acc::speech::Speak(msg, /*interrupt=*/true);
             acclog::Write("Combat.Queue",
                           "Removed flat=%d type=%u verb=[%s]",
                           g_state.focusIdx + 1, (unsigned)type, verb);
@@ -836,7 +836,7 @@ bool HandleInputEvent(int code, int value) {
                               "re-announcing (world stays paused)");
                 acc::unified_menu::ReannounceCurrent();
             } else {
-                prism::Speak(acc::strings::Get(acc::strings::Id::QueueClosed),
+                acc::speech::Speak(acc::strings::Get(acc::strings::Id::QueueClosed),
                             /*interrupt=*/true);
                 acclog::Write("Combat.Queue", "Esc -> close");
             }
@@ -854,7 +854,7 @@ void Tick() {
     if (acc::transitions::IsModuleLoadPending()) return;
     int count = BuildRows();
     if (count <= 0) {
-        prism::Speak(acc::strings::Get(acc::strings::Id::QueueEmpty),
+        acc::speech::Speak(acc::strings::Get(acc::strings::Id::QueueEmpty),
                     /*interrupt=*/false);
         ForceDisarm("tick-queue-empty");
         return;

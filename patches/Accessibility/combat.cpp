@@ -14,7 +14,7 @@
 #include "menus_extract.h"    // FromControl — listbox row text reader
 #include "same_name_suffix.h" // AppendSuffix for same-LocName disambiguator
 #include "strings.h"
-#include "prism.h"
+#include "speech.h"
 #include "transitions.h"      // IsModuleLoadPending — gate during cutscene-load
 #include "unified_action_menu.h" // ForceDisarm — auto-close the queueing menu
 #include "engine_offsets_select.h"
@@ -117,7 +117,7 @@ void TickCombatMode() {
             auto id = nowInCombat ? acc::strings::Id::CombatBegins
                                   : acc::strings::Id::CombatEnds;
             const char* phrase = acc::strings::Get(id);
-            prism::Speak(phrase, /*interrupt=*/false);
+            acc::speech::Speak(phrase, /*interrupt=*/false);
             acclog::Write("Combat.Mode", "%s -> [%s] (debounced %ums)",
                           nowInCombat ? "entering" : "leaving",
                           phrase, static_cast<unsigned>(now - s_partyChanged));
@@ -169,7 +169,7 @@ void TickCombatMode() {
             if (wasLeaving && partyInCombat) {
                 const char* phrase =
                     acc::strings::Get(acc::strings::Id::CombatLeaderAtPeace);
-                prism::Speak(phrase, /*interrupt=*/false);
+                acc::speech::Speak(phrase, /*interrupt=*/false);
                 acclog::Write("Combat.Mode",
                               "leader at peace while party fights -> [%s]",
                               phrase);

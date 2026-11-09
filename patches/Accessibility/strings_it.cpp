@@ -1,7 +1,7 @@
 // Italian string table.
 //
 // Encoding: Windows-1252 hex escapes for non-ASCII (\xE0=?, \xE8=?,
-// \xE9=?, \xEC=?, \xF2=?, \xF9=?). Prism's ANSI overload converts from
+// \xE9=?, \xEC=?, \xF2=?, \xF9=?). The narrow Speak overload converts from
 // CP_ACP via MultiByteToWideChar; on an Italian Windows install CP_ACP
 // = Windows-1252, so the literal bytes pass through unchanged.
 //

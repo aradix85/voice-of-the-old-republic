@@ -14,7 +14,7 @@
 #include "engine_player.h"   // GetPlayerPosition, GetPlayerYawDegrees, GetPartyMembers, GetSoloMode
 #include "hotkeys.h"         // VkLabel
 #include "log.h"
-#include "prism.h"
+#include "speech.h"
 #include "strfmt.h"
 #include "strings.h"
 #include "view_mode.h"       // IsActive, TryGetCursorPosition — cursor drives
@@ -346,7 +346,7 @@ void SpeakIntro(const Vector& playerPos) {
         line += acc::strfmt::Format(Get(Id::FmtFloorSoloHint),
                                     acc::hotkeys::VkLabel(vk));
     }
-    prism::Speak(line.c_str(), /*interrupt=*/true);
+    acc::speech::Speak(line.c_str(), /*interrupt=*/true);
     acclog::Write("FloorPuzzle", "intro spoken (followers=%d solo=%d)",
                   followerCount, acc::engine::GetSoloMode() ? 1 : 0);
 }
@@ -444,7 +444,7 @@ void Tick() {
         bool lit[kPlateCount];
         int  litCount = ReadLiveBoard(lit);
         std::string board = BoardStateText(lit, litCount);
-        prism::Speak(board.c_str(), /*interrupt=*/true);
+        acc::speech::Speak(board.c_str(), /*interrupt=*/true);
         acclog::Write("FloorPuzzle", "R board read -> [%s] (lit=%d)",
                       board.c_str(), litCount);
     }
@@ -501,7 +501,7 @@ void Tick() {
     // ---- Solved --------------------------------------------------------
     if (!g_solvedQuiet && litCount == kPlateCount && anyFlip) {
         g_solvedQuiet = true;
-        prism::Speak(Get(Id::FloorPuzzleSolved), /*interrupt=*/true);
+        acc::speech::Speak(Get(Id::FloorPuzzleSolved), /*interrupt=*/true);
         acclog::Write("FloorPuzzle", "solved — module going quiet");
         return;
     }
@@ -547,7 +547,7 @@ void Tick() {
             // The previous entry never saw its delta (fast crossing) —
             // speak it before the new entry claims the merge slot.
             std::string old = entryText(g_pendingEntry);
-            prism::Speak(old.c_str(), /*interrupt=*/true);
+            acc::speech::Speak(old.c_str(), /*interrupt=*/true);
             acclog::Write("FloorPuzzle", "announce: [%s] (pending flush)",
                           old.c_str());
         }
@@ -574,12 +574,7 @@ void Tick() {
         g_pendingEntry = -1;
     }
     if (!line.empty()) {
-        // Urgent channel: normal-priority speech is cancelled by the
-        // screen reader on every keypress, and this feedback lands
-        // exactly while the player is hammering movement keys — plate
-        // entries were audibly swallowed mid-line in testing (see
-        // project_prism_sapi_bypass for the mechanism).
-        prism::Speak(line.c_str(), /*interrupt=*/true);
+        acc::speech::Speak(line.c_str(), /*interrupt=*/true);
         acclog::Write("FloorPuzzle",
                       "announce: [%s] (plate=%d lit=%d leaderCaused=%d)",
                       line.c_str(), newPlate, litCount, leaderCaused ? 1 : 0);
@@ -623,7 +618,7 @@ void Tick() {
         (now - g_nearestSpokenAt) >= kNearestMinGapMs) {
         g_lastNearestLine = say;
         g_nearestSpokenAt = now;
-        prism::Speak(say.c_str(), /*interrupt=*/true);
+        acc::speech::Speak(say.c_str(), /*interrupt=*/true);
         acclog::Write("FloorPuzzle", "nearest: [%s] dist=%.2f", say.c_str(),
                       nearestDist);
     }

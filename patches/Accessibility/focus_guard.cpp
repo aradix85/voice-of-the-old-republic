@@ -1,7 +1,6 @@
 #include "focus_guard.h"
 
 #include <windows.h>
-#include <objbase.h>
 #include <atomic>
 #include <cstdio>
 #include <cstring>
@@ -9,10 +8,9 @@
 #include "bringup_announce.h"
 #include "engine_input.h"
 #include "log.h"
-#include "prism.h"
+#include "speech.h"
 #include "strings.h"
 
-#pragma comment(lib, "ole32.lib")
 
 namespace acc::focus_guard {
 
@@ -76,29 +74,6 @@ const SubclassedWindow* FindSubclassed(HWND hwnd) {
         if (g_subclassed[i].hwnd == hwnd) return &g_subclassed[i];
     }
     return nullptr;
-}
-
-const char* ApartmentTypeName(APTTYPE t) {
-    switch (t) {
-        case APTTYPE_STA:     return "STA";
-        case APTTYPE_MTA:     return "MTA";
-        case APTTYPE_NA:      return "NA";
-        case APTTYPE_MAINSTA: return "MainSTA";
-        default:              return "?";
-    }
-}
-
-const char* ApartmentQualifierName(APTTYPEQUALIFIER q) {
-    switch (q) {
-        case APTTYPEQUALIFIER_NONE:               return "NONE";
-        case APTTYPEQUALIFIER_IMPLICIT_MTA:       return "IMPLICIT_MTA";
-        case APTTYPEQUALIFIER_NA_ON_MTA:          return "NA_ON_MTA";
-        case APTTYPEQUALIFIER_NA_ON_STA:          return "NA_ON_STA";
-        case APTTYPEQUALIFIER_NA_ON_IMPLICIT_MTA: return "NA_ON_IMPLICIT_MTA";
-        case APTTYPEQUALIFIER_NA_ON_MAINSTA:      return "NA_ON_MAINSTA";
-        case APTTYPEQUALIFIER_APPLICATION_STA:    return "APPLICATION_STA";
-        default:                                  return "?";
-    }
 }
 
 // On a focus-loss (WM_ACTIVATEAPP active=0) the foreground has moved to a
@@ -261,14 +236,6 @@ bool IsGameWindowClass(const char* cls) {
     if (!cls || !*cls) return false;
     if (strcmp(cls, "MSCTFIME UI") == 0) return false;
     if (strcmp(cls, "IME") == 0) return false;
-    // SAPI spins up a transient "CSpThreadTask Window" per speech
-    // utterance on our own speech-engine threads. These are NOT game
-    // windows: subclassing them cross-thread races SAPI's teardown, and
-    // because they're created/destroyed per utterance they flooded this
-    // append-only table — 57 of 64 slots in a single ~35-min session
-    // (patch-20260601-210737.log), starving real game windows and
-    // burying the log under "table full" spam.
-    if (strcmp(cls, "CSpThreadTask Window") == 0) return false;
     // Never touch the Bink movie player's window. KOTOR's movie player
     // is fragile about window/focus churn during playback (cf. the
     // Alt+Tab-during-intros queue-restart bug); replacing its wndproc
@@ -728,22 +695,6 @@ DWORD WINAPI PollProc(LPVOID) {
 
 }  // namespace
 
-void LogComApartment(const char* tag) {
-    APTTYPE          apt = APTTYPE_STA;
-    APTTYPEQUALIFIER qual = APTTYPEQUALIFIER_NONE;
-    HRESULT hr = CoGetApartmentType(&apt, &qual);
-    if (FAILED(hr)) {
-        acclog::Write("Prism",
-            "apartment[%s]: CoGetApartmentType hr=0x%lx (thread uninitialized)",
-            tag, static_cast<unsigned long>(hr));
-        return;
-    }
-    acclog::Write("Prism",
-        "apartment[%s]: %s (type=%d) qualifier=%s",
-        tag, ApartmentTypeName(apt), static_cast<int>(apt),
-        ApartmentQualifierName(qual));
-}
-
 bool GameOwnsForeground() {
     HWND fg = GetForegroundWindow();
     if (!fg) return false;
@@ -776,7 +727,7 @@ void DrainInputBlockedWarning() {
     acclog::Write("Focus",
         "InputBlockedWarning: speaking Big Picture focus-theft warning");
     // Spoken on the main tick (COM-safe), not the poll thread.
-    prism::Speak(acc::strings::Get(acc::strings::Id::InputBlockedBigPicture), /*interrupt=*/true);
+    acc::speech::Speak(acc::strings::Get(acc::strings::Id::InputBlockedBigPicture), /*interrupt=*/true);
 }
 
 void ArmStartupForegroundGuard() {

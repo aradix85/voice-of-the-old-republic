@@ -4,7 +4,7 @@ Source: `patches/Accessibility/probe_audio_frame.h`
 
 Audio-frame diagnostic probe.
 
-F10 advances through the 8 compass sectors (N → NE → E → SE → S → SW → W → NW → repeat), emitting a 3D-positional cue at 5m from the player in each direction and speaking the spoken-direction name via Prism. The user listens for whether the audio pan matches the spoken direction.
+F10 advances through the 8 compass sectors (N → NE → E → SE → S → SW → W → NW → repeat), emitting a 3D-positional cue at 5m from the player in each direction and speaking the spoken-direction name via NVDA. The user listens for whether the audio pan matches the spoken direction.
 
 Purpose: characterise the relationship between our compass frame (used by the beacon description, camera_announce, turn_announce) and the engine's 3D audio listener frame. Pillar 3 beacon testing uncovered a mismatch where the user perceived the heartbeat as coming from a different direction than the description implied. We don't know which axis the engine treats as "listener forward" — this probe lets the user report the actual perceived direction for each compass sector, from which we can build a compensation matrix or confirm there's no mismatch at all.
 

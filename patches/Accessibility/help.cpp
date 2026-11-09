@@ -23,7 +23,7 @@
 #include "log.h"
 #include "minigame_pazaak.h"   // IsBoardForeground — the pazaak help context
 #include "binding_hints.h"      // ControllerActive — the one wording predicate
-#include "prism.h"
+#include "speech.h"
 #include "strings.h"
 #include "unified_action_menu.h"
 
@@ -485,7 +485,7 @@ void SpeakRow(int idx, bool interrupt) {
                       acc::strings::Get(S::FmtHelpRowOf),
                       base, r.entryPos, g_state.entryTotal);
     }
-    prism::Speak(line, interrupt);
+    acc::speech::Speak(line, interrupt);
 }
 
 // Focus movement, shared by the keyboard poll and the pad nav route so the
@@ -538,7 +538,7 @@ void SpeakContext() {
                       acc::strings::Get(ContextNameId(c)),
                       joined);
     }
-    prism::Speak(out, /*interrupt=*/true);
+    acc::speech::Speak(out, /*interrupt=*/true);
     acclog::Write("Help", "context speak ctx=%d entries=%d", static_cast<int>(c), n);
 }
 
@@ -563,7 +563,7 @@ void OpenMenu() {
                   g_state.rowCount, g_state.entryTotal,
                   g_state.pausedWorld ? 1 : 0);
 
-    prism::Speak(acc::strings::Get(S::HelpMenuOpened), /*interrupt=*/true);
+    acc::speech::Speak(acc::strings::Get(S::HelpMenuOpened), /*interrupt=*/true);
     SpeakRow(g_state.focus, /*interrupt=*/false);
 }
 
@@ -577,7 +577,7 @@ void CloseMenu() {
     }
     g_state.focus    = 0;
     g_state.rowCount = 0;
-    prism::Speak(acc::strings::Get(S::HelpMenuClosed), /*interrupt=*/true);
+    acc::speech::Speak(acc::strings::Get(S::HelpMenuClosed), /*interrupt=*/true);
 }
 
 void ToggleMenu() {

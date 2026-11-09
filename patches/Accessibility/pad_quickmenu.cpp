@@ -15,7 +15,7 @@
 #include "key_inject.h"
 #include "log.h"
 #include "pad_input.h"      // EnginePadDead — is the mod the pad driver here?
-#include "prism.h"
+#include "speech.h"
 #include "strings.h"
 
 namespace acc::pad::quickmenu {
@@ -62,7 +62,7 @@ void SpeakRow(bool interrupt) {
     std::snprintf(line, sizeof(line), acc::strings::Get(S::FmtHelpRowOf),
                   acc::strings::Get(kEntries[g_focus].label), g_focus + 1,
                   kEntryCount);
-    prism::Speak(line, interrupt);
+    acc::speech::Speak(line, interrupt);
 }
 
 // Clamp, never wrap: hearing the same line twice is the boundary cue.
@@ -142,7 +142,7 @@ void SpeakEngineEntry(void* panel, int sel, bool interrupt) {
         acclog::Write("Pad.quick", "engine menu entry %d has no caption", sel);
         return;
     }
-    prism::Speak(text, interrupt);
+    acc::speech::Speak(text, interrupt);
 }
 
 void TickEngineMenu() {
@@ -160,7 +160,7 @@ void TickEngineMenu() {
         g_enginePanel = fg;
         g_engineSel   = sel;
         acclog::Write("Pad.quick", "engine menu opened, entry %d", sel);
-        prism::Speak(acc::strings::Get(S::PadQuickMenuOpened), /*interrupt=*/true);
+        acc::speech::Speak(acc::strings::Get(S::PadQuickMenuOpened), /*interrupt=*/true);
         SpeakEngineEntry(fg, sel, /*interrupt=*/false);
         return;
     }
@@ -237,7 +237,7 @@ void Open() {
     g_open  = true;
     g_focus = 0;
     acclog::Write("Pad.quick", "opened");
-    prism::Speak(acc::strings::Get(S::PadQuickMenuOpened), /*interrupt=*/true);
+    acc::speech::Speak(acc::strings::Get(S::PadQuickMenuOpened), /*interrupt=*/true);
     SpeakRow(/*interrupt=*/false);
 }
 
@@ -246,7 +246,7 @@ void Close() {
     g_open  = false;
     g_focus = 0;
     acclog::Write("Pad.quick", "closed");
-    prism::Speak(acc::strings::Get(S::PadQuickMenuClosed), /*interrupt=*/true);
+    acc::speech::Speak(acc::strings::Get(S::PadQuickMenuClosed), /*interrupt=*/true);
 }
 
 void Toggle() {

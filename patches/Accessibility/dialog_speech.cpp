@@ -15,7 +15,7 @@
 #include "log.h"
 #include "menus_extract.h"    // FromControl
 #include "menus_modsettings.h" // GetToggle(Option::HumanSubtitles)
-#include "prism.h"
+#include "speech.h"
 #include "strings.h"          // DialogRepeatLineHint — R-repeat cue for forced lines
 #include "transitions.h"      // IsModuleLoadPending — gate during cutscene-load
 #include "tutorial_hints.h"   // HintForDialogLine — detect a rewritten tutorial line
@@ -695,17 +695,17 @@ void Tick() {
                 // AFTER a cue already in flight from the same interaction — the
                 // "Dieses Objekt ist gesperrt" feedback that triggered this
                 // dialogue — instead of clobbering it. Normal lines interrupt.
-                prism::Speak(npc, /*interrupt=*/!forcedSpoken);
+                acc::speech::Speak(npc, /*interrupt=*/!forcedSpoken);
                 // The line is silent unless force-spoken, so tell the player once
                 // that R re-speaks it — their only other way to hear it. Queued
                 // after the line itself.
                 if (forcedSpoken) {
-                    prism::Speak(
+                    acc::speech::Speak(
                         acc::strings::Get(acc::strings::Id::DialogRepeatLineHint),
                         /*interrupt=*/false);
                 }
             } else if (ExtractSkillCheckMarker(npc, marker, sizeof(marker))) {
-                prism::Speak(marker, /*interrupt=*/true);
+                acc::speech::Speak(marker, /*interrupt=*/true);
                 spokeMarker = true;
             }
             acclog::Write("Dialog.Speech",
@@ -769,7 +769,7 @@ void Tick() {
                             if (acc::menus::extract::FromControl(
                                     row, text, sizeof(text)) &&
                                 text[0] != '\0') {
-                                prism::Speak(text, /*interrupt=*/false);
+                                acc::speech::Speak(text, /*interrupt=*/false);
                                 acclog::Write("Dialog.Speech",
                                               "computer row %d [%.200s]",
                                               i, text);
@@ -796,7 +796,7 @@ void Tick() {
         // so the suppression toggle doesn't apply here.
         if (acc::hotkeys::Pressed(acc::hotkeys::Action::DialogRepeatLine) &&
             s_lastNpcLine[0] != '\0') {
-            prism::Speak(s_lastNpcLine, /*interrupt=*/true);
+            acc::speech::Speak(s_lastNpcLine, /*interrupt=*/true);
             acclog::Write("Dialog.Speech", "R repeat -> [%.300s]", s_lastNpcLine);
         }
     }
@@ -832,7 +832,7 @@ void Tick() {
             s_lastCamPanel = cam;
             char hint[256] = "";
             if (ReadFirstVisibleText(cam, hint, sizeof(hint)) && hint[0]) {
-                prism::Speak(hint, /*interrupt=*/true);
+                acc::speech::Speak(hint, /*interrupt=*/true);
                 acclog::Write("Dialog.Speech",
                               "camera feed opened panel=%p -> [%.200s]",
                               cam, hint);
@@ -840,7 +840,7 @@ void Tick() {
                 // Panel is up but carries no readable label — say so rather
                 // than leaving the player in a silent picture with no idea a
                 // screen change happened at all.
-                prism::Speak(acc::strings::Get(acc::strings::Id::CameraFeed),
+                acc::speech::Speak(acc::strings::Get(acc::strings::Id::CameraFeed),
                               /*interrupt=*/true);
                 acclog::Write("Dialog.Speech",
                               "camera feed opened panel=%p — no readable label, "
@@ -898,7 +898,7 @@ void Tick() {
                     acc::menus::modsettings::Option::HumanSubtitles);
 
             if (!suppress) {
-                prism::Speak(text, /*interrupt=*/false);
+                acc::speech::Speak(text, /*interrupt=*/false);
             }
             // Story-locked doors/containers explain themselves via an ownerless
             // bark that fires once. Offer it for capture so a later locked

@@ -10,7 +10,7 @@
 #include "log.h"
 #include "menus_extract.h"
 #include "menus_pending.h"
-#include "prism.h"
+#include "speech.h"
 
 namespace acc::menus::listbox {
 
@@ -170,7 +170,7 @@ void WorkbenchUpgradeAnnounce(void* /*lb*/, const ListBoxNavResult& r) {
     snprintf(msg, sizeof(msg),
              acc::strings::Get(acc::strings::Id::FmtContainerItemAt),
              marked, r.newSel - minSel + 1, r.rowCount - minSel);
-    prism::Speak(msg, /*interrupt=*/false);
+    acc::speech::Speak(msg, /*interrupt=*/false);
 }
 
 // Dynamic minSel: hide the row-0 remove entry on power slots (minSel 1); show
@@ -244,7 +244,7 @@ bool WorkbenchUpgradeOnEnter(void* panel) {
 
     if (removeGesture && removeRow && btn) {
         acc::menus::pending::QueueWorkbenchUpgradeCommit(panel, removeRow, btn);
-        prism::Speak(acc::strings::Get(acc::strings::Id::WorkbenchSlotRemoved),
+        acc::speech::Speak(acc::strings::Get(acc::strings::Id::WorkbenchSlotRemoved),
                      /*interrupt=*/false);
         acclog::Write("WorkbenchUpgrade", "Enter -> remove (installed row sel=%d, "
                       "commit remove row %p btn_assemble=%p panel=%p)",

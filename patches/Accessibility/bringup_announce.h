@@ -22,7 +22,7 @@
 namespace acc::bringup_announce {
 
 // Spin up the polling thread. Idempotent. Call once from OnRulesInit
-// after Prism is initialised so the announce path is ready.
+// after speech is initialised so the announce path is ready.
 void Start();
 
 // Called from menus.cpp the moment we detect the user's first arrow-key

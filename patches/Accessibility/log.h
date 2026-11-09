@@ -115,7 +115,7 @@ void FlushAll();
 // input pump.
 void BringupMark(const char* name);
 
-// Absolute path of <install>\patches. Empty before Init. Used by prism.cpp
+// Absolute path of <install>\patches. Empty before Init. Used by speech.cpp
 // for SetDllDirectory.
 const char* PatchDir();
 

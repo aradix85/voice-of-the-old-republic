@@ -13,7 +13,7 @@
 #include "engine_reads.h"     // ReadGuiString
 #include "log.h"
 #include "menus_pending.h"    // QueueGalaxyInput
-#include "prism.h"
+#include "speech.h"
 #include "strings.h"
 #include "engine_offsets_select.h"
 
@@ -62,7 +62,7 @@ bool ReadLabel(void* panel, size_t labelOffset, char* outBuf, size_t bufSize) {
 void AnnouncePlanetName(void* panel, bool interrupt) {
     char name[256];
     if (ReadLabel(panel, kPlanetNameLabelOffset, name, sizeof(name))) {
-        prism::Speak(name, interrupt);
+        acc::speech::Speak(name, interrupt);
         acclog::Write("GalaxyMap", "planet name=\"%s\"", name);
     } else {
         acclog::Write("GalaxyMap", "planet name empty (panel=%p)", panel);
@@ -141,7 +141,7 @@ bool SpeakDescription(void* panel) {
     if (!IsGalaxyMapPanel(panel)) return false;
     char desc[4096];
     if (ReadLabel(panel, kDescriptionLabelOffset, desc, sizeof(desc))) {
-        prism::Speak(desc, /*interrupt=*/true);
+        acc::speech::Speak(desc, /*interrupt=*/true);
         acclog::Write("GalaxyMap", "description=\"%s\"", desc);
     } else {
         acclog::Write("GalaxyMap", "description empty (panel=%p)", panel);
@@ -194,7 +194,7 @@ void Tick() {
 
     // Title + current planet (the engine auto-selects the first
     // available+selectable planet in OnPanelAdded before we see the panel).
-    prism::Speak(acc::strings::Get(acc::strings::Id::GalaxyMapTitle),
+    acc::speech::Speak(acc::strings::Get(acc::strings::Id::GalaxyMapTitle),
                  /*interrupt=*/false);
     acclog::Write("GalaxyMap", "first-sight panel=%p kind=%s", panel,
                   PanelKindName(IdentifyPanel(panel)));

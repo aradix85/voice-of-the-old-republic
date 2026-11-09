@@ -10,7 +10,7 @@
 #include "log.h"
 #include "menus.h"           // ClearPendingAnnounce — partner of InvalidateChain
 #include "menus_chain.h"     // InvalidateChain — teardown-window stale-pointer guard
-#include "prism.h"           // Speak — pause/resume cue
+#include "speech.h"           // Speak — pause/resume cue
 #include "strings.h"         // Id::GamePaused / Id::GameResumed
 #include "engine_rebase.h"
 #include "engine_game.h"
@@ -614,7 +614,7 @@ extern "C" void __cdecl OnSetPauseState(void* thisPtr,
     }
 
     const bool nowPaused = (nowBit != 0);
-    prism::Speak(
+    acc::speech::Speak(
         acc::strings::Get(
             nowPaused ? acc::strings::Id::GamePaused
                       : acc::strings::Id::GameResumed),

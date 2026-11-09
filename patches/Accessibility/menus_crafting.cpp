@@ -21,7 +21,7 @@
 #include "hotkeys.h"          // Pressed() for Q/E (CraftViewToggle)
 #include "menus_internal.h"   // detail::FindControlById
 #include "strings.h"
-#include "prism.h"
+#include "speech.h"
 
 using acc::engine::IdentifyPanel;
 using acc::engine::ReadListBoxRowCount;
@@ -154,11 +154,11 @@ void AnnounceFamilyTitleOnFgEdge(void* fg, PanelKind pk, bool edge,
         snprintf(msg, sizeof(msg),
                  acc::strings::Get(acc::strings::Id::FmtWorkbenchUpgradeTitle),
                  text);
-        prism::Speak(msg, /*interrupt=*/false);
+        acc::speech::Speak(msg, /*interrupt=*/false);
         acclog::Write("Crafting", "fg-edge title panel=%p kind=%d -> \"%s\"",
                       fg, (int)pk, msg);
     } else {
-        prism::Speak(text, /*interrupt=*/false);
+        acc::speech::Speak(text, /*interrupt=*/false);
         acclog::Write("Crafting", "fg-edge title panel=%p kind=%d -> \"%s\"",
                       fg, (int)pk, text);
     }
@@ -434,7 +434,7 @@ void AnnounceChainStepSuffix(void* panel, void* control) {
         snprintf(msg + used, sizeof(msg) - used, "%s",
                  acc::strings::Get(acc::strings::Id::DisabledSuffix));
     }
-    prism::Speak(msg, /*interrupt=*/false);
+    acc::speech::Speak(msg, /*interrupt=*/false);
     acclog::Write("Crafting",
                   "chain-step suffix row=%p item=%p %s cost=%u craftable=%d "
                   "-> \"%s\"",
@@ -609,7 +609,7 @@ void Tick() {
     if (isCraft && shopVis != -1 && s_lastShopVis != -1 &&
         shopVis != s_lastShopVis) {
         // BTN_Examine (or the engine itself) flipped create ↔ breakdown.
-        prism::Speak(acc::strings::Get(
+        acc::speech::Speak(acc::strings::Get(
                          shopVis ? acc::strings::Id::WorkbenchModeCreate
                                  : acc::strings::Id::WorkbenchModeBreakdown),
                      /*interrupt=*/false);

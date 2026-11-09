@@ -298,11 +298,6 @@ patches/Accessibility/passive_narrate.cpp
 patches/Accessibility/passive_narrate.h
 patches/Accessibility/peek_description.cpp
 patches/Accessibility/peek_description.h
-patches/Accessibility/prism.cpp
-patches/Accessibility/prism.h
-patches/Accessibility/prism_internal.h
-patches/Accessibility/prism_state.cpp
-patches/Accessibility/prism_text.cpp
 patches/Accessibility/probe_audio_frame.cpp
 patches/Accessibility/probe_audio_frame.h
 patches/Accessibility/probe_camera_distance.cpp
@@ -337,6 +332,8 @@ patches/Accessibility/spatial_wall_surfaces.cpp
 patches/Accessibility/spatial_wall_surfaces.h
 patches/Accessibility/spectator_scene.cpp
 patches/Accessibility/spectator_scene.h
+patches/Accessibility/speech.cpp
+patches/Accessibility/speech.h
 patches/Accessibility/speech_clipboard.cpp
 patches/Accessibility/speech_clipboard.h
 patches/Accessibility/state_overrides.cpp

@@ -15,7 +15,7 @@
 #include "hotkeys.h"
 #include "log.h"
 #include "strings.h"
-#include "prism.h"
+#include "speech.h"
 #include "transitions.h"      // IsModuleLoadPending — gate during cutscene-load
 #include "engine_offsets_select.h"
                               // transient (engine LYT loader use-after-free)
@@ -385,7 +385,7 @@ void TickLeaderChangeAutoAnnounce() {
     }
     acclog::Write("Combat.PcStat", "leader changed -> [%s]; speaking name only",
                   now);
-    prism::Speak(now, /*interrupt=*/true);
+    acc::speech::Speak(now, /*interrupt=*/true);
 }
 
 // ============================================================================
@@ -487,7 +487,7 @@ void SpeakSelfStatus() {
     if (!creature) {
         const char* phrase = acc::strings::Get(
             acc::strings::Id::PcStatNoCharacter);
-        prism::Speak(phrase, /*interrupt=*/true);
+        acc::speech::Speak(phrase, /*interrupt=*/true);
         acclog::Write("Combat.SelfStatus", "no creature -> [%s]", phrase);
         return;
     }
@@ -547,7 +547,7 @@ void SpeakSelfStatus() {
         BriefAppend(b, acc::strings::Get(S::FmtBriefOffHand), offWpn);
     }
 
-    prism::Speak(msg, /*interrupt=*/true);
+    acc::speech::Speak(msg, /*interrupt=*/true);
     acclog::Write("Combat.SelfStatus",
                   "hp=%d/%d fp=%d/%d effects=[%s] main=[%s] off=[%s] -> [%s]",
                   hpCur, hpMax, fpCur, fpMax,

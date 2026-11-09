@@ -10,7 +10,7 @@
 
 #include "hotkeys.h"
 #include "log.h"
-#include "prism.h"
+#include "speech.h"
 #include "strings.h"
 
 namespace acc::speech_clipboard {
@@ -28,9 +28,7 @@ constexpr int kOpenAttempts = 16;
 // ---- Why the copy runs on its own thread ---------------------------------
 //
 // The engine's main thread is where the message loop, the DirectInput
-// dispatch and our whole tick live, and prism's SAPI backend has already put
-// it in an STA (logged at startup as "apartment[post_prism_init]: MainSTA").
-// Clipboard calls from an STA are not inert: EmptyClipboard notifies the
+// dispatch and our whole tick live. Clipboard calls there are not inert: EmptyClipboard notifies the
 // previous owner, SetClipboardData wakes every clipboard listener on the
 // system — NVDA and Windows 11's clipboard history among them — and the
 // cross-apartment round trips that follow can pump messages underneath us.
@@ -55,15 +53,15 @@ volatile LONG s_result = kNone;  // worker -> tick
 void SpeakFeedback(S id) {
     const char* text = acc::strings::Get(id);
     if (!text || !*text) return;
-    prism::SuppressNextCapture();
-    prism::Speak(text, /*interrupt=*/true);
+    acc::speech::SuppressNextCapture();
+    acc::speech::Speak(text, /*interrupt=*/true);
 }
 
 // Publish `text` (game codepage) as CF_UNICODETEXT. Unicode rather than
 // CF_TEXT so umlauts / Cyrillic survive the paste; Windows synthesises CF_TEXT
 // from it for consumers that want ANSI, so one format is enough.
 bool CopyToClipboard(const char* text) {
-    const UINT cp = prism::GetSpeechCodepage();
+    const UINT cp = acc::speech::GetSpeechCodepage();
     int wideLen = MultiByteToWideChar(cp, 0, text, -1, nullptr, 0);
     if (wideLen <= 0) {
         acclog::Write("Clipboard", "MultiByteToWideChar(cp=%u) failed, err=%lu",
@@ -138,7 +136,7 @@ void PollWin32() {
 
     // No game-state gate on purpose: the value of this key is that it behaves
     // identically in dialog, in the journal, in a menu and in the world.
-    const char* text = prism::LastSpoken();
+    const char* text = acc::speech::LastSpoken();
     if (!text || !*text) {
         acclog::Write("Clipboard", "Ctrl+R with nothing spoken yet");
         SpeakFeedback(S::ClipboardNothingToCopy);

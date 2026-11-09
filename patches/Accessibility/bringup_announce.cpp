@@ -5,7 +5,7 @@
 #include <cstring>
 
 #include "log.h"
-#include "prism.h"
+#include "speech.h"
 #include "strings.h"
 
 namespace acc::bringup_announce {
@@ -239,7 +239,7 @@ DWORD WINAPI PollProc(LPVOID) {
                 acclog::Write("BringupAnnounce",
                     "stage 1: nav-key pressed during Loading — speaking \"%s\"",
                     msg);
-                prism::Speak(msg, /*interrupt=*/true);
+                acc::speech::Speak(msg, /*interrupt=*/true);
             } else if (wait_already && !stuck_already && UserNavKeyHeld()) {
                 ULONGLONG since = GetTickCount64() -
                     g_waitNagMs.load(std::memory_order_acquire);
@@ -250,7 +250,7 @@ DWORD WINAPI PollProc(LPVOID) {
                     acclog::Write("BringupAnnounce",
                         "stage 2: still in Loading %llums after stage 1 — speaking \"%s\"",
                         static_cast<unsigned long long>(since), msg);
-                    prism::Speak(msg, /*interrupt=*/true);
+                    acc::speech::Speak(msg, /*interrupt=*/true);
                 }
             }
         }

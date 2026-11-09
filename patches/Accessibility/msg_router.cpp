@@ -9,7 +9,7 @@
 #include "engine_player.h"    // GetPlayerPosition — world-live replay gate
 #include "log.h"
 #include "menus_listbox.h"    // RegisterPickerMsgRules — equip-preview suppression
-#include "prism.h"
+#include "speech.h"
 #include "engine_game.h"
 
 namespace acc::msg {
@@ -55,9 +55,9 @@ void Router::Dispatch(const char* text) {
 
 void Router::Speak(const char* text) {
     // Single seam for backend selection. Future: priority routing
-    // (interrupt for crits, Prism backchannel for urgent lines, etc.)
+    // (interrupt for crits, etc.)
     // lives here.
-    prism::Speak(text, /*interrupt=*/false);
+    acc::speech::Speak(text, /*interrupt=*/false);
 }
 
 void Router::LogRaw(const char* text) {

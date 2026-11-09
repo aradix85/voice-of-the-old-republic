@@ -57,7 +57,7 @@
 #include "probe_audio_frame.h"
 #include "probe_camera_distance.h"
 #include "probe_camera_state.h"
-#include "prism.h"
+#include "speech.h"
 #include "engine_input.h"
 #include "spatial_change_detector.h"
 #include "speech_clipboard.h"
@@ -70,9 +70,9 @@
 #include "view_mode.h"
 #include "engine_game.h"
 
-// core_dllmain.cpp — the once-per-session stand-up (guards, Prism, language,
+// core_dllmain.cpp — the once-per-session stand-up (guards, speech, language,
 // config snapshot, keymap, focus probe, bring-up nag). Forward-declared the
-// same way EnsurePrismInitialized is in the menu translation units.
+// same way EnsureSpeechInitialized is in the menu translation units.
 void EnsureSessionBringup();
 
 namespace acc::tick {

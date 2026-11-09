@@ -12,7 +12,7 @@
 #include "hotkeys.h"
 #include "log.h"
 #include "strings.h"
-#include "prism.h"
+#include "speech.h"
 
 namespace acc::probe_audio_frame {
 
@@ -74,7 +74,7 @@ void FireProbe(int sector, const char* tag) {
     // is.
     char msg[64];
     std::snprintf(msg, sizeof(msg), "Probe %s", dirName);
-    prism::Speak(msg, /*interrupt=*/true);
+    acc::speech::Speak(msg, /*interrupt=*/true);
 
     bool ok = acc::audio::PlayCue3D(kProbeResref, sourcePos);
 

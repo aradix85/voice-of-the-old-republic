@@ -20,7 +20,7 @@
 #include <cstring>
 
 #include "log.h"
-#include "prism.h"
+#include "speech.h"
 #include "menus.h"
 #include "menus_internal.h"
 #include "menus_abilities.h"
@@ -64,8 +64,8 @@ using acc::menus::chain::g_chainIndex;
 using acc::menus::chain::g_chainCount;
 
 // Forward decl from core_dllmain.cpp - both hooks below are entry points
-// that may fire before anything else has initialised Prism.
-void EnsurePrismInitialized();
+// that may fire before anything else has initialised speech.
+void EnsureSpeechInitialized();
 
 // CSWGuiControl::HandleFocusChange — hooked mid-function at 0x41896b.
 // Demoted to log-only. The panel-level SetActiveControl hook above is the
@@ -74,7 +74,7 @@ void EnsurePrismInitialized();
 extern "C" void __cdecl OnHandleFocusChange(void* thisPtr, int param_1) {
     // Cleared for KOTOR 2 (Batch 1): the whole chain is ReadControlNameFields,
     // whose control-id and tooltip offsets are verified for both games.
-    EnsurePrismInitialized();
+    EnsureSpeechInitialized();
     static int n = 0;
     ++n;
     const char* tip; uint32_t tipLen; int id;
@@ -105,7 +105,7 @@ extern "C" int __cdecl OnHandleInputEvent(void* thisPtr, int param_1, int param_
     // "KOTOR 2 (Batch" to enumerate); the key then falls through to the
     // generic chain, so those screens navigate without their enhancements
     // instead of faulting.
-    EnsurePrismInitialized();
+    EnsureSpeechInitialized();
     static int n = 0;
     ++n;
     // Shared seq counter — lets readers correlate Menus.Input lines with

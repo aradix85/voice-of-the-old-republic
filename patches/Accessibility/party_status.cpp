@@ -18,7 +18,7 @@
 #include "engine_reads.h"
 #include "hotkeys.h"
 #include "log.h"
-#include "prism.h"
+#include "speech.h"
 #include "strings.h"
 #include "transitions.h"
 
@@ -113,7 +113,7 @@ void PollHotkey() {
         text += entry;
     }
     if (text.empty()) return;
-    prism::Speak(text.c_str(), /*interrupt=*/true);
+    acc::speech::Speak(text.c_str(), /*interrupt=*/true);
     acclog::Write("PartyStatus", "Ctrl+H: %s", text.c_str());
 }
 
@@ -134,7 +134,7 @@ void Tick() {
         std::snprintf(buf, sizeof(buf),
                       acc::strings::Get(acc::strings::Id::FmtCanLevelUpNotice),
                       NameOf(m.obj).c_str());
-        prism::Speak(buf, /*interrupt=*/false);
+        acc::speech::Speak(buf, /*interrupt=*/false);
         acclog::Write("PartyStatus", "level-up notice: %s", buf);
     }
 }

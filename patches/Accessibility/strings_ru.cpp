@@ -9,7 +9,7 @@
 // with an explicit codepage rather than CP_ACP precisely so that a Russian
 // install still speaks correctly on a German or English Windows.
 // acc::strings::CodepageFor(Lang::Ru) returns 1251 and core_dllmain pins it
-// through prism::SetSpeechCodepage at startup.
+// through acc::speech::SetSpeechCodepage at startup.
 //
 // Escapes were generated from UTF-8 source, not typed by hand. Where a hex
 // escape is followed by a literal hex digit the string is split with ""

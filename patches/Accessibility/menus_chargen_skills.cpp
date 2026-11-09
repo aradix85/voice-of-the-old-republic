@@ -13,7 +13,7 @@
 #include "log.h"
 #include "menus_chargen_layout.h"
 #include "strings.h"
-#include "prism.h"
+#include "speech.h"
 
 namespace acc::menus::chargen_skills {
 
@@ -105,7 +105,7 @@ void AnnounceChainStepSuffix(void* panel, void* control) {
                  acc::strings::Id::FmtChargenSkillInfoSuffix),
              costText);
 
-    prism::Speak(msg, /*interrupt=*/false);
+    acc::speech::Speak(msg, /*interrupt=*/false);
     acclog::Write("Menus.ChargenSkill",
                   "chain-step suffix focus=%p idx=%d cost=%d",
                   control, idx, cost);
@@ -140,7 +140,7 @@ bool AnnounceValueChange(void* panel, void* control) {
                  acc::strings::Id::FmtChargenSkillValueChange),
              value, remText);
 
-    prism::Speak(msg, /*interrupt=*/false);
+    acc::speech::Speak(msg, /*interrupt=*/false);
     acclog::Write("Menus.ChargenSkill",
                   "value-change focus=%p idx=%d value=\"%s\" remaining=\"%s\"",
                   control, idx, value, remText);

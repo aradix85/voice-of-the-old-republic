@@ -8,7 +8,7 @@
 #include "log.h"
 #include "msg_router.h"
 #include "narrated_target.h"
-#include "prism.h"
+#include "speech.h"
 
 namespace acc::locked_recall {
 
@@ -143,7 +143,7 @@ void MaybeCapture(const char* barkText, bool ownerless) {
 
 void Tick() {
     if (!s_pendingReplay[0]) return;
-    prism::Speak(s_pendingReplay, /*interrupt=*/false);
+    acc::speech::Speak(s_pendingReplay, /*interrupt=*/false);
     acclog::Write("LockedRecall", "replay -> [%.200s]", s_pendingReplay);
     s_pendingReplay[0] = '\0';
 }

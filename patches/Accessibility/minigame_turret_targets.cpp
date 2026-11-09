@@ -6,7 +6,7 @@
 #include "audio_bus.h"        // PlayCue3D — one-shot lock-confirmation ping
 #include "hotkeys.h"          // Q/E target-cycle bindings
 #include "log.h"
-#include "prism.h"
+#include "speech.h"
 #include "strings.h"          // Get(TurretGameStarted/Controls/Ended)
 
 namespace acc::turret_game {
@@ -90,7 +90,7 @@ void AnnounceSelectedTarget(int idx, const int occSlot[], const float occDist[],
                           acc::strings::Get(acc::strings::Id::FmtTurretTarget),
                           number, meters);
         }
-        prism::Speak(buf, /*interrupt=*/true);
+        acc::speech::Speak(buf, /*interrupt=*/true);
     }
 
     // One-shot confirmation at a compressed (always-audible) position in the
@@ -140,7 +140,7 @@ void HandleTargetCycle(const int occSlot[], const float occDist[],
     g_state.last_manual_cycle_ms = GetTickCount64();
 
     if (occCount <= 0) {
-        prism::Speak(acc::strings::Get(acc::strings::Id::TurretNoTargets), /*interrupt=*/true);
+        acc::speech::Speak(acc::strings::Get(acc::strings::Id::TurretNoTargets), /*interrupt=*/true);
         g_state.selected_slot = -1;
         acclog::Write("Turret", "cycle: no targets");
         return;

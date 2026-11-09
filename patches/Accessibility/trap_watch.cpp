@@ -17,7 +17,7 @@
 #include "view_mode.h"       // GetEffectiveViewpoint — camera-anchored
                              // position + facing for the spoken clock
 #include "log.h"
-#include "prism.h"
+#include "speech.h"
 #include "strfmt.h"
 #include "strings.h"
 
@@ -239,7 +239,7 @@ void ScanInternal(DWORD now) {
                 std::string label = acc::strfmt::Format(
                     (fmt && fmt[0]) ? fmt : "Falle entdeckt: %s", name);
                 std::string line = WithClock(label.c_str(), t->pos);
-                prism::Speak(line.c_str(), /*interrupt=*/false);
+                acc::speech::Speak(line.c_str(), /*interrupt=*/false);
                 acclog::Write("TrapWatch",
                               "trap detected (kind=%d): handle=%08x -> [%s]",
                               kind, handle, line.c_str());
@@ -254,7 +254,7 @@ void ScanInternal(DWORD now) {
                 char name[96];
                 TrapSpokenName(obj, /*isMine=*/true, name, sizeof(name));
                 std::string line = WithClock(name, t->pos);
-                prism::Speak(line.c_str(), /*interrupt=*/true);
+                acc::speech::Speak(line.c_str(), /*interrupt=*/true);
                 acclog::Write("TrapWatch",
                               "proximity warn: handle=%08x dist=%.1fm -> [%s]",
                               handle, std::sqrt(d2), line.c_str());

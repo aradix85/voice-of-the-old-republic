@@ -4,7 +4,7 @@
 
 #include "engine_area.h"   // GetObjectTag, GetCurrentArea
 #include "log.h"
-#include "prism.h"
+#include "speech.h"
 #include "strings.h"
 
 namespace acc::spectator {
@@ -82,7 +82,7 @@ void OnObjectNarrated(void* obj) {
 
     // interrupt=false so the warning follows the name/brief the funnel just
     // spoke ("Republikanischer Soldat, 17 Meter …") rather than cutting it.
-    prism::Speak(DramaticLine(), /*interrupt=*/false);
+    acc::speech::Speak(DramaticLine(), /*interrupt=*/false);
     acclog::Write("Spectator", "doomed-battle cue -> [%s]", DramaticLine());
 }
 

@@ -6,7 +6,7 @@
 #include "engine_compass.h"
 #include "log.h"
 #include "strings.h"
-#include "prism.h"
+#include "speech.h"
 
 namespace acc::guidance::description {
 
@@ -117,7 +117,7 @@ bool Speak(const Vector& playerPos,
                       acc::strings::Get(
                           acc::strings::Id::FmtBeaconNoPath),
                       nameOrFallback);
-        prism::Speak(msg, interrupt);
+        acc::speech::Speak(msg, interrupt);
         acclog::Write("Description", "no path -> [%s]", msg);
         return false;
     }
@@ -144,7 +144,7 @@ bool Speak(const Vector& playerPos,
     if (segs.empty()) {
         const char* msg = acc::strings::Get(
             acc::strings::Id::BeaconAlreadyAtDest);
-        prism::Speak(msg, interrupt);
+        acc::speech::Speak(msg, interrupt);
         acclog::Write("Description", "all-sub-threshold -> [%s]", msg);
         return true;
     }
@@ -184,7 +184,7 @@ bool Speak(const Vector& playerPos,
     std::snprintf(msg, sizeof(msg),
                   acc::strings::Get(acc::strings::Id::FmtRouteHeader),
                   nameOrFallback, total, joined, transNote);
-    prism::Speak(msg, interrupt);
+    acc::speech::Speak(msg, interrupt);
     acclog::Write("Description", "segs=%zu total=%dm transition=%d -> [%s]",
                   segs.size(), total, isTransition ? 1 : 0, msg);
     return true;

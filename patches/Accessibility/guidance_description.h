@@ -20,7 +20,7 @@
 
 namespace acc::guidance::description {
 
-// targetName is caller-resolved. interrupt forwards to Prism.
+// targetName is caller-resolved. interrupt forwards to speech.
 // Empty waypoint list speaks the localised "no path" phrase.
 bool Speak(const Vector& playerPos,
            const std::vector<Vector>& waypoints,

@@ -1,7 +1,7 @@
 // User-facing string table.
 //
 // Layer: i18n/ — sits between the speech path (cycle_input, future
-// announce paths) and Prism. Centralises every string the user hears so
+// announce paths) and speech. Centralises every string the user hears so
 // language swaps + wording changes happen in one place.
 //
 // Logs stay English regardless of the active language: developer-readable
@@ -10,7 +10,7 @@
 //
 // Encoding: source files use 7-bit ASCII for English and Windows-1252
 // hex escapes (e.g. "T\xFCr") for German, so the literal bytes already
-// match Prism's ANSI overload (which calls MultiByteToWideChar(CP_ACP)
+// match speech's narrow overload (which calls MultiByteToWideChar(CP_ACP)
 // — CP_ACP = Windows-1252 on a German Windows install). UTF-8 source
 // would also work but only if the build script sets /utf-8 explicitly,
 // which create-patch.bat does not.
@@ -605,7 +605,7 @@ enum class Id : int {
     // ---- Facing readout (AltGr / right trigger; announce_facing). Only the
     //      facing half: it speaks on the compass voice, and the place half
     //      (area or room name) follows on the screen reader as its own
-    //      utterance (prism::SpeakCompassThen).
+    //      utterance (acc::speech::SpeakCompassThen).
     //
     //      `FmtFacingWorld` — in the world. Single arg: the camera's sector
     //                         word (`%s` — DirNorth.. via strings.Get). No
@@ -2473,7 +2473,7 @@ enum class Lang : int {
 };
 
 // Windows codepage the language's narrow string bytes are written in. Fed to
-// prism::SetSpeechCodepage so Cyrillic renders on a non-Russian Windows.
+// acc::speech::SetSpeechCodepage so Cyrillic renders on a non-Russian Windows.
 unsigned CodepageFor(Lang l);
 
 // Set the active language. Default is German (per user direction at

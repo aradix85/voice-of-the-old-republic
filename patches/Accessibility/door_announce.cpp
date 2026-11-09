@@ -14,7 +14,7 @@
 #include "log.h"
 #include "engine_offsets_select.h"
 #include "engine_game.h"
-#include "prism.h"
+#include "speech.h"
 #include "same_name_suffix.h"  // the door's number, as the cycles say it
 #include "strings.h"
 
@@ -104,7 +104,7 @@ void AnnounceNearbyOpen(uint32_t doorHandle) {
     char line[256];
     std::snprintf(line, sizeof(line),
                   acc::strings::Get(acc::strings::Id::FmtDoorOpensNearby), name);
-    prism::Speak(line, /*interrupt=*/false);
+    acc::speech::Speak(line, /*interrupt=*/false);
     s_lastNearbyDoor = doorHandle;
     s_lastNearbyAtMs = now;
     acclog::Write("DoorAnnounce", "nearby open 0x%08x at %.1f m -> [%s]",

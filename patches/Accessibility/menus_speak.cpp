@@ -4,7 +4,7 @@
 #include <cstdio>
 
 #include "log.h"
-#include "prism.h"
+#include "speech.h"
 
 namespace acc::menus::speak {
 
@@ -19,7 +19,7 @@ void SpeakChoice(const char* tag, const char* label,
         acclog::Write(tag, "speak %s -> empty", ctx);
         return;
     }
-    prism::Speak(label, /*interrupt=*/true);
+    acc::speech::Speak(label, /*interrupt=*/true);
     acclog::Write(tag, "speak %s [%s]", ctx, label);
 }
 

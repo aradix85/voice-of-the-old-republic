@@ -20,7 +20,7 @@
 #include "log.h"
 #include "menus.h"           // SpeakIfChanged (empty-state dedup)
 #include "menus_extract.h"
-#include "prism.h"
+#include "speech.h"
 
 namespace acc::menus::listbox {
 
@@ -196,7 +196,7 @@ void SpeakRowAndPosition(const ListBoxNavResult& r) {
     snprintf(msg, sizeof(msg),
              acc::strings::Get(acc::strings::Id::FmtContainerItemAt),
              rowText, r.newSel + 1, r.rowCount);
-    prism::Speak(msg, /*interrupt=*/false);
+    acc::speech::Speak(msg, /*interrupt=*/false);
 }
 
 bool TryHandleInput(int n, void* thisPtr, void* activePanel,

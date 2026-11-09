@@ -9,7 +9,7 @@
 #include "log.h"
 #include "map_ui_cursor.h"
 #include "strings.h"
-#include "prism.h"
+#include "speech.h"
 #include "transitions.h"
 
 namespace acc::map_user_markers {
@@ -140,7 +140,7 @@ void OnDrop() {
                                         refNum, &newPin);
     if (!ok) {
         // Never silent: speak a localised "couldn't save" message.
-        prism::Speak(
+        acc::speech::Speak(
             acc::strings::Get(acc::strings::Id::SavedMarkerFailed),
             /*interrupt=*/true);
         acclog::Write("UserMarker",
@@ -161,7 +161,7 @@ void OnDrop() {
     char msg[160];
     std::snprintf(msg, sizeof(msg),
         acc::strings::Get(acc::strings::Id::FmtSavedMarkerPlaced), name);
-    prism::Speak(msg, /*interrupt=*/true);
+    acc::speech::Speak(msg, /*interrupt=*/true);
     acclog::Write("UserMarker",
         "drop ok: pin=%p clientArea=%p pos=(%.1f,%.1f,%.1f) "
         "ref=0x%08x seq=%u name=\"%s\"",

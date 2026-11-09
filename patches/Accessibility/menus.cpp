@@ -3,8 +3,8 @@
 //
 // Layering:
 //   log.{h,cpp}             file/debug logging primitives
-//   prism.{h,cpp}            screen-reader bridge (LoadLibrary'd lazily)
-//   core_dllmain.cpp        DllMain + OnRulesInit + EnsurePrismInitialized
+//   speech.{h,cpp}           NVDA controller client (LoadLibrary'd lazily)
+//   core_dllmain.cpp        DllMain + OnRulesInit + EnsureSpeechInitialized
 //   engine_input.{h,cpp}    InputIndices name table + manager translate
 //   engine_offsets.h        engine struct/vtable offset constants + engine structs
 //   engine_reads.{h,cpp}    SEH-guarded readers (CallDowncast, ReadGuiString, ...)
@@ -25,7 +25,7 @@
 
 #include "log.h"
 #include "core_tick.h"
-#include "prism.h"
+#include "speech.h"
 #include "menus.h"           // public surface — Step 1 mod-wide tick split
 #include "menus_chargen_attr.h" // Chargen "Attribute" panel label + selected_ability sync
 #include "menus_chargen_skills.h" // Chargen "Fähigkeiten" panel — same shape as Attribute
@@ -92,8 +92,8 @@ using acc::menus::focus::SpeakPanelTitleOnFirstSight;
 using acc::menus::focus::AnnounceNewFocusedControl;
 
 // Forward decl from core_dllmain.cpp. The first hook to fire calls this so
-// Prism is loaded the moment any focus / input event reaches us.
-void EnsurePrismInitialized();
+// Speech is loaded the moment any focus / input event reaches us.
+void EnsureSpeechInitialized();
 
 // Defined in menus_dispatch.cpp (Phase-1 split). PollHomeEndKeys below
 // re-enters the GUI input pipeline through it to deliver the Home/End
@@ -180,7 +180,7 @@ void SpeakIfChanged(int channel, const char* text, unsigned repeatAfterMs) {
     }
     strncpy_s(s_lastSpoken[channel], text, _TRUNCATE);
     s_lastSpokenAt[channel] = acc::tick::NowMs();
-    prism::Speak(text, /*interrupt=*/false);
+    acc::speech::Speak(text, /*interrupt=*/false);
 }
 
 bool AlreadySpokenOnAnyChannel(const char* text) {
@@ -454,7 +454,7 @@ using acc::engine::IsModalPopupPanel;
 // menus_focus_k2.cpp, which does the frame arithmetic and the KOTOR 2 cursor
 // warp and then calls this.
 extern "C" void __cdecl OnSetActiveControl(void* panel, void* newControl) {
-    EnsurePrismInitialized();
+    EnsureSpeechInitialized();
     static int n = 0;
     ++n;
 
@@ -587,7 +587,7 @@ extern "C" void __cdecl OnListBoxSetActiveControl(void* listBox, void* newRow,
     // (verified +0x10 shift), the control id (verified), FromControl (menu
     // closure, resolved) and the two load-suppression reads, both of which
     // degrade to false on KOTOR 2.
-    EnsurePrismInitialized();
+    EnsureSpeechInitialized();
 
     static int n = 0;
     ++n;
@@ -787,7 +787,7 @@ extern "C" void __cdecl OnListBoxSetActiveControl(void* listBox, void* newRow,
         if (ctrlsSize > 1) {
             char placeholder[64];
             snprintf(placeholder, sizeof(placeholder), "row %d", id);
-            prism::Speak(placeholder, /*interrupt=*/false);
+            acc::speech::Speak(placeholder, /*interrupt=*/false);
         }
     }
 }
@@ -1011,7 +1011,7 @@ void DrainPendingAnnounce() {
         reinterpret_cast<unsigned char*>(control) + kControlIdOffset);
     char placeholder[64];
     snprintf(placeholder, sizeof(placeholder), "control %d", id);
-    prism::Speak(placeholder, /*interrupt=*/false);
+    acc::speech::Speak(placeholder, /*interrupt=*/false);
 }
 
 void ClearPendingAnnounce() {
@@ -1026,6 +1026,6 @@ void SetDrilledIntoSubScreen(bool drilled) {
 
 }  // namespace acc::menus
 
-// DllMain + OnRulesInit + EnsurePrismInitialized live in core_dllmain.cpp.
+// DllMain + OnRulesInit + EnsureSpeechInitialized live in core_dllmain.cpp.
 // OnSetMoveToModuleString moved to transitions.cpp next to
 // AnnouncePreLoadDestination.

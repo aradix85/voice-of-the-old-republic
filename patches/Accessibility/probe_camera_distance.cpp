@@ -10,7 +10,7 @@
 #include "engine_app.h"      // GetClientModule, GetCamera
 #include "hotkeys.h"
 #include "log.h"
-#include "prism.h"
+#include "speech.h"
 #include "engine_rebase.h"
 #include "engine_offsets_select.h"
 
@@ -200,7 +200,7 @@ void AdvanceClampMode() {
     char msg[64];
     std::snprintf(msg, sizeof(msg), "Camera distance probe: %s",
                   ModeName(g_clampMode));
-    prism::Speak(msg, /*interrupt=*/true);
+    acc::speech::Speak(msg, /*interrupt=*/true);
 
     // Reset rate accounting on every mode change so the per-second
     // summary aligns with the new mode's lifetime.

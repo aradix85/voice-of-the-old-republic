@@ -10,7 +10,7 @@
 #include "engine_player.h"
 #include "log.h"
 #include "strings.h"
-#include "prism.h"
+#include "speech.h"
 
 namespace acc::guidance::beacon {
 
@@ -149,7 +149,7 @@ void SpeakNextSegment(const Vector& playerPos, const Vector& nextWp) {
     std::snprintf(msg, sizeof(msg),
                   acc::strings::Get(acc::strings::Id::FmtBeaconNextSegment),
                   metres, dir);
-    prism::Speak(msg, /*interrupt=*/false);
+    acc::speech::Speak(msg, /*interrupt=*/false);
     acclog::Write("Beacon", "next-segment -> [%s] dist=%.2fm sector=%d",
                   msg, distance, sector);
 }

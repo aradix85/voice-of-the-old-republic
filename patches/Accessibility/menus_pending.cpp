@@ -36,7 +36,7 @@
 #include "menus_listbox.h"   // ClearWorkbenchUpgradeArmLatch (post-slot-select cleanup)
 #include "menus_powers_levelup.h"   // IsPowersLevelUpPanel — chargen sub-screen close
 #include "menus_store.h"     // DispatchTradeAction for StoreItemActivate
-#include "prism.h"           // Speak — workbench slot-click outcome announce
+#include "speech.h"           // Speak — workbench slot-click outcome announce
 #include "strings.h"         // WorkbenchSlotInstalled / Removed / NoMatch
 
 namespace acc::menus::pending {
@@ -924,7 +924,7 @@ void Drain(void* gm) {
                     } else {
                         snprintf(msg, sizeof(msg), "%s", result);
                     }
-                    prism::Speak(msg, /*interrupt=*/false);
+                    acc::speech::Speak(msg, /*interrupt=*/false);
                 }
             }
         }
@@ -1010,7 +1010,7 @@ void Drain(void* gm) {
                 }
             }
             if (say != acc::strings::Id::Count_) {
-                prism::Speak(acc::strings::Get(say), /*interrupt=*/false);
+                acc::speech::Speak(acc::strings::Get(say), /*interrupt=*/false);
             }
             acclog::Write("Update", "WorkbenchUpgradeInstallK2 done panel=%p row=%p "
                           "none=%d before=%p after=%p row.is_active=%u%s -> say=%d",

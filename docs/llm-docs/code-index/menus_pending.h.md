@@ -6,7 +6,7 @@ deferred menu-side operation queue.
 
 g_pendingActivate, g_pendingCursorMove, g_pendingSliderInput, g_pendingEquipSelect, g_pendingEquipCommit) flag/target pairs collapse to a single tagged op stored here. Input handlers in menus.cpp call `Queue*` to enqueue; `Drain` runs once per tick from `TickPendingOps` and dispatches the op against deep engine functions (MoveMouseToPosition, manager LMouseDown/Up, vtable[15] HandleInputEvent, OnEnterSlot/ OnSelectSlot, OnItemSelected/OnOKPressed).
 
-Why deferred: invoking these mid-input-dispatch recurses through HandleMouseMove → UpdateMouseOverControl, the same re-entrancy class that destabilised earlier listbox-entry hooks. Deferring to the next CSWGuiManager::Update tick (~16ms at 60fps; inaudible) keeps deep engine re-entry off the input-hook stack. Prism speech still fires synchronously from the input hook so the audible response feels instantaneous.
+Why deferred: invoking these mid-input-dispatch recurses through HandleMouseMove → UpdateMouseOverControl, the same re-entrancy class that destabilised earlier listbox-entry hooks. Deferring to the next CSWGuiManager::Update tick (~16ms at 60fps; inaudible) keeps deep engine re-entry off the input-hook stack. Speech still fires synchronously from the input hook so the audible response feels instantaneous.
 
 Queue depth: one op at a time. The `ClickAt` op atomically does both cursor-warp and LMouseDown/Up on drain — that's what tab-button activation needs. Every Queue* returns false if an op is already pending; callers log + treat the keypress as consumed.
 

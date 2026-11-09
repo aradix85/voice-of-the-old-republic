@@ -1,13 +1,6 @@
 // Diagnostics for the "menu loaded but unresponsive" / "intro movie plays
 // twice" / "alt-tab needed to wake the engine" class of reports.
 //
-// LogComApartment reports the COM apartment model the calling thread is
-// committed to. Called once after EnsurePrismInitialized so we can see
-// whether the SAPI backend inside prism.dll has CoInitialize'd the
-// engine's main thread into MTA (which can conflict with Bink / other
-// engine COM paths that expect STA, producing exactly the "fine until
-// the first focus loss, then dead" symptom).
-//
 // StartFocusProbe spins up a background polling thread that periodically
 // re-enumerates the process's top-level windows and subclasses every
 // game window it hasn't seen before. Subclassed WindowProc logs every
@@ -22,11 +15,6 @@
 #pragma once
 
 namespace acc::focus_guard {
-
-// Log a single line describing the calling thread's COM apartment.
-// `tag` is appended so the same probe can fire at multiple sites
-// without ambiguity (e.g. "post_prism_init", "first_menu_tick").
-void LogComApartment(const char* tag);
 
 // Start the focus-probe polling thread. Idempotent. First call spawns
 // the worker; subsequent calls return immediately.

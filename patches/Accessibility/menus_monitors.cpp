@@ -27,7 +27,7 @@
 #include "menus_journal.h"   // LogEntryCounts — entry-count completeness diagnostic
 #include "menus_listbox.h"   // IsEquipPickerArmed — mute the slot re-read during preview
 #include "strings.h"
-#include "prism.h"
+#include "speech.h"
 #include "tutorial_hints.h"  // TutorialBox keyboard-hint substitution (Surface 1)
 #include "tutorial_popup.h"  // synthetic Trask-line tutorial popup (Surface 2)
 
@@ -157,7 +157,7 @@ void AnnounceControl(void* control) {
             spoken = acc::tutorial_popup::SyntheticHint();
         if (!spoken) spoken = acc::tutorial_hints::HintForMouseText(text);
         if (!spoken) spoken = text;
-        prism::Speak(spoken, /*interrupt=*/false);
+        acc::speech::Speak(spoken, /*interrupt=*/false);
         // Prime channel-0 dedup so the engine's post-nav SetActive echo
         // (which lands in the pending-announce slot and gets drained next
         // tick) sees the same text as last-spoken and stays silent.
@@ -191,7 +191,7 @@ void AnnounceControl(void* control) {
     }
     char placeholder[64];
     snprintf(placeholder, sizeof(placeholder), "control %d", static_cast<int>(id));
-    prism::Speak(placeholder, /*interrupt=*/false);
+    acc::speech::Speak(placeholder, /*interrupt=*/false);
 }
 
 namespace {
@@ -314,7 +314,7 @@ void MonitorFocusedControl() {
             // that, which is the user's confirmation that the cancel took.
             bool equipPreview = acc::menus::listbox::IsEquipPickerArmed();
             if (!handled && !equipPreview) {
-                prism::Speak(text, /*interrupt=*/false);
+                acc::speech::Speak(text, /*interrupt=*/false);
             }
             strncpy_s(s_focusMonitorText, text, _TRUNCATE);
             acclog::Write("Monitor", "focused=%p text changed -> \"%s\"%s",
@@ -462,7 +462,7 @@ void AnnounceNewSubScreens(void** panels, int count) {
                 acclog::Write("Menus.SubScreen",
                               "panel=%p kind=%s title=\"%s\" (dynamic)",
                               p, PanelKindName(k), title);
-                prism::Speak(title, /*interrupt=*/false);
+                acc::speech::Speak(title, /*interrupt=*/false);
             } else {
                 acclog::Write("Menus.SubScreen",
                               "panel=%p kind=%s LBL_TITLE empty; silent",
@@ -478,7 +478,7 @@ void AnnounceNewSubScreens(void** panels, int count) {
             LookupTlk(strref, text, sizeof(text))) {
             acclog::Write("Menus.SubScreen", "panel=%p kind=%s strref=%u text=\"%s\"",
                           p, PanelKindName(k), strref, text);
-            prism::Speak(text, /*interrupt=*/false);
+            acc::speech::Speak(text, /*interrupt=*/false);
             spoke = true;
         }
         if (!spoke) {
@@ -493,7 +493,7 @@ void AnnounceNewSubScreens(void** panels, int count) {
             }
             acclog::Write("Menus.SubScreen", "panel=%p kind=%s text=\"%s\" (literal)",
                           p, PanelKindName(k), literal);
-            prism::Speak(literal, /*interrupt=*/false);
+            acc::speech::Speak(literal, /*interrupt=*/false);
         }
 
         // (Charakterblatt no longer reads the full stat block on open —
@@ -727,7 +727,7 @@ void SpeakNewSegments(const char* prev, const char* curr) {
                     "  already spoken by a focus/row announce — skipped \"%s\"",
                     seg);
             } else {
-                prism::Speak(seg, /*interrupt=*/false);
+                acc::speech::Speak(seg, /*interrupt=*/false);
                 acc::menus::MarkSpoken(/*channel=*/0, seg);
                 acclog::Write("ContentChange", "  spoke \"%s\"", seg);
             }
@@ -1176,7 +1176,7 @@ void MonitorDialogReplies() {
         snprintf(msg, sizeof(msg),
                  acc::strings::Get(acc::strings::Id::FmtContainerItemAt),
                  text, selIdx + 1, lbList->size);
-        prism::Speak(msg, /*interrupt=*/false);
+        acc::speech::Speak(msg, /*interrupt=*/false);
     } else {
         char vtbl[160];
         if (row) DumpControlVtable(row, vtbl, sizeof(vtbl));

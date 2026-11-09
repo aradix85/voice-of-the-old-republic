@@ -43,7 +43,7 @@
 #include "mod_version.h"
 #include "narrated_target.h"
 #include "party_status.h"
-#include "prism.h"
+#include "speech.h"
 #include "same_name_suffix.h"
 #include "strfmt.h"
 
@@ -66,7 +66,7 @@ constexpr size_t kSpokenCapacity  = 300;
 // Game codepage (what the engine and the speech path hand us) -> UTF-8.
 std::string ToUtf8(const char* text) {
     if (!text || !*text) return std::string();
-    UINT cp = prism::GetSpeechCodepage();
+    UINT cp = acc::speech::GetSpeechCodepage();
     int wlen = MultiByteToWideChar(cp, 0, text, -1, nullptr, 0);
     if (wlen <= 0) return std::string(text);
     std::wstring w(static_cast<size_t>(wlen), L'\0');
@@ -635,7 +635,7 @@ std::string RunAction(const Job& job) {
     if (action == "say") {
         std::wstring w = Utf8ToWide(Param(job, "text"));
         if (w.empty()) return "{\"error\":\"text missing\"}";
-        prism::Speak(w.c_str(), /*interrupt=*/true);
+        acc::speech::Speak(w.c_str(), /*interrupt=*/true);
         return "{\"ok\":true}";
     }
     if (action == "key") {
@@ -670,7 +670,7 @@ std::string RunAction(const Job& job) {
         std::string name = SpokenName(obj);
         if (Param(job, "quiet") != "1") {
             std::wstring w = Utf8ToWide(name);
-            if (!w.empty()) prism::Speak(w.c_str(), /*interrupt=*/true);
+            if (!w.empty()) acc::speech::Speak(w.c_str(), /*interrupt=*/true);
         }
         return "{\"ok\":true,\"name\":" + Json(name) + "}";
     }

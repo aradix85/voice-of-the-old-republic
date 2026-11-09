@@ -1,4 +1,4 @@
-# floor_puzzle.cpp (633 lines)
+# floor_puzzle.cpp (628 lines)
 
 Source: `patches/Accessibility/floor_puzzle.cpp`
 

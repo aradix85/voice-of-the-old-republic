@@ -7,7 +7,7 @@
 #include "log.h"
 #include "menus_extract.h"
 #include "menus_pending.h"
-#include "prism.h"
+#include "speech.h"
 
 namespace acc::menus::listbox {
 
@@ -51,7 +51,7 @@ void EquipPickerAnnounce(void* /*lb*/, const ListBoxNavResult& r) {
         snprintf(msg, sizeof(msg),
                  acc::strings::Get(acc::strings::Id::FmtContainerItemAt),
                  rowText, r.newSel, r.rowCount - 1);
-        prism::Speak(msg, /*interrupt=*/false);
+        acc::speech::Speak(msg, /*interrupt=*/false);
     }
 }
 
@@ -111,7 +111,7 @@ bool EquipPickerOnEnter(void* panel) {
     // items_listbox.bit_flags & 8 by OnSelectSlot's SetEnabled.
     if (selectedIsEquipped && unequipRow && btn) {
         acc::menus::pending::QueueEquipCommit(panel, unequipRow, btn);
-        prism::Speak(acc::strings::Get(acc::strings::Id::EquipUnequipped),
+        acc::speech::Speak(acc::strings::Get(acc::strings::Id::EquipUnequipped),
                      /*interrupt=*/false);
         acclog::Write("EquipPicker", "Enter -> unequip (equipped row sel=%d, "
                       "commit empty row %p btn_equip=%p panel=%p)",

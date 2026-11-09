@@ -9,7 +9,7 @@
 #include "engine_reads.h"
 #include "log.h"
 #include "menus_pending.h"
-#include "prism.h"
+#include "speech.h"
 #include "engine_offsets_select.h"
 
 namespace acc::menus::listbox {
@@ -140,7 +140,7 @@ bool InGameMessagesOnLeftRight(void* panel, int dir) {
 
     char msg[200];
     FormatMsgView(panel, target, msg, sizeof(msg));
-    prism::Speak(msg, /*interrupt=*/true);
+    acc::speech::Speak(msg, /*interrupt=*/true);
     acclog::Write("InGameMessages", "%s view %d -> %d (%s) \"%s\"",
                   dir < 0 ? "Left" : "Right", static_cast<int>(cur),
                   idx, action, msg);

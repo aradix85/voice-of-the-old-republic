@@ -19,7 +19,7 @@
 #include "filter_objects.h"
 #include "log.h"
 #include "narrated_target.h"
-#include "prism.h"
+#include "speech.h"
 #include "strings.h"
 #include "engine_rebase.h"
 #include "engine_offsets_select.h"
@@ -347,7 +347,7 @@ void Tick() {
     g_idleSpoken = true;
     if (!HostileNearby()) return;
     const char* line = acc::strings::Get(acc::strings::Id::CombatIdleNotice);
-    prism::Speak(line, /*interrupt=*/false);
+    acc::speech::Speak(line, /*interrupt=*/false);
     acclog::Write("Combat.Diag", "idle notice -> [%s]", line);
 }
 

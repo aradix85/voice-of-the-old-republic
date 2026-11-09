@@ -4,7 +4,7 @@ Source: `patches/Accessibility/menus.cpp`
 
 menu-side hook handlers (chain navigation, focus events, input dispatch, per-tick monitors).
 
-Layering: log.{h,cpp}             file/debug logging primitives prism.{h,cpp}            screen-reader bridge (LoadLibrary'd lazily) core_dllmain.cpp        DllMain + OnRulesInit + EnsurePrismInitialized engine_input.{h,cpp}    InputIndices name table + manager translate engine_offsets.h        engine struct/vtable offset constants + engine structs engine_reads.{h,cpp}    SEH-guarded readers (CallDowncast, ReadGuiString, ...) engine_panels.{h,cpp}   PanelKind enum + CGuiInGame slot classification engine_manager.{h,cpp}  CSWGuiManager surface + cursor / click-sim PFNs this file               the menu-accessibility hook handlers
+Layering: log.{h,cpp}             file/debug logging primitives speech.{h,cpp}           NVDA controller client (LoadLibrary'd lazily) core_dllmain.cpp        DllMain + OnRulesInit + EnsureSpeechInitialized engine_input.{h,cpp}    InputIndices name table + manager translate engine_offsets.h        engine struct/vtable offset constants + engine structs engine_reads.{h,cpp}    SEH-guarded readers (CallDowncast, ReadGuiString, ...) engine_panels.{h,cpp}   PanelKind enum + CGuiInGame slot classification engine_manager.{h,cpp}  CSWGuiManager surface + cursor / click-sim PFNs this file               the menu-accessibility hook handlers
 
 Phase 0 of the long-term nav plan extracted the foundation (core_dllmain + engine_*) out of the original monolithic Accessibility.cpp; the remaining menu-accessibility code is what lives here under the new name. Per plan, the menu-side logic is NOT decomposed further in Phase 0 (incremental refactor discipline) — see docs/navsystem-longterm-plan.md.
 

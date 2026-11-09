@@ -14,7 +14,7 @@
 #include "log.h"
 #include "menus_chargen_layout.h"
 #include "strings.h"
-#include "prism.h"
+#include "speech.h"
 
 namespace acc::menus::chargen_attr {
 
@@ -113,7 +113,7 @@ int ReadEngineAbilityCost(void* panel, int currentValue) {
     return cost;
 }
 
-// Render the modifier with sign so it reads correctly through Prism:
+// Render the modifier with sign so it reads correctly through NVDA:
 // positive gets an explicit "+", zero is bare "0" (engine renders
 // this as bare "-" which sounds broken), negative carries its own
 // sign already.
@@ -165,7 +165,7 @@ void AnnounceChainStepSuffix(void* panel, void* control) {
                  acc::strings::Id::FmtChargenAttrInfoSuffix),
              modText, costText);
 
-    prism::Speak(msg, /*interrupt=*/false);
+    acc::speech::Speak(msg, /*interrupt=*/false);
     acclog::Write("Menus.ChargenAttr",
                   "chain-step suffix focus=%p idx=%d value=%d mod=\"%s\" cost=%d",
                   control, idx, value, modText, cost);
@@ -269,7 +269,7 @@ bool AnnounceValueChange(void* panel, void* control) {
         snprintf(msg, sizeof(msg), fmt, value, remText);
     }
 
-    prism::Speak(msg, /*interrupt=*/false);
+    acc::speech::Speak(msg, /*interrupt=*/false);
     acclog::Write("Menus.ChargenAttr",
                   "value-change focus=%p idx=%d value=\"%s\" "
                   "mod=%d (prev=%d, %s) cost=%d (prev=%d, %s) remaining=\"%s\"",

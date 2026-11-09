@@ -43,7 +43,7 @@
 #include "menus_store.h"
 #include "minigame_pazaak.h"  // kWagerLessCode / kWagerMoreCode
 #include "peek_description.h"
-#include "prism.h"
+#include "speech.h"
 #include "strings.h"
 
 namespace acc::menus::chain {
@@ -347,7 +347,7 @@ void HandleEnterActivation(void* activePanel, int code, int val, bool& consumed)
         // Run the engine's (no-op) toggle for the UI click sound, then tell
         // the user why the composition didn't change.
         acc::menus::pending::QueueActivate(e.control);
-        prism::Speak(acc::strings::Get(acc::strings::Id::PartySelectionFull),
+        acc::speech::Speak(acc::strings::Get(acc::strings::Id::PartySelectionFull),
                      /*interrupt=*/false);
         acclog::Write("Menus.Enter",
                       "party-full add blocked panel=%p index=%d target=%p",
@@ -511,7 +511,7 @@ void HandleNavStep(void* activePanel, int code, int val, bool& consumed) {
     // just-arrived focus wins the speech channel. No-op on every other panel
     // (their descriptions are short enough to drain naturally).
     if (acc::menus::chargen_skills::IsChargenSkillsPanel(g_chainPanel)) {
-        prism::Silence();
+        acc::speech::Silence();
     }
     acc::menus::monitors::AnnounceControl(e.control);
     // Mirror chain focus into the chargen Attributes panel's selected_ability
@@ -544,7 +544,7 @@ void HandleNavStep(void* activePanel, int code, int val, bool& consumed) {
             snprintf(suffix, sizeof(suffix),
                      acc::strings::Get(acc::strings::Id::FmtItemStackSuffix),
                      stack);
-            prism::Speak(suffix, /*interrupt=*/false);
+            acc::speech::Speak(suffix, /*interrupt=*/false);
         }
         // Charged consumables can't stack, so this is mutually exclusive with
         // the suffix above. charges == 0 is still meaningful (depleted item).
@@ -554,7 +554,7 @@ void HandleNavStep(void* activePanel, int code, int val, bool& consumed) {
             snprintf(suffix, sizeof(suffix),
                      acc::strings::Get(acc::strings::Id::FmtItemChargeSuffix),
                      charges);
-            prism::Speak(suffix, /*interrupt=*/false);
+            acc::speech::Speak(suffix, /*interrupt=*/false);
         }
     }
     int cursorX = e.cx;

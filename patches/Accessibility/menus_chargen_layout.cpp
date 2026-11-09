@@ -12,7 +12,7 @@
 #include "log.h"
 #include "menus_chain.h"
 #include "menus_extract.h"
-#include "prism.h"
+#include "speech.h"
 
 namespace acc::menus::chargen_layout {
 
@@ -250,7 +250,7 @@ bool AnnounceDescription(const PanelDesc& d, void* panel, void* control) {
         dump[n] = '\0';
     }
 
-    prism::Speak(buf, /*interrupt=*/false);
+    acc::speech::Speak(buf, /*interrupt=*/false);
     acclog::Write(d.logTag,
                   "chain-step description focus=%p idx=%d (first 300 chars: \"%.300s\")",
                   control, idx, dump);

@@ -15,7 +15,7 @@
 #include "interact_dispatch.h" // Ctrl+Shift+N tries a locked door like Enter
 #include "narrated_target.h"
 #include "log.h"
-#include "prism.h"
+#include "speech.h"
 #include "same_name_suffix.h"
 #include "strings.h"
 
@@ -101,7 +101,7 @@ void WalkTowardUnexplored() {
             acc::interact::DispatchInteract(o.tryDoor, handle,
                                             /*forceRadial=*/false);
             // Queued behind the interact line, which names the door.
-            prism::Speak(acc::strings::Get(Id::ExploreTryingDoor),
+            acc::speech::Speak(acc::strings::Get(Id::ExploreTryingDoor),
                          /*interrupt=*/false);
             acclog::Write("ExitMemory", "explore walk: nothing reachable left, "
                           "trying locked door 0x%08x", handle);
@@ -122,14 +122,14 @@ void WalkTowardUnexplored() {
             std::snprintf(line, sizeof(line),
                           acc::strings::Get(Id::FmtExploreWayOut),
                           Located(exitName, o.exitDoorPos).c_str());
-            prism::Speak(line, /*interrupt=*/true);
+            acc::speech::Speak(line, /*interrupt=*/true);
             acclog::Write("ExitMemory", "explore walk: way out 0x%08x -> [%s]",
                           exitHandle, line);
             return;
         }
         // Nothing reachable left: say why (all explored / behind locks).
         const std::string text = OverviewText(o);
-        prism::Speak(text.c_str(), /*interrupt=*/true);
+        acc::speech::Speak(text.c_str(), /*interrupt=*/true);
         return;
     }
     g_chain        = ExploreChain{};
@@ -155,13 +155,13 @@ void WalkTowardUnexplored() {
         char fail[256];
         std::snprintf(fail, sizeof(fail), acc::strings::Get(Id::FmtGuidingFailed),
                       g_chain.name.c_str());
-        prism::Speak(fail, /*interrupt=*/true);
+        acc::speech::Speak(fail, /*interrupt=*/true);
         return;
     }
     char buf[640];
     std::snprintf(buf, sizeof(buf), acc::strings::Get(Id::FmtWalkingTo),
                   subject.c_str());
-    prism::Speak(buf, /*interrupt=*/true);
+    acc::speech::Speak(buf, /*interrupt=*/true);
     acclog::Write("ExitMemory", "walk unexplored: %s (goal region %d)", buf,
                   o.targetId);
 }
@@ -170,7 +170,7 @@ void WalkToNearestLoot() {
     Overview o;
     if (!CollectOverview(o)) return;
     if (o.loot.empty()) {
-        prism::Speak(acc::strings::Get(acc::strings::Id::OverviewNothingToSearch),
+        acc::speech::Speak(acc::strings::Get(acc::strings::Id::OverviewNothingToSearch),
                      /*interrupt=*/true);
         return;
     }

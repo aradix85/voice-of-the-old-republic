@@ -30,7 +30,7 @@
 #include "menus_extract.h"
 #include "menus_pending.h"
 #include "strings.h"
-#include "prism.h"
+#include "speech.h"
 
 using namespace acc::engine;
 
@@ -263,19 +263,18 @@ void SnapshotInto(ArmedState& s) {
 
 void SpeakFullText(const char* text, uint32_t len) {
     if (len == 0) {
-        prism::Speak(acc::strings::Get(acc::strings::Id::EditboxEmpty),
+        acc::speech::Speak(acc::strings::Get(acc::strings::Id::EditboxEmpty),
                     /*interrupt=*/false);
     } else {
-        prism::Speak(text, /*interrupt=*/false);
+        acc::speech::Speak(text, /*interrupt=*/false);
     }
 }
 
-// Speak a single character. Render as a one-char null-terminated string —
-// The Prism NVDA backend handles this natively (NVDA reads single chars per its
-// "characters" verbosity setting).
+// Speak a single character as a one-char string; NVDA reads single chars per
+// its "characters" verbosity setting.
 void SpeakSingleChar(char c) {
     char buf[2] = {c, '\0'};
-    prism::Speak(buf, /*interrupt=*/false);
+    acc::speech::Speak(buf, /*interrupt=*/false);
 }
 
 // ============================================================================
@@ -605,7 +604,7 @@ void TickEditboxMonitors() {
             } else {
                 snprintf(msg, sizeof(msg), "%s. %s", role, empty);
             }
-            prism::Speak(msg, /*interrupt=*/false);
+            acc::speech::Speak(msg, /*interrupt=*/false);
             acc::menus::ClearPendingAnnounce();
 
             acclog::Write("Editbox", "%s arm: panel=%p editbox=%p "

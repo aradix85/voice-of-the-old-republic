@@ -9,7 +9,7 @@
 #include "engine_offsets.h"  // kCreatureInventoryOffset, kInventory*HandleOffset
 #include "engine_player.h"   // GetPlayerServerCreature
 #include "log.h"
-#include "prism.h"
+#include "speech.h"
 #include "strings.h"
 
 namespace acc::weapon_set_watch {
@@ -105,7 +105,7 @@ void SpeakNewLoadout(void* leader) {
         std::snprintf(buf, sizeof(buf), "%s",
                       acc::strings::Get(acc::strings::Id::WeaponSwitchedBare));
     }
-    prism::Speak(buf, /*interrupt=*/true);
+    acc::speech::Speak(buf, /*interrupt=*/true);
 }
 
 }  // namespace

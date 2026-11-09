@@ -10,7 +10,7 @@
 #include "hotkeys.h"
 #include "log.h"
 #include "menus_modsettings.h"   // ExtendedCycling: list loot map-wide
-#include "prism.h"
+#include "speech.h"
 #include "same_name_suffix.h"
 #include "strings.h"
 #include "view_mode.h"         // routes are from the player, not the cursor
@@ -103,7 +103,7 @@ void FlushReminder() {
         if (acc::engine::GetPlayerPosition(unused) &&
             !acc::engine::IsForegroundUiBlocking()) {
             const char* line = acc::strings::Get(acc::strings::Id::RouteNoWayLocked);
-            prism::Speak(line, /*interrupt=*/false);
+            acc::speech::Speak(line, /*interrupt=*/false);
             acclog::Write("ExitMemory", "no way: %s", line);
         }
     }
@@ -114,7 +114,7 @@ void FlushReminder() {
     if (!acc::engine::GetPlayerPosition(unused)) return;
     // A conversation or a panel took over meanwhile: the moment has passed.
     if (acc::engine::IsForegroundUiBlocking()) return;
-    prism::Speak(g_reminderText.c_str(), /*interrupt=*/false);
+    acc::speech::Speak(g_reminderText.c_str(), /*interrupt=*/false);
     acclog::Write("ExitMemory", "loot reminder: %s", g_reminderText.c_str());
 }
 
@@ -375,7 +375,7 @@ void PollOverviewHotkey() {
     if (!text.empty() && text.back() != '.') text += '.';
     if (!text.empty()) text += ' ';
     text += OverviewText(o);
-    prism::Speak(text.c_str(), /*interrupt=*/true);
+    acc::speech::Speak(text.c_str(), /*interrupt=*/true);
     acclog::Write("ExitMemory", "overview: %s", text.c_str());
 }
 

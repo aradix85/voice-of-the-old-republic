@@ -12,7 +12,7 @@
 #include "engine_player.h"    // AppManager chain (kAddrAppManagerPtr ...) +
                               //   GetCameraPosition / GetPlayerPosition
 #include "log.h"
-#include "prism.h"
+#include "speech.h"
 #include "strings.h"          // Get(TurretGameStarted/Controls/Ended)
 
 namespace acc::turret_game {
@@ -187,7 +187,7 @@ void AnnounceTargetGone(int slot, bool diedOnScreen) {
                                                 : acc::strings::Id::FmtTurretDestroyedNamed),
                       noun, num);
     }
-    prism::Speak(buf, /*interrupt=*/true);
+    acc::speech::Speak(buf, /*interrupt=*/true);
     const char* why = escaped ? "(vanished alive -> escaped)"
                     : (g_state.slot_damaged[slot] || diedOnScreen) ? "(damaged -> kill)"
                     : "(no damage seen -> despawn?)";

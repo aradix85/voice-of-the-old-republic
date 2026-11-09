@@ -17,7 +17,7 @@
 #include "menus_chain.h"      // RebindChain on mode flip
 #include "menus_pending.h"    // QueueActivate for G / Esc helpers
 #include "strings.h"
-#include "prism.h"
+#include "speech.h"
 
 namespace acc::menus::store {
 
@@ -260,7 +260,7 @@ void AnnounceChainStepSuffix(void* panel, void* control) {
                  (int)price, stock);
     }
 
-    prism::Speak(msg, /*interrupt=*/false);
+    acc::speech::Speak(msg, /*interrupt=*/false);
 
     // Charged consumables (max_charges > 0) also report their current charge
     // count. Orthogonal to stock — a merchant can carry a charged item too.
@@ -270,7 +270,7 @@ void AnnounceChainStepSuffix(void* panel, void* control) {
         snprintf(chargeMsg, sizeof(chargeMsg),
                  acc::strings::Get(acc::strings::Id::FmtItemChargeSuffix),
                  charges);
-        prism::Speak(chargeMsg, /*interrupt=*/false);
+        acc::speech::Speak(chargeMsg, /*interrupt=*/false);
     }
 
     acclog::Write("Menus.Store",
@@ -334,7 +334,7 @@ void TickMonitorMode() {
         const char* word = acc::strings::Get(current == Mode::Buy
             ? acc::strings::Id::StoreModeBuy
             : acc::strings::Id::StoreModeSell);
-        prism::Speak(word, /*interrupt=*/false);
+        acc::speech::Speak(word, /*interrupt=*/false);
         acclog::Write("Menus.Store", "mode change panel=%p -> %s",
                       fg, current == Mode::Buy ? "buy" : "sell");
 
@@ -419,7 +419,7 @@ void TickMonitorMode() {
                      ? acc::strings::Id::FmtStoreBoughtFor
                      : acc::strings::Id::FmtStoreSoldFor),
                  (int)g_tradeWatchPrice);
-        prism::Speak(msg, /*interrupt=*/false);
+        acc::speech::Speak(msg, /*interrupt=*/false);
         acclog::Write("Menus.Store",
                       "trade success mode=%s via %s (gold %u -> %u, "
                       "size delta=%d, price=%u)",
@@ -442,7 +442,7 @@ void TickMonitorMode() {
         const char* word = acc::strings::Get(current == Mode::Buy
             ? acc::strings::Id::StoreCannotBuy
             : acc::strings::Id::StoreCannotSell);
-        prism::Speak(word, /*interrupt=*/false);
+        acc::speech::Speak(word, /*interrupt=*/false);
         acclog::Write("Menus.Store",
                       "trade refused mode=%s (no gold/size change after "
                       "watch; gold=%u)",
@@ -502,7 +502,7 @@ void DispatchTradeAction(void* panel, void* row) {
                      acc::strings::Get(
                          acc::strings::Id::FmtStoreNotEnoughCredits),
                      (int)price, (int)gold);
-            prism::Speak(msg, /*interrupt=*/false);
+            acc::speech::Speak(msg, /*interrupt=*/false);
             acclog::Write("Menus.Store",
                           "DispatchTradeAction buy refused (gold=%u price=%u) panel=%p",
                           gold, price, panel);

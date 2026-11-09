@@ -10,7 +10,7 @@
 #include "engine_reads.h"
 #include "log.h"
 #include "menus_extract.h"
-#include "prism.h"
+#include "speech.h"
 #include "engine_offsets_select.h"
 
 namespace acc::menus::listbox {
@@ -119,7 +119,7 @@ void SkillInfoBoxAnnounce(void* /*lb*/, const ListBoxNavResult& r) {
     snprintf(head, sizeof(head),
              acc::strings::Get(acc::strings::Id::FmtChargenFeatGrantedRow),
              rowText, r.newSel + 1, r.rowCount);
-    prism::Speak(head, /*interrupt=*/false);
+    acc::speech::Speak(head, /*interrupt=*/false);
 }
 
 // Per-row enrichment: refresh the underlying CSWGuiFeatsCharGen's
@@ -182,7 +182,7 @@ void SkillInfoBoxEnrichRow(void* /*panel*/, const ListBoxNavResult& r) {
     char desc[1024];
     if (descRow && ReadLabelText(descRow, desc, sizeof(desc)) &&
         desc[0] != '\0') {
-        prism::Speak(desc, /*interrupt=*/false);
+        acc::speech::Speak(desc, /*interrupt=*/false);
         // Newline-flatten for the diagnostic log line.
         char dump[1024];
         size_t dn = strnlen(desc, sizeof(desc) - 1);
