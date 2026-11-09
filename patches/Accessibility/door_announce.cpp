@@ -48,10 +48,12 @@ DWORD           s_lastNearbyAtMs  = 0;
 
 // Walk-through after an Enter on a closed door into another area (see the
 // header). The window is long because the engine first walks the leader to
-// the door; the distance test keeps a door that opens after the player left
-// from pulling them back. The short settle lets the open animation clear the
-// doorway before the walk is queued.
-constexpr DWORD kWalkThroughWindowMs = 30000;
+// the door: 2026-11-09 the Upper City lift was 115 m away, the walk took 30 s
+// and the lift opened the very tick a 30 s window ran out. The distance test
+// keeps a door that opens after the player left from pulling them back. The
+// short settle lets the open animation clear the doorway before the walk is
+// queued.
+constexpr DWORD kWalkThroughWindowMs = 120000;
 constexpr DWORD kWalkThroughSettleMs = 600;
 constexpr float kWalkThroughMaxM     = 6.0f;
 uint32_t        s_walkDoor           = 0;   // server handle, 0 = disarmed

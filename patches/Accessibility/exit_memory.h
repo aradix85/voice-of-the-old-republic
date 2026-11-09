@@ -66,6 +66,17 @@ void OnClusterCommitted(int from, int to);
 // Marks it visited only.
 void OnClusterSeen(int id);
 
+// The bit of walkmesh at a door into another area (the lift you arrive by,
+// the doorway of an area door) can be a region of its own, joined to the
+// rest of the area only through that door. Standing in it is standing in
+// the region in front of the door: returns that region (and its centre in
+// outCentre, may be null) for such a sliver, else `region` unchanged.
+// 2026-11-09, Lower City lift: the arrival spot was such a sliver, its label
+// read "Elevator 2 North, To Upper City" and every route went "via Elevator
+// 2 North, To Upper City", which sounded like going back up. Cached briefly;
+// cheap per frame.
+int TransitionSliverOwner(void* area, int region, Vector* outCentre);
+
 // Once per frame: loads this area's visited regions from the save once the
 // player creature has settled and the region graph exists.
 void Tick();

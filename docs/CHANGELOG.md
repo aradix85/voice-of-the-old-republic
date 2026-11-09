@@ -82,6 +82,8 @@ push to the branch is built by GitHub Actions and published as the pre-release
   and the conversation starts.
 - Enter on a map note at a door uses the door.
 - Enter on a closed door into another area opens it and takes you through.
+- Arriving by a lift or an area door, the region in front of it is announced
+  and routes no longer go "via" the door you came through.
 - A door near you that someone else opens says "Door 1 opens".
 - R while already attacking that enemy says "Already attacking X".
 - Standing idle in combat with an enemy near is announced once.
@@ -193,13 +195,19 @@ push to the branch is built by GitHub Actions and published as the pre-release
   entrance, and the walk to the note stopped against the door; "To Upper City
   South" sits 3.2 metres from its door, and Enter on it did nothing.
 - Enter on an open door walks through it.
+- The bit of floor at a door into another area (where you arrive by a lift)
+  counts as the region in front of the door. It used to be a tiny region of
+  its own: arriving in the Lower City the region read "Elevator 2 North, To
+  Upper City" and every route said "via Elevator 2 North, To Upper City",
+  which sounded like going back up. Now the street is announced, routes
+  start from it, and that sliver is never listed as unexplored.
 - Enter on a closed door into another area goes through once the door is
   open, also when its story script opens it a moment later (the Upper City
   lift). Before, the press only opened it and a second Enter was needed; that
   press often landed on something else, or the lift had already closed again.
-  It waits out a conversation, gives up after 30 seconds, and does not pull
-  you back if you walked more than 6 metres away. Any other Enter cancels it
-  (KOTOR 1).
+  It waits out the walk there and a conversation, gives up after 2 minutes,
+  and does not pull you back if you walked more than 6 metres away. Any
+  other Enter cancels it (KOTOR 1).
 - A door within 20 metres that someone else opens says "Door 1 opens" (KOTOR
   1). This is mostly a story door opening from its own script after your
   attempt; the last thing heard used to be "Door 1, locked", so a successful

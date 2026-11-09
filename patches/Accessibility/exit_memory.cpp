@@ -631,6 +631,9 @@ bool BuildGraph(void* area, const Vector& player, Graph& g) {
                                  /*requireWallReachable=*/true,
                                  /*zTrusted=*/true, &g.exits);
     g.start = (area == g_area && g_current >= 0) ? g_current : g.underPlayer;
+    // In the doorway sliver of an area door the region in front of it is
+    // where the player is (and ExitToward then names no exit of the sliver).
+    g.start = TransitionSliverOwner(area, g.start, nullptr);
 
     acc::room_topology::GetClusterLinks(area, g.links);
     const std::vector<Vector> lockedDoors = LockedDoorPositions(area);
@@ -923,6 +926,22 @@ std::string RegionLabelAt(void* area, const Vector& player) {
         label.empty()) {
         return std::string();
     }
+    // In the doorway sliver of an area door: read the region in front of it.
+    Vector ownerCentre{};
+    if (TransitionSliverOwner(area, cid, &ownerCentre) != cid) {
+        std::string ownerLabel;
+        std::vector<ExitMark> ownerExits;
+        int ownerCid = kClusterIdNone;
+        if (acc::room_topology::LookupAt(area, ownerCentre, ownerLabel, sig,
+                                         ownerCid, /*allowDiagLog=*/false,
+                                         /*requireWallReachable=*/true,
+                                         /*zTrusted=*/false, &ownerExits) &&
+            !ownerLabel.empty()) {
+            label = ownerLabel;
+            exits = ownerExits;
+            cid   = ownerCid;
+        }
+    }
     if (area == g_area && cid >= 0 && cid == g_current) {
         std::string annotated;
         std::vector<ExitMark> unused;
@@ -954,7 +973,86 @@ void FlushReminder() {
     acclog::Write("ExitMemory", "loot reminder: %s", g_reminderText.c_str());
 }
 
+// TransitionSliverOwner state: the last answer, reused for a short while
+// (the cluster tick asks every frame).
+struct SliverCache {
+    void*  area   = nullptr;
+    int    region = kClusterIdNone;
+    int    owner  = kClusterIdNone;
+    Vector centre = {0.0f, 0.0f, 0.0f};
+    DWORD  atMs   = 0;
+};
+SliverCache g_sliver;
+int         g_sliverLogged = kClusterIdNone;
+constexpr DWORD kSliverCacheMs    = 2000;
+// A lift cab or a doorway; anything wider is a real place.
+constexpr float kSliverMaxExtentM = 10.0f;
+
+// Any door (open or closed) standing within kDoorMatchM of `p`, or null.
+void* DoorNear(void* area, const Vector& p) {
+    acc::engine::AreaObjectIterator it(area);
+    while (void* obj = it.Next()) {
+        if (acc::engine::GetObjectKind(obj) !=
+            static_cast<int>(acc::engine::GameObjectKind::Door)) {
+            continue;
+        }
+        Vector q;
+        if (!acc::engine::GetObjectPosition(obj, q)) continue;
+        const float dx = q.x - p.x;
+        const float dy = q.y - p.y;
+        if (dx * dx + dy * dy <= kDoorMatchM * kDoorMatchM) return obj;
+    }
+    return nullptr;
+}
+
 }  // namespace
+
+int TransitionSliverOwner(void* area, int region, Vector* outCentre) {
+    if (!area || region < 0) return region;
+    const DWORD now = GetTickCount();
+    if (g_sliver.area == area && g_sliver.region == region &&
+        now - g_sliver.atMs < kSliverCacheMs) {
+        if (g_sliver.owner != region && outCentre) *outCentre = g_sliver.centre;
+        return g_sliver.owner;
+    }
+    g_sliver.area   = area;
+    g_sliver.region = region;
+    g_sliver.owner  = region;
+    g_sliver.atMs   = now;
+
+    ClusterInfo info;
+    if (!acc::room_topology::GetClusterInfo(area, region, info) ||
+        info.extentM < 0.0f || info.extentM > kSliverMaxExtentM) {
+        return region;
+    }
+    std::vector<ClusterLink> links;
+    if (!acc::room_topology::GetClusterLinks(area, links)) return region;
+    int   owner    = kClusterIdNone;
+    void* viaDoor  = nullptr;
+    for (const ClusterLink& l : links) {
+        if (l.a != region && l.b != region) continue;
+        const int other = (l.a == region) ? l.b : l.a;
+        if (!l.viaDoor) return region;  // an open way: a place of its own
+        void* door = DoorNear(area, l.doorPos);
+        if (!door || !acc::engine::DoorHasTransitionDest(door)) return region;
+        if (owner != kClusterIdNone && owner != other) return region;
+        owner   = other;
+        viaDoor = door;
+    }
+    if (owner == kClusterIdNone) return region;
+    ClusterInfo oi;
+    if (!acc::room_topology::GetClusterInfo(area, owner, oi)) return region;
+    g_sliver.owner  = owner;
+    g_sliver.centre = oi.centre;
+    if (outCentre) *outCentre = oi.centre;
+    if (g_sliverLogged != region) {
+        g_sliverLogged = region;
+        acclog::Write("ExitMemory", "region %d (extent %.1fm) is the doorway "
+                      "sliver of area door %p; standing in it counts as "
+                      "region %d", region, info.extentM, viaDoor, owner);
+    }
+    return owner;
+}
 
 void OnAreaEntered(void* area) {
     char key[64] = {0};
@@ -1109,6 +1207,12 @@ bool CollectOverview(Overview& o) {
 
         int target = -1;
         for (size_t i = 0; i < g.nodes.size(); ++i) {
+            // A doorway sliver of an area door is not a place to explore
+            // (the region in front of the door stands for it).
+            if (TransitionSliverOwner(area, g.nodes[i].id, nullptr) !=
+                g.nodes[i].id) {
+                continue;
+            }
             const bool visited = g_visited.count(g.nodes[i].id) != 0;
             const bool reachable = g.distAll[i] < kFar;
             if (visited || reachable) ++o.total;

@@ -905,7 +905,25 @@ void TickPendingPlatz(void* area, const Vector& playerPos) {
     std::string fireBuf;
     std::vector<acc::room_topology::ExitMark> exits;
     const char* source = "none";
-    bool resolved = ResolveRoomSpeech(area, playerPos,
+    // Still in the doorway sliver of an area door: the pending label belongs
+    // to the region in front of it and was resolved at that region's centre
+    // (TickCluster); resolving at the player would read the sliver again.
+    Vector resolvePos = playerPos;
+    {
+        std::string sliverLabel;
+        int sliverSig = 0;
+        int sliverCid = acc::room_topology::kClusterIdNone;
+        if (acc::room_topology::LookupAt(area, playerPos, sliverLabel,
+                                         sliverSig, sliverCid,
+                                         /*allowDiagLog=*/false,
+                                         /*requireWallReachable=*/true,
+                                         /*zTrusted=*/true) &&
+            acc::exit_memory::TransitionSliverOwner(area, sliverCid,
+                                                    nullptr) != sliverCid) {
+            resolvePos = g_pending_platz_pos;
+        }
+    }
+    bool resolved = ResolveRoomSpeech(area, resolvePos,
                                       fireBuf, source,
                                       nullptr, &exits) &&
                     !fireBuf.empty();
@@ -1556,6 +1574,23 @@ void Tick() {
         clusterId = g_prev_cluster_id;
     }
 
+    // The doorway sliver of an area door (the lift just arrived by) is a
+    // region of its own, joined to the rest only through that door. Track
+    // and announce the region in front of the door instead, with its label
+    // resolved at that region's centre (exit_memory::TransitionSliverOwner).
+    Vector labelPos       = pos;
+    bool   sliverRedirect = false;
+    {
+        Vector ownerCentre{};
+        const int owner = acc::exit_memory::TransitionSliverOwner(
+            area, clusterId, &ownerCentre);
+        if (owner != clusterId) {
+            clusterId      = owner;
+            labelPos       = ownerCentre;
+            sliverRedirect = true;
+        }
+    }
+
     bool clusterChanged  = (clusterId != g_prev_cluster_id);
     bool friendlyChanged = (std::strncmp(friendlyBuf,
                                          g_prev_friendly_room_name,
@@ -1623,6 +1658,13 @@ void Tick() {
         }
     }
 
+    // From the doorway sliver the player is not walking toward the region's
+    // centre yet; neither the centre rule nor the minor-region dwell apply.
+    if (sliverRedirect) {
+        g_pending_cluster_centre = false;
+        g_pending_cluster_minor  = false;
+    }
+
     // Track the closest approach every tick from the first observation,
     // not only once the stability window has passed.
     if (g_pending_cluster_centre && !friendlyChanged) {
@@ -1656,7 +1698,7 @@ void Tick() {
             g_gated_cluster_pending = true;
             g_gate_clear_since_ms   = 0;
         } else {
-            SpeakRoomChange(area, clusterId, pos);
+            SpeakRoomChange(area, clusterId, labelPos);
         }
         g_prev_cluster_id = clusterId;
         std::strncpy(g_prev_friendly_room_name, friendlyBuf,
