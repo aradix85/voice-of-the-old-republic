@@ -2481,6 +2481,7 @@ enum class Id : int {
     //      "; " so these commas do not read as extra exits.
     ExitAnnoNew,              // "new"      — region behind the exit not visited yet
     ExitAnnoVisited,          // "visited"
+    ExitAnnoNothingLeft,      // "nothing left" (visited region behind a door, all searched)
     ExitAnnoBack,             // "back"     — the region the player just came from
     FmtExitAnnoTo,            // "to %s"    — discovered landmark behind the exit
     ExitAnnoToCorridor,       // "to a corridor"

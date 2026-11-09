@@ -55,6 +55,35 @@ std::set<int> g_visited;
 int           g_current  = kClusterIdNone;
 int           g_previous = kClusterIdNone;
 
+// Doors into other areas, remembered in the save: per area the spots of the
+// doors the player went through and the module each led to
+// (ACC_EXIT_<area> = "x,y=module;..."), and per area the map notes seen
+// there (ACC_SUM_<area>). Two areas the game names alike (Taris' two "Lower
+// City Apartments") are told apart by what is inside: "Matrik's Apartment"
+// against "Selven's Apartment" (2026-11-09).
+std::string g_areaName;               // display name of g_area
+Vector      g_lastPos = {0.0f, 0.0f, 0.0f};  // player, last tick in g_area
+bool        g_haveLastPos = false;
+struct Arrival {
+    std::string fromKey;
+    std::string fromName;
+    Vector      fromPos = {0.0f, 0.0f, 0.0f};
+    bool        pending = false;
+};
+Arrival     g_arrival;
+DWORD       g_summaryAtMs = 0;
+std::string g_summarySaved;
+// A remembered door spot belongs to a door into another area this close.
+constexpr float kExitMatchM      = 6.0f;
+// A map note this close to a door into another area names that way out
+// ("To Lower City"), not something inside the area.
+constexpr float kExitNoteM       = 10.0f;
+constexpr DWORD kSummaryEveryMs  = 3000;
+constexpr int   kSummaryMaxNames = 4;
+constexpr int   kMaxExitEntries  = 60;
+// What is still in a visited region behind a door: at most this many named.
+constexpr int   kBehindMax       = 3;
+
 // Save-var reconciliation, like discovery: read only once the player
 // creature has been the same pointer for a settle window (a read on the
 // save-load tick races the engine restoring the var table).
@@ -390,12 +419,76 @@ bool IsPartyMember(void* obj, const uint32_t* party, int count) {
     return false;
 }
 
+struct RegionEntry {
+    float       dist;
+    std::string name;
+};
+
+// The people (not the party, not the dead), containers that still hold
+// something and items on the ground standing in region `cluster`, nearest
+// to the player first. `radiusM` <= 0: no distance limit. `record`: mark
+// them heard for the , / . cycles.
+std::vector<RegionEntry> RegionEntries(void* area, int cluster, float radiusM,
+                                       bool record);
+
 std::string HereList(void* area, int cluster) {
-    struct Entry {
-        float       dist;
-        std::string name;
-    };
-    std::vector<Entry> found;
+    std::vector<RegionEntry> found =
+        RegionEntries(area, cluster, kHereRadiusM, /*record=*/true);
+    if (found.empty()) return std::string();
+    std::string list;
+    int shown = 0;
+    for (const RegionEntry& e : found) {
+        if (shown == kHereMax) break;
+        if (!list.empty()) list += "; ";
+        list += e.name;
+        ++shown;
+    }
+    const int rest = static_cast<int>(found.size()) - shown;
+    if (rest > 0) {
+        char more[64];
+        std::snprintf(more, sizeof(more),
+                      acc::strings::Get(acc::strings::Id::FmtRegionHereMore), rest);
+        list += "; ";
+        list += more;
+    }
+    char buf[1024];
+    std::snprintf(buf, sizeof(buf),
+                  acc::strings::Get(acc::strings::Id::FmtRegionHere), list.c_str());
+    return buf;
+}
+
+// What is still in a visited region behind a door ("Matrik; Footlocker"),
+// or "nothing left". Empty for a region not visited: the player has not
+// seen it, and naming it would spoil it.
+std::string BehindDoorText(void* area, int farId) {
+    if (area != g_area || farId < 0 || !g_visited.count(farId)) {
+        return std::string();
+    }
+    std::vector<RegionEntry> found =
+        RegionEntries(area, farId, 0.0f, /*record=*/false);
+    if (found.empty()) return acc::strings::Get(acc::strings::Id::ExitAnnoNothingLeft);
+    std::string list;
+    int shown = 0;
+    for (const RegionEntry& e : found) {
+        if (shown == kBehindMax) break;
+        if (!list.empty()) list += "; ";
+        list += e.name;
+        ++shown;
+    }
+    const int rest = static_cast<int>(found.size()) - shown;
+    if (rest > 0) {
+        char more[64];
+        std::snprintf(more, sizeof(more),
+                      acc::strings::Get(acc::strings::Id::FmtRegionHereMore), rest);
+        list += "; ";
+        list += more;
+    }
+    return list;
+}
+
+std::vector<RegionEntry> RegionEntries(void* area, int cluster, float radiusM,
+                                       bool record) {
+    std::vector<RegionEntry> found;
     uint32_t party[12] = {0};
     const int partyCount = acc::engine::GetPartyMembers(party, 12);
     // Everything standing in the region, heard before or not: a sighted
@@ -403,7 +496,7 @@ std::string HereList(void* area, int cluster) {
     // limit this to discovered objects whenever map-wide cycling is off,
     // and never holds ground items at all.)
     Vector player;
-    if (!acc::engine::GetPlayerPosition(player)) return std::string();
+    if (!acc::engine::GetPlayerPosition(player)) return found;
     // The creature under control, by handle: pointer identity missed it and
     // "Here:" named the player herself ("Here: korasha; Remains 1").
     // With a companion as leader the player character is neither the
@@ -434,7 +527,7 @@ std::string HereList(void* area, int cluster) {
         const float dx = pos.x - player.x;
         const float dy = pos.y - player.y;
         const float dist = std::sqrt(dx * dx + dy * dy);
-        if (dist > kHereRadiusM) continue;
+        if (radiusM > 0.0f && dist > radiusM) continue;
         if (cat == CycleCategory::Npc) {
             if (IsPartyMember(obj, party, partyCount)) continue;
             const int hp = acc::engine::ReadCreatureCurrentHitPoints(obj);
@@ -454,33 +547,15 @@ std::string HereList(void* area, int cluster) {
             ToLowerAscii(name) == ToLowerAscii(pcName)) {
             continue;
         }
-        found.push_back(Entry{dist, name});
+        found.push_back(RegionEntry{dist, name});
         // Heard now: the , / . cycles may list it from here on.
-        acc::discovery::Record(obj);
+        if (record) acc::discovery::Record(obj);
     }
-    if (found.empty()) return std::string();
     std::stable_sort(found.begin(), found.end(),
-                     [](const Entry& a, const Entry& b) { return a.dist < b.dist; });
-    std::string list;
-    int shown = 0;
-    for (const Entry& e : found) {
-        if (shown == kHereMax) break;
-        if (!list.empty()) list += "; ";
-        list += e.name;
-        ++shown;
-    }
-    const int rest = static_cast<int>(found.size()) - shown;
-    if (rest > 0) {
-        char more[64];
-        std::snprintf(more, sizeof(more),
-                      acc::strings::Get(acc::strings::Id::FmtRegionHereMore), rest);
-        list += "; ";
-        list += more;
-    }
-    char buf[1024];
-    std::snprintf(buf, sizeof(buf),
-                  acc::strings::Get(acc::strings::Id::FmtRegionHere), list.c_str());
-    return buf;
+                     [](const RegionEntry& a, const RegionEntry& b) {
+                         return a.dist < b.dist;
+                     });
+    return found;
 }
 
 // ---------------------------------------------------------------------------
@@ -551,6 +626,56 @@ void* ClosedDoorNear(void* area, const Vector& p) {
         if (dx * dx + dy * dy <= kDoorMatchM * kDoorMatchM) return obj;
     }
     return nullptr;
+}
+
+// Any door (open or closed) standing within kDoorMatchM of `p`, or null.
+void* DoorNear(void* area, const Vector& p) {
+    acc::engine::AreaObjectIterator it(area);
+    while (void* obj = it.Next()) {
+        if (acc::engine::GetObjectKind(obj) !=
+            static_cast<int>(acc::engine::GameObjectKind::Door)) {
+            continue;
+        }
+        Vector q;
+        if (!acc::engine::GetObjectPosition(obj, q)) continue;
+        const float dx = q.x - p.x;
+        const float dy = q.y - p.y;
+        if (dx * dx + dy * dy <= kDoorMatchM * kDoorMatchM) return obj;
+    }
+    return nullptr;
+}
+
+// The nearest door into another area within `maxM` of `p`, or null. With a
+// non-empty `destName` only a door whose destination reads exactly that.
+void* TransitionDoorNear(void* area, const Vector& p, float maxM,
+                         const std::string& destName, Vector* outPos) {
+    void* best = nullptr;
+    float bestSq = maxM * maxM;
+    acc::engine::AreaObjectIterator it(area);
+    while (void* obj = it.Next()) {
+        if (acc::engine::GetObjectKind(obj) !=
+            static_cast<int>(acc::engine::GameObjectKind::Door)) {
+            continue;
+        }
+        if (!acc::engine::DoorHasTransitionDest(obj)) continue;
+        Vector q;
+        if (!acc::engine::GetObjectPosition(obj, q)) continue;
+        const float dx = q.x - p.x;
+        const float dy = q.y - p.y;
+        const float d2 = dx * dx + dy * dy;
+        if (d2 > bestSq) continue;
+        if (!destName.empty()) {
+            char dest[128] = {0};
+            acc::engine::ExtractTextOrStrRef(
+                obj, ::kDoorTransitionDestOffset,
+                ::kDoorTransitionDestOffset + 4, dest, sizeof(dest));
+            if (destName != dest) continue;
+        }
+        best = obj;
+        bestSq = d2;
+        if (outPos) *outPos = q;
+    }
+    return best;
 }
 
 bool NearAny(const Vector& p, const std::vector<Vector>& points, float maxM) {
@@ -861,6 +986,9 @@ std::string DoorBeyond(const Graph& g, const Vector& doorPos, int* outNear) {
         out += g_visited.count(farId) ? acc::strings::Get(Id::ExitAnnoVisited)
                                       : acc::strings::Get(Id::ExitAnnoNew);
     }
+    // Visited: who and what is still there ("Matrik", "nothing left").
+    const std::string behind = BehindDoorText(g.area, farId);
+    if (!behind.empty()) out += ", " + behind;
     return out;
 }
 
@@ -988,21 +1116,176 @@ constexpr DWORD kSliverCacheMs    = 2000;
 // A lift cab or a doorway; anything wider is a real place.
 constexpr float kSliverMaxExtentM = 10.0f;
 
-// Any door (open or closed) standing within kDoorMatchM of `p`, or null.
-void* DoorNear(void* area, const Vector& p) {
-    acc::engine::AreaObjectIterator it(area);
-    while (void* obj = it.Next()) {
-        if (acc::engine::GetObjectKind(obj) !=
-            static_cast<int>(acc::engine::GameObjectKind::Door)) {
+// ---------------------------------------------------------------------------
+// Doors into other areas: where they led, in the save
+
+std::string ExitVarName(const std::string& key) { return "ACC_EXIT_" + key; }
+std::string SumVarName(const std::string& key)  { return "ACC_SUM_" + key; }
+
+struct ExitEntry {
+    long        x = 0;
+    long        y = 0;
+    std::string to;
+};
+
+std::vector<ExitEntry> ReadExits(const std::string& areaKey) {
+    std::vector<ExitEntry> out;
+    if (areaKey.empty()) return out;
+    static char buf[4096];
+    if (!acc::engine::GetPlayerVarString(ExitVarName(areaKey).c_str(), buf,
+                                         sizeof(buf))) {
+        return out;
+    }
+    const char* p = buf;
+    while (*p) {
+        char* end = nullptr;
+        ExitEntry e;
+        e.x = std::strtol(p, &end, 10);
+        if (end == p || *end != ',') break;
+        p = end + 1;
+        e.y = std::strtol(p, &end, 10);
+        if (end == p || *end != '=') break;
+        p = end + 1;
+        while (*p && *p != ';') e.to.push_back(*p++);
+        if (!e.to.empty()) out.push_back(e);
+        if (*p == ';') ++p;
+    }
+    return out;
+}
+
+// Remember that the door at `pos` in `areaKey` leads to module `toKey`,
+// replacing whatever was remembered for that spot.
+void RecordExit(const std::string& areaKey, const Vector& pos,
+                const std::string& toKey) {
+    if (areaKey.empty() || toKey.empty()) return;
+    std::vector<ExitEntry> all = ReadExits(areaKey);
+    const long px = std::lround(pos.x);
+    const long py = std::lround(pos.y);
+    std::string val;
+    int n = 0;
+    for (const ExitEntry& e : all) {
+        const long dx = e.x - px;
+        const long dy = e.y - py;
+        if (dx * dx + dy * dy <= 4) continue;  // same spot: replaced below
+        if (++n >= kMaxExitEntries) break;
+        char buf[96];
+        std::snprintf(buf, sizeof(buf), "%ld,%ld=%s;", e.x, e.y, e.to.c_str());
+        val += buf;
+    }
+    char buf[96];
+    std::snprintf(buf, sizeof(buf), "%ld,%ld=%s", px, py, toKey.c_str());
+    val += buf;
+    acc::engine::SetPlayerVarString(ExitVarName(areaKey).c_str(), val.c_str());
+}
+
+// The module remembered for the door spot nearest `doorPos`, empty if none.
+std::string ExitTargetAt(const std::string& areaKey, const Vector& doorPos) {
+    std::string best;
+    float bestSq = kExitMatchM * kExitMatchM;
+    for (const ExitEntry& e : ReadExits(areaKey)) {
+        const float dx = static_cast<float>(e.x) - doorPos.x;
+        const float dy = static_cast<float>(e.y) - doorPos.y;
+        const float d2 = dx * dx + dy * dy;
+        if (d2 <= bestSq) {
+            bestSq = d2;
+            best = e.to;
+        }
+    }
+    return best;
+}
+
+// The map notes of the current area that are not a way out, as the cycles
+// name them, joined: "Largo's Apartment, Yun's Apartment".
+std::string CurrentAreaSummary(void* area) {
+    acc::cycle::CategoryListing listing;
+    if (!acc::cycle::BuildCategoryListing(CycleCategory::Landmark, listing)) {
+        return std::string();
+    }
+    std::vector<std::string> names;
+    for (int i = 0; i < listing.count; ++i) {
+        if (listing.isPin[i] || !listing.objs[i]) continue;
+        if (TransitionDoorNear(area, listing.positions[i], kExitNoteM,
+                               std::string(), nullptr)) {
             continue;
         }
-        Vector q;
-        if (!acc::engine::GetObjectPosition(obj, q)) continue;
-        const float dx = q.x - p.x;
-        const float dy = q.y - p.y;
-        if (dx * dx + dy * dy <= kDoorMatchM * kDoorMatchM) return obj;
+        char name[128] = {0};
+        if (!acc::narration::GetSpokenName(listing.objs[i],
+                                           CycleCategory::Landmark,
+                                           name, sizeof(name)) ||
+            !name[0]) {
+            continue;
+        }
+        if (std::find(names.begin(), names.end(), name) == names.end()) {
+            names.push_back(name);
+        }
     }
-    return nullptr;
+    std::sort(names.begin(), names.end());
+    std::string out;
+    int shown = 0;
+    for (const std::string& n : names) {
+        if (shown == kSummaryMaxNames) break;
+        if (!out.empty()) out += ", ";
+        out += n;
+        ++shown;
+    }
+    return out;
+}
+
+// For a door into another area: the map notes of the area behind it, as
+// last seen there. Empty when the player never went through it.
+std::string TransitionDoorMemory(const Vector& doorPos) {
+    if (g_areaKey.empty()) return std::string();
+    const std::string to = ExitTargetAt(g_areaKey, doorPos);
+    if (to.empty() || to == g_areaKey) return std::string();
+    char buf[512] = {0};
+    if (!acc::engine::GetPlayerVarString(SumVarName(to).c_str(), buf,
+                                         sizeof(buf))) {
+        return std::string();
+    }
+    return buf;
+}
+
+// Per tick: the player's spot (for the door left by), the arrival check
+// that records which door joins which two areas, and this area's notes.
+void TickAreaMemory() {
+    if (!g_area || acc::engine::GetCurrentArea() != g_area) return;
+    Vector p;
+    if (!acc::engine::GetPlayerPosition(p)) return;
+    if (!g_saveLoaded) return;  // settling: the spot may still be stale
+    g_lastPos     = p;
+    g_haveLastPos = true;
+
+    if (g_arrival.pending) {
+        g_arrival.pending = false;
+        // Only a real walk through a door: the player stands at a door of
+        // this area that leads back to the area just left (a save loaded
+        // elsewhere does not).
+        Vector doorPos{};
+        if (TransitionDoorNear(g_area, p, kExitMatchM, g_arrival.fromName,
+                               &doorPos)) {
+            RecordExit(g_areaKey, doorPos, g_arrival.fromKey);
+            RecordExit(g_arrival.fromKey, g_arrival.fromPos, g_areaKey);
+            acclog::Write("ExitMemory", "door at (%.0f,%.0f) here leads to %s; "
+                          "door at (%.0f,%.0f) there leads here (%s)",
+                          doorPos.x, doorPos.y, g_arrival.fromKey.c_str(),
+                          g_arrival.fromPos.x, g_arrival.fromPos.y,
+                          g_areaKey.c_str());
+        } else {
+            acclog::Write("ExitMemory", "arrival at (%.0f,%.0f) not at a door to "
+                          "'%s': no door recorded", p.x, p.y,
+                          g_arrival.fromName.c_str());
+        }
+    }
+
+    const DWORD now = GetTickCount();
+    if (now - g_summaryAtMs < kSummaryEveryMs) return;
+    g_summaryAtMs = now;
+    if (g_areaKey.empty()) return;
+    const std::string s = CurrentAreaSummary(g_area);
+    if (s.empty() || s == g_summarySaved) return;
+    g_summarySaved = s;
+    acc::engine::SetPlayerVarString(SumVarName(g_areaKey).c_str(), s.c_str());
+    acclog::Write("ExitMemory", "%s: notes %s", g_areaKey.c_str(), s.c_str());
 }
 
 }  // namespace
@@ -1057,6 +1340,24 @@ int TransitionSliverOwner(void* area, int region, Vector* outCentre) {
 void OnAreaEntered(void* area) {
     char key[64] = {0};
     if (!acc::engine::GetCurrentAreaResName(key, sizeof(key))) key[0] = '\0';
+    // The area left and the spot it was left from: once settled here,
+    // TickAreaMemory checks that the player arrived at a door back to it.
+    g_arrival = Arrival{};
+    if (g_haveLastPos && !g_areaKey.empty() && !g_areaName.empty() &&
+        g_areaKey != ToLowerAscii(key)) {
+        g_arrival.fromKey  = g_areaKey;
+        g_arrival.fromName = g_areaName;
+        g_arrival.fromPos  = g_lastPos;
+        g_arrival.pending  = true;
+    }
+    g_haveLastPos  = false;
+    g_summarySaved.clear();
+    g_summaryAtMs  = 0;
+    {
+        char name[128] = {0};
+        g_areaName = acc::engine::GetAreaDisplayName(area, name, sizeof(name))
+                         ? std::string(name) : std::string();
+    }
     g_area     = area;
     g_areaKey  = ToLowerAscii(key);
     g_varName  = g_areaKey.empty() ? std::string()
@@ -1087,6 +1388,7 @@ void Tick() {
     FlushReminder();
     TickExploreChain();
     MarkNearbySeen();
+    TickAreaMemory();
     if (g_saveLoaded || !g_area) return;
     if (g_varName.empty()) {
         g_saveLoaded = true;  // no stable key: session-only memory
@@ -1167,6 +1469,20 @@ bool Annotate(void* area, const std::string& label,
                                              ? acc::strings::Get(Id::ExitAnnoVisited)
                                              : acc::strings::Get(Id::ExitAnnoNew);
                     extra = dest.empty() ? std::string(status) : dest + ", " + status;
+                }
+            }
+            // A door into another area: the notes of the area it led to.
+            // Any other door: what is still behind it, once visited.
+            Vector doorPos = e.pos;
+            if (TransitionDoorNear(area, e.pos, kDoorMatchM, std::string(),
+                                   &doorPos)) {
+                const std::string mem = TransitionDoorMemory(doorPos);
+                if (!mem.empty()) extra = extra.empty() ? mem : extra + ", " + mem;
+            } else if (target >= 0 && target != g_previous &&
+                       DoorNear(area, e.pos)) {
+                const std::string behind = BehindDoorText(area, target);
+                if (!behind.empty()) {
+                    extra = extra.empty() ? behind : extra + ", " + behind;
                 }
             }
             if (!extra.empty()) {
@@ -1490,7 +1806,10 @@ std::string TargetWayInfo(void* obj, const Vector& pos) {
         // side: the door's own position can fall in that sliver).
         int nearIdx = -1;
         std::string out = DoorBeyond(g, pos, &nearIdx);
-        if (acc::engine::DoorHasTransitionDest(obj)) out.clear();
+        // Instead: what the area behind it holds, once the player has been
+        // through ("Matrik's Apartment"), so two areas of the same name
+        // differ.
+        if (acc::engine::DoorHasTransitionDest(obj)) out = TransitionDoorMemory(pos);
         if (nearIdx < 0) return out.empty() ? RouteText(RouteTo(g, pos)) : out;
         if (nearIdx != g.si) {
             const std::string route = RouteText(RouteToIndex(g, nearIdx, pos));

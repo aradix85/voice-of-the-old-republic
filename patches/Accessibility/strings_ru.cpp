@@ -1231,6 +1231,7 @@ const char* Get(Id id) {
         case Id::ChargenBtnBack:        return "\xCD\xE0\xE7\xE0\xE4";
         case Id::ExitAnnoNew:           return "\xed\xee\xe2\xee\xe5";
         case Id::ExitAnnoVisited:       return "\xef\xee\xf1\xe5\xf9\xe5\xed\xee";
+        case Id::ExitAnnoNothingLeft:   return "\xed\xe8\xf7\xe5\xe3\xee \xed\xe5 \xee\xf1\xf2\xe0\xeb\xee\xf1\xfc";
         case Id::ExitAnnoBack:          return "\xed\xe0\xe7\xe0\xe4";
         case Id::FmtExitAnnoTo:         return "\xea %s";
         case Id::ExitAnnoToCorridor:    return "\xea \xea\xee\xf0\xe8\xe4\xee\xf0\xf3";

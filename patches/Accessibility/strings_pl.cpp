@@ -1192,6 +1192,7 @@ const char* Get(Id id) {
         case Id::ChargenBtnBack:        return "Cofnij";
         case Id::ExitAnnoNew:           return "nowe";
         case Id::ExitAnnoVisited:       return "odwiedzone";
+        case Id::ExitAnnoNothingLeft:   return "nic nie zosta\xb3o";
         case Id::ExitAnnoBack:          return "powr\xf3""t";
         case Id::FmtExitAnnoTo:         return "w stron\xea"" %s";
         case Id::ExitAnnoToCorridor:    return "do korytarza";
