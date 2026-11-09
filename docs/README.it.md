@@ -86,7 +86,7 @@ La mod lascia intatta la mappatura dei tasti predefinita del gioco, con una modi
 - F — Annullare il combattimento, G — Furtività, V — Modalità solitaria, X — Roteare l'arma
 - Barra spaziatrice — Pausa
 - Esc — Menu di gioco
-- F4 — Salvataggio rapido, F5 — Caricamento rapido (nel menu principale, F5 cerca invece un aggiornamento della mod)
+- F4 — Salvataggio rapido, F5 — Caricamento rapido
 - I — Inventario del gruppo, U — Equipaggiamento, P — Scheda personaggio, K — Abilità / talenti / poteri
 - M — Mappa, L — Missioni, J — Messaggi, O — Opzioni
 - Mouse 1 — Clic nel mondo 3D (raramente necessario; vedi la modalità visuale più sotto)

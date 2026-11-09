@@ -61,7 +61,6 @@ toggle is deferred).
 - Sound options movie-volume label fix-up (SoundOptionsMovieVolume)
 - Swoop racing + turret minigames (SwoopRace*, FmtSwoopRace*, TurretGame*, FmtTurret*, TurretNoTargets, TurretTargetLost)
 - Mod-settings virtual submenu incl. cue/urgent volume sliders, skip-intros toggle, audio glossary (ModSetting*, FmtModSetting*, ModSettingAudioGlossary, GlossaryEntry*)
-- Auto-updater (F5) announcements (FmtUpdateAvailable/NotAvailable, UpdateDownload*, UpdateFailed, UpdateNotInMenu)
 - Panel-title override, bringup-phase nag, pause transition cues (PanelTitleMainMenu, Loading*, GamePaused/Resumed)
 - Galaxy map title (GalaxyMapTitle)
 - Help system (F1 list + Ctrl+F1 context): group headers, per-key phrases, framing (Help*, FmtHelp*)

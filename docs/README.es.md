@@ -86,7 +86,7 @@ El mod deja intacto el mapa de teclas predeterminado del juego, con un cambio er
 - F — Cancelar el combate, G — Sigilo, V — Modo en solitario, X — Florear el arma
 - Barra espaciadora — Pausa
 - Esc — Menú del juego
-- F4 — Guardado rápido, F5 — Carga rápida (en el menú principal, F5 busca en su lugar una actualización del mod)
+- F4 — Guardado rápido, F5 — Carga rápida
 - I — Inventario del grupo, U — Equipo, P — Ficha de personaje, K — Habilidades / dotes / poderes
 - M — Mapa, L — Misiones, J — Mensajes, O — Opciones
 - Ratón 1 — Clic en el mundo 3D (rara vez necesario; ver el modo vista más abajo)

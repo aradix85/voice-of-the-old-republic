@@ -119,6 +119,8 @@ push to the branch is built by GitHub Actions and published as the pre-release
 - F1 help and the README list the new keys.
 - A local bridge lets an external helper read the game state and act in the
   game.
+- The in-game updater is gone: F5 on the main menu no longer checks for or
+  installs the maker's releases.
 - Log only: the patch log can be read while the game runs; lock lines name a
   door's OnFailToOpen script.
 
@@ -319,6 +321,13 @@ push to the branch is built by GitHub Actions and published as the pre-release
 
 - GitHub Actions builds `accessibility.dll` on every push to `bridge` and
   publishes it as the pre-release `bridge-latest`.
+- The in-game updater (`update_checker`, F5 on the main menu) is removed. In
+  this fork it would have replaced the fork's DLL with the maker's release;
+  the fork takes upstream changes over by hand instead. Its strings, keybind
+  row and README remark went with it.
+- `tools/analysis/`: scripts that measure the patch source (function length
+  and complexity with lizard, clones, include cycles, single-use functions,
+  same-named helpers across files). See `docs/refactoring/STATE.md`.
 - Log only: the patch log is opened shared for reading, so it can be followed
   while the game runs.
 

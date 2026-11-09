@@ -39,7 +39,6 @@
 #include "strings.h"
 #include "tutorial_hints.h"
 #include "tutorial_popup.h"
-#include "update_checker.h"
 #include "diag_chargen_feats.h"
 #include "focus_guard.h"
 
@@ -173,7 +172,6 @@ static void AnnouncePanelTitle(void* panel) {
                 "cold-start acquire skipped: game not foreground at "
                 "first-sight; the focus-regain edge will acquire");
         }
-        acc::update_checker::StartBackgroundCheck();
         // Belt-and-braces — the polling thread spawned at OnRulesInit
         // should already have subclassed every game window by now, but
         // re-calling is a no-op and keeps the safety net in place in

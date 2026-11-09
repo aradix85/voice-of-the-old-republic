@@ -86,7 +86,7 @@ Mod zostawia domyślny układ klawiszy gry bez zmian, z jednym ergonomicznym wyj
 - F — Przerwanie walki, G — Skradanie, V — Tryb samotny, X — Popis bronią
 - Spacja — Pauza
 - Esc — Menu gry
-- F4 — Szybki zapis, F5 — Szybkie wczytanie (w menu głównym F5 sprawdza natomiast aktualizacje moda)
+- F4 — Szybki zapis, F5 — Szybkie wczytanie
 - I — Ekwipunek drużyny, U — Wyposażenie, P — Karta postaci, K — Umiejętności / atuty / moce
 - M — Mapa, L — Zadania, J — Wiadomości, O — Opcje
 - Mysz 1 — Kliknięcie w świecie 3D (rzadko potrzebne; patrz tryb widoku poniżej)

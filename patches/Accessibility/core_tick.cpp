@@ -69,7 +69,6 @@
 #include "trap_watch.h"
 #include "minigame_turret.h"
 #include "transitions.h"
-#include "update_checker.h"
 #include "view_mode.h"
 #include "engine_game.h"
 
@@ -976,23 +975,6 @@ void Dispatch() {
 
     // Audio-glossary delayed-playback timer.
     PHASE("modsettings", acc::menus::modsettings::Tick());
-
-    // KOTOR 2 kick-off for the background version check. KOTOR 1 starts it from
-    // the MainMenu first-sight handler, deliberately late — WinHTTP bring-up
-    // (DNS, WPAD, TLS, thread pool, implicit COM apartments) competes with Bink
-    // playback and the DirectInput handshake if it runs during engine startup.
-    // KOTOR 2's first-sight path is a different handler with no such call, so
-    // it never ran there at all. The input pump going live is the equivalent
-    // "demonstrably past the delicate startup window" signal, and it is already
-    // the latch this tick uses for the cold-start reacquire. Idempotent (atomic
-    // compare-exchange inside), so the per-tick cost once started is one load.
-    if (!k1 && acc::bringup_announce::IsInputPumpLive()) {
-        acc::update_checker::StartBackgroundCheck();
-    }
-
-    // In-game auto-updater: F5 poll + background-check announce + handoff
-    // batch spawn on download completion. Cheap when idle (one atomic load).
-    PHASE("update_checker", acc::update_checker::Tick());
 
     // Drain the Pazaak deck-builder's staged add/remove/play before the generic
     // pending-op drain (a Play queues an Activate that drains in TickPendingOps).

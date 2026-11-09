@@ -596,13 +596,6 @@ const char* Get(Id id) {
         case Id::GlossaryEntrySwoopShiftReady:      return "Swoop cambio marcia pronto";
         case Id::GlossaryEntrySwoopJumpNow:         return "Swoop salta ora";
 
-        case Id::FmtUpdateAvailable:    return "Aggiornamento disponibile, versione %s. Premi F5 dal menu principale per installare.";
-        case Id::UpdateDownloadStarting: return "Avvio del download.";
-        case Id::UpdateDownloading:     return "Download dell'aggiornamento in corso.";
-        case Id::UpdateDownloaded:      return "Aggiornamento scaricato. Chiusura del gioco per installare.";
-        case Id::UpdateFailed:          return "Download dell'aggiornamento fallito. Premi F5 per riprovare.";
-        case Id::FmtUpdateNotAvailable: return "Nessun aggiornamento disponibile. Sei alla versione %s.";
-        case Id::UpdateNotInMenu:       return "Gli aggiornamenti possono essere installati solo dal menu principale.";
 
         case Id::PanelTitleMainMenu:    return "Menu principale";
         case Id::LoadingPleaseWait:     return "Il gioco sta ancora caricando, attendere prego.";
@@ -874,7 +867,6 @@ const char* Get(Id id) {
         // General
         case Id::KbNameHelpMenuOpen:        return "Aiuto tasti";
         case Id::KbNameHelpContext:         return "Aiuto contestuale";
-        case Id::KbNameCheckForUpdate:      return "Cerca aggiornamenti";
         case Id::KbNameDialogRepeatLine:    return "Ripeti battuta di dialogo";
         case Id::KbNameCopyLastSpoken:      return "Copia l'ultimo testo letto";
 

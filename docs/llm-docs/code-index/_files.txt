@@ -262,8 +262,6 @@ tutorial_popup.cpp
 tutorial_popup.h
 unified_action_menu.cpp
 unified_action_menu.h
-update_checker.cpp
-update_checker.h
 view_mode.cpp
 view_mode.h
 wall_topology.cpp

@@ -3,8 +3,6 @@
 //
 // Read by:
 //   - core_dllmain.cpp's "loaded, version X" greeting
-//   - update_checker.cpp's "no update available, you are on version X" cue
-//   - update_checker.cpp's remote-vs-local version comparison
 
 #pragma once
 

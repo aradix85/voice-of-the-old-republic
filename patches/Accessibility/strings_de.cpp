@@ -617,13 +617,6 @@ const char* Get(Id id) {
         // "dr?cken" ? the hex escape \xFC followed by literal 'c' would be
         // parsed as \xFCc (out of range). Split the literal across two
         // string tokens to keep the escape sequence terminated.
-        case Id::FmtUpdateAvailable:    return "Update verf\xFCgbar, Version %s. Im Hauptmen\xFC F5 dr\xFC" "cken, um zu installieren.";
-        case Id::UpdateDownloadStarting: return "Download wird gestartet.";
-        case Id::UpdateDownloading:     return "Update wird heruntergeladen.";
-        case Id::UpdateDownloaded:      return "Update heruntergeladen. Spiel wird beendet, um zu installieren.";
-        case Id::UpdateFailed:          return "Download des Updates fehlgeschlagen. F5 dr\xFC" "cken, um es erneut zu versuchen.";
-        case Id::FmtUpdateNotAvailable: return "Kein Update verf\xFCgbar. Aktuelle Version %s.";
-        case Id::UpdateNotInMenu:       return "Updates k\xF6nnen nur aus dem Hauptmen\xFC installiert werden.";
 
         case Id::PanelTitleMainMenu:    return "Hauptmen\xFC";
         case Id::LoadingPleaseWait:     return "Spiel l\xE4""dt noch, bitte warten.";
@@ -896,7 +889,6 @@ const char* Get(Id id) {
         // General
         case Id::KbNameHelpMenuOpen:        return "Tastenhilfe";
         case Id::KbNameHelpContext:         return "Kontexthilfe";
-        case Id::KbNameCheckForUpdate:      return "Nach Update suchen";
         case Id::KbNameDialogRepeatLine:    return "Dialogzeile wiederholen";
         case Id::KbNameCopyLastSpoken:      return "Zuletzt gesprochenen Text kopieren";
 

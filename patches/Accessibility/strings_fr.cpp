@@ -597,13 +597,6 @@ const char* Get(Id id) {
         case Id::GlossaryEntrySwoopShiftReady:      return "Swoop changement de vitesse pr\xEAt";
         case Id::GlossaryEntrySwoopJumpNow:         return "Swoop sauter maintenant";
 
-        case Id::FmtUpdateAvailable:    return "Mise \xE0 jour disponible, version %s. Appuyez sur F5 depuis le menu principal pour installer.";
-        case Id::UpdateDownloadStarting: return "D\xE9marrage du t\xE9l\xE9""chargement.";
-        case Id::UpdateDownloading:     return "T\xE9l\xE9""chargement de la mise \xE0 jour.";
-        case Id::UpdateDownloaded:      return "Mise \xE0 jour t\xE9l\xE9""charg\xE9""e. Fermeture du jeu pour installer.";
-        case Id::UpdateFailed:          return "\xC9""chec du t\xE9l\xE9""chargement de la mise \xE0 jour. Appuyez sur F5 pour r\xE9""essayer.";
-        case Id::FmtUpdateNotAvailable: return "Aucune mise \xE0 jour disponible. Vous \xEAtes en version %s.";
-        case Id::UpdateNotInMenu:       return "Les mises \xE0 jour ne peuvent \xEAtre install\xE9""es que depuis le menu principal.";
 
         case Id::PanelTitleMainMenu:    return "Menu principal";
         case Id::LoadingPleaseWait:     return "Le jeu charge encore, veuillez patienter.";
@@ -875,7 +868,6 @@ const char* Get(Id id) {
         // General
         case Id::KbNameHelpMenuOpen:        return "Aide des touches";
         case Id::KbNameHelpContext:         return "Aide contextuelle";
-        case Id::KbNameCheckForUpdate:      return "Rechercher une mise \xE0 jour";
         case Id::KbNameDialogRepeatLine:    return "R\xE9p\xE9ter la ligne de dialogue";
         case Id::KbNameCopyLastSpoken:      return "Copier le dernier texte lu";
 

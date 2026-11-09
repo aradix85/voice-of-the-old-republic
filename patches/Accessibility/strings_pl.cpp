@@ -596,13 +596,6 @@ const char* Get(Id id) {
         case Id::GlossaryEntrySwoopShiftReady:      return "Gotowo\x9C\xE6 do zmiany biegu";
         case Id::GlossaryEntrySwoopJumpNow:         return "Swoop skacz teraz";
 
-        case Id::FmtUpdateAvailable:    return "Dost\xEApna aktualizacja, wersja %s. Naci\x9Cnij F5 w menu g\xB3\xF3wnym, aby zainstalowa\xE6.";
-        case Id::UpdateDownloadStarting: return "Rozpoczynam pobieranie.";
-        case Id::UpdateDownloading:     return "Pobieram aktualizacj\xEA.";
-        case Id::UpdateDownloaded:      return "Pobrano aktualizacj\xEA. Zamykam gr\xEA, aby zainstalowa\xE6.";
-        case Id::UpdateFailed:          return "Pobieranie aktualizacji nie powiod\xB3o si\xEA. Naci\x9Cnij F5, aby spr\xF3""bowa\xE6 ponownie.";
-        case Id::FmtUpdateNotAvailable: return "Brak aktualizacji. Masz wersj\xEA %s.";
-        case Id::UpdateNotInMenu:       return "Aktualizacje mo\xBFna instalowa\xE6 tylko z menu g\xB3\xF3wnego.";
 
         case Id::PanelTitleMainMenu:    return "Menu g\xB3\xF3wne";
         case Id::LoadingPleaseWait:     return "Gra si\xEA jeszcze wczytuje, prosz\xEA czeka\xE6.";
@@ -874,7 +867,6 @@ const char* Get(Id id) {
         // General
         case Id::KbNameHelpMenuOpen:        return "Pomoc klawiszy";
         case Id::KbNameHelpContext:         return "Pomoc kontekstowa";
-        case Id::KbNameCheckForUpdate:      return "Sprawd\x9F aktualizacje";
         case Id::KbNameDialogRepeatLine:    return "Powt\xF3rz kwesti\xEA";
         case Id::KbNameCopyLastSpoken:      return "Skopiuj ostatnio wypowiedziany tekst";
 

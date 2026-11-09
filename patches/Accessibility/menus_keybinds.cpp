@@ -118,7 +118,6 @@ constexpr ActionEntry kMinigames[] = {
 constexpr ActionEntry kGeneral[] = {
     { A::HelpMenuOpen,     S::KbNameHelpMenuOpen },
     { A::HelpContext,      S::KbNameHelpContext },
-    { A::CheckForUpdate,   S::KbNameCheckForUpdate },
     { A::DialogRepeatLine, S::KbNameDialogRepeatLine },
     { A::CopyLastSpoken,   S::KbNameCopyLastSpoken },
 };

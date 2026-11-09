@@ -50,7 +50,6 @@
 #include "engine_panels.h"
 #include "engine_reads.h"
 #include "hotkeys.h"
-#include "update_checker.h"     // Deferred background version check + bringup mark
 #include "focus_guard.h"         // WindowProc subclass for WM_ACTIVATE logging
 #include "bringup_announce.h"   // Loading-phase nag when user presses arrows too early
 #include "transitions.h"        // Phase 2 lay-off 7 — Pillar 2 area+room announce

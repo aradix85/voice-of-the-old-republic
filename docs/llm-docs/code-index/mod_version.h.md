@@ -2,8 +2,7 @@
 
 Single source of truth for the installed mod version string, bumped together
 with `manifest.toml`'s `[patch].version` on every release. Read by
-`core_dllmain.cpp`'s startup greeting and `update_checker.cpp`'s
-no-update/version-compare cues.
+`core_dllmain.cpp`'s startup greeting.
 
 ## Declarations (in source order)
 

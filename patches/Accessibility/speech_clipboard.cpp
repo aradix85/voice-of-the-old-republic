@@ -34,8 +34,6 @@ constexpr int kOpenAttempts = 16;
 // previous owner, SetClipboardData wakes every clipboard listener on the
 // system — NVDA and Windows 11's clipboard history among them — and the
 // cross-apartment round trips that follow can pump messages underneath us.
-// The codebase already refuses to start WinHTTP on this thread for the same
-// class of reason (see the update_checker note in core_dllmain.cpp).
 //
 // (The input freeze seen in the first live tests was NOT this — it was the
 // OS opening its Alt menu mode, fixed by swallowing SC_KEYMENU in

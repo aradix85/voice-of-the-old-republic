@@ -86,7 +86,7 @@ Le mod conserve la disposition des touches par défaut du jeu, avec une modifica
 - F — Annuler le combat, G — Discrétion, V — Mode solo, X — Faire tournoyer l'arme
 - Barre d'espace — Pause
 - Échap — Menu du jeu
-- F4 — Sauvegarde rapide, F5 — Chargement rapide (dans le menu principal, F5 recherche plutôt une mise à jour du mod)
+- F4 — Sauvegarde rapide, F5 — Chargement rapide
 - I — Inventaire du groupe, U — Équipement, P — Fiche de personnage, K — Compétences / dons / pouvoirs
 - M — Carte, L — Quêtes, J — Messages, O — Options
 - Souris 1 — Clic dans le monde en 3D (rarement nécessaire ; voir le mode vue ci-dessous)

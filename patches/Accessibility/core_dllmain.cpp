@@ -23,7 +23,6 @@
 #include "prism.h"
 #include "save_crash_guard.h"
 #include "strings.h"
-#include "update_checker.h"
 #include "engine_rebase.h"
 
 namespace {
@@ -279,17 +278,6 @@ void EnsureSessionBringup() {
     // machine keys on the "SWMovieWindow" and "Render Window" class names,
     // both of which are present in the KOTOR 2 binary.
     acc::bringup_announce::Start();
-    // NOTE: update_checker::StartBackgroundCheck() deliberately does NOT fire
-    // here. This runs DURING engine bringup — before intro-movie playback
-    // completes and before the OpenGL/DirectInput pipeline is settled.
-    // Starting WinHTTP I/O here (DNS, WPAD, TLS, thread-pool init,
-    // implicit COM apartments) competes with Bink playback for window-
-    // foreground / message-loop state and is a leading suspect for
-    // intermittent "menu loaded but unresponsive, alt-tab fixes it" /
-    // "intro movie plays twice" reports. KOTOR 1 kicks it off from the
-    // MainMenu first-sight handler (menus.cpp AnnouncePanelTitle); KOTOR 2's
-    // first-sight path is a different handler, so it uses the equivalent
-    // past-the-startup-window signal from the tick — see core_tick.cpp.
 }
 
 // CSWRules::CSWRules construction detour (hooks.toml @ 0x00552c9a).

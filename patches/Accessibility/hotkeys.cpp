@@ -128,7 +128,6 @@ const char* const kActionNames[static_cast<int>(Action::COUNT)] = {
     "EditboxCancel",
     "HelpMenuOpen",
     "HelpContext",
-    "CheckForUpdate",
     "ProbeAudioCycle",
     "ProbeAudioFire",
     "ProbeCameraDump",
@@ -398,14 +397,6 @@ void InitDefaults() {
                                        kModShift | kModCtrl | kModAlt | kModAltGr);
     bind(Action::HelpContext,          VK_F1, 0, kModCtrl,
                                        kModShift | kModAlt | kModAltGr);
-
-    // ----- In-game auto-updater -----
-    // F5 alone. Forbid every modifier so a stray Shift/Ctrl/Alt+F5 (no
-    // sibling binding yet, but cheap insurance) can't trigger the
-    // installer download mid-gameplay. Per-tick gate in update_checker
-    // refuses the press once the game world has loaded.
-    bind(Action::CheckForUpdate,       VK_F5, 0, 0,
-                                       kModShift | kModCtrl | kModAlt | kModAltGr);
 
     // ----- Diagnostic probes -----
     // Plain F9-F12 forbid Ctrl so the Option-B distance probes below can

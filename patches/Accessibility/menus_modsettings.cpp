@@ -196,11 +196,9 @@ enum class RowKind {
     Link,      // Enter opens a URL in the browser; speech reads "Name" only
 };
 
-// Link-row targets. Both mirror addresses already published elsewhere:
-// the Ko-fi page is the one in README.md's support section, and the
-// releases/latest redirect is the same endpoint update_checker.cpp polls
-// for the version check (it serves the page a browser can read, not the
-// API JSON).
+// Link-row targets. The Ko-fi page is the one in README.md's support
+// section; the releases/latest redirect serves the page a browser can read
+// (not the API JSON).
 constexpr const char* kSupportModderUrl = "https://ko-fi.com/jeanstiletto";
 constexpr const char* kLatestChangesUrl =
     "https://github.com/JeanStiletto/voice-of-the-old-republic/releases/latest";

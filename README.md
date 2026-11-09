@@ -86,7 +86,7 @@ The mod keeps the game's default key map intact, with one ergonomic change the i
 - F — Cancel combat, G — Stealth, V — Solo mode, X — Flourish weapon
 - Spacebar — Pause
 - Esc — Game menu
-- F4 — Quick save, F5 — Quick load (on the main menu, F5 instead checks for a mod update)
+- F4 — Quick save, F5 — Quick load
 - I — Party inventory, U — Equip, P — Player record, K — Skills / feats / powers
 - M — Map, L — Quests, J — Messages, O — Options
 - Mouse 1 — Click in the 3D world (rarely needed; see view mode below)

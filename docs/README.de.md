@@ -86,7 +86,7 @@ Die Mod lässt das Standard-Tastaturlayout des Spiels unverändert, mit einer er
 - F — Kampf abbrechen, G — Tarnung, V — Solo-Modus, X — Waffe schwingen
 - Leertaste — Pause
 - Esc — Spielmenü
-- F4 — Schnellspeichern, F5 — Schnellladen (im Hauptmenü sucht F5 stattdessen nach einem Mod-Update)
+- F4 — Schnellspeichern, F5 — Schnellladen
 - I — Gruppeninventar, U — Ausrüstung, P — Charakterblatt, K — Fertigkeiten / Vorzüge / Mächte
 - M — Karte, L — Aufgaben, J — Nachrichten, O — Optionen
 - Maus 1 — Klick in die 3D-Welt (selten nötig; siehe Sichtmodus unten)
