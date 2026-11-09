@@ -66,9 +66,12 @@ clone and name scans):
 
 ### P0 — Infrastructure
 - [x] Branch `refactor`, this file.
-- [ ] Analysis scripts in `tools/analysis/` (lizard needed: pip install lizard).
-- [ ] Clean-build warning baseline (`kdev build --clean`).
-- [ ] Put `kotor-tools/` under local git (it has no history today).
+- [x] Analysis scripts in `tools/analysis/` (lizard needed: pip install lizard).
+  Run: `python tools/analysis/analyse.py <repo> <outdir>`, then
+  `analyse2.py <outdir> <repo>/patches/Accessibility`.
+- [ ] Clean-build warning baseline (`kdev build --clean`). The incremental
+  build after P1 (110 TUs) gave 0 warnings.
+- [x] `kotor-tools/` under local git (no remote; acf657e is the starting state).
 
 ### P1 — Remove what is not needed (YAGNI)
 - [x] In-game updater (update_checker*, F5 in the main menu, its strings in
@@ -79,8 +82,13 @@ clone and name scans):
   Verify each (hooks.toml, exports.def, function pointers) before removal.
 
 ### P2 — Tests and quality gates
-- [ ] Python (kotor-tools): ruff, mypy, pytest. kotor.py against a fake
-  bridge server; kotor_kaart.py against the installed game files.
+- [x] Python (kotor-tools, c7a9c41): ruff, mypy and pytest configured in
+  kotor-tools/pyproject.toml; 31 tests (kotor.py against a fake bridge,
+  kotor_kaart helpers, integration with the installed game files). All clean.
+  Run from kotor-tools: `.venv\Scripts\python.exe -m pytest -q`, `-m ruff check .`,
+  `-m mypy kotor.py kotor_kaart.py kompas.py check_locks.py`.
+  Same commit removed the duplication inside the scripts (one PyKotor guard,
+  one compass module, gebied_info reused by kaart, one section printer).
 - [ ] Bridge test script: with the game running, every path answers, the
   JSON has the expected fields, /state, /objects, /rooms and /overview agree
   with each other and with kotor_kaart.py.
@@ -119,8 +127,8 @@ clone and name scans):
   turret, pazaak).
 
 ### P4 — Bridge and map script
-- [ ] /objects without creatures; kotor.py has no find-by-name (handles had
-  to be dug out of raw JSON with a one-off script, 2026-11-09).
+- [ ] /objects without creatures. (Find-by-name done: `kotor.py zoek TEKST`,
+  c7a9c41, searches /objects; creatures still missing there.)
 - [ ] No party/equipment/inventory path: equipment and armour comparisons
   needed one-off PyKotor scripts on the save. One path or one script.
 - [ ] kotor_kaart.py matches live objects to file objects by position
@@ -142,4 +150,8 @@ clone and name scans):
 ## Log
 
 - 2026-11-09: P0 started, baseline measured, P1 updater removal done on
-  `refactor`.
+  `refactor` (8d2a198, not yet merged to `bridge`: play-test first: start
+  the game, main menu responds, F5 there does nothing). kotor-tools under
+  git with tests (c7a9c41).
+- Next: C++ unit-test harness (doctest) and the bridge test script (needs
+  the game running), then P3 F1 (door lookup) and F2 (exit_memory split).
