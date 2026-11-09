@@ -118,6 +118,11 @@ prefix (menus_listbox_picker.cpp).
      WallSounds toggle, view_mode/cycle_input/map_ui_cursor/passive_narrate
      cues): check each for a text equivalent first. Minigame audio
      (audio_bus, audio_loop, swoop, turret) stays.
+  After C (Anouk asked, 2026-11-10): review bridge.cpp together with
+  kotor-tools/kotor_kaart.py (does the live /objects + /rooms data match
+  the map from the game files?), lean/split bridge.cpp, add tag and resref
+  to /objects for the match, creatures in /objects, tests for the match;
+  the live check waits for the game (bridge test script).
   E. Docs pass after D: README.md and docs/README.*.md (settings rows,
      voices, 3D speech, sounds), controls-and-input, installer.md, tools.md,
      known-issues, llm-docs (audio-internals, action-menu-and-combat,
