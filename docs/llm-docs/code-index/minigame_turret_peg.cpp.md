@@ -1,4 +1,4 @@
-# minigame_turret_peg.cpp (858 lines)
+# minigame_turret_peg.cpp (862 lines)
 
 Source: `patches/Accessibility/minigame_turret_peg.cpp`
 
@@ -6,4 +6,4 @@ DriveSelectedPeg: per tick, the audio peg that guides the aim onto the selected 
 
 ## Declarations (in source order)
 
-- L152 `void DriveSelectedPeg(const int occSlot[], const float occDist[], const Vector occPos[], const TargetInfo occInfo[], int occCount, const Vector& aimDir, bool haveAim, const Vector& listener, bool selectedAliveInPool)`: Drive the continuous peg tone on the selected fighter.
+- L156 `void DriveSelectedPeg(const int occSlot[], const float occDist[], const Vector occPos[], const TargetInfo occInfo[], int occCount, const Vector& aimDir, bool haveAim, const Vector& listener, bool selectedAliveInPool)`: Drive the continuous peg tone on the selected fighter.

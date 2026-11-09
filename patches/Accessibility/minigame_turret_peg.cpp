@@ -3,6 +3,10 @@
 
 #include "minigame_turret_internal.h"
 
+#include "audio_bus.h"        // PlayCue3D — one-shot lock-confirmation ping
+#include "menus_modsettings.h" // TurretAutoAim easy-mode toggle
+#include "log.h"
+
 namespace acc::turret_game {
 
 namespace {
@@ -89,10 +93,10 @@ constexpr float kAccelLeadCapSeconds = 1.0f;   // cap on the flight-time used in
 // (elevation) at CSWMiniPlayer +0x1c4 (engine-confirmed — Control re-integrates
 // it each tick, so a per-tick write sticks; see ReadAimLine / WriteOffset).
 //
-// CONSOLE-STYLE STICKY AIM (reworked 2026-06-05 after a manual round showed pure-
-// by-ear aiming is ~unplayable — 8% on-target — because fast crossing fighters
-// can't be tracked manually and the old 15°-gated, yield-on-WASD magnetism almost
-// never engaged). The pull now:
+// CONSOLE-STYLE STICKY AIM: pure by-ear aiming is about unplayable (8%
+// on-target in a measured round) because fast crossing fighters can't be
+// tracked manually, and a narrow, yield-on-WASD magnetism almost never
+// engages. The pull:
 //   * engages from WIDE angles (kMagnetEngageDeg), so it starts guiding long
 //     before you're on target;
 //   * applies EVERY tick and BLENDS with your own WASD (no yield-on-keypress) —

@@ -4,12 +4,14 @@
 
 #include "minigame_turret_internal.h"
 
+#include "log.h"
+
 namespace acc::turret_game {
 
 namespace {
 
 // ============================================================================
-// THE CROSSHAIR + aim-assist — engine-grounded (decompiled 2026-06-05; see
+// THE CROSSHAIR + aim-assist — engine-grounded (decompiled; see
 // docs/llm-docs/turret-minigame-model.md and build/re/turret-aim.decomp.txt).
 //
 // CSWMiniPlayer::Control integrates `offset` (+0x1c4) each tick
@@ -29,7 +31,7 @@ namespace {
 // ============================================================================
 // Gun-walk offsets (CSWTrackFollower is the base of CSWMiniPlayer at +0).
 //
-// KOTOR 2 witnesses (2026-10-24), each the same as K1:
+// KOTOR 2 witnesses, each the same as K1:
 //   gun_banks +0x74 / count +0x78 — CSWMiniPlayer::CreateGunBank's twin
 //     @0x00837700 reads [this+0x78] and appends through `this+0x74` (K1
 //     @0x0066F440 does the same at [EBP+0x74] / [EBP+0x78]).
@@ -204,7 +206,7 @@ float TargetSpeed(const TargetInfo* info, float measured) {
 // THE CROSSHAIR. Read the bullethook0 node's world position + orientation and
 // return the fire-line direction (unit) and origin. False if the part/gun is
 // unavailable this tick (cue holds). baseForward is the node's local "down the
-// barrel" axis — KOTOR object/part forward is +Y, IN-GAME CONFIRMED 2026-06-05:
+// barrel" axis — KOTOR object/part forward is +Y, IN-GAME CONFIRMED:
 // full-autoaim drove this crosshair onto fighters and cleared the wave (6 kills
 // in ~13 s, 93% of frames on-target across all ranges), which only works if +Y
 // is the true fire line. (The other local axes read as lateral/up: +X elevation

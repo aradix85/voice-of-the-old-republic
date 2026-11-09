@@ -4,6 +4,19 @@
 
 #include "minigame_turret_internal.h"
 
+#include "audio_bus.h"        // PlayCue3D — one-shot lock-confirmation ping
+#include "examine_view.h"     // IsHostileCreature — area-target census
+#include "engine_area.h"      // GetCurrentArea + GetClientArea chain,
+                              //   AreaObjectIterator + object accessors
+#include "engine_reads.h"     // ReadObjectCurrentHitPoints, IsPlotObject
+#include "engine_player.h"    // AppManager chain (kAddrAppManagerPtr ...) +
+                              //   GetCameraPosition / GetPlayerPosition
+#include "log.h"
+#include "prism.h"            // SpeakUrgent — entry/exit must beat NVDA's
+                              //              typed-character cancel (the
+                              //              player is holding fire keys)
+#include "strings.h"          // Get(TurretGameStarted/Controls/Ended)
+
 namespace acc::turret_game {
 
 namespace {

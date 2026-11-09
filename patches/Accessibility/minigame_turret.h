@@ -6,8 +6,7 @@
 // turret/gunner game is type 2 (engine-confirmed — CSWMiniGame::Load only
 // ever sets type to 1 or 2). This module owns the type==2 case;
 // swoop_race.cpp gates itself to type==1 so the two never both fire on the
-// same minigame. (We previously read +0x84 = axis_x and matched 0/3 by
-// coincidence.)
+// same minigame.
 //
 // Behaviour: entry/exit announce (the native control hint — WASD aims,
 // Space fires) plus a 3D crosshair cue on the Q/E-selected fighter. The aim

@@ -3,6 +3,14 @@
 
 #include "minigame_turret_internal.h"
 
+#include "audio_bus.h"        // PlayCue3D — one-shot lock-confirmation ping
+#include "hotkeys.h"          // Q/E target-cycle bindings
+#include "log.h"
+#include "prism.h"            // SpeakUrgent — entry/exit must beat NVDA's
+                              //              typed-character cancel (the
+                              //              player is holding fire keys)
+#include "strings.h"          // Get(TurretGameStarted/Controls/Ended)
+
 namespace acc::turret_game {
 
 // ----- LeadCheck self-measuring diagnostic -----

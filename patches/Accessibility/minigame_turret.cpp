@@ -44,6 +44,15 @@
 
 #include "minigame_turret_internal.h"
 
+#include "engine_area.h"      // GetCurrentArea + GetClientArea chain,
+                              //   AreaObjectIterator + object accessors
+#include "log.h"
+#include "prism.h"            // SpeakUrgent — entry/exit must beat NVDA's
+                              //              typed-character cancel (the
+                              //              player is holding fire keys)
+#include "strings.h"          // Get(TurretGameStarted/Controls/Ended)
+#include "engine_game.h"
+
 namespace acc::turret_game {
 
 namespace {
@@ -67,7 +76,7 @@ constexpr uint32_t kMiniGameTypeTurret     = 2;
 // once the latched struct has been gone for this many consecutive ticks.
 constexpr int       kExitDebounceTicks     = 60;
 
-// NOTE (RE + measured 2026-06-04): sphere_radius is the value OUR cue subtends
+// NOTE (RE + measured): sphere_radius is the value OUR cue subtends
 // against, but it is NOT the engine's hit primitive. The bullet-hit path is
 // CSWMiniGame::DoHitCheck -> CSWTrackFollower::DoBulletHitCheck ->
 // CSWMiniGame::HitCheckBullet, which intersects the bullet against the

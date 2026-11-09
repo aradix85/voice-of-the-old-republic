@@ -11,25 +11,9 @@
 #include <cstdio>
 #include <cstring>
 
-#include "audio_bus.h"        // PlayCue3D — one-shot lock-confirmation ping
 #include "audio_loop.h"       // LoopSource — per-fighter 3D engine loop
-#include "examine_view.h"     // IsHostileCreature — area-target census
-#include "hotkeys.h"          // Q/E target-cycle bindings
-#include "menus_modsettings.h" // TurretAutoAim easy-mode toggle
-#include "engine_area.h"      // GetCurrentArea + GetClientArea chain,
-                              //   AreaObjectIterator + object accessors
-#include "engine_reads.h"     // ReadObjectCurrentHitPoints, IsPlotObject
-#include "engine_offsets.h"   // Vector
-#include "engine_player.h"    // AppManager chain (kAddrAppManagerPtr ...) +
-                              //   GetCameraPosition / GetPlayerPosition
 #include "minigame_aim.h"     // shared offset read/write + magnetism math
-#include "log.h"
-#include "prism.h"            // SpeakUrgent — entry/exit must beat NVDA's
-                              //              typed-character cancel (the
-                              //              player is holding fire keys)
-#include "strings.h"          // Get(TurretGameStarted/Controls/Ended)
 #include "engine_offsets_select.h"
-#include "engine_game.h"
 
 namespace acc::turret_game {
 
@@ -49,7 +33,7 @@ using acc::minigame::ReadFollowerPosition;
 // docs/llm-docs/re/swkotor.exe.h for the full CSWMiniGame walk). The KOTOR 2
 // witnesses for the CSWCArea / CSWMiniGame / CSWTrackFollower values are at
 // the matching declarations in minigame_swoop_race.cpp (same struct, same
-// fields, ported 2026-08-15); turret-only fields carry their own below.
+// fields); turret-only fields carry their own below.
 // ============================================================================
 const size_t kClientAreaMiniGameOffset = acc::off::Pick(0x264, 0x268);  // CSWCArea.mini_game
 const size_t kMiniGameVtableOffset     = acc::off::Same(0x00);
@@ -94,10 +78,10 @@ const size_t kFollowerSpeedOffset        = acc::off::Same(0x98);  // float (engi
 const size_t kFollowerInvulnOffset       = acc::off::Same(0x9c);  // float
 
 // ----- Range model (calibrated on KOTOR 1, scaled per area) -----
-// Every distance the cues use used to be a KOTOR 1 constant: a 600 m census,
-// a 130 m "killable" range cue, a 1.6 s bolt-flight limit (480 m at the K1
-// bolt speed of 300), and a 1/30 hum compression. They are now DERIVED from
-// what the engine says about the current area — bolt speed and lifespan off
+// The distances the cues use were tuned on KOTOR 1: a 600 m census, a 130 m
+// "killable" range cue, a 1.6 s bolt-flight limit (480 m at the K1 bolt
+// speed of 300), and a 1/30 hum compression. They are DERIVED from what
+// the engine says about the current area — bolt speed and lifespan off
 // the player's gun bank, each target's radius and speed — through formulas
 // whose constants are exactly those K1 values, so KOTOR 1 lands where it was
 // tuned and the K2 areas get the same model with their own numbers.
@@ -187,15 +171,11 @@ constexpr const char* kFighterLoopResref    = "acc_turret_loop";
 // the swing, where fine aiming happens. 25° is a touch steeper than the 30°
 // the two-cue ("beatable") build used, because the peg now carries fine-centring
 // alone (no hum to assist).
-//   FULL-RANGE FIX (2026-06-03): the earlier "loudness feels flat / loud the
-//   moment I'm roughly on" was NOT the engine curve being dead — swoop's
-//   obstacle cue proves pan+volume works (swoop_spatial_audio.cpp:185-205, the
-//   curve has usable slope from ~1 m "right on top" through ~20 m "just
-//   audible"). The peg was mapping aim error into only the TOP HALF of that
-//   range (5->20 m = the gentle end), so dead-centre never reached the loud end
-//   and the whole swing sat compressed and faint. Fix: open the ramp to the
-//   full band — dead-centre at 1 m (right on top, loudest), the quiet beacon
-//   floor at 20 m. Same gradient shape, just the full dynamic range.
+//   FULL RANGE: the engine curve has usable slope from ~1 m "right on top"
+//   through ~20 m "just audible" (swoop's obstacle cue shows it). Mapping
+//   aim error into only the gentle end (5->20 m) leaves dead-centre faint and
+//   the whole swing compressed, so the ramp spans the full band: dead-centre
+//   at 1 m (loudest), the quiet beacon floor at 20 m.
 constexpr float kPegRampDeg   = 25.0f;  // fade width beyond the hitbox edge (narrow = steep near-centre swing)
 constexpr float kPegMinDist   = 1.0f;   // dead-centre -> right on top -> loudest
 constexpr float kPegEdgeDist  = 9.0f;   // hitbox edge -> clearly audible (mid)
@@ -212,7 +192,7 @@ constexpr float kFallbackOnTargetDeg = 6.0f;
 // stereo front/back mirror (a rear-left target can't masquerade as a front-left
 // one when the rear half is silent) without narrowing awareness.
 //
-// HYSTERESIS: a fighter orbiting right at the boundary used to flap the peg on
+// HYSTERESIS: a fighter orbiting right at the boundary would flap the peg on
 // and off every few ticks (a 60 s session logged 17 off / 18 on transitions),
 // which — with the behind tick firing the SAME sample — read as mush rather
 // than a clean tone. So the gate has a dead band: cross INTO behind only past
@@ -264,7 +244,7 @@ constexpr const char* kRangeCueResref = "c_drdastro_atk1";
 // enough that the short sample doesn't blur into one, tick-rate independent.
 constexpr ULONGLONG kLeaveTapGapMs    = 180;
 
-// NOTE (engine-confirmed 2026-06-05): the aim field (+0x1c4 offset) IS the aim —
+// NOTE (engine-confirmed): the aim field (+0x1c4 offset) IS the aim —
 // CSWMiniPlayer::Control integrates it and pushes it into the rotating gun/camera
 // models each tick. The earlier "+0x1c4 is a no-op for bolts" conclusion was an
 // artifact of measuring through the broken bolt-travel fire line (~85° off). So
