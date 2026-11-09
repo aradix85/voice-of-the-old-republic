@@ -4,6 +4,13 @@
 
 #include "exit_memory_internal.h"
 
+#include "cycle_state.h"
+#include "engine_area.h"
+#include "engine_player.h"     // position, yaw, party, player creature
+#include "engine_scriptvar.h"  // visited regions in the save
+#include "log.h"
+#include "same_name_suffix.h"
+
 namespace acc::exit_memory {
 
 namespace {

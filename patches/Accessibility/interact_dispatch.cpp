@@ -317,35 +317,21 @@ void DispatchInteractImpl(void* target, uint32_t handle, bool forceRadial) {
     // A map note placed at a door ("To Sith Party" sits on the North
     // Apartments entrance, "Largo's Apartment" on his door) means the door:
     // a coordinate walk stops against it closed, and an open transition door
-    // still needs Enter to go through. Hand Enter to the door itself.
-    // 2026-11-09, Taris Upper City North: Enter on "To Sith Party" walked
-    // into the closed entrance and ended in "way blocked". Same radius as
-    // the landmark-to-door label match (room_topology AttachLandmarksToDoors,
-    // 5 m): "To Upper City South" sits 3.2 m from its door, was matched for
-    // the label, but a 3 m radius here sent Enter to the note, where the
-    // player already stood, and nothing happened (2026-11-09, four presses).
+    // still needs Enter to go through. Hand Enter to the door itself. The
+    // radius is that of the landmark-to-door label match (room_topology
+    // AttachLandmarksToDoors, 5 m): "To Upper City South" sits 3.2 m from
+    // its door.
     if (cat == acc::filter::CycleCategory::Landmark) {
         Vector lpos{};
         void*  area = acc::engine::GetCurrentArea();
         if (area && acc::engine::GetObjectPosition(target, lpos)) {
-            void* door  = nullptr;
-            float bestD = 5.0f;
-            acc::engine::AreaObjectIterator it(area);
-            while (void* obj = it.Next()) {
-                if (acc::engine::GetObjectKind(obj) !=
-                    static_cast<int>(acc::engine::GameObjectKind::Door)) {
-                    continue;
-                }
-                if (acc::engine::IsDoorCosmetic(obj)) continue;
-                Vector dp;
-                if (!acc::engine::GetObjectPosition(obj, dp)) continue;
-                const float dx = dp.x - lpos.x;
-                const float dy = dp.y - lpos.y;
-                const float d  = std::sqrt(dx * dx + dy * dy);
-                if (d <= bestD) { bestD = d; door = obj; }
-            }
+            Vector dpos{};
+            void* door = acc::engine::NearestDoor(area, lpos, 5.0f, [](void* d) {
+                return !acc::engine::IsDoorCosmetic(d);
+            }, &dpos);
+            const float bestD = std::hypot(dpos.x - lpos.x, dpos.y - lpos.y);
             const uint32_t dh = door ? acc::engine::GetObjectHandle(door) : 0;
-            if (door && dh) {
+            if (dh) {
                 acclog::Write("Interact", "landmark [%s] sits %.1fm from door "
                     "0x%08x — Enter goes to the door", name, bestD, dh);
                 DispatchInteractImpl(door, dh, forceRadial);

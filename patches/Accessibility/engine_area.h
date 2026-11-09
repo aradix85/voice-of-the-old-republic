@@ -451,6 +451,36 @@ private:
     void*     objectArray_;  // CGameObjectArray* (server-side master table)
 };
 
+// Calls fn(door, pos) for every door of `area` whose position reads.
+template <class Fn>
+void ForEachDoor(void* area, Fn fn) {
+    AreaObjectIterator it(area);
+    while (void* obj = it.Next()) {
+        if (GetObjectKind(obj) != static_cast<int>(GameObjectKind::Door)) continue;
+        Vector pos;
+        if (GetObjectPosition(obj, pos)) fn(obj, pos);
+    }
+}
+
+// The door of `area` nearest to `p` in the plane, within `maxM`, for which
+// accept(door) holds; null if none. Its position goes to *outPos.
+template <class Accept>
+void* NearestDoor(void* area, const Vector& p, float maxM, Accept accept,
+                  Vector* outPos = nullptr) {
+    void* best   = nullptr;
+    float bestSq = maxM * maxM;
+    ForEachDoor(area, [&](void* door, const Vector& q) {
+        const float dx = q.x - p.x;
+        const float dy = q.y - p.y;
+        const float d2 = dx * dx + dy * dy;
+        if (d2 > bestSq || !accept(door)) return;
+        best   = door;
+        bestSq = d2;
+        if (outPos) *outPos = q;
+    });
+    return best;
+}
+
 }  // namespace acc::engine
 
 // CSWSArea::GetRoom — __thiscall. On K1 the third arg is an int*

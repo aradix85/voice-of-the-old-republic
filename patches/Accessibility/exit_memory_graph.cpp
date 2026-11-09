@@ -4,6 +4,13 @@
 
 #include "exit_memory_internal.h"
 
+#include "engine_area.h"
+#include "engine_compass.h"
+#include "engine_player.h"     // position, yaw, party, player creature
+#include "log.h"
+#include "strings.h"
+#include "view_mode.h"         // routes are from the player, not the cursor
+
 namespace acc::exit_memory {
 
 namespace {

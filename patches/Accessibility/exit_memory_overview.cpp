@@ -3,6 +3,18 @@
 
 #include "exit_memory_internal.h"
 
+#include "discovery.h"         // loot heard in the overview joins the , / . cycle
+#include "engine_area.h"
+#include "engine_panels.h"     // IsForegroundUiBlocking
+#include "engine_player.h"     // position, yaw, party, player creature
+#include "hotkeys.h"
+#include "log.h"
+#include "menus_modsettings.h"   // ExtendedCycling: list loot map-wide
+#include "prism.h"
+#include "same_name_suffix.h"
+#include "strings.h"
+#include "view_mode.h"         // routes are from the player, not the cursor
+
 namespace acc::exit_memory {
 
 namespace {
@@ -164,9 +176,8 @@ bool CollectOverview(Overview& o) {
 
         // Nothing left to walk to, but unexplored regions behind locked
         // doors: the nearest locked door with a reachable region on one side
-        // and an unexplored one on the other. 2026-11-08, Endar Spire bridge:
-        // the overview only said "7 more behind locked doors", the player
-        // never tried Door 1 (which opens on the attempt) and was stuck.
+        // and an unexplored one on the other. Some open on the attempt (Door
+        // 1 on the Endar Spire bridge), so a count alone is not enough.
         if (target < 0 && o.lockedAway > 0) {
             float best = kFar;
             for (const ClusterLink& l : g.links) {
@@ -206,38 +217,30 @@ bool CollectOverview(Overview& o) {
         }
 
         // Still nothing: the nearest door the graph joins nothing through,
-        // usually the way out of the area. 2026-11-08, Taris hideout: one
-        // region, explored, and the exit door "To Apartment Complex" was
-        // named nowhere (its far side was folded into the same region and
-        // the door carries no transition text), so the player was stuck.
+        // usually the way out of the area (the Taris hideout is one region,
+        // and the far side of its exit door is folded into it; the door
+        // carries no transition text).
         if (target < 0 && !o.tryDoor) {
             float best = kFar;
-            acc::engine::AreaObjectIterator it(area);
-            while (void* obj = it.Next()) {
-                if (acc::engine::GetObjectKind(obj) !=
-                    static_cast<int>(acc::engine::GameObjectKind::Door)) {
-                    continue;
-                }
-                if (acc::engine::IsDoorCosmetic(obj)) continue;
-                Vector dp;
-                if (!acc::engine::GetObjectPosition(obj, dp)) continue;
+            acc::engine::ForEachDoor(area, [&](void* door, const Vector& dp) {
+                if (acc::engine::IsDoorCosmetic(door)) return;
                 int nearId = kClusterIdNone;
                 int farId  = kClusterIdNone;
-                if (DoorSides(g, dp, nearId, farId)) continue;
+                if (DoorSides(g, dp, nearId, farId)) return;
                 const float d = Dist2D(player, dp);
                 const Route r = RouteTo(g, dp);
                 const bool reachable =
                     r.kind == Route::Here || r.kind == Route::Open ||
                     (r.kind == Route::Unknown && d <= kExitDoorNearM);
-                if (!reachable) continue;
+                if (!reachable) return;
                 const float walk =
                     r.kind == Route::Open ? static_cast<float>(r.walkM) : d;
                 if (walk < best) {
                     best          = walk;
-                    o.exitDoor    = obj;
+                    o.exitDoor    = door;
                     o.exitDoorPos = dp;
                 }
-            }
+            });
         }
     }
 

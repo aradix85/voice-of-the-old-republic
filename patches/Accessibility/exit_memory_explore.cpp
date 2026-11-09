@@ -3,6 +3,22 @@
 
 #include "exit_memory_internal.h"
 
+#include "cycle_input.h"       // WalkToNarratedTarget
+#include "endar_softlock.h"    // Trask may not try his own door
+#include "engine_area.h"
+#include "engine_panels.h"     // IsForegroundUiBlocking
+#include "engine_player.h"     // position, yaw, party, player creature
+#include "engine_subscreen.h"  // WorldIsPaused (explore walk waits)
+#include "guidance_approach.h"
+#include "guidance_autowalk.h"
+#include "hotkeys.h"
+#include "interact_dispatch.h" // Ctrl+Shift+N tries a locked door like Enter
+#include "narrated_target.h"
+#include "log.h"
+#include "prism.h"
+#include "same_name_suffix.h"
+#include "strings.h"
+
 namespace acc::exit_memory {
 
 namespace {

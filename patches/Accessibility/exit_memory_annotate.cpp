@@ -4,6 +4,15 @@
 
 #include "exit_memory_internal.h"
 
+#include "discovery.h"         // loot heard in the overview joins the , / . cycle
+#include "engine_area.h"
+#include "engine_player.h"     // position, yaw, party, player creature
+#include "engine_reads.h"      // ReadCreatureCurrentHitPoints
+#include "log.h"
+#include "same_name_suffix.h"
+#include "strings.h"
+#include "view_mode.h"         // routes are from the player, not the cursor
+
 namespace acc::exit_memory {
 
 namespace {

@@ -4,6 +4,11 @@
 
 #include "exit_memory_internal.h"
 
+#include "engine_area.h"
+#include "engine_player.h"     // position, yaw, party, player creature
+#include "engine_scriptvar.h"  // visited regions in the save
+#include "log.h"
+
 namespace acc::exit_memory {
 
 namespace {
@@ -25,8 +30,7 @@ constexpr float  kSavedMatchM     = 2.5f;
 
 // Regions next to the player's, joined without a door, whose centre is this
 // close count as seen: a few steps of the same open space are not a place to
-// walk to. The Endar Spire bridge is cut into many such slivers, and walking
-// to each one in turn sent the player back and forth (2026-11-08). Loot and
+// walk to (the Endar Spire bridge is cut into many such slivers). Loot and
 // creatures are tracked on their own, so nothing worth finding is lost.
 constexpr float kSeenM       = 6.0f;
 constexpr DWORD kSeenEveryMs = 500;

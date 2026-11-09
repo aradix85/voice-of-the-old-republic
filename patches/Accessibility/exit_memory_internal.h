@@ -18,29 +18,7 @@
 #include <utility>
 #include <vector>
 #include <windows.h>           // GetTickCount (loot reminder timing)
-#include "cycle_input.h"       // WalkToNarratedTarget
-#include "cycle_state.h"
-#include "discovery.h"         // loot heard in the overview joins the , / . cycle
-#include "endar_softlock.h"    // Trask may not try his own door
-#include "engine_area.h"
-#include "engine_compass.h"
-#include "engine_panels.h"     // IsForegroundUiBlocking
-#include "engine_player.h"     // position, yaw, party, player creature
-#include "engine_reads.h"      // ReadCreatureCurrentHitPoints
-#include "engine_scriptvar.h"  // visited regions in the save
-#include "engine_subscreen.h"  // WorldIsPaused (explore walk waits)
 #include "filter_objects.h"
-#include "guidance_approach.h"
-#include "guidance_autowalk.h"
-#include "hotkeys.h"
-#include "interact_dispatch.h" // Ctrl+Shift+N tries a locked door like Enter
-#include "narrated_target.h"
-#include "log.h"
-#include "menus_modsettings.h"   // ExtendedCycling: list loot map-wide
-#include "prism.h"
-#include "same_name_suffix.h"
-#include "strings.h"
-#include "view_mode.h"         // routes are from the player, not the cursor
 
 namespace acc::exit_memory {
 
@@ -62,7 +40,7 @@ extern int g_previous;
 // (ACC_EXIT_<area> = "x,y=module;..."), and per area the map notes seen
 // there (ACC_SUM_<area>). Two areas the game names alike (Taris' two "Lower
 // City Apartments") are told apart by what is inside: "Matrik's Apartment"
-// against "Selven's Apartment" (2026-11-09).
+// against "Selven's Apartment".
 extern Vector g_lastPos;  // player, last tick in g_area
 extern bool g_haveLastPos;
 

@@ -146,9 +146,17 @@ clone and name scans):
   in the lean commit.
 
 ### P3 — Duplication (verify each before changing)
-- [ ] F1 Door lookup near a point: exit_memory DoorNear, ClosedDoorNear,
-  TransitionDoorNear, LockedDoorPositions; interact_dispatch landmark-to-door;
-  room_topology AttachLandmarksToDoors. One engine_area helper.
+- [x] F1 Door lookup near a point: engine_area.h ForEachDoor and NearestDoor
+  (templates) now serve exit_memory_doors.cpp, the exit-door search in
+  exit_memory_overview.cpp and interact_dispatch's landmark-to-door. Left
+  for the room_topology split: SnapshotDoors (it caps and logs) and
+  AttachLandmarksToDoors.
+- [ ] F10 Distance in the ground plane: seven helpers with four names
+  (Dist2D, DistXY, HorizontalDistance, DistanceSquaredXY; plus DistXYSq,
+  DistSq, DistanceSquared to check for 3-D) and `dx * dx + dy * dy` written
+  out in about 43 places in 42 files. One pair DistXY/DistXYSq next to
+  struct Vector (engine_offsets_types.h). Own commit across the code base.
+- [ ] F11 ToLowerAscii in discovery.cpp and exit_memory_regions.cpp: one.
 - [x] F2 exit_memory.cpp split by job (see "Done" below).
 - [ ] F2b Share the save-variable code of exit_memory_visits.cpp (Persist,
   LoadVisited) and exit_memory_area_doors.cpp with discovery.cpp Persist.
@@ -273,6 +281,12 @@ internal header too. Proposed modules, public API unchanged
 - 2026-11-09 22:20: exit_memory.cpp split into ten files (move only), kdev
   build green with 0 warnings. Anouk asked for lean commits as well
   (duplication, defensive code, window dressing); decision recorded above.
-- Next: the lean commit for exit_memory (F1 door lookup, includes, guards,
-  comments), then the C++ unit-test harness (doctest) for the pure parts
-  (save-var formats, ShortestPaths, RoundWalk), then room_topology.cpp.
+- 22:45: lean commit for exit_memory: F1 door lookup, project includes moved
+  from the internal header into the files that use them, history removed
+  from four comments. Our own code turned out lean already (13 entry guards,
+  all on values that can really be null or none; no SEH): the gains are in
+  the maker's files. ClosedDoorNear and DoorNear now give the nearest door
+  within 1.5 m instead of the first one found.
+- Next: F10 and F11 (codebase-wide small helpers), P1 single-use functions,
+  then the C++ unit-test harness (doctest) for the pure parts (save-var
+  formats, ShortestPaths, RoundWalk), then room_topology.cpp.
