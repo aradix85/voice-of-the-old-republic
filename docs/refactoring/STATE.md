@@ -5,8 +5,9 @@ fork aradix85/voice-of-the-old-republic. Any session working on it reads this
 file first and updates it before it ends. The chat transcript is not the
 record; this file, git log and the code are. The maker's earlier effort (July
 2026, phases 0-5) is archived in `archiev/refactoring/`; its END-REPORT is
-required reading, above all "What was rejected, and why it matters" and
-"What actually finds defects".
+worth reading for its lessons ("What was rejected, and why it matters",
+"What actually finds defects"). Its rejections are advice, not decisions for
+this fork: Anouk decides, and may put any of them back on the list.
 
 ## Decisions
 
