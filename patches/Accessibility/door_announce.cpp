@@ -10,6 +10,7 @@
 #include "engine_panels.h"  // HasActiveDialogPanel
 #include "engine_player.h"  // GetPlayerServerCreature
 #include "filter_objects.h"
+#include "interact_dispatch.h"  // walk-through: the open-door path of Enter
 #include "log.h"
 #include "engine_offsets_select.h"
 #include "engine_game.h"
@@ -44,6 +45,19 @@ constexpr float kNearbyOpenM      = 20.0f;
 constexpr DWORD kNearbyRepeatMs   = 3000;
 uint32_t        s_lastNearbyDoor  = 0;
 DWORD           s_lastNearbyAtMs  = 0;
+
+// Walk-through after an Enter on a closed door into another area (see the
+// header). The window is long because the engine first walks the leader to
+// the door; the distance test keeps a door that opens after the player left
+// from pulling them back. The short settle lets the open animation clear the
+// doorway before the walk is queued.
+constexpr DWORD kWalkThroughWindowMs = 30000;
+constexpr DWORD kWalkThroughSettleMs = 600;
+constexpr float kWalkThroughMaxM     = 6.0f;
+uint32_t        s_walkDoor           = 0;   // server handle, 0 = disarmed
+void*           s_walkArea           = nullptr;
+DWORD           s_walkArmedAtMs      = 0;
+DWORD           s_walkOpenSinceMs    = 0;
 
 bool ReadServerObjectId(void* serverObj, uint32_t& outId) {
     if (!serverObj) return false;
@@ -97,7 +111,77 @@ void AnnounceNearbyOpen(uint32_t doorHandle) {
                   doorHandle, dist, line);
 }
 
+void PollWalkThrough() {
+    if (s_walkDoor == 0) return;
+    const uint32_t h   = s_walkDoor;
+    const DWORD    now = GetTickCount();
+    if (now - s_walkArmedAtMs > kWalkThroughWindowMs) {
+        s_walkDoor = 0;
+        acclog::Write("DoorAnnounce", "walk-through 0x%08x: window passed, "
+                      "door did not open", h);
+        return;
+    }
+    if (acc::engine::GetCurrentArea() != s_walkArea) {
+        s_walkDoor = 0;
+        acclog::Write("DoorAnnounce", "walk-through 0x%08x: area changed, "
+                      "dropped", h);
+        return;
+    }
+    // A guard's conversation can come first (Upper City lift): wait it out.
+    if (acc::engine::HasActiveDialogPanel()) return;
+    void* door = acc::engine::ResolveServerObjectHandle(h);
+    if (!door) {
+        s_walkDoor = 0;
+        return;
+    }
+    if (!acc::engine::IsDoorOpen(door)) {
+        s_walkOpenSinceMs = 0;
+        return;
+    }
+    if (s_walkOpenSinceMs == 0) {
+        s_walkOpenSinceMs = now ? now : 1;
+        return;
+    }
+    if (now - s_walkOpenSinceMs < kWalkThroughSettleMs) return;
+    s_walkDoor = 0;
+    Vector dp;
+    Vector pp;
+    if (!acc::engine::GetObjectPosition(door, dp) ||
+        !acc::engine::GetPlayerPosition(pp)) {
+        return;
+    }
+    const float dx   = dp.x - pp.x;
+    const float dy   = dp.y - pp.y;
+    const float dist = std::sqrt(dx * dx + dy * dy);
+    if (dist > kWalkThroughMaxM) {
+        acclog::Write("DoorAnnounce", "walk-through 0x%08x: open, but the "
+                      "leader is %.1f m away; not walking", h, dist);
+        return;
+    }
+    acclog::Write("DoorAnnounce", "walk-through 0x%08x: open, leader %.1f m "
+                  "away; going through", h, dist);
+    acc::interact::DispatchInteract(door, h, /*forceRadial=*/false);
+}
+
 }  // namespace
+
+void ArmWalkThrough(uint32_t doorHandle) {
+    // KOTOR 1 only: the door pointer resolve and open-state read below are
+    // the same ones the nearby-open line uses, which is K1-only.
+    if (acc::game::IsKotor2() || doorHandle == 0) return;
+    s_walkDoor        = doorHandle & ~0x80000000u;
+    s_walkArea        = acc::engine::GetCurrentArea();
+    s_walkArmedAtMs   = GetTickCount();
+    s_walkOpenSinceMs = 0;
+    acclog::Write("DoorAnnounce", "walk-through armed for 0x%08x", s_walkDoor);
+}
+
+void DisarmWalkThrough() {
+    if (s_walkDoor == 0) return;
+    acclog::Write("DoorAnnounce", "walk-through 0x%08x disarmed by another "
+                  "interact", s_walkDoor);
+    s_walkDoor = 0;
+}
 
 void NoteDoorOpened(uint32_t openerServerId, uint32_t doorHandle) {
     s_pendingOpener = openerServerId;
@@ -106,6 +190,7 @@ void NoteDoorOpened(uint32_t openerServerId, uint32_t doorHandle) {
 }
 
 void Tick() {
+    PollWalkThrough();
     if (!s_pending) return;
     s_pending = false;
     uint32_t opener = s_pendingOpener;

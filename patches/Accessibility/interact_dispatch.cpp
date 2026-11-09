@@ -9,6 +9,7 @@
 #pragma comment(lib, "user32.lib")
 
 #include "combat_queue.h"   // Phase 3A — action-queue submenu (Shift+H)
+#include "door_announce.h"   // walk-through once Enter opened a door into another area
 #include "endar_softlock.h"  // Trask may not try the Trask door himself
 #include "exit_memory.h"     // loot reminder when leaving a region
 #include "engine_actionbar.h"
@@ -206,6 +207,10 @@ void DispatchInteractImpl(void* target, uint32_t handle, bool forceRadial) {
         return;
     }
 
+    // Any new interact replaces a pending walk-through (re-armed below when
+    // this press is itself on a closed door into another area).
+    acc::door_announce::DisarmWalkThrough();
+
     // WARNING — do NOT add a tag-keyed "this door is sealed, skip the dispatch"
     // shortcut here, however dead the door looks. In this engine the open
     // ATTEMPT is frequently the story trigger, carried by the door's OnOpen /
@@ -314,13 +319,17 @@ void DispatchInteractImpl(void* target, uint32_t handle, bool forceRadial) {
     // a coordinate walk stops against it closed, and an open transition door
     // still needs Enter to go through. Hand Enter to the door itself.
     // 2026-11-09, Taris Upper City North: Enter on "To Sith Party" walked
-    // into the closed entrance and ended in "way blocked".
+    // into the closed entrance and ended in "way blocked". Same radius as
+    // the landmark-to-door label match (room_topology AttachLandmarksToDoors,
+    // 5 m): "To Upper City South" sits 3.2 m from its door, was matched for
+    // the label, but a 3 m radius here sent Enter to the note, where the
+    // player already stood, and nothing happened (2026-11-09, four presses).
     if (cat == acc::filter::CycleCategory::Landmark) {
         Vector lpos{};
         void*  area = acc::engine::GetCurrentArea();
         if (area && acc::engine::GetObjectPosition(target, lpos)) {
             void* door  = nullptr;
-            float bestD = 3.0f;
+            float bestD = 5.0f;
             acc::engine::AreaObjectIterator it(area);
             while (void* obj = it.Next()) {
                 if (acc::engine::GetObjectKind(obj) !=
@@ -394,6 +403,14 @@ void DispatchInteractImpl(void* target, uint32_t handle, bool forceRadial) {
                 dmsg, handle, dpos.x, dpos.y, dpos.z);
             return;
         }
+    }
+
+    // A closed door into another area: the press below only opens it (or
+    // runs its story script). Go through once it is open, so one Enter takes
+    // the player into the next area. See door_announce::ArmWalkThrough.
+    if (!forceRadial && cat == acc::filter::CycleCategory::Door &&
+        acc::engine::DoorHasTransitionDest(target)) {
+        acc::door_announce::ArmWalkThrough(handle);
     }
 
     // First: try the engine action picker. It runs the same picker the

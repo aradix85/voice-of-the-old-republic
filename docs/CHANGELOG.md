@@ -81,6 +81,7 @@ push to the branch is built by GitHub Actions and published as the pre-release
 - Talking to someone behind a counter works: the walk stops in front of them
   and the conversation starts.
 - Enter on a map note at a door uses the door.
+- Enter on a closed door into another area opens it and takes you through.
 - A door near you that someone else opens says "Door 1 opens".
 - R while already attacking that enemy says "Already attacking X".
 - Standing idle in combat with an enemy near is announced once.
@@ -187,10 +188,18 @@ push to the branch is built by GitHub Actions and published as the pre-release
   asked for again on arrival (once per 20 seconds per person). Janice Nall in
   the Taris droid shop stands behind her counter; the walk to her spot never
   started and every Enter ended in "way blocked".
-- Enter on a map note within 3 metres of a door goes to that door (open, walk
+- Enter on a map note within 5 metres of a door goes to that door (open, walk
   through, or try it). "To Sith Party" sits on the closed North Apartments
-  entrance, and the walk to the note stopped against the door.
+  entrance, and the walk to the note stopped against the door; "To Upper City
+  South" sits 3.2 metres from its door, and Enter on it did nothing.
 - Enter on an open door walks through it.
+- Enter on a closed door into another area goes through once the door is
+  open, also when its story script opens it a moment later (the Upper City
+  lift). Before, the press only opened it and a second Enter was needed; that
+  press often landed on something else, or the lift had already closed again.
+  It waits out a conversation, gives up after 30 seconds, and does not pull
+  you back if you walked more than 6 metres away. Any other Enter cancels it
+  (KOTOR 1).
 - A door within 20 metres that someone else opens says "Door 1 opens" (KOTOR
   1). This is mostly a story door opening from its own script after your
   attempt; the last thing heard used to be "Door 1, locked", so a successful
