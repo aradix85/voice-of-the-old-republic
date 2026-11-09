@@ -11,7 +11,7 @@ Replaced an earlier per-.lyt-room walkmesh-probe classifier — .lyt- rooms over
 ## Declarations (in source order)
 
 - L31 `enum Kind`: sig & 0xff = kind.
-- L59 `struct ExitMark`: One exit entry of a region label, exactly as it appears in the label text ("Nord", "Tür Süd-West nach X"), and the world point it leads to — what 3D exit descriptions (positional_speech::SpeakExitList) place it at.
+- L59 `struct ExitMark`: One exit entry of a region label, exactly as it appears in the label text ("Nord", "Tür Süd-West nach X"), and the world point it leads to — what exit_memory annotates and camera_orient (N) turns to.
 - L73 `void BuildForArea(void* area)`: Idempotent on same area pointer.
 - L79 `void ResetNavGraphRetry()`: Clears the per-area nav-graph retry latch, re-arming BuildForArea for an area it previously gave up on.
 - L84 `void MaybeRefreshDoors(void* area)`: Re-snapshots doors until the door set stabilises (initial snapshot can race a partially-populated server-object array).

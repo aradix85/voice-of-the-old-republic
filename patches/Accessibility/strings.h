@@ -1660,9 +1660,6 @@ enum class Id : int {
     ModSettingRoomShapes,
     ModSettingWallSounds,
     ModSettingHumanSubtitles,
-    ModSettingSubtitleSapi,               // toggle label — speak subtitles on the
-                                          // announcement voice (SAPI) instead of
-                                          // the screen reader
     ModSettingTurretAutoAim,              // toggle label — turret easy-mode auto-aim
     ModSettingSkipIntros,                 // toggle label — "Skip intro movies"
     ModSettingStateOn,
@@ -1674,72 +1671,6 @@ enum class Id : int {
     // "Name: N Prozent" (one %s name + one %d percent).
     ModSettingCueVolume,
     FmtModSettingSlider,
-
-    // Spoken-announcement (SAPI urgent channel) volume slider row. Same
-    // FmtModSettingSlider "Name: N percent" format as the cue-volume row;
-    // adjusting it speaks a short SAPI sample (UrgentVolumePreview) at the
-    // new level so the user hears the resulting loudness.
-    ModSettingUrgentVolume,
-    // Announcement-speed slider — SAPI speech rate for the same channel, as a
-    // percent through FmtModSettingSlider: 50 is SAPI's own default pace, 80
-    // the rate the mod has always used, 100 the fastest SAPI offers.
-    ModSettingUrgentRate,
-    // Announcement-voice picker. Left/Right walk the SAPI voices installed on
-    // the machine; the row reads "Name: <voice>" through FmtModSettingOption,
-    // falling back to ModSettingUrgentVoiceUnavailable when SAPI offers none.
-    ModSettingUrgentVoice,
-    ModSettingUrgentVoiceUnavailable,
-    ModSettingUrgentVolumePreview,
-
-    // ---- Mod-settings → Announcement-voice submenu (menus_modsettings).
-    //      Nested submenu that holds every row shaping the mod's own
-    //      announcement (SAPI) voice: its volume, its speed, which installed
-    //      voice speaks, and whether dialogue subtitles ride that channel.
-    //      VoiceSettings is the row label in the root list and the submenu's
-    //      own name; VoiceSettingsOpened is the opener cue, same shape as the
-    //      audio glossary's.
-    ModSettingVoiceSettings,
-    ModSettingsVoiceSettingsOpened,
-
-    // ---- Mod-settings -> Announcement-voice -> Compass-voice submenu
-    //      (menus_modsettings). The facing direction — the compass readout
-    //      while turning and the facing key — has its own SAPI voice
-    //      (prism::SpeakCompass); this submenu, nested in the
-    //      announcement-voice one, holds its volume and speed (through
-    //      FmtModSettingSlider) and the voice picker (FmtModSettingOption,
-    //      ModSettingUrgentVoiceUnavailable when there is none).
-    ModSettingCompassSettings,
-    ModSettingsCompassSettingsOpened,
-    ModSettingCompassVolume,
-    ModSettingCompassRate,
-    ModSettingCompassVoice,
-
-    // Positional-announcements submenu ("Combat announcements" until
-    // 2026-10-28; the ids kept their names). CombatSettings is the root row
-    // and the submenu's name, CombatSettingsOpened its opener cue (same shape
-    // as the voice submenu's). Its two toggles: PositionalCombatSpeech, combat
-    // lines spoken from the creature they are about, and
-    // PositionalExitSpeech, each exit of a walking region label spoken from
-    // where it is (positional_speech).
-    ModSettingCombatSettings,
-    ModSettingsCombatSettingsOpened,
-    ModSettingPositionalCombatSpeech,
-    ModSettingPositionalExitSpeech,
-    // Its four sliders: volume and speed of the normal lines, then of the
-    // urgent ones (which the exit lines share). Volumes read through
-    // FmtModSettingSlider. Speeds are an
-    // offset from the voice's own rate: 0 reads "Name: <RateSameAs...>"
-    // through FmtModSettingOption (screen reader for the normal lines,
-    // announcement voice for the urgent ones), else "Name: plus N" /
-    // "Name: minus N" (one %s name + one %d, always positive).
-    ModSettingCombatVolume,
-    ModSettingCombatRate,
-    ModSettingCombatUrgentVolume,
-    ModSettingCombatUrgentRate,
-    ModSettingRateSameAsReader,
-    ModSettingRateSameAsAnnouncements,
-    FmtModSettingRatePlus,
-    FmtModSettingRateMinus,
 
     // Side-effect cues for the SkipIntros toggle — spoken after the
     // .bik rename to tell the user the change applies on next launch.
@@ -2457,8 +2388,6 @@ enum class Id : int {
     ExitAnnoToJunction,       // "to a junction"
     ExitAnnoToArea,           // "to a room"
     ExitAnnoToDeadEnd,        // "to a dead end"
-
-    ModSettingAllViaScreenReader,  // toggle label — every line on the screen reader
 
     // ---- Lock detail after "locked" on doors and containers (engine_area
     //      AppendLockNeed, KOTOR 1 only): what it takes to open it.

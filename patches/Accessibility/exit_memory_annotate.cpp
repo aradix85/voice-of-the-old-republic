@@ -171,8 +171,7 @@ std::string RegionLabelAt(void* area, const Vector& player) {
     }
     if (area == g_area && cid >= 0 && cid == g_current) {
         std::string annotated;
-        std::vector<ExitMark> unused;
-        if (Annotate(area, label, exits, annotated, unused)) return annotated;
+        if (Annotate(area, label, exits, annotated)) return annotated;
     }
     return label;
 }
@@ -210,8 +209,7 @@ std::string BehindDoorText(void* area, int farId) {
 
 bool Annotate(void* area, const std::string& label,
               const std::vector<ExitMark>& exits,
-              std::string& outLabel,
-              std::vector<ExitMark>& outExits) {
+              std::string& outLabel) {
     using acc::strings::Id;
     if (!area || g_current < 0) return false;
 
@@ -295,7 +293,6 @@ bool Annotate(void* area, const std::string& label,
     if (!exitsAdded && hereList.empty()) return false;
 
     std::string text = exitsAdded ? head + list : label;
-    outExits = exitsAdded ? annotated : exits;
     if (!hereList.empty()) {
         if (!text.empty() && text.back() != '.') text += '.';
         text += ' ';

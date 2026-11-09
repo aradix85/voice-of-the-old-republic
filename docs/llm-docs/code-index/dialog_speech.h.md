@@ -1,4 +1,4 @@
-# dialog_speech.h (31 lines)
+# dialog_speech.h (25 lines)
 
 Source: `patches/Accessibility/dialog_speech.h`
 
@@ -10,8 +10,6 @@ Coverage: - NPC line — CSWGuiDialog.message_label @+0x1ca4. Edge-speak on chan
 
 Per-row reply nav + "(unavailable)" suffix come via the existing ListBoxPanelSpec plumbing in menus_listbox.cpp.
 
-Everything this TU speaks is a subtitle, so it all leaves through one router (SpeakSubtitle in the .cpp): the screen reader by default, or the announcement/SAPI channel when the SubtitleSapi setting is on. Suppression is decided before the router — the channel choice never makes a silent line audible or the reverse.
-
 ## Declarations (in source order)
 
-- L28 `void Tick()`: Idle when no dialog panel is mounted.
+- L22 `void Tick()`: Idle when no dialog panel is mounted.

@@ -9,8 +9,7 @@
 // Yaw is derived per tick from the camera and player world positions —
 // the KOTOR orbital camera always looks at the character, so look
 // direction = normalize(player - camera). 8 × 45° compass sectors with
-// 5° hysteresis around the last spoken sector. Urgent SAPI speech routes
-// around NVDA's typed-char cancel since the user is holding A/D.
+// 5° hysteresis around the last spoken sector.
 //
 // Tick speaks for exactly one of three reasons, resolved in one place:
 // "stopped" (the turn just ended — immediate, so it doesn't read as lag),

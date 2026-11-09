@@ -762,19 +762,9 @@ void Tick() {
         // Apartments"); blind players need it announced or they lose the
         // "which map am I looking at" anchor.
         //
-        // Route through the NORMAL screen-reader channel (prism::Speak),
-        // NOT SpeakUrgent. The engine's own panel first-sight announce
-        // speaks the map title ("Karte") on the NVDA channel the instant
-        // the map opens; SpeakUrgent would play this name on the SAPI
-        // channel SIMULTANEOUSLY, so the two TTS engines talk over each
-        // other and the area name is masked (the user reported never
-        // hearing it — patch-20260614-135627.log line 2174 shows the
-        // "[SAPI] Manaan - West-Ahto" landing on top of NVDA's "Karte").
-        // interrupt=false queues it AFTER the title on the same engine, so
-        // the user hears "Karte" then the area name cleanly. The
-        // typed-char-cancel rationale that makes the cursor's PAN narration
-        // use SpeakUrgent doesn't apply here — the map-open title proves
-        // the normal channel survives the open keystroke.
+        // The engine's own panel first-sight announce speaks the map title
+        // ("Karte") the instant the map opens; interrupt=false queues the
+        // area name AFTER it, so the user hears "Karte" then the area name.
         void* area = acc::engine::GetCurrentArea();
         if (!g_state.announced_area_name) {
             if (area) {
@@ -1073,10 +1063,7 @@ void Tick() {
                         combined += ". ";
                         combined += shapeTextLocal;
                     }
-                    // Routed via the SAPI urgent channel — survives the
-                    // typed-character cancellation that the NORMAL screen-
-                    // reader path suffers from while WASD is held.
-                    prism::SpeakUrgent(combined.c_str());
+                    prism::Speak(combined.c_str(), /*interrupt=*/true);
                     acclog::Write("MapCursor",
                                   "speak %s=\"%s\" tag=\"%s\" "
                                   "shape=\"%s\" haveText=%d "
@@ -1283,10 +1270,7 @@ void Tick() {
                         speakStr += ". ";
                         speakStr += shapeTextLocal;
                     }
-                    // Same Prism+SAPI urgent path the waypoint announce
-                    // uses — survives NVDA's typed-character cancel
-                    // while the user holds WASD.
-                    prism::SpeakUrgent(speakStr.c_str());
+                    prism::Speak(speakStr.c_str(), /*interrupt=*/true);
                     acclog::Write("MapCursor",
                                   "speak ambient kind=%s key=%d "
                                   "text=\"%s\" shape=\"%s\" "

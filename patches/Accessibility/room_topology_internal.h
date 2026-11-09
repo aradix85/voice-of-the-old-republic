@@ -171,7 +171,7 @@ struct AreaGraph {
     Vector      node_pos    [kMaxNodes];
     std::string node_label  [kMaxNodes];
     // The label's exit entries with their world points (ExitMark), written
-    // with node_label by Pass 3. Feeds 3D exit descriptions.
+    // with node_label by Pass 3. Feeds exit_memory and camera_orient.
     std::vector<ExitMark> node_exits[kMaxNodes];
     int         node_sig    [kMaxNodes];
     int         node_kind   [kMaxNodes];  // see kKind* constants
@@ -261,7 +261,7 @@ extern int s_class_blocked;
 extern int s_caveat1_hits;  // door inside walkmesh wall
 extern int s_caveat2_hits;  // walk-clear edge between distinct .wok rooms
 
-// Exit-mark sink for 3D exit descriptions. PassClassifyClusters points it
+// Exit-mark sink (see ExitMark). PassClassifyClusters points it
 // at the cluster's mark list around ClassifyCluster; every place that
 // appends an EXIT entry to a label notes the entry and its world point
 // here. Null outside classification, so the label helpers stay usable

@@ -103,8 +103,8 @@ struct MsgStrings {
     const char* word_resists;        // "widersteht" — save-success verb
     const char* word_save_failed;    // "misslungen" — save-failure tag
 
-    // Defeat/kill line ("<actor> neutralisiert <target>: N EPs"). Routed
-    // through the urgent SAPI channel so a kill cuts through queued speech.
+    // Defeat/kill line ("<actor> neutralisiert <target>: N EPs"). Spoken
+    // interrupting, so a kill cuts through queued speech.
     const char* kill_marker;         // "neutralisiert"
 
     // Status-echo copula in "<target> ist <status>" (DE) — the "to be" verb

@@ -140,7 +140,7 @@ void Tick() {
 
     char buf[16];
     std::snprintf(buf, sizeof(buf), "%d", dist);
-    prism::SpeakUrgent(buf);
+    prism::Speak(buf, /*interrupt=*/true);
     g_lastAnnounced = dist;
     g_lastSpeakMs   = now;
 }

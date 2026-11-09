@@ -1,4 +1,4 @@
-# exit_memory_annotate.cpp (354 lines)
+# exit_memory_annotate.cpp (351 lines)
 
 Source: `patches/Accessibility/exit_memory_annotate.cpp`
 
@@ -10,7 +10,7 @@ Region announcements and target lines: what lies behind each exit, visited or ne
 - L46 `std::string HereList(void* area, int cluster)`
 - L72 `std::vector<RegionEntry> RegionEntries(void* area, int cluster, float radiusM, bool record)`
 - L144 `std::string RegionLabelAt(void* area, const Vector& player)`: The player's region label, annotated like the walk-in announce when the committed region is the one underfoot.
-- L185 `std::string BehindDoorText(void* area, int farId)`: What is still in a visited region behind a door ("Matrik; Footlocker"), or "nothing left".
-- L211 `bool Annotate(void* area, const std::string& label, const std::vector<ExitMark>& exits, std::string& outLabel, std::vector<ExitMark>& outExits)`
-- L310 `std::string CurrentRegionText()`
-- L318 `std::string TargetWayInfo(void* obj, const Vector& pos)`
+- L184 `std::string BehindDoorText(void* area, int farId)`: What is still in a visited region behind a door ("Matrik; Footlocker"), or "nothing left".
+- L210 `bool Annotate(void* area, const std::string& label, const std::vector<ExitMark>& exits, std::string& outLabel)`
+- L307 `std::string CurrentRegionText()`
+- L315 `std::string TargetWayInfo(void* obj, const Vector& pos)`

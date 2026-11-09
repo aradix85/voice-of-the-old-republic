@@ -22,11 +22,8 @@
 //     chain dispatcher sees them. Up/Down cycles the focused option,
 //     Space/Enter toggles, Esc closes and rebinds the parent chain.
 //
-//   * Rows can live one level deeper. The root list and the
-//     announcement-voice submenu are two views over the same Option enum
-//     and share one input handler; Esc inside the nested view returns to
-//     the root rather than to the parent panel. The audio glossary and the
-//     keybind configurator are separate views with their own row model.
+//   * The audio glossary and the keybind configurator are nested views
+//     with their own row model; Esc inside one returns to the list.
 //
 //   * Three dummy toggle options ship as scaffolding: extended cycling,
 //     room shape descriptions, wall sounds. The toggle bits live in
@@ -45,56 +42,25 @@ namespace acc::menus::modsettings {
 // whichever display table the row should appear in.
 //
 // This enum is a row's stable IDENTITY (persistence keys, GetToggle callers),
-// not its position on screen: the .cpp carries one display table per view —
-// the root list and the announcement-voice submenu — and those decide where a
-// row is seen. Adding a row to neither table hides it.
+// not its position on screen: the .cpp's display table decides where a row is
+// seen.
 //
 // ExtendedCycling / RoomShapes / WallSounds are boolean toggles (Enter
 // flips, current state spoken as "Name: an/aus"). VoiceSettings and
 // AudioGlossary are submenu pivots (Enter opens a nested view) and have no
 // toggle state; GetToggle() returns false for them. SupportModder /
 // LatestChanges / OpenReadme are link rows — Enter hands a URL to the default
-// browser and minimises the game; they hold no state either. UrgentVoice is a
-// choice row — Left/Right walk the installed SAPI voices, and it holds no
-// toggle state either (prism owns the selection).
+// browser; they hold no state either.
 enum class Option {
     ExtendedCycling = 0,
     RoomShapes,
     WallSounds,
     HumanSubtitles,
-    SubtitleSapi,      // route spoken subtitles through the announcement (SAPI)
-                       // voice instead of the screen reader (off by default)
-    AllViaScreenReader,  // every line on the screen reader: no SAPI announcement
-                         // or compass voice, no 3D speech (off by default)
     QEAllAround,         // Q/E cycle everything around the player, not only the
                          // camera's view (qe_ring; off by default)
     TurretAutoAim,     // easy-mode cheat — turret auto-tracks the locked fighter (off by default)
     SkipIntros,        // filesystem-backed — state is biologo.bik vs biologo.bik.disabled
     CueVolume,         // slider — global hint-sound volume (audio_bus owns the value)
-    VoiceSettings,     // submenu pivot — the announcement-voice submenu, which
-                       // holds every row below plus SubtitleSapi
-    UrgentVolume,      // slider — SAPI spoken-announcement volume (prism owns the value)
-    UrgentRate,        // slider — SAPI speech rate for the announcements
-                       // (prism owns the value + persistence)
-    UrgentVoice,       // choice — which installed SAPI voice speaks the
-                       // announcements (prism owns the value + persistence)
-    CompassSettings,   // submenu pivot inside the announcement-voice submenu —
-                       // the compass voice's own three rows below
-    CompassVolume,     // slider — loudness of the compass readout while turning
-    CompassRate,       // slider — its speed (prism owns both + persistence)
-    CompassVoice,      // choice — which SAPI voice speaks the compass readout
-    CombatSettings,    // submenu pivot — the positional-announcements submenu
-                       // (named "Combat announcements" until 2026-10-28)
-    PositionalCombatSpeech,  // combat lines spoken from the creature they are
-                             // about, in 3D (positional_speech; on by default)
-    PositionalExitSpeech,    // each exit of a walking region label spoken from
-                             // where it is (positional_speech Exits; on by default)
-    CombatVolume,      // slider — loudness of the positional combat lines
-                       // (positional_speech owns the value, normal channel)
-    CombatRate,        // slider — their speed as an offset from the screen
-                       // reader's rate (positional_speech, normal channel)
-    CombatUrgentVolume,  // the same pair for the urgent combat lines, whose
-    CombatUrgentRate,    // speed is an offset from the announcement voice's
     Keybindings,       // submenu pivot — the mod keybind configurator (menus_keybinds)
     AudioGlossary,
     SupportModder,     // link row — opens the Ko-fi page in the default browser

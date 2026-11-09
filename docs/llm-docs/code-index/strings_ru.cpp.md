@@ -1,4 +1,4 @@
-# strings_ru.cpp (1283 lines)
+# strings_ru.cpp (1257 lines)
 
 Source: `patches/Accessibility/strings_ru.cpp`
 

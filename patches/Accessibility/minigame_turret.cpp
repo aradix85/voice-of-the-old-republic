@@ -47,9 +47,7 @@
 #include "engine_area.h"      // GetCurrentArea + GetClientArea chain,
                               //   AreaObjectIterator + object accessors
 #include "log.h"
-#include "prism.h"            // SpeakUrgent — entry/exit must beat NVDA's
-                              //              typed-character cancel (the
-                              //              player is holding fire keys)
+#include "prism.h"
 #include "strings.h"          // Get(TurretGameStarted/Controls/Ended)
 #include "engine_game.h"
 
@@ -152,9 +150,9 @@ void StopAllLoops() {
 }
 
 // ============================================================================
-// Speech. Combine opener + control reminder into ONE urgent utterance so
-// the two halves can't preempt each other (same rationale as the swoop
-// opener — every SpeakUrgent interrupts).
+// Speech. Combine opener + control reminder into ONE interrupting utterance
+// so the two halves can't preempt each other (same rationale as the swoop
+// opener).
 // ============================================================================
 
 void AnnounceEntry() {
@@ -165,13 +163,13 @@ void AnnounceEntry() {
     char buf[256];
     std::snprintf(buf, sizeof(buf), "%s %s",
                   opener ? opener : "", controls ? controls : "");
-    prism::SpeakUrgent(buf);
+    prism::Speak(buf, /*interrupt=*/true);
     acclog::Write("Turret", "spoke entry: [%s]", buf);
 }
 
 void AnnounceExit() {
     const char* msg = acc::strings::Get(acc::strings::Id::TurretGameEnded);
-    if (msg && *msg) prism::SpeakUrgent(msg);
+    if (msg && *msg) prism::Speak(msg, /*interrupt=*/true);
     acclog::Write("Turret", "spoke exit: [%s]", msg ? msg : "");
 }
 

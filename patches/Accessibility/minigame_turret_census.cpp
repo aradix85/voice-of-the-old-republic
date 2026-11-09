@@ -12,9 +12,7 @@
 #include "engine_player.h"    // AppManager chain (kAddrAppManagerPtr ...) +
                               //   GetCameraPosition / GetPlayerPosition
 #include "log.h"
-#include "prism.h"            // SpeakUrgent — entry/exit must beat NVDA's
-                              //              typed-character cancel (the
-                              //              player is holding fire keys)
+#include "prism.h"
 #include "strings.h"          // Get(TurretGameStarted/Controls/Ended)
 
 namespace acc::turret_game {
@@ -189,7 +187,7 @@ void AnnounceTargetGone(int slot, bool diedOnScreen) {
                                                 : acc::strings::Id::FmtTurretDestroyedNamed),
                       noun, num);
     }
-    prism::SpeakUrgent(buf);
+    prism::Speak(buf, /*interrupt=*/true);
     const char* why = escaped ? "(vanished alive -> escaped)"
                     : (g_state.slot_damaged[slot] || diedOnScreen) ? "(damaged -> kill)"
                     : "(no damage seen -> despawn?)";
@@ -260,13 +258,11 @@ void TickFighterCues() {
 
     // Announce EVERY target that left the field this tick, by its stable
     // number — not just the locked one (the old logic only saw the selected
-    // slot, so kills you weren't locked onto were silent). MUST go via
-    // SpeakUrgent (SAPI), NOT the normal NVDA backend: the player holds the
-    // fire key during the turret game, and held keys trigger NVDA's
-    // cancel-on-keypress, which swallows normal-backend speech entirely (same
-    // reason entry/exit use SpeakUrgent). Trade-off: SpeakUrgent interrupts, so
-    // two kills within ~1 s clobber — but hearing the last beats hearing none.
-    // If clusters prove lossy, serialize via a small FIFO drained one-per-cue.
+    // slot, so kills you weren't locked onto were silent). The player holds
+    // the fire key during the turret game; with NVDA's "speech interrupt for
+    // typed characters" on, held keys cancel speech. Each kill interrupts,
+    // so two kills within ~1 s clobber — but hearing the last beats hearing
+    // none.
     // slot_damaged tells a real kill from a possible despawn; fighters announce
     // both as destroyed and log the distinction.
     for (int i = 0; i < kMgoArraySlotCount; ++i) {

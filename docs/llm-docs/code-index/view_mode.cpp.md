@@ -1,4 +1,4 @@
-# view_mode.cpp (761 lines)
+# view_mode.cpp (757 lines)
 
 Source: `patches/Accessibility/view_mode.cpp`
 
@@ -15,16 +15,16 @@ Hotkey B chosen because V is taken (Solo Mode in stock kotor.ini) and B is unbou
 - L152 `void ToggleViewMode()`
 - L159 `void DumpCameraStateProbe()`: Shift+B diagnostic: snapshot CClientOptions to the log.
 - L209 `void StepCursor(float dt)`
-- L301 `bool ResolveCursorRegionLabel(void* area, const Vector& cursor, std::string& outBuf, const char*& outSource, std::vector<acc::room_topology::ExitMark>& outExits)`: Tier order matches the walking adapter: landmark → friendly room name → shape cache.
-- L358 `void AnnounceCursorRegion(void* area, const Vector& cursor)`: Per-tick region announce.
-- L408 `void NarrateNearestObject(void* area, const Vector& cursor)`
-- L497 `void PollEnter()`: Enter / Shift+Enter dispatch while view mode is active.
-- L538 `void ProcessPendingDispatch()`: Runs at the top of Tick BEFORE the IsActive() gate — by design, this fires after PollEnter exited view mode synchronously.
-- L591 `bool IsActive()`
-- L593 `bool ConsumedEnterThisTick()`
-- L599 `bool TryGetCursorPosition(Vector& out)`
-- L605 `bool GetEffectiveOrientationYawDegrees(float& out)`
-- L625 `bool GetEffectiveReferencePosition(Vector& out)`
-- L635 `bool GetEffectiveViewpoint(Vector& outPos, float& outYawDegrees)`
-- L645 `void PollWin32()`
-- L726 `void Tick()`
+- L301 `bool ResolveCursorRegionLabel(void* area, const Vector& cursor, std::string& outBuf, const char*& outSource)`: Tier order matches the walking adapter: landmark → friendly room name → shape cache.
+- L355 `void AnnounceCursorRegion(void* area, const Vector& cursor)`: Per-tick region announce.
+- L404 `void NarrateNearestObject(void* area, const Vector& cursor)`
+- L493 `void PollEnter()`: Enter / Shift+Enter dispatch while view mode is active.
+- L534 `void ProcessPendingDispatch()`: Runs at the top of Tick BEFORE the IsActive() gate — by design, this fires after PollEnter exited view mode synchronously.
+- L587 `bool IsActive()`
+- L589 `bool ConsumedEnterThisTick()`
+- L595 `bool TryGetCursorPosition(Vector& out)`
+- L601 `bool GetEffectiveOrientationYawDegrees(float& out)`
+- L621 `bool GetEffectiveReferencePosition(Vector& out)`
+- L631 `bool GetEffectiveViewpoint(Vector& outPos, float& outYawDegrees)`
+- L641 `void PollWin32()`
+- L722 `void Tick()`

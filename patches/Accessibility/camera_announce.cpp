@@ -41,7 +41,7 @@ constexpr DWORD kMinIntervalHeldMs = 300;
 // player actually ended on.
 //
 // The readout exists so a player can steer by ear, and for a slow turn it does
-// that. It cannot serve a fast one: a cue costs ~250ms of blocking SpeakUrgent
+// that. It cannot serve a fast one: a cue cost ~250ms of blocking speech
 // on the tick thread, so once sector boundaries arrive faster than the cadence
 // each cue only cuts off the last and the player hears fragments. One tester's
 // ~7s spin spoke all eight sectors, four of them inside a single second, and
@@ -374,9 +374,7 @@ void Tick() {
 
     auto id = acc::engine::SectorString(sector);
     const char* phrase = acc::strings::Get(id);
-    // Compass voice (a SAPI instance of its own): mid-turn a normal Speak gets
-    // eaten by NVDA's typed-char cancel when the turn key is a typing key.
-    prism::SpeakCompass(phrase);
+    prism::Speak(phrase, /*interrupt=*/true);
     acclog::Write("CameraAnnounce", "sector %d -> %d (%s); camCompass=%.1f "
         "(rot=%.0f°/s %s fg=%d)",
         s_lastSpokenSector, sector, phrase, camCompass, rotDps, reason,
@@ -416,7 +414,7 @@ bool AnnounceCurrentFacing(unsigned int dedupMs) {
     // keypress that opened the door trips NVDA's typed-char cancel (which
     // ignores priority), so route around it the same way the A/D-held turn
     // announce does.
-    prism::SpeakCompass(phrase);
+    prism::Speak(phrase, /*interrupt=*/true);
     acclog::Write("CameraAnnounce",
         "facing readout: sector %d (%s) camCompass=%.1f", sector, phrase,
         camCompass);

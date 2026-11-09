@@ -253,7 +253,7 @@ void RunStuckProbe(const Vector& pos) {
         freeDir[7] ? 1 : 0, blockBy[7],
         buf);
 
-    prism::SpeakUrgent(buf);
+    prism::Speak(buf, /*interrupt=*/true);
 }
 
 // Fires when walking but oscillating: cumulative path length to net

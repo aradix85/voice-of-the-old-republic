@@ -57,12 +57,6 @@ std::string ToUtf8(const char* gameText) {
     return Recode(gameText, g_speechCodepage, CP_UTF8);
 }
 
-// Prism hands voice names back in UTF-8; everything downstream of us (speech
-// dispatch, the composed UI line) works in the game codepage.
-std::string FromUtf8(const char* utf8) {
-    return Recode(utf8, CP_UTF8, g_speechCodepage);
-}
-
 std::string WideToUtf8(const wchar_t* text) {
     return Narrow(text, CP_UTF8);
 }

@@ -51,11 +51,11 @@ constexpr int kClusterIdOpenArea  = -2;
 
 // One exit entry of a region label, exactly as it appears in the label
 // text ("Nord", "Tür Süd-West nach X"), and the world point it leads to —
-// what 3D exit descriptions (positional_speech::SpeakExitList) place it at.
-// Recorded while the label is built; the label itself never changes.
+// what exit_memory annotates and camera_orient (N) turns to. Recorded while
+// the label is built; the label itself never changes.
 // Empty text = an exit the label names only through its axis word
 // ("Korridor Nord-Süd", "Bereich Ost-West"): it has a real point but no
-// entry of its own, so 3D speech skips it and only camera_orient (N) uses it.
+// entry of its own, so only camera_orient uses it.
 struct ExitMark {
     std::string text;
     Vector      pos;

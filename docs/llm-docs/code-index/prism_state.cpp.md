@@ -1,4 +1,4 @@
-# prism_state.cpp (46 lines)
+# prism_state.cpp (26 lines)
 
 Source: `patches/Accessibility/prism_state.cpp`
 

@@ -1,4 +1,4 @@
-# dialog_speech.cpp (952 lines)
+# dialog_speech.cpp (924 lines)
 
 Source: `patches/Accessibility/dialog_speech.cpp`
 
@@ -16,9 +16,8 @@ transient (engine LYT loader use-after-free)
 - L425 `uint32_t ReadGuiDialogSpeakerClientId()`: Read CGuiInGame+0x170 — the current dialog entry's speaker as a CLIENT object id.
 - L437 `bool ResolveDialogSpeaker(SpeakerInfo& out)`
 - L490 `bool ResolveBarkSpeaker(void* barkPanel, SpeakerInfo& out)`: Resolve the speaker of a bark bubble from its own owner field, rather than the dialog-speaker chain (which is empty for barks — see ResolveDialogSpeaker note above, where bark resolution always failed and every bark w...
-- L533 `void SpeakSubtitle(const char* text, bool interrupt)`: ---- Channel decision ---------------------------------------------------- Every line this TU speaks IS a subtitle — the NPC line, its skill-check marker, the computer terminal's rows, the bark bubble, and the R re-sp...
-- L549 `DialogPanelMatch FindActiveDialogPanel()`
-- L587 `void* FindBarkBubblePanel()`: Find a BarkBubble panel (independent lifecycle from main dialog).
-- L592 `int ReadListBoxRowCount(void* panel, size_t lbOffset)`: Read row count of a CSWGuiListBox at panel + offset.
-- L610 `bool ReadFirstVisibleText(void* panel, char* outBuf, size_t bufSize)`: Walk a panel's controls[] for the first child whose text resolves non-empty.
-- L635 `void Tick()`
+- L521 `DialogPanelMatch FindActiveDialogPanel()`
+- L559 `void* FindBarkBubblePanel()`: Find a BarkBubble panel (independent lifecycle from main dialog).
+- L564 `int ReadListBoxRowCount(void* panel, size_t lbOffset)`: Read row count of a CSWGuiListBox at panel + offset.
+- L582 `bool ReadFirstVisibleText(void* panel, char* outBuf, size_t bufSize)`: Walk a panel's controls[] for the first child whose text resolves non-empty.
+- L607 `void Tick()`

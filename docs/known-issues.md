@@ -132,9 +132,8 @@ Follow-ups to decide:
 
 ### Exit direction WORDS are measured from the junction's map point, not from where the player stands — found 2026-10-28, revisit later
 
-Surfaced by 3D exit descriptions (docs/llm-docs/positional-speech.md "3D exit
-descriptions"). The 3D sound is right; the spoken word can be wrong for the
-player, and the 3D sound now makes that audible.
+Surfaced by the (since removed) 3D exit descriptions: the spoken word can be
+wrong for where the player stands.
 
 **Known (log patch-20261028-125607.log, Taris Upper City, KOTOR 1):**
 

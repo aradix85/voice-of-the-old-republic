@@ -300,10 +300,8 @@ void StepCursor(float dt) {
 // → shape cache. False = no tier resolved; caller stays silent.
 bool ResolveCursorRegionLabel(void* area, const Vector& cursor,
                               std::string& outBuf,
-                              const char*& outSource,
-                              std::vector<acc::room_topology::ExitMark>& outExits) {
+                              const char*& outSource) {
     outBuf.clear();
-    outExits.clear();
     outSource = "none";
 
     // 15m matches the walking adapter's enter/exit windows.
@@ -343,8 +341,7 @@ bool ResolveCursorRegionLabel(void* area, const Vector& cursor,
                                      shapeSig, clusterId,
                                      /*allowDiagLog=*/true,
                                      /*requireWallReachable=*/true,
-                                     /*zTrusted=*/false,
-                                     &outExits) &&
+                                     /*zTrusted=*/false) &&
         !shapeBuf.empty()) {
         outBuf = shapeBuf;
         outSource = "shape";
@@ -368,9 +365,8 @@ void AnnounceCursorRegion(void* area, const Vector& cursor) {
     }
 
     std::string label;
-    std::vector<acc::room_topology::ExitMark> exits;
     const char* source = "none";
-    bool resolved = ResolveCursorRegionLabel(area, cursor, label, source, exits);
+    bool resolved = ResolveCursorRegionLabel(area, cursor, label, source);
     if (!resolved || label.empty()) {
         g_state.region_pending_text.clear();
         g_state.region_pending_started_ms = 0;
@@ -388,7 +384,7 @@ void AnnounceCursorRegion(void* area, const Vector& cursor) {
     if (label == g_state.region_pending_text &&
         g_state.region_pending_started_ms != 0) {
         if (now - g_state.region_pending_started_ms >= kHoverPauseMs) {
-            acc::transitions::SpeakRegionLabel(label.c_str(), exits);
+            acc::transitions::SpeakRegionLabel(label.c_str());
             g_state.region_last_spoken_text = label;
             g_state.region_pending_text.clear();
             g_state.region_pending_started_ms = 0;

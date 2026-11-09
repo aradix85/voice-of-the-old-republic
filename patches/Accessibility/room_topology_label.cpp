@@ -76,7 +76,7 @@ void ClassifyClusterShape(const acc::engine::navgraph::NavGraphSnapshot& g,
     // direction word for the "Tür DIR" / "Tür DIR nach DEST" rewrite
     // and skips the (Sackgasse) marker for that octant — door wins.
     int octantDoorIdx[8] = {-1, -1, -1, -1, -1, -1, -1, -1};
-    // Where each octant's exit leads, for 3D exit descriptions: the first
+    // Where each octant's exit leads (ExitMark): the first
     // contributing neighbour (a door octant is placed at the door itself,
     // see ExitPoint).
     Vector octantPos[8] = {};

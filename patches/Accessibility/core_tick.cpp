@@ -57,8 +57,6 @@
 #include "probe_audio_frame.h"
 #include "probe_camera_distance.h"
 #include "probe_camera_state.h"
-#include "probe_memory_sound.h"
-#include "positional_speech.h"
 #include "prism.h"
 #include "engine_input.h"
 #include "spatial_change_detector.h"
@@ -689,10 +687,6 @@ void Dispatch() {
         // investigation actually needs them, not before.
         PHASE("probe_camera_state", acc::probe_camera_state::PollWin32());
         PHASE("probe_camera_distance", acc::probe_camera_distance::Tick());
-        // In-memory sound probe (F11 tone, Shift+F11 rendered speech) —
-        // positional-speech groundwork. KOTOR 1 until the K2 resource
-        // manager is researched (in-memory-sound-resource.md, "Open").
-        PHASE("probe_memory_sound", acc::probe_memory_sound::PollWin32());
     }
 
     // Audio-frame probe (F10) — engine-constant-free (player position +
@@ -716,8 +710,6 @@ void Dispatch() {
     // Cycle keys (`,`/`.`/`-`) and AltGr — engine drops unbound scancodes.
     PHASE("cycle_input", acc::cycle_input::PollWin32());
     PHASE("announce_facing", acc::announce_facing::PollWin32());
-    // Releases the facing readout's area half once the compass voice is done.
-    PHASE("prism", prism::Tick());
 
     // Beacon driver.
     PHASE("guidance.beacon", acc::guidance::beacon::Tick());
@@ -868,10 +860,6 @@ void Dispatch() {
     PHASE("combat.absorb", acc::combat::TickCombatAbsorb());
     PHASE("combat.deflect", acc::combat::TickCombatDeflect());
     PHASE("combat.effects", acc::combat::TickCombatEffects());
-    // Positional combat speech: starts queued lines, collects background
-    // (Eloquence) renders, falls back on failures. After the combat flushers
-    // above so a line they queue this tick can start at once.
-    PHASE("positional_speech", acc::positional_speech::Tick());
     // One-shot audio-path report (Miles 3D provider, dsoal, HRTF) once the
     // sound system is up; a no-op every tick after.
     PHASE("audio_path", acc::diag::settings::LogAudioPathOnce());

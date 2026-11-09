@@ -254,7 +254,7 @@ void ScanInternal(DWORD now) {
                 char name[96];
                 TrapSpokenName(obj, /*isMine=*/true, name, sizeof(name));
                 std::string line = WithClock(name, t->pos);
-                prism::SpeakUrgent(line.c_str());
+                prism::Speak(line.c_str(), /*interrupt=*/true);
                 acclog::Write("TrapWatch",
                               "proximity warn: handle=%08x dist=%.1fm -> [%s]",
                               handle, std::sqrt(d2), line.c_str());

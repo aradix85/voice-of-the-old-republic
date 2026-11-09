@@ -1,4 +1,4 @@
-# map_ui_cursor.cpp (1325 lines)
+# map_ui_cursor.cpp (1309 lines)
 
 Source: `patches/Accessibility/map_ui_cursor.cpp`
 

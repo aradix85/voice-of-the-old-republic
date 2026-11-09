@@ -79,15 +79,14 @@ int TransitionSliverOwner(void* area, int region, Vector* outCentre);
 // player creature has settled and the region graph exists.
 void Tick();
 
-// Rewrite a player-region label and its exit marks with destination,
-// visited and way-back words, door numbers and the "Here:" list. False
-// (outputs untouched) when there is nothing to add. When the exits are
-// annotated the list is re-joined with "; " so the commas inside an
-// annotated exit do not read as extra exits.
+// Rewrite a player-region label with destination, visited and way-back
+// words, door numbers and the "Here:" list. False (output untouched) when
+// there is nothing to add. When the exits are annotated the list is
+// re-joined with "; " so the commas inside an annotated exit do not read as
+// extra exits.
 bool Annotate(void* area, const std::string& label,
               const std::vector<acc::room_topology::ExitMark>& exits,
-              std::string& outLabel,
-              std::vector<acc::room_topology::ExitMark>& outExits);
+              std::string& outLabel);
 
 // One thing still worth a look: a loot container that holds items, or an
 // item on the ground. Named as the , / . cycle names it (game codepage).

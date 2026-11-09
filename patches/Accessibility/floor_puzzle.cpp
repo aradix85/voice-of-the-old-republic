@@ -103,8 +103,8 @@ DWORD g_lastEntryAt = 0;     // leader stepped onto a plate (0..8) at this tick
 // Entry announcements are HELD briefly to be merged with the toggle
 // delta into ONE utterance: the plate script usually runs a poll after
 // we see the position change, and speaking the entry immediately meant
-// the delta line interrupted it mid-word one tick later (both ride the
-// urgent channel). -1 = nothing pending.
+// the delta line interrupted it mid-word one tick later (both interrupt).
+// -1 = nothing pending.
 int   g_pendingEntry   = -1;
 DWORD g_pendingEntryAt = 0;
 constexpr DWORD kEntryMergeWindowMs = 500;
@@ -346,7 +346,7 @@ void SpeakIntro(const Vector& playerPos) {
         line += acc::strfmt::Format(Get(Id::FmtFloorSoloHint),
                                     acc::hotkeys::VkLabel(vk));
     }
-    prism::SpeakUrgent(line.c_str());
+    prism::Speak(line.c_str(), /*interrupt=*/true);
     acclog::Write("FloorPuzzle", "intro spoken (followers=%d solo=%d)",
                   followerCount, acc::engine::GetSoloMode() ? 1 : 0);
 }
@@ -444,7 +444,7 @@ void Tick() {
         bool lit[kPlateCount];
         int  litCount = ReadLiveBoard(lit);
         std::string board = BoardStateText(lit, litCount);
-        prism::SpeakUrgent(board.c_str());
+        prism::Speak(board.c_str(), /*interrupt=*/true);
         acclog::Write("FloorPuzzle", "R board read -> [%s] (lit=%d)",
                       board.c_str(), litCount);
     }
@@ -501,7 +501,7 @@ void Tick() {
     // ---- Solved --------------------------------------------------------
     if (!g_solvedQuiet && litCount == kPlateCount && anyFlip) {
         g_solvedQuiet = true;
-        prism::SpeakUrgent(Get(Id::FloorPuzzleSolved));
+        prism::Speak(Get(Id::FloorPuzzleSolved), /*interrupt=*/true);
         acclog::Write("FloorPuzzle", "solved — module going quiet");
         return;
     }
@@ -547,7 +547,7 @@ void Tick() {
             // The previous entry never saw its delta (fast crossing) —
             // speak it before the new entry claims the merge slot.
             std::string old = entryText(g_pendingEntry);
-            prism::SpeakUrgent(old.c_str());
+            prism::Speak(old.c_str(), /*interrupt=*/true);
             acclog::Write("FloorPuzzle", "announce: [%s] (pending flush)",
                           old.c_str());
         }
@@ -579,7 +579,7 @@ void Tick() {
         // exactly while the player is hammering movement keys — plate
         // entries were audibly swallowed mid-line in testing (see
         // project_prism_sapi_bypass for the mechanism).
-        prism::SpeakUrgent(line.c_str());
+        prism::Speak(line.c_str(), /*interrupt=*/true);
         acclog::Write("FloorPuzzle",
                       "announce: [%s] (plate=%d lit=%d leaderCaused=%d)",
                       line.c_str(), newPlate, litCount, leaderCaused ? 1 : 0);
@@ -623,7 +623,7 @@ void Tick() {
         (now - g_nearestSpokenAt) >= kNearestMinGapMs) {
         g_lastNearestLine = say;
         g_nearestSpokenAt = now;
-        prism::SpeakUrgent(say.c_str());
+        prism::Speak(say.c_str(), /*interrupt=*/true);
         acclog::Write("FloorPuzzle", "nearest: [%s] dist=%.2f", say.c_str(),
                       nearestDist);
     }

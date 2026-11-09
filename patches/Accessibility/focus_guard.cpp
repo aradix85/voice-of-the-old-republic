@@ -775,10 +775,8 @@ void DrainInputBlockedWarning() {
     if (!g_warnPending.exchange(false, std::memory_order_acquire)) return;
     acclog::Write("Focus",
         "InputBlockedWarning: speaking Big Picture focus-theft warning");
-    // Urgent (SAPI) channel: the user is mashing keys, and typed characters
-    // cancel NORMAL-priority NVDA speech — SpeakUrgent bypasses that. Spoken
-    // on the main tick (COM-safe), not the poll thread.
-    prism::SpeakUrgent(acc::strings::Get(acc::strings::Id::InputBlockedBigPicture));
+    // Spoken on the main tick (COM-safe), not the poll thread.
+    prism::Speak(acc::strings::Get(acc::strings::Id::InputBlockedBigPicture), /*interrupt=*/true);
 }
 
 void ArmStartupForegroundGuard() {

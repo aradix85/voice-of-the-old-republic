@@ -98,13 +98,12 @@ void AnnounceWorldFacing() {
 
     std::string facing = acc::strfmt::Format(
         acc::strings::Get(acc::strings::Id::FmtFacingWorld), sector);
-    // The direction on the compass voice, the area after it on the screen
-    // reader: two voices, so the heading never runs into the area's own
-    // direction words.
-    prism::SpeakCompassThen(facing.c_str(), haveCluster ? clusterBuf.c_str() : nullptr);
-    acclog::Write("AnnounceFacing",
-        "world -> [%s] then [%s] (camYaw=%.1f, deg=%d, sector=\"%s\")",
-        facing.c_str(), haveCluster ? clusterBuf.c_str() : "", engineYaw, degrees, sector);
+    // The area on its own line, so the heading does not run into the area's
+    // own direction words.
+    if (haveCluster) facing += "\n" + clusterBuf;
+    prism::Speak(facing.c_str(), /*interrupt=*/true);
+    acclog::Write("AnnounceFacing", "world -> [%s] (camYaw=%.1f, deg=%d, sector=\"%s\")",
+                  facing.c_str(), engineYaw, degrees, sector);
 }
 
 // Three-tier room name lookup matching transitions::Tick:
@@ -189,12 +188,14 @@ void AnnounceMapFacing() {
 
     std::string line = acc::strfmt::Format(
         acc::strings::Get(acc::strings::Id::FmtFacingMap), degrees, sector);
-    // Same split as the world readout: facing on the compass voice, the room
-    // after it on the screen reader.
-    prism::SpeakCompassThen(line.c_str(), haveRoom ? roomBuf : nullptr);
-    acclog::Write("AnnounceFacing",
-        "map -> [%s] then [%s] (camYaw=%.1f, mapYawCCW=%.1f, deg=%d)",
-        line.c_str(), haveRoom ? roomBuf : "", camYawDeg, mapYawCCW, degrees);
+    // The room on its own line, as in the world readout.
+    if (haveRoom) {
+        line += "\n";
+        line += roomBuf;
+    }
+    prism::Speak(line.c_str(), /*interrupt=*/true);
+    acclog::Write("AnnounceFacing", "map -> [%s] (camYaw=%.1f, mapYawCCW=%.1f, deg=%d)",
+                  line.c_str(), camYawDeg, mapYawCCW, degrees);
 }
 
 }  // namespace

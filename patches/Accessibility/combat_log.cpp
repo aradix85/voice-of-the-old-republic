@@ -53,7 +53,6 @@
 #include "combat_strings.h"
 #include "engine_compass.h"   // ClockPosition — mine-detect line enrichment
 #include "party_cache.h"
-#include "positional_speech.h"  // SpeakCombatLine — lines from where they land
 #include "strfmt.h"           // Format — heap-backed line assembly
 #include "trap_watch.h"       // PeekFreshMine / ConsumeFreshMine correlation
 #include "view_mode.h"        // GetEffectiveViewpoint — camera-anchored
@@ -726,40 +725,19 @@ void BuildIncomingLine(const AttackBlock& b, char* out, size_t cap) {
     }
 }
 
-// Every spoken combat line goes through one of these two. With positional
-// speech on, the line sounds from `subject` — the creature WHERE ITS EFFECT
-// LANDS (an attack's target, a hit party member, the affected creature; a
-// cast with no target: its caster). `nearName` picks among same-named
-// creatures (an attack's target: the one closest to its attacker). Otherwise,
-// or when the subject cannot be placed, it is spoken centred as before:
-// normal lines on the screen reader, urgent lines on the SAPI voice.
-void SpeakCombatLine(const char* line, const char* subject, const char* nearName = nullptr) {
-    using acc::positional_speech::Channel;
-    if (acc::positional_speech::Speak(Channel::Normal, line, subject, nearName)) return;
-    acc::msg::Router::Instance().Speak(line);
-}
-
-void SpeakCombatLineUrgent(const char* line, const char* subject) {
-    using acc::positional_speech::Channel;
-    if (acc::positional_speech::Speak(Channel::Urgent, line, subject)) return;
-    prism::SpeakUrgent(line);
-}
-
 // A status condition applied to a party member (stunned, poisoned, paralysed,
 // feared — whatever the engine echoes in "<target> ist <status>") is a
 // disabling state the player needs to act on, so it shouldn't wait behind
 // queued combat chatter. When `victim` is a party member and `status` is
-// non-empty, deliver it as its own urgent cue on the SAPI channel
-// ("<victim> ist <status>") — the same channel a kill uses — and return true
-// so the caller drops the status from the normal-priority damage/effect line.
-// No new information: the status word is moved to the urgent channel, not
-// duplicated; the (non-urgent) damage stays on the normal channel.
+// non-empty, speak it as its own interrupting line ("<victim> ist <status>"),
+// like a kill, and return true so the caller drops the status from the
+// queued damage/effect line. The status word is moved, not duplicated.
 bool MaybeSpeakStatusUrgent(const char* victim, const char* status) {
     if (!status || !status[0] || !IsPartyMember(victim)) return false;
     const auto& L = acc::combat::loc::Get();
     char line[160];
     snprintf(line, sizeof(line), "%s%s%s", victim, L.status_ist_marker, status);
-    SpeakCombatLineUrgent(line, victim);
+    prism::Speak(line, /*interrupt=*/true);
     acc::msg::Router::Instance().LogEmit("emit-status-urgent", line);
     return true;
 }
@@ -788,7 +766,7 @@ void FlushPending() {
     char buf[640];
     if (announce_outgoing) {
         BuildOutgoingLine(g_pending, buf, sizeof(buf));
-        SpeakCombatLine(buf, g_pending.target, g_pending.actor);
+        acc::msg::Router::Instance().Speak(buf);
         r.LogEmit("emit-outgoing", buf);
     } else if (g_pending.hit && target_is_party) {
         // Peel any applied status off the damage line and re-speak it
@@ -796,7 +774,7 @@ void FlushPending() {
         if (MaybeSpeakStatusUrgent(g_pending.target, g_pending.status))
             g_pending.status[0] = '\0';
         BuildIncomingLine(g_pending, buf, sizeof(buf));
-        SpeakCombatLine(buf, g_pending.target, g_pending.actor);
+        acc::msg::Router::Instance().Speak(buf);
         r.LogEmit("emit-incoming", buf);
     } else {
         BuildCompact(g_pending, buf, sizeof(buf));
@@ -884,7 +862,7 @@ bool RuleAbilityUse(const char* text) {
     if (IsPartyMember(actor)) {
         char line[200];
         snprintf(line, sizeof(line), "%s%s%s", actor, L.ability_use_marker, action);
-        SpeakCombatLine(line, actor);  // a cast has no target yet: the caster
+        acc::msg::Router::Instance().Speak(line);
         r.LogEmit("emit-use", line);
     } else {
         r.LogEmit("emit-use-suppressed", action);
@@ -1019,7 +997,7 @@ void BuildEffectLine(const EffectTarget& e, char* out, size_t cap) {
 // Speak (and clear) one accumulated effect slot. Party-relevant only — an
 // NPC-vs-NPC power exchange is logged but not spoken, matching the weapon path.
 void FlushEffect(EffectTarget& e) {
-    // A force/grenade status on a party member: lift it to the urgent channel
+    // A force/grenade status on a party member: speak it on its own first,
     // before building the line, so the disabling state cuts through (same as
     // the weapon path in FlushPending). Status moved, not duplicated.
     if (MaybeSpeakStatusUrgent(e.target, e.status)) e.status[0] = '\0';
@@ -1037,7 +1015,7 @@ void FlushEffect(EffectTarget& e) {
         bool known_npc_vs_npc =
             (e.caster[0] && !caster_is_party && !target_is_party);
         if (!known_npc_vs_npc) {
-            SpeakCombatLine(line, e.target, e.caster);
+            acc::msg::Router::Instance().Speak(line);
             r.LogEmit("emit-effect", line);
         }
         else                   { r.LogEmit("emit-effect-suppressed", line); }
@@ -1054,7 +1032,7 @@ void FlushAbsorb() {
     snprintf(line, sizeof(line), "%s%s %d%s",
              g_absorb_namepart, L.absorb_anchor, g_absorb_total, g_absorb_suffix);
     auto& r = acc::msg::Router::Instance();
-    SpeakCombatLine(line, g_absorb_namepart);  // the absorber ("<name> " before the anchor)
+    acc::msg::Router::Instance().Speak(line);
     r.LogEmit("emit-absorb", line);
     g_absorb_namepart[0] = '\0';
     g_absorb_suffix[0]   = '\0';
@@ -1125,7 +1103,7 @@ void FlushDeflect(DeflectSlot& s) {
     else              snprintf(line, sizeof(line), L.fmt_deflect_many, s.actor, s.count);
     auto& r = acc::msg::Router::Instance();
     if (IsPartyMember(s.actor)) {
-        SpeakCombatLine(line, s.actor);  // the deflector
+        acc::msg::Router::Instance().Speak(line);
         r.LogEmit("emit-deflect", line);
     } else {
         r.LogEmit("emit-deflect-suppressed", line);
@@ -1191,24 +1169,13 @@ bool RuleBedrohung(const char* text) {
     return true;  // claimed, no speech
 }
 
-// "<actor> neutralisiert <target>: N EPs" — a defeat. Speak it verbatim, but
-// route through the urgent SAPI channel so a kill cuts through queued combat
-// chatter instead of waiting behind it.
-//
-// Positionally it sounds from the defeated creature: the text after the
-// marker, up to the ':' before the XP. Word order differs by language, so this
-// is best effort — a slice that names no creature leaves the line centred
-// (positional_speech finds nothing and returns false).
+// "<actor> neutralisiert <target>: N EPs" — a defeat. Spoken verbatim and
+// interrupting, so a kill cuts through queued combat chatter instead of
+// waiting behind it.
 bool RuleKill(const char* text) {
-    const auto& L = acc::combat::loc::Get();
-    const char* m = strstr(text, L.kill_marker);
-    if (!m) return false;
-    const char* ts = m + strlen(L.kill_marker);
-    const char* te = strchr(ts, ':');
-    char victim[96];
-    CopyRange(victim, sizeof(victim), ts, te ? te : ts + strlen(ts));
-    SpeakCombatLineUrgent(text, victim);
-    return true;  // claimed: urgent speech handled here
+    if (!strstr(text, acc::combat::loc::Get().kill_marker)) return false;
+    prism::Speak(text, /*interrupt=*/true);
+    return true;  // claimed: speech handled here
 }
 
 // Mine-detection feedback enrichment. The engine line (TLK 42132,

@@ -23,7 +23,6 @@
 #include "menus_keybinds.h"  // nested keybind configurator submenu
 #include "menus_nav.h"       // ClampedCursorStep — shared Up/Down/Home/End ladder
 #include "mod_settings_store.h"  // persist toggles across launches
-#include "positional_speech.h"  // combat speech volume / speed sliders + preview
 #include "prism.h"
 #include "strings.h"
 
@@ -62,20 +61,6 @@ bool s_toggles[static_cast<int>(Option::Count)] = {
                                   // suppression filter gates on appearance /
                                   // race (see IsSuppressibleSpeaker), not on
                                   // this toggle alone.
-    /* SubtitleSapi    */ false,  // default off — subtitles keep going to the
-                                  // user's own screen reader. ON routes them to
-                                  // the announcement (SAPI) voice instead, so a
-                                  // typed character or a braille cursor move in
-                                  // NVDA can't cancel a dialogue line mid-word.
-                                  // Purely a channel choice: whether a line is
-                                  // spoken at all is still decided by the
-                                  // suppression rules in dialog_speech.cpp.
-    /* AllViaScreenReader */ false,  // default off. ON sends every line the
-                                  // mod speaks to the screen reader: the
-                                  // announcement and compass voices and the 3D
-                                  // speech step aside (prism, positional_speech).
-                                  // For players who want one voice, at their
-                                  // own rate, and text-only descriptions.
     /* QEAllAround */ false,      // default off. ON: Q/E cycle every object
                                   // around the player within the engine's
                                   // target range, clockwise from straight
@@ -96,31 +81,6 @@ bool s_toggles[static_cast<int>(Option::Count)] = {
                                   // this index and call into intro_skip.
     /* CueVolume       */ false,  // unused — RowKind::Slider; value lives in
                                   // audio_bus (Get/SetGlobalCueVolumePercent).
-    /* VoiceSettings   */ false,  // unused — RowKind::Submenu (voice-row pivot)
-    /* UrgentVolume    */ false,  // unused — RowKind::Slider; value lives in
-                                  // prism (Get/SetUrgentVolumePercent).
-    /* UrgentRate      */ false,  // unused — RowKind::Slider; value lives in
-                                  // prism (Get/SetUrgentRatePercent).
-    /* UrgentVoice     */ false,  // unused — RowKind::Choice; value lives in
-                                  // prism (Get/SetUrgentVoiceId), persisted
-                                  // there by voice name.
-    /* CompassSettings */ false,  // unused — RowKind::Submenu (compass-row pivot)
-    /* CompassVolume   */ false,  // unused — RowKind::Slider / Choice; the
-    /* CompassRate     */ false,  // compass voice's values live in prism
-    /* CompassVoice    */ false,  // (Get/SetCompass*), persisted there.
-    /* CombatSettings  */ false,  // unused — RowKind::Submenu (combat-row pivot)
-    /* PositionalCombatSpeech */ true,  // default on (user 2026-10-27): combat
-                                  // lines sound from the creature they are
-                                  // about; off = the centred screen-reader /
-                                  // SAPI speech they had before.
-    /* PositionalExitSpeech */ true,  // default on, like its sibling
-                                  // (2026-10-28): each exit of a walking region
-                                  // label sounds from where it is; off = the
-                                  // centred announcement voice as before.
-    /* CombatVolume    */ false,  // unused — RowKind::Slider; the four combat
-    /* CombatRate      */ false,  // sliders' values live in positional_speech
-    /* CombatUrgentVolume */ false,  // (Get/SetVolumePercent,
-    /* CombatUrgentRate   */ false,  // Get/SetRateOffset), persisted there.
     /* Keybindings     */ false,  // unused — RowKind::Submenu (configurator pivot)
     /* AudioGlossary   */ false,  // unused — RowKind::Submenu
     /* SupportModder   */ false,  // unused — RowKind::Link
@@ -145,23 +105,12 @@ bool s_toggles[static_cast<int>(Option::Count)] = {
 // focus index (independent of the root focus so the user returns to
 // the AudioGlossary row when they Esc out).
 //
-// s_nested is the same pivot for the nested LIST views (announcement voice,
-// combat announcements), with one difference from the glossary: those views
-// are further windows onto the SAME row model (Option / OptionSpec), so they
-// share the root's input handler and only need their own focus index. Null on
-// the root list; see k_nestedViews.
 bool   s_open            = false;
 int    s_focused         = 0;
 void*  s_parentPanel     = nullptr;
 void*  s_fgAtOpen        = nullptr;
 bool   s_glossaryOpen    = false;
 int    s_glossaryFocused = 0;
-struct NestedView;
-const NestedView* s_nested = nullptr;
-int    s_nestedFocused   = 0;
-// Focus of the nested view a deeper one was opened from (the voice submenu
-// behind the compass one), restored on Esc. Nesting stops at two levels.
-int    s_outerFocused    = 0;
 // True while the nested keybind configurator (menus_keybinds) owns input.
 // Unlike the glossary it keeps its own state in that TU; we only track that we
 // routed into it so HandleInput / Tick / Close can defer to it.
@@ -192,7 +141,6 @@ enum class RowKind {
     Toggle,    // Enter flips s_toggles[idx]; speech reads "Name: state"
     Submenu,   // Enter opens a nested view; speech reads "Name" only
     Slider,    // Left/Right adjust a percent; speech reads "Name: N Prozent"
-    Choice,    // Left/Right walk a named list; speech reads "Name: value"
     Link,      // Enter opens a URL in the browser; speech reads "Name" only
 };
 
@@ -243,89 +191,10 @@ const char* BuildReadmeUrl(char* buf, size_t bufSize) {
 // and plays at the slider-scaled per-source volume so the user hears the
 // level they just dialled in. BeaconActive (gui_check) is a short, clean
 // affirmative blip representative of the hint-sound vocabulary.
-constexpr int kSliderStepDefault        = 10;
-// The rate row steps in 5% jumps instead: Prism maps 0..100% onto SAPI's
-// -10..+10, so 5% is exactly one SAPI notch and the ladder cannot skip a
-// setting the user might want.
-constexpr int kSliderStepRate           = 5;
+// The only slider is the cue volume; it steps 10 percent per press.
+constexpr int kSliderStep               = 10;
 constexpr int kCueVolumePreviewGroup    = 0x0b;
 constexpr acc::audio::NavCue kCueVolumePreviewCue = acc::audio::NavCue::BeaconActive;
-
-// Slider value plumbing. Each Slider row owns its value in a different
-// subsystem (cue volume → audio_bus, spoken-announcement volume → prism,
-// combat speech → positional_speech); these helpers route by Option so the
-// focus/announce/adjust code paths stay generic. Most values are percents;
-// the combat speed rows hold a signed offset from the voice's own rate.
-// Non-slider options return 0 / no-op.
-using acc::positional_speech::Channel;
-
-int GetSliderValue(Option opt) {
-    namespace ps = acc::positional_speech;
-    switch (opt) {
-        case Option::CueVolume:          return acc::audio::GetGlobalCueVolumePercent();
-        case Option::UrgentVolume:       return prism::GetUrgentVolumePercent();
-        case Option::UrgentRate:         return prism::GetUrgentRatePercent();
-        case Option::CompassVolume:      return prism::GetCompassVolumePercent();
-        case Option::CompassRate:        return prism::GetCompassRatePercent();
-        case Option::CombatVolume:       return ps::GetVolumePercent(Channel::Normal);
-        case Option::CombatRate:         return ps::GetRateOffset(Channel::Normal);
-        case Option::CombatUrgentVolume: return ps::GetVolumePercent(Channel::Urgent);
-        case Option::CombatUrgentRate:   return ps::GetRateOffset(Channel::Urgent);
-        default:                         return 0;
-    }
-}
-
-void SetSliderValue(Option opt, int value) {
-    namespace ps = acc::positional_speech;
-    switch (opt) {
-        case Option::CueVolume:          acc::audio::SetGlobalCueVolumePercent(value); break;
-        case Option::UrgentVolume:       prism::SetUrgentVolumePercent(value);         break;
-        case Option::UrgentRate:         prism::SetUrgentRatePercent(value);           break;
-        case Option::CompassVolume:      prism::SetCompassVolumePercent(value);        break;
-        case Option::CompassRate:        prism::SetCompassRatePercent(value);          break;
-        case Option::CombatVolume:       ps::SetVolumePercent(Channel::Normal, value); break;
-        case Option::CombatRate:         ps::SetRateOffset(Channel::Normal, value);    break;
-        case Option::CombatUrgentVolume: ps::SetVolumePercent(Channel::Urgent, value); break;
-        case Option::CombatUrgentRate:   ps::SetRateOffset(Channel::Urgent, value);    break;
-        default:                         break;
-    }
-}
-
-// True for the combat speed rows, whose value is an offset, not a percent.
-bool IsRateOffsetSlider(Option opt) {
-    return opt == Option::CombatRate || opt == Option::CombatUrgentRate;
-}
-
-// The positional channel a combat slider tunes (for its preview), or false.
-bool CombatSliderChannel(Option opt, Channel& out) {
-    switch (opt) {
-        case Option::CombatVolume:
-        case Option::CombatRate:         out = Channel::Normal; return true;
-        case Option::CombatUrgentVolume:
-        case Option::CombatUrgentRate:   out = Channel::Urgent; return true;
-        default:                         return false;
-    }
-}
-
-// The range a Slider row clamps to.
-void SliderRange(Option opt, int& lo, int& hi) {
-    namespace ps = acc::positional_speech;
-    lo = 0;
-    hi = 100;
-    if (IsRateOffsetSlider(opt)) {
-        lo = -ps::kMaxRateOffset;
-        hi =  ps::kMaxRateOffset;
-    } else if (opt == Option::CombatVolume || opt == Option::CombatUrgentVolume) {
-        lo = ps::kMinVolumePercent;
-    }
-}
-
-// Amount a single Left/Right press moves the given Slider row by.
-int SliderStep(Option opt) {
-    return (opt == Option::UrgentRate || opt == Option::CompassRate || IsRateOffsetSlider(opt))
-               ? kSliderStepRate
-               : kSliderStepDefault;
-}
 
 struct OptionSpec {
     Option              option;
@@ -341,27 +210,10 @@ constexpr OptionSpec k_options[] = {
     { Option::RoomShapes,      acc::strings::Id::ModSettingRoomShapes,      RowKind::Toggle  },
     { Option::WallSounds,      acc::strings::Id::ModSettingWallSounds,      RowKind::Toggle  },
     { Option::HumanSubtitles,  acc::strings::Id::ModSettingHumanSubtitles,  RowKind::Toggle  },
-    { Option::SubtitleSapi,    acc::strings::Id::ModSettingSubtitleSapi,    RowKind::Toggle  },
-    { Option::AllViaScreenReader, acc::strings::Id::ModSettingAllViaScreenReader, RowKind::Toggle },
     { Option::QEAllAround,     acc::strings::Id::ModSettingQEAllAround,     RowKind::Toggle  },
     { Option::TurretAutoAim,   acc::strings::Id::ModSettingTurretAutoAim,   RowKind::Toggle  },
     { Option::SkipIntros,      acc::strings::Id::ModSettingSkipIntros,      RowKind::Toggle  },
     { Option::CueVolume,       acc::strings::Id::ModSettingCueVolume,       RowKind::Slider  },
-    { Option::VoiceSettings,   acc::strings::Id::ModSettingVoiceSettings,   RowKind::Submenu },
-    { Option::UrgentVolume,    acc::strings::Id::ModSettingUrgentVolume,    RowKind::Slider  },
-    { Option::UrgentRate,      acc::strings::Id::ModSettingUrgentRate,      RowKind::Slider  },
-    { Option::UrgentVoice,     acc::strings::Id::ModSettingUrgentVoice,     RowKind::Choice  },
-    { Option::CompassSettings, acc::strings::Id::ModSettingCompassSettings, RowKind::Submenu },
-    { Option::CompassVolume,   acc::strings::Id::ModSettingCompassVolume,   RowKind::Slider  },
-    { Option::CompassRate,     acc::strings::Id::ModSettingCompassRate,     RowKind::Slider  },
-    { Option::CompassVoice,    acc::strings::Id::ModSettingCompassVoice,    RowKind::Choice  },
-    { Option::CombatSettings,  acc::strings::Id::ModSettingCombatSettings,  RowKind::Submenu },
-    { Option::PositionalCombatSpeech, acc::strings::Id::ModSettingPositionalCombatSpeech, RowKind::Toggle },
-    { Option::PositionalExitSpeech,   acc::strings::Id::ModSettingPositionalExitSpeech,   RowKind::Toggle },
-    { Option::CombatVolume,       acc::strings::Id::ModSettingCombatVolume,       RowKind::Slider },
-    { Option::CombatRate,         acc::strings::Id::ModSettingCombatRate,         RowKind::Slider },
-    { Option::CombatUrgentVolume, acc::strings::Id::ModSettingCombatUrgentVolume, RowKind::Slider },
-    { Option::CombatUrgentRate,   acc::strings::Id::ModSettingCombatUrgentRate,   RowKind::Slider },
     { Option::Keybindings,     acc::strings::Id::KeybindsRootLabel,         RowKind::Submenu },
     { Option::AudioGlossary,   acc::strings::Id::ModSettingAudioGlossary,   RowKind::Submenu },
     { Option::SupportModder,   acc::strings::Id::ModSettingSupportModder,   RowKind::Link    },
@@ -378,13 +230,9 @@ const OptionSpec& Spec(Option opt) {
     return k_options[static_cast<int>(opt)];
 }
 
-// ---- Display tables --------------------------------------------------------
+// ---- Display table ---------------------------------------------------------
 //
-// Top-to-bottom order of each view. Everything that shapes the mod's own
-// announcement (SAPI) voice — how loud it is, how fast it talks, which
-// installed voice it uses, and whether dialogue subtitles ride it — lives one
-// level down behind the VoiceSettings row, so the root list stays a list of
-// features rather than four consecutive rows about the same voice.
+// Top-to-bottom order of the list.
 constexpr Option k_rootRows[] = {
     Option::ExtendedCycling,
     Option::QEAllAround,
@@ -394,8 +242,6 @@ constexpr Option k_rootRows[] = {
     Option::TurretAutoAim,
     Option::SkipIntros,
     Option::CueVolume,
-    Option::VoiceSettings,
-    Option::CombatSettings,
     Option::Keybindings,
     Option::AudioGlossary,
     Option::SupportModder,
@@ -405,103 +251,16 @@ constexpr Option k_rootRows[] = {
 constexpr int k_rootRowCount = static_cast<int>(
     sizeof(k_rootRows) / sizeof(k_rootRows[0]));
 
-// The announcement-voice submenu. Volume first (the coarsest control, and the
-// one that was already there), then speed, then the voice itself, then the
-// subtitle routing that decides how much traffic this channel carries. Last,
-// the compass voice's own submenu: a separate voice, but one more voice
-// setting, so it lives beside the announcement voice rather than at the root.
-constexpr Option k_voiceRows[] = {
-    Option::AllViaScreenReader,
-    Option::UrgentVolume,
-    Option::UrgentRate,
-    Option::UrgentVoice,
-    Option::SubtitleSapi,
-    Option::CompassSettings,
-};
-constexpr int k_voiceRowCount = static_cast<int>(
-    sizeof(k_voiceRows) / sizeof(k_voiceRows[0]));
+// Every option is a row of the list: a row added to the enum but not here
+// would be invisible with nothing else to catch it.
+static_assert(k_rootRowCount == k_optionCount,
+              "every Option must appear in the display table");
 
-// The compass-voice submenu, nested in the one above. Same order as the
-// announcement voice's rows.
-constexpr Option k_compassRows[] = {
-    Option::CompassVolume,
-    Option::CompassRate,
-    Option::CompassVoice,
-};
-constexpr int k_compassRowCount = static_cast<int>(
-    sizeof(k_compassRows) / sizeof(k_compassRows[0]));
-
-// The positional-announcements submenu: the two 3D toggles, then volume and
-// speed of the normal combat lines, then of the urgent ones (which the exit
-// lines share: same voice).
-constexpr Option k_combatRows[] = {
-    Option::PositionalCombatSpeech,
-    Option::PositionalExitSpeech,
-    Option::CombatVolume,
-    Option::CombatRate,
-    Option::CombatUrgentVolume,
-    Option::CombatUrgentRate,
-};
-constexpr int k_combatRowCount = static_cast<int>(
-    sizeof(k_combatRows) / sizeof(k_combatRows[0]));
-
-// Every option is reachable from exactly one view — a row added to the enum
-// and to neither table would be invisible with nothing else to catch it.
-static_assert(k_rootRowCount + k_voiceRowCount + k_compassRowCount + k_combatRowCount ==
-                  k_optionCount,
-              "every Option must appear in exactly one display table");
-
-// A nested list view: the row that opens it, its rows, its opener cue, and the
-// view it sits in (`parent`, the pivot of that view; Option::Count = the root
-// list). All nested views share the root's row model and input handler; only
-// the rows, the focus index and where Esc goes differ.
-struct NestedView {
-    Option           pivot;
-    const Option*    rows;
-    int              count;
-    acc::strings::Id opened;
-    const char*      logName;
-    Option           parent;
-};
-constexpr NestedView k_nestedViews[] = {
-    { Option::VoiceSettings,   k_voiceRows,   k_voiceRowCount,
-      acc::strings::Id::ModSettingsVoiceSettingsOpened,   "voice",   Option::Count },
-    { Option::CompassSettings, k_compassRows, k_compassRowCount,
-      acc::strings::Id::ModSettingsCompassSettingsOpened, "compass", Option::VoiceSettings },
-    { Option::CombatSettings,  k_combatRows,  k_combatRowCount,
-      acc::strings::Id::ModSettingsCombatSettingsOpened,  "combat",  Option::Count },
-};
-
-// The nested view in front, or nullptr on the root list.
-const NestedView* NestedViewFor(Option pivot) {
-    for (const NestedView& v : k_nestedViews) {
-        if (v.pivot == pivot) return &v;
-    }
-    return nullptr;
-}
-
-// A view is a row list plus the focus index that walks it.
-struct RowView {
-    const Option* rows;
-    int           count;
-};
-
-RowView CurrentView() {
-    return s_nested ? RowView{ s_nested->rows, s_nested->count }
-                    : RowView{ k_rootRows,     k_rootRowCount  };
-}
-
-int& CurrentFocus() {
-    return s_nested ? s_nestedFocused : s_focused;
-}
-
-// Option under the cursor in the active view, or Option::Count when the view
-// is empty or the index has gone out of range.
+// Option under the cursor, or Option::Count when the index has gone out of
+// range.
 Option FocusedOption() {
-    const RowView view = CurrentView();
-    const int     f    = CurrentFocus();
-    if (f < 0 || f >= view.count) return Option::Count;
-    return view.rows[f];
+    if (s_focused < 0 || s_focused >= k_rootRowCount) return Option::Count;
+    return k_rootRows[s_focused];
 }
 
 // Stable acc_settings.ini keys for the toggles that persist across launches.
@@ -514,12 +273,8 @@ const char* PersistKey(Option opt) {
         case Option::RoomShapes:      return "RoomShapes";
         case Option::WallSounds:      return "WallSounds";
         case Option::HumanSubtitles:  return "HumanSubtitles";
-        case Option::SubtitleSapi:    return "SubtitleSapi";
-        case Option::AllViaScreenReader: return "AllViaScreenReader";
         case Option::QEAllAround:     return "QEAllAround";
         case Option::TurretAutoAim:   return "TurretAutoAim";
-        case Option::PositionalCombatSpeech: return "PositionalCombatSpeech";
-        case Option::PositionalExitSpeech:   return "PositionalExitSpeech";
         default:                      return nullptr;  // not persisted here
     }
 }
@@ -576,56 +331,6 @@ constexpr GlossaryEntry k_glossary[] = {
 constexpr int k_glossaryCount = static_cast<int>(
     sizeof(k_glossary) / sizeof(k_glossary[0]));
 
-// The two voice-choice rows: which SAPI voice the announcement channel
-// (UrgentVoice) or the compass channel (CompassVoice) speaks with. Both pick
-// from the same SAPI list, so names always come from GetUrgentVoiceName.
-size_t VoiceCount(Option opt) {
-    return opt == Option::CompassVoice ? prism::CompassVoiceCount() : prism::UrgentVoiceCount();
-}
-
-size_t GetVoiceId(Option opt) {
-    return opt == Option::CompassVoice ? prism::GetCompassVoiceId() : prism::GetUrgentVoiceId();
-}
-
-void SetVoiceId(Option opt, size_t id) {
-    if (opt == Option::CompassVoice) prism::SetCompassVoiceId(id);
-    else                             prism::SetUrgentVoiceId(id);
-}
-
-bool IsCompassRow(Option opt) {
-    return opt == Option::CompassVolume || opt == Option::CompassRate ||
-           opt == Option::CompassVoice;
-}
-
-// Sample line for a voice or slider row, spoken on the channel that row tunes
-// so it comes out in the voice, loudness and pace just chosen. The compass
-// voice says a heading, its own vocabulary; the announcement voice the sample
-// phrase.
-void SpeakSample(Option opt) {
-    if (IsCompassRow(opt)) {
-        prism::SpeakCompass(acc::strings::Get(acc::strings::Id::DirNorth));
-    } else {
-        prism::SpeakUrgent(
-            acc::strings::Get(acc::strings::Id::ModSettingUrgentVolumePreview));
-    }
-}
-
-// Value text for a voice-choice row: the voice's name. Held in a static so
-// StateText can hand back a plain const char* like every other row; the buffer
-// is only ever read on the same turn it is written. "not available" covers a
-// machine with no SAPI voices, a prism.dll too old to enumerate them, and SAPI
-// (or the compass instance) failing to start — all cases where the row cannot
-// do anything.
-const char* VoiceText(Option opt) {
-    static char s_voiceName[128];
-    if (VoiceCount(opt) == 0 ||
-        !prism::GetUrgentVoiceName(GetVoiceId(opt), s_voiceName, sizeof(s_voiceName))) {
-        return acc::strings::Get(
-            acc::strings::Id::ModSettingUrgentVoiceUnavailable);
-    }
-    return s_voiceName;
-}
-
 const char* StateText(Option opt) {
     // SkipIntros: state is the filesystem (biologo.bik vs .disabled),
     // not s_toggles. Read the canonical state every call so the UI
@@ -639,21 +344,13 @@ const char* StateText(Option opt) {
         return acc::strings::Get(on ? acc::strings::Id::ModSettingStateOn
                                     : acc::strings::Id::ModSettingStateOff);
     }
-    if (Spec(opt).kind == RowKind::Choice) return VoiceText(opt);
     bool on = s_toggles[static_cast<int>(opt)];
     return acc::strings::Get(on ? acc::strings::Id::ModSettingStateOn
                                 : acc::strings::Id::ModSettingStateOff);
 }
 
-// Speak the current focused option. Toggle and Choice rows read as
-// "Name: value"; Submenu and Link rows read just "Name" (nothing to compose
-// with).
-// Always uses Speak(interrupt=true) — normal NVDA / screen-reader speech
-// with previous-utterance interrupt, NOT SAPI urgent. Per-feedback
-// 2026-05-26: SpeakUrgent is reserved for cross-cancel events
-// (compass turns, etc.); UI navigation should stay on the normal speech
-// bus so it batches with chain step speech and respects the user's
-// screen-reader rate / voice.
+// Speak the current focused option. Toggle rows read as "Name: value";
+// Submenu and Link rows read just "Name" (nothing to compose with).
 // `interrupt` is false only on the two open paths, where the view's title
 // has just been spoken and the row should queue behind it.
 void SpeakFocusedOption(bool interrupt = true) {
@@ -662,35 +359,19 @@ void SpeakFocusedOption(bool interrupt = true) {
     const auto& row = Spec(opt);
     const char* name = acc::strings::Get(row.label);
     char line[160];
-    if (row.kind == RowKind::Toggle || row.kind == RowKind::Choice) {
+    if (row.kind == RowKind::Toggle) {
         snprintf(line, sizeof(line),
                  acc::strings::Get(acc::strings::Id::FmtModSettingOption),
                  name, StateText(opt));
-    } else if (row.kind == RowKind::Slider && IsRateOffsetSlider(opt)) {
-        // "Name: same as screen reader" / "Name: plus 10" / "Name: minus 10".
-        const int v = GetSliderValue(opt);
-        if (v == 0) {
-            snprintf(line, sizeof(line),
-                     acc::strings::Get(acc::strings::Id::FmtModSettingOption), name,
-                     acc::strings::Get(opt == Option::CombatRate
-                                           ? acc::strings::Id::ModSettingRateSameAsReader
-                                           : acc::strings::Id::ModSettingRateSameAsAnnouncements));
-        } else {
-            snprintf(line, sizeof(line),
-                     acc::strings::Get(v > 0 ? acc::strings::Id::FmtModSettingRatePlus
-                                             : acc::strings::Id::FmtModSettingRateMinus),
-                     name, v > 0 ? v : -v);
-        }
     } else if (row.kind == RowKind::Slider) {
         snprintf(line, sizeof(line),
                  acc::strings::Get(acc::strings::Id::FmtModSettingSlider),
-                 name, GetSliderValue(opt));
+                 name, acc::audio::GetGlobalCueVolumePercent());
     } else {
         snprintf(line, sizeof(line), "%s", name);
     }
     prism::Speak(line, interrupt);
-    acclog::Write("ModSettings", "speak focused %s idx=%d \"%s\"",
-                  s_nested ? s_nested->logName : "root", CurrentFocus(), line);
+    acclog::Write("ModSettings", "speak focused idx=%d \"%s\"", s_focused, line);
 }
 
 // Speak the current focused glossary entry — just the localised name.
@@ -795,11 +476,8 @@ bool IsOpen() {
 void OpenSubMenu(void* parentPanel) {
     EnsureTogglesLoaded();
     s_open         = true;
-    s_focused       = 0;
-    s_nested        = nullptr;
-    s_nestedFocused = 0;
-    s_outerFocused  = 0;
-    s_parentPanel   = parentPanel;
+    s_focused      = 0;
+    s_parentPanel  = parentPanel;
     // Snapshot the engine-foreground panel right now. Subsequent
     // HandleInput calls compare against this baseline so we only
     // auto-close on a real foreground push (modal popup, parent
@@ -811,9 +489,7 @@ void OpenSubMenu(void* parentPanel) {
                   "submenu opened (parent=%p fgAtOpen=%p)",
                   parentPanel, s_fgAtOpen);
     // Two-part open speech: "Mod settings opened" then the first
-    // option. Speak(interrupt=true) on the title cuts the chain-step
-    // tail without going through SAPI urgent (reserved for cross-
-    // cancel cues); the option follow-up uses interrupt=false so it
+    // option. The title interrupts the chain-step tail; the option
     // queues right after.
     prism::Speak(
         acc::strings::Get(acc::strings::Id::ModSettingsOpened),
@@ -829,9 +505,6 @@ void Close() {
     s_focused         = 0;
     s_glossaryOpen    = false;
     s_glossaryFocused = 0;
-    s_nested          = nullptr;
-    s_nestedFocused   = 0;
-    s_outerFocused    = 0;
     if (s_keybindsOpen) { acc::menus::keybinds::Reset(); s_keybindsOpen = false; }
     CancelPendingGlossaryCue();
     void* parent = s_parentPanel;
@@ -865,9 +538,6 @@ void AutoCloseSilent() {
     s_focused         = 0;
     s_glossaryOpen    = false;
     s_glossaryFocused = 0;
-    s_nested          = nullptr;
-    s_nestedFocused   = 0;
-    s_outerFocused    = 0;
     if (s_keybindsOpen) { acc::menus::keybinds::Reset(); s_keybindsOpen = false; }
     CancelPendingGlossaryCue();
     s_parentPanel = nullptr;
@@ -908,32 +578,6 @@ void CloseGlossarySubMenu() {
     // knows they're back at the outer level. The root focus is
     // unchanged from before — it was the AudioGlossary row that was
     // Enter'd in the first place.
-    SpeakFocusedOption();
-}
-
-// Open a nested list view (announcement voice, compass voice, combat
-// announcements) and announce its title + first row. The view shares the
-// root's row model, so pointing s_nested at it is the whole state change —
-// plus, when opened from inside another nested view, keeping that view's focus
-// for the way back.
-void OpenNestedView(const NestedView& view) {
-    if (s_nested) s_outerFocused = s_nestedFocused;
-    s_nested        = &view;
-    s_nestedFocused = 0;
-    acclog::Write("ModSettings", "%s submenu opened", view.logName);
-    prism::Speak(acc::strings::Get(view.opened), /*interrupt=*/true);
-    SpeakFocusedOption(/*interrupt=*/false);
-}
-
-// Close it, returning the user to the view it was opened from. Speaks the row
-// they came from (the pivot) as the audible anchor — same rhythm as the
-// glossary's Esc.
-void CloseNestedView() {
-    if (!s_nested) return;
-    acclog::Write("ModSettings", "%s submenu closed", s_nested->logName);
-    s_nested        = NestedViewFor(s_nested->parent);
-    s_nestedFocused = s_nested ? s_outerFocused : 0;
-    s_outerFocused  = 0;
     SpeakFocusedOption();
 }
 
@@ -978,96 +622,31 @@ void ActivateLinkRow(Option opt) {
         /*interrupt=*/true);
 }
 
-// Adjust the focused Slider row by delta (clamped to its range), re-announce
-// it, and play an audible preview at the new setting so the user hears what
-// they just dialled in. The preview is per-slider:
-//   CueVolume                — a hint-sound cue on priority group 0xb
-//                              (survives the in-game Optionen pause), scaled
-//                              to the new per-source level. Reuses the
-//                              glossary preview handle.
-//   UrgentVolume/UrgentRate  — a short SAPI urgent utterance, which already
-//                              carries the new setting (SetSliderValue
-//                              pushed it to the SAPI backend), letting the
-//                              user gauge announcement loudness or pace
-//                              directly.
-//   Combat volume/speed      — a sample line through positional speech on
-//                              the row's channel, straight ahead at full
-//                              distance gain: the lines' own loudness and
-//                              pace, not the screen reader's.
-// No-op on a non-slider focus.
+// Adjust the cue-volume slider by delta (clamped to 0..100), re-announce it,
+// and play a hint-sound cue at the new level on priority group 0xb (survives
+// the in-game Optionen pause), reusing the glossary preview handle.
 void AdjustSlider(int delta) {
-    const Option opt = FocusedOption();
-    if (opt == Option::Count) return;
-    if (Spec(opt).kind != RowKind::Slider) return;
-
-    int lo = 0, hi = 100;
-    SliderRange(opt, lo, hi);
-    int next = GetSliderValue(opt) + delta;
-    if (next < lo) next = lo;
-    if (next > hi) next = hi;
-    SetSliderValue(opt, next);
-    acclog::Write("ModSettings", "slider %d adjust delta=%+d -> %d",
-                  static_cast<int>(opt), delta, next);
+    int next = acc::audio::GetGlobalCueVolumePercent() + delta;
+    if (next < 0)   next = 0;
+    if (next > 100) next = 100;
+    acc::audio::SetGlobalCueVolumePercent(next);
+    acclog::Write("ModSettings", "cue volume adjust delta=%+d -> %d", delta, next);
     SpeakFocusedOption();
-
-    Channel channel;
-    if (CombatSliderChannel(opt, channel)) {
-        acc::positional_speech::Preview(
-            channel, acc::strings::Get(acc::strings::Id::ModSettingUrgentVolumePreview));
-    } else if (opt == Option::CueVolume) {
-        if (next > 0) {
-            int previewByte = 127 * next / 100;
-            const Vector kCentre = { 0.0f, 0.0f, 0.0f };
-            s_glossaryPreview.Start(
-                acc::audio::GetNavCueResref(kCueVolumePreviewCue), kCentre,
-                /*looping=*/false, /*spatial=*/false,
-                /*priorityGroup=*/kCueVolumePreviewGroup,
-                /*volumeByte=*/previewByte);
-        } else {
-            s_glossaryPreview.Stop();  // muted — silence any in-flight tail
-        }
+    if (next > 0) {
+        const Vector kCentre = { 0.0f, 0.0f, 0.0f };
+        s_glossaryPreview.Start(
+            acc::audio::GetNavCueResref(kCueVolumePreviewCue), kCentre,
+            /*looping=*/false, /*spatial=*/false,
+            /*priorityGroup=*/kCueVolumePreviewGroup,
+            /*volumeByte=*/127 * next / 100);
     } else {
-        // SAPI sample at the new setting, on the row's own channel. For a
-        // volume at 0% it's inaudible by design — that IS the preview (the
-        // user hears nothing, confirming mute).
-        SpeakSample(opt);
+        s_glossaryPreview.Stop();  // muted - silence any in-flight tail
     }
 }
 
-// Step the focused voice row (announcement or compass voice) by `delta`
-// places in Prism's SAPI voice list, clamped at both ends (no wrap — same rule
-// as the row ladder, and the repeated name is the boundary cue). Announces the
-// new row on the screen reader, then plays the row's sample (SpeakSample),
-// which now comes out in the newly chosen voice: the screen reader tells you
-// which voice you are on, the sample tells you what it sounds like.
-// No-op when SAPI has no voices to offer.
-void AdjustVoice(int delta) {
-    const Option opt = FocusedOption();
-    size_t count = VoiceCount(opt);
-    if (count == 0) {
-        SpeakFocusedOption();  // reads "not available"
-        return;
-    }
-    size_t cur  = GetVoiceId(opt);
-    size_t next = cur;
-    if (delta < 0) {
-        if (cur > 0) next = cur - 1;
-    } else if (delta > 0) {
-        if (cur + 1 < count) next = cur + 1;
-    }
-    if (next != cur) SetVoiceId(opt, next);
-    acclog::Write("ModSettings", "voice %d adjust delta=%+d -> %zu/%zu",
-                  static_cast<int>(opt), delta, next, count);
-    SpeakFocusedOption();
-    SpeakSample(opt);
-}
-
-// Input for whichever option list is in front — the root list, or the
-// announcement-voice submenu. Both are views over the same row model, so the
-// only thing that differs between them is where Esc goes.
+// Input for the option list.
 bool HandleInputList(int keyCode) {
-    const RowView view = CurrentView();
-    // Left / Right: adjust the focused Slider row or step the Choice row;
+    // Left / Right: adjust the focused Slider row;
     // ignored on every other kind (they fall through to the parent-input
     // block in HandleInput, which consumes them so they don't leak to the
     // engine).
@@ -1076,12 +655,7 @@ bool HandleInputList(int keyCode) {
         if (opt != Option::Count) {
             const RowKind kind = Spec(opt).kind;
             if (kind == RowKind::Slider) {
-                const int step = SliderStep(opt);
-                AdjustSlider(keyCode == kInputNavRight ? step : -step);
-                return true;
-            }
-            if (kind == RowKind::Choice) {
-                AdjustVoice(keyCode == kInputNavRight ? 1 : -1);
+                AdjustSlider(keyCode == kInputNavRight ? kSliderStep : -kSliderStep);
                 return true;
             }
         }
@@ -1097,9 +671,8 @@ bool HandleInputList(int keyCode) {
         const bool home = (keyCode == kInputHome);
         const bool end  = (keyCode == kInputEnd);
         if (up || down || home || end) {
-            if (view.count <= 0) return true;
-            CurrentFocus() = acc::menus::nav::ClampedCursorStep(
-                CurrentFocus(), view.count, up, down, home, end);
+            s_focused = acc::menus::nav::ClampedCursorStep(
+                s_focused, k_rootRowCount, up, down, home, end);
             SpeakFocusedOption();
             return true;
         }
@@ -1113,8 +686,6 @@ bool HandleInputList(int keyCode) {
         if (row.kind == RowKind::Submenu) {
             if (row.option == Option::AudioGlossary) {
                 OpenGlossarySubMenu();
-            } else if (const NestedView* nested = NestedViewFor(row.option)) {
-                OpenNestedView(*nested);
             } else if (row.option == Option::Keybindings) {
                 s_keybindsOpen = true;
                 acc::menus::keybinds::Open();
@@ -1129,12 +700,6 @@ bool HandleInputList(int keyCode) {
         // Right do the actual adjusting). delta=0 keeps the value put.
         if (row.kind == RowKind::Slider) {
             AdjustSlider(0);
-            return true;
-        }
-        // Choice: same contract — Enter re-auditions the current voice
-        // without moving the selection.
-        if (row.kind == RowKind::Choice) {
-            AdjustVoice(0);
             return true;
         }
         // SkipIntros: filesystem rename instead of s_toggles flip.
@@ -1168,11 +733,9 @@ bool HandleInputList(int keyCode) {
         SpeakFocusedOption();
         return true;
     }
-    // Esc: one level up — out of a nested list view back to the root list, or
-    // out of the root list back to the parent panel.
+    // Esc: back to the parent panel.
     if (keyCode == kInputEsc1 || keyCode == kInputEsc2) {
-        if (s_nested) CloseNestedView();
-        else          Close();
+        Close();
         return true;
     }
     return false;

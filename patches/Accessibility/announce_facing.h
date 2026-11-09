@@ -2,10 +2,8 @@
 //
 // In the world: the camera's facing as a compass direction word ("Facing
 // north"), then the area the player stands in. On the map screen: the facing
-// in map-frame degrees plus the direction word, then the room. The facing
-// half speaks on the compass voice and the place half follows on the screen
-// reader once it has finished (prism::SpeakCompassThen), so the heading never
-// runs into the area description.
+// in map-frame degrees plus the direction word, then the room on a line of
+// its own, so the heading never runs into the area description.
 //
 // Camera (not character) because A/D rotates the camera and W only snaps
 // the character on commit — the camera direction is what every other

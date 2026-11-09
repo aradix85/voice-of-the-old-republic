@@ -21,7 +21,6 @@
 #include "log.h"
 #include "menus_modsettings.h"  // RoomShapes toggle gates the shape tier
 #include "narrated_target.h" // clear on area transition
-#include "positional_speech.h"  // 3D exit descriptions; combat voices gate the refire
 #include "same_name_suffix.h"   // Reset() on area transition
 #include "strings.h"
 #include "prism.h"
@@ -126,12 +125,11 @@ constexpr DWORD kMinorClusterDwellMs = 500;
 DWORD g_pending_cluster_since_ms = 0;
 bool  g_pending_cluster_minor    = false;
 
-// Centre rule (2026-10-28, Taris Upper City + 3D exit descriptions). A
-// Kreuzung, merged room or Bereich under Großer-Bereich size speaks exit
-// words measured from its centroid, but the cluster is entered when its
-// node becomes the nearest one, roughly halfway from the neighbour — up
-// to ~9 m off-centre on wide streets, where the 3D sound made the word
-// audibly wrong ("Süd-Ost" heard from nearly north). So the announce is
+// Centre rule (Taris Upper City). A Kreuzung, merged room or Bereich under
+// Großer-Bereich size speaks exit words measured from its centroid, but the
+// cluster is entered when its node becomes the nearest one, roughly halfway
+// from the neighbour — up to ~9 m off-centre on wide streets, where the
+// words are wrong ("Süd-Ost" for what is nearly north). So the announce is
 // held until the player is where the words are true:
 //   - within a quarter of the cluster's extent of its centre, or
 //   - no longer getting closer: passing the closest point, or standing
@@ -166,9 +164,8 @@ constexpr float kCentreRadiusFraction = 0.25f;
 constexpr float kCentreProgressEpsM   = 0.05f;
 constexpr DWORD kCentreNoCloserMs     = 300;
 constexpr DWORD kCentreReactionMs     = 500;
-// Noun length until one exit list has played (or when exit descriptions
-// are off and the screen reader speaks): "Kreuzung" at the default rate.
-constexpr DWORD kCentreDefaultLeadMs  = 420;
+// Time to hear the region noun: "Kreuzung" at the default rate.
+constexpr DWORD kCentreLeadMs         = 420;
 // Below this the player counts as standing (the stall test's case).
 constexpr float kCentreMovingMps      = 0.5f;
 bool   g_pending_cluster_centre = false;
@@ -237,8 +234,7 @@ bool CentreRuleReady(int clusterId, const Vector& pos) {
         const float speedSq = g_motion_vx * g_motion_vx +
                               g_motion_vy * g_motion_vy;
         if (speedSq >= kCentreMovingMps * kCentreMovingMps) {
-            DWORD nounMs = acc::positional_speech::LastExitLeadMs();
-            if (nounMs == 0) nounMs = kCentreDefaultLeadMs;
+            const DWORD nounMs = kCentreLeadMs;
             const float leadS = (nounMs + kCentreReactionMs) / 1000.0f;
             // Time until the closest point of the current path; negative
             // once it is behind.
@@ -519,7 +515,7 @@ void CommitSpokenLabel(const std::string& text, const Vector& pos,
 // Platz delayed-announce state. Since 2026-10-28 only Großer Bereich
 // (extent >= the large-area threshold) takes this path; every smaller
 // Platz waits for the centre rule instead. When such a cluster
-// resolves (kind == KindPlatz) we defer the SAPI announce for
+// resolves (kind == KindPlatz) we defer the announce for
 // kPlatzDelayMs ms so the player has time to walk further into the
 // cluster — by the time the announce fires they're closer to the
 // centroid, so the centroid-relative direction list (West, Nord, …)
@@ -645,8 +641,8 @@ DWORD g_gate_clear_since_ms     = 0;
 // don't correspond to doorways. The Path 3 classifier now treats every
 // degree-2 node as a corridor; real doorway detection would need
 // wall-geometry constriction sensing.
-// outExitsOpt receives the shape label's exits for 3D exit descriptions
-// (empty for a friendly room name).
+// outExitsOpt receives the shape label's exits for exit_memory (empty for a
+// friendly room name).
 bool ResolveRoomSpeech(void* area, const Vector& worldPos,
                        std::string& outBuf,
                        const char*& outSource,
@@ -753,7 +749,7 @@ void LogWallTopoComparison(void* area, int roomIndex,
 // combat / UI-blocking checks.
 //
 // Platz delay: when the resolved label is a multi-node Path 3 cluster
-// (kind == KindPlatz) of Großer-Bereich size, defer the SAPI announce for
+// (kind == KindPlatz) of Großer-Bereich size, defer the announce for
 // kPlatzDelayMs (smaller ones take the centre rule in Tick instead). The
 // label + position are stashed; `TickPendingPlatz` fires the announce
 // later, re-resolving at the current player position so a player who
@@ -770,13 +766,8 @@ void LogWallTopoComparison(void* area, int roomIndex,
 void SpeakPlayerRegionLabel(void* area, const std::string& label,
                             const std::vector<acc::room_topology::ExitMark>& exits) {
     std::string annotated;
-    std::vector<acc::room_topology::ExitMark> annotatedExits;
-    if (acc::exit_memory::Annotate(area, label, exits, annotated,
-                                   annotatedExits)) {
-        acc::transitions::SpeakRegionLabel(annotated.c_str(), annotatedExits);
-    } else {
-        acc::transitions::SpeakRegionLabel(label.c_str(), exits);
-    }
+    const bool added = acc::exit_memory::Annotate(area, label, exits, annotated);
+    acc::transitions::SpeakRegionLabel(added ? annotated.c_str() : label.c_str());
 }
 
 void SpeakRoomChange(void* area, int clusterId, const Vector& worldPos) {
@@ -867,9 +858,7 @@ void SpeakRoomChange(void* area, int clusterId, const Vector& worldPos) {
         return;
     }
 
-    // Non-Platz path: walking-adapter cluster change uses Prism+SAPI
-    // urgent so it survives NVDA's typed-character cancellation while
-    // W/S is held. Cancel any pending Platz announce (we just entered
+    // Non-Platz path. Cancel any pending Platz announce (we just entered
     // a different shape, the deferred Platz no longer applies).
     g_pending_platz_valid = false;
 
@@ -973,13 +962,7 @@ void TickGatedClusterRefire(void* area, const Vector& playerPos) {
     if (!g_gated_cluster_pending) return;
 
     DWORD now = GetTickCount();
-    // Positional combat lines play one after another, so a long fight can
-    // still be speaking well past combat end; the refire waits for both
-    // combat voices to finish instead of talking over their tail.
-    using acc::positional_speech::Channel;
-    if (IsWorldSpeechGatedImpl() ||
-        acc::positional_speech::IsSpeaking(Channel::Normal) ||
-        acc::positional_speech::IsSpeaking(Channel::Urgent)) {
+    if (IsWorldSpeechGatedImpl()) {
         g_gate_clear_since_ms = 0;  // gate re-engaged — restart the clock
         return;
     }
@@ -1146,7 +1129,7 @@ void TickProximityLandmarks(const Vector& playerPos) {
                       "gated, state advanced silently",
                       g_landmarks[nearest].name, nearest, std::sqrt(bestD2));
     } else {
-        prism::SpeakUrgent(g_landmarks[nearest].name);
+        prism::Speak(g_landmarks[nearest].name, /*interrupt=*/true);
         acclog::Write("Transition",
                       "landmark proximity -> '%s' (idx=%d dist=%.2fm)",
                       g_landmarks[nearest].name, nearest, std::sqrt(bestD2));
@@ -1701,11 +1684,8 @@ bool IsWorldSpeechGated() {
     return IsWorldSpeechGatedImpl();
 }
 
-void SpeakRegionLabel(const char* text,
-                      const std::vector<acc::room_topology::ExitMark>& exits) {
-    if (!acc::positional_speech::SpeakExitList(text, exits)) {
-        prism::SpeakUrgent(text);
-    }
+void SpeakRegionLabel(const char* text) {
+    prism::Speak(text, /*interrupt=*/true);
 }
 
 bool IsModuleLoadPending() {

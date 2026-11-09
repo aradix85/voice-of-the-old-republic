@@ -71,11 +71,8 @@ bool IsResrefStyleRoomName(const char* name);
 bool IsWorldSpeechGated();
 
 // Speaks a perceptual-region label (the walking announce and the view-mode
-// cursor's): through 3D exit descriptions when they are on, each of
-// `exits` sounding from where it leads, else the announcement voice,
-// centred. Either way it replaces the previous region label.
-void SpeakRegionLabel(const char* text,
-                      const std::vector<acc::room_topology::ExitMark>& exits);
+// cursor's), interrupting the previous one.
+void SpeakRegionLabel(const char* text);
 
 // True between SetMoveToModuleString firing and the next fresh area
 // pointer surfacing. Probes that call into player/leader/area accessors

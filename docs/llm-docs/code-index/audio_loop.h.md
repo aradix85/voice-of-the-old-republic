@@ -1,4 +1,4 @@
-# audio_loop.h (126 lines)
+# audio_loop.h (88 lines)
 
 Source: `patches/Accessibility/audio_loop.h`
 

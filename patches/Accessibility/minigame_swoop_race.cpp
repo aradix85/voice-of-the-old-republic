@@ -32,9 +32,7 @@
 #include "log.h"
 #include "audio_bus.h"        // PlayCue — non-positional "you can shift now" cue
 #include "audio_cues.h"       // NavCue + GetNavCueResref (shift-ready resref)
-#include "prism.h"            // SpeakUrgent — entry/exit/gear must beat
-                              //              NVDA's typed-character cancel
-                              //              (race input is held Space/Enter)
+#include "prism.h"
 #include "strings.h"          // Get(SwoopRaceStarted/Controls/Ended) +
                               //     FmtSwoopRaceGear
 #include "minigame_swoop_audio.h"  // TickSpatialAudio + ResetSpatialAudio
@@ -762,7 +760,7 @@ void AnnounceGear(int gear, const char* why) {
     const char* fmt = acc::strings::Get(acc::strings::Id::FmtSwoopRaceGear);
     if (fmt && *fmt) {
         std::snprintf(buf, sizeof(buf), fmt, gear);
-        prism::SpeakUrgent(buf);
+        prism::Speak(buf, /*interrupt=*/true);
     }
     acclog::Write("SwoopRace", "gear -> %d (%s)", gear, why);
 }
@@ -946,7 +944,7 @@ void TickStuckHint(void* miniGame) {
             break;
     }
     const char* msg = acc::binding_hints::Text(id);
-    if (msg && *msg) prism::SpeakUrgent(msg);
+    if (msg && *msg) prism::Speak(msg, /*interrupt=*/true);
     acclog::Write("SwoopRace", "stuck hint: no progress for %llums at y=%.1f "
                   "(gear=%d speed=%.1f tunnelX=%.1f) [%s]",
                   now - g_state.progress_mark_ms, cam.y, gear, speed,
@@ -1048,9 +1046,8 @@ void TickShiftReady(void* miniGame) {
 // ============================================================================
 // Speech.
 //
-// Combine opener + keybind cheat sheet into ONE urgent utterance so the
-// two halves can't preempt each other (every SpeakUrgent uses
-// interrupt=true — see prism::SpeakUrgent). Without this combine, the
+// Combine opener + keybind cheat sheet into ONE interrupting utterance so
+// the two halves can't preempt each other. Without this combine, the
 // observed live behaviour was: opener cancelled by controls cancelled
 // by the spurious EXIT 125 ms later, so the user heard nothing
 // coherent.
@@ -1071,7 +1068,7 @@ void AnnounceEntry() {
     std::snprintf(buf, sizeof(buf), "%s %s",
                   opener   ? opener   : "",
                   controls ? controls : "");
-    prism::SpeakUrgent(buf);
+    prism::Speak(buf, /*interrupt=*/true);
     acclog::Write("SwoopRace", "spoke entry: [%s]", buf);
 }
 
@@ -1103,7 +1100,7 @@ void SpeakRaceEndMessage() {
     if (!msg) msg = acc::strings::Get(acc::strings::Id::SwoopRaceEnded);
     if (msg && *msg) {
         if (g_state.wrecked || !g_state.have_race_time) {
-            prism::SpeakUrgent(msg);   // a wreck: say it now
+            prism::Speak(msg, /*interrupt=*/true);   // a wreck: say it now
         } else {
             // The time waits out the finish sound (see kRaceEndSpeakDelayMs);
             // FlushRaceEndSpeech speaks it from the tick, or at once on exit.
@@ -1125,7 +1122,7 @@ void FlushRaceEndSpeech(bool force) {
     if (!g_state.race_end_pending) return;
     if (!force && GetTickCount64() < g_state.race_end_due_ms) return;
     g_state.race_end_pending = false;
-    prism::SpeakUrgent(g_state.race_end_msg);
+    prism::Speak(g_state.race_end_msg, /*interrupt=*/true);
     acclog::Write("SwoopRace", "spoke race time%s: [%s]",
                   force ? " (flushed on exit)" : "", g_state.race_end_msg);
 }
@@ -1171,7 +1168,7 @@ void HandleEnter(void* mg) {
 
     // Speak FIRST, dump SECOND. The full byte dump fires a couple dozen
     // log writes which take real wall-time; doing them before
-    // SpeakUrgent risks the engine ticking again before we queue the
+    // speaking risks the engine ticking again before we queue the
     // utterance, in which case TickGearWatch / EmitDiagSnapshot would
     // pile up on the same audio frame.
     AnnounceEntry();

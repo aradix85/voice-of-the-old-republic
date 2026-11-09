@@ -265,11 +265,6 @@ void AnnounceCurrent(const acc::cycle::CategoryListing& listing,
         // category-prefix wrapper is intentionally NOT applied here:
         // EmptyDoors etc. are full sentences, not item names. No 3D cue
         // either, since there's no object to localise spatially.
-        //
-        // Speech path: normal Prism (NVDA primary) in both contexts.
-        // SpeakUrgent stays reserved for sustained-key-hold scenarios
-        // (map cursor WASD pan); single-press cycle keys don't suffer
-        // the typed-character cancel feedback loop in practice.
         const char* msg = acc::strings::Get(bindings.empty);
         prism::Speak(msg, /*interrupt=*/true);
         acclog::Write("Cycle", "-> [%s] (ctx=%s)", msg,

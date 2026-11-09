@@ -102,19 +102,8 @@ prefix (menus_listbox_picker.cpp).
 
 ## Open
 
-- NVDA-only speech (decision above), one commit each, in this order:
-  A. Positional speech out: positional_speech, eloquence_render,
-     nvda_config, audio_wav, probe_memory_sound (F11 probes),
-     LoopSource::StartFromMemory, prism Render*/NoteSpokenElsewhere/
-     ActiveScreenReader/OffsetRatePercent; callers combat_log (speak
-     centred), core_tick, pad_input, transitions (SpeakExitList,
-     LastExitLeadMs), menus_modsettings rows (persistence is keyed by name,
-     so enum rows can go), strings_*, docs (positional-speech.md,
-     in-memory-sound-resource.md, user docs).
-  B. SAPI voices out: SpeakUrgent/SpeakOnUrgentChannel/SpeakCompass/
-     SpeakCompassThen become Speak (interrupt) or one joined line;
-     menus_modsettings voice and compass rows, SubtitleSapi,
-     AllViaScreenReader; prism_urgent/compass go.
+- NVDA-only speech (decision above). A+B done: positional speech and the
+  SAPI voices are out (one commit). Still to do:
   C. Prism replaced by the NVDA Controller Client (x86 DLL, speak, cancel,
      braille), module renamed (prism:: to speech::, 91 includes);
      installer ships nvdaControllerClient32.dll instead of prism.dll and
@@ -124,6 +113,13 @@ prefix (menus_listbox_picker.cpp).
      WallSounds toggle, view_mode/cycle_input/map_ui_cursor/passive_narrate
      cues): check each for a text equivalent first. Minigame audio
      (audio_bus, audio_loop, swoop, turret) stays.
+  E. Docs pass after D: README.md and docs/README.*.md (settings rows,
+     voices, 3D speech, sounds), controls-and-input, installer.md, tools.md,
+     known-issues, llm-docs (audio-internals, action-menu-and-combat,
+     game-flow), installer WindowsVoicesInstaller and its locale strings.
+  Note for Anouk at the end: with NVDA only, NVDA's "speech interrupt for
+  typed characters" (Keyboard settings) cuts lines while a key is held
+  (map cursor, turret fire key); the SAPI voices used to dodge that.
 - room_topology: pure logic to engine-free files with tests (octant
   helpers; the bits E=0 counter-clockwise could become compass order N=0
   clockwise like engine_compass, which would also simplify

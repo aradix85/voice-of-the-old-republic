@@ -1,10 +1,10 @@
-# announce_facing.cpp (216 lines)
+# announce_facing.cpp (217 lines)
 
 Source: `patches/Accessibility/announce_facing.cpp`
 
 (From announce_facing.h.) On-demand facing readout (AltGr / Right Alt; the pad's right trigger).
 
-In the world: the camera's facing as a compass direction word ("Facing north"), then the area the player stands in. On the map screen: the facing in map-frame degrees plus the direction word, then the room. The facing half speaks on the compass voice and the place half follows on the screen reader once it has finished (prism::SpeakCompassThen), so the heading never runs into the area description.
+In the world: the camera's facing as a compass direction word ("Facing north"), then the area the player stands in. On the map screen: the facing in map-frame degrees plus the direction word, then the room on a line of its own, so the heading never runs into the area description.
 
 Camera (not character) because A/D rotates the camera and W only snaps the character on commit — the camera direction is what every other orient cue references, so a manual readout on a different frame would disagree with the last sector word the user heard.
 
@@ -17,6 +17,6 @@ Win32 polling because AltGr is unbound in stock kotor.ini and the engine keymap 
 - L51 `const char* SectorWord(int compassDegrees)`
 - L60 `bool ResolveClusterLabelForPlayer(std::string& outBuf)`: Perceptual-region label at the player's position.
 - L86 `void AnnounceWorldFacing()`
-- L112 `bool ResolveRoomNameForPlayer(char* outBuf, size_t bufSize)`: Three-tier room name lookup matching transitions::Tick: landmark → friendly room name → synthetic "Room N".
-- L151 `void AnnounceMapFacing()`
-- L202 `void PollWin32()`
+- L111 `bool ResolveRoomNameForPlayer(char* outBuf, size_t bufSize)`: Three-tier room name lookup matching transitions::Tick: landmark → friendly room name → synthetic "Room N".
+- L150 `void AnnounceMapFacing()`
+- L203 `void PollWin32()`

@@ -1,4 +1,4 @@
-# focus_guard.cpp (795 lines)
+# focus_guard.cpp (793 lines)
 
 Source: `patches/Accessibility/focus_guard.cpp`
 
@@ -35,4 +35,4 @@ Idempotent — repeat calls are no-ops. Safe to call from OnRulesInit (early, be
 - L747 `bool GameOwnsForeground()`
 - L755 `void StartFocusProbe()`
 - L774 `void DrainInputBlockedWarning()`
-- L784 `void ArmStartupForegroundGuard()`
+- L782 `void ArmStartupForegroundGuard()`
