@@ -23,6 +23,22 @@ this fork: Anouk decides, and may put any of them back on the list.
   pytest.
 - No duplicate code (Anouk): duplication is the first target. Time is not a
   constraint.
+- Split by job into modules wherever possible (Anouk, 2026-11-09 22:01):
+  she cannot program and Claude does all the work, so the code must be as
+  orderly and systematic as possible, and therefore easy to check. This
+  overrides the maker's rejections of the room_topology, transitions and
+  engine_radial splits; all seven of his rejections are reopened and
+  re-evaluated with measurements when their file comes up (22:02). The
+  maker's objection (a split publishes many internals through a header) is
+  met with internal headers (`<module>_internal.h`), included only by the
+  files of that module.
+- One mod for both games stays (Anouk, 22:02): the existing K1/K2 pattern
+  (offsets chosen per game with acc::off::Pick/Same, K2 branches beside
+  their K1 counterparts) is kept, and a split keeps a K1 path and its K2
+  twin in the same file.
+- Target per file: one job, a header comment that says what that job is,
+  roughly 600 lines or less (data tables such as strings_*.cpp excepted).
+  "Per function" means per job, not one file per C++ function.
 
 ## Rules of engagement
 
@@ -139,6 +155,55 @@ clone and name scans):
   (1.6 m); fragile. Expose tag/resref in /objects and match on that.
 - [ ] Check what the KOTOR 2 side of the bridge really needs (YAGNI).
 
+### Method for every split (P3 and the module work)
+
+1. `python tools/analysis/split_plan.py FILE --groepen --kern 6`: per
+   function its lines, the same-file functions it calls and the file-scope
+   data it uses; with --kern the widely shared core is listed apart.
+2. Write the module design into this file: the new files, the job of
+   each, and what goes into the internal header.
+3. Move code only (cut and paste, no logic change), keep the namespace,
+   fix includes. One source file per commit.
+4. `kdev build` with 0 warnings, the tests, and analyse.py before and
+   after (code lines equal apart from headers and includes).
+5. Update the code index (docs/llm-docs/code-index/<file>.md) for every
+   new or changed file, and ARCHITECTURE.md where a module's place changes.
+
+Order: our own exit_memory.cpp first (best known), then the largest files:
+room_topology.cpp, menus_extract.cpp, minigame_turret.cpp, menus_listbox.cpp,
+minigame_swoop_audio.cpp, prism.cpp, pad_input.cpp, transitions.cpp,
+engine_area.cpp, unified_action_menu.cpp, combat_log.cpp, and on down the
+size list of analyse.py. The duplication families (F1-F9) are taken along
+when their files are split.
+
+### Design: exit_memory.cpp (2,212 lines, 65 functions, 54 file-scope data)
+
+split_plan (--kern 6) puts BuildGraph, Dist2D, IndexOf, RegionAt and the
+data g_area, g_current, g_visited, kFar in the core; the rest still forms
+one group, held together by a few more helpers (RouteText,
+TransitionSliverOwner, the door lookups, NumberedDoors). Those go into the
+internal header too. Proposed modules, public API unchanged
+(exit_memory.h):
+- exit_memory_internal.h: the shared state (area, area key, save-var name,
+  visited set, current and previous region, save-loaded flag) as one struct,
+  the constants, RegionAt, RegionBehind, LinkedRegions, Dist2D, the Graph
+  and Route types with their functions. Door lookups go to engine_area (F1).
+- exit_memory_visits.cpp: visited regions in the save (Persist, RecordVisit,
+  LoadVisited), OnAreaEntered, OnClusterCommitted, OnClusterSeen,
+  MarkNearbySeen, Tick.
+- exit_memory_graph.cpp: BuildGraph, ShortestPaths, ExitToward, the route
+  functions, DoorSides, DoorBeyond, TransitionSliverOwner,
+  UnreachableFlags, ListRegions.
+- exit_memory_annotate.cpp: Annotate, HereList, RegionEntries,
+  BehindDoorText, Destination, LandmarkRegions, door numbering,
+  RegionLabelAt, CurrentRegionText, TargetWayInfo.
+- exit_memory_area_doors.cpp: ACC_EXIT and ACC_SUM, TransitionDoorMemory,
+  CurrentAreaSummary, TickAreaMemory.
+- exit_memory_overview.cpp: CollectOverview, OverviewText, CollectLoot,
+  PollOverviewHotkey, WarnIfBehindLock, RemindLootOnLeaving, FlushReminder.
+- exit_memory_explore.cpp: the explore chain (Ctrl+Shift+N), WalkToNearestLoot
+  (Ctrl+L), PollWalkHotkeys.
+
 ### P5 — Complexity hotspots (selective)
 - [ ] Only where a split gives functions with short parameter lists and
   clear names; the maker's DriveSelectedPeg rejection is the precedent.
@@ -156,5 +221,10 @@ clone and name scans):
 - 2026-11-09: P0 started, baseline measured, P1 updater removal (8d2a198),
   kotor-tools under git with tests (c7a9c41). All on `bridge` now. In-game
   check owed at the end: main menu responds, F5 there does nothing.
-- Next: C++ unit-test harness (doctest) and the bridge test script (needs
-  the game running), then P3 F1 (door lookup) and F2 (exit_memory split).
+- 2026-11-09 22:00: Anouk chose splitting by job everywhere and reopened the
+  maker's rejections; tools/analysis/split_plan.py added; exit_memory design
+  written above.
+- Next: execute the exit_memory split per the design (F1 door lookup with
+  it), then the C++ unit-test harness (doctest) for the pure parts that the
+  split frees (save-var formats, ShortestPaths, RoundWalk), then
+  room_topology.cpp.
