@@ -224,7 +224,7 @@ bool NarrateHandle(uint32_t handle, const char* reason, bool explicitRequest) {
     }
     // The automatic focus-follow must not cut off a bark that is being read.
     // 2026-11-08, Taris: Enter on an Ithorian surfaced his bark, the engine
-    // then moved its target to him and "Ithorian. 3 meters." interrupted the
+    // then moved its target to him and "Ithorian. 3 metres." interrupted the
     // line a second later, so the player heard nothing of it. Queue behind
     // the bark instead; an explicit Q/E press still interrupts.
     const bool behindBark = !explicitRequest && acc::engine::HasActiveBarkBubble();

@@ -267,7 +267,7 @@ const char* Get(Id id) {
         case Id::FactionNeutral:             return "neutral";
 
         case Id::FmtBriefCondition:          return " %s.";
-        case Id::FmtBriefDistanceMeters:     return " %d meters.";
+        case Id::FmtBriefDistanceMeters:     return " %d metres.";
         case Id::FmtBriefEffects:            return " %s.";
         case Id::FmtBriefWielding:           return " %s.";
         case Id::FmtBriefOffHand:            return " off-hand %s.";
@@ -284,7 +284,7 @@ const char* Get(Id id) {
         case Id::FmtExamineRowName:          return "Name: %s";
         case Id::FmtExamineRowFaction:       return "Disposition: %s";
         case Id::FmtExamineRowHp:            return "Hit points: %d";
-        case Id::FmtExamineRowDistance:      return "Distance: %d meters";
+        case Id::FmtExamineRowDistance:      return "Distance: %d metres";
         case Id::FmtExamineRowWeapon:        return "Main hand: %s";
         case Id::ExamineRowWeaponNone:       return "Main hand: none";
         case Id::FmtExamineRowEffect:        return "Effect: %s";
@@ -514,13 +514,13 @@ const char* Get(Id id) {
         case Id::TurretGameEnded:
             return "Turret ended.";
         case Id::FmtTurretTarget:
-            return "Fighter %d, %d meters";
+            return "Fighter %d, %d metres";
         case Id::FmtTurretDestroyed:
             return "Fighter %d destroyed.";
         case Id::TurretNoTargets:
             return "No targets.";
         case Id::FmtTurretTargetNamed:
-            return "%s %d, %d meters";
+            return "%s %d, %d metres";
         case Id::FmtTurretDestroyedNamed:
             return "Target destroyed: %s %d.";
         case Id::FmtTurretEscapedNamed:

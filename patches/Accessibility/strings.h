@@ -1017,7 +1017,7 @@ enum class Id : int {
     //   FmtExamineRowName    — row label "Name: %s".
     //   FmtExamineRowFaction — row label "Disposition: %s".
     //   FmtExamineRowHp      — row label "Lebenspunkte: %d".
-    //   FmtExamineRowDistance— row label "Distance: %d meters".
+    //   FmtExamineRowDistance— row label "Distance: %d metres".
     //   FmtExamineRowWeapon  — row label "Main hand: %s".
     //   ExamineRowWeaponNone — "Main hand: none" (unarmed).
     //   FmtExamineRowEffect  — row label "Effect: %s".
