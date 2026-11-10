@@ -1,11 +1,11 @@
-# menus_extract_icons.cpp (302 lines)
+# menus_extract_icons.cpp (161 lines)
 
 Source: `patches/Accessibility/menus_extract_icons.cpp`
 
-Icon controls of the in-game screens: party portraits, the speculative read of an unknown control's text, the in-game menu icons, equipment slots and the map arrows.
+Image-only controls of the in-game screens, named from what they stand for: the party portraits, the in-game menu icons and the map's note arrows.
 
 ## Declarations (in source order)
 
-- L43 `const char* TryPartyPortrait(void* control, char* outBuf, size_t bufSize, bool& claimedVtable)`: 7b.
-- L146 `const char* TryInGameMenuIcon(void* control, void* owner, char* outBuf, size_t bufSize)`: 9a.
-- L273 `const char* TryInGameMapArrow(void* control, void* owner, char* outBuf, size_t bufSize)`: 9b2.
+- L56 `const char* TryPartyPortrait(void* control, char* outBuf, size_t bufSize, bool& claimedVtable)`: CSWGuiPartySelectionButton: OnPanelAdded (0x006beeb0) gives each portrait the companion's image and no caption, so it is read through ReadPartyPortrait (engine_player.h).
+- L114 `const char* TryInGameMenuIcon(void* control, void* owner, char* outBuf, size_t bufSize)`: No engine path carries the in-game menu icons' text (inline, strref, text_object, gui_string and tooltip are all empty), so they are named from the table by .gui id.
+- L142 `const char* TryInGameMapArrow(void* control, void* owner, char* outBuf, size_t bufSize)`: CSWGuiInGameMap's two image-only buttons beside the map (up_button, down_button): HandleInputEvent 0x31 / 0x32, which the map routes to CSWGuiMapHider::GetPrevMapNote / GetNextMapNote, cycling the explored map notes.
