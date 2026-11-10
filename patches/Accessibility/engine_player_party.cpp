@@ -1,17 +1,6 @@
-// party and leader resolution.
-//
-// Split out of engine_player.cpp by the Phase-1 structure pass
-// (refactoring candidate 5). Everything here answers "who is in the party,
-// who is leading, what are they called": leader/creature resolution, the
-// party table accessors, solo mode, roster availability/selectability and
-// the companion name table.
-//
-// The functions were interleaved with the input-lock state machine in the
-// original file, so this is a two-piece cut rather than one slice - the
-// definitions themselves are verbatim.
-//
-// Declarations stay in engine_player.h; GetPlayerServerObject comes from
-// engine_player_internal.h.
+// Who is in the party, who is leading, and what they are called: leader and
+// creature resolution, the party table, solo mode, roster availability and
+// the companion names. Declarations are in engine_player.h.
 
 #include "engine_player.h"
 #include "engine_player_internal.h"
@@ -98,10 +87,13 @@ bool IsAnyPartyMemberInCombat() {
     // OR that bit across the whole party for the true encounter state. Stays
     // client-side on the same field/namespace as the global we already poll,
     // so there is no client/server timing skew between the two.
-    const size_t    kInternalPartyOffset          = acc::off::Todo(0x270);     // CClientExoAppInternal.party
-    const size_t    kCSWCCreatureCombatModeOffset = acc::off::Pick(0x440, 0x458);  // field200_0x440 bit 0; K2 via DoTargetAction twin
-    const uintptr_t kAddrCSWPartyGetCharacter = acc::addr::R(0x006346C0); // __thiscall(int) -> CSWCCreature*
-    constexpr int       kPartyScanCap                 = 8;          // KOTOR party <=3; generous cap
+    // CClientExoAppInternal.party
+    const size_t kInternalPartyOffset = acc::off::Todo(0x270);
+    // field200_0x440 bit 0; K2 via the DoTargetAction twin
+    const size_t kCSWCCreatureCombatModeOffset = acc::off::Pick(0x440, 0x458);
+    // __thiscall(int) -> CSWCCreature*
+    const uintptr_t kAddrCSWPartyGetCharacter = acc::addr::R(0x006346C0);
+    constexpr int kPartyScanCap = 8;  // a KOTOR party is at most 3
     typedef void* (__thiscall* PFN_GetCharacter)(void* this_, int index);
     void* internal = GetClientAppInternal();
     if (!internal) return false;
@@ -127,148 +119,85 @@ bool IsAnyPartyMemberInCombat() {
     }
 }
 
+namespace {
+
+typedef int (__thiscall* PFN_PartyTableGetNPCObject)(void*, int, int, int);
+
+// The object id of the creature in a roster slot (an index: 2 = Carth,
+// 6 = Mission), 0 when none is live. Like the engine's OnPanelAdded:
+// (slot, 0, 1) first, then the second-instance pool (slot, 1, 1).
+uint32_t NpcObjectId(void* table, int slot) {
+    __try {
+        auto fn = reinterpret_cast<PFN_PartyTableGetNPCObject>(
+            kAddrCSWPartyTableGetNPCObject);
+        int id = fn(table, slot, 0, 1);
+        if (id == 0) id = fn(table, slot, 1, 1);
+        return static_cast<uint32_t>(id);
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return 0;
+    }
+}
+
+// A server creature's stats.first_name, a pure memory read. Companions
+// usually have one; the PC's is empty in vanilla saves.
+bool StatsFirstName(void* serverCreature, char* outBuf, size_t bufSize) {
+    void* stats = nullptr;
+    return TryReadPtr(serverCreature, kCreatureStatsPtrOffset, &stats) && stats &&
+           ExtractTextOrStrRef(stats, kCreatureStatsFirstNameOffset,
+                               kCreatureStatsFirstNameOffset + 4, outBuf, bufSize) &&
+           outBuf[0] != '\0';
+}
+
+}  // namespace
+
+// The name of the CURRENTLY CONTROLLED leader: Tab re-wires
+// CClientExoApp::GetPlayerCreature to the new one.
 bool GetActiveLeaderName(char* outBuf, size_t bufSize) {
     if (!outBuf || bufSize < 2) return false;
-    outBuf[0] = '\0';
-
-    // Resolve the *currently controlled* leader's name. Tab cycles which
-    // party member the engine considers leader; GetClientLeader walks
-    // CClientExoApp::GetPlayerCreature which the engine re-wires on each
-    // Tab to the new leader (confirmed live via the DiagSelect Tab probe).
-    //
-    // Read first_name directly from CSWSCreatureStats via a pure memory
-    // path (ExtractTextOrStrRef — inline CExoString, falling back to TLK
-    // strref). We intentionally do NOT route through the engine's
-    // CClientExoApp::GetObjectName accessor: that accessor writes through
-    // a stack CExoString, and on the PC handle during the chargen→world
-    // transient it overruns the caller's stack frame and trips the /GS
-    // canary → uncatchable __fastfail (bisected 2026-05-19). The
-    // direct-read path here doesn't invoke the engine accessor at all and
-    // is safe in every state.
-    //
-    // The PC's stats.first_name is empty in vanilla saves (chargen writes
-    // the chosen name to CClientExoAppInternal::player_character_name
-    // instead — see project_pc_name_lives_in_client_exoapp). So when the
-    // direct-read path yields an empty string, the leader is the PC and
-    // we fall back to GetPlayerCharacterName.
     void* clientLeader = GetClientLeader();
     void* serverCreature = nullptr;
-    void* stats = nullptr;
-    uint32_t leaderHandle = 0;
-    if (clientLeader) {
-        __try {
-            serverCreature = *reinterpret_cast<void**>(
-                reinterpret_cast<unsigned char*>(clientLeader) +
-                kClientObjectServerObjectOffset);
-            if (serverCreature) {
-                stats = *reinterpret_cast<void**>(
-                    reinterpret_cast<unsigned char*>(serverCreature) +
-                    kCreatureStatsPtrOffset);
-            }
-        } __except (EXCEPTION_EXECUTE_HANDLER) {
-            serverCreature = nullptr;
-            stats = nullptr;
-        }
-        leaderHandle = GetObjectHandle(clientLeader);
-    }
+    TryReadPtr(clientLeader, kClientObjectServerObjectOffset, &serverCreature);
+    const uint32_t leaderHandle = clientLeader ? GetObjectHandle(clientLeader) : 0u;
 
-    // Path 1: engine's universal display-name accessor on the leader's
-    // handle. This is the same accessor sighted UI uses; it gives
-    // localized names for companions (Trask, Carth, ...) and the PC's
-    // chargen name where appropriate. The crash window we hit on
-    // 2026-05-19 was the chargen→world *transient* (PC handle not yet
-    // fully registered) — the Tab caller already gates that with
-    // GetPlayerPosition.
+    // Trace, not Write: this is asked dozens of times per tick with the
+    // same answer, and Trace folds repeats.
+    auto found = [&](const char* via) {
+        acclog::Trace("PartyLeader", "leader=%s - client=%p server=%p handle=0x%08x "
+                      "name=[%s]", via, clientLeader, serverCreature, leaderHandle,
+                      outBuf);
+        return true;
+    };
+
+    // 1. The engine's display-name accessor on the leader's handle, the one
+    //    the sighted UI uses: localized companion names. During the
+    //    chargen-to-world transient it overruns its stack buffer on the PC
+    //    handle (an uncatchable /GS fastfail); the Tab caller gates that
+    //    window with GetPlayerPosition.
+    outBuf[0] = '\0';
     if (leaderHandle != 0u &&
         GetObjectDisplayNameByHandle(leaderHandle, outBuf, bufSize) &&
         outBuf[0] != '\0') {
-        // Trace, not Write: this accessor is called dozens of times per
-        // tick and the resolved line is identical every call (one distinct
-        // value across a whole session). Trace dedups consecutive identical
-        // content and emits a "(repeated Nx more)" summary on change, so the
-        // log keeps the first line + every leader change + the repeat count
-        // with none of the per-tick spam. (Was Write — 58% of one tester
-        // session's 42k-line log; the volume served no diagnostic purpose
-        // and each line cost an OutputDebugStringA + fflush on the game tick.)
-        acclog::Trace("PartyLeader",
-                      "leader=handle — client=%p server=%p stats=%p "
-                      "handle=0x%08x name=[%s]",
-                      clientLeader, serverCreature, stats,
-                      leaderHandle, outBuf);
-        return true;
+        return found("handle");
     }
-
-    // Path 1b: the controlled leader's *client* handle is the engine's
-    // "player-controlled" sentinel (0xffffffff) whose display name resolves
-    // empty — so Path 1 dies for the PC and we'd fall through to the stale
-    // chargen slot (GetPlayerCharacterName returns a leftover "test" even
-    // when the player chose a different, longer name). The PC's *server*
-    // creature keeps its real object identity, so resolve the name straight
-    // off it with the same by-pointer accessor the Q/E cycle uses — verified
-    // live: cycling onto the PC from a companion's view reads the correct
-    // name, because that path reads the server object too. Companions never
-    // reach here (Path 1 already returned for them).
+    // 2. The PC's client handle is the "player-controlled" sentinel, whose
+    //    display name is empty. The server creature keeps its identity.
     outBuf[0] = '\0';
-    if (serverCreature &&
-        GetObjectName(serverCreature, outBuf, bufSize) &&
+    if (serverCreature && GetObjectName(serverCreature, outBuf, bufSize) &&
         outBuf[0] != '\0') {
-        acclog::Trace("PartyLeader",
-                      "leader=server-object — client=%p server=%p name=[%s]",
-                      clientLeader, serverCreature, outBuf);
-        return true;
+        return found("server-object");
     }
-
-    // Path 2: direct stats first_name read. Bypasses the engine accessor
-    // entirely (pure memory read). Companions usually populate this; the
-    // PC's stats slot is empty in vanilla saves.
+    // 3. stats.first_name.
     outBuf[0] = '\0';
-    bool statsReadOk = false;
-    if (stats) {
-        statsReadOk = ExtractTextOrStrRef(
-            stats,
-            kCreatureStatsFirstNameOffset,
-            kCreatureStatsFirstNameOffset + 4,
-            outBuf, bufSize);
-        if (statsReadOk && outBuf[0] != '\0') {
-            acclog::Trace("PartyLeader",
-                          "leader=stats — client=%p server=%p stats=%p "
-                          "name=[%s]",
-                          clientLeader, serverCreature, stats, outBuf);
-            return true;
-        }
+    if (serverCreature && StatsFirstName(serverCreature, outBuf, bufSize)) {
+        return found("stats");
     }
-
-    // Path 3: PC chargen-name slot in CClientExoAppInternal — last resort
-    // when the leader is the PC and the engine accessor + stats are both
-    // empty (the canonical case for a freshly created PC).
+    // 4. The chargen-name slot: last, because it can hold a stale name.
     outBuf[0] = '\0';
-    bool pcOk = GetPlayerCharacterName(outBuf, bufSize);
-
-    // Diagnostic: also dump the raw 8 bytes at stats+0x14 (CExoString
-    // c_string + length) so we can see if first_name is a strref-only
-    // slot we should be resolving through TLK.
-    const char* firstName_cstr = nullptr;
-    uint32_t    firstName_len  = 0xFFFFFFFFu;
-    uint32_t    firstName_strref = 0xFFFFFFFFu;
-    if (stats) {
-        __try {
-            auto* p = reinterpret_cast<unsigned char*>(stats) +
-                      kCreatureStatsFirstNameOffset;
-            firstName_cstr   = *reinterpret_cast<const char**>(p);
-            firstName_len    = *reinterpret_cast<uint32_t*>(p + 4);
-            firstName_strref = *reinterpret_cast<uint32_t*>(p + 8);
-        } __except (EXCEPTION_EXECUTE_HANDLER) {}
+    if (GetPlayerCharacterName(outBuf, bufSize) && outBuf[0] != '\0') {
+        return found("chargen-name");
     }
-    uint32_t serverHandle = serverCreature ? GetObjectHandle(serverCreature) : 0u;
-    acclog::Trace("PartyLeader",
-                  "all paths empty — client=%p server=%p serverHandle=0x%08x "
-                  "stats=%p handle=0x%08x first_name(cstr=%p len=%u strref=0x%x) "
-                  "stats_read_ok=%d pcOk=%d name=[%s]",
-                  clientLeader, serverCreature, serverHandle, stats,
-                  leaderHandle, firstName_cstr, firstName_len,
-                  firstName_strref, statsReadOk ? 1 : 0, pcOk ? 1 : 0,
-                  outBuf);
-    if (pcOk && outBuf[0] != '\0') return true;
+    acclog::Trace("PartyLeader", "all paths empty - client=%p server=%p handle=0x%08x",
+                  clientLeader, serverCreature, leaderHandle);
     return false;
 }
 
@@ -293,79 +222,47 @@ bool GetPlayerCharacterName(char* outBuf, size_t bufSize) {
 
 int GetPartyMembers(uint32_t* outHandles, int maxCount) {
     if (!outHandles || maxCount <= 0) return 0;
-    __try {
-        // GetServerPartyTable walks AppManager+0x8 → facade → +0x4 internal
-        // → +0x1b770. The old inline chain here skipped the +0x4 internal
-        // indirection and read pt_num_members from facade heap, which lands
-        // on a zero byte — so this always returned 0 ("no active party")
-        // and every party check silently no-opped.
-        auto* partyTable = reinterpret_cast<unsigned char*>(
-            GetServerPartyTable());
-        if (!partyTable) return 0;
-        uint32_t numMembers = *reinterpret_cast<uint32_t*>(
-            partyTable + kPartyTableNumMembersOffset);
-        if (numMembers == 0 ||
-            numMembers > static_cast<uint32_t>(kPartyTableMaxMembers)) {
-            return 0;
-        }
-        int take = static_cast<int>(numMembers);
-        if (take > maxCount) take = maxCount;
-        // pt_member_ids holds NPC *roster slot indices* (0..8), NOT object
-        // handles — e.g. 2=Carth, 6=Mission. Resolve each slot to the live
-        // creature's object handle via CSWPartyTable::GetNPCObject so the
-        // result is comparable to GetObjectHandle()/handle-keyed accessors.
-        // Mirror OnPanelAdded's (slot,0,1) → (slot,1,1) second-instance
-        // fallback. Slots that don't resolve to a live creature are skipped.
-        typedef int (__thiscall* PFN_GetNPCObject)(void*, int, int, int);
-        auto getObj = reinterpret_cast<PFN_GetNPCObject>(
-            kAddrCSWPartyTableGetNPCObject);
-        auto* ids = reinterpret_cast<int32_t*>(
-            partyTable + kPartyTableMemberIdsOffset);
-        int written = 0;
-        for (int i = 0; i < take; ++i) {
-            int slot = ids[i];
-            int id = getObj(partyTable, slot, 0, 1);
-            if (id == 0) id = getObj(partyTable, slot, 1, 1);
-            if (id != 0) outHandles[written++] = static_cast<uint32_t>(id);
-        }
-        return written;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
+    void* table = GetServerPartyTable();
+    uint32_t numMembers = 0;
+    if (!TryReadU32(table, kPartyTableNumMembersOffset, &numMembers) ||
+        numMembers == 0 ||
+        numMembers > static_cast<uint32_t>(kPartyTableMaxMembers)) {
         return 0;
     }
+    // pt_member_ids holds roster slot indices; each resolves to the live
+    // creature's object id, comparable to GetObjectHandle. Slots without a
+    // live creature are skipped.
+    int written = 0;
+    for (uint32_t i = 0; i < numMembers && written < maxCount; ++i) {
+        uint32_t slot = 0;
+        if (!TryReadU32(table, kPartyTableMemberIdsOffset + i * sizeof(int32_t),
+                        &slot)) {
+            break;
+        }
+        const uint32_t id = NpcObjectId(table, static_cast<int>(slot));
+        if (id != 0) outHandles[written++] = id;
+    }
+    return written;
 }
 
 void* GetServerPartyTable() {
-    // The party_table is embedded in CServerExoAppInternal at +0x1b770 —
-    // inside the INTERNAL, not the facade (engine_player.h records what the
-    // facade-relative walk returned instead).
-    //
-    // "Address arithmetic only, so no guard is needed" was this function's
-    // original reasoning, and it is exactly the assumption that broke on
-    // KOTOR 2: when the offset is unported it poisons, and `internal + poison`
-    // is a NON-NULL wild pointer that every caller's `if (!table)` waves
-    // through to a fault. acc::off::Ptr returns nullptr instead, which is what
-    // those callers already handle.
+    // The party table is embedded in CServerExoAppInternal (the internal,
+    // not the facade). acc::off::Ptr gives nullptr for an unported offset,
+    // where plain arithmetic would hand callers a non-null wild pointer.
     void* serverInternal = GetServerAppInternal();
     return acc::off::Ptr(serverInternal, kServerInternalPartyTableOffset);
 }
 
 bool GetSoloMode() {
-    void* table = GetServerPartyTable();
-    if (!table) return false;
-    __try {
-        return *reinterpret_cast<uint32_t*>(
-                   reinterpret_cast<unsigned char*>(table) +
-                   kPartyTableSoloModeOffset) != 0;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return false;
-    }
+    uint32_t solo = 0;
+    return TryReadU32(GetServerPartyTable(), kPartyTableSoloModeOffset, &solo) &&
+           solo != 0;
 }
 
 namespace {
 
 typedef int  (__thiscall* PFN_PartyTableGetIsNPCAvailable)(void*, int);
 typedef char (__thiscall* PFN_PartyTableGetNPCSelectability)(void*, int);
-typedef int  (__thiscall* PFN_PartyTableGetNPCObject)(void*, int, int, int);
 
 }  // namespace
 
@@ -374,14 +271,9 @@ int PartyRosterSlotCount() {
 }
 
 bool IsPartyPortrait(void* control) {
-    if (!control) return false;
-    __try {
-        void** vt = *reinterpret_cast<void***>(control);
-        return reinterpret_cast<uintptr_t>(vt) ==
-               kVtableCSWGuiPartySelectionButton;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return false;
-    }
+    void* vt = nullptr;
+    return TryReadPtr(control, 0, &vt) &&
+           reinterpret_cast<uintptr_t>(vt) == kVtableCSWGuiPartySelectionButton;
 }
 
 bool ReadPartyPortrait(void* control, PartyPortrait* out) {
@@ -407,14 +299,9 @@ bool ReadPartyPortrait(void* control, PartyPortrait* out) {
 }
 
 int PartySelectionChosenCount(void* panel) {
-    if (!panel) return -1;
-    __try {
-        return *reinterpret_cast<int*>(
-            reinterpret_cast<unsigned char*>(panel) +
-            kPartySelectionChosenCountOffset);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return -1;
-    }
+    uint32_t count = 0;
+    if (!TryReadU32(panel, kPartySelectionChosenCountOffset, &count)) return -1;
+    return static_cast<int>(count);
 }
 
 bool PartyTableIsNPCAvailable(int npcSlot) {
@@ -443,15 +330,8 @@ bool PartyTableIsNPCSelectable(int npcSlot) {
     }
 }
 
-// Roster name fallback. KOTOR 1's NPC slot index is fixed and these are
-// proper nouns ("Bastila", "Carth Onasi", …) that don't change between
-// English and German installs, so a hardcoded table is the simplest
-// reliable path when GetNPCObject can't resolve a live creature (i.e.
-// the companion is recruited but not in the current module — the open-
-// world PartySelection case). Order matches the engine's roster index:
-//   0 Bastila, 1 Canderous, 2 Carth, 3 HK-47, 4 Jolee, 5 Juhani,
-//   6 Mission, 7 T3-M4, 8 Zaalbar.
-// KOTOR 1 only — KOTOR 2 names come from the engine (see the fallback below).
+// KOTOR 1's roster by slot index, for a companion GetNPCObject cannot
+// resolve to a live creature. Proper nouns, the same in every language.
 static const char* const kK1CompanionNamesBySlot[9] = {
     "Bastila Shan",
     "Canderous Ordo",
@@ -469,80 +349,35 @@ bool GetPartyNpcNameForSlot(int npcSlot, char* outBuf, size_t bufSize) {
     outBuf[0] = '\0';
     if (npcSlot < 0 || npcSlot >= PartyRosterSlotCount()) return false;
     void* table = GetServerPartyTable();
-    if (table) {
-        uint32_t handle = 0;
-        __try {
-            auto fn = reinterpret_cast<PFN_PartyTableGetNPCObject>(
-                kAddrCSWPartyTableGetNPCObject);
-            // OnPanelAdded calls GetNPCObject(slot, 0, 1) first; if that's
-            // 0 (creature not in the active module) it tries (slot, 1, 1).
-            // Mirror that fallback so a name resolves even when the engine
-            // had to fall through to the second-instance pool.
-            int id0 = fn(table, npcSlot, 0, 1);
-            if (id0 != 0) {
-                handle = static_cast<uint32_t>(id0);
-            } else {
-                int id1 = fn(table, npcSlot, 1, 1);
-                if (id1 != 0) handle = static_cast<uint32_t>(id1);
-            }
-        } __except (EXCEPTION_EXECUTE_HANDLER) {
-            handle = 0;
+    const uint32_t handle = table ? NpcObjectId(table, npcSlot) : 0u;
+    if (handle != 0) {
+        // The client-side display name: companions in the current module.
+        if (GetObjectDisplayNameByHandle(handle, outBuf, bufSize) &&
+            outBuf[0] != '\0') {
+            return true;
         }
-        if (handle != 0) {
-            // Path A: client-side universal display-name accessor. Resolves
-            // in-module companions on the normal PartySelection screen.
-            if (GetObjectDisplayNameByHandle(handle, outBuf, bufSize) &&
-                outBuf[0] != '\0') {
-                return true;
-            }
-            // Path B: the client namespace can't see this handle. On the Endar
-            // Spire the slot-0 occupant is Trask — a live SERVER object whose
-            // client-side name won't resolve (GetNPCObject hands back its
-            // server id). Resolve the server creature and name it: prefer
-            // stats.first_name via ExtractTextOrStrRef (a populated, localized
-            // name where present), else the universal accessor. For this Trask
-            // instance first_name is empty, so we land on his tag ("end_trask")
-            // — still the real occupant, and preferable to the fixed-roster
-            // "Bastila" the table below would otherwise emit.
+        // The client namespace cannot see this handle: on the Endar Spire
+        // slot 0 is Trask, a live SERVER object. Name the server creature:
+        // first_name where filled, else the universal accessor (for Trask
+        // his tag, still the real occupant rather than the table's
+        // "Bastila").
+        outBuf[0] = '\0';
+        if (void* serverObj = ResolveServerObjectHandle(handle)) {
+            if (StatsFirstName(serverObj, outBuf, bufSize)) return true;
             outBuf[0] = '\0';
-            void* serverObj = ResolveServerObjectHandle(handle);
-            if (serverObj) {
-                void* stats = nullptr;
-                __try {
-                    stats = *reinterpret_cast<void**>(
-                        reinterpret_cast<unsigned char*>(serverObj) +
-                        kCreatureStatsPtrOffset);
-                } __except (EXCEPTION_EXECUTE_HANDLER) {
-                    stats = nullptr;
-                }
-                if (stats &&
-                    ExtractTextOrStrRef(stats, kCreatureStatsFirstNameOffset,
-                                        kCreatureStatsFirstNameOffset + 4,
-                                        outBuf, bufSize) &&
-                    outBuf[0] != '\0') {
-                    return true;
-                }
-                outBuf[0] = '\0';
-                if (GetObjectName(serverObj, outBuf, bufSize) &&
-                    outBuf[0] != '\0') {
-                    return true;
-                }
+            if (GetObjectName(serverObj, outBuf, bufSize) && outBuf[0] != '\0') {
+                return true;
             }
         }
         outBuf[0] = '\0';
     }
-    // Engine path didn't resolve — most often because the companion is on
-    // the roster but not in the current module (open-world PartySelection
-    // screen, away from base). Fall back to the fixed-roster table.
-    //
-    // KOTOR 2 has no table and needs none: its GetNPCObject template-loads a
-    // benched companion, and its own hover handler 0x0089EFF0 names the
-    // portrait from exactly that creature (logging "I am broken" when it
-    // fails). An unresolved KOTOR 2 slot stays nameless rather than guessed.
+    // Not resolved: mostly a companion on the roster but not in the current
+    // module. KOTOR 1 falls back to the fixed roster. KOTOR 2 needs no
+    // table: its GetNPCObject template-loads a benched companion, so an
+    // unresolved slot stays nameless rather than guessed.
     if (acc::game::IsKotor2()) return false;
     const char* fixed = kK1CompanionNamesBySlot[npcSlot];
-    if (!fixed || !fixed[0]) return false;
-    size_t nlen = strlen(fixed);
+    const size_t nlen = strlen(fixed);
     if (nlen + 1 > bufSize) return false;
     memcpy(outBuf, fixed, nlen + 1);
     return true;
