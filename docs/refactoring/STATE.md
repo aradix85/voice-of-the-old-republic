@@ -174,6 +174,11 @@ dialog_speech: Tick per panel (e8666d3d), split into three (6767b951),
 lean (6ff3e3cb: skill-check marker engine-free with unit tests, shared
 RecordTutorialLine/SilenceLine). CI note: the core_tick lean run failed
 only on a transient HTTP 500 while publishing bridge-latest.
+engine_radial: namespace prep (4d0bacca), diagnostics split off
+(9148dd48), lean (4efbbed0: engine_reads instead of local readers,
+shared action-list access). Left for an F-family (F5): the
+CSWGuiInterfaceAction descriptor layout (kIfAction*) and a local
+ReadInt32 are restated in engine_actionbar.cpp and engine_picker.cpp.
 
 Careful: never rewrite source files with PowerShell ReadAllText/WriteAllText
 (it decodes UTF-8 and writes '?' for the dashes and umlauts in comments);
@@ -232,7 +237,7 @@ prefix (menus_listbox_picker.cpp).
   EngineYawToCompass/CompassToSector/SectorString. One helper in
   engine_compass (bearing of a vector, and its compass word). kRadToDeg is
   defined in many files: one constant with it.
-- Next file: engine_radial.cpp (894),
+- Next file:
   engine_panels.cpp (887), combat_queue.cpp (871), minigame_turret_peg.cpp
   (860), guidance_approach.cpp (840), peek_description.cpp (839),
   menus_modsettings.cpp (828), menus_chain_input.cpp (824) (sizes of
