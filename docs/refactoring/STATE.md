@@ -162,7 +162,11 @@ as named steps). Left for an F-family: menus_crafting.cpp keeps its own
 vtable[15] HandleInputEvent typedef next to menus_pending's
 HandleInputEventOf. cycle_input split into three (81155d2) and made lean
 (414bf1f, comments; F7 note: GuidancePreRollFor still mirrors
-interact_hotkey's PreRollFor).
+interact_hotkey's PreRollFor). menus.cpp made lean without a split
+(8cf60b1, 1018 to 672 lines). menus_internal: namespace prep (94b0f40),
+split into four (6d535b5), lean (37135ce5: one listbox drive with one
+clamp, unused equip slot-button ids and the empty internal header gone,
+menus_internal.h resolver comments shared).
 
 Careful: never rewrite source files with PowerShell ReadAllText/WriteAllText
 (it decodes UTF-8 and writes '?' for the dashes and umlauts in comments);
@@ -221,8 +225,7 @@ prefix (menus_listbox_picker.cpp).
   EngineYawToCompass/CompassToSector/SectorString. One helper in
   engine_compass (bearing of a vector, and its compass word). kRadToDeg is
   defined in many files: one constant with it.
-- Next file: menus.cpp (1018), then menus_internal.cpp (979),
-  core_tick.cpp (931), dialog_speech.cpp (894), engine_radial.cpp (894),
+- Next file: core_tick.cpp (931), dialog_speech.cpp (894), engine_radial.cpp (894),
   engine_panels.cpp (887), combat_queue.cpp (871), minigame_turret_peg.cpp
   (860), guidance_approach.cpp (840), peek_description.cpp (839),
   menus_modsettings.cpp (828), menus_chain_input.cpp (824) (sizes of
