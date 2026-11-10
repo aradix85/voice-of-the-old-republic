@@ -1,19 +1,26 @@
+// The engine's sub-screen and pause machinery: the overlay pause for the mod's
+// own menus, the unpause safety net when a popup or the last sub-screen
+// closes, the "Paused" / "Resumed" speech, and the hooks on CGuiInGame's
+// Switch/Hide/SetSWGuiStatus and the server's SetPauseState (both games).
+
 #include "engine_subscreen.h"
 
-#include <windows.h>
-#include <cstdint>
-#include <cstdio>
-
-#include "engine_app.h"      // kAddrAppManagerPtr, GetAppManager, GetServerApp
+#include "engine_app.h"      // GetAppManager, GetServerApp, GetClientApp
+#include "engine_game.h"
 #include "engine_manager.h"  // kAddrGuiManagerPtr, kMgrModalStackSizeOffset
 #include "engine_panels.h"   // HasActiveSubScreen, CallPrevSWInGameGui
-#include "log.h"
-#include "menus.h"           // ClearPendingAnnounce — partner of InvalidateChain
-#include "menus_chain.h"     // InvalidateChain — teardown-window stale-pointer guard
-#include "speech.h"           // Speak — pause/resume cue
-#include "strings.h"         // Id::GamePaused / Id::GameResumed
+#include "engine_reads.h"
 #include "engine_rebase.h"
-#include "engine_game.h"
+#include "log.h"
+#include "menus.h"           // ClearPendingAnnounce
+#include "menus_chain.h"     // InvalidateChain
+#include "speech.h"
+#include "strings.h"
+
+#include <windows.h>
+
+#include <cstdint>
+#include <cstdio>
 
 namespace acc::engine {
 
@@ -21,52 +28,48 @@ bool g_switchHookEverFired = false;
 
 namespace {
 
-// CServerExoApp::SetPauseState @ 0x004ae9a0. __thiscall.
-// `this` = AppManager->server (CServerExoApp*, at AppManager + 0x08).
-// param_1 = source bit (we use 2 = "menu pause" source).
-// param_2 = on/off (0 = unpause, 1 = pause).
-//
-// Idempotent: the internal handler returns early if the bit is already
-// at the requested value, so calling SetPauseState(2, 0) on a popup
-// close is safe regardless of whether bit 2 was actually set by the
-// popup-open path. This is the critical fix over TogglePauseRequest,
-// which XOR-toggles and therefore alternates the state on consecutive
-// calls when the popup-open path does NOT touch bit 2 itself.
-//
-// We pass source bit 2 to match the engine's own usage:
-// CSWCMessage::SendPlayerToServerInput_TogglePauseRequest passes 2 to
-// CServerExoApp::TogglePauseState, so bit 2 is the "menu pause" source
-// the Esc-menu close path also clears.
-// K2 facade 0x0051C760 (movzx byte bit + on_off, ret 8, forwards to the
-// internal 0x00538ED0 whose body carries K1's exact pause-bit field set —
-// [internal+0x10078] bits, +0x10048/4c/50 timers, all at K1's offsets).
+// CServerExoApp::SetPauseState(mask, on_off), this = the server app. The
+// mask is the bit itself; bit 2 is the menu/manual pause source that the
+// pause key's TogglePauseRequest and every sub-screen and popup use. Unlike
+// the toggle, setting is idempotent, so an unpause on close cannot flip a
+// bit the open never set. K2's facade 0x0051C760 forwards to an internal
+// with K1's pause fields at K1's offsets.
 const uintptr_t kAddrSetPauseState = acc::addr::Pick(0x004ae9a0, 0x0051C760);
 using PFN_SetPauseState =
     void(__thiscall *)(void* server, int source_bit, unsigned long on_off);
+constexpr unsigned char kPauseBitManualOrMenu = 0x02;
 
-
-// CExoSoundInternal::SetSoundMode @ 0x005d5e80. __thiscall.
-// `this` = global ExoSound (CExoSoundInternal*). Mode 0 = playing,
-// mode 2 = paused-by-combat-mute. CClientExoAppInternal::SetPausedByCombat
-// is the engine's canonical caller — it flips mode 2 <-> 0 when entering
-// or leaving combat-style pauses. We call it with mode 0 to unmute the
-// audio mixer after a MessageBoxModal close.
-// CAUTION — the two games differ in SIGNATURE here, not just address:
-// KOTOR 1's 0x005d5e80 is CExoSoundInternal::SetSoundMode(int mode) with
-// `this` = the internal; KOTOR 2's 0x0070BC60 is the CExoSound FACADE
-// taking TWO args (mode, flag — engine callers pass 0) with `this` = the
-// facade object, ret 8. CallSetSoundMode below hides the split.
+// SetSoundMode, mode 0 = playing: unmutes the mixer after a popup close. The
+// games differ in signature: K1's 0x005d5e80 is CExoSoundInternal::
+// SetSoundMode(mode) on the internal, K2's 0x0070BC60 the CExoSound facade's
+// (mode, flag). The ExoSound global holds the matching `this` for each.
 const uintptr_t kAddrSetSoundMode = acc::addr::Pick(0x005d5e80, 0x0070BC60);
 using PFN_SetSoundMode = void(__thiscall *)(void* self, int mode);
 using PFN_SetSoundModeK2 = void(__thiscall *)(void* self, int mode, int flag);
-
-// ExoSound global. KOTOR 1: 0x007a39ec holds the CExoSoundInternal*.
-// KOTOR 2: 0x00A1B494 holds the CExoSound* facade object. Either way,
-// dereference once to get the `this` the game's own SetSoundMode expects.
 const uintptr_t kAddrExoSoundPtr = acc::addr::PickGlobal(0x007a39ec, 0x00A1B494);
 
-// One call site for both games' SetSoundMode shapes. SEH-free by design —
-// callers wrap it in their own __try.
+// CClientExoApp::SetPausedByCombat(paused, source, force): despite the name
+// the game's real pause, the one the pause key (source 4) and combat
+// auto-pause use; it sets the client pause fields that the world update
+// checks, plus the sound mode and rumble. The server bit alone does not stop
+// the world. K2's facade 0x00740350 (internal 0x0079BF40) writes the same
+// three fields at K1's offsets and forks the same way.
+const uintptr_t kAddrSetPausedByCombat = acc::addr::Pick(0x005edc20, 0x00740350);
+using PFN_SetPausedByCombat =
+    void(__thiscall *)(void* clientApp, int paused, int source, int force);
+
+// The live pause byte, accumulated from every OnSetPauseState fire (the
+// field Ghidra names pause_state_ reads 0 even while paused).
+unsigned char g_pauseShadow = 0;
+
+// True around our own pause calls, so OnSetPauseState stays silent for them;
+// the shadow still follows, since the engine state did change.
+bool g_inOwnPauseCall = false;
+
+// The mod's overlays that hold the overlay pause (they stack: the world
+// resumes only when the last one closes).
+unsigned g_overlayPauseOwners = 0;
+
 void CallSetSoundMode(void* exoSound, int mode) {
     if (acc::game::IsKotor2()) {
         reinterpret_cast<PFN_SetSoundModeK2>(kAddrSetSoundMode)(exoSound, mode, 0);
@@ -75,62 +78,34 @@ void CallSetSoundMode(void* exoSound, int mode) {
     }
 }
 
-// SetPauseState's first arg is the bit MASK itself (engine does
-// `byte | mask` / `byte & ~mask`), NOT a bit index. Bit 0x02 is the
-// menu/manual pause source per project_messagebox_close_unpause —
-// both CSWCMessage::SendPlayerToServerInput_TogglePauseRequest (Space)
-// and every sub-screen / popup open route through this bit.
-constexpr unsigned char kPauseBitManualOrMenu = 0x02;
+// The modal-stack size and whether a sub-screen is up; false on a fault.
+bool ReadUiState(int* modalSize, bool* hasSubScreen) {
+    *modalSize = 0;
+    *hasSubScreen = false;
+    void* mgr = nullptr;
+    if (!TryReadPtr(reinterpret_cast<void*>(kAddrGuiManagerPtr), 0, &mgr)) return false;
+    uint32_t size = 0;
+    if (mgr && !TryReadU32(mgr, kMgrModalStackSizeOffset, &size)) return false;
+    *modalSize = static_cast<int>(size);
+    __try {
+        *hasSubScreen = HasActiveSubScreen();
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+    return true;
+}
 
-// Live shadow of the server's pause byte. Updated by OnSetPauseState
-// on every engine fire. Distinct from "is the byte at +0x178 the live
-// state" — Ghidra's `pause_state_` field label was misleading; polling
-// that offset returned 0 even when sub-screens paused the game. The
-// hook approach sidesteps the question entirely: we accumulate (mask,
-// on_off) pairs and that IS the live state by definition.
-unsigned char g_pauseShadow = 0;
-
-// Set to true around our own SetPauseState calls so the OnSetPauseState
-// hook can recognise its own footsteps and skip the user-facing speech.
-// The mask flip still updates g_pauseShadow because the engine state
-// did genuinely change — only the announcement is suppressed.
-bool g_inOwnPauseCall = false;
-
-}  // namespace
-
-namespace {
-
-// Dispatch the two-step unpause + audio-resync. Idempotent — calling on
-// already-clean state is a no-op (SetPauseState short-circuits when bit 2
-// is already at the requested value; SetSoundMode(0) just rewrites the
-// mode field). Each closing edge (modal pop, sub-screen exit) calls this
-// with a trigger label that lands in the diagnostic line.
+// Unpause after a close: server bit 2 off, then the mixer back on (the
+// server round trip does not touch the sound mode). Idempotent.
 void DispatchUnpauseCleanup(const char* trigger) {
-    acclog::Write("PauseToggle",
-                  "%s: SetPauseState(2,0) + SetSoundMode(0)", trigger);
-
-    // 1. Server-side unpause: SET pause source bit 2 = 0
-    //    (idempotent — no-op if already clear). Server then
-    //    resumes world timers and sends SetPauseState back to
-    //    the client; client handler re-enables animations and
-    //    timer ticks. We use SetPauseState rather than
-    //    TogglePauseRequest because Toggle XORs the bit and so
-    //    alternates the state on consecutive popup-closes when
-    //    the popup-open path doesn't itself touch bit 2 (which
-    //    is what we observed empirically — odd cycles unpaused,
-    //    even cycles paused).
-    // Both links are resolved separately so the log still distinguishes
-    // "no AppManager yet" from "AppManager without a server" — the extra
-    // read is one dereference.
-    if (!acc::engine::GetAppManager()) {
+    acclog::Write("PauseToggle", "%s: SetPauseState(2,0) + SetSoundMode(0)", trigger);
+    if (!GetAppManager()) {
         acclog::Write("PauseToggle", "SetPauseState skipped: AppManager NULL");
-    } else if (void* server = acc::engine::GetServerApp()) {
+    } else if (void* server = GetServerApp()) {
         __try {
-            auto fn = reinterpret_cast<PFN_SetPauseState>(kAddrSetPauseState);
-            // OnSetPauseState fires synchronously inside this call —
-            // flag it so the hook stays silent for our own footsteps.
-            g_inOwnPauseCall = true;
-            fn(server, kPauseBitManualOrMenu, 0);
+            g_inOwnPauseCall = true;   // OnSetPauseState fires inside this call
+            reinterpret_cast<PFN_SetPauseState>(kAddrSetPauseState)(
+                server, kPauseBitManualOrMenu, 0);
             g_inOwnPauseCall = false;
         } __except (EXCEPTION_EXECUTE_HANDLER) {
             acclog::Write("PauseToggle", "fault in SetPauseState");
@@ -139,116 +114,64 @@ void DispatchUnpauseCleanup(const char* trigger) {
         acclog::Write("PauseToggle", "SetPauseState skipped: server NULL");
     }
 
-    // 2. Client-side audio resync: SetSoundMode(0) un-mutes the
-    //    audio mixer. The server roundtrip in step 1 does NOT
-    //    automatically touch SetSoundMode — that's done
-    //    separately by SetPausedByCombat (which has gates we
-    //    can't reliably satisfy), or directly here.
+    void* exoSound = nullptr;
+    TryReadPtr(reinterpret_cast<void*>(kAddrExoSoundPtr), 0, &exoSound);
+    if (!exoSound) {
+        acclog::Write("PauseToggle", "SetSoundMode skipped: ExoSound NULL");
+        return;
+    }
     __try {
-        void* exoSound =
-            *reinterpret_cast<void**>(kAddrExoSoundPtr);
-        if (exoSound) {
-            CallSetSoundMode(exoSound, 0);
-        } else {
-            acclog::Write("PauseToggle",
-                          "SetSoundMode skipped: ExoSound NULL");
-        }
+        CallSetSoundMode(exoSound, 0);
     } __except (EXCEPTION_EXECUTE_HANDLER) {
         acclog::Write("PauseToggle", "fault in SetSoundMode");
     }
 }
 
-// CClientExoApp::SetPausedByCombat @0x005edc20 — the engine's REAL pause
-// toggle, the one the pause key (event 0xf1 / 0xe0) and combat auto-pause
-// use. Despite the name it is the general game-pause: it sets the client's
-// own pause fields (CClientExoAppInternal field206_0x37c |= 4, field207,
-// sound_paused_by_combat) and SetSoundMode + PauseRumble, which is what the
-// client's world-update loop actually checks. The server pause-bit
-// (CServerExoApp::SetPauseState bit 2) is a DIFFERENT layer — sub-screens /
-// MessageBoxes route through it, but setting it alone does NOT freeze the
-// in-world simulation the player perceives (verified live 2026-06-07: our
-// SetPauseState(2,1) set the bit but the world kept running). So overlays
-// must pause through this function, exactly like the pause key does.
-//
-// __thiscall(CClientExoApp* this, int paused, byte source, int force).
-// The facade forwards to the internal via this->internal; we pass the
-// public CClientExoApp pointer (AppManager + 0x4). paused 1=pause/0=resume,
-// source 4 = the value the pause key passes, force 0.
-//
-// KOTOR 2: facade 0x00740350 → internal 0x0079BF40. Identified by structure,
-// not by name: the internal is the only small function in the binary that
-// writes the same three fields at the same offsets K1 uses (0x37c |= 4, the
-// source byte at 0x388, the requested state at 0x380), gates on
-// gui_in_game's own flag, and forks into PauseRumble + SetSoundMode(paused)
-// versus UnpauseRumble + SetSoundMode(running). `ret 0xc` on both confirms
-// the (int, byte, int) tail. The facade is its 37-byte forwarder through
-// this->internal at +0x4, the same shape K1's has.
-//
-// Until this was found, EVERY overlay pause on KOTOR 2 called address 0 and
-// was swallowed by the __except below — the menu believed it had paused, the
-// world kept running, and the action menu therefore took its
-// world-is-running branch and closed after one fire.
-const uintptr_t kAddrSetPausedByCombat =
-    acc::addr::Pick(0x005edc20, 0x00740350);
-using PFN_SetPausedByCombat =
-    void(__thiscall *)(void* clientApp, int paused, int source, int force);
+// The client app for SetPausedByCombat, or nullptr (logged with `what`). An
+// unresolved address is reported as such: a null call under __try would look
+// like the engine refusing.
+void* PauseClient(const char* what) {
+    if (!acc::addr::Ok(kAddrSetPausedByCombat)) {
+        acclog::Write("PauseToggle", "%s skipped: SetPausedByCombat unresolved on this "
+                      "build — the world will NOT change pause state", what);
+        return nullptr;
+    }
+    if (!GetAppManager()) {
+        acclog::Write("PauseToggle", "%s skipped: AppManager NULL", what);
+        return nullptr;
+    }
+    void* client = GetClientApp();
+    if (!client) acclog::Write("PauseToggle", "%s skipped: client NULL", what);
+    return client;
+}
 
+bool CallSetPausedByCombat(void* client, int paused, bool own) {
+    __try {
+        g_inOwnPauseCall = own;
+        reinterpret_cast<PFN_SetPausedByCombat>(kAddrSetPausedByCombat)(client, paused, 4, 0);
+        g_inOwnPauseCall = false;
+        return true;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        g_inOwnPauseCall = false;
+        return false;
+    }
+}
+
+// The overlay's own open and close speech is the cue, as native sub-screens
+// suppress the engine's, so this call counts as our own.
 void DispatchOverlayPause(const char* trigger, int paused) {
     acclog::Write("PauseToggle", "%s: SetPausedByCombat(%d,4,0)", trigger, paused);
-    // An unresolved address is a null call, and a null call inside __try is
-    // indistinguishable in the log from the engine refusing. Say which it is.
-    if (!acc::addr::Ok(kAddrSetPausedByCombat)) {
-        acclog::Write("PauseToggle",
-                      "overlay-pause skipped: SetPausedByCombat unresolved on "
-                      "this build — the world will NOT pause");
-        return;
-    }
-    if (!acc::engine::GetAppManager()) {
-        acclog::Write("PauseToggle", "overlay-pause skipped: AppManager NULL");
-        return;
-    }
-    void* client = acc::engine::GetClientApp();
-    if (!client) {
-        acclog::Write("PauseToggle", "overlay-pause skipped: client NULL");
-        return;
-    }
-    __try {
-        auto fn = reinterpret_cast<PFN_SetPausedByCombat>(kAddrSetPausedByCombat);
-        // The pause propagates to the server pause-bit synchronously inside
-        // this call, which re-enters OnSetPauseState — flag it as our own so
-        // the hook stays silent (the overlay's open/close speech is the cue,
-        // matching native sub-screens which suppress the same announce).
-        g_inOwnPauseCall = true;
-        fn(client, paused, 4, 0);
-        g_inOwnPauseCall = false;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
+    void* client = PauseClient("overlay-pause");
+    if (client && !CallSetPausedByCombat(client, paused, /*own=*/true)) {
         acclog::Write("PauseToggle", "fault in overlay-pause SetPausedByCombat");
     }
 }
 
 }  // namespace
 
-// In-world overlay pause hold. Our keyboard-driven in-world menus (examine
-// view, action queue, the Shift-number action menus) have no engine panel,
-// so the engine never pauses the world for them the way it does for native
-// sub-screens. These give them the native "menu freezes the world, closing
-// it resumes" behaviour, via the same SetPausedByCombat path the pause key
-// uses.
-//
-// Owner-tracked, by design: a first-level mod menu should freeze the world
-// when it opens and resume when it closes — BUT our overlays stack (the combat
-// queue opens on top of the unified action menu, the help list over it, ...),
-// and the world must stay frozen until the LAST overlay closes. We track which
-// owners currently hold the pause in a bitmask; the world only actually resumes
-// on the empty-mask edge. Switching directly between two overlays stays paused
-// regardless of order, even when the inner one closes first (the combat-queue-
-// Esc-unpauses bug). SetPausedByCombat is internally idempotent (it no-ops when
-// the requested state already matches), so the redundant re-assert on Begin is
-// harmless and keeps the existing "re-assert on resume" call sites working.
-namespace {
-unsigned g_overlayPauseOwners = 0;
-}  // namespace
-
+// The mod's in-world menus have no engine panel, so the engine never pauses
+// for them; these give them a native sub-screen's freeze through the pause
+// key's own path. Re-asserting on Begin is harmless (the call is idempotent).
 void BeginOverlayPause(OverlayPauseOwner owner) {
     g_overlayPauseOwners |= static_cast<unsigned>(owner);
     DispatchOverlayPause("overlay opened", 1);
@@ -260,8 +183,7 @@ void EndOverlayPause(OverlayPauseOwner owner) {
         DispatchOverlayPause("overlay closed", 0);
     } else {
         acclog::Write("PauseToggle",
-                      "overlay closed (owner=0x%02x) — 0x%02x still holds; "
-                      "staying paused",
+                      "overlay closed (owner=0x%02x) — 0x%02x still holds; staying paused",
                       static_cast<unsigned>(owner), g_overlayPauseOwners);
     }
 }
@@ -272,426 +194,198 @@ bool WorldIsPaused() {
 
 bool ResumeWorldIfPaused(const char* reason) {
     const char* tag = reason ? reason : "?";
-    if ((g_pauseShadow & kPauseBitManualOrMenu) == 0) {
-        acclog::Write("PauseToggle",
-                      "%s: resume requested but world already running", tag);
+    if (!WorldIsPaused()) {
+        acclog::Write("PauseToggle", "%s: resume requested but world already running", tag);
         return false;
     }
-    // Drop any overlay hold we still track so g_overlayPauseOwners can't
-    // outlive the resume (the menu's own owner is already cleared by
-    // ForceDisarm; this also covers the manual-pause case where we never held
-    // an overlay pause at all).
+    // No overlay hold may outlive the resume (this also covers a manual pause
+    // with no overlay hold at all).
     g_overlayPauseOwners = 0;
     acclog::Write("PauseToggle", "%s: resume world SetPausedByCombat(0,4,0)", tag);
-    if (!acc::addr::Ok(kAddrSetPausedByCombat)) {
-        acclog::Write("PauseToggle",
-                      "resume skipped: SetPausedByCombat unresolved on this "
-                      "build");
-        return false;
-    }
-    if (!acc::engine::GetAppManager()) {
-        acclog::Write("PauseToggle", "resume skipped: AppManager NULL");
-        return false;
-    }
-    void* client = acc::engine::GetClientApp();
-    if (!client) {
-        acclog::Write("PauseToggle", "resume skipped: client NULL");
-        return false;
-    }
-    __try {
-        // Deliberately NOT flagged as our own call: we WANT OnSetPauseState to
-        // fire un-suppressed so the engine's resume cue ("Unpaused") speaks
-        // as the menu-close announcement.
-        reinterpret_cast<PFN_SetPausedByCombat>(kAddrSetPausedByCombat)(
-            client, 0, 4, 0);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
+    void* client = PauseClient("resume");
+    if (!client) return false;
+    // Not our own call: the engine's "Unpaused" is the menu-close cue here.
+    if (!CallSetPausedByCombat(client, 0, /*own=*/false)) {
         acclog::Write("PauseToggle", "fault in ResumeWorldIfPaused");
         return false;
     }
     return true;
 }
 
+// The unpause safety net, on two edges (calling both on one frame is safe):
+//   1. the modal stack empties: a MessageBox close skips HideSWInGameGui and
+//      leaves the pause bit set and the sound muted. Not while a sub-screen
+//      is still up (a tutorial or confirm over a panel): the panel's own
+//      close unpauses later.
+//   2. the last sub-screen leaves panels[]: Options -> Save -> Esc -> Esc
+//      can leave the engine's own close half done. Closing one sub-screen
+//      while another stays open is no edge.
 void TickInputClassReassert() {
-    // Two edges trigger the same unpause cleanup:
-    //
-    //   1. modal_stack non-zero → 0 — any MessageBoxModal close path
-    //      (Alt+F4 quit-confirm, save-overwrite, dialog-skip, …). The
-    //      engine's MessageBoxModal close skips HideSWInGameGui, so the
-    //      server pause bit + client SetSoundMode stay set; we set both
-    //      to 0 directly. Idempotent — no-op when already clean.
-    //
-    //   2. has-active-sub-screen true → false — last InGame* sub-screen
-    //      just left panels[]. Esc on the bare panel goes through
-    //      HideSWInGameGui which usually unpauses natively, BUT when the
-    //      user came in via Options → Save Game → CSWGuiSaveLoad,
-    //      then Esc(SaveLoad) → Esc(Options), the engine's natural path
-    //      gets confused: sw_gui_status oscillates 3→4→3 and the final
-    //      close leaves the pause bit set + audio muted. The safety-net
-    //      catches that case. Critically, this edge ONLY fires when
-    //      panels[] transitions from "any sub-screen visible" to "none":
-    //      closing SaveLoad while Options stays open keeps the count
-    //      non-zero (Options still in panels[]) so we don't unpause
-    //      prematurely. Only fully leaving the panel system unpauses,
-    //      which is the user-expected behaviour.
-    //
-    // Both edges call the same idempotent DispatchUnpauseCleanup helper.
-    // Double-firing in scenarios where both fire on the same frame is
-    // safe — the second call sees already-clean state and short-circuits.
-    static int  s_prevModalSize     = 0;
-    static bool s_prevHasSubScreen  = false;
+    static int  s_prevModalSize    = 0;
+    static bool s_prevHasSubScreen = false;
 
     int  modalSize = 0;
     bool hasSubScreen = false;
-    __try {
-        void* mgr = *reinterpret_cast<void**>(kAddrGuiManagerPtr);
-        if (mgr) {
-            modalSize = *reinterpret_cast<int*>(
-                static_cast<unsigned char*>(mgr) + kMgrModalStackSizeOffset);
-        }
-        hasSubScreen = HasActiveSubScreen();
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return;
-    }
+    if (!ReadUiState(&modalSize, &hasSubScreen)) return;
 
     if (s_prevModalSize > 0 && modalSize == 0) {
-        // Suppress modal-edge unpause when a sub-screen is still alive:
-        // TutorialBox / MessageBoxModal popups can fire on top of an open
-        // panel (e.g. a tutorial that appears while the user is in
-        // Inventory, or an in-Options confirm dialog). Dismissing the
-        // popup leaves the user still inside a panel — pause must stay
-        // until the sub-screen itself closes. The sub-screen edge below
-        // handles the eventual unpause when panels[] empties of
-        // sub-screens.
-        //
-        // Counter-cases this still covers: Alt+F4 quit-confirm with no
-        // sub-screen open (modal pops, dismiss → unpause); save-overwrite
-        // confirm during in-world save (same shape).
         if (!hasSubScreen) {
             char tag[64];
-            snprintf(tag, sizeof(tag),
-                     "popup closed (modal_stack %d->0)", s_prevModalSize);
+            snprintf(tag, sizeof(tag), "popup closed (modal_stack %d->0)", s_prevModalSize);
             DispatchUnpauseCleanup(tag);
         } else {
-            acclog::Write("PauseToggle",
-                          "popup closed (modal_stack %d->0): SUPPRESSED — "
-                          "sub-screen still in panels[]",
-                          s_prevModalSize);
+            acclog::Write("PauseToggle", "popup closed (modal_stack %d->0): SUPPRESSED — "
+                          "sub-screen still in panels[]", s_prevModalSize);
         }
     }
-
     if (s_prevHasSubScreen && !hasSubScreen) {
         DispatchUnpauseCleanup("last sub-screen left panels[]");
     }
-
     s_prevModalSize    = modalSize;
     s_prevHasSubScreen = hasSubScreen;
 }
 
 }  // namespace acc::engine
 
+namespace {
+
+// The hooks' parameters are the addresses of the engine's stack slots (the
+// "esp+X" LEA); the return address sits one slot below the first.
+bool ReadSlots(void* p1_addr, void* p2_addr, int* p1, int* p2, uint32_t* callerEip) {
+    __try {
+        *p1 = *reinterpret_cast<int*>(p1_addr);
+        if (p2_addr) *p2 = *reinterpret_cast<int*>(p2_addr);
+        *callerEip = *(reinterpret_cast<uint32_t*>(p1_addr) - 1);
+        return true;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+}
+
+}  // namespace
+
+// CGuiInGame::SwitchToSWInGameGui, the warm path (a sub-screen is up and
+// another opens; the cold path is ShowSWInGameGui, which the menus monitor
+// covers by polling). The prior sub-screen is popped first, so the engine's
+// push lands on a clean panels[], the cascade the engine's own close paths
+// use.
 extern "C" void __cdecl OnSwitchToSWInGameGui(void* thisPtr, int guiId) {
-    // Runs on both games since Batch 2. KOTOR 1 hooks this directly
-    // (mid-function, register params); KOTOR 2 reaches it through
-    // OnSwitchToSWInGameGuiK2 below. Whole chain K2-verified:
-    // HasActiveSubScreen walks the ported slot table, CallPrevSWInGameGui
-    // resolves via Pick(0x0062cdf0, 0x007CA3C0).
-    // First-fire diagnostic — single line per session so absence proves
-    // the hook never installed (vs. installing but firing silently in
-    // the cold path with no active sub-screen to clean up).
     if (!acc::engine::g_switchHookEverFired) {
-        acc::engine::g_switchHookEverFired = true;
-        acclog::Write("SubScreen.Switch",
-                      "first fire: this=%p GUI_id=%d (hook is alive)",
+        acc::engine::g_switchHookEverFired = true;   // proves the hook is alive
+        acclog::Write("SubScreen.Switch", "first fire: this=%p GUI_id=%d (hook is alive)",
                       thisPtr, guiId);
     }
-
-    // Drill-arm lives in the menus_monitors per-tick poll (AnnounceNewSubScreens),
-    // not here. SwitchToSWInGameGui is only the WARM path (sub-screen already
-    // showing → switching to a different one); the COLD path is
-    // ShowSWInGameGui (in-world → first sub-screen, e.g. Esc → Options), which
-    // we don't hook. Arming the flag here would have left first Esc opens
-    // un-armed and walked the user through the InGameMenu strip instead of
-    // the Options panel. The monitor catches BOTH paths because it polls the
-    // resulting state (panels[] contains a sub-screen kind) — robust to any
-    // current or future engine open path. This hook stays for its
-    // close-on-redrill cleanup role (a real mutation: pop prior sub-screen
-    // before the new one pushes).
-
-    // Only act if there's already a sub-screen alive in panels[]. The
-    // very first sub-screen open (cold path: world → strip → Inventory)
-    // has nothing to clean up; we let SwitchToSWInGameGui do its normal
-    // push without our intervention.
-    //
-    // For warm paths (sub-screen already open and user opens a different
-    // one — via strip Enter, hotkey, or anything else that calls this
-    // function), fire PrevSWInGameGui synchronously to pop the current
-    // sub-screen. After we return, the original SwitchToSWInGameGui
-    // executes its body and pushes the new sub-screen onto a clean
-    // panels[]. Both calls land in the same engine call chain, so the
-    // sequencing is safe (the engine's own OnQuit→Close paths do
-    // exactly this kind of in-engine cascade).
-    if (!acc::engine::HasActiveSubScreen()) {
-        return;
-    }
-
-    acclog::Write("SubScreen.Switch",
-                  "redrill cleanup: this=%p new GUI_id=%d (closing prior "
-                  "sub-screen via PrevSWInGameGui)",
-                  thisPtr, guiId);
+    if (!acc::engine::HasActiveSubScreen()) return;
+    acclog::Write("SubScreen.Switch", "redrill cleanup: this=%p new GUI_id=%d (closing prior "
+                  "sub-screen via PrevSWInGameGui)", thisPtr, guiId);
     acc::engine::CallPrevSWInGameGui();
 }
 
-// Diagnostic: every CGuiInGame::SetSWGuiStatus call logs the new status
-// value plus the calling instruction's return EIP. Read-only — passes
-// through to the original function. The return EIP lets us identify
-// which engine code path is closing pause (status 3→1 transitions) so
-// we can either suppress that path or compensate.
-extern "C" void __cdecl OnSetSWGuiStatus(void* thisPtr,
-                                          void* p1_addr,
-                                          void* p2_addr) {
-    // Runs on both games since Batch 2 (KOTOR 2 via OnSetSWGuiStatusK2).
-    // Chain is log + mod-internal state only (InvalidateChain /
-    // ClearPendingAnnounce), and the status-4 teardown hazard it guards
-    // is byte-identical in KOTOR 2's status machine.
+// CGuiInGame::SetSWGuiStatus. Status 4 means a sub-screen is finishing: its
+// controls are about to be freed, so the cached chain and the pending
+// announce (a SetActive just before an area load) are dropped now.
+extern "C" void __cdecl OnSetSWGuiStatus(void* thisPtr, void* p1_addr, void* p2_addr) {
     if (!p1_addr || !p2_addr) return;
-
-    int new_status = -1;
-    int param_2 = -1;
-    uint32_t caller_eip = 0;
-
-    __try {
-        new_status = *reinterpret_cast<int*>(p1_addr);
-        param_2    = *reinterpret_cast<int*>(p2_addr);
-        // [esp+0] (one slot below esp+4) is the return address.
-        caller_eip = *(reinterpret_cast<uint32_t*>(p1_addr) - 1);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        acclog::Write("SubScreen.Status",
-                      "deref faulted (this=%p p1=%p p2=%p)",
+    int newStatus = -1, p2 = -1;
+    uint32_t callerEip = 0;
+    if (!ReadSlots(p1_addr, p2_addr, &newStatus, &p2, &callerEip)) {
+        acclog::Write("SubScreen.Status", "deref faulted (this=%p p1=%p p2=%p)",
                       thisPtr, p1_addr, p2_addr);
         return;
     }
-
-    // Trace, not Write: the engine re-asserts the SAME status from the SAME
-    // caller on essentially every frame while a sub-screen is up, and at ~20
-    // lines/second that one call site was 55% of a tester's whole session log
-    // (k2-patch-20260827-190850: 5030 of 9141 lines, all
-    // `new_status=1 p2=1 caller=0x00781d3b`). Line-level dedup keeps the
-    // suppressed count, so no transition is lost — only the repeats fold.
-    acclog::Trace("SubScreen.Status",
-                  "this=%p new_status=%d p2=%d caller=0x%08x",
-                  thisPtr, new_status, param_2, caller_eip);
-
-    // Teardown-window stale-pointer guard. status=4 = sub-screen finishing.
-    // The engine is about to free the active panel's child controls; any
-    // pointer in g_chain (cached at the last SetActiveControl) becomes
-    // stale within the same tick. Drop the chain so MonitorFocusedControl
-    // short-circuits on its g_chainCount > 0 gate until OnSetActiveControl
-    // rebuilds it against the next live panel.
-    //
-    // thisPtr here is the CGuiInGame singleton, not the panel — same
-    // value across status changes. We invalidate unconditionally on
-    // status=4; the chain rebuilds on the very next active-control event
-    // (typically the parent panel re-taking focus, or the next screen's
-    // first control), so the brief empty-chain window is invisible at
-    // the announce layer.
-    //
-    // Also drop the pending-announce slot. OnSetActiveControl writes it
-    // on every focus event, so a SetActive fired just before the area
-    // transition (e.g. PartySelection re-taking focus when the party
-    // confirmation MessageBox closes on OK) leaves a
-    // dangling control pointer that the next tick's DrainPendingAnnounce
-    // would deref through its now-freed vtable. Crash dumps 20996 / 2288
-    // (2026-05-22, ESI = the cached Add button) caught this exact
-    // path during the Hideout → tar_m02aa load.
-    if (new_status == 4) {
+    // Trace: the engine re-asserts the same status every frame while a
+    // sub-screen is up; the dedup keeps the count.
+    acclog::Trace("SubScreen.Status", "this=%p new_status=%d p2=%d caller=0x%08x",
+                  thisPtr, newStatus, p2, callerEip);
+    if (newStatus == 4) {
         acc::menus::chain::InvalidateChain();
         acc::menus::ClearPendingAnnounce();
     }
 }
 
-// Diagnostic: every CGuiInGame::HideSWInGameGui call logs the caller
-// EIP. Pause-flicker: pause auto-closes via HideSWInGameGui within ~1s
-// of opening. The SetSWGuiStatus log confirms HideSWInGameGui's body is
-// running (sets status to 4). This hook tells us WHICH engine path
-// invokes HideSWInGameGui — the caller_eip is the return address of the
-// CALL instruction, so we can identify the engine function that's
-// closing pause and decide how to suppress it.
+// CGuiInGame::HideSWInGameGui: which engine path closes a sub-screen.
 extern "C" void __cdecl OnHideSWInGameGui(void* thisPtr, void* p1_addr) {
-    // Runs on both games since Batch 2 (KOTOR 2 via OnHideSWInGameGuiK2).
-    // Log-only — no engine reads beyond the caller-provided addresses.
     if (!p1_addr) return;
-
-    int param_1 = -1;
-    uint32_t caller_eip = 0;
-
-    __try {
-        param_1 = *reinterpret_cast<int*>(p1_addr);
-        caller_eip = *(reinterpret_cast<uint32_t*>(p1_addr) - 1);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        acclog::Write("SubScreen.Hide",
-                      "deref faulted (this=%p p1=%p)", thisPtr, p1_addr);
+    int p1 = -1, unused = 0;
+    uint32_t callerEip = 0;
+    if (!ReadSlots(p1_addr, nullptr, &p1, &unused, &callerEip)) {
+        acclog::Write("SubScreen.Hide", "deref faulted (this=%p p1=%p)", thisPtr, p1_addr);
         return;
     }
-
-    acclog::Write("SubScreen.Hide",
-                  "this=%p param_1=%d caller=0x%08x",
-                  thisPtr, param_1, caller_eip);
+    acclog::Write("SubScreen.Hide", "this=%p param_1=%d caller=0x%08x", thisPtr, p1, callerEip);
 }
 
-// CServerExoAppInternal::SetPauseState @ 0x004b8110 — fires on every
-// pause-state mutation. param_1 is the bit MASK (not an index); param_2
-// is the new value (0 = clear bits in mask, 1 = set them). Bit 0x02 is
-// the manual+menu pause source. Announce only on bit 0x02 transitions
-// that come from outside our own DispatchUnpauseCleanup AND when no UI
-// is up (menu opens/closes have their own panel-walk speech).
-//
-// Engine-side state lives wherever the engine's `pause_state_` field
-// actually maps to (Ghidra labelled +0x178 but that offset returned 0
-// in live testing — the real offset is elsewhere). We don't need to
-// know: g_pauseShadow tracks our own (mask, on_off) accumulator and
-// IS the live state by definition once the hook is in place.
-extern "C" void __cdecl OnSetPauseState(void* thisPtr,
-                                         void* p1_addr,
-                                         void* p2_addr) {
-    // Gate cleared for KOTOR 2 in Batch 4: the shadow accumulator is game-
-    // agnostic and the suppression reads (GUI-manager modal stack, sub-screen
-    // state) are all resolved and live there since Batches 1/2.
+// CServerExoAppInternal::SetPauseState (K1 0x004b8110): every pause change.
+// Speaks "Paused" / "Resumed" on a bit-2 flip that is not our own and comes
+// with no popup or sub-screen up (those have their own speech).
+extern "C" void __cdecl OnSetPauseState(void* thisPtr, void* p1_addr, void* p2_addr) {
+    using acc::engine::g_pauseShadow;
+    using acc::engine::kPauseBitManualOrMenu;
     if (!p1_addr || !p2_addr) return;
-
-    int mask = 0;
-    int onOff = 0;
-    uint32_t caller_eip = 0;
-    __try {
-        mask  = *reinterpret_cast<int*>(p1_addr);
-        onOff = *reinterpret_cast<int*>(p2_addr);
-        caller_eip = *(reinterpret_cast<uint32_t*>(p1_addr) - 1);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
+    int mask = 0, onOff = 0;
+    uint32_t callerEip = 0;
+    if (!ReadSlots(p1_addr, p2_addr, &mask, &onOff, &callerEip)) {
         acclog::Write("Pause", "deref faulted (this=%p)", thisPtr);
         return;
     }
 
-    const unsigned char prev = acc::engine::g_pauseShadow;
+    const unsigned char prev = g_pauseShadow;
     const unsigned char maskByte = static_cast<unsigned char>(mask);
-    const unsigned char next = onOff
-        ? static_cast<unsigned char>(prev | maskByte)
-        : static_cast<unsigned char>(prev & ~maskByte);
-    acc::engine::g_pauseShadow = next;
-
-    acclog::Write(
-        "Pause", "fire mask=0x%02x on_off=%d shadow %02x->%02x caller=0x%08x%s",
-        static_cast<unsigned>(maskByte), onOff,
-        static_cast<unsigned>(prev), static_cast<unsigned>(next),
-        caller_eip,
-        acc::engine::g_inOwnPauseCall ? " (SELF)" : "");
+    const unsigned char next = onOff ? static_cast<unsigned char>(prev | maskByte)
+                                     : static_cast<unsigned char>(prev & ~maskByte);
+    g_pauseShadow = next;
+    acclog::Write("Pause", "fire mask=0x%02x on_off=%d shadow %02x->%02x caller=0x%08x%s",
+                  static_cast<unsigned>(maskByte), onOff, static_cast<unsigned>(prev),
+                  static_cast<unsigned>(next), callerEip,
+                  acc::engine::g_inOwnPauseCall ? " (SELF)" : "");
 
     if (acc::engine::g_inOwnPauseCall) return;
-    if ((maskByte & acc::engine::kPauseBitManualOrMenu) == 0) return;
+    if ((maskByte & kPauseBitManualOrMenu) == 0) return;
+    const bool wasPaused = (prev & kPauseBitManualOrMenu) != 0;
+    const bool nowPaused = (next & kPauseBitManualOrMenu) != 0;
+    if (wasPaused == nowPaused) return;
 
-    const unsigned char prevBit = prev & acc::engine::kPauseBitManualOrMenu;
-    const unsigned char nowBit  = next & acc::engine::kPauseBitManualOrMenu;
-    if (prevBit == nowBit) return;  // idempotent, engine short-circuits anyway
-
-    // UI-state suppression — menu opens, menu closes, and popup show/dismiss
-    // all flip bit 0x02. The panel-walk speech is the user's cue in those
-    // cases; speaking "Paused"/"Resumed" on top would be noise.
     int modalSize = 0;
     bool hasSubScreen = false;
-    __try {
-        void* mgr = *reinterpret_cast<void**>(kAddrGuiManagerPtr);
-        if (mgr) {
-            modalSize = *reinterpret_cast<int*>(
-                static_cast<unsigned char*>(mgr) + kMgrModalStackSizeOffset);
-        }
-        hasSubScreen = acc::engine::HasActiveSubScreen();
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return;
-    }
+    if (!acc::engine::ReadUiState(&modalSize, &hasSubScreen)) return;
     if (modalSize > 0 || hasSubScreen) {
-        acclog::Write(
-            "Pause", "speech SUPPRESSED (modal=%d subscreen=%d)",
-            modalSize, hasSubScreen ? 1 : 0);
+        acclog::Write("Pause", "speech SUPPRESSED (modal=%d subscreen=%d)",
+                      modalSize, hasSubScreen ? 1 : 0);
         return;
     }
-
-    const bool nowPaused = (nowBit != 0);
-    acc::speech::Speak(
-        acc::strings::Get(
-            nowPaused ? acc::strings::Id::GamePaused
-                      : acc::strings::Id::GameResumed),
-        /*interrupt=*/false);
+    acc::speech::Speak(acc::strings::Get(nowPaused ? acc::strings::Id::GamePaused
+                                                   : acc::strings::Id::GameResumed),
+                       /*interrupt=*/false);
 }
 
-// ============================================================================
-// Batch 2 — KOTOR 2 frame-unpacking wrappers (same pattern as the Batch 1 set
-// at the bottom of menus_focus_k2.cpp). KOTOR 2 compiles its GUI unoptimised,
-// so every argument lives in the frame; the hook passes ECX (`this`, not yet
-// stored at the cut) plus EBP, the wrapper does the frame arithmetic, and the
-// SAME handler KOTOR 1 hooks directly runs on both games. No logic here.
-//
-// The address-style handlers (OnSetSWGuiStatus / OnHideSWInGameGui /
-// OnAppendToMsgBuffer's twin in msg_router.cpp) expect the ADDRESS of each
-// stack argument — KOTOR 1's esp+X parameter source yields addresses via the
-// framework's LEA emission (project_kpatchmanager_lea_bug). EBP+8 is exactly
-// that address in a standard frame, and it keeps their caller_eip trick
-// intact: [EBP+4] is the return address, i.e. *(p1_addr - 1).
-// ============================================================================
+// KOTOR 2 frame wrappers. K2 compiles its GUI unoptimised, so the hook passes
+// ECX (`this`) and EBP; [EBP+8] is the first argument's slot and [EBP+4] the
+// return address, exactly the slot addresses the K1 handlers expect.
 
-// CGuiInGame::SwitchToSWInGameGui @0x007CA550, hooked at 0x007CA575 — after
-// the prologue, before the guards (mirroring KOTOR 1's pre-guard cut).
-//   ECX     = this      (CGuiInGame*)
-//   [EBP+8] = GUI_id    (int, 0..7)
+// CGuiInGame::SwitchToSWInGameGui @0x007CA550, hooked at 0x007CA575.
 extern "C" void __cdecl OnSwitchToSWInGameGuiK2(void* thisGui, void* ebp) {
-    if (!acc::game::IsKotor2()) return;
-    if (!thisGui || !ebp) return;
-
-    int guiId = -1;
-    __try {
-        guiId = *reinterpret_cast<int*>(static_cast<char*>(ebp) + 8);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return;
-    }
-
-    OnSwitchToSWInGameGui(thisGui, guiId);
+    if (!acc::game::IsKotor2() || !thisGui || !ebp) return;
+    uint32_t guiId = 0;
+    if (!acc::engine::TryReadU32(ebp, 8, &guiId)) return;
+    OnSwitchToSWInGameGui(thisGui, static_cast<int>(guiId));
 }
 
 // CGuiInGame::HideSWInGameGui @0x007CA060, hooked at 0x007CA066.
-//   ECX     = this      (CGuiInGame*)
-//   [EBP+8] = param_1   (0 = re-open pause panel path)
 extern "C" void __cdecl OnHideSWInGameGuiK2(void* thisGui, void* ebp) {
-    if (!acc::game::IsKotor2()) return;
-    if (!thisGui || !ebp) return;
+    if (!acc::game::IsKotor2() || !thisGui || !ebp) return;
     OnHideSWInGameGui(thisGui, static_cast<char*>(ebp) + 8);
 }
 
 // CGuiInGame::SetSWGuiStatus @0x007C9C40, hooked at 0x007C9C46.
-//   ECX      = this     (CGuiInGame*)
-//   [EBP+8]  = status   (1..4)
-//   [EBP+0xC]= param_2
 extern "C" void __cdecl OnSetSWGuiStatusK2(void* thisGui, void* ebp) {
-    if (!acc::game::IsKotor2()) return;
-    if (!thisGui || !ebp) return;
-    OnSetSWGuiStatus(thisGui,
-                     static_cast<char*>(ebp) + 8,
-                     static_cast<char*>(ebp) + 0xC);
+    if (!acc::game::IsKotor2() || !thisGui || !ebp) return;
+    OnSetSWGuiStatus(thisGui, static_cast<char*>(ebp) + 8, static_cast<char*>(ebp) + 0xC);
 }
 
-
-// CServerExoAppInternal::SetPauseState @0x00538ED0 on KOTOR 2 (K1 hooks its
-// 0x004B8110 twin directly), hooked at 0x00538ED9 — the `this` store right
-// after the prologue. The internal carries KOTOR 1's exact pause-bit field
-// set at the SAME server-internal offsets (bits byte +0x10078, timer trio
-// +0x10048/4c/50), witnessed in its own body.
-//   ECX       = this    (CServerExoAppInternal*)
-//   [EBP+8]   = mask    (pause source bit)
-//   [EBP+0xC] = on_off
-// The shared handler expects stack-slot ADDRESSES (the esp+N LEA contract)
-// and reads caller_eip at *(p1_addr - 1) = [EBP+4], the return address —
-// both preserved by handing EBP+8 / EBP+0xC through.
+// CServerExoAppInternal::SetPauseState @0x00538ED0, hooked at 0x00538ED9 (K1's
+// pause fields at the same offsets).
 extern "C" __declspec(dllexport)
 void __cdecl OnSetPauseStateK2(void* thisPtr, void* ebp) {
-    if (!acc::game::IsKotor2()) return;
-    if (!thisPtr || !ebp) return;
-    OnSetPauseState(thisPtr,
-                    static_cast<char*>(ebp) + 8,
-                    static_cast<char*>(ebp) + 0xC);
+    if (!acc::game::IsKotor2() || !thisPtr || !ebp) return;
+    OnSetPauseState(thisPtr, static_cast<char*>(ebp) + 8, static_cast<char*>(ebp) + 0xC);
 }
