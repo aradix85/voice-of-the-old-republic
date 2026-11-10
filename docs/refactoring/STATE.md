@@ -423,6 +423,25 @@ prefix (menus_listbox_picker.cpp).
   in the old combat_query say returns garbage for anyone but the PC.
   ReadClientCreatureHitPoints is the read the character sheet uses.
   Compare Ctrl+H or the bridge with the character sheet in game.
+- Next design, combat_diag.cpp (543 lines, read 2026-11-11, not changed
+  yet). The name hides two shipped behaviours among the diagnostics:
+  the spoken idle notice ("You are not attacking", in Tick with
+  HostileNearby) and LeaderIsAttacking (R on a target already being
+  attacked, used by input_poll_router). OnUseItemRequestK2, called
+  log-only, also cancels the no-op watch. Its queue readers repeat
+  combat_queue_engine: ReadFirstQueuedTarget is GetQueueAction(round, 0)
+  plus ReadActionFields; GetPlayerCombatRound and ReadQueueSize are
+  ReadCombatRound; ReadRoundActionCount is RawRoundCount except for a
+  round without a list (0 here, on purpose, for the CLEAR hook and the
+  idle test; -1 there, where OnEngineActionAdded then stays silent).
+  Plan: (1) move-only, the idle notice and LeaderIsAttacking to the
+  combat_queue module (watch file), with the State readers they need;
+  (2) lean, the readers on combat_queue_engine and engine_reads, one
+  count function with the null-list case decided once (check the
+  engine's AddAction: can it run on a round without a list?);
+  (3) combat_diag keeps the DELTA / PRE / POST lines and the three
+  log-only hooks. combat_diag_internal.h and the split history at the
+  top of combat_queue_hooks.cpp go with it.
 - Bug, found by Anouk in play (2026-11-10): a locked container that opens
   through a dialog on the object itself is labelled "opens only through
   the story". ReadLockNeed answers StoryOnly for key-required without a
