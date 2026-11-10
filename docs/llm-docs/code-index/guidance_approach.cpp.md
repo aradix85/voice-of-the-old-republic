@@ -1,4 +1,4 @@
-# guidance_approach.cpp (841 lines)
+# guidance_approach.cpp (316 lines)
 
 Source: `patches/Accessibility/guidance_approach.cpp`
 
@@ -18,26 +18,15 @@ Input restore on SUCCESS stays with engine_player's queue-watched session (TickP
 
 ## Declarations (in source order)
 
-- L130 `void EndApproach(ApproachOutcome outcome)`
-- L137 `bool ResolveTargetPos(Vector& out)`: Live target position when the object is readable, else the stamped fallback.
-- L150 `float GapTo(const Vector& tgt, const Vector& pos)`: Planar player→target gap, in metres.
-- L154 `void MarkWalkStart()`
-- L166 `Vector RescueDestination(const Vector& tgt)`: Where a rescue walk should go.
-- L192 `bool TryCoordinateWalkRetry(const Vector& tgt)`: The walk never physically started (see the header note): re-issue it as a plain coordinate walk to the target position rather than hand the player a "way blocked" they would reasonably read as "there is no route at all".
-- L229 `int NearbyCreatures(const Vector& pc, float radius, Vector* outPos, void** outObj, int maxCount)`: Living creatures (party included, the leader not) within `radius` of `pc`.
-- L258 `bool ChooseSidestep(const Vector& pc, const Vector& tgt, Vector& out, float& outYaw, float& outNearest)`: Pick a sidestep point kSidestepDist from `pc`: as far from nearby creatures as possible, leaning toward the target, but never straight at it (that line is the one that just failed) and never back along an already-trie...
-- L298 `bool TrySidestep(const Vector& tgt)`: Rooted even after the coordinate retry: step aside and walk again (see kSidestepMax).
-- L351 `void ResumeAfterSidestep()`: The sidestep landed (or got partway): walk to the target again.
-- L370 `bool CreatureInTheWay(char* name, size_t nameSize)`: Nearest living creature within kInTheWayRadius of the PC, for the final blocked line.
-- L405 `bool TryReissueUse(float gap)`: The coordinate-walk retry only walks.
-- L460 `bool CompanionInTheWay(const Vector& tgt, char* name, size_t nameSize)`: A party member standing at the target, closer to it than the player and within a few metres: the walk cannot get past them to the use point.
-- L486 `void OnBlocked(DWORD stalledMs)`: Break a blocked approach: cancel the bouncing walk, restore input if the caller disabled it (explicit, so engine_player's queue-watched restore and this tracker never fight), clear dialog-pending limbo (talk only), an...
-- L548 `void ArmApproach(const ApproachArm& arm)`
-- L592 `void TickApproach()`
-- L763 `bool IsApproachInFlight()`
-- L767 `void CancelApproach()`
-- L771 `ApproachOutcome LastApproachOutcome(uint32_t* serial)`
-- L776 `void* ApproachTarget()`
-- L780 `bool IsAnyModApproachInFlight()`
-- L784 `bool CancelByMovement()`
-- L808 `void SpeakWayBlocked(const char* name, const Vector& targetPos)`
+- L25 `void EndApproach(ApproachOutcome outcome)`
+- L32 `bool ResolveTargetPos(Vector& out)`: Live target position when the object is readable, else the stamped fallback.
+- L45 `float GapTo(const Vector& tgt, const Vector& pos)`: Planar player→target gap, in metres.
+- L49 `void MarkWalkStart()`
+- L55 `void ArmApproach(const ApproachArm& arm)`
+- L99 `void TickApproach()`
+- L270 `bool IsApproachInFlight()`
+- L274 `void CancelApproach()`
+- L278 `ApproachOutcome LastApproachOutcome(uint32_t* serial)`
+- L283 `void* ApproachTarget()`
+- L287 `bool IsAnyModApproachInFlight()`
+- L291 `bool CancelByMovement()`
