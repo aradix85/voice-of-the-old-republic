@@ -423,7 +423,6 @@ The file-name prefix tells you the role. Add a new file under the right prefix.
   label and exits. **`exit_memory_*`** — what lies behind each door, routes,
   the exploration overview and walk, the save variables.
 - **`bridge_*`** — the local HTTP bridge for helper tools.
-- **`pad_*`** — the controller driver and its menus.
 - **`cycle_*`**, **`filter_objects`**, **`discovery`**, **`narrated_target`** —
   the discovered-object cycle (input + per-map state) and what feeds it.
 - **`map_*`** — the in-game map cursor and user-placed markers.

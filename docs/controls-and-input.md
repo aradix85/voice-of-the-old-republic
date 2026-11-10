@@ -1,6 +1,6 @@
 # Controls & Input — Survey
 
-Working document. Catalogues every default keyboard control, every mouse-required action, and the controller-support situation for **KOTOR 1 PC (Steam, v1.0.3)**. The mouse-only list at the bottom is the authoritative backlog of accessibility gaps we work through one screen at a time.
+Working document. Catalogues every default keyboard control, and every mouse-required action for **KOTOR 1 PC (Steam, v1.0.3)**. The mouse-only list at the bottom is the authoritative backlog of accessibility gaps we work through one screen at a time.
 
 ## Sources
 
@@ -114,9 +114,9 @@ The PC release of KOTOR 1 has no controller support of any kind. The manual neve
 - **Controller Companion** (paid Steam app, ~$3) — KOTOR profiles available.
 - **reWASD / Xpadder** — generic remappers.
 
-### Implication for our mod
+### In this fork
 
-We can't piggyback on an XInput layer the game already wires up. If we ever wanted gamepad navigation we'd have to ship it ourselves (SDL2 or XInput inside our injected DLL, mapped to synthesized keystrokes or directly into our own UI hook layer). This is **deprioritized** — most blind users prefer keyboard + screen reader, and the existing mouse-only widgets are equally inaccessible to a gamepad. Better to make every screen keyboard-navigable first; revisit gamepad only if a user specifically asks.
+Keyboard only. The original mod's own gamepad driver was removed; KOTOR 2's native controller support is the game's and is left alone.
 
 ## Accessibility gaps — the mouse-only / mouse-required action backlog
 

@@ -1,12 +1,13 @@
 # Voice of the Old Republic, Anouk's version
 
-This is a fork of [Voice of the Old Republic](https://github.com/JeanStiletto/voice-of-the-old-republic) by JeanStiletto, the mod that makes Star Wars: Knights of the Old Republic playable for fully blind players. It keeps what the original does — speech for menus, dialogue and combat, navigation helpers, controller support and accessible minigames — and changes it in a few deliberate ways for one player, Anouk, who plays with NVDA and a braille display.
+This is a fork of [Voice of the Old Republic](https://github.com/JeanStiletto/voice-of-the-old-republic) by JeanStiletto, the mod that makes Star Wars: Knights of the Old Republic playable for fully blind players. It keeps what the original does — speech for menus, dialogue and combat, navigation helpers and accessible minigames — and changes it in a few deliberate ways for one player, Anouk, who plays with NVDA and a braille display.
 
 ## How this version differs from the original
 
 - **NVDA only, with braille.** Every line goes to NVDA as speech and as a braille message, through NV Access's controller client. There is no support for other screen readers, no Windows (SAPI) voices and no positional 3D speech. When NVDA is not running, the mod is silent.
 - **Words instead of sounds.** The exploration sounds (walls, doors, objects, collisions, the guidance beacon) are gone; what they told you is now said in words. The only sounds the mod adds are the cues of the swoop race and the turret minigame.
 - **English only.** The mod and its installer speak English, and the mod assumes the English version of the game.
+- **Keyboard only.** The original's gamepad support is gone; the key list (F1) and the tutorial hints name keyboard keys. KOTOR 2's own controller support, which is part of the game, is untouched.
 - **More help finding your way.** Rooms, doors and routes are described in more detail, and the mod remembers what you have seen. See [Finding your way](#finding-your-way).
 - **A local bridge for helper tools.** Tools on the same PC can read the game state and act in the game. See [The bridge](#the-bridge).
 - **Builds come from this fork.** Every change is built automatically, and the installer downloads the mod from here.
@@ -153,49 +154,6 @@ In the action menu, a category menu or the action queue:
 - On a plus/minus card, Enter opens a sign choice: Left / Right pick, Enter plays, Esc cancels
 
 On the wager screen the top entry reads your bet, the table maximum and your credits. The side-deck builder reads every card and slot.
-
-## Controller
-
-KOTOR 1 has no gamepad support of its own, so the mod drives an Xbox-style (XInput) controller itself. Connect it before starting the game. Keyboard and controller work side by side, and everything the controller does goes through your key bindings. With a controller connected, the key list (F1) gains a controller section. The minigames (Pazaak, swoop racing, the turret) still need the keyboard.
-
-Button names: A, B, X, Y, the shoulder buttons LB / RB, the triggers LT / RT, and pressing a stick L3 / R3.
-
-### Moving and orientation
-
-- Left stick — Move in all eight directions
-- Right stick — Turn the camera
-- R3 — Camera to the nearest exit, then clockwise to the next (the keyboard's N)
-- RT alone — Facing and area
-
-### Objects and actions
-
-- D-pad left / right — Previous / next found object (`,` / `.`)
-- D-pad up / down — Previous / next category
-- A — Default action on the focused target
-- B — Close the action menu; otherwise the game's cancel
-- LB / RB — Previous / next target (Q / E)
-- LT alone — Open or close the action menu. While it is open, D-pad left / right change the category, up / down the entry, and A fires it
-- LT + LB — Describe the route to the focused object
-- RT + RB — Walk to the focused object
-
-### Party, status and game
-
-- X — Change party leader
-- LT + X — Your status (H)
-- RT + X — The action queue (Shift+H). Inside it, D-pad up / down step through the entries, A removes the last one, LT + A clears all, B closes
-- Y — Quick menu: the menu screens, party leader, solo mode, stealth, quick save, and the key list. Walking stops while it is open
-- L3 — Flourish weapon
-- Start — Pause
-- Back — Options
-- LT + RT — The keys for the current screen (Ctrl+F1)
-
-### In menus
-
-- D-pad or left stick — Move
-- A — Confirm, B — Back
-- LB / RB — Step through the in-game menu's screens (equipment, map, quests, …); in a container or store they switch the mode
-- Hold Y and press D-pad up or down — Read the focused item's full description, part by part
-- On the map, the left stick moves the cursor and the D-pad steps through the pins
 
 ## Mod settings
 

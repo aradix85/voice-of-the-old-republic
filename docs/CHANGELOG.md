@@ -102,6 +102,7 @@ installer, as the pre-release `bridge-latest`.
 - The map cursor says "Edge of the map" and the view-mode cursor says "Wall".
 - The combat heartbeat is gone.
 - The mod and the installer are English only and assume the English game.
+- Keyboard only: the mod's gamepad support is gone.
 - Enter on an open door walks through it.
 - Endar Spire: Trask as party leader can no longer try the door that must be
   opened by your own character.
@@ -314,11 +315,19 @@ installer, as the pre-release `bridge-latest`.
 - The installer is English only and no longer handles other game languages
   (localized TSLRCM editions, K1CP translation overlays).
 
+<h3>Input:</h3>
+
+- Keyboard only. The mod's gamepad driver is gone on both games: the
+  controller bindings, the controller section in F1, the controller wording of
+  the tutorial hints and swoop race lines, the KOTOR 1 quick menu and the
+  KOTOR 2 pad action menu. KOTOR 2's own controller support is the game's and
+  is unchanged.
+
 <h3>Help:</h3>
 
 - F1 lists Ctrl+N, Ctrl+Shift+N, Ctrl+L and Ctrl+H; the Q/E, , / . and Ctrl+N
   descriptions match the new behaviour, and the Ctrl+Shift+N line mentions the
-  door attempt. The new keys have no controller rows yet.
+  door attempt.
 - The README is rewritten for this fork: how it differs from the original,
   installing from `bridge-latest`, finding your way, keys, settings, the
   bridge and troubleshooting. The translated READMEs are gone.

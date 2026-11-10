@@ -29,7 +29,6 @@ Native C++17 (MSVC x86), built by `kdev build` into a `.kpatch` archive. Files a
 - **`camera_*`, `view_mode`, `announce_facing`, `spatial_wall_surfaces`, `wall_probe`** — orientation: facing, turning to exits, view mode, the wall cache.
 - **`map_*`** — the map screen: cursor, map notes, user markers.
 - **`party_*`** — party status (Ctrl+H), leader changes.
-- **`pad_*`** — the controller driver (KOTOR 1 has no gamepad code; the mod reads XInput itself) and its action and quick menus.
 - **`minigame_*`, `floor_puzzle`** — turret, swoop race, pazaak and puzzles. The swoop and turret cues are the only sounds the mod plays.
 - **`audio_*`** — the audio bus for those cues, looping sources, pitch, and footstep suppression when the player is stuck.
 - **`bridge_*`** — the local HTTP bridge (see below).

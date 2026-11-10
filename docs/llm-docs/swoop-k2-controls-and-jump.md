@@ -31,9 +31,9 @@ client input handler routes the two slot runners from four event ids:
 minigame page). So on KOTOR 2 **Space jumps**; on KOTOR 1 the same two events
 `0x19` / `0xd9` both reach `CSWMiniPlayer::Fire` (K1 `HandleInputEvent
 @0x00621210`, cases `0x19` and `0xd9`), whose gun bank runs `onfire.ncs`, which
-is why Space shifts there. Event `0x16` is what the pad's B button produces on
-the minigame keymap page (`k2-controller-support.md`, context row 2). The
-keyboard/mouse sources of `0x16` / `0x19` are settled in section 6.
+is why Space shifts there. Event `0x16` is what the gamepad's B button produces
+on the minigame keymap page (context row 2). The keyboard/mouse sources of
+`0x16` / `0x19` are settled in section 6.
 
 ## 2. Slot indices (in-memory order, both games)
 
@@ -173,9 +173,8 @@ it is logged); event `0x16` (pad B) is consumed and `TryShift` runs the
 OnAccelerate runner; the `SwoopShift` hotkey (bare W, polled in Tick because
 W is an axis poll, not an event, inside the race) runs the OnAccelerate runner
 from the keyboard. Since 2026-09-17 W also shifts on KOTOR 1 (TryShift presses
-the MGshoot bind there, so the engine's own 0xd9 → Fire path does the shift),
-and the pad's race bindings are shared by both games —
-`docs/kotor1-controller-port.md`, "Swoop race". Left / right mouse keep their native meaning. (Rounds 1–4
+the MGshoot bind there, so the engine's own 0xd9 → Fire path does the shift).
+Left / right mouse keep their native meaning. (Rounds 1–4
 had the pair the other way round — Space shift, W jump — to match KOTOR 1; the
 player asked for Space = jump, W = shift on 2026-09-15, which is also the
 engine's own Space.)

@@ -1,7 +1,7 @@
 # Voice of the Old Republic — KOTOR 1 Accessibility Mod
 
 ## Purpose
-Accessibility mod for **Star Wars: Knights of the Old Republic** (KOTOR 1, BioWare 2003) enabling blind players to play with NVDA (speech and braille, through the NVDA Controller Client). This is Anouk's fork (aradix85, branch `bridge`) of JeanStiletto's Voice of the Old Republic: NVDA only, English only, text instead of exploration sounds. The refactoring plan and its decisions are in `docs/refactoring/STATE.md`.
+Accessibility mod for **Star Wars: Knights of the Old Republic** (KOTOR 1, BioWare 2003) enabling blind players to play with NVDA (speech and braille, through the NVDA Controller Client). This is Anouk's fork (aradix85, branch `bridge`) of JeanStiletto's Voice of the Old Republic: NVDA only, English only, keyboard only, text instead of exploration sounds. The refactoring plan and its decisions are in `docs/refactoring/STATE.md`.
 
 ## Developer accessibility
 The developer of this mod is blind. Any workflow you propose has to be doable with a screen reader and keyboard alone. Things to avoid unless there is no alternative:
@@ -86,8 +86,6 @@ Always read these before diving into work — they capture decisions and current
 - **`docs/controls-and-input.md`** — canonical KOTOR 1 keyboard/mouse control survey + accessibility-gap backlog.
 - **`docs/installer.md`** — what the installer does: where the mod comes from, the flows, what lands in the game folder, the pins. The original design notes and research are in `archiev/installer-design-original.md`.
 - **`docs/upstream-prs.md`** — Kotor-Patch-Manager (and K1CP) defects with our workarounds and the local fixes in the vendored copy; code comments cite its entries as PR-1 … PR-12.
-- **`docs/kotor2-controller-plan.md`** — controller support for KOTOR 2: the phased work plan, the confirmed pad→InputIndex code table, and the defects one live test round exposed. Written to be executed cold. Engine reference is `docs/llm-docs/k2-controller-support.md`.
-- **`docs/kotor1-controller-port.md`** — the same support backported to KOTOR 1, whose engine has no gamepad path at all (decompile evidence inside). Records what differs — the mod is the pad driver there — the shared binding set, and the combined test round.
 - **`docs/known-issues.md`** — five-bucket status tracker (Bugs / Planned / Monitor / Polish / Beta Preparations).
 - **`docs/CHANGELOG.md`** — release notes. The top section (`v0.9.1+bridge`) is this fork's; add every change there, in its overview and its topic subsection.
 - **`docs/llm-docs/`** — LLM-targeted reference material. See `docs/llm-docs/CLAUDE.md` for the index. `docs/llm-docs/code-index/` is generated from the source comments: `python tools/analysis/code_index.py`. Start with `game-flow.md` for lifecycle context, `accessibility-map.md` for pillar-by-pillar hook candidates, and `sarif-cookbook.md` for querying Lane's RE database.

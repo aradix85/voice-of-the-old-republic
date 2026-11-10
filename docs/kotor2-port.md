@@ -5,18 +5,11 @@
 result especially — but whose cost estimate predates the RTTI finding below.
 
 > **Fork note (v0.9.1+bridge).** In this fork the mod speaks English only,
-> through NVDA only, and has no beacon, wall cues or update checker. Entries
-> below about locales, per-language string tables, German or other non-English
-> TLK anchors, Prism, the beacon or `update_checker` describe the code as it
+> through NVDA only, from the keyboard only, and has no beacon, wall cues or
+> update checker. Entries below about locales, per-language string tables,
+> German or other non-English TLK anchors, Prism, the beacon, `update_checker`
+> or controller support (pad_*, pad twins of strings) describe the code as it
 > was when they were written. They are kept as history, not as current state.
-
-**Controller support is a separate, self-contained workstream** — investigated,
-planned and fully implemented 2026-08-06 (Phases 0–5), built clean, awaiting its
-first live round. It does not block or depend on the batches below. Plan, as-built
-notes and the combined test round: `docs/kotor2-controller-plan.md`. Engine
-reference: `docs/llm-docs/k2-controller-support.md`. Code: `pad_input.{h,cpp}`,
-`pad_quickmenu.{h,cpp}`, `pad_actionmenu.{h,cpp}` plus seam edits listed in the
-plan.
 
 ## WHERE TO RESUME (read this first)
 

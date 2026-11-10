@@ -210,7 +210,7 @@ the identical discard. Treat the rule below as engine-wide, not KOTOR 1-only.
 
 **How to apply:** any code path that drives `SetActive(0)->(1)` must first
 establish that no key is held — including keys the mod itself is synthesising
-(`camera_orient` holds a real turn scancode down; `pad_movement` holds WASD).
+(`camera_orient` holds a real turn scancode down).
 `core_tick.cpp`'s `WatchDeadKeyboard` is built around this rule: a hold that
 looks unanswered only *arms* a suspicion, and the recovery cycle waits for the
 release. See the comment block there for the beta-log evidence — one user's
