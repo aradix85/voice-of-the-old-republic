@@ -14,204 +14,24 @@
 // Declarations stay in engine_reads.h - splitting that header is a
 // separate, deferred item, so every existing includer is unaffected.
 
-#include "engine_reads.h"
+#include "engine_reads_items_internal.h"
 
-#include <windows.h>
-#include <cstdint>
-#include <cstring>
-
-#include "engine_app.h"     // GetServerApp
 #include "engine_area.h"    // GetObjectDisplayNameByHandle
 #include "log.h"
 #include "engine_offsets_select.h"
 
 namespace acc::engine {
 
+namespace {
+
 typedef uint32_t (__thiscall* PFN_ClientToServerObjectId)(void* this_,
                                                            uint32_t handle);
 typedef void*    (__thiscall* PFN_GetItemByGameObjectID)(void* this_,
                                                          uint32_t handle);
 
-uint32_t ClientToServerObjectId(uint32_t clientHandle) {
-    if (clientHandle == 0 || clientHandle == 0xffffffff) return 0;
-    void* serverApp = GetServerApp();
-    if (!serverApp) return 0;
-
-    uint32_t serverHandle = 0;
-    __try {
-        auto fn = reinterpret_cast<PFN_ClientToServerObjectId>(
-            kAddrServerExoAppClientToServerObjectId);
-        serverHandle = fn(serverApp, clientHandle);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return 0;
-    }
-    if (serverHandle == 0 || serverHandle == 0xffffffff) return 0;
-    return serverHandle;
-}
-
-void* ResolveItemFromClientHandle(uint32_t clientHandle) {
-    uint32_t serverHandle = ClientToServerObjectId(clientHandle);
-    if (serverHandle == 0) return nullptr;
-
-    void* serverApp = GetServerApp();
-    if (!serverApp) return nullptr;
-
-    void* item = nullptr;
-    __try {
-        auto fn = reinterpret_cast<PFN_GetItemByGameObjectID>(
-            kAddrServerExoAppGetItemByGameObjectID);
-        item = fn(serverApp, serverHandle);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return nullptr;
-    }
-    return item;
-}
-
-typedef CExoString* (__thiscall* PFN_GetPropertyDescription)(void* this_,
-                                                              CExoString* out);
-
-// CSWGuiInterfaceAction descriptors encode an action-type tag in the
-// high nibble of the action_id at +0x08; the low 28 bits carry the
-// category-specific lookup key. Tags decoded via decompile of the
-// CSWCCreature entry-creators:
-//
-//   0x10000000  feat        — CSWCCreature::EnableFeatForMenu      @0x00618a30
-//                             ("action_id = feat_id | 0x10000000")
-//   0x20000000  force power — CSWCCreatureStats_ClassInfo::GetMenuInfo
-//                             @0x0064a870 ("action_id = spell_id | 0x20000000")
-//   0x40000000  item        — CSWCCreature::CreateUsableItemEntry  @0x006193a0
-//                             ("action_id = server_item.game_object.id | 0x40000000")
-//
-// Other categories (attack verbs, door open/unlock, computer hack, etc.)
-// don't carry a separately addressable description — they're plain verbs
-// the engine never surfaces extra text for, so we let the caller fall
-// back to the localised "no description" cue.
-constexpr uint32_t kActionIdTagMask     = 0xF0000000;
-constexpr uint32_t kActionIdTagFeat     = 0x10000000;
-constexpr uint32_t kActionIdTagSpell    = 0x20000000;
-constexpr uint32_t kActionIdTagItem     = 0x40000000;
-
-static void* ResolveItemFromServerHandle(uint32_t serverHandle) {
-    if (serverHandle == 0 || serverHandle == 0xffffffff) return nullptr;
-    void* serverApp = GetServerApp();
-    if (!serverApp) return nullptr;
-
-    void* item = nullptr;
-    __try {
-        auto fn = reinterpret_cast<PFN_GetItemByGameObjectID>(
-            kAddrServerExoAppGetItemByGameObjectID);
-        item = fn(serverApp, serverHandle);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return nullptr;
-    }
-    return item;
-}
-
-static void* GetRulesGlobal() {
-    void* rules = nullptr;
-    __try {
-        rules = *reinterpret_cast<void**>(kAddrRulesGlobal);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return nullptr;
-    }
-    return rules;
-}
-
-typedef void* (__thiscall* PFN_RulesGetFeat)(void* rules, uint16_t featIdx);
-
-bool ResolveFeatDescription(uint32_t featIdx, char* outBuf, size_t bufSize) {
-    void* rules = GetRulesGlobal();
-    if (!rules) return false;
-
-    void* feat = nullptr;
-    __try {
-        auto fn = reinterpret_cast<PFN_RulesGetFeat>(kAddrCSWRulesGetFeat);
-        feat = fn(rules, static_cast<uint16_t>(featIdx));
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return false;
-    }
-    if (!feat) return false;
-
-    // Read the description strref off the feat row and resolve it through
-    // the dual-game TLK path — mirror of ResolveSpellDescription below.
-    // This replaced the CSWFeat::GetDescriptionText call (all it does with
-    // the same +0xc strref) because its address was KOTOR 1-only, so on K2
-    // the fetch faulted into the SEH and descriptions came back empty.
-    // Offset is Same(0x0c), witnessed on K2 in the abilities OnEnterFeat
-    // twin.
-    uint32_t descStrRef = 0;
-    __try {
-        descStrRef = *reinterpret_cast<uint32_t*>(
-            reinterpret_cast<unsigned char*>(feat) +
-            kFeatDescriptionStrRefOffset);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return false;
-    }
-    if (descStrRef == 0 || descStrRef == 0xffffffff) return false;
-    return LookupTlk(descStrRef, outBuf, bufSize);
-}
-
-typedef void* (__thiscall* PFN_SpellArrayGetSpell)(void* spells, int spellId);
-
-bool ResolveSpellDescription(uint32_t spellId, char* outBuf, size_t bufSize) {
-    void* rules = GetRulesGlobal();
-    if (!rules) return false;
-
-    void* spellArray = nullptr;
-    __try {
-        spellArray = *reinterpret_cast<void**>(
-            reinterpret_cast<unsigned char*>(rules) + kRulesSpellsOffset);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return false;
-    }
-    if (!spellArray) return false;
-
-    void* spell = nullptr;
-    __try {
-        auto fn = reinterpret_cast<PFN_SpellArrayGetSpell>(
-            kAddrCSWSpellArrayGetSpell);
-        spell = fn(spellArray, static_cast<int>(spellId));
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return false;
-    }
-    if (!spell) return false;
-
-    uint32_t descStrRef = 0;
-    __try {
-        descStrRef = *reinterpret_cast<uint32_t*>(
-            reinterpret_cast<unsigned char*>(spell) +
-            kSpellDescriptionStrRefOffset);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return false;
-    }
-    if (descStrRef == 0 || descStrRef == 0xffffffff) return false;
-    return LookupTlk(descStrRef, outBuf, bufSize);
-}
-
-bool ResolveActionDescriptionFromActionId(uint32_t actionId,
-                                          char* outBuf, size_t bufSize) {
-    if (!outBuf || bufSize < 2) return false;
-    outBuf[0] = '\0';
-    if (actionId == 0 || actionId == 0xffffffff) return false;
-
-    uint32_t tag   = actionId & kActionIdTagMask;
-    uint32_t lowId = actionId & ~kActionIdTagMask;
-    switch (tag) {
-        case kActionIdTagItem: {
-            void* item = ResolveItemFromServerHandle(lowId);
-            if (!item) return false;
-            return ReadItemPropertyDescription(item, outBuf, bufSize);
-        }
-        case kActionIdTagSpell:
-            return ResolveSpellDescription(lowId, outBuf, bufSize);
-        case kActionIdTagFeat:
-            return ResolveFeatDescription(lowId, outBuf, bufSize);
-        default:
-            return false;
-    }
-}
-
-namespace {
+// The English dialog.tlk LanguageID: the `language` half of a CExoLocString
+// substring id.
+constexpr uint32_t kEnglish = 0;
 
 // Read CSWSItem.stack_size (2 bytes) and bit_flags (4 bytes). Mirrors the
 // store-side ReadItemStock helper but doesn't return the infinite-stock
@@ -283,6 +103,57 @@ uint32_t ReadItemRowHandle(void* rowControl) {
 
 }  // namespace
 
+uint32_t ClientToServerObjectId(uint32_t clientHandle) {
+    if (clientHandle == 0 || clientHandle == 0xffffffff) return 0;
+    void* serverApp = GetServerApp();
+    if (!serverApp) return 0;
+
+    uint32_t serverHandle = 0;
+    __try {
+        auto fn = reinterpret_cast<PFN_ClientToServerObjectId>(
+            kAddrServerExoAppClientToServerObjectId);
+        serverHandle = fn(serverApp, clientHandle);
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return 0;
+    }
+    if (serverHandle == 0 || serverHandle == 0xffffffff) return 0;
+    return serverHandle;
+}
+
+void* ResolveItemFromClientHandle(uint32_t clientHandle) {
+    uint32_t serverHandle = ClientToServerObjectId(clientHandle);
+    if (serverHandle == 0) return nullptr;
+
+    void* serverApp = GetServerApp();
+    if (!serverApp) return nullptr;
+
+    void* item = nullptr;
+    __try {
+        auto fn = reinterpret_cast<PFN_GetItemByGameObjectID>(
+            kAddrServerExoAppGetItemByGameObjectID);
+        item = fn(serverApp, serverHandle);
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return nullptr;
+    }
+    return item;
+}
+
+void* ResolveItemFromServerHandle(uint32_t serverHandle) {
+    if (serverHandle == 0 || serverHandle == 0xffffffff) return nullptr;
+    void* serverApp = GetServerApp();
+    if (!serverApp) return nullptr;
+
+    void* item = nullptr;
+    __try {
+        auto fn = reinterpret_cast<PFN_GetItemByGameObjectID>(
+            kAddrServerExoAppGetItemByGameObjectID);
+        item = fn(serverApp, serverHandle);
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return nullptr;
+    }
+    return item;
+}
+
 int ReadItemRowStackCount(void* rowControl) {
     uint32_t handle = ReadItemRowHandle(rowControl);
     if (handle == 0) return 0;
@@ -303,14 +174,6 @@ int ReadItemRowCharges(void* rowControl) {
     if (!item) return -1;
     return ReadItemCharges(item);
 }
-
-namespace {
-
-// The English dialog.tlk LanguageID: the `language` half of a CExoLocString
-// substring id.
-constexpr uint32_t kEnglish = 0;
-
-}  // namespace
 
 bool ReadLocStringOtherLanguage(void* base, size_t locStringOffset,
                                 char* outBuf, size_t bufSize) {
@@ -395,12 +258,6 @@ int ReadItemStack(void* item) {
     return ReadItemStackSize(item);
 }
 
-void* ItemFromActionId(uint32_t actionId) {
-    if (actionId == 0 || actionId == 0xffffffff) return nullptr;
-    if ((actionId & kActionIdTagMask) != kActionIdTagItem) return nullptr;
-    return ResolveItemFromServerHandle(actionId & ~kActionIdTagMask);
-}
-
 bool IsInventoryItemRow(void* control) {
     if (!control) return false;
     void** vt = nullptr;
@@ -410,237 +267,6 @@ bool IsInventoryItemRow(void* control) {
         return false;
     }
     return reinterpret_cast<uintptr_t>(vt) == kVtableCSWGuiInGameItemEntry;
-}
-
-bool ReadItemPropertyDescription(void* item, char* outBuf, size_t bufSize) {
-    if (!item || !outBuf || bufSize < 2) return false;
-    CExoString tmp = {nullptr, 0};
-    bool ok = false;
-    __try {
-        auto fn = reinterpret_cast<PFN_GetPropertyDescription>(
-            kAddrCSWSItemGetPropertyDescription);
-        fn(item, &tmp);
-        if (tmp.c_string && tmp.length > 0 && tmp.length < bufSize) {
-            memcpy(outBuf, tmp.c_string, tmp.length);
-            outBuf[tmp.length] = '\0';
-            ok = true;
-        }
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        acclog::Write("Engine.Reads",
-                      "GetPropertyDescription SEH for item=%p", item);
-        ok = false;
-    }
-    return ok;
-}
-
-namespace {
-
-typedef void* (__thiscall* PFN_GetBaseItem)(void* item);
-
-// Read item_type / weapon_type via CSWItem::GetBaseItem (the CSWItem subobject
-// is at offset 0 of CSWSItem, so the item pointer is a valid `this`). Offsets
-// are CMP-verified from the GetPropertyDescription disassembly.
-bool ReadBaseItemFlags(void* item, uint8_t& itemType, uint8_t& weaponType) {
-    __try {
-        auto fn = reinterpret_cast<PFN_GetBaseItem>(kAddrCSWItemGetBaseItem);
-        auto* base = reinterpret_cast<unsigned char*>(fn(item));
-        if (!base) return false;
-        itemType   = *(base + kBaseItemItemTypeOffset);
-        weaponType = *(base + kBaseItemWeaponTypeOffset);
-        return true;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return false;
-    }
-}
-
-// Append the engine's own per-category builders to ONE accumulator, in the same
-// order and with the same guards GetPropertyDescription uses, recording
-// the visible (strlen) length after each section. The result is the byte offsets
-// at which Tags / Values / Properties end inside the canonical
-// GetPropertyDescription string — so the caller can slice that string rather
-// than re-emit each section (separate accumulators diverge from the canonical
-// text by a byte or two; one cumulative accumulator matches it exactly). The
-// accumulator's heap c_string is leaked (CRT-mismatch rule). offTags/offValues/
-// offProps are left at their incoming values on fault.
-//
-// The cascade is PER GAME (each replicates its own engine's decompiled
-// sequence — a mismatched replica trips the caller's divergence guard and
-// degrades to description-only):
-//   K1 (0x0055F340): FeatReq | weapon?{Damage,Range,Crit,OnHit,Size} |
-//     AttackMod, Defence | Misc.
-//   K2 (0x00607790): NEW header, FeatReq | NEW x4 | (weapon || base 0x2d)?
-//     {Damage, Range, [Crit unless base 0x2d], OnHit, Size} | AttackMod,
-//     Defence | Misc. The lightsaber base id 0x2d forces the weapon block
-//     (minus the crit builder) even with weapon_type == 0.
-void ComputeSectionOffsets(void* item, uint8_t weaponType,
-                           size_t& offTags, size_t& offValues,
-                           size_t& offProps) {
-    const bool k2 = acc::game::IsKotor2();
-    int baseItemId = -1;
-    CExoString acc = {nullptr, 0};
-    __try {
-        if (k2) {
-            baseItemId = *reinterpret_cast<int*>(
-                reinterpret_cast<unsigned char*>(item) +
-                kSwsItemBaseItemIdOffset);
-        }
-        reinterpret_cast<PFN_CExoStringCtor>(kAddrCExoStringDefaultCtor)(&acc);
-
-        if (k2) {
-            reinterpret_cast<PFN_AddItemProperty>(
-                kAddrItemAddK2StatsHeader)(item, &acc);
-        }
-        reinterpret_cast<PFN_AddItemProperty>(
-            kAddrItemAddFeatRequirements)(item, &acc);
-        offTags = acc.c_string ? strlen(acc.c_string) : 0;
-
-        if (k2) {
-            reinterpret_cast<PFN_AddItemProperty>(
-                kAddrItemAddK2Extra1)(item, &acc);
-            reinterpret_cast<PFN_AddItemProperty>(
-                kAddrItemAddK2Extra2)(item, &acc);
-            reinterpret_cast<PFN_AddItemProperty>(
-                kAddrItemAddK2Extra3)(item, &acc);
-            reinterpret_cast<PFN_AddItemProperty>(
-                kAddrItemAddK2Extra4)(item, &acc);
-        }
-        const bool saber = k2 && baseItemId == 0x2d;
-        if (weaponType != 0 || saber) {
-            reinterpret_cast<PFN_AddItemProperty>(
-                kAddrItemAddDamageProperties)(item, &acc);
-            reinterpret_cast<PFN_AddItemProperty>(
-                kAddrItemAddRangeProperties)(item, &acc);
-            if (!saber) {
-                reinterpret_cast<PFN_AddItemProperty>(
-                    kAddrItemAddCriticalThreatProps)(item, &acc);
-            }
-            reinterpret_cast<PFN_AddItemProperty>(
-                kAddrItemAddOnHitProperties)(item, &acc);
-            reinterpret_cast<PFN_AddItemProperty>(
-                kAddrItemAddWeaponSizeProperties)(item, &acc);
-        }
-        reinterpret_cast<PFN_AddItemProperty>(
-            kAddrItemAddAttackModifierProps)(item, &acc);
-        reinterpret_cast<PFN_AddItemProperty>(
-            kAddrItemAddDefenceProperties)(item, &acc);
-        offValues = acc.c_string ? strlen(acc.c_string) : offTags;
-
-        reinterpret_cast<PFN_AddItemProperty>(
-            kAddrItemAddMiscellaneousProps)(item, &acc);
-        offProps = acc.c_string ? strlen(acc.c_string) : offValues;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        acclog::Write("Engine.Reads",
-                      "ComputeSectionOffsets SEH for item=%p", item);
-    }
-}
-
-// Resolve the item's identified-description text through the TLK strref,
-// bypassing the (sometimes corrupt) inline CExoLocString substring that
-// GetPropertyDescription/GetString prefer. Returns false when there's no strref
-// (-1 sentinel) or the lookup fails / is empty. outStrref reports the strref for
-// logging.
-bool ReadItemDescriptionViaTlk(void* item, char* outBuf, size_t bufSize,
-                               uint32_t& outStrref) {
-    outStrref = 0xFFFFFFFF;
-    if (!item || !outBuf || bufSize < 2) return false;
-    __try {
-        outStrref = *reinterpret_cast<uint32_t*>(
-            reinterpret_cast<unsigned char*>(item) +
-            kItemDescriptionLocStringOffset + kExoLocStringStrRefOffset);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return false;
-    }
-    if (outStrref == 0xFFFFFFFF) return false;  // no TLK entry for this locstring
-    return LookupTlk(outStrref, outBuf, bufSize) && outBuf[0] != '\0';
-}
-
-// Copy src[start..end) into dst (NUL-terminated, bounded by cap).
-void CopySlice(char* dst, size_t cap, const char* src, size_t start, size_t end) {
-    if (!dst || cap == 0) return;
-    if (end < start) end = start;
-    size_t n = end - start;
-    if (n >= cap) n = cap - 1;
-    if (n) memcpy(dst, src + start, n);
-    dst[n] = '\0';
-}
-
-}  // namespace
-
-bool BuildItemDescriptionBlocks(void* item, ItemDescriptionBlocks* out) {
-    if (!item || !out) return false;
-    out->tags[0] = out->values[0] = out->properties[0] =
-        out->description[0] = '\0';
-
-    // Canonical text — exactly what the game renders. Every spoken block is a
-    // slice of THIS string; we never re-emit a section, so the bytes (and their
-    // CP-1252 encoding) always match the game.
-    char full[8192];
-    if (!ReadItemPropertyDescription(item, full, sizeof(full))) return false;
-    size_t fullLen = strlen(full);
-
-    uint8_t itemType = 0, weaponType = 0;
-    bool haveFlags = ReadBaseItemFlags(item, itemType, weaponType);
-
-    // Find where Tags / Values / Properties end inside `full` by replaying the
-    // engine's builder sequence into one accumulator. Crystals (0x2e) and
-    // grenades (6) skip the whole property block — as does a missing base item —
-    // so all offsets stay 0 and the entire string is the description. KOTOR 2's
-    // twin adds a third skip type (0x31), replicated per game.
-    size_t offTags = 0, offValues = 0, offProps = 0;
-    bool engineSkips = itemType == 0x2e || itemType == 6 ||
-                       (acc::game::IsKotor2() && itemType == 0x31);
-    if (haveFlags && !engineSkips) {
-        ComputeSectionOffsets(item, weaponType, offTags, offValues, offProps);
-    }
-
-    // Guard against any divergence from `full` (offsets past the string, or out
-    // of order): fall back to the whole string as the description.
-    if (offTags > offValues || offValues > offProps || offProps > fullLen) {
-        acclog::Write("Engine.Reads",
-                      "BuildItemDescriptionBlocks item=%p offsets diverged "
-                      "(tags=%zu values=%zu props=%zu fullLen=%zu); "
-                      "description-only fallback",
-                      item, offTags, offValues, offProps, fullLen);
-        offTags = offValues = offProps = 0;
-    }
-
-    CopySlice(out->tags,       sizeof(out->tags),       full, 0,         offTags);
-    CopySlice(out->values,     sizeof(out->values),     full, offTags,   offValues);
-    CopySlice(out->properties, sizeof(out->properties), full, offValues, offProps);
-
-    // Description: prefer the TLK strref (clean cp1252) over the inline copy that
-    // GetPropertyDescription emits — some German items have a corrupt inline
-    // description (umlauts collapsed to 0xFD). Fall back to the GetPropertyDescription
-    // tail when there's no usable strref.
-    uint32_t descStrref = 0xFFFFFFFF;
-    bool descViaTlk = ReadItemDescriptionViaTlk(item, out->description,
-                                                sizeof(out->description),
-                                                descStrref);
-    // No strref and no English substring: the engine's tail is
-    // only its "no description" placeholder, so take the text the item does
-    // carry in another language (English-only mod items).
-    bool descOtherLang = false;
-    if (!descViaTlk) {
-        descOtherLang = ReadLocStringOtherLanguage(
-            item, kItemDescriptionLocStringOffset,
-            out->description, sizeof(out->description));
-    }
-    if (!descViaTlk && !descOtherLang) {
-        CopySlice(out->description, sizeof(out->description), full, offProps,
-                  fullLen);
-    }
-
-    acclog::Write("Engine.Reads",
-                  "BuildItemDescriptionBlocks item=%p itemType=%u weaponType=%u "
-                  "fullLen=%zu offsets(tags=%zu values=%zu props=%zu) "
-                  "descStrref=0x%x descViaTlk=%d descOtherLang=%d "
-                  "lens(tags=%zu values=%zu props=%zu desc=%zu)",
-                  item, (unsigned)itemType, (unsigned)weaponType, fullLen,
-                  offTags, offValues, offProps, descStrref, descViaTlk ? 1 : 0,
-                  descOtherLang ? 1 : 0,
-                  strlen(out->tags), strlen(out->values),
-                  strlen(out->properties), strlen(out->description));
-    return fullLen > 0 || out->description[0] != '\0';
 }
 
 void* GetWorkbenchSlotInstalledItem(void* upgradePanel, void* slotControl) {
