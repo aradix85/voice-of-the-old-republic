@@ -257,8 +257,9 @@ menus_extract_controls: lean (222d56de: TryAs over the engine_reads text
 readers, PanelControls, TryEditbox through ReadEditboxText, the dead
 TryTooltip gone).
 audio_footstep_suppress: stuck probe in named steps (0cbc1240), moved to
-audio_stuck_probe (14310482); its lean is next (engine-free stuck window
-with tests, one point-to-segment helper shared with floor_puzzle_plates).
+audio_stuck_probe (14310482), lean (4ba10f9b: stuck window and the two
+probe triggers engine-free in stuck_detect with tests, DistXYToSegmentSq
+next to Vector shared with floor_puzzle_plates).
 
 Careful: never rewrite source files with PowerShell ReadAllText/WriteAllText
 (it decodes UTF-8 and writes '?' for the dashes and umlauts in comments);
@@ -321,7 +322,7 @@ prefix (menus_listbox_picker.cpp).
   possible; for files above 500 lines, judge whether a split into modules of
   things that belong together makes sense, and do it where it does.
 - Next file, by size (2026-11-10 21:15, strings*.cpp excepted):
-  audio_footstep_suppress lean, engine_reads 622, menus_dispatch 619,
+  engine_reads 622, menus_dispatch 619,
   minigame_swoop_audio_internal.h 616 (judge), engine_picker 609; then to
   judge: combat_query 585, room_topology 578, room_topology_label_kinds
   576, room_topology_doors 574, log 563, menus_chargen_feats 561,
