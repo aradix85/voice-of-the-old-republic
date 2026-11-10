@@ -1,15 +1,15 @@
 // The dialogue-line side of the tutorial hints: the mouse-worded tutorial
 // lines replaced by a keyboard hint popup, the voiceless subtitle lines
 // forced spoken (K1), and the voiced lines whose subtitle is suppressed (K2).
+// Every list is keyed by source strref and matched in the game's own wording
+// through the TLK.
 
-#include "tutorial_hints.h"
+#include "tutorial_hints_internal.h"
 
 #include <cstdint>
 #include <cstring>
 
-#include "engine_game.h"     // IsKotor2
-#include "engine_reads.h"    // LookupTlk, EqualsTrimmed
-#include "log.h"
+#include "engine_game.h"  // IsKotor2
 #include "strings.h"
 
 namespace acc::tutorial_hints {
@@ -17,16 +17,14 @@ namespace acc::tutorial_hints {
 namespace {
 
 using acc::strings::Id;
+using acc::engine::EqualsTrimmed;
 
-// Surface 2 map: source strref -> hint Id. Resolved to the current language's
-// text lazily via the engine TLK, then matched against the rendered dialogue
-// line. KOTOR 1: the Endar Spire Trask / pop-window mouse lines. KOTOR 2: the
-// Ebon Hawk prologue's T3-M4 instruction lines (module 001EBO) — the K2
-// equivalent of the Trask set.
 struct DialogHint {
     uint32_t strref;
     Id       id;
 };
+
+// KOTOR 1: the Endar Spire Trask lines and Carth's stealth line on Taris.
 constexpr DialogHint kDialogHintsK1[] = {
     // Closing line of Trask's intro tree ("grab your things, we have to go").
     // Not a rewritten tutorial line — this is stock story VO — but it's the
@@ -61,14 +59,11 @@ constexpr DialogHint kDialogHintsK1[] = {
     {48557, Id::TutStealthMode},
 };
 
-// KOTOR 2 — every strref is a T3-M4 instruction line from the Ebon Hawk
-// prologue (001EBO), mined from the module's _dlg.erf 2026-08-25. Most lines
-// exist twice, once worded for the PC (mouse + vanilla default keys) and once
-// for the Xbox pad; both variants map to the same hint id, so whichever the
-// engine renders is caught. The spoken vanilla line is suppressed for these
-// (see dialog_speech.cpp — T3 is a droid, so the human-VO suppression that
-// covers Trask on KOTOR 1 does not apply) and the hint fires as a popup at
-// the reply break, exactly like the Trask set.
+// KOTOR 2: the Ebon Hawk prologue's T3-M4 instruction lines (001EBO). Most
+// exist twice, worded for the PC and for the Xbox pad, and both map to the
+// same hint. T3 is a droid, so the human-VO suppression that covers Trask
+// does not apply: dialog_speech suppresses these through the hint match and
+// the hint fires as a popup at the reply break, like the Trask set.
 constexpr DialogHint kDialogHintsK2[] = {
     {130726, Id::TutHintMovement},       // controls.dlg (PC)
     {130727, Id::TutHintMovement},       // controls.dlg (Xbox)
@@ -122,11 +117,9 @@ constexpr int kDialogHintCountK1 =
 constexpr int kDialogHintCountK2 =
     static_cast<int>(sizeof(kDialogHintsK2) / sizeof(kDialogHintsK2[0]));
 constexpr int kDialogHintMax =
-    kDialogHintCountK1 > kDialogHintCountK2 ? kDialogHintCountK1
-                                            : kDialogHintCountK2;
+    kDialogHintCountK1 > kDialogHintCountK2 ? kDialogHintCountK1 : kDialogHintCountK2;
 
-// The running game's table. Selected once — the game cannot change mid-process.
-inline const DialogHint* ActiveDialogHints(int* count) {
+const DialogHint* ActiveDialogHints(int* count) {
     if (acc::game::IsKotor2()) {
         *count = kDialogHintCountK2;
         return kDialogHintsK2;
@@ -135,136 +128,24 @@ inline const DialogHint* ActiveDialogHints(int* count) {
     return kDialogHintsK1;
 }
 
-// Resolved-text cache, built once the TLK is loaded.
-struct ResolvedHint {
-    char text[512];
-    Id   id;
-    bool valid;
-};
-ResolvedHint s_resolved[kDialogHintMax];
-int          s_resolvedCount = 0;
-bool         s_resolvedBuilt = false;
+TlkTexts<kDialogHintMax, 512> s_hintText;
 
-// Guards against a stray padding space between the engine's rendered label
-// and its own TLK resolution of the same strref. Shared implementation —
-// see engine_reads.h.
-using acc::engine::EqualsTrimmed;
-
-void BuildResolvedIfNeeded() {
-    if (s_resolvedBuilt) return;
-    int count = 0;
-    const DialogHint* hints = ActiveDialogHints(&count);
-    int resolvedCount = 0;
-    for (int i = 0; i < count; ++i) {
-        s_resolved[i].id    = hints[i].id;
-        s_resolved[i].valid = false;
-        s_resolved[i].text[0] = '\0';
-        if (acc::engine::LookupTlk(hints[i].strref, s_resolved[i].text,
-                                   sizeof(s_resolved[i].text))) {
-            s_resolved[i].valid = true;
-            ++resolvedCount;
-        }
-    }
-    // Only latch "built" once we actually resolved at least one entry — before
-    // the TLK table is live (main menu / early load) every lookup fails and we
-    // must retry on a later call.
-    if (resolvedCount > 0) {
-        s_resolvedBuilt = true;
-        s_resolvedCount = count;
-        acclog::Write("TutorialHint", "dialog hint map built: %d/%d strrefs resolved",
-                      resolvedCount, count);
-    }
-}
-
-}  // namespace
-
-// ---- Forced-spoken VO-less subtitle lines --------------------------------
-//
-// Curated strrefs whose dialogue node ships as subtitle text with no VO. The
-// speaker (Trask) classifies as a voiced human, so dialog_speech's human-
-// subtitle suppression would silence these entirely. We resolve each strref to
-// the current locale's text once (same lazy TLK path as the hint map) and
-// trim-match it against the rendered line so dialog_speech can force it spoken.
-//
-//   39454 — "You have enough experience to level up. Level up
-//            before you go through this door." Trask's Endar Spire level-up-gate
-//            line, said when the player tries the locked door before assigning
-//            their first level. No VO recorded; subtitle only. (verified in the
-//            German dialog.tlk, 2026-07-19)
-constexpr uint32_t kForcedSpokenStrrefs[] = { 39454 };
+// KOTOR 1 subtitle lines shipped without VO whose speaker (Trask) counts as
+// a voiced human, so the human-subtitle suppression would silence them.
+//   39454: Trask's Endar Spire level-up gate, said when the player tries the
+//          locked door before taking the first level.
+constexpr uint32_t kForcedSpokenStrrefs[] = {39454};
 constexpr int kForcedSpokenCount =
     static_cast<int>(sizeof(kForcedSpokenStrrefs) / sizeof(kForcedSpokenStrrefs[0]));
+TlkTexts<kForcedSpokenCount, 512> s_forcedText;
 
-char s_forcedText[kForcedSpokenCount][512];
-bool s_forcedTextBuilt = false;
-
-void BuildForcedTextIfNeeded() {
-    if (s_forcedTextBuilt) return;
-    int resolved = 0;
-    for (int i = 0; i < kForcedSpokenCount; ++i) {
-        s_forcedText[i][0] = '\0';
-        if (acc::engine::LookupTlk(kForcedSpokenStrrefs[i], s_forcedText[i],
-                                   sizeof(s_forcedText[i]))) {
-            ++resolved;
-        }
-    }
-    if (resolved > 0) {
-        s_forcedTextBuilt = true;
-        acclog::Write("TutorialHint", "forced-spoken map built: %d/%d strrefs resolved",
-                      resolved, kForcedSpokenCount);
-    }
-}
-
-const char* HintForDialogLine(const char* renderedLine, uint32_t* outStrref) {
-    if (!renderedLine || !renderedLine[0]) return nullptr;
-    BuildResolvedIfNeeded();
-    if (!s_resolvedBuilt) return nullptr;
-    int count = 0;
-    const DialogHint* hints = ActiveDialogHints(&count);
-    for (int i = 0; i < s_resolvedCount; ++i) {
-        if (!s_resolved[i].valid) continue;
-        if (EqualsTrimmed(renderedLine, s_resolved[i].text)) {
-            const char* s = acc::strings::Get(s_resolved[i].id);
-            if (!s[0]) return nullptr;
-            // s_resolved is built parallel to the active hint table, so index
-            // i carries the source strref.
-            if (outStrref) *outStrref = hints[i].strref;
-            return s;
-        }
-    }
-    return nullptr;
-}
-
-bool IsForcedSpokenDialogLine(const char* renderedLine) {
-    if (!renderedLine || !renderedLine[0]) return false;
-    // The curated strrefs are KOTOR 1 lines; on KOTOR 2 the same numbers name
-    // unrelated strings, so resolving them would arm the matcher with garbage.
-    if (acc::game::IsKotor2()) return false;
-    BuildForcedTextIfNeeded();
-    if (!s_forcedTextBuilt) return false;
-    for (int i = 0; i < kForcedSpokenCount; ++i) {
-        if (s_forcedText[i][0] && EqualsTrimmed(renderedLine, s_forcedText[i])) {
-            return true;
-        }
-    }
-    return false;
-}
-
-// ---- Voiced subtitle lines to suppress ------------------------------------
-//
-// The INVERSE of the forced-spoken list: curated strrefs whose line carries
-// real recorded voice-over, but whose speaker the classifier cannot resolve —
-// so the human-VO suppression never fires and the mod speaks the subtitle
-// over the actor. First entries (2026-08-26): the KOTOR 2 Ebon Hawk
-// prologue's narrator, "the voice of the Ebon Hawk" (strref 134048 names her)
-// — her lines render as ownerless barks and cinematic-copy panels
-// (speaker=[?], appearance -1), and every one below has its VO file verified
-// present under StreamVoice/001/. The prologue's silent lines (the security
-// consoles, whose VO resrefs have no audio on disk) are deliberately NOT
-// here: with no voice behind them, the subtitle is the only channel.
-//
-// Tutorial-mapped lines (kDialogHintsK2) are also not here — dialog_speech
-// suppresses those through the hint match and replaces them with a popup.
+// The inverse: KOTOR 2 lines with real recorded VO whose speaker the
+// classifier cannot resolve, so the mod would speak the subtitle over the
+// actor. The Ebon Hawk prologue's narrator, "the voice of the Ebon Hawk"
+// (134048 names her): ownerless barks and cinematic-copy panels (speaker
+// [?], appearance -1), each with its VO file under StreamVoice/001/. The
+// silent security consoles (no audio on disk) stay out, as do the
+// tutorial-mapped lines above.
 constexpr uint32_t kVoicedSuppressedK2[] = {
     74957, 74958, 124138, 124139, 125865, 125866, 125867, 125868,  // 3cfd
     125872, 125874, 125889, 127840, 127841,
@@ -311,33 +192,14 @@ constexpr uint32_t kVoicedSuppressedK2[] = {
     117970, 117971, 117972, 117973, 117974, 117975,  // treatinj (<FullName>)
     123780, 123781, 123782,  // wrkbnch
 };
-constexpr int kVoicedSuppressedCount = static_cast<int>(
-    sizeof(kVoicedSuppressedK2) / sizeof(kVoicedSuppressedK2[0]));
+constexpr int kVoicedSuppressedCount =
+    static_cast<int>(sizeof(kVoicedSuppressedK2) / sizeof(kVoicedSuppressedK2[0]));
+TlkTexts<kVoicedSuppressedCount, 512> s_voicedText;
 
-char s_voicedText[kVoicedSuppressedCount][512];
-bool s_voicedTextBuilt = false;
-
-void BuildVoicedTextIfNeeded() {
-    if (s_voicedTextBuilt) return;
-    int resolved = 0;
-    for (int i = 0; i < kVoicedSuppressedCount; ++i) {
-        s_voicedText[i][0] = '\0';
-        if (acc::engine::LookupTlk(kVoicedSuppressedK2[i], s_voicedText[i],
-                                   sizeof(s_voicedText[i]))) {
-            ++resolved;
-        }
-    }
-    if (resolved > 0) {
-        s_voicedTextBuilt = true;
-        acclog::Write("TutorialHint", "voiced-suppress map built: %d/%d strrefs resolved",
-                      resolved, kVoicedSuppressedCount);
-    }
-}
-
-// memcmp-based strstr for a length-bounded needle segment.
+// strstr for a length-bounded needle.
 const char* FindSegment(const char* hay, const char* needle, size_t n) {
     if (n == 0) return hay;
-    size_t hayLen = std::strlen(hay);
+    const size_t hayLen = std::strlen(hay);
     if (hayLen < n) return nullptr;
     for (size_t i = 0; i + n <= hayLen; ++i) {
         if (std::memcmp(hay + i, needle, n) == 0) return hay + i;
@@ -345,16 +207,13 @@ const char* FindSegment(const char* hay, const char* needle, size_t n) {
     return nullptr;
 }
 
-// EqualsTrimmed, extended for lines the engine token-substitutes at render
-// time (<FullName> and friends, e.g. the treatinj medbay lines): the stored
-// TLK text's literal segments must appear left to right in the rendered line,
-// a token matches any run of characters, and — like EqualsTrimmed — leading /
-// trailing padding spaces don't count. Degenerates to EqualsTrimmed when the
-// stored text has no token.
+// EqualsTrimmed for lines the engine token-substitutes at render time
+// (<FullName> and friends, the treatinj medbay lines): the stored text's
+// literal segments must appear left to right in the rendered line, a token
+// matches any run of characters, and padding spaces at either end do not
+// count. Without a token it is EqualsTrimmed.
 bool MatchesWithTokens(const char* rendered, const char* stored) {
-    if (std::strchr(stored, '<') == nullptr) {
-        return EqualsTrimmed(rendered, stored);
-    }
+    if (std::strchr(stored, '<') == nullptr) return EqualsTrimmed(rendered, stored);
     while (*rendered == ' ') ++rendered;
     while (*stored == ' ') ++stored;
     const char* r = rendered;
@@ -371,9 +230,9 @@ bool MatchesWithTokens(const char* rendered, const char* stored) {
             continue;
         }
         const char* tok = std::strchr(s, '<');
-        size_t segLen = tok ? static_cast<size_t>(tok - s) : std::strlen(s);
+        const size_t segLen = tok ? static_cast<size_t>(tok - s) : std::strlen(s);
         size_t cmpLen = segLen;
-        if (!tok) {  // final literal: ignore its trailing padding
+        if (!tok) {  // the final literal: its trailing padding does not count
             while (cmpLen > 0 && s[cmpLen - 1] == ' ') --cmpLen;
         }
         if (first) {
@@ -388,24 +247,45 @@ bool MatchesWithTokens(const char* rendered, const char* stored) {
         first = false;
     }
     if (endsWithToken) return true;  // a trailing token swallows the rest
-    while (*r == ' ') ++r;           // after the final literal: padding only
+    while (*r == ' ') ++r;
     return *r == '\0';
 }
 
-bool IsVoicedSuppressedLine(const char* renderedLine) {
-    if (!renderedLine || !renderedLine[0]) return false;
-    // The curated strrefs are KOTOR 2 lines; a future KOTOR 1 entry gets its
-    // own table (see the forced-spoken list for the mirror-image gate).
-    if (!acc::game::IsKotor2()) return false;
-    BuildVoicedTextIfNeeded();
-    if (!s_voicedTextBuilt) return false;
-    for (int i = 0; i < kVoicedSuppressedCount; ++i) {
-        if (s_voicedText[i][0] &&
-            MatchesWithTokens(renderedLine, s_voicedText[i])) {
-            return true;
-        }
+}  // namespace
+
+const char* HintForDialogLine(const char* renderedLine, uint32_t* outStrref) {
+    if (!renderedLine || !renderedLine[0]) return nullptr;
+    int count = 0;
+    const DialogHint* hints = ActiveDialogHints(&count);
+    if (!s_hintText.Ensure(count, [&](int i) { return hints[i].strref; }, "dialog hint")) {
+        return nullptr;
     }
-    return false;
+    const int i = s_hintText.Find(
+        [&](const char* stored) { return EqualsTrimmed(renderedLine, stored); });
+    if (i < 0) return nullptr;
+    const char* s = acc::strings::Get(hints[i].id);
+    if (!s[0]) return nullptr;
+    if (outStrref) *outStrref = hints[i].strref;
+    return s;
+}
+
+bool IsForcedSpokenDialogLine(const char* renderedLine) {
+    // KOTOR 1 strrefs: on KOTOR 2 the same numbers name unrelated strings.
+    if (!renderedLine || !renderedLine[0] || acc::game::IsKotor2()) return false;
+    return s_forcedText.Ensure(kForcedSpokenCount,
+                               [](int i) { return kForcedSpokenStrrefs[i]; }, "forced-spoken") &&
+           s_forcedText.Find([&](const char* stored) {
+               return EqualsTrimmed(renderedLine, stored);
+           }) >= 0;
+}
+
+bool IsVoicedSuppressedLine(const char* renderedLine) {
+    if (!renderedLine || !renderedLine[0] || !acc::game::IsKotor2()) return false;
+    return s_voicedText.Ensure(kVoicedSuppressedCount,
+                               [](int i) { return kVoicedSuppressedK2[i]; }, "voiced-suppress") &&
+           s_voicedText.Find([&](const char* stored) {
+               return MatchesWithTokens(renderedLine, stored);
+           }) >= 0;
 }
 
 }  // namespace acc::tutorial_hints

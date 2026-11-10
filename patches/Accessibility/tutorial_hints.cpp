@@ -1,14 +1,15 @@
-#include "tutorial_hints.h"
+// The tutorial popup side of the tutorial hints: the keyboard hint spoken
+// for a mouse-worded tutorial.2da popup, found by the popup's row or by its
+// rendered message text.
+
+#include "tutorial_hints_internal.h"
 
 #include <windows.h>
 #include <cstdint>
-#include <cstring>
 
-#include "engine_game.h"     // IsKotor2 — per-game strref/row tables
-#include "engine_reads.h"    // LookupTlk
-#include "log.h"
-#include "strings.h"
+#include "engine_game.h"     // IsKotor2: per-game strref and row tables
 #include "engine_offsets_select.h"
+#include "strings.h"
 
 namespace acc::tutorial_hints {
 
@@ -16,17 +17,12 @@ namespace {
 
 using acc::strings::Id;
 
-// CSWGuiTutorialBox +0x994 (uint8) — the source tutorial.2da row index the
-// popup was built from. RE-confirmed: SetTutorialReason writes it, SetNextMessage
-// reads it back as the 2DA row. Survives after the popup is built, so a poll
-// recovers the popup's identity language-independently.
-// KOTOR 2: +0x9d8, witnessed in both directions — SetTutorialReason
-// @0x00898f60 writes it (and zeroes the page counter at +0x9d9), and
-// SetNextMessage @0x00899630 reads it back as the row for its
-// "Message_PC%i" 2DA lookups.
+// CSWGuiTutorialBox's tutorial.2da row (uint8): SetTutorialReason writes it
+// and SetNextMessage reads it back as the 2DA row; it outlives the build, so
+// a poll learns which popup this is in any language. K2 +0x9d8
+// (SetTutorialReason 0x00898f60 also zeroes the page counter at +0x9d9;
+// SetNextMessage 0x00899630 reads it for its "Message_PC%i" lookups).
 const size_t kTutorialBoxRowOffset = acc::off::Pick(0x994, 0x9d8);
-
-using acc::engine::EqualsTrimmed;
 
 }  // namespace
 
@@ -41,8 +37,8 @@ int ReadTutorialRow(void* panel) {
 }
 
 const char* HintForTutorialRow(int row) {
-    // Rows 0-42 carry the same labels in both games' tutorial.2da (verified
-    // against the K2 2DA 2026-08-25), so this block is shared. Rows only
+    // Rows 0-42 carry the same labels in both games' tutorial.2da, so this
+    // block is shared. Rows only
     // KOTOR 2 fires — its extra rows 43+, plus rows that exist in KOTOR 1's
     // 2DA but were left unmapped there — follow in the K2-only block.
     Id id;
@@ -102,6 +98,8 @@ const char* HintForTutorialRow(int row) {
     return (s[0]) ? s : nullptr;
 }
 
+namespace {
+
 // The message strrefs (the Message columns of tutorial.2da) for every mapped
 // row, paired with that row's keyboard-hint Id. The single-row message listbox
 // announces these mouse-worded strings; we resolve them through the engine TLK
@@ -138,7 +136,7 @@ constexpr MouseMsg kTutorialMouseMsgsK1[] = {
 };
 
 // KOTOR 2's tutorial.2da splits the columns into message_pc* and
-// message_xbox* (mined 2026-08-25). The engine reads message_pc on PC
+// message_xbox*. The engine reads message_pc on PC
 // (SetNextMessage @0x00899630 formats "Message_PC%i" unconditionally), but
 // both variants are listed where they differ so a build that ever renders the
 // pad column is still caught — text matching is cheap and cannot collide.
@@ -202,7 +200,7 @@ constexpr int kTutorialMouseMsgMax =
     kTutorialMouseMsgCountK1 > kTutorialMouseMsgCountK2 ? kTutorialMouseMsgCountK1
                                                         : kTutorialMouseMsgCountK2;
 
-inline const MouseMsg* ActiveMouseMsgs(int* count) {
+const MouseMsg* ActiveMouseMsgs(int* count) {
     if (acc::game::IsKotor2()) {
         *count = kTutorialMouseMsgCountK2;
         return kTutorialMouseMsgsK2;
@@ -211,47 +209,25 @@ inline const MouseMsg* ActiveMouseMsgs(int* count) {
     return kTutorialMouseMsgsK1;
 }
 
-// 1024, not 512: KOTOR 2's longest mapped popup text (the mine tutorial,
-// 48227) is ~850 bytes, and the announce paths hand rendered text around in
-// kAnnounceTextMax (1024) buffers — the stored copy must not truncate earlier
-// than the rendered one or EqualsTrimmed never matches.
-char s_mouseText[kTutorialMouseMsgMax][1024];
-int  s_mouseTextCount = 0;
-bool s_mouseTextBuilt = false;
+// 1024: K2's longest mapped popup text (the mine tutorial) is about 850
+// bytes, and a stored copy shorter than the rendered one (kAnnounceTextMax)
+// would never match.
+TlkTexts<kTutorialMouseMsgMax, 1024> s_mouseText;
 
-void BuildMouseTextIfNeeded() {
-    if (s_mouseTextBuilt) return;
-    int count = 0;
-    const MouseMsg* msgs = ActiveMouseMsgs(&count);
-    int resolved = 0;
-    for (int i = 0; i < count; ++i) {
-        s_mouseText[i][0] = '\0';
-        if (acc::engine::LookupTlk(msgs[i].strref, s_mouseText[i],
-                                   sizeof(s_mouseText[i]))) {
-            ++resolved;
-        }
-    }
-    if (resolved > 0) {
-        s_mouseTextBuilt = true;
-        s_mouseTextCount = count;
-        acclog::Write("TutorialHint", "popup mouse-text map built: %d/%d strrefs resolved",
-                      resolved, count);
-    }
-}
+}  // namespace
 
 const char* HintForMouseText(const char* text) {
     if (!text || !text[0]) return nullptr;
-    BuildMouseTextIfNeeded();
-    if (!s_mouseTextBuilt) return nullptr;
     int count = 0;
     const MouseMsg* msgs = ActiveMouseMsgs(&count);
-    for (int i = 0; i < s_mouseTextCount; ++i) {
-        if (s_mouseText[i][0] && EqualsTrimmed(text, s_mouseText[i])) {
-            const char* s = acc::strings::Get(msgs[i].hint);
-            return (s[0]) ? s : nullptr;
-        }
+    if (!s_mouseText.Ensure(count, [&](int i) { return msgs[i].strref; }, "popup mouse-text")) {
+        return nullptr;
     }
-    return nullptr;
+    const int i = s_mouseText.Find(
+        [&](const char* stored) { return acc::engine::EqualsTrimmed(text, stored); });
+    if (i < 0) return nullptr;
+    const char* s = acc::strings::Get(msgs[i].hint);
+    return s[0] ? s : nullptr;
 }
 
 }  // namespace acc::tutorial_hints
