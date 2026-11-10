@@ -96,6 +96,9 @@ patches/Accessibility/engine_game.cpp
 patches/Accessibility/engine_game.h
 patches/Accessibility/engine_input.cpp
 patches/Accessibility/engine_input.h
+patches/Accessibility/engine_input_acquire.cpp
+patches/Accessibility/engine_input_internal.h
+patches/Accessibility/engine_input_mouseguard.cpp
 patches/Accessibility/engine_keyboard_resync.cpp
 patches/Accessibility/engine_keyboard_resync.h
 patches/Accessibility/engine_keymap.cpp
