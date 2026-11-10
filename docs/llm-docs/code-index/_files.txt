@@ -277,6 +277,11 @@ patches/Accessibility/minigame_swoop_audio_obstacles.cpp
 patches/Accessibility/minigame_swoop_audio_state.cpp
 patches/Accessibility/minigame_swoop_race.cpp
 patches/Accessibility/minigame_swoop_race.h
+patches/Accessibility/minigame_swoop_race_cues.cpp
+patches/Accessibility/minigame_swoop_race_diag.cpp
+patches/Accessibility/minigame_swoop_race_internal.h
+patches/Accessibility/minigame_swoop_race_state.cpp
+patches/Accessibility/minigame_swoop_race_timer.cpp
 patches/Accessibility/minigame_turret.cpp
 patches/Accessibility/minigame_turret.h
 patches/Accessibility/minigame_turret_arena.cpp
