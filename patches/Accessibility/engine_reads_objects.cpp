@@ -40,18 +40,8 @@ int ReadObjectDamageLevel(void* serverObject) {
         }
     }
 
-    int cur = 0;
-    int max = 0;
-    __try {
-        auto curFn = reinterpret_cast<PFN_GetHpThisInt>(
-            kAddrCSWSObjectGetCurrentHitPoints);
-        auto maxFn = reinterpret_cast<PFN_GetHpThisInt>(
-            kAddrCSWSCreatureGetMaxHitPoints);
-        cur = static_cast<short>(curFn(serverObject, 0));
-        max = static_cast<short>(maxFn(serverObject, 1));
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return -1;
-    }
+    const int cur = ReadCreatureCurrentHitPoints(serverObject);
+    const int max = ReadCreatureMaxHitPoints(serverObject);
     if (max <= 0 || max > 0x4000) return -1;
 
     float ratio = static_cast<float>(cur) / static_cast<float>(max);
@@ -86,25 +76,14 @@ int ReadCreatureMaxHitPoints(void* serverCreature) {
 }
 
 int ReadObjectCurrentHitPoints(void* serverObject) {
-    if (!serverObject) return -1;
-    __try {
-        return static_cast<int>(*reinterpret_cast<short*>(
-            reinterpret_cast<unsigned char*>(serverObject) +
-            kObjectHitPointsOffset));
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return -1;
-    }
+    uint16_t hp = 0;
+    if (!TryReadU16(serverObject, kObjectHitPointsOffset, &hp)) return -1;
+    return static_cast<short>(hp);
 }
 
 bool IsPlotObject(void* serverObject) {
-    if (!serverObject) return false;
-    __try {
-        return *reinterpret_cast<uint32_t*>(
-                   reinterpret_cast<unsigned char*>(serverObject) +
-                   kObjectPlotOffset) != 0;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return false;
-    }
+    uint32_t plot = 0;
+    return TryReadU32(serverObject, kObjectPlotOffset, &plot) && plot != 0;
 }
 
 }  // namespace acc::engine

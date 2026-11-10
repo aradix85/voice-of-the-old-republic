@@ -12,48 +12,38 @@ namespace acc::engine {
 
 namespace {
 
-// True iff buf looks like real localised text rather than uninitialised
-// memory. The action-bar / target-action / radial column buttons leave
-// their CSWGuiControl.tooltip_string slot at +0x28 uninitialised
-// (engine renders these buttons via a separate dynamic-text path, so the
-// .gui-time CExoString never gets written). What we observed in practice
-// is a non-null literal pointer + a small length (3 bytes) yielding
-// CP1252 control-range bytes 0x80..0x9F — code points the engine never
-// emits in any localised UI string. Rejecting those lets the caller fall
-// back to the proper "No description available" cue.
+// True when buf looks like text rather than uninitialised memory: mostly
+// printable bytes (ASCII or 0xA0 and up; the CP1252 control block
+// 0x80..0x9F never occurs in UI strings). The action bar, target action and
+// radial buttons never write their tooltip_string, and what sits there is a
+// non-null pointer with a small length of such control bytes.
 bool LooksLikeReadableText(const char* buf, size_t len) {
-    if (!buf || len == 0) return false;
     size_t printable = 0;
     for (size_t i = 0; i < len; ++i) {
-        unsigned char c = static_cast<unsigned char>(buf[i]);
-        // ASCII printable + extended Latin range (covers German umlauts
-        // 0xE4/0xF6/0xFC/0xDF, accented French/Spanish/Italian, etc.).
-        // Excludes 0x00..0x1F (controls), 0x7F (DEL), and 0x80..0x9F
-        // (CP1252 control block — never used in localised UI strings).
-        if ((c >= 0x20 && c < 0x7F) || c >= 0xA0) {
-            ++printable;
-        }
+        const unsigned char c = static_cast<unsigned char>(buf[i]);
+        if ((c >= 0x20 && c < 0x7F) || c >= 0xA0) ++printable;
     }
-    // Require at least one printable byte AND a majority of printable
-    // bytes. Short all-garbage strings (the 3-byte case we hit) get
-    // rejected; legitimate short tooltips like "OK" keep working.
     return printable > 0 && printable * 2 >= len;
+}
+
+// True for the glyph markers KOTOR 2 embeds in a rendered gui_string: the
+// Aspyr build prefixes an actionable button's caption with a controller-icon
+// code, so Close renders as "\x11 Close". Whitespace controls are not
+// markers: '\n' carries meaning downstream (the Options settings blob is
+// recognised by its newlines, menus_setactive.cpp).
+bool IsGlyphMarkerByte(unsigned char ch) {
+    return ch < 0x20 && ch != '\t' && ch != '\n' && ch != '\r';
 }
 
 }  // namespace
 
 bool ReadControlNameFields(void* control, const char*& outTip,
                            uint32_t& outTipLen, int& outId) {
-    // Always initialise the outs: callers (OnHandleFocusChange) log them
-    // unconditionally, so an early return must not leave them garbage.
+    // The caller logs the outs whatever the result.
     outTip    = nullptr;
     outTipLen = 0;
     outId     = 0;
     if (!control) return false;
-    // SEH-guarded like CallDowncast below. This is called straight from the
-    // OnHandleFocusChange detour, which fires during engine control
-    // teardown - exactly the window where `control` is stale rather than
-    // null, which a null check cannot catch.
     __try {
         auto* base = reinterpret_cast<unsigned char*>(control);
         outTip    = *reinterpret_cast<const char**>(base + kControlTooltipStringOffset);
@@ -91,82 +81,28 @@ bool ReadControlTooltip(void* control, char* outBuf, size_t bufSize) {
     if (!control || !outBuf || bufSize < 2) return false;
     outBuf[0] = '\0';
 
-    // Bound the parent-walk so a malformed/cyclic parent chain can't spin
-    // us forever. The deepest in-game panel hierarchy we've observed is
-    // ~6 levels (panel → row → embedded button → text); 8 is generous.
-    void*    cur   = control;
-    void*    last  = nullptr;
-    int      hops  = 0;
-    while (cur && cur != last && hops < 8) {
-        last = cur;
-        ++hops;
-
-        uint32_t strref     = 0;
-        const char* literal = nullptr;
-        uint32_t literalLen = 0;
-        void*    parent     = nullptr;
-
-        __try {
-            auto* base = reinterpret_cast<unsigned char*>(cur);
-            strref  = *reinterpret_cast<uint32_t*>(base + kControlTooltipStrRefOffset);
-            literal = *reinterpret_cast<const char**>(base + kControlTooltipStringOffset);
-            literalLen = *reinterpret_cast<uint32_t*>(
-                base + kControlTooltipStringOffset + 4);
-            parent  = *reinterpret_cast<void**>(base + kControlParentOffset);
-        } __except (EXCEPTION_EXECUTE_HANDLER) {
+    // The deepest panel hierarchy seen is about 6 levels; 8 hops also stop a
+    // cyclic parent chain.
+    void* cur = control;
+    for (int hops = 0; cur && hops < 8; ++hops) {
+        uint32_t strref = 0;
+        void*    parent = nullptr;
+        if (!TryReadU32(cur, kControlTooltipStrRefOffset, &strref) ||
+            !TryReadPtr(cur, kControlParentOffset, &parent)) {
             return false;
         }
-
-        // 1. Strref takes priority (engine decompile: when field4_0x24
-        //    is non-zero AND a strref lookup succeeds, that wins over
-        //    the literal).
-        if (strref != 0 && strref != 0xFFFFFFFF) {
-            if (LookupTlk(strref, outBuf, bufSize) && outBuf[0]) {
-                return true;
-            }
+        // The strref wins over the literal when it resolves.
+        if (LookupTlk(strref, outBuf, bufSize) && outBuf[0]) return true;
+        // Garbage in the literal counts as no tooltip here; keep bubbling.
+        if (ReadCExoString(cur, kControlTooltipStringOffset, outBuf, bufSize) &&
+            LooksLikeReadableText(outBuf, strlen(outBuf))) {
+            return true;
         }
-
-        // 2. Literal tooltip_string. Validate it looks like real text —
-        //    action-bar / target-action / radial column buttons leave
-        //    this slot uninitialised and the engine never wipes it on
-        //    .gui load, so a stale non-null pointer + small length can
-        //    return CP1252 control-range garbage. Drop garbage and keep
-        //    bubbling so the caller's "no tooltip" fallback fires.
-        if (literal && literalLen > 0 && literalLen < bufSize) {
-            __try {
-                memcpy(outBuf, literal, literalLen);
-                outBuf[literalLen] = '\0';
-                if (LooksLikeReadableText(outBuf, literalLen)) {
-                    return true;
-                }
-                outBuf[0] = '\0';
-            } __except (EXCEPTION_EXECUTE_HANDLER) {
-                outBuf[0] = '\0';
-                // Fall through to parent walk — corrupt literal pointer.
-            }
-        }
-
-        // 3. Bubble up to parent and retry (engine recurses via
-        //    parent_control->vtable->DisplayToolTip).
+        outBuf[0] = '\0';
+        if (parent == cur) break;
         cur = parent;
     }
-
     return false;
-}
-
-// True for the byte-level glyph markers KOTOR 2 embeds in a rendered
-// gui_string. The Aspyr build prefixes an actionable button's caption with a
-// controller-icon code — 0x11 followed by a space — so the close button on
-// every sub-screen renders as "\x11 Close" while dialog.tlk 1582 says
-// "Close". Not whitespace, so no amount of trimming reaches it; it has to
-// come off as a distinct class of byte.
-//
-// Whitespace controls are deliberately NOT in the set. '\n' in particular
-// carries meaning downstream — the Options settings blob is identified by
-// interior newlines (menus_setactive.cpp) — so only the non-whitespace C0
-// codes are treated as markers.
-bool IsGlyphMarkerByte(unsigned char ch) {
-    return ch < 0x20 && ch != '\t' && ch != '\n' && ch != '\r';
 }
 
 bool ReadGuiString(void* control, size_t guiStringPtrOffset,
@@ -195,11 +131,9 @@ bool ReadGuiString(void* control, size_t guiStringPtrOffset,
     }
     if (!got) return false;
 
-    // Strip the glyph markers off both ends. Done here, at the single funnel
-    // every gui_string read goes through, rather than at each comparison site
-    // — the marker is not text, and letting it through means both a caption
-    // that no strref compare can match AND a stray control byte handed to the
-    // screen reader on every K2 button.
+    // Strip the glyph markers off both ends, here where every gui_string
+    // read passes: a marker left in defeats strref compares and reaches the
+    // screen reader as a stray control byte.
     size_t start = 0;
     while (outBuf[start] &&
            IsGlyphMarkerByte(static_cast<unsigned char>(outBuf[start]))) {
@@ -213,9 +147,8 @@ bool ReadGuiString(void* control, size_t guiStringPtrOffset,
     if (start != 0) memmove(outBuf, outBuf + start, end);
     outBuf[end] = '\0';
 
-    // Marker-only strings (a pure icon button) count as no text, so the
-    // caller falls through to its CExoString / strref paths instead of
-    // accepting an empty rendered string as the answer.
+    // A marker-only string (an icon button) is no text: the caller goes on
+    // to its CExoString and strref paths.
     return outBuf[0] != '\0';
 }
 
@@ -223,73 +156,45 @@ bool ExtractTextOrStrRefIndirect(void* control,
                                  size_t cexoOffset, size_t strRefOffset,
                                  size_t textObjectOffset,
                                  char* outBuf, size_t bufSize) {
-    // gui_string offset for label and button differ by inline CSWGuiText
-    // start offset; derive from cexoOffset to avoid threading another
-    // parameter through every call site (gui_string ptr is at
-    // text.+0x14 = (cexo - 0x18) + 0x14 = cexo - 4).
-    size_t guiStringPtrOffset = cexoOffset - 4;
-    if (ReadGuiString(control, guiStringPtrOffset, outBuf, bufSize)) {
-        return true;
-    }
+    // The gui_string pointer sits 4 bytes before the inline CExoString in
+    // both CSWGuiText layouts (text +0x14 against +0x18), which saves a
+    // parameter: kLabelGuiStringPtrOffset == kLabelTextOffset - 4, and the
+    // same for buttons.
+    if (ReadGuiString(control, cexoOffset - 4, outBuf, bufSize)) return true;
     if (ExtractTextOrStrRef(control, cexoOffset, strRefOffset, outBuf, bufSize)) {
         return true;
     }
-    bool got = false;
-    __try {
-        void* textObj = *reinterpret_cast<void**>(
-            reinterpret_cast<unsigned char*>(control) + textObjectOffset);
-        if (textObj) {
-            got = ExtractTextOrStrRef(textObj,
-                                      kTextObjectTextOffset,
-                                      kTextObjectStrRefOffset,
-                                      outBuf, bufSize);
-        }
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        acclog::Write("Engine.Reads", "text_object indirection SEH for control=%p "
-                      "(textObjectOffset=0x%x)", control, (unsigned)textObjectOffset);
-        got = false;
-    }
-    return got;
+    void* textObj = nullptr;
+    return TryReadPtr(control, textObjectOffset, &textObj) && textObj &&
+           ExtractTextOrStrRef(textObj, kTextObjectTextOffset,
+                               kTextObjectStrRefOffset, outBuf, bufSize);
 }
 
-bool ReadLabelText(void* label, char* outBuf, size_t bufSize) {
-    if (!label || !outBuf || bufSize == 0) return false;
-    outBuf[0] = '\0';
-    __try {
-        if (ReadGuiString(label, kLabelGuiStringPtrOffset,
-                          outBuf, bufSize) && outBuf[0] != '\0') {
-            return true;
-        }
-        if (ExtractTextOrStrRefIndirect(
-                label, kLabelTextOffset, kLabelStrRefOffset,
-                kLabelTextObjectOffset, outBuf, bufSize) &&
-            outBuf[0] != '\0') {
-            return true;
-        }
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        outBuf[0] = '\0';
+namespace {
+
+// Non-empty text through every path, "" on a miss.
+bool ReadTextOrEmpty(void* control, size_t cexoOffset, size_t strRefOffset,
+                     size_t textObjectOffset, char* outBuf, size_t bufSize) {
+    if (!control || !outBuf || bufSize == 0) return false;
+    if (ExtractTextOrStrRefIndirect(control, cexoOffset, strRefOffset,
+                                    textObjectOffset, outBuf, bufSize) &&
+        outBuf[0] != '\0') {
+        return true;
     }
+    outBuf[0] = '\0';
     return false;
+}
+
+}  // namespace
+
+bool ReadLabelText(void* label, char* outBuf, size_t bufSize) {
+    return ReadTextOrEmpty(label, kLabelTextOffset, kLabelStrRefOffset,
+                           kLabelTextObjectOffset, outBuf, bufSize);
 }
 
 bool ReadButtonText(void* button, char* outBuf, size_t bufSize) {
-    if (!button || !outBuf || bufSize == 0) return false;
-    outBuf[0] = '\0';
-    __try {
-        if (ReadGuiString(button, kButtonGuiStringPtrOffset,
-                          outBuf, bufSize) && outBuf[0] != '\0') {
-            return true;
-        }
-        if (ExtractTextOrStrRefIndirect(
-                button, kButtonTextOffset, kButtonStrRefOffset,
-                kButtonTextObjectOffset, outBuf, bufSize) &&
-            outBuf[0] != '\0') {
-            return true;
-        }
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        outBuf[0] = '\0';
-    }
-    return false;
+    return ReadTextOrEmpty(button, kButtonTextOffset, kButtonStrRefOffset,
+                           kButtonTextObjectOffset, outBuf, bufSize);
 }
 
 }  // namespace acc::engine
