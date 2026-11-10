@@ -1,6 +1,20 @@
-// Local bridge: how game things read in the JSON answers (game text as UTF-8, names as the mod speaks them, distance and direction from the player).
+// Local bridge: how game things read in the JSON answers: game text as
+// UTF-8, names as the mod speaks them, distance and direction from the
+// player.
+
+#include <windows.h>
+
+#include <cmath>
+#include <string>
 
 #include "bridge_internal.h"
+#include "engine_area.h"
+#include "engine_compass.h"
+#include "engine_game.h"
+#include "engine_player.h"
+#include "mod_version.h"
+#include "same_name_suffix.h"
+#include "speech.h"
 
 namespace acc::bridge {
 
@@ -18,8 +32,10 @@ float BearingDeg(float dx, float dy) {
 
 }  // namespace
 
-// ---------------------------------------------------------------------------
-// Text helpers
+std::string GameFields() {
+    return "\"game\":" + Json(acc::game::TitleName()) +
+           ",\"mod_version\":" + Json(std::string(acc::kModVersion) + "+bridge");
+}
 
 // Game codepage (what the engine and the speech path hand us) -> UTF-8.
 std::string ToUtf8(const char* text) {
@@ -84,9 +100,8 @@ std::string SpokenName(void* obj) {
 std::string RelativeJson(const PlayerFrame& f, const Vector& p) {
     if (!f.ok) return "null";
     float dx = p.x - f.pos.x, dy = p.y - f.pos.y;
-    float dist = std::sqrt(dx * dx + dy * dy);
     float bearing = BearingDeg(dx, dy);
-    std::string s = "{\"distance\":" + Num(dist) +
+    std::string s = "{\"distance\":" + Num(DistXY(f.pos, p)) +
                     ",\"bearing\":" + Num(bearing, 0) +
                     ",\"direction\":" + Json(Dir8(bearing));
     if (f.yawOk) {

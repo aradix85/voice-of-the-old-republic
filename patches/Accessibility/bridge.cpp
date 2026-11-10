@@ -1,66 +1,102 @@
-// Local bridge — see bridge.h for the contract.
-//
-// Winsock must be included before <windows.h>.
+// Local bridge, see bridge.h for the contract. This file: the socket thread,
+// the job queue between it and the main thread, and Tick.
 
+// Winsock must be included before <windows.h>.
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <windows.h>
+#include <bcrypt.h>
+
+#include <chrono>
+#include <condition_variable>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <deque>
+#include <memory>
+#include <mutex>
+#include <string>
+#include <thread>
+#include <vector>
+
+#include "bridge.h"
 #include "bridge_internal.h"
+#include "engine_game.h"
+#include "log.h"
+
+#pragma comment(lib, "ws2_32.lib")
+#pragma comment(lib, "bcrypt.lib")
 
 namespace acc::bridge {
 
 namespace {
 
-constexpr int   kFirstPort        = 47781;
-constexpr int   kPortAttempts     = 10;
-constexpr DWORD kSnapshotPeriodMs = 250;
-constexpr DWORD kJobTimeoutMs     = 2000;
-constexpr size_t kSpokenCapacity  = 300;
+constexpr int    kFirstPort      = 47781;
+constexpr int    kPortAttempts   = 10;
+constexpr DWORD  kJobTimeoutMs   = 2000;
+constexpr size_t kSpokenCapacity = 300;
 
-// ---------------------------------------------------------------------------
-// Shared state between the socket thread and the main thread
+// The requests Tick answers on the main thread. k1Only: the engine reads
+// behind them are mapped for KOTOR 1 only.
+struct Route {
+    const char* path;
+    bool        k1Only;
+    std::string (*run)(const Params&);
+};
+
+const Route kRoutes[] = {
+    {"/state",    false, [](const Params&) { return BuildSnapshot(); }},
+    {"/menu",     false, [](const Params&) { return BuildMenu(); }},
+    {"/do",       false, RunAction},
+    {"/nearby",   true,  BuildNearby},
+    {"/overview", true,  [](const Params&) { return BuildOverview(); }},
+    {"/objects",  true,  [](const Params&) { return BuildObjects(); }},
+    {"/rooms",    true,  [](const Params&) { return BuildRooms(); }},
+};
+
+const Route* FindRoute(const std::string& path) {
+    for (const Route& r : kRoutes) {
+        if (path == r.path) return &r;
+    }
+    return nullptr;
+}
+
 struct Spoken {
     uint32_t    id;
     DWORD       ms;
     std::string text;  // UTF-8
 };
 
+struct Job {
+    const Route* route = nullptr;
+    Params       params;
+    std::string  result;   // JSON body
+    bool         done = false;
+};
+
+// Shared between the socket thread and the main thread, under g_mu.
 std::mutex              g_mu;
 std::condition_variable g_cv;
 std::deque<Spoken>      g_spoken;
 uint32_t                g_nextSpokenId = 1;
-std::string             g_snapshot = "{\"ready\":false}";
-DWORD                   g_snapshotMs = 0;
 DWORD                   g_lastTickMs = 0;
 std::deque<std::shared_ptr<Job>> g_jobs;
 
+// Main thread only, before the socket thread starts.
 bool        g_started = false;
 int         g_port = 0;
 std::string g_token;
 
-std::string RunJob(const Job& job) {
-    if (job.path == "/nearby") {
-        std::string r = Param(job, "radius");
-        float radius = r.empty() ? 0.0f : static_cast<float>(std::atof(r.c_str()));
-        return BuildNearby(radius);
+std::string Run(const Job& job) {
+    if (job.route->k1Only && !acc::game::IsKotor1()) {
+        return "{\"error\":" +
+               Json(std::string(job.route->path + 1) + " is KOTOR 1 only for now") + "}";
     }
-    if (job.path == "/do") return RunAction(job);
-    if (job.path == "/overview") return BuildOverview();
-    if (job.path == "/objects") return BuildObjects();
-    if (job.path == "/rooms") return BuildRooms();
-    if (job.path == "/menu") return BuildMenu();
-    return "{\"error\":\"unknown job\"}";
+    return job.route->run(job.params);
 }
 
-void SendResponse(SOCKET c, int status, const std::string& body) {
-    const char* reason = status == 200 ? "OK"
-                       : status == 403 ? "Forbidden"
-                       : status == 404 ? "Not Found"
-                       : status == 504 ? "Gateway Timeout"
-                       : "Error";
-    std::string head = "HTTP/1.0 " + std::to_string(status) + " " + reason +
-                       "\r\nContent-Type: application/json; charset=utf-8"
-                       "\r\nCache-Control: no-store"
-                       "\r\nContent-Length: " + std::to_string(body.size()) +
-                       "\r\nConnection: close\r\n\r\n";
-    std::string all = head + body;
+void Send(SOCKET c, int status, const std::string& body) {
+    const std::string all = Response(status, body);
     const char* p = all.data();
     int left = static_cast<int>(all.size());
     while (left > 0) {
@@ -71,23 +107,53 @@ void SendResponse(SOCKET c, int status, const std::string& body) {
     }
 }
 
-std::string QueueAndWait(const std::string& path,
-                         const std::map<std::string, std::string>& params,
-                         int* status) {
+// Hands the request to the main thread and waits for Tick to answer it.
+std::string QueueAndWait(const Route& route, const Params& params, int& status) {
     auto job = std::make_shared<Job>();
-    job->path = path;
+    job->route = &route;
     job->params = params;
     std::unique_lock<std::mutex> lock(g_mu);
     g_jobs.push_back(job);
-    bool done = g_cv.wait_for(lock, std::chrono::milliseconds(kJobTimeoutMs),
-                              [&] { return job->done; });
-    if (!done) {
-        *status = 504;
+    if (!g_cv.wait_for(lock, std::chrono::milliseconds(kJobTimeoutMs),
+                       [&] { return job->done; })) {
+        status = 504;
         return "{\"error\":\"the game did not handle the request in time "
                "(is it minimised or loading?)\"}";
     }
-    *status = 200;
+    status = 200;
     return job->result;
+}
+
+std::string Health() {
+    const DWORD now = GetTickCount();
+    std::lock_guard<std::mutex> lock(g_mu);
+    const DWORD age = g_lastTickMs ? now - g_lastTickMs : 0xFFFFFFFF;
+    return "{\"ok\":true," + GameFields() +
+           ",\"last_tick_ms_ago\":" + std::to_string(age) + "}";
+}
+
+std::string SpokenSince(const Params& params) {
+    const uint32_t since =
+        static_cast<uint32_t>(std::strtoul(Param(params, "since").c_str(), nullptr, 10));
+    int max = std::atoi(Param(params, "max").c_str());
+    if (max <= 0 || max > static_cast<int>(kSpokenCapacity)) max = 50;
+    std::lock_guard<std::mutex> lock(g_mu);
+    std::vector<const Spoken*> picked;
+    for (auto it = g_spoken.rbegin(); it != g_spoken.rend(); ++it) {
+        if (it->id <= since) break;
+        picked.push_back(&*it);
+        if (static_cast<int>(picked.size()) >= max) break;
+    }
+    const DWORD now = GetTickCount();
+    std::string body = "{\"next\":" + std::to_string(g_nextSpokenId - 1) + ",\"lines\":[";
+    for (size_t i = picked.size(); i-- > 0;) {
+        const Spoken* sp = picked[i];
+        body += "{\"id\":" + std::to_string(sp->id) +
+                ",\"seconds_ago\":" + Num((now - sp->ms) / 1000.0) +
+                ",\"text\":" + Json(sp->text) + "}";
+        if (i) body += ",";
+    }
+    return body + "]}";
 }
 
 void HandleClient(SOCKET c) {
@@ -101,96 +167,24 @@ void HandleClient(SOCKET c) {
         if (got <= 0) break;
         req.append(buf, static_cast<size_t>(got));
     }
-    size_t lineEnd = req.find("\r\n");
-    if (lineEnd == std::string::npos) {
-        SendResponse(c, 400, "{\"error\":\"bad request\"}");
-        return;
-    }
-    std::string line = req.substr(0, lineEnd);
-    size_t sp1 = line.find(' ');
-    size_t sp2 = line.find(' ', sp1 + 1);
-    if (sp1 == std::string::npos || sp2 == std::string::npos) {
-        SendResponse(c, 400, "{\"error\":\"bad request line\"}");
-        return;
-    }
-    std::string target = line.substr(sp1 + 1, sp2 - sp1 - 1);
 
-    // Token check (header names are case-insensitive).
-    const std::string lower =
-        acc::strfmt::ToLowerAscii(req.substr(0, req.find("\r\n\r\n")));
-    const std::string want = acc::strfmt::ToLowerAscii("x-kotor-bridge: " + g_token);
-    if (lower.find(want) == std::string::npos) {
-        SendResponse(c, 403, "{\"error\":\"missing or wrong X-Kotor-Bridge token\"}");
-        return;
-    }
-
-    std::string path = target, query;
-    size_t qm = target.find('?');
-    if (qm != std::string::npos) {
-        path = target.substr(0, qm);
-        query = target.substr(qm + 1);
-    }
-    std::map<std::string, std::string> params;
-    ParseQuery(query, params);
-
-    if (path == "/health") {
-        DWORD now = GetTickCount();
-        std::lock_guard<std::mutex> lock(g_mu);
-        DWORD age = g_lastTickMs ? now - g_lastTickMs : 0xFFFFFFFF;
-        SendResponse(c, 200, "{\"ok\":true,\"game\":" +
-                     Json(acc::game::TitleName()) +
-                     ",\"mod_version\":" +
-                     Json(std::string(acc::kModVersion) + "+bridge") +
-                     ",\"last_tick_ms_ago\":" + std::to_string(age) + "}");
-        return;
-    }
-    if (path == "/spoken") {
-        uint32_t since = static_cast<uint32_t>(
-            std::strtoul(params["since"].c_str(), nullptr, 10));
-        int max = params["max"].empty() ? 50 : std::atoi(params["max"].c_str());
-        if (max <= 0 || max > 300) max = 50;
-        std::lock_guard<std::mutex> lock(g_mu);
-        std::vector<const Spoken*> picked;
-        for (auto it = g_spoken.rbegin(); it != g_spoken.rend(); ++it) {
-            if (it->id <= since) break;
-            picked.push_back(&*it);
-            if (static_cast<int>(picked.size()) >= max) break;
-        }
-        DWORD now = GetTickCount();
-        std::string body = "{\"next\":" + std::to_string(g_nextSpokenId - 1) +
-                           ",\"lines\":[";
-        for (size_t i = picked.size(); i-- > 0;) {
-            const Spoken* sp = picked[i];
-            body += "{\"id\":" + std::to_string(sp->id) +
-                    ",\"seconds_ago\":" + Num((now - sp->ms) / 1000.0) +
-                    ",\"text\":" + Json(sp->text) + "}";
-            if (i) body += ",";
-        }
-        body += "]}";
-        SendResponse(c, 200, body);
-        return;
-    }
-    if (path == "/state") {
-        std::lock_guard<std::mutex> lock(g_mu);
-        DWORD now = GetTickCount();
-        std::string body = g_snapshot;
-        // Splice the snapshot age into the object.
-        if (!body.empty() && body.back() == '}') {
-            body.pop_back();
-            body += ",\"snapshot_ms_ago\":" +
-                    std::to_string(g_snapshotMs ? now - g_snapshotMs : 0) + "}";
-        }
-        SendResponse(c, 200, body);
-        return;
-    }
-    if (path == "/nearby" || path == "/do" || path == "/overview" ||
-        path == "/menu" || path == "/objects" || path == "/rooms") {
+    std::string path;
+    Params params;
+    if (!ParseRequest(req, path, params)) {
+        Send(c, 400, "{\"error\":\"bad request\"}");
+    } else if (!HasToken(req, g_token)) {
+        Send(c, 403, "{\"error\":\"missing or wrong X-Kotor-Bridge token\"}");
+    } else if (path == "/health") {
+        Send(c, 200, Health());
+    } else if (path == "/spoken") {
+        Send(c, 200, SpokenSince(params));
+    } else if (const Route* route = FindRoute(path)) {
         int status = 200;
-        std::string body = QueueAndWait(path, params, &status);
-        SendResponse(c, status, body);
-        return;
+        const std::string body = QueueAndWait(*route, params, status);
+        Send(c, status, body);
+    } else {
+        Send(c, 404, "{\"error\":\"unknown path\"}");
     }
-    SendResponse(c, 404, "{\"error\":\"unknown path\"}");
 }
 
 void WriteConnectionFile() {
@@ -296,28 +290,20 @@ void RecordSpoken(const char* text) {
 void Tick() {
     if (!g_started) StartServer();
 
-    DWORD now = GetTickCount();
-    bool refresh = false;
     std::deque<std::shared_ptr<Job>> jobs;
     {
         std::lock_guard<std::mutex> lock(g_mu);
-        g_lastTickMs = now;
-        refresh = (now - g_snapshotMs) >= kSnapshotPeriodMs || !g_snapshotMs;
+        g_lastTickMs = GetTickCount();
         jobs.swap(g_jobs);
     }
-
-    if (refresh) {
-        std::string snap = BuildSnapshot();
-        std::lock_guard<std::mutex> lock(g_mu);
-        g_snapshot = std::move(snap);
-        g_snapshotMs = now;
-    }
-
     if (jobs.empty()) return;
+
     for (auto& job : jobs) {
-        std::string result = RunJob(*job);
-        acclog::Write("Bridge", "%s action=%s -> %.120s", job->path.c_str(),
-                      Param(*job, "action").c_str(), result.c_str());
+        std::string result = Run(*job);
+        if (std::strcmp(job->route->path, "/do") == 0) {
+            acclog::Write("Bridge", "/do action=%s -> %.120s",
+                          Param(job->params, "action").c_str(), result.c_str());
+        }
         std::lock_guard<std::mutex> lock(g_mu);
         job->result = std::move(result);
         job->done = true;

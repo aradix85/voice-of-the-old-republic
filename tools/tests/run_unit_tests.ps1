@@ -12,6 +12,7 @@ $out  = Join-Path $repo 'build\unit_tests'
 # The sources under test. Each must build without the game: no hooks, no
 # engine addresses, no Windows API.
 $underTest = @(
+    'bridge_http.cpp',
     'engine_compass.cpp',
     'save_points.cpp',
     'shortest_paths.cpp'

@@ -1,59 +1,90 @@
-// Local bridge: what is in the area, for /nearby, /overview, /objects and /rooms.
+// Local bridge: what is in the area, for /nearby, /overview, /objects and
+// /rooms.
+
+#include <algorithm>
+#include <cstdlib>
+#include <string>
+#include <utility>
+#include <vector>
 
 #include "bridge_internal.h"
+#include "cycle_state.h"
+#include "engine_area.h"
+#include "examine_view.h"
+#include "exit_memory.h"
+#include "same_name_suffix.h"
 
 namespace acc::bridge {
 
-std::string BuildNearby(float radius) {
-    if (!acc::game::IsKotor1())
-        return "{\"error\":\"nearby is KOTOR 1 only for now\"}";
+namespace {
+
+using C = acc::filter::CycleCategory;
+
+constexpr size_t kMaxObjects = 256;
+
+const char* Bool(bool b) { return b ? "true" : "false"; }
+
+// "category", "name" (as the mod speaks it), "handle", "x" and "y" of one
+// object, without braces.
+std::string ObjectFields(C cat, void* obj, const Vector& p) {
+    char nbuf[256] = {0};
+    std::string name = "?";
+    if (acc::narration::GetSpokenName(obj, cat, nbuf, sizeof(nbuf)) && nbuf[0])
+        name = ToUtf8(nbuf);
+    return "\"category\":" + Json(CategoryKey(cat)) + ",\"name\":" + Json(name) +
+           ",\"handle\":" + HandleJson(acc::engine::GetObjectHandle(obj)) +
+           ",\"x\":" + Num(p.x) + ",\"y\":" + Num(p.y);
+}
+
+// The live state /objects adds per category.
+std::string StateFields(C cat, void* obj) {
+    switch (cat) {
+        case C::Door:
+            return std::string(",\"open\":") + Bool(acc::engine::IsDoorOpen(obj)) +
+                   ",\"locked\":" + Bool(acc::engine::IsDoorLocked(obj)) +
+                   ",\"cosmetic\":" + Bool(acc::engine::IsDoorCosmetic(obj));
+        case C::Container:
+            return ",\"items\":" + std::to_string(acc::engine::GetContainerItemCount(obj));
+        case C::Npc:
+            return std::string(",\"dead\":") + Bool(acc::examine_view::IsCreatureDead(obj)) +
+                   ",\"hostile\":" + Bool(acc::examine_view::IsHostileCreature(obj));
+        default:
+            return "";
+    }
+}
+
+}  // namespace
+
+std::string BuildNearby(const Params& params) {
     PlayerFrame f = ReadPlayerFrame();
-    if (!f.ok) return "{\"error\":\"no player position (not in the world?)\"}";
+    if (!f.ok) return kNotInWorld;
+    const float radius = static_cast<float>(std::atof(Param(params, "radius").c_str()));
 
     std::string s = "{\"radius\":" + Num(radius) + ",\"objects\":[";
     bool first = true;
-    for (int c = 0; c < static_cast<int>(acc::filter::CycleCategory::Count_);
-         ++c) {
-        auto cat = static_cast<acc::filter::CycleCategory>(c);
+    for (int c = 0; c < static_cast<int>(C::Count_); ++c) {
+        const auto cat = static_cast<C>(c);
         acc::cycle::CategoryListing listing;
         if (!acc::cycle::BuildCategoryListing(cat, listing)) continue;
         for (int i = 0; i < listing.count; ++i) {
             if (listing.isPin[i] || !listing.objs[i]) continue;
             const Vector& p = listing.positions[i];
-            float dx = p.x - f.pos.x, dy = p.y - f.pos.y;
-            float dist = std::sqrt(dx * dx + dy * dy);
-            if (radius > 0 && dist > radius) continue;
-            void* obj = listing.objs[i];
-            char hbuf[16];
-            std::snprintf(hbuf, sizeof(hbuf), "0x%08x",
-                          acc::engine::GetObjectHandle(obj));
-            char nbuf[256] = {0};
-            std::string name = "?";
-            if (acc::narration::GetSpokenName(obj, cat, nbuf, sizeof(nbuf)) &&
-                nbuf[0])
-                name = ToUtf8(nbuf);
+            if (radius > 0 && DistXY(f.pos, p) > radius) continue;
             if (!first) s += ",";
             first = false;
-            s += "{\"category\":" + Json(CategoryKey(cat)) +
-                 ",\"name\":" + Json(name) +
-                 ",\"handle\":" + Json(hbuf) +
-                 ",\"x\":" + Num(p.x) + ",\"y\":" + Num(p.y) +
+            s += "{" + ObjectFields(cat, listing.objs[i], p) +
                  ",\"where\":" + RelativeJson(f, p) + "}";
         }
     }
-    s += "]}";
-    return s;
+    return s + "]}";
 }
 
 std::string BuildOverview() {
-    if (!acc::game::IsKotor1())
-        return "{\"error\":\"overview is KOTOR 1 only for now\"}";
     acc::exit_memory::Overview o;
-    if (!acc::exit_memory::CollectOverview(o))
-        return "{\"error\":\"no player position (not in the world?)\"}";
+    if (!acc::exit_memory::CollectOverview(o)) return kNotInWorld;
     PlayerFrame f = ReadPlayerFrame();
     std::string s = "{\"have_map\":";
-    s += o.haveGraph ? "true" : "false";
+    s += Bool(o.haveGraph);
     const std::string here = acc::exit_memory::CurrentRegionText();
     if (!here.empty()) s += ",\"here\":" + JsonGame(here.c_str());
     s += ",\"explored\":" + std::to_string(o.explored) +
@@ -69,13 +100,11 @@ std::string BuildOverview() {
     for (size_t i = 0; i < o.loot.size(); ++i) {
         const auto& l = o.loot[i];
         if (i) s += ",";
-        char hbuf[16];
-        std::snprintf(hbuf, sizeof(hbuf), "0x%08x", l.handle);
         s += "{\"name\":" + JsonGame(l.name.c_str()) +
-             ",\"handle\":" + Json(hbuf) +
+             ",\"handle\":" + HandleJson(l.handle) +
              ",\"x\":" + Num(l.pos.x) + ",\"y\":" + Num(l.pos.y) +
              ",\"where\":" + RelativeJson(f, l.pos) +
-             ",\"reachable\":" + (l.reachable ? "true" : "false");
+             ",\"reachable\":" + Bool(l.reachable);
         if (!l.way.empty()) s += ",\"way\":" + JsonGame(l.way.c_str());
         s += "}";
     }
@@ -83,85 +112,57 @@ std::string BuildOverview() {
     return s;
 }
 
-// Every door, loot container and ground item in the area with its live state,
-// heard before or not, for the map tool (kotor_kaart.py --live) to lay over
-// the static game files: which doors are open, which containers are empty,
-// what can be reached now, and what the game added (remains of the fallen).
+// Every door, loot container, ground item and creature in the area with its
+// live state and tag, heard before or not, for the map tool (kotor_kaart.py
+// --live) to lay over the static game files: which doors are open, which
+// containers are empty, who is where now, what can be reached, and what the
+// game added (remains of the fallen).
 std::string BuildObjects() {
-    if (!acc::game::IsKotor1())
-        return "{\"error\":\"objects is KOTOR 1 only for now\"}";
     PlayerFrame f = ReadPlayerFrame();
     void* area = acc::engine::GetCurrentArea();
-    if (!f.ok || !area) return "{\"error\":\"no player position (not in the world?)\"}";
+    if (!f.ok || !area) return kNotInWorld;
 
-    struct Entry {
-        void* obj;
-        acc::filter::CycleCategory cat;
-        Vector pos;
-    };
-    std::vector<Entry> found;
+    std::vector<void*> objs;
+    std::vector<Vector> poss;
+    std::vector<C> cats;
     acc::engine::AreaObjectIterator it(area);
     while (void* obj = it.Next()) {
-        using C = acc::filter::CycleCategory;
         C cat;
         if (acc::filter::ObjectMatches(obj, C::Door)) cat = C::Door;
         else if (acc::filter::ObjectMatches(obj, C::Container)) cat = C::Container;
         else if (acc::filter::ObjectMatches(obj, C::Item)) cat = C::Item;
+        else if (acc::filter::ObjectMatches(obj, C::Npc)) cat = C::Npc;
         else continue;
         Vector p;
         if (!acc::engine::GetObjectPosition(obj, p)) continue;
-        found.push_back(Entry{obj, cat, p});
-        if (found.size() >= 256) break;
+        objs.push_back(obj);
+        poss.push_back(p);
+        cats.push_back(cat);
+        if (objs.size() >= kMaxObjects) break;
     }
-    std::vector<void*> objs;
-    std::vector<Vector> poss;
-    for (const Entry& e : found) {
-        objs.push_back(e.obj);
-        poss.push_back(e.pos);
-    }
-    std::vector<char> behind(found.size(), 0);
-    if (!found.empty()) {
-        bool flags[256] = {};
-        if (acc::exit_memory::UnreachableFlags(objs.data(), poss.data(),
-                                               static_cast<int>(found.size()),
-                                               flags)) {
-            for (size_t i = 0; i < found.size(); ++i) behind[i] = flags[i] ? 1 : 0;
-        }
+    bool behind[kMaxObjects] = {};
+    if (!objs.empty() &&
+        !acc::exit_memory::UnreachableFlags(objs.data(), poss.data(),
+                                            static_cast<int>(objs.size()), behind)) {
+        std::fill(behind, behind + kMaxObjects, false);
     }
 
     std::string s = "{\"objects\":[";
-    for (size_t i = 0; i < found.size(); ++i) {
-        const Entry& e = found[i];
-        char nbuf[256] = {0};
-        std::string name = "?";
-        if (acc::narration::GetSpokenName(e.obj, e.cat, nbuf, sizeof(nbuf)) && nbuf[0])
-            name = ToUtf8(nbuf);
-        char hbuf[16];
-        std::snprintf(hbuf, sizeof(hbuf), "0x%08x", acc::engine::GetObjectHandle(e.obj));
+    for (size_t i = 0; i < objs.size(); ++i) {
+        char tag[64] = {0};
+        acc::engine::GetObjectTag(objs[i], tag, sizeof(tag));
         if (i) s += ",";
-        s += "{\"category\":" + Json(CategoryKey(e.cat)) +
-             ",\"name\":" + Json(name) + ",\"handle\":" + Json(hbuf) +
-             ",\"x\":" + Num(e.pos.x) + ",\"y\":" + Num(e.pos.y) +
-             ",\"reachable\":" + (behind[i] ? "false" : "true");
-        if (e.cat == acc::filter::CycleCategory::Door) {
-            s += std::string(",\"open\":") +
-                 (acc::engine::IsDoorOpen(e.obj) ? "true" : "false") +
-                 ",\"locked\":" + (acc::engine::IsDoorLocked(e.obj) ? "true" : "false") +
-                 ",\"cosmetic\":" + (acc::engine::IsDoorCosmetic(e.obj) ? "true" : "false");
-        } else if (e.cat == acc::filter::CycleCategory::Container) {
-            s += ",\"items\":" + std::to_string(acc::engine::GetContainerItemCount(e.obj));
-        }
-        s += ",\"where\":" + RelativeJson(f, e.pos) + "}";
+        s += "{" + ObjectFields(cats[i], objs[i], poss[i]) +
+             ",\"tag\":" + JsonGame(tag) +
+             ",\"reachable\":" + Bool(!behind[i]) + StateFields(cats[i], objs[i]) +
+             ",\"where\":" + RelativeJson(f, poss[i]) + "}";
     }
-    s += "]}";
-    return s;
+    return s + "]}";
 }
 
 // The area's regions (the mod's room graph): kind, visited, reachable now,
 // and which regions touch. For the map tool's room summary.
 std::string BuildRooms() {
-    if (!acc::game::IsKotor1())
-        return "{\"error\":\"rooms is KOTOR 1 only for now\"}";
     PlayerFrame f = ReadPlayerFrame();
     std::vector<acc::exit_memory::RegionSummary> rooms;
     std::vector<std::pair<int, int>> links;
@@ -173,10 +174,10 @@ std::string BuildRooms() {
         if (i) s += ",";
         s += "{\"id\":" + std::to_string(r.id) + ",\"kind\":" + Json(r.kind) +
              ",\"x\":" + Num(r.centre.x) + ",\"y\":" + Num(r.centre.y) +
-             ",\"visited\":" + (r.visited ? "true" : "false") +
-             ",\"here\":" + (r.here ? "true" : "false") +
-             ",\"reachable\":" + (r.reachable ? "true" : "false") +
-             ",\"behind_lock\":" + (r.behindLock ? "true" : "false") +
+             ",\"visited\":" + Bool(r.visited) +
+             ",\"here\":" + Bool(r.here) +
+             ",\"reachable\":" + Bool(r.reachable) +
+             ",\"behind_lock\":" + Bool(r.behindLock) +
              ",\"walk\":" + Num(r.walk) +
              ",\"where\":" + RelativeJson(f, r.centre) + "}";
     }
@@ -186,8 +187,7 @@ std::string BuildRooms() {
         s += "[" + std::to_string(links[i].first) + "," +
              std::to_string(links[i].second) + "]";
     }
-    s += "]}";
-    return s;
+    return s + "]}";
 }
 
 }  // namespace acc::bridge
