@@ -752,7 +752,7 @@ const char* Get(Id id) {
         case Id::KbNamePazaakOppHand:       return "Pazaak: Opponent hand";
         case Id::KbNameTurretCyclePrev:     return "Turret: Previous target";
         case Id::KbNameTurretCycleNext:     return "Turret: Next target";
-        case Id::KbNameSwoopShift:           "Swoop: Shift up";
+        case Id::KbNameSwoopShift:          return "Swoop: Shift up";
         // General
         case Id::KbNameHelpMenuOpen:        return "Key help";
         case Id::KbNameHelpContext:         return "Context help";
