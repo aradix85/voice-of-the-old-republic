@@ -47,6 +47,8 @@ rejections are advice only, Anouk decides.
 - Comments (Anouk, 2026-11-10 14:20): only where they really add
   something, as long as Claude understands the code. The full trim of
   comments that restate the code happens per module during its lean.
+- View mode (Anouk, 2026-11-10 22:10): goes. She walks with
+  Ctrl+Shift+N and autowalk and does not use it.
 
 ## Rules
 
@@ -217,7 +219,10 @@ equipment reader of combat_query, engine_reads for the memory reads).
 engine_reads_items: descriptions and actions split off (f571fd25), lean
 (edf9a39e: TryRead*, GetFeatRow/GetSpellRow/ReadRowStrRefText shared with
 examine_view).
-view_mode: narration and Enter split off (49c3e25e), lean (71ffbbfd).
+view_mode: narration and Enter split off (49c3e25e), lean (71ffbbfd);
+removed with its listener hook and the wall-surface clustering
+(82c9a9bf). viewpoint.h keeps what the rest asked it for: the camera
+yaw and the player position.
 filter: one ClassifyObject instead of four copies (189f655c).
 input_pipeline: the in-world hook in named steps (abbba85d), 394 lines, no
 split needed.
@@ -300,7 +305,7 @@ prefix (menus_listbox_picker.cpp).
   D done: proximity cues, wall cache tick moved to wall_surfaces
   (f4c6019); beacon (Ctrl+- now speaks the route), cycling and Q/E cues,
   combat heartbeat (Anouk: not needed) and the audio-frame probe out, map
-  edge and view-mode wall spoken (4d2371a). Left on purpose: minigame
+  edge spoken (4d2371a). Left on purpose: minigame
   audio, footstep suppression when stuck (a silenced game sound, plus the
   spoken stuck directions), the installer's optional dsoal spatial-audio
   toggle (game audio). Still to do:
@@ -347,12 +352,6 @@ prefix (menus_listbox_picker.cpp).
   menus_listbox_picker 524, menus_focus_k2 520, help 520, menus_focus 510,
   menus_powers_levelup 510. The catalog headers (engine_offsets_fields.h
   2318, engine_offsets_addresses.h 1060, engine_area.h 789) stay as they are.
-- View-mode wall test: SegmentCrossesSurface (view_mode only) skips every
-  surface that is a loop or a fork, which the old diagnostics put at 15-33%
-  of the surfaces in some areas. The clustering predates the portal filter
-  in walkmesh_geometry; SegmentCrossesWalkmesh on the filtered walls would
-  see every wall and make the clustering (about 200 lines) unnecessary.
-  Needs an in-game check of the view-mode "Wall" line.
 - F13 WriteJmpRel32 (engine_input_mouseguard) and WriteRel32Jmp
   (save_crash_guard) are the same four lines: one shared helper.
 - F2b: share the save-variable code of exit_memory with discovery.cpp.
@@ -403,7 +402,7 @@ kSortByOwnCy); the tool keeps it in the one file whose code uses it.
   friends (noise in engine-pointer code), useStlAlgorithm (loops read
   better), uninitMemberVarNoCtor (POD structs filled by the engine),
   badBitmaskCheck on `kKindDeadEnd & 0xff |` (written that way to show
-  the layout), view_mode shadow/duplicateAssign, and the false positives
+  the layout), and the false positives
   (bridge_describe containerOutOfBounds, cycle_state and skillinfo
   uninitvar).
 - BTN_WAEHLEN / BTN_ABBRECHEN stay in a comment: they are .gui control
