@@ -71,7 +71,7 @@ namespace KotorAccessibilityInstaller
         public static readonly string[] KeepModules =
         {
             "swkotor.exe", "swkotor2.exe",
-            "accessibility.dll", "kotorpatcher.dll", "dinput8.dll", "prism.dll", "sqlite3.dll",
+            "accessibility.dll", "kotorpatcher.dll", "dinput8.dll", "sqlite3.dll",
             "widescreen.dll",
         };
 

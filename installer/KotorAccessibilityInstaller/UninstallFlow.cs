@@ -84,7 +84,7 @@ namespace KotorAccessibilityInstaller
                     catch (Exception ex) { Logger.Warning($"Could not delete {name}: {ex.Message}"); }
                 }
 
-                // Remove the patches/ folder we put accessibility.dll + prism.dll into.
+                // Remove the patches/ folder we put accessibility.dll + nvdaControllerClient32.dll into.
                 string patchesDir = Path.Combine(gamePath, "patches");
                 if (Directory.Exists(patchesDir))
                 {

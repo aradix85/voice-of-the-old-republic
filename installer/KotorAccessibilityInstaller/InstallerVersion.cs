@@ -12,7 +12,7 @@ namespace KotorAccessibilityInstaller
     /// shipped EXE is stamped with the release it went out in (v0.8.0 -> file
     /// version 0.8.0.0). That is deliberate here in a way it would not be for a
     /// pure downloader — this EXE *carries* the payload (KotorPatcher.dll,
-    /// prism.dll, the dinput8 proxy, the VC runtime, HoloPatcher, the address
+    /// the NVDA controller client, the dinput8 proxy, the VC runtime, HoloPatcher, the address
     /// database, the Override samples), all of which are refreshed from
     /// third_party at release time. An installer one release behind therefore
     /// installs a current .kpatch next to stale bundled binaries, which is

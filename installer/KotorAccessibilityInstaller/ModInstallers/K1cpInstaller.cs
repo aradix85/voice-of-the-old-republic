@@ -91,7 +91,7 @@ namespace KotorAccessibilityInstaller.ModInstallers
                 // input the parser over-runs the read buffer by one byte per
                 // line and eventually scans into unmapped memory inside
                 // sscanf -> strlen. Heap-layout luck masks the bug for some
-                // installs; others (e.g. with our DLL + Prism + SAPI in the
+                // installs; others (e.g. with our DLL and its speech runtime in the
                 // process) hit a decommitted page and crash. See
                 // docs/upstream-prs.md PR-6 for the upstream report.
                 int normalized = NormalizeOverrideLineEndings(ctx.GameDir);

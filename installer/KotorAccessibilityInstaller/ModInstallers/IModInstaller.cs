@@ -5,7 +5,7 @@ namespace KotorAccessibilityInstaller.ModInstallers
     /// <summary>
     /// One per bundled optional mod (K1CP, JDR, Party Conversations on Ebon Hawk,
     /// Thematic Companions, Swoop Bike Upgrades, UniWS, HR Menus). Plays inside
-    /// MainForm's install pipeline after the .kpatch + Prism + ini tweaks land.
+    /// MainForm's install pipeline after the .kpatch + speech runtime + ini tweaks land.
     ///
     /// Contract: each installer is self-contained — it downloads its own source,
     /// stages it, applies it, cleans up. The coordinator handles ordering and

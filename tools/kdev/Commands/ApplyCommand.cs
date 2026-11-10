@@ -149,11 +149,9 @@ public static class ApplyCommand
             Console.WriteLine($"Detected version: {result.DetectedVersion.DisplayName}");
         }
 
-        // Copy bundled Prism runtime DLL alongside our patch DLL. Prism's
-        // bridge DLLs (orca, speech_dispatcher) do LoadLibrary with bare
-        // names; prism.cpp points SetDllDirectory at this dir so they
-        // resolve against bundled neighbours instead of WindowsApps.
-        var copyExit = CopyPrismRuntimeDll(config, target);
+        // The NVDA controller client next to our patch DLL; speech.cpp loads
+        // it from there.
+        var copyExit = CopySpeechRuntimeDll(config, target);
         if (copyExit != 0) return copyExit;
 
         // Drop the dinput8.dll proxy next to the game exe. Without it the
@@ -184,20 +182,13 @@ public static class ApplyCommand
         return 0;
     }
 
-    private static int CopyPrismRuntimeDll(KdevConfig config, KdevConfig.GameTarget target)
+    private static int CopySpeechRuntimeDll(KdevConfig config, KdevConfig.GameTarget target)
     {
-        var prismSrcDir = Path.Combine(config.ProjectRoot, "third_party", "prism-dist", "x86");
-        if (!Directory.Exists(prismSrcDir))
+        var srcDll = Path.Combine(config.ProjectRoot, "third_party", "nvda", "x86",
+                                  "nvdaControllerClient32.dll");
+        if (!File.Exists(srcDll))
         {
-            Console.Error.WriteLine($"ERROR: Prism dist dir not found: {prismSrcDir}");
-            Console.Error.WriteLine("       Expected vendored binaries from upstream prism/x86.");
-            return 5;
-        }
-
-        var prismDll = Path.Combine(prismSrcDir, "prism.dll");
-        if (!File.Exists(prismDll))
-        {
-            Console.Error.WriteLine($"ERROR: prism.dll not found at {prismDll}");
+            Console.Error.WriteLine($"ERROR: NVDA controller client not found at {srcDll}");
             return 5;
         }
 
@@ -205,28 +196,24 @@ public static class ApplyCommand
         Directory.CreateDirectory(destDir);
 
         Console.WriteLine();
-        Console.WriteLine("Copying Prism runtime DLL...");
-        var dst = Path.Combine(destDir, "prism.dll");
-        File.Copy(prismDll, dst, overwrite: true);
-        Console.WriteLine("  ✓ prism.dll");
+        Console.WriteLine("Copying the NVDA controller client...");
+        File.Copy(srcDll, Path.Combine(destDir, "nvdaControllerClient32.dll"), overwrite: true);
+        Console.WriteLine("  ✓ nvdaControllerClient32.dll");
 
-        // Tolk migration cleanup: remove stale Tolk runtime files from prior
-        // installs. Safe — these are files this command itself used to copy.
-        string[] staleTolkFiles = { "Tolk.dll", "nvdaControllerClient32.dll" };
-        foreach (var stale in staleTolkFiles)
+        // Speech runtimes this command used to copy.
+        string[] staleFiles = { "prism.dll", "Tolk.dll" };
+        foreach (var stale in staleFiles)
         {
             var stalePath = Path.Combine(destDir, stale);
-            if (File.Exists(stalePath))
+            if (!File.Exists(stalePath)) continue;
+            try
             {
-                try
-                {
-                    File.Delete(stalePath);
-                    Console.WriteLine($"  ✓ removed stale {stale}");
-                }
-                catch (Exception ex)
-                {
-                    Console.Error.WriteLine($"  WARN: could not remove stale {stale}: {ex.Message}");
-                }
+                File.Delete(stalePath);
+                Console.WriteLine($"  ✓ removed stale {stale}");
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"  WARN: could not remove stale {stale}: {ex.Message}");
             }
         }
 

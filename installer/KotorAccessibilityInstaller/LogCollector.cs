@@ -636,7 +636,7 @@ namespace KotorAccessibilityInstaller
                 sb.AppendLine(line);
             }
 
-            sb.AppendLine("  (prism.dll is delay-loaded: losing it silences the mod but still writes a patch log;");
+            sb.AppendLine("  (nvdaControllerClient32.dll is loaded at runtime: losing it silences the mod but still writes a patch log;");
             sb.AppendLine("   every other line above is load-critical. dinput8.dll is the one antivirus quarantines.)");
         }
 

@@ -3,7 +3,7 @@ namespace KotorAccessibilityInstaller
     /// <summary>
     /// User's per-category selection from <see cref="ModSelectionForm"/>.
     /// Each flag covers one of the three optional mod groupings; the always-installed
-    /// components (accessibility mod, KotorPatcher runtime, Prism, widescreen) live
+    /// components (accessibility mod, KotorPatcher runtime, NVDA controller client, widescreen) live
     /// outside this struct because they are not user-selectable.
     /// </summary>
     public sealed class ModSelection

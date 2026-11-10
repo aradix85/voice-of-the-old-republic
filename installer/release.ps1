@@ -234,7 +234,8 @@ Write-Host "`nRefreshing installer bundled resources..." -ForegroundColor Cyan
 $installerResources = Join-Path $root 'installer\KotorAccessibilityInstaller\Resources'
 Copy-Item (Join-Path $root 'third_party\Kotor-Patch-Manager\bin\Release\KotorPatcher.dll') $installerResources -Force
 Copy-Item (Join-Path $root 'third_party\Kotor-Patch-Manager\bin\Release\sqlite3.dll')      $installerResources -Force
-Copy-Item (Join-Path $root 'third_party\prism-dist\x86\prism.dll')                          $installerResources -Force
+Copy-Item (Join-Path $root 'third_party\nvda\x86\nvdaControllerClient32.dll')               $installerResources -Force
+Copy-Item (Join-Path $root 'third_party\nvda\LICENSE.txt') (Join-Path $installerResources 'nvdaControllerClient-License.txt') -Force
 Copy-Item (Join-Path $root 'third_party\Kotor-Patch-Manager\AddressDatabases\kotor1_0_3.db') $installerResources -Force
 Copy-Item $loaderDll                                                                         $installerResources -Force
 Write-Host "  Resources refreshed" -ForegroundColor Green
@@ -339,7 +340,7 @@ $notesText += @"
 
 Run ``VoiceOfTheOldRepublicInstaller.exe`` to install. The installer detects your
 Steam copy of KOTOR, applies ``Accessibility.kpatch`` via KPatchManager, and
-drops the Prism speech runtime alongside.
+drops the NVDA controller client alongside.
 
 **Verification (SHA256):**
 

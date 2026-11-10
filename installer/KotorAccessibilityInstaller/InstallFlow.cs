@@ -101,7 +101,7 @@ namespace KotorAccessibilityInstaller
 
             if (gameVersionForm.Selection.Kotor1)
             {
-                // Base-components info: accessibility mod + Prism + widescreen (always installed).
+                // Base-components info: accessibility mod + NVDA controller client + widescreen (always installed).
                 var infoForm = new ModdingInfoForm();
                 Application.Run(infoForm);
                 if (!infoForm.ProceedWithInstall)

@@ -247,7 +247,7 @@ namespace KotorAccessibilityInstaller
                 // sentinel FadeTime, never by name) but wrong, and a duplicate
                 // name is exactly the sort of thing a label-based lookup
                 // elsewhere would trip over.
-                row.TryGetValue(LogicalColumn(c), out string? val);
+                row.TryGetValue(LogicalColumn(c), out string val);
                 val ??= "";  // unknown column -> empty cell (defensive, forward-compat)
                 int off = data.Count;
                 data.AddRange(Encoding.ASCII.GetBytes(val));

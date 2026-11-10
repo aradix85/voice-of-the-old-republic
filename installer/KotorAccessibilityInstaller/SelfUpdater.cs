@@ -36,7 +36,7 @@ namespace KotorAccessibilityInstaller
     /// <para>WHY THIS MATTERS MORE HERE THAN FOR A PURE DOWNLOADER. The .kpatch
     /// is always fetched from the newest release, so an old installer still
     /// installs the newest mod. Everything else it lays down comes out of its own
-    /// EXE — KotorPatcher.dll, prism.dll, the dinput8 proxy, the VC runtime,
+    /// EXE — KotorPatcher.dll, the NVDA controller client, the dinput8 proxy, the VC runtime,
     /// HoloPatcher, the address database, the Override samples and 2DAs. Running
     /// last release's installer therefore pairs a current .kpatch with stale
     /// bundled binaries, and that mismatch is not something the user can see or

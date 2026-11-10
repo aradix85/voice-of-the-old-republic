@@ -451,5 +451,4 @@ installer/KotorAccessibilityInstaller/UninstallFlow.cs
 installer/KotorAccessibilityInstaller/UninstallForm.cs
 installer/KotorAccessibilityInstaller/UpdateAvailableForm.cs
 installer/KotorAccessibilityInstaller/WelcomeForm.cs
-installer/KotorAccessibilityInstaller/WindowsVoicesInstaller.cs
 installer/KotorAccessibilityInstaller/WorkshopTslrcmForm.cs

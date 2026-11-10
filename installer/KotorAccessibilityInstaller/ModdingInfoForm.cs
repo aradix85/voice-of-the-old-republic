@@ -8,7 +8,7 @@ namespace KotorAccessibilityInstaller
     /// <summary>
     /// Screen inserted between the welcome wizard and the mod-selection screen.
     /// Informs the user about the components that are ALWAYS installed
-    /// (accessibility mod, Prism speech bridge, widescreen patches) — these are
+    /// (accessibility mod, NVDA controller client, widescreen patches) — these are
     /// not user-selectable because the mod depends on them for basic functionality.
     /// User-optional mods live in <see cref="ModSelectionForm"/>.
     ///
@@ -115,7 +115,7 @@ namespace KotorAccessibilityInstaller
 
         private static string BuildContent()
         {
-            // Read order: accessibility mod → Prism → widescreen. Each section
+            // Read order: accessibility mod → NVDA controller client → widescreen. Each section
             // gives a short blurb plus a credit line where relevant.
             var sb = new StringBuilder();
 
@@ -124,8 +124,8 @@ namespace KotorAccessibilityInstaller
                 InstallerLocale.Get("ModdingInfo_AccessibilityBody"));
 
             AppendSection(sb,
-                InstallerLocale.Get("ModdingInfo_PrismHeading"),
-                InstallerLocale.Get("ModdingInfo_PrismBody"));
+                InstallerLocale.Get("ModdingInfo_SpeechHeading"),
+                InstallerLocale.Get("ModdingInfo_SpeechBody"));
 
             AppendSection(sb,
                 InstallerLocale.Get("ModdingInfo_WidescreenHeading"),

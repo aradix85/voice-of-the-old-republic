@@ -12,7 +12,7 @@ namespace KotorAccessibilityInstaller
     /// Drives the KOTOR-side installation: stages the bundled KPatchManager runtime
     /// (KotorPatcher.dll, sqlite3.dll, AddressDatabases/) into a temp directory,
     /// invokes KPatchCore.PatchApplicator against the downloaded .kpatch, then
-    /// drops the bundled Prism speech runtime alongside accessibility.dll.
+    /// drops the bundled NVDA controller client alongside accessibility.dll.
     /// </summary>
     public class InstallationManager
     {
@@ -25,7 +25,8 @@ namespace KotorAccessibilityInstaller
         // DLL it copies into the game folder.
         private static readonly string[] PatcherRuntimeFiles = { "KotorPatcher.dll", "sqlite3.dll" };
         private static readonly string[] AddressDbFiles = { "kotor1_0_3.db" };
-        private const string PrismDllName = "prism.dll";
+        private const string SpeechDllName = "nvdaControllerClient32.dll";
+        private const string SpeechLicenseName = "nvdaControllerClient-License.txt";
         private const string LoaderDllName = "dinput8.dll";
 
         // Visual C++ runtime, deployed app-locally into the game root — see
@@ -57,10 +58,10 @@ namespace KotorAccessibilityInstaller
         /// textbook DLL-hijack pattern, and antivirus quarantines it by
         /// name+behaviour, often on a scan hours after a working session.</para>
         ///
-        /// <para><c>prism.dll</c> is last and is the one non-fatal entry: it is
-        /// delay-loaded, so losing it silences the mod but still produces a
-        /// patch log. Included because "no speech" is exactly the report this
-        /// list is read for.</para>
+        /// <para><c>nvdaControllerClient32.dll</c> is last and is the one
+        /// non-fatal entry: the mod loads it at runtime, so losing it silences
+        /// the mod but still produces a patch log. Included because "no
+        /// speech" is exactly the report this list is read for.</para>
         /// </summary>
         public static IReadOnlyList<string> LoadChainFileNames { get; } =
             new[] { LoaderDllName }
@@ -68,7 +69,7 @@ namespace KotorAccessibilityInstaller
                 .Concat(VcRuntimeFiles)
                 .Concat(new[] { PatchConfigFileName })
                 .Concat(new[] { Path.Combine("patches", "accessibility.dll"),
-                                Path.Combine("patches", PrismDllName) })
+                                Path.Combine("patches", SpeechDllName) })
                 .ToArray();
 
         /// <summary>
@@ -519,25 +520,23 @@ namespace KotorAccessibilityInstaller
         }
 
         /// <summary>
-        /// Copies the bundled Prism speech runtime into &lt;game&gt;/patches/.
-        /// Prism's NVDA bridge is statically linked, so no separate NVDA DLL is shipped —
-        /// see docs/installer.md for the migration rationale.
-        ///
-        /// Also removes stale Tolk runtime files left over from earlier installer
-        /// versions (Tolk.dll, nvdaControllerClient32.dll), matching the cleanup
-        /// path in tools/kdev/Commands/ApplyCommand.cs.
+        /// Copies the bundled NVDA controller client into &lt;game&gt;/patches/,
+        /// where speech.cpp loads it, and removes the speech runtimes earlier
+        /// versions shipped (prism.dll, Tolk.dll). tools/kdev/Commands/ApplyCommand.cs
+        /// does the same for dev deploys.
         /// </summary>
-        public void InstallPrismRuntime()
+        public void InstallSpeechRuntime()
         {
             string patchesDir = Path.Combine(_gameDir, "patches");
             Directory.CreateDirectory(patchesDir);
 
-            string prismDest = Path.Combine(patchesDir, PrismDllName);
-            ExtractEmbeddedResource(PrismDllName, prismDest);
-            Logger.Info($"Installed Prism speech runtime to: {prismDest}");
+            string speechDest = Path.Combine(patchesDir, SpeechDllName);
+            ExtractEmbeddedResource(SpeechDllName, speechDest);
+            ExtractEmbeddedResource(SpeechLicenseName, Path.Combine(patchesDir, SpeechLicenseName));
+            Logger.Info($"Installed the NVDA controller client to: {speechDest}");
 
-            string[] staleTolkFiles = { "Tolk.dll", "nvdaControllerClient32.dll" };
-            foreach (var stale in staleTolkFiles)
+            string[] staleFiles = { "prism.dll", "Tolk.dll" };
+            foreach (var stale in staleFiles)
             {
                 string stalePath = Path.Combine(patchesDir, stale);
                 if (File.Exists(stalePath))
@@ -805,7 +804,7 @@ namespace KotorAccessibilityInstaller
         /// <summary>
         /// Best-effort clear of the read-only attribute on an existing target so
         /// FileMode.Create can overwrite it. A prior install (or a mod archive
-        /// extracted read-only) can leave dinput8.dll / prism.dll read-only,
+        /// extracted read-only) can leave dinput8.dll / nvdaControllerClient32.dll read-only,
         /// which otherwise fails the write instantly with "access denied".
         /// </summary>
         private static void ClearReadOnly(string path)
