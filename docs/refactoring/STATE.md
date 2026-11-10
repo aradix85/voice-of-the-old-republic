@@ -358,8 +358,7 @@ prefix (menus_listbox_picker.cpp).
   possible; for files above 500 lines, judge whether a split into modules of
   things that belong together makes sense, and do it where it does.
 - Next file, by size (2026-11-10 21:15, strings*.cpp excepted):
-  to judge: menus_chargen_feats 561,
-  combat_diag 543, minigame_turret_peg 536,
+  to judge: menus_chargen_feats 561, minigame_turret_peg 536,
   menus_listbox_picker 524, menus_focus_k2 520, help 520, menus_focus 510,
   menus_powers_levelup 510. The catalog headers (engine_offsets_fields.h
   2318, engine_offsets_addresses.h 1060, engine_area.h 789) stay as they are.
@@ -423,25 +422,12 @@ prefix (menus_listbox_picker.cpp).
   in the old combat_query say returns garbage for anyone but the PC.
   ReadClientCreatureHitPoints is the read the character sheet uses.
   Compare Ctrl+H or the bridge with the character sheet in game.
-- Next design, combat_diag.cpp (543 lines, read 2026-11-11, not changed
-  yet). The name hides two shipped behaviours among the diagnostics:
-  the spoken idle notice ("You are not attacking", in Tick with
-  HostileNearby) and LeaderIsAttacking (R on a target already being
-  attacked, used by input_poll_router). OnUseItemRequestK2, called
-  log-only, also cancels the no-op watch. Its queue readers repeat
-  combat_queue_engine: ReadFirstQueuedTarget is GetQueueAction(round, 0)
-  plus ReadActionFields; GetPlayerCombatRound and ReadQueueSize are
-  ReadCombatRound; ReadRoundActionCount is RawRoundCount except for a
-  round without a list (0 here, on purpose, for the CLEAR hook and the
-  idle test; -1 there, where OnEngineActionAdded then stays silent).
-  Plan: (1) move-only, the idle notice and LeaderIsAttacking to the
-  combat_queue module (watch file), with the State readers they need;
-  (2) lean, the readers on combat_queue_engine and engine_reads, one
-  count function with the null-list case decided once (check the
-  engine's AddAction: can it run on a round without a list?);
-  (3) combat_diag keeps the DELTA / PRE / POST lines and the three
-  log-only hooks. combat_diag_internal.h and the split history at the
-  top of combat_queue_hooks.cpp go with it.
+- combat_diag is done (543 -> 263): it only logs now. The idle notice,
+  LeaderIsAttacking and the queue readers are in combat_queue; one count
+  function, where a round without an action list is 0 (it was -1 and
+  silent in OnEngineActionAdded). Not checked against the engine whether
+  AddAction can run on such a round; if it can, the announce now says
+  "position 1" there.
 - Bug, found by Anouk in play (2026-11-10): a locked container that opens
   through a dialog on the object itself is labelled "opens only through
   the story". ReadLockNeed answers StoryOnly for key-required without a
@@ -452,9 +438,29 @@ prefix (menus_listbox_picker.cpp).
   or an OnUsed script gets TryIt, or a wording of its own; needs the
   CSWSPlaceable offsets of those two fields, verified. Also check that
   Enter next to such a container starts the dialog (her attempts were
-  from 15 m and the walk was cancelled), and whether the six holograms
-  of the Security Crate (placeables with OnUsed, no inventory) are in
-  the , / . cycle.
+  from 15 m and the walk was cancelled). Seen 2026-11-11: Enter at 1 m
+  starts the crate's dialog, and the six holograms are in the , / .
+  cycle as containers.
+- Three findings from the Security Crate puzzle (2026-11-11, installed
+  build d875083, log patch-20261110-224439.log):
+  (1) A hologram that is switched on is locked by its script and then
+  reads "locked, Security 18, best in your party: Carth with 2". Anouk
+  took that for a lock to pick. A placeable without an inventory has no
+  lock to pick: no Security line there (needs the has-inventory field).
+  (2) The leader stood boxed in between the crate, the holograms and
+  the follower. Enter on four objects 3 m away queued the use (outer
+  queue 0 -> 5, never draining), "Approach: stalled but target position
+  unresolvable - disarm quietly", and nothing was spoken. Wanted: the
+  stalled approach says so ("Cannot get there"), also when the target
+  position cannot be read; find out why it could not for a placeable.
+  Tab to the follower on the other side solved it.
+  (3) Crash: the bridge's /do use (kotor.py pak) on hologram 0x68 with
+  that boxed-in leader: c0000005 in accessibility.dll at RVA 0x001cd79d,
+  right after "UseObject dispatch target=0x00000068 ret=1". The mod's
+  own Enter (the same UseObject) did not crash before or after. Full
+  dump: %TEMP%\claude_split\crash_0014_holo.dmp. To do: find the
+  function (a d875083 build with a map file, or the dump), then check
+  the current tree.
 - Tab: on a leader swap both party_leader_announce's Tab window and
   TickLeaderChange speak the new name. Check in game whether it is heard
   twice; if so the Tab path only needs the no-swap case.
