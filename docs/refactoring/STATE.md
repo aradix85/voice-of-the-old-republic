@@ -140,7 +140,9 @@ GetGameObject lookup, one SEH layer around ReadCExoString, TryReadTag
 was GetObjectTag). unified_action_menu split into six (1ed055a; split_file.py
 fix 4c33467: a comment above a namespace line carried the line along) and
 made lean (b75ade7). combat_log split into five (07754ad) and made lean
-(0f244a4: BuildCompact from parts, English rule names).
+(0f244a4: BuildCompact from parts, English rule names). menus_chain split
+into five (c52c540) and made lean (e240b6d); menus_chain_input.cpp (824)
+stays for its turn on the size list.
 
 Careful: never rewrite source files with PowerShell ReadAllText/WriteAllText
 (it decodes UTF-8 and writes '?' for the dashes and umlauts in comments);
@@ -199,8 +201,7 @@ prefix (menus_listbox_picker.cpp).
   EngineYawToCompass/CompassToSector/SectorString. One helper in
   engine_compass (bearing of a vector, and its compass word). kRadToDeg is
   defined in many files: one constant with it.
-- Next file: menus_chain.cpp (1460 lines), then minigame_swoop_race.cpp,
-  map_ui_cursor.cpp, menus_monitors.cpp, minigame_pazaak.cpp,
+- Next file: minigame_swoop_race.cpp (1314 lines), then map_ui_cursor.cpp, menus_monitors.cpp, minigame_pazaak.cpp,
   menus_pending.cpp, cycle_input.cpp, menus.cpp, menus_internal.cpp,
   core_tick.cpp (sizes of 2026-11-10, strings*.cpp excepted).
 - F2b: share the save-variable code of exit_memory with discovery.cpp.
@@ -241,7 +242,9 @@ header go to the files that use them (a small script did this for
 room_topology; the compiler catches a miss, and it misses some: engine_app.h,
 engine_reads.h, msg_router.h, party_cache.h). When the module's public
 header is not <module>.h (combat_log: combat.h), fix the include in the
-internal header by hand.
+internal header by hand. A constant that a shared function's default
+argument uses must go to the internal header by hand too (menus_chain:
+kSortByOwnCy); the tool keeps it in the one file whose code uses it.
 
 ## Rejected
 
