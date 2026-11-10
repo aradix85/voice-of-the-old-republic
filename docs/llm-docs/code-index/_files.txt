@@ -124,6 +124,8 @@ patches/Accessibility/engine_player_internal.h
 patches/Accessibility/engine_player_party.cpp
 patches/Accessibility/engine_radial.cpp
 patches/Accessibility/engine_radial.h
+patches/Accessibility/engine_radial_diag.cpp
+patches/Accessibility/engine_radial_internal.h
 patches/Accessibility/engine_reads.cpp
 patches/Accessibility/engine_reads.h
 patches/Accessibility/engine_reads_items.cpp
