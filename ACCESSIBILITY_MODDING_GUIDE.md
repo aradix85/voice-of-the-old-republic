@@ -43,9 +43,9 @@ This guide is deliberately split:
 
 - Well-structured text output — no tables, no ASCII art, no graphics.
 - Linear, one-thing-per-line presentation a screen reader can read top to bottom.
-- Speech routed through a real screen-reader bridge (Tolk, Prism, or the
-  native controller client), not a bare text-to-speech engine, so the user's
-  own voice, rate, and punctuation settings apply.
+- Speech routed through the screen reader itself (here NVDA's controller
+  client), not a bare text-to-speech engine, so the user's own voice, rate,
+  punctuation and braille settings apply.
 - Full keyboard navigation to every interactive element. If a sighted player
   can reach it, a blind player must be able to reach it without a mouse.
 
@@ -122,7 +122,7 @@ Another Item
 - **Single letters** for fast jumps to a zone or category (e.g. `M` for map).
 - **Shift+letter** for the opponent's / alternate view of the same thing.
 - **Arrow keys** for navigation *within* a focused area.
-- **Ctrl / Alt variants** for "nearest / farthest", "beacon", "clear" — a
+- **Ctrl / Alt variants** for "nearest / farthest", "route", "clear" — a
   consistent family of modifiers on the same base key.
 - **F1 for help, F-keys for global actions**, Space for the primary action.
 
@@ -145,9 +145,11 @@ a German form — see the README's keyboard section for the pattern.)
 
 - **Default:** queue normal announcements so they don't stomp each other; dedup
   per channel so a repeated focus event doesn't repeat its speech.
-- **Urgent:** some cues must interrupt and must survive the screen reader's
-  "cancel speech on keypress" behaviour (e.g. NVDA cancels queued speech when
-  you type). Route those through a path that speaks immediately.
+- **Interrupting:** a line that replaces what was being said (a new focus)
+  interrupts the screen reader first. NVDA's "speech interrupt for typed
+  characters" also cancels speech on every key press, held keys included;
+  this project does not route around it, so keep lines short where keys
+  repeat.
 - **Never silence a fallback.** If you don't have a good name for something,
   speak a generic placeholder ("Control 3", "row 2") — do **not** drop the
   announcement. Silence reads as "nothing is there", which is worse than an ugly
@@ -183,11 +185,9 @@ extraction/activation logic is the most common way these projects rot.
 ### Centralizing user-facing strings
 
 Every word the user *hears* goes through a single string table keyed by a stable
-ID; handler code calls `Get(id)` and never contains a literal. This buys you
-localization for free and lets you reword a cue in one place. **Logs stay in the
-developer's language** (English here) — only spoken output is localized. See
-[docs/CONTRIBUTING_TRANSLATIONS.md](docs/CONTRIBUTING_TRANSLATIONS.md) for how
-this project's table is laid out and how to add a language.
+ID; handler code calls `Get(id)` and never contains a literal. It lets you
+reword a cue in one place and keeps localization possible. In this project the
+table is English only (`strings.h` and `strings.cpp`); log lines stay out of it.
 
 ### Testing with a screen reader
 
@@ -335,9 +335,8 @@ _(General principles only.)_
   reverse-engineered headers are mostly right but occasionally lag reality;
   cross-check against the internal RE material (below) or a decompile.
 
-Several of these are written up in the memory index (`project_client_server_architecture`,
-`project_gameobject_kind_is_one_byte`, `project_object_handle_namespaces`) — the
-canonical place for "why this read is shaped this way".
+The header comment of the reading function is the place for "why this read is
+shaped this way".
 
 ### Where the reverse-engineering lives
 
@@ -404,38 +403,44 @@ toolchain, the Steam path, the patch-manager release — is in
 The file-name prefix tells you the role. Add a new file under the right prefix.
 
 - **`core_*`** — lifecycle: DLL attach + deferred init (`core_dllmain`),
-  per-frame tick dispatch (`core_tick`), settings (`core_settings`).
-- **`engine_*`** (~33) — the read-side engine bindings. Area/objects, player,
+  per-frame tick dispatch (`core_tick`). Settings are in `mod_settings_store`.
+- **`engine_*`** (~26) — the read-side engine bindings. Area/objects, player,
   panels, input, keymap, options, nav-graph, compass, radial, action bar,
   sub-screens, level-up, script vars. This is the layer everything else reads
   through.
-- **`menus_*`** (~49) — per-screen GUI narration. One file per game screen:
+- **`menus_*`** (~46) — per-screen GUI narration. One file per game screen:
   character creation (`menus_chargen_*`), character sheet, equipment, journal,
   galaxy map, store, key-mapping, mod settings, Pazaak deck builder, level-up
   powers, abilities, credits, plus the shared machinery (`menus.cpp`,
   `menus_listbox`, `menus_editbox`, `menus_chain`, `menus_extract`).
-- **`audio_*`** (~11) — cue playback and the 3D audio bus, footstep
-  suppression, positional loops, pitch.
-- **`guidance_*`** (~10) — movement help: pathfinding, autowalk, beacon,
-  approach, spoken route descriptions.
-- **`combat_*`** (~12) — combat entry/exit, target queries, the action queue,
-  special-ability watch, result strings.
+- **`audio_*`** — the audio bus for the minigame cues, loops, pitch, and
+  footstep suppression when the player is stuck.
+- **`guidance_*`** — movement help: pathfinding, autowalk, approach, spoken
+  route descriptions.
+- **`combat_*`** — combat-log narration, target queries, the action queue,
+  the English combat-log anchors.
+- **`room_topology_*`** — regions of an area's walk-mesh, with their shape,
+  label and exits. **`exit_memory_*`** — what lies behind each door, routes,
+  the exploration overview and walk, the save variables.
+- **`bridge_*`** — the local HTTP bridge for helper tools.
+- **`pad_*`** — the controller driver and its menus.
 - **`cycle_*`**, **`filter_objects`**, **`discovery`**, **`narrated_target`** —
   the discovered-object cycle (input + per-map state) and what feeds it.
 - **`map_*`** — the in-game map cursor and user-placed markers.
-- **`camera_*`**, **`spatial_*`**, **`wall_*`** — camera orientation and the
-  continuous wall-cue / room-shape layer (`wall_topology`, `spatial_wall_surfaces`).
-- **Minigames** — `pazaak`, `turret_game`, `swoop_race` + `swoop_spatial_audio`,
+- **`camera_*`**, **`spatial_wall_surfaces`**, **`wall_probe`**,
+  **`qe_ring`** — camera orientation, the wall cache, and Q / E over
+  everything around the player.
+- **Minigames** — `minigame_pazaak`, `minigame_turret_*`, `minigame_swoop_*`,
   `minigame_aim`, `floor_puzzle`.
-- **Feature one-offs** — `view_mode`, `unified_action_menu`, `interact_hotkey`,
+- **Feature one-offs** — `view_mode`, `unified_action_menu`, `interact_dispatch`,
   `examine_view`, `peek_description`, `help`, `hotkeys`, `input_pipeline`,
   `msg_router`, `party_*`, `stealth_watch`, `trap_watch`, `transitions`,
   `tutorial_*`, `intro_skip`, `dialog_speech`, plus area-specific fixes
   (`endar_softlock`, `spectator_scene`, `locked_recall`, `save_crash_guard`).
 - **`probe_*`** / **`diag_*`** — diagnostic instruments, not shipped behaviour.
   Handy when investigating; don't build features on them.
-- **`strings*`** — the i18n tables (see the translation guide). **`prism`** —
-  the speech backend. **`update_checker`** — the auto-updater.
+- **`strings`** — the spoken-text table (English). **`speech`** — the NVDA
+  controller client: every line spoken and brailled.
 
 #### Navigation systems
 
@@ -448,18 +453,18 @@ KOTOR is a 3D RPG, so most of the work is keeping the player oriented. The
 - **Discovered-object cycle (`,` / `.`)** — a mod-owned, in-save per-map index
   of objects the player has found, grouped by category. Built from
   `cycle_state` + `filter_objects` + `discovery`, driven by `cycle_input`. The
-  narrated-target slot is shared with the world cycle so Enter/autowalk/beacon
-  all act on "the last thing announced".
+  narrated-target slot is shared with the world cycle so Enter, autowalk and
+  the route description all act on "the last thing announced".
 - **Unified action menu (Shift+Enter)** — one menu that replaced the game's
   separate radial, target, and personal menus. **Hard rule:** it is populated
   *only* from the input pipeline, never re-populated from a tick/poll. See
-  `unified_action_menu` and the memory entry `project_unified_action_menu_design`.
+  `unified_action_menu`.
 - **Map (M)** — `map_ui_cursor` makes the in-game map navigable; `map_user_markers`
   handles Shift+N pins. Map pins fold into the same `,` / `.` vocabulary.
-- **Wall cues + room-shape** — a continuous positional-audio layer off the
-  nearest walls (`spatial_wall_surfaces`), plus a spoken room descriptor
-  (name / shape / exits) computed live from the walk-mesh (`wall_topology`,
-  `engine_navgraph`).
+- **Room descriptions** — a spoken room descriptor (name / shape / exits)
+  computed live from the walk-mesh (`room_topology_*`, `engine_navgraph`), with
+  what lies behind each door and the routes between rooms (`exit_memory_*`).
+  Everything is said in words; there is no positional-audio layer.
 
 #### Adding a new narrated screen
 
@@ -471,7 +476,7 @@ examples under `menus_*`):
    structure.
 2. **Announce title-only on entry.** Speak the screen's title and the initially
    focused element — *not* a full enumeration of every control. Title-only on
-   first sight is the house style (memory: `feedback_first_sight_title_only`).
+   first sight is the house style.
 3. **Read elements through typed accessors.** Use the `engine_panels.cpp`
    vtable down-casts (`AsButton`/`AsLabel`/…) to pull each control's text.
    Don't read offsets at the call site.
@@ -479,11 +484,11 @@ examples under `menus_*`):
    engine delivers to GUI panels (arrows, Enter), add a
    `TryHandleInput(activePanel, …)` that returns "consumed" *before* the generic
    chain handlers run — the model used by `menus_listbox`, `menus_editbox`, and
-   `pazaak`. A Win32 poll (`GetAsyncKeyState`) is only safe for scancodes the
+   `minigame_pazaak`. A Win32 poll (`GetAsyncKeyState`) is only safe for scancodes the
    engine drops before the manager hook (letters, `,` `.` `-`).
 5. **Route all speech through the string table.** Add an `Id` to `strings.h` and
-   an entry to every locale file; call `strings::Get(Id)`. No literals in the
-   handler.
+   its English text to `strings.cpp`; call `strings::Get(Id)`. No literals in
+   the handler.
 6. **Log first, behave second.** Land the detection with a logging-only handler,
    confirm it fires exactly on that screen, then add narration.
 
@@ -492,8 +497,6 @@ examples under `menus_*`):
 ## See also
 
 - [CONTRIBUTING.md](CONTRIBUTING.md) — dev setup, the inner loop, hook and
-  speech conventions, the reverse-engineering workflow, and how to send a PR.
+  speech conventions, the reverse-engineering workflow, and how to commit.
 - [ARCHITECTURE.md](ARCHITECTURE.md) — the code's high-level shape.
-- [docs/CONTRIBUTING_TRANSLATIONS.md](docs/CONTRIBUTING_TRANSLATIONS.md) —
-  adding or improving a language.
 - [docs/known-issues.md](docs/known-issues.md) — the current backlog.

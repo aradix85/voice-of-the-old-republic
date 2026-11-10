@@ -137,11 +137,16 @@ prefix (menus_listbox_picker.cpp).
      names still carry German examples and words. Docs that still point
      at translations (ACCESSIBILITY_MODDING_GUIDE, kotor2-port-
      feasibility, kdev-design, llm-docs/action-menu-and-combat) go in E.
-  I. Installer source (Anouk, 2026-11-10): the installer downloads the
-     mod from this fork (the bridge-latest pre-release that build.yml
-     publishes on every push), not from the original mod's GitHub, and
-     no longer self-updates from there. Before E.
-  E. Docs pass: every current doc that still names Prism, Tolk,
+  I. Installer source (Anouk, 2026-11-10), done: no self-update, no
+     --auto-update handoff, release.ps1 gone (9321977); the mod comes
+     from this fork's bridge-latest, builds are named "bridge-<sha7>" and
+     compared for equality, build.yml publishes the installer EXE too
+     (0679714; check that CI run).
+  E. Docs pass. Done: README rewritten (2ea042a), CHANGELOG (bce53e6),
+     CLAUDE.md, CONTRIBUTING.md, ARCHITECTURE.md (eabc45c). Next: the
+     rest of the list below, upstream-prs.md kept (it records the KPM
+     defects many comments cite; drop its prism PR-7 and PR-10).
+     Original list: every current doc that still names Prism, Tolk,
      SAPI, the urgent or compass voice, positional/3D speech, the Windows
      voices option, the in-game updater, the removed exploration sounds or
      the old bridge behaviour (snapshot every 250 ms, no creatures in
