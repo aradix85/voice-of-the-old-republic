@@ -505,16 +505,19 @@ const uintptr_t kAddrCSWSAreaMapGetMapRotateCCW = acc::addr::Pick(0x00578ED0, 0x
 // CSWSAreaMap fog grid geometry (Initialize @0x00578c60): fixed 440x256
 // map-pixel space, MapResX cells across, MapResY = MapResX * 256/440
 // truncated; world-units-per-map-pixel from the .are Map calibration.
-// map_ui_cursor keeps a local copy of the transform fields (+0x18..+0x24)
-// for its cursor projection.
+// NorthAxis (0..3, the map's rotation) and the world origin complete the
+// pixel transform the map cursor inverts (map_ui_cursor_transform.cpp).
 // CSWSAreaMap fog grid is byte-identical between games — witnessed in K2's
 // area loader (SetMapData @0x005f6b90: explored-bits ptr +0, bit-dword count
 // +4, NorthAxis +0x10, 1/zoom +0x14, world origin +0x20/+0x24), and the
 // world-per-pixel transform read at +0x18/+0x1c exactly as KOTOR 1.
 const size_t kAreaMapResXOffset        = acc::off::Same(0x8);
 const size_t kAreaMapResYOffset        = acc::off::Same(0xc);
+const size_t kAreaMapNorthAxisOffset   = acc::off::Same(0x10);
 const size_t kAreaMapWorldPerPxXOffset = acc::off::Same(0x18);
 const size_t kAreaMapWorldPerPxYOffset = acc::off::Same(0x1c);
+const size_t kAreaMapWorldOriginXOffset = acc::off::Same(0x20);
+const size_t kAreaMapWorldOriginYOffset = acc::off::Same(0x24);
 
 // CSWCMapPin allocation chain. operator_new at 0x43e1b0 is matched to
 // the _free that CExoString::operator= and ~CSWCMapPin invoke.

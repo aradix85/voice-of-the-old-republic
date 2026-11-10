@@ -1,13 +1,12 @@
-# map_ui_cursor_hover.cpp (289 lines)
+# map_ui_cursor_hover.cpp (170 lines)
 
 Source: `patches/Accessibility/map_ui_cursor_hover.cpp`
 
-What is under the map cursor: the nearest explored map note, user marker or shipped hint within the hover radius, and the waypoint's note text and tag.
+What is under the map cursor: the nearest explored map note, user marker or shipped hint within the hover radius.
 
 ## Declarations (in source order)
 
-- L80 `void* FindNearestExploredMapNote(void* mapPanel, void* areaMap, float cursorPx, float cursorPy, int* outScannedCount, float* outBestDist2, acclog::BlockLog* dump)`: Walk the map-hider's waypoint linked list, find the nearest waypoint whose map-pixel projection lands within kHoverHitRadiusPx of the cursor AND whose has_map_note != 0 AND whose position IsWorldPointExplored == true.
-- L194 `void* FindNearestUserMapPin(void* clientArea, void* areaMap, float cursorPx, float cursorPy, int* outScannedCount, float* outBestDist2)`: Hit-test against the mod's own saved markers in `CSWCArea.map_pins[]`.
-- L237 `const acc::map_shipped_hints::ShippedHint* FindNearestShippedHint( void* areaMap, float cursorPx, float cursorPy, int* outScannedCount, float* outBestDist2)`: Hit-test the mod's shipped curated hints (map_shipped_hints) — static table rows with no engine object behind them.
-- L268 `bool ReadWaypointMapNoteText(void* waypoint, char* outBuf, size_t bufSize)`
-- L275 `bool ReadWaypointTag(void* waypoint, char* outBuf, size_t bufSize)`: Read CSWSWaypoint.Tag for diagnostic logging.
+- L46 `void Consider(Nearest& best, void* obj, float ppx, float ppy, float cursorPx, float cursorPy)`: Takes `obj` as the best candidate when its map pixel is nearer the cursor than the best so far, which starts at the hover radius.
+- L66 `Nearest FindNearestExploredMapNote(void* mapPanel, void* areaMap, float cursorPx, float cursorPy, acclog::BlockLog& dump)`: The nearest explored map note: the map hider's waypoint list under the filter the engine's GetNext/PrevMapNote applies (map note enabled, position explored), but by distance rather than list order.
+- L131 `Nearest FindNearestUserMapPin(void* clientArea, void* areaMap, float cursorPx, float cursorPy)`: The nearest of the player's own markers in CSWCArea.map_pins[].
+- L154 `Nearest FindNearestShippedHint(void* areaMap, float cursorPx, float cursorPy)`: The nearest of the mod's shipped curated hints (map_shipped_hints: table rows, no engine object).

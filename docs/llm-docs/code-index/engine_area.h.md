@@ -1,4 +1,4 @@
-# engine_area.h (859 lines)
+# engine_area.h (862 lines)
 
 Source: `patches/Accessibility/engine_area.h`
 
@@ -71,11 +71,11 @@ game_objects[] is an array of handles, not pointers. Initial code treated entrie
 - L419 `class AreaObjectIterator`: Snapshots data pointer + size at construction.
 - L435 `void ForEachDoor(void* area, Fn fn)`: Calls fn(door, pos) for every door of `area` whose position reads.
 - L447 `void* NearestDoor(void* area, const Vector& p, float maxM, Accept accept, Vector* outPos = nullptr)`: The door of `area` nearest to `p` in the plane, within `maxM`, for which accept(door) holds; null if none.
-- L761 `bool TrapDetectedByAnyOf(void* gameObject, const uint32_t* ids, int idCount)`: True when `gameObject`'s trap has been detected by any of the given SERVER object ids (pass the current party's ids).
-- L769 `struct WallEdge`: One perimeter walkmesh edge — a triangle side that has no neighbour (`SurfaceMeshAdjacency.indices[e] == -1`) and therefore corresponds to a physical wall in the room.
-- L798 `int BuildAreaWallCache(void* area, WallEdge* outBuf, int maxEdges)`: Walks every room in `area`, then every face in each room's CSWRoomSurfaceMesh, and emits one WallEdge for each triangle side whose adjacency is `-1` (perimeter / wall sentinel).
-- L805 `struct FloorTri`: One walkmesh floor triangle, all three corners in WORLD space (LocalToWorld applied at extraction, same as WallEdge).
-- L816 `int BuildAreaFloorCache(void* area, FloorTri* outBuf, int maxTris)`: Walks every room's surface mesh and emits every face as a FloorTri.
-- L851 `bool SegmentCrossesWalkmesh(const WallEdge* walls, int wallCount, const Vector& a, const Vector& b, Vector& outHitPoint, bool ignoreZ = false)`: Segment-vs-perimeter test in the XY plane, with an optional 3D guard: a wall is only a blocker when its edge sits within kWallCrossZToleranceM of the ray at the crossing point.
+- L764 `bool TrapDetectedByAnyOf(void* gameObject, const uint32_t* ids, int idCount)`: True when `gameObject`'s trap has been detected by any of the given SERVER object ids (pass the current party's ids).
+- L772 `struct WallEdge`: One perimeter walkmesh edge — a triangle side that has no neighbour (`SurfaceMeshAdjacency.indices[e] == -1`) and therefore corresponds to a physical wall in the room.
+- L801 `int BuildAreaWallCache(void* area, WallEdge* outBuf, int maxEdges)`: Walks every room in `area`, then every face in each room's CSWRoomSurfaceMesh, and emits one WallEdge for each triangle side whose adjacency is `-1` (perimeter / wall sentinel).
+- L808 `struct FloorTri`: One walkmesh floor triangle, all three corners in WORLD space (LocalToWorld applied at extraction, same as WallEdge).
+- L819 `int BuildAreaFloorCache(void* area, FloorTri* outBuf, int maxTris)`: Walks every room's surface mesh and emits every face as a FloorTri.
+- L854 `bool SegmentCrossesWalkmesh(const WallEdge* walls, int wallCount, const Vector& a, const Vector& b, Vector& outHitPoint, bool ignoreZ = false)`: Segment-vs-perimeter test in the XY plane, with an optional 3D guard: a wall is only a blocker when its edge sits within kWallCrossZToleranceM of the ray at the crossing point.
 
-Also 82 constants or variables at namespace scope.
+Also 85 constants or variables at namespace scope.
