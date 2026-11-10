@@ -142,10 +142,13 @@ patches/Accessibility/engine_radial_diag.cpp
 patches/Accessibility/engine_radial_internal.h
 patches/Accessibility/engine_reads.cpp
 patches/Accessibility/engine_reads.h
+patches/Accessibility/engine_reads_controls.cpp
 patches/Accessibility/engine_reads_items.cpp
 patches/Accessibility/engine_reads_items_actions.cpp
 patches/Accessibility/engine_reads_items_desc.cpp
 patches/Accessibility/engine_reads_items_internal.h
+patches/Accessibility/engine_reads_objects.cpp
+patches/Accessibility/engine_reads_text.cpp
 patches/Accessibility/engine_rebase.cpp
 patches/Accessibility/engine_rebase.h
 patches/Accessibility/engine_scriptvar.cpp
