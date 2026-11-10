@@ -930,64 +930,6 @@ void FormatCardLabel(int index, int flip, CardContext ctx, char* out, size_t n,
     snprintf(out, n, Get(Id::PazaakFmtPlain), index - FirstMainDeckIndex() + 1);
 }
 
-// The pad's two board bindings. The D-Pad, A and B need nothing here: the pad
-// layer already synthesises the arrows, Enter and Escape a menu surface expects,
-// so they arrive at TryHandleInput as the board's own navigator keys. Y and X
-// are the pair that has no keyboard twin to synthesise — the keyboard reaches
-// Stand and End turn through the letters S and E, which the engine drops before
-// any hook and which no pad button stands in for — so the board claims them
-// itself. See docs/pazaak-investigation.md.
-bool TryHandlePadAction(PadAction a) {
-    using namespace acc::strings;
-    if (!g_boardForeground || !g_panel) return false;
-    void* panel = g_panel;
-
-    // The three readers first: they change nothing, so they answer in any state
-    // — including the opponent's turn and a half-made sign choice, which are
-    // exactly the moments a player wants to re-read the table.
-    void* model = GetModel(panel);
-    if (!model) return true;
-    switch (a) {
-        case PadAction::ReviewHand:
-            acclog::Write("Pazaak", "pad left shoulder -> your hand");
-            SpeakHand(PlayerOf(model));
-            return true;
-        case PadAction::ReviewTable:
-            acclog::Write("Pazaak", "pad right shoulder -> both boards");
-            SpeakTable(model);
-            return true;
-        case PadAction::OppHand:
-            acclog::Write("Pazaak", "pad left stick press -> opponent card count");
-            SpeakOppHandCount(model);
-            return true;
-        default:
-            break;
-    }
-
-    // Mid-sign-choice the card owns the surface: standing or ending the turn out
-    // from under a half-played card would strand it. Claim the press so nothing
-    // else acts on it, and re-read the prompt rather than going silent — an
-    // ignored button that says nothing reads as a dead pad.
-    if (g_optMode) {
-        void* player = PlayerOf(model);
-        if (player) {
-            SpeakSignOption(ReadCard(player, kPlayerHandOffset, g_optSlot).index,
-                            /*interrupt=*/true);
-        }
-        return true;
-    }
-
-    const int state = GetState(panel);
-    if (a == PadAction::Stand) {
-        acclog::Write("Pazaak", "pad Y -> stand");
-        ActStand(panel, state);
-    } else {
-        acclog::Write("Pazaak", "pad X -> end turn");
-        ActEndTurn(panel, state);
-    }
-    return true;
-}
-
 // Arrow + Enter navigator, driven from the manager input hook so the generic
 // chain can't also act on the board's controls. Returns true (+ rv) when it
 // consumes the key. Letters fall through to PollShortcuts; Esc (outside the

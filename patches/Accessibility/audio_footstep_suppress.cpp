@@ -7,7 +7,7 @@
 
 #include "combat.h"          // IsCombatActive — combat bypasses suppression
 #include "engine_area.h"
-#include "engine_keymap.h"   // ForwardBackwardCommanded — drive-loop push gate
+#include "engine_keymap.h"   // ForwardBackwardKeyHeld — drive-loop push gate
                              // (keyboard walk keys OR the KOTOR 2 left stick)
 #include "engine_offsets.h"
 #include "engine_player.h"
@@ -606,7 +606,7 @@ extern "C" int __cdecl OnUpdateRollingFootstep(void* creature) {
     const bool sustained = acc::audio::footstep_suppress::StuckSustainedFor(
         kLoopStuckSustainMs);
     const bool in_combat = acc::combat::IsCombatActive();
-    const bool pushing   = acc::engine_keymap::ForwardBackwardCommanded();
+    const bool pushing   = acc::engine_keymap::ForwardBackwardKeyHeld();
     if (!sustained || in_combat) {
         g_loop_latched = false;
     } else if (pushing) {

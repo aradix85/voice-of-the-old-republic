@@ -247,20 +247,6 @@ bool IsScriptSelectStructural(void* panel) {
     return HasVtable(panel, kVtableCSWGuiScriptSelect);
 }
 
-// KOTOR 2 gamepad Quick Menu — vtable equality, nothing structural. The class
-// exists only in KOTOR 2, so the constant poisons to 0 on KOTOR 1 and the
-// guard below declines there without a read.
-bool IsGamepadQuickMenuStructural(void* panel) {
-    if (!panel) return false;
-    if (!acc::addr::Ok(kVtableCSWGamepadMenuIos)) return false;
-    __try {
-        void** vt = *reinterpret_cast<void***>(panel);
-        return reinterpret_cast<uintptr_t>(vt) == kVtableCSWGamepadMenuIos;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return false;
-    }
-}
-
 // CSWGuiPowersLevelUp picker (pwrlvlup.gui). The same class backs both the
 // chargen Force-selection screen and the InGameLevelUp Force sub-screen.
 // Vtable equality only — the ctor-written identity of this single-instance
@@ -775,9 +761,6 @@ PanelKind IdentifyPanel(void* panel) {
     // Probe order: vtable-equality detectors first — collision-proof and
     // cheap — then the remaining .gui-shape probes, tighter (more-
     // distinctive) signatures before looser ones.
-    if (IsGamepadQuickMenuStructural(panel)) {
-        return recordAndReturn(PanelKind::GamepadQuickMenu, "GamepadQuickMenu");
-    }
     // SaveLoad identifies by vtable since the gui-id audit (it used to be
     // a .gui-id quartet probe that collided with upgrade.gui and had to
     // run AFTER the workbench shapes; that ordering constraint is gone).

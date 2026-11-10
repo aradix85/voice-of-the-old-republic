@@ -577,10 +577,8 @@ enum class Id : int {
     StuckFreeDirsPrefix,
     StuckAllBlocked,
 
-    // ---- Facing readout (AltGr / right trigger; announce_facing). Only the
-    //      facing half: it speaks on the compass voice, and the place half
-    //      (area or room name) follows on the screen reader as its own
-    //      utterance (acc::speech::SpeakCompassThen).
+    // ---- Facing readout (AltGr; announce_facing). Only the facing half: the
+    //      place half (area or room name) follows as its own utterance.
     //
     //      `FmtFacingWorld` — in the world. Single arg: the camera's sector
     //                         word (`%s` — DirNorth.. via strings.Get). No
@@ -594,13 +592,6 @@ enum class Id : int {
     //                         readers pronounce it consistently.
     FmtFacingWorld,
     FmtFacingMap,
-
-    // ---- Phase 4 lay-off 2 — view-mode Mouse Look probe (Shift+AltGr).
-    //      Diagnostic-only; spoken on toggle so the user knows the
-    //      keypress landed and can correlate it with whatever the
-    //      engine then does (or doesn't) with mouse motion.
-    MouseLookOn,
-    MouseLookOff,
 
     // ---- Phase 4 lay-off 3 — view mode toggle (B). The "stop and look
     //      around" mode: character is frozen, camera stays under the
@@ -1523,8 +1514,8 @@ enum class Id : int {
     // slot is EMPTY, the gear ladder moved to the OnAccelerate slot and the
     // OnBrake slot runs onjump.ncs (SWMG_SetJumpSpeed 30 — a 1.3 s hop under
     // a 10-unit tunnel ceiling). The client HandleInputEvent twin @0x007b12c0
-    // routes event 0xd9 (the MGshoot keymap row = Space, pad A) and 0x1a to
-    // the OnBrake runner @0x00838ec0, and events 0x16 (pad B) / 0x19 to the
+    // routes event 0xd9 (the MGshoot keymap row = Space) and 0x1a to the
+    // OnBrake runner @0x00838ec0, and events 0x16 / 0x19 to the
     // OnAccelerate runner @0x00838e10 — so Space JUMPS on KOTOR 2 and the
     // shift is on the accelerate input named in the string. K1 sends both
     // 0x19 and 0xd9 to CSWMiniPlayer::Fire, which is why Space shifts there.
@@ -1745,10 +1736,6 @@ enum class Id : int {
     HelpGroupMap,
     HelpGroupPazaak,
     HelpGroupMod,
-    //      KOTOR 2 only, and only while a gamepad is present: the engine's own
-    //      Help panel for pad users is a bare picture of a controller, which
-    //      tells a blind player nothing at all.
-    HelpGroupController,
 
     //      Keybind entries — each is one self-contained "KEY: what it does"
     //      phrase, authored so a join with ". " reads cleanly when Ctrl+F1
@@ -1826,80 +1813,6 @@ enum class Id : int {
     // Mod features.
     HelpKeyModSettings,
     HelpKeyCopyLastSpoken,
-    // Controller (either game, pad present). Order is the reading order: what
-    // the pad does in menus first, then the D-Pad's world job, then the action
-    // menu, then the trigger chords, then the remaining buttons.
-    // Every line is true on both games — KOTOR 2 gets the last few from its
-    // engine, KOTOR 1 from the mod synthesising the player's own bind.
-    // The stick pair, and the two routes a pad has into the game's own screens.
-    // Listed first because they are what a player reaches for before anything
-    // else, and because with a pad connected this section is the WHOLE list —
-    // every keyboard row is hidden, so nothing basic may be missing from it.
-    HelpKeyPadMove,
-    HelpKeyPadMenuNav,
-    HelpKeyPadTooltip,
-    HelpKeyPadTabs,
-    HelpKeyPadScreens,
-    HelpKeyPadInteract,
-    HelpKeyPadAnnounceFocus,
-    HelpKeyPadCycleObjects,
-    HelpKeyPadCycleCategory,
-    // The D-Pad's second gesture: keep holding a direction past a second and
-    // the step becomes the jump to the end. Two rows because the two surfaces
-    // it lands on are two different answers — the object run in the world and
-    // on the map, an ordinary list everywhere else.
-    HelpKeyPadCycleEnds,
-    HelpKeyPadListEnds,
-    HelpKeyPadMapHints,
-    HelpKeyPadMapCursor,
-    HelpKeyPadDropMarker,
-    HelpKeyPadActionMenuToggle,
-    HelpKeyPadActionMenuNav,
-    // The face-button chord grid: hold a trigger, press a face button. Eight
-    // slots, and they are what closed the last gaps between the keyboard's
-    // vocabulary and the pad's.
-    HelpKeyPadSelfStatus,
-    HelpKeyPadActionQueue,
-    HelpKeyPadViewMode,
-    HelpKeyPadLevelUp,
-    HelpKeyPadCancelCombat,
-    HelpKeyPadCopyLastSpoken,
-    HelpKeyPadWalkToFocus,
-    HelpKeyPadRoute,
-    HelpKeyPadDegrees,
-    HelpKeyPadCameraOrient,
-    HelpKeyPadHelp,
-    HelpKeyPadQuickMenu,
-    HelpKeyPadCycleTargets,
-    HelpKeyPadTradeMode,
-    HelpKeyPadOptions,
-    HelpKeyPadPause,
-    HelpKeyPadSwitchLeader,
-    // In a dialogue the trigger pair drops the context help and repeats the
-    // line instead — the pad has no R, and a screen whose only control is
-    // "continue" has no keys worth reading out.
-    HelpKeyPadDialogRepeat,
-    // The Pazaak board. The D-Pad, A and B need no controller knowledge on the
-    // board at all — the pad layer synthesises the arrows, Return and Escape,
-    // and the board's own navigator answers them. Y and X are the two the
-    // keyboard reaches through letters the engine drops, so the board is handed
-    // those presses directly.
-    HelpKeyPadPazaakNav,
-    HelpKeyPadPazaakSign,
-    HelpKeyPadPazaakTurn,
-    HelpKeyPadPazaakReview,
-    // The KOTOR 1 quick menu (Y). KOTOR 2 has the engine's own panel here and
-    // the navigation chain reads its captions, so these are K1's only.
-    // PadQuickMenus is the in-game menu screens (the engine's "GUI" action),
-    // not this menu.
-    PadQuickMenuOpened,
-    PadQuickMenuClosed,
-    PadQuickMenus,
-    PadQuickPartyLeader,
-    PadQuickSoloMode,
-    PadQuickStealth,
-    PadQuickSave,
-    PadQuickHelp,
 
     //      F1 list framing.
     //   HelpMenuOpened     — opener cue spoken on F1. Tells the user how to
@@ -2186,103 +2099,9 @@ enum class Id : int {
     //      KOTOR 2's default keymap puts Quests on J and Messages on L — the
     //      mirror image of KOTOR 1 (K2 keymap.2da rows 13/14). These three
     //      repeat their TutHint* twins' texts with the two letters swapped.
-    //      Keyboard only: the pad wordings name no letter keys, so kTwins
-    //      maps them onto the existing TutHint*Pad ids.
     TutK2OpenScreens,    // row 7  — the screen-key overview, J/L swapped
     TutK2Messages,       // row 12 — Messages opens with L on KOTOR 2
     TutK2Journal,        // row 14 + 123744/123743 — Quests opens with J
-
-    //      Controller wording. Every id above names KEYBOARD keys, because a
-    //      keyboard is the one input device a KOTOR install always has. When a
-    //      gamepad is present the same hint has to name buttons instead, so
-    //      each keyboard id gets an optional `<Name>Pad` twin here and
-    //      binding_hints::Text() picks between the two — one decision point,
-    //      every surface flipping together. A hint with no twin (or an untrans-
-    //      lated twin) simply keeps its keyboard wording, which is always
-    //      truthful: the keyboard stays live on both games, pad or no pad.
-    //
-    //      Button names are spelled out in full — "left shoulder button", not
-    //      "LB"; "press the left stick", not "L3" — because a screen reader
-    //      reads the abbreviations as letters, and the glyphs a console prompt
-    //      would use are not read at all.
-    //
-    //      Order mirrors the keyboard block above, one for one.
-    TutHintCombatFeatPad,
-    TutHintGrenadePad,
-    TutHintMinePad,
-    TutHintFriendlyPowerPad,
-    TutHintHostilePowerPad,
-    TutHintActionMenuScrollPad,
-    TutHintOpenScreensPad,
-    TutHintCycleTargetsPad,
-    TutHintEquipSlotPad,
-    TutHintEnemyNearPad,
-    TutHintBashPad,
-    TutHintAttackPad,
-    TutHintAttackAutoPad,
-    TutHintMovementPad,
-    TutHintMapScreenPad,
-    TutHintJournalPad,
-    TutHintMessagesPad,
-    TutHintPartyDiesPad,
-    TutHintInventoryPad,
-    TutTraskGettingStartedPad,
-    TutTraskEquipOpenPad,
-    TutTraskEquipBrowsePad,
-    TutTraskEquipWeaponPad,
-    TutTraskCameraPad,
-    TutTraskFootlockerPad,
-    TutTraskPickItemPad,
-    TutTraskLeaderPad,
-    TutTraskMakeLeaderPad,
-    TutTraskMenusPad,
-    TutTraskTabsPad,
-    TutTraskActionMenuPad,
-    TutTraskMedkitPad,
-    TutTraskOpenDoorPad,
-    TutTraskActivateEntryPad,
-    TutTraskTargetMenuPad,
-    TutTraskConfirmEntryPad,
-    TutTraskPausedPad,
-    TutTraskWalkToPad,
-    TutTraskSecurityPad,
-    TutTraskHealWoundedPad,
-    TutLevelUpPad,
-    TutStealthModePad,
-    DialogRepeatLineHintPad,
-    //      KOTOR 2 block, mirroring the TutK2* keyboard ids. Three ids have
-    //      no twin ON PURPOSE and keep their keyboard wording with a pad
-    //      connected: TutK2FirstPerson (Caps Lock stays the only first-person
-    //      control), TutK2Pause (no established pad pause control) and
-    //      TutK2ActionRemove (names no control at all).
-    TutK2SwoopRacePad,
-    TutK2ActionQueuePad,
-    TutK2PlasmaTorchPad,
-    TutK2SpaceSuitPad,
-    TutK2CommRoomPad,
-    TutK2MinesPad,
-    TutK2VibrocutterPad,
-    TutK2DialogueChoicePad,
-    TutK2EquipWeaponPad,
-    TutK2WeaponConfigPad,
-    TutK2TakeItemPad,
-    TutK2GalaxyMapPad,
-    TutK2SoloModePad,
-    TutK2RepairKitPad,
-    TutK2SecuritySpikePad,
-    //      Swoop race, both games, mirroring the SwoopRace* keyboard ids. The
-    //      pad's race bindings match across the games: B shifts up, the left
-    //      stick steers, and A jumps on KOTOR 2 (KOTOR 1 has no jump, so its
-    //      opener names no A). See minigame_swoop_race.cpp.
-    SwoopRaceControlsPad,
-    SwoopRaceControlsK2Pad,
-    SwoopRaceStuckHintPad,
-    SwoopRaceStuckHintLeftPad,
-    SwoopRaceStuckHintRightPad,
-    SwoopRaceStuckBarWallLeftPad,
-    SwoopRaceStuckBarWallRightPad,
-    SwoopRaceStuckBarStripPad,
-    SwoopRaceStuckBarJumpPad,
 
     // ---- Rakatan temple floor-plate puzzle (floor_puzzle.cpp; Unknown
     //      World Temple Main Floor, module unk_m44ab). A 3x3 lights-out

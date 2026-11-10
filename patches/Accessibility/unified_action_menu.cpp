@@ -772,8 +772,6 @@ bool OpenPersonalImpl(int col, bool requested) {
 
 bool OpenPersonal(int col) { return OpenPersonalImpl(col, /*requested=*/true); }
 
-bool OpenAnyPersonal() { return OpenPersonalImpl(0, /*requested=*/false); }
-
 // Steps of HandleInputEvent below. They are file-local because every one of
 // them writes `g` and is only meaningful inside a single input dispatch —
 // the HARD RULE is that the menu is populated from input_pipeline and

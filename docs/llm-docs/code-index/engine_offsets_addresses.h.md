@@ -1,4 +1,4 @@
-# engine_offsets_addresses.h (1079 lines)
+# engine_offsets_addresses.h (1071 lines)
 
 Source: `patches/Accessibility/engine_offsets_addresses.h`
 
@@ -22,19 +22,19 @@ A .data pointer must never be left bare `constexpr`: that hands out the KOTOR 1 
 
 ## Declarations (in source order)
 
-- L389 `typedef void (__thiscall* PFN_CSWGuiListBoxSetSelectedControl)(void* listbox, int index, int playSound)`: CSWGuiListBox::SetSelectedControl @0x0041c040 — __thiscall(listbox, index, playSound).
-- L411 `typedef CExoString* (__thiscall* PFN_GetSimpleString)(void* this_, CExoString* out, uint32_t strref)`: CTlkTable::GetSimpleString — resolves a TLK str_ref to a localized string.
-- L460 `typedef void (__thiscall* PFN_InGameEquipOnEnterSlot)(void* panel, void* slot_btn)`: CSWGuiInGameEquip slot handlers — invoked directly to bypass click-sim hit-test problems on the equip panel.
-- L461 `typedef void (__thiscall* PFN_InGameEquipOnSelectSlot)(void* panel, void* slot_btn)`
-- L503 `typedef void (__thiscall* PFN_InGameEquipOnItemSelected)(void* panel, void* item_entry)`: Picker-side commit handlers.
-- L504 `typedef void (__thiscall* PFN_InGameEquipOnOKPressed)(void* panel, void* btn_equip)`
-- L570 `typedef void (__thiscall* PFN_CSWGuiUpgradeOnEnterSlot) (void* panel, void* slot_btn)`: CSWGuiUpgrade (workbench upgrade.gui) slot-pick + commit chain.
-- L571 `typedef void (__thiscall* PFN_CSWGuiUpgradeOnSlotSelected) (void* panel, void* slot_btn)`
-- L572 `typedef void (__thiscall* PFN_CSWGuiUpgradeOnUpgradeSelected)(void* panel, void* item_entry)`
-- L573 `typedef void (__thiscall* PFN_CSWGuiUpgradeOnAssemble) (void* panel, void* btn_assemble)`
-- L590 `typedef void (__thiscall* PFN_CSWGuiUpgradeOnControlEntered)(void* panel, void* item_entry)`: CSWGuiUpgrade::OnControlEntered @0x006c5370 — __thiscall(panel, item_entry).
-- L625 `typedef void (__thiscall* PFN_CSWGuiUpgradeShowItems)(void* panel, int visible)`: CSWGuiUpgrade::ShowItems @0x006c2f80 — __thiscall(int visible).
-- L983 `typedef void (__thiscall* PFN_AddItemProperty)(void* item, CExoString* accum)`: Per-category property-block builders that GetPropertyDescription calls in fixed order (decompile-verified at 0055f340).
-- L1020 `typedef CExoString* (__thiscall* PFN_CExoStringCtor)(CExoString* this_)`: CExoString default constructor — __thiscall(CExoString* this).
+- L381 `typedef void (__thiscall* PFN_CSWGuiListBoxSetSelectedControl)(void* listbox, int index, int playSound)`: CSWGuiListBox::SetSelectedControl @0x0041c040 — __thiscall(listbox, index, playSound).
+- L403 `typedef CExoString* (__thiscall* PFN_GetSimpleString)(void* this_, CExoString* out, uint32_t strref)`: CTlkTable::GetSimpleString — resolves a TLK str_ref to a localized string.
+- L452 `typedef void (__thiscall* PFN_InGameEquipOnEnterSlot)(void* panel, void* slot_btn)`: CSWGuiInGameEquip slot handlers — invoked directly to bypass click-sim hit-test problems on the equip panel.
+- L453 `typedef void (__thiscall* PFN_InGameEquipOnSelectSlot)(void* panel, void* slot_btn)`
+- L495 `typedef void (__thiscall* PFN_InGameEquipOnItemSelected)(void* panel, void* item_entry)`: Picker-side commit handlers.
+- L496 `typedef void (__thiscall* PFN_InGameEquipOnOKPressed)(void* panel, void* btn_equip)`
+- L562 `typedef void (__thiscall* PFN_CSWGuiUpgradeOnEnterSlot) (void* panel, void* slot_btn)`: CSWGuiUpgrade (workbench upgrade.gui) slot-pick + commit chain.
+- L563 `typedef void (__thiscall* PFN_CSWGuiUpgradeOnSlotSelected) (void* panel, void* slot_btn)`
+- L564 `typedef void (__thiscall* PFN_CSWGuiUpgradeOnUpgradeSelected)(void* panel, void* item_entry)`
+- L565 `typedef void (__thiscall* PFN_CSWGuiUpgradeOnAssemble) (void* panel, void* btn_assemble)`
+- L582 `typedef void (__thiscall* PFN_CSWGuiUpgradeOnControlEntered)(void* panel, void* item_entry)`: CSWGuiUpgrade::OnControlEntered @0x006c5370 — __thiscall(panel, item_entry).
+- L617 `typedef void (__thiscall* PFN_CSWGuiUpgradeShowItems)(void* panel, int visible)`: CSWGuiUpgrade::ShowItems @0x006c2f80 — __thiscall(int visible).
+- L975 `typedef void (__thiscall* PFN_AddItemProperty)(void* item, CExoString* accum)`: Per-category property-block builders that GetPropertyDescription calls in fixed order (decompile-verified at 0055f340).
+- L1012 `typedef CExoString* (__thiscall* PFN_CExoStringCtor)(CExoString* this_)`: CExoString default constructor — __thiscall(CExoString* this).
 
-Also 113 constants or variables at namespace scope.
+Also 112 constants or variables at namespace scope.

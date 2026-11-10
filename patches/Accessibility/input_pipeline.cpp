@@ -43,7 +43,6 @@
                              // owns the number keys
 #include "log.h"
 #include "narrated_target.h" // TryGet — pull the unified "current focus"
-#include "pad_input.h"       // TranslateClientEvent — the pad's in-world route
                              // slot to drive deterministic targeting
 #include "passive_narrate.h" // ReannounceCurrentShowObjectTarget — Q/E
 #include "qe_ring.h"         // Q/E all around (mod setting)
@@ -220,52 +219,25 @@ extern "C" int __cdecl OnClientHandleInputEvent(void* this_ptr,
                       acc::engine::InputIndexName(param_1), param_1, param_2);
     }
 
-    // Codes 65 and 66 arriving here are the MOUSE axes, not the KOTOR 2 pad's
-    // left stick — see the note in pad_input.h. They were briefly wired to the
-    // pad's movement signal on the strength of a misread test round; the stick
-    // is now read directly through XInput instead. Nothing to do with them
-    // here.
+    // Codes 65 and 66 arriving here are the MOUSE axes (they carry pixel
+    // positions). Nothing to do with them here.
 
-    // ---- KOTOR 2 gamepad, in-world route -----------------------------------
-    // The shoulder chords (LT+LB route, RT+RB autowalk) and the right-stick
-    // press have to be claimed HERE rather than at the manager: this is the
-    // route on which the engine actually performs Cycle Target and First-Person
-    // View, so consuming at the manager would leave the engine action running
-    // alongside ours. Self-gates to KOTOR 2 and to a session that has really
-    // seen a pad — see pad::TranslateClientEvent for the MOUSE_BUTTON1
-    // collision on the stick-press code.
-    if (acc::pad::TranslateClientEvent(param_1, param_2)) {
-        acclog::Write("Diag.ClientHIE", "seq=%u code=%d CONSUMED — pad binding",
+    // ---- KOTOR 2 swoop race: Space jumps ----------------------------------
+    // K2's HandleInputEvent sends event 0xd9 (the MGshoot keymap row = Space)
+    // and 0x1a (right mouse) to the bike's OnBrake runner, the JUMP; the gear
+    // shift (OnAccelerate) gets only the left mouse button, so the mod gives
+    // the shift a keyboard key of its own (bare W, polled in swoop_race Tick
+    // because W is an axis there, not an event). Space still goes through the
+    // mod's own runner and is swallowed, so every jump is logged beside the
+    // race state. Presses only; the engine's case early-outs on release
+    // anyway. TryJump is a no-op (returns false, pass through) outside an
+    // active K2 swoop race. KOTOR 2 only: on KOTOR 1 Space is the shift, and
+    // its 0xd9 must reach the engine untouched.
+    if (acc::game::IsKotor2() && param_2 != 0 && param_1 == 0xd9 &&
+        acc::swoop_race::TryJump()) {
+        acclog::Write("Diag.ClientHIE", "seq=%u code=0x%x CONSUMED — K2 swoop jump",
                       seq, param_1);
-        return 1;  // consume → consumed_exit (POP*5 + RET 8)
-    }
-
-    // ---- KOTOR 2 swoop race: Space / pad A jump, pad B shifts ---------------
-    // K2's HandleInputEvent sends event 0xd9 (the MGshoot keymap row = Space,
-    // pad A) and 0x1a (right mouse) to the bike's OnBrake runner — the JUMP —
-    // and only 0x16 (pad B) / 0x19 (left mouse) to the OnAccelerate runner,
-    // the gear shift. No keyboard key shifts by default. The mod keeps the
-    // engine's Space = jump (a first build swapped Space onto the shift to
-    // match KOTOR 1; the player found Space = jump, W = shift the intuitive
-    // pair — 2026-09-15) and gives the shift a keyboard key of its own (bare
-    // W, polled in swoop_race Tick because W is an axis there, not an event).
-    // Both events still go through the mod's own runners and are swallowed so
-    // every jump / shift is logged beside the race state and the pad and the
-    // keyboard share one code path. Presses only — the engine's cases
-    // early-out on release anyway. TryShift/TryJump are no-ops (return false →
-    // pass through) outside an active K2 swoop race, so this touches nothing
-    // else that arrives as 0xd9 / 0x16. KOTOR 2 only: on KOTOR 1 TryShift
-    // presses Space, whose own 0xd9 must reach the engine's shift untouched.
-    if (acc::game::IsKotor2() && param_2 != 0 &&
-        (param_1 == 0xd9 || param_1 == 0x16)) {
-        const bool handled = (param_1 == 0xd9) ? acc::swoop_race::TryJump()
-                                               : acc::swoop_race::TryShift();
-        if (handled) {
-            acclog::Write("Diag.ClientHIE",
-                          "seq=%u code=0x%x CONSUMED — K2 swoop %s",
-                          seq, param_1, param_1 == 0xd9 ? "jump" : "shift");
-            return 1;  // consume → consumed_exit
-        }
+        return 1;  // consume → consumed_exit
     }
 
     // ---- Puzzle-room bare-R ownership --------------------------------------

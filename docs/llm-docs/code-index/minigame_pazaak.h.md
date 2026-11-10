@@ -1,4 +1,4 @@
-# minigame_pazaak.h (104 lines)
+# minigame_pazaak.h (78 lines)
 
 Source: `patches/Accessibility/minigame_pazaak.h`
 
@@ -15,9 +15,7 @@ See docs/pazaak-investigation.md for the full reverse-engineering.
 - L42 `bool IsSignChoiceCard(int index)`: True iff `index` is one of KOTOR 2's ±-faced cards, i.e.
 - L47 `bool IsBoardForeground()`: True iff the Pazaak board is the current foreground panel (updated each Tick).
 - L52 `bool TryHandleInput(void* activePanel, int param_1, int param_2, int& rv)`: Manager-hook input handler for the board's arrow-zone navigator.
-- L71 `enum class PadAction`: The two board actions a gamepad has to carry itself.
-- L78 `bool TryHandlePadAction(PadAction a)`
-- L99 `void DispatchWagerInput(void* panel, int code)`: Drive a wager-popup less/more step by calling CSWGuiWagerPopup:: HandleInputEvent(panel, code, 1) directly — the same path the engine's own button-push callbacks take.
-- L101 `void Tick()`
+- L73 `void DispatchWagerInput(void* panel, int code)`: Drive a wager-popup less/more step by calling CSWGuiWagerPopup:: HandleInputEvent(panel, code, 1) directly — the same path the engine's own button-push callbacks take.
+- L75 `void Tick()`
 
 Also 2 constants or variables at namespace scope.

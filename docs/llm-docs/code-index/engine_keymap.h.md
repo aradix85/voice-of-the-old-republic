@@ -1,4 +1,4 @@
-# engine_keymap.h (172 lines)
+# engine_keymap.h (159 lines)
 
 Source: `patches/Accessibility/engine_keymap.h`
 
@@ -28,5 +28,3 @@ Namespace note -------------- The codes here are the engine's internal "quick ac
 - L143 `bool AnyMovementKeyHeld()`: True iff any bound movement/turn key is currently held down.
 - L149 `int FirstMovementKeyHeld()`: Same scan, but returns the VK that answered (0 when none).
 - L156 `bool ForwardBackwardKeyHeld()`: True iff a bound forward/backward key is currently held (the walk axes, including the arrow alternates) — deliberately EXCLUDING the turn/strafe buckets.
-- L168 `bool ForwardBackwardCommanded()`: ---- Device-independent movement queries ------------------------------------ The two above ask about KEYS, which is what this module knows about.
-- L169 `bool AnyMovementCommanded()`

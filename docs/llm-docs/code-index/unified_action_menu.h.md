@@ -1,4 +1,4 @@
-# unified_action_menu.h (122 lines)
+# unified_action_menu.h (116 lines)
 
 Source: `patches/Accessibility/unified_action_menu.h`
 
@@ -18,14 +18,13 @@ Engine read/primitive layers live in engine_radial (target) and engine_actionbar
 
 - L43 `bool OpenTarget(int row)`: Open on a specific TARGET category (Shift+1/2/3, row 0..2).
 - L54 `bool OpenPersonal(int col)`: Open on a specific PERSONAL column (Shift+4/5/6/7, col 0..3).
-- L60 `bool OpenAnyPersonal()`: Open the personal block wherever it actually has something, with no column requested.
-- L67 `bool FirePersonal(int col)`: Fire a personal column's currently-selected entry outright, no menu — what bare 8 and 9 do for KOTOR 2's combat-behaviour and forms columns.
-- L75 `bool ArmFromRadial(const char* name, uint32_t targetHandle)`: Arm from the Shift+Enter radial path.
-- L77 `bool IsActive()`
-- L92 `void ReannounceCurrent()`: Re-speak the current category against the live menus, re-locating the cursor on the same slot.
-- L99 `bool IsSuspended()`: True while armed but suspended under a blocking engine panel (a MessageBox or a hotkey-opened sub-screen).
-- L105 `void SetForegroundBlocked(bool blocked)`: Per-tick panel-stack notification, driven by interact_hotkey.
-- L111 `bool HandleInputEvent(int code, int value)`: Routed by interact_hotkey's Win32 poll.
-- L113 `void ForceDisarm(const char* reason)`
-- L118 `int PersonalSelection(int col)`: Bare-key announce support: the user's last-selected index for a personal column / target row, kept in lock-step with the engine's per-slot selection so a bare 1..7 press announces what the engine actually fires.
-- L119 `int TargetSelection(int row)`
+- L61 `bool FirePersonal(int col)`: Fire a personal column's currently-selected entry outright, no menu — what bare 8 and 9 do for KOTOR 2's combat-behaviour and forms columns.
+- L69 `bool ArmFromRadial(const char* name, uint32_t targetHandle)`: Arm from the Shift+Enter radial path.
+- L71 `bool IsActive()`
+- L86 `void ReannounceCurrent()`: Re-speak the current category against the live menus, re-locating the cursor on the same slot.
+- L93 `bool IsSuspended()`: True while armed but suspended under a blocking engine panel (a MessageBox or a hotkey-opened sub-screen).
+- L99 `void SetForegroundBlocked(bool blocked)`: Per-tick panel-stack notification, driven by interact_hotkey.
+- L105 `bool HandleInputEvent(int code, int value)`: Routed by interact_hotkey's Win32 poll.
+- L107 `void ForceDisarm(const char* reason)`
+- L112 `int PersonalSelection(int col)`: Bare-key announce support: the user's last-selected index for a personal column / target row, kept in lock-step with the engine's per-slot selection so a bare 1..7 press announces what the engine actually fires.
+- L113 `int TargetSelection(int row)`

@@ -18,7 +18,6 @@
 #include <cstdio>
 #include <cstring>
 
-#include "binding_hints.h"    // Text — keyboard or controller wording
 #include "engine_app.h"       // GetServerApp (real race-timer read — see
                               //   TickRaceTimer)
 #include "engine_area.h"      // GetClientArea + map-pin chain (back-pointer),
@@ -162,12 +161,12 @@ const size_t kMiniGameJumpVelocityOffset    = acc::off::Kotor2Only(0x118);
 //   @0x00838ec0 -> slot 11 = OnBrake       (the jump, onjump.ncs)
 // The engine reaches them from event ids 0x16 (pad B) / 0x19 (left mouse
 // button) for OnAccelerate and 0x1a (right mouse button) / 0xd9 (the MGshoot
-// keymap row = Space, pad A) for OnBrake — events registered by K2's
+// keymap row = Space) for OnBrake — events registered by K2's
 // SetEventDescriptions twin @0x00785df0 (0x19 <- InputIndex 0 MOUSE_BUTTON0,
 // 0x1a <- InputIndex 1 MOUSE_BUTTON1, class 1). KOTOR 1 sends 0x19 and 0xd9
 // to CSWMiniPlayer::Fire instead, whose gun bank runs onfire.ncs — so Space
 // shifts there and no keyboard key shifts on KOTOR 2 by default. The mod
-// therefore re-routes: Space / pad A -> TryShift, W / pad B -> TryJump.
+// therefore re-routes: Space -> TryShift, W -> TryJump.
 // __thiscall with one int (memory: the typedef must carry the int, or the
 // callee reads caller-frame garbage).
 const uintptr_t kAddrK2RunOnAccelerateScript = acc::addr::Kotor2Only(0x00838e10);
@@ -943,7 +942,7 @@ void TickStuckHint(void* miniGame) {
             else if (offOk && off.x <= -kStuckWallU) { id = acc::strings::Id::SwoopRaceStuckHintRight; why = "wall left"; }
             break;
     }
-    const char* msg = acc::binding_hints::Text(id);
+    const char* msg = acc::strings::Get(id);
     if (msg && *msg) acc::speech::Speak(msg, /*interrupt=*/true);
     acclog::Write("SwoopRace", "stuck hint: no progress for %llums at y=%.1f "
                   "(gear=%d speed=%.1f tunnelX=%.1f) [%s]",
@@ -1058,8 +1057,7 @@ void AnnounceEntry() {
     // KOTOR 2 rebinds the race: Space is the JUMP (OnBrake slot -> onjump.ncs)
     // and the gear shift moved to the OnAccelerate slot — see the string's
     // comment in strings.h for the input ids behind that.
-    // Worded for the controller when one is connected (binding_hints).
-    const char* controls = acc::binding_hints::Text(
+    const char* controls = acc::strings::Get(
         acc::game::IsKotor2() ? acc::strings::Id::SwoopRaceControlsK2
                               : acc::strings::Id::SwoopRaceControls);
     if ((!opener || !*opener) && (!controls || !*controls)) return;

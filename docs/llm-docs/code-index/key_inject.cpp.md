@@ -4,9 +4,9 @@ Source: `patches/Accessibility/key_inject.cpp`
 
 (From key_inject.h.) Synthetic keystrokes at the SCANCODE level — the one way this mod makes the engine act as though a key were pressed.
 
-Why scancodes and not VKs ------------------------- KOTOR reads the keyboard through DirectInput, which sees physical scancodes only. A plain-VK SendInput is invisible to it. This is the mechanism camera_orient's snap-turn has always used to drive the engine's own turn axis, and the KOTOR 1 pad layer reuses it for everything the engine has to do on a controller press: walking, camera rotation, menu navigation, and the quick menu's game actions (see pad_input.h).
+Why scancodes and not VKs ------------------------- KOTOR reads the keyboard through DirectInput, which sees physical scancodes only. A plain-VK SendInput is invisible to it. This is the mechanism camera_orient's snap-turn uses to drive the engine's own turn axis; the swoop race and the bridge's key action use it too.
 
-Deliberately policy-free ------------------------ No foreground gate, no edge tracking, no repeat handling. Callers own all of that, because they differ: camera_orient holds a key across ticks with its own predictive release, pad_movement releases on a dead-zone edge, and both gate on hotkeys::IsForegroundGame() before they ever press. A gate inside here would swallow the RELEASE of a key held when focus was lost — the one failure this module must never be able to cause.
+Deliberately policy-free ------------------------ No foreground gate, no edge tracking, no repeat handling. Callers own all of that, because they differ: camera_orient holds a key across ticks with its own predictive release and gates on hotkeys::IsForegroundGame() before it ever presses. A gate inside here would swallow the RELEASE of a key held when focus was lost — the one failure this module must never be able to cause.
 
 ## Declarations (in source order)
 

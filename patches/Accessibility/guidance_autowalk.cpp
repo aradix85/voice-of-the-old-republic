@@ -6,7 +6,7 @@
 
 #include "camera_orient.h"  // IsActive — its snap-turn must not self-trip the
                             // movement-key cancel.
-#include "engine_keymap.h"  // AnyMovementCommanded — the player's bound move/turn
+#include "engine_keymap.h"  // FirstMovementKeyHeld — the player's bound move/turn
                             // keys, so cancel works regardless of rebinds.
 #include "engine_player.h"
 #include "guidance_approach.h"  // IsAnyModApproachInFlight / CancelByMovement —
@@ -16,7 +16,6 @@
                       // so keys pressed in another app while Alt+Tabbed out
                       // don't kill an in-flight autowalk silently.
 #include "log.h"
-#include "pad_input.h"  // StickMoving — the pad half of AnyMovementCommanded
 #include "engine_rebase.h"
 #include "engine_offsets_select.h"
 
@@ -343,9 +342,7 @@ void PollMovementKeysCancel() {
     // Any of the player's bound movement / turn keys held cancels the walk —
     // read from swkotor.ini [Keymapping] (engine_keymap) so this follows a
     // rebind instead of assuming A/D/W/S, and still covers the legacy German
-    // QWERTZ extras (C/Y/Z) as a union so it never regresses. On KOTOR 2 the
-    // gamepad's left stick counts too: taking manual control of the character
-    // has to cancel the walk whichever device does it.
+    // QWERTZ extras (C/Y/Z) as a union so it never regresses.
     //
     // Level-triggered (no rising-edge requirement): a key already held when the
     // walk dispatched still cancels, so the user can always turn/walk their way
@@ -353,18 +350,16 @@ void PollMovementKeysCancel() {
     // early lives in CancelByMovement (kCancelGraceMs), keyed off the tracker's
     // arm time.
     const int heldVk = acc::engine_keymap::FirstMovementKeyHeld();
-    const bool stick = acc::pad::StickMoving();
-    if (heldVk == 0 && !stick) return;
+    if (heldVk == 0) return;
 
     // Name the culprit. A movement key stuck down in the OS async state (a
     // keyup lost to a focus switch, a synthetic SendInput press whose release
     // never landed) cancels EVERY mod-armed walk the moment the grace expires,
     // which reads as "the mod refuses to walk to anything" with nothing in the
     // log to explain it. Trace-deduped, so a genuinely held key logs once.
-    acclog::Trace("Autowalk", "movement-cancel source: vk=0x%02x ('%c') stick=%d",
+    acclog::Trace("Autowalk", "movement-cancel source: vk=0x%02x ('%c')",
                   heldVk,
-                  (heldVk >= 32 && heldVk < 127) ? (char)heldVk : '?',
-                  stick ? 1 : 0);
+                  (heldVk >= 32 && heldVk < 127) ? (char)heldVk : '?');
 
     acc::guidance::CancelByMovement();
 }

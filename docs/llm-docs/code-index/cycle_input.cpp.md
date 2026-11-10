@@ -1,4 +1,4 @@
-# cycle_input.cpp (1081 lines)
+# cycle_input.cpp (1053 lines)
 
 Source: `patches/Accessibility/cycle_input.cpp`
 
@@ -25,6 +25,5 @@ user32.lib for GetAsyncKeyState / GetForegroundWindow / GetWindowThreadProcessId
 - L779 `void OnRouteFocus()`: Ctrl+- — speak the route to the currently-focused object, turn by turn, from our own A* over the static per-area nav graph (the engine refuses to plot for the leader).
 - L849 `void OnPathfindFocusForce()`: Alt+- — diagnostic alternate path that bypasses the action queue via CSWSCreature::ForceMoveToPoint instead of AddMoveToPointAction.
 - L894 `bool TryHandleEvent(int param_1, int param_2)`
-- L985 `bool DispatchPadAction(PadAction action)`
-- L1013 `void PollWin32()`
-- L1076 `void WalkToNarratedTarget()`
+- L985 `void PollWin32()`
+- L1048 `void WalkToNarratedTarget()`

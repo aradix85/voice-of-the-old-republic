@@ -53,12 +53,6 @@ bool OpenTarget(int row);
 // is now reserved for the one case that means it: nothing populated anywhere.
 bool OpenPersonal(int col);
 
-// Open the personal block wherever it actually has something, with no column
-// requested. The pad's left trigger uses this: it is opening "the action
-// menu", not "Force Powers", so a notice about an empty column nobody asked
-// for would be answering an unasked question.
-bool OpenAnyPersonal();
-
 // Fire a personal column's currently-selected entry outright, no menu — what
 // bare 8 and 9 do for KOTOR 2's combat-behaviour and forms columns. Bare 4..7
 // do NOT come here: those are the engine's own keys and the mod only announces

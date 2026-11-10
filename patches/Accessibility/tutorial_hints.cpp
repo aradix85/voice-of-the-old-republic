@@ -4,7 +4,6 @@
 #include <cstdint>
 #include <cstring>
 
-#include "binding_hints.h"  // Text — keyboard vs controller wording
 #include "engine_game.h"     // IsKotor2 — per-game strref/row tables
 #include "engine_reads.h"    // LookupTlk
 #include "log.h"
@@ -255,9 +254,7 @@ const char* HintForTutorialRow(int row) {
         }
     }
     if (!have) return nullptr;
-    // Text(), not Get(): a gamepad turns every one of these into its
-    // controller wording, from the one predicate every hint surface asks.
-    const char* s = acc::binding_hints::Text(id);
+    const char* s = acc::strings::Get(id);
     return (s[0]) ? s : nullptr;
 }
 
@@ -406,7 +403,7 @@ const char* HintForMouseText(const char* text) {
     const MouseMsg* msgs = ActiveMouseMsgs(&count);
     for (int i = 0; i < s_mouseTextCount; ++i) {
         if (s_mouseText[i][0] && EqualsTrimmed(text, s_mouseText[i])) {
-            const char* s = acc::binding_hints::Text(msgs[i].hint);
+            const char* s = acc::strings::Get(msgs[i].hint);
             return (s[0]) ? s : nullptr;
         }
     }
@@ -459,7 +456,7 @@ const char* HintForDialogLine(const char* renderedLine, uint32_t* outStrref) {
     for (int i = 0; i < s_resolvedCount; ++i) {
         if (!s_resolved[i].valid) continue;
         if (EqualsTrimmed(renderedLine, s_resolved[i].text)) {
-            const char* s = acc::binding_hints::Text(s_resolved[i].id);
+            const char* s = acc::strings::Get(s_resolved[i].id);
             if (!s[0]) return nullptr;
             // s_resolved is built parallel to the active hint table, so index
             // i carries the source strref.

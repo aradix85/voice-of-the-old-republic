@@ -55,10 +55,6 @@ struct EdgeState {
     bool keyNow;
     bool keyLast;
     bool claimed;
-    // One-shot rising edge from a non-keyboard source (the KOTOR 2 gamepad).
-    // Set by PadPress, cleared by the Pressed() that reports it — see the
-    // header for why the clear is on the read and not in EndTick.
-    bool padLatch;
 };
 EdgeState g_edge[static_cast<int>(Action::COUNT)] = {};
 
@@ -575,22 +571,10 @@ bool Pressed(Action a) {
     int idx = static_cast<int>(a);
     if (idx < 0 || idx >= static_cast<int>(Action::COUNT)) return false;
     if (g_edge[idx].claimed) return false;
-    if (g_edge[idx].padLatch) {
-        g_edge[idx].padLatch = false;
-        return IsForegroundGame();
-    }
     if (!g_edge[idx].now || g_edge[idx].last) return false;
     // The key itself must have been up last tick — see EdgeState::keyLast.
     if (g_edge[idx].keyLast) return false;
     return IsForegroundGame();
-}
-
-void PadPress(Action a) {
-    InitDefaults();
-    int idx = static_cast<int>(a);
-    if (idx < 0 || idx >= static_cast<int>(Action::COUNT)) return;
-    g_edge[idx].padLatch = true;
-    acclog::Write("Hotkeys", "pad press -> %s", Name(a));
 }
 
 bool Held(Action a) {

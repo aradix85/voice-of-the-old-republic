@@ -12,7 +12,6 @@
 #include "engine_offsets_select.h"  // acc::off — the CExoRawInputInternal
                                     // device fields moved by 4 bytes in K2
 #include "engine_rebase.h"
-#include "pad_input.h"   // CodeHint — the KOTOR 2 pad shares this numbering
 #include "speech.h"
 #include "strings.h"
 
@@ -309,25 +308,8 @@ const char* InputIndexNameRaw(int code) {
 }
 }  // namespace
 
-// Public wrapper. On KOTOR 2 the gamepad reuses this very numbering, so a raw
-// name like "KEYBOARD_F12" is actively misleading in a log that is mostly
-// about pad events — annotate the codes a pad can produce with what they mean
-// on the pad. The keyboard name stays primary and the hint keeps its question
-// mark: the numbering genuinely IS shared with real bindablekeys.2da rows, so
-// renaming outright would just move the lie.
-//
-// The small rotating buffer exists because callers pass the result straight
-// into a format string; one slot would break a line that names two codes.
 const char* InputIndexName(int code) {
-    const char* base = InputIndexNameRaw(code);
-    const char* hint = acc::pad::CodeHint(code);
-    if (!hint) return base;
-    static char s_bufs[4][96];
-    static int  s_slot = 0;
-    s_slot = (s_slot + 1) & 3;
-    _snprintf_s(s_bufs[s_slot], sizeof(s_bufs[s_slot]), _TRUNCATE,
-                "%s [pad %s?]", base, hint);
-    return s_bufs[s_slot];
+    return InputIndexNameRaw(code);
 }
 
 // CSWGuiManager::HandleInputEvent receives KOTOR-internal "logical action"

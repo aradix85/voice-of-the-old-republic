@@ -1,4 +1,4 @@
-# menus_dispatch.cpp (683 lines)
+# menus_dispatch.cpp (631 lines)
 
 Source: `patches/Accessibility/menus_dispatch.cpp`
 
@@ -12,5 +12,5 @@ The definitions are verbatim from menus.cpp. Gate ORDER is behaviour - each subs
 
 ## Declarations (in source order)
 
-- L74 `extern "C" void __cdecl OnHandleFocusChange(void* thisPtr, int param_1)`: CSWGuiControl::HandleFocusChange — hooked mid-function at 0x41896b.
-- L99 `extern "C" int __cdecl OnHandleInputEvent(void* thisPtr, int param_1, int param_2)`: CSWGuiManager::HandleInputEvent — hooked mid-function at 0x0040c907.
+- L72 `extern "C" void __cdecl OnHandleFocusChange(void* thisPtr, int param_1)`: CSWGuiControl::HandleFocusChange — hooked mid-function at 0x41896b.
+- L97 `extern "C" int __cdecl OnHandleInputEvent(void* thisPtr, int param_1, int param_2)`: CSWGuiManager::HandleInputEvent — hooked mid-function at 0x0040c907.

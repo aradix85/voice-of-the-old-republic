@@ -14,7 +14,6 @@
 #include "menus_galaxymap.h"  // SpeakDescription — galaxy-map LBL_DESC peek
 #include "menus_internal.h"   // panel-member control resolvers
 #include "menus_listbox.h"    // IsEquipPickerArmed
-#include "pad_input.h"        // PeekModifierHeld — Y is the pad's Shift
 #include "speech.h"
 #include "strings.h"          // WorkbenchSlotPeekEmpty
 
@@ -549,13 +548,7 @@ const char* ReadRowText(void* row, char* outBuf, std::size_t bufSize) {
 bool ShiftHeld() {
     // OS-level query; the engine-side flag can latch stale on swallowed
     // up-edges.
-    //
-    // The pad's Y button is the same modifier by another name: it is what a
-    // controller has instead of Shift, and holding it turns the D-Pad's up /
-    // down into this peek exactly as Shift turns the arrow keys'. One predicate
-    // rather than a second gate per panel, so every entry in the registry gains
-    // the pad route at once.
-    return acc::hotkeys::ShiftHeld() || acc::pad::PeekModifierHeld();
+    return acc::hotkeys::ShiftHeld();
 }
 
 // Workbench saber-upgrade picker: build the description the way the engine's

@@ -1,4 +1,4 @@
-# menus_chain.cpp (1482 lines)
+# menus_chain.cpp (1467 lines)
 
 Source: `patches/Accessibility/menus_chain.cpp`
 
@@ -35,23 +35,23 @@ here and what stays in menus.cpp. Function bodies are unchanged from the origina
 - L546 `void* ResolveEquipPickerListBox(void* panel)`: InGameEquip picker listbox (LB_ITEMS, id=5): the equip panel keeps the picker's item listbox in panel.controls[] even when the picker isn't visually shown — the engine pre-populates it with the body- slot candidates a...
 - L567 `void* ResolveWorkbenchUpgradeListBox(void* panel)`: WorkbenchUpgrade LB_ITEMS (id=0): the compatible-crystal list.
 - L604 `bool IsDecorativeControl(void* panel, void* c, const char* closeCaption, bool haveCloseCaption)`: Per-kind decorative filter.
-- L849 `void AppendListBoxChildren(void* panel, void* c, void* equipPickerLb, void* workbenchUpgradeLb, bool modalText, int& listBlockTop)`: Listbox dispatch: * size > 1 — recurse one level into button children (sub-dialog settings list).
-- L967 `bool AppendVirtualRow(void* labelControl, int sortCy, void* panel, RowProbe probe)`
-- L981 `bool ProbeCreditsRow(void* panel, void* labelControl)`
-- L987 `bool ProbeStatRow(void* panel, void* labelControl)`
-- L993 `bool ProbeWagerRow(void* panel, void* labelControl)`
-- L999 `bool ProbeEquipStatRow(void* panel, void* labelControl)`
-- L1018 `bool OnCreditsAnchor(void* labelControl, int sortCy, void* userData)`: Virtual credits row for Inventory + Store.
-- L1037 `bool OnStatRowAnchor(void* labelControl, int sortCy, void* userData)`: Per-kind virtual chain entries.
-- L1045 `bool OnWagerAnchor(void* labelControl, int sortCy, void* userData)`: Virtual wager row for the Pazaak wager popup.
-- L1056 `bool OnEquipStatAnchor(void* labelControl, int sortCy, void* userData)`: Virtual stat rows for the Equip panel (Vitality, Defense, Attack, Damage).
-- L1067 `bool OnModSettingsAnchor(void* sentinel, int sortCx, int sortCy, void* /*userData*/)`: Virtual "Mod settings" entry for InGameOptions + MainMenuOptions.
-- L1090 `void AppendStatusSummaryRows(void* panel, CExoArrayList* list, int n)`: Per-kind virtual chain entries for StatusSummary — the engine's quest- progress / journal-entry info popup.
-- L1109 `bool ChainEntryPrecedes(const ChainEntry& a, const ChainEntry& b)`: Reading-order comparator: y first, then x — but the x tiebreak applies only when BOTH entries are geometrically ordered (see ChainEntry::geometricOrder).
-- L1145 `void DemoteFilterStripAboveList(void* panel, int listBlockTop)`: House rule: on a list-driven screen the list is read first and its filter / toggle strip after it.
-- L1172 `void SortChainBySortCy()`: Insertion sort in reading order (ChainEntryPrecedes).
-- L1187 `void SquashCycleFlankers(void* panel)`: Squash cycle-arrow flankers from the chain.
-- L1245 `void ComputeEquipSlotClickOffset(void* panel)`: Row pitch between InGameEquip slot buttons, used to compensate the simulated click position.
-- L1280 `void ComputeClassIconClickOffset(void* panel)`: Column pitch between chargen class-selection icons, same purpose as ComputeEquipSlotClickOffset above.
-- L1306 `void LogChainContents(void* panel, void* active)`: Per-rebind chain dump.
-- L1352 `void RebindChain(void* panel)`
+- L834 `void AppendListBoxChildren(void* panel, void* c, void* equipPickerLb, void* workbenchUpgradeLb, bool modalText, int& listBlockTop)`: Listbox dispatch: * size > 1 — recurse one level into button children (sub-dialog settings list).
+- L952 `bool AppendVirtualRow(void* labelControl, int sortCy, void* panel, RowProbe probe)`
+- L966 `bool ProbeCreditsRow(void* panel, void* labelControl)`
+- L972 `bool ProbeStatRow(void* panel, void* labelControl)`
+- L978 `bool ProbeWagerRow(void* panel, void* labelControl)`
+- L984 `bool ProbeEquipStatRow(void* panel, void* labelControl)`
+- L1003 `bool OnCreditsAnchor(void* labelControl, int sortCy, void* userData)`: Virtual credits row for Inventory + Store.
+- L1022 `bool OnStatRowAnchor(void* labelControl, int sortCy, void* userData)`: Per-kind virtual chain entries.
+- L1030 `bool OnWagerAnchor(void* labelControl, int sortCy, void* userData)`: Virtual wager row for the Pazaak wager popup.
+- L1041 `bool OnEquipStatAnchor(void* labelControl, int sortCy, void* userData)`: Virtual stat rows for the Equip panel (Vitality, Defense, Attack, Damage).
+- L1052 `bool OnModSettingsAnchor(void* sentinel, int sortCx, int sortCy, void* /*userData*/)`: Virtual "Mod settings" entry for InGameOptions + MainMenuOptions.
+- L1075 `void AppendStatusSummaryRows(void* panel, CExoArrayList* list, int n)`: Per-kind virtual chain entries for StatusSummary — the engine's quest- progress / journal-entry info popup.
+- L1094 `bool ChainEntryPrecedes(const ChainEntry& a, const ChainEntry& b)`: Reading-order comparator: y first, then x — but the x tiebreak applies only when BOTH entries are geometrically ordered (see ChainEntry::geometricOrder).
+- L1130 `void DemoteFilterStripAboveList(void* panel, int listBlockTop)`: House rule: on a list-driven screen the list is read first and its filter / toggle strip after it.
+- L1157 `void SortChainBySortCy()`: Insertion sort in reading order (ChainEntryPrecedes).
+- L1172 `void SquashCycleFlankers(void* panel)`: Squash cycle-arrow flankers from the chain.
+- L1230 `void ComputeEquipSlotClickOffset(void* panel)`: Row pitch between InGameEquip slot buttons, used to compensate the simulated click position.
+- L1265 `void ComputeClassIconClickOffset(void* panel)`: Column pitch between chargen class-selection icons, same purpose as ComputeEquipSlotClickOffset above.
+- L1291 `void LogChainContents(void* panel, void* active)`: Per-rebind chain dump.
+- L1337 `void RebindChain(void* panel)`

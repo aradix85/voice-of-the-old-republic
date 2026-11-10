@@ -31,23 +31,4 @@ void PollWin32();
 // A second call while that walk is in flight cancels it, like Shift+-.
 void WalkToNarratedTarget();
 
-// Third ingestion path: the KOTOR 2 gamepad (pad_input.cpp). The D-Pad is
-// inert in the world — all four codes reach the GUI manager, nothing consumes
-// them — so it carries the cycle bindings, with the triggers as a modifier
-// layer over the `-` family. Same per-action handlers as the two keyboard
-// paths, so pad and keyboard cycling behave identically.
-//
-// Self-gates on in-world exactly like TryHandleEvent (GetPlayerPosition) and
-// picks the World / Map context the same way; returns false when the caller
-// should let the event through instead.
-enum class PadAction {
-    ItemPrev, ItemNext,
-    CategoryPrev, CategoryNext,
-    ItemFirst, ItemLast,
-    AnnounceFocus,   // repeat the last narrated target
-    WalkToFocus,     // autowalk (second press cancels)
-    RouteFocus,      // speak the route to the focus
-};
-bool DispatchPadAction(PadAction action);
-
 }  // namespace acc::cycle_input

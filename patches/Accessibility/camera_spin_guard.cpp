@@ -9,7 +9,7 @@
 #include "engine_app.h"      // GetClientAppInternal — K2 viewport-object chain
 #include "engine_input.h"    // PollTurnAxis / ReadNativeStickAxes — the two
                              // sources UpdateCamera feeds to AcclTurnCamera
-#include "engine_keymap.h"   // AnyMovementCommanded — device-independent input
+#include "engine_keymap.h"   // AnyMovementKeyHeld — the bound move/turn keys
 #include "engine_manager.h"  // kAddrGuiManagerPtr
 #include "engine_options.h"  // GetMouseLook
 #include "engine_panels.h"   // IsForegroundUiBlocking — cinematic / screen gate
@@ -502,7 +502,7 @@ void Tick() {
     // gated on here because the only mouse state we can read reliably across
     // both games is the cursor, and a full uncommanded revolution is worth a
     // line even when a mouse is involved.
-    bool playerCommanding = acc::engine_keymap::AnyMovementCommanded();
+    bool playerCommanding = acc::engine_keymap::AnyMovementKeyHeld();
     bool cameraNotOurs    = CameraDrivenByNonPlayer();
     bool watchEligible = !cameraNotOurs && !playerCommanding &&
                          acc::hotkeys::IsForegroundGame();

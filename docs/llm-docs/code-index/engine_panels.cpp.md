@@ -1,4 +1,4 @@
-# engine_panels.cpp (905 lines)
+# engine_panels.cpp (888 lines)
 
 Source: `patches/Accessibility/engine_panels.cpp`
 
@@ -24,21 +24,20 @@ Chain: *(CAppManager**)0x7A39FC → CAppManager → +0x4 CClientExoApp → +0x4 
 - L217 `bool IsPazaakWagerStructural(void* panel)`
 - L232 `bool IsQuestItemStructural(void* panel)`
 - L246 `bool IsScriptSelectStructural(void* panel)`
-- L253 `bool IsGamepadQuickMenuStructural(void* panel)`: KOTOR 2 gamepad Quick Menu — vtable equality, nothing structural.
-- L274 `bool IsPowersLevelUpStructural(void* panel)`: CSWGuiPowersLevelUp picker (pwrlvlup.gui).
-- L319 `PanelKind IdentifyOptionsSubScreen(void* panel)`: Returns the specific sub-screen kind, or Unknown if `panel`'s vtable isn't one of the nine.
-- L341 `bool LookupUpgradeSlotType(int slotCustomValue, int category, int* outUpgradeType, uint32_t* outStrRef)`: See the header for why the index lives here rather than at the call sites.
-- L531 `const char* PanelKindName(PanelKind k)`
-- L539 `void* ResolveGuiInGame()`
-- L552 `void* ResolveMainInterface()`
-- L564 `bool ReadDialogReplyText(int replyIndex, char* outBuf, size_t bufSize)`
-- L589 `int ReadDialogReplyCount()`
-- L628 `bool IsVtableAlreadyDumped(uintptr_t vt)`
-- L635 `void RememberDumpedVtable(uintptr_t vt)`
-- L645 `void LogUnknownPanelDiagnostics(void* panel)`
-- L722 `int SlotTableLookup(void* panel)`: The CGuiInGame slot walk, hoisted out of IdentifyPanel so the __try owns no unwinding objects (C2712) and returns the matching table index, or -1.
-- L742 `PanelKind IdentifyPanel(void* panel)`
-- L856 `bool IsPanelKindInGameMenu(void* panel)`
-- L860 `void* FindPanelByKind(PanelKind kind)`
-- L872 `bool IsMainMenuOptionsSubScreen(PanelKind k)`
-- L889 `bool IsModalPopupPanel(PanelKind k)`
+- L260 `bool IsPowersLevelUpStructural(void* panel)`: CSWGuiPowersLevelUp picker (pwrlvlup.gui).
+- L305 `PanelKind IdentifyOptionsSubScreen(void* panel)`: Returns the specific sub-screen kind, or Unknown if `panel`'s vtable isn't one of the nine.
+- L327 `bool LookupUpgradeSlotType(int slotCustomValue, int category, int* outUpgradeType, uint32_t* outStrRef)`: See the header for why the index lives here rather than at the call sites.
+- L517 `const char* PanelKindName(PanelKind k)`
+- L525 `void* ResolveGuiInGame()`
+- L538 `void* ResolveMainInterface()`
+- L550 `bool ReadDialogReplyText(int replyIndex, char* outBuf, size_t bufSize)`
+- L575 `int ReadDialogReplyCount()`
+- L614 `bool IsVtableAlreadyDumped(uintptr_t vt)`
+- L621 `void RememberDumpedVtable(uintptr_t vt)`
+- L631 `void LogUnknownPanelDiagnostics(void* panel)`
+- L708 `int SlotTableLookup(void* panel)`: The CGuiInGame slot walk, hoisted out of IdentifyPanel so the __try owns no unwinding objects (C2712) and returns the matching table index, or -1.
+- L728 `PanelKind IdentifyPanel(void* panel)`
+- L839 `bool IsPanelKindInGameMenu(void* panel)`
+- L843 `void* FindPanelByKind(PanelKind kind)`
+- L855 `bool IsMainMenuOptionsSubScreen(PanelKind k)`
+- L872 `bool IsModalPopupPanel(PanelKind k)`

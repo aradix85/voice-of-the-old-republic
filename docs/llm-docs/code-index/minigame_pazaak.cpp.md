@@ -1,4 +1,4 @@
-# minigame_pazaak.cpp (1180 lines)
+# minigame_pazaak.cpp (1122 lines)
 
 Source: `patches/Accessibility/minigame_pazaak.cpp`
 
@@ -55,8 +55,7 @@ Design (no engine detour hook): * Identify the live board panel structurally —
 - L838 `bool IsSignChoiceCard(int index)`
 - L844 `void FormatFlipFaces(int mag, int flip, CardContext ctx, char* out, size_t n)`: Render one of the six classic ±N flip faces into `out`.
 - L877 `void FormatCardLabel(int index, int flip, CardContext ctx, char* out, size_t n, int value)`: Shared card-label synthesizer — see pazaak.h.
-- L940 `bool TryHandlePadAction(PadAction a)`: The pad's two board bindings.
-- L995 `bool TryHandleInput(void* /*activePanel*/, int param_1, int param_2, int& rv)`: Arrow + Enter navigator, driven from the manager input hook so the generic chain can't also act on the board's controls.
-- L1095 `bool IsBoardForeground()`
-- L1097 `void DispatchWagerInput(void* panel, int code)`
-- L1110 `void Tick()`
+- L937 `bool TryHandleInput(void* /*activePanel*/, int param_1, int param_2, int& rv)`: Arrow + Enter navigator, driven from the manager input hook so the generic chain can't also act on the board's controls.
+- L1037 `bool IsBoardForeground()`
+- L1039 `void DispatchWagerInput(void* panel, int code)`
+- L1052 `void Tick()`

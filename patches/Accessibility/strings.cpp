@@ -169,8 +169,6 @@ const char* Get(Id id) {
 
         case Id::FmtFacingWorld:              return "Facing %s.";
 
-        case Id::MouseLookOn:          return "Mouse Look on";
-        case Id::MouseLookOff:         return "Mouse Look off";
 
         case Id::ViewModeOn:           return "View mode on";
         case Id::ViewModeOff:          return "View mode off";
@@ -581,7 +579,6 @@ const char* Get(Id id) {
         case Id::HelpGroupMap:          return "Map";
         case Id::HelpGroupPazaak:              return "Pazaak";
         case Id::HelpGroupMod:          return "Mod features";
-        case Id::HelpGroupController:    return "Controller";
 
         case Id::HelpKeyUpDown:          return "Up and down arrow: move through lists and menu entries";
         case Id::HelpKeyLeftRight:       return "Left and right arrow: switch category or change a value";
@@ -643,79 +640,6 @@ const char* Get(Id id) {
 
         case Id::HelpKeyModSettings:     return "Mod settings are in Options, at the bottom of the list";
         case Id::HelpKeyCopyLastSpoken:  return "Control plus R: copy the last spoken text to the clipboard";
-        case Id::HelpKeyPadMenuNav:          return "In menus: D-pad or left stick move, A confirms, B goes back";
-        case Id::HelpKeyPadTooltip:          return "Hold Y and press the D-pad up or down: read the full description without moving";
-        case Id::HelpKeyPadInteract:          return "A: default action on the focused target (attack, open, talk, pick up)";
-        case Id::HelpKeyPadCycleObjects:     return "D-pad left and right: previous and next object";
-        case Id::HelpKeyPadCycleCategory:    return "D-pad up and down: previous and next category";
-        case Id::HelpKeyPadMapHints:         return "Map screen, D-pad left and right: previous and next map hint";
-        case Id::HelpKeyPadActionMenuToggle: return "Left trigger: open the action menu; press it again to close";
-        case Id::HelpKeyPadActionMenuNav:    return "Action menu, D-pad: left and right change the category, up and down the entry, A fires, B or the left trigger closes";
-        case Id::HelpKeyPadSelfStatus:       return "Left trigger with X: your own status";
-        case Id::HelpKeyPadActionQueue:      return "Left trigger with B: the action queue. D-pad up and down step through the entries, A removes the last one queued, Y clears the whole queue, B closes";
-        case Id::HelpKeyPadWalkToFocus:      return "Right trigger with right shoulder button: walk to the focused object";
-        case Id::HelpKeyPadRoute:            return "Left trigger with left shoulder button: describe the route to the focused object";
-        case Id::HelpKeyPadDegrees:          return "Right trigger: announce your facing direction and the area you are in";
-        case Id::HelpKeyPadCameraOrient:
-            return "Press the right stick: turn the camera to the nearest exit, then clockwise to the next one";
-        case Id::HelpKeyPadHelp:             return "Both triggers: keys for this screen. The quick menu's Help entry opens this list";
-        case Id::HelpKeyPadQuickMenu:        return "Y: quick menu";
-        case Id::HelpKeyPadCycleTargets:     return "Left and right shoulder buttons: cycle targets";
-        case Id::HelpKeyPadTradeMode:        return "Container and store, shoulder buttons: switch the mode";
-        case Id::HelpKeyPadOptions:          return "Back button: options menu";
-        case Id::HelpKeyPadPause:            return "Start: pause";
-        case Id::HelpKeyPadSwitchLeader:     return "X: switch party leader";
-
-        // Controller rows added with the Pazaak board bindings, the D-Pad's
-        // hold-to-jump gesture and the map's marker press.
-        case Id::HelpKeyPadCycleEnds:
-            return "Hold the D-pad left or right: jump to the nearest or farthest object";
-        case Id::HelpKeyPadListEnds:
-            return "Hold the D-pad up or down: jump to the first or last entry of a list";
-        case Id::HelpKeyPadDropMarker:
-            return "Map screen, press the right stick: drop a map marker at the cursor";
-        case Id::HelpKeyPadDialogRepeat:
-            return "In a dialogue, both triggers: repeat the current spoken line";
-        case Id::HelpKeyPadPazaakNav:
-            return "Pazaak board, D-pad: up and down move between your hand, the two boards and the actions; left and right move within one. A plays the card you are on, B cancels a sign choice";
-        case Id::HelpKeyPadPazaakSign:
-            return "Pazaak board, on a plus-minus card: left and right choose the sign, A plays it, B cancels";
-        case Id::HelpKeyPadPazaakTurn:
-            return "Pazaak board, Y: stand. X: end turn";
-
-        // Controller rows that close the last of the keyboard-only gaps: the
-        // stick pair, the two routes into the game's screens, and the face-button
-        // chord grid.
-        case Id::HelpKeyPadMove:
-            return "Left stick: walk, and step sideways. Right stick: turn the camera and, with it, your walking direction";
-        case Id::HelpKeyPadTabs:
-            return "Left and right shoulder buttons: switch tabs, and step between the in-game menu screens";
-        case Id::HelpKeyPadScreens:
-            return "Y, entry Menus: open the game screens. The shoulder buttons then step between map, messages, quests, abilities, character, inventory and equip";
-        case Id::HelpKeyPadMapCursor:
-            return "Map screen, left stick: move the map cursor to read terrain and markers";
-        case Id::HelpKeyPadAnnounceFocus:
-            return "Left trigger with A: announce the focused object";
-        case Id::HelpKeyPadViewMode:
-            return "Right trigger with A: look-around mode, hold position while you turn the camera";
-        case Id::HelpKeyPadLevelUp:
-            return "Right trigger with Y: open the level-up screen";
-        case Id::HelpKeyPadCancelCombat:
-            return "Left trigger with Y: cancel combat";
-        case Id::HelpKeyPadCopyLastSpoken:
-            return "Right trigger with B: copy the last spoken text to the clipboard";
-        case Id::HelpKeyPadPazaakReview:
-            return "Pazaak board, left shoulder button: your hand. Right shoulder button: both boards. Press the left stick: how many cards the opponent still holds";
-
-        case Id::PadQuickMenuOpened:
-            return "Quick menu. Up and down to choose, A confirms, B closes.";
-        case Id::PadQuickMenuClosed:         return "Quick menu closed.";
-        case Id::PadQuickMenus:              return "Menus";
-        case Id::PadQuickPartyLeader:        return "Party leader";
-        case Id::PadQuickSoloMode:           return "Solo mode";
-        case Id::PadQuickStealth:            return "Stealth";
-        case Id::PadQuickSave:               return "Quick save";
-        case Id::PadQuickHelp:               return "Help";
 
         case Id::HelpMenuOpened:    return "Key help. Up and down to read, Escape to close.";
         case Id::HelpMenuClosed:    return "Key help closed.";
@@ -929,8 +853,6 @@ const char* Get(Id id) {
         case Id::DialogRepeatLineHint:
             return "Press R to repeat the last dialogue line.";
         case Id::CameraFeed:            return "Camera view.";
-        case Id::DialogRepeatLineHintPad:
-            return "Pull both triggers together to repeat the last dialogue line.";
 
         // ---- KOTOR 2 tutorial hints (tutorial_hints.cpp K2 tables). The
         //      shared rows 0-42 reuse the TutHint* wordings above; these
@@ -975,151 +897,13 @@ const char* Get(Id id) {
         // ---- KOTOR 2 J/L swap: KOTOR 2's default keymap puts Quests on J
         //      and Messages on L, the mirror image of KOTOR 1 (its keymap.2da
         //      rows 13/14). Same texts as the TutHint* twins above with the two
-        //      letters exchanged; the pad wordings name no letter keys, so
-        //      kTwins points these at the existing *Pad ids.
+        //      letters exchanged.
         case Id::TutK2OpenScreens:
             return "Open game screens directly: M map, L messages, J quests, K abilities, P character, I inventory, U equip, O options. Escape returns.";
         case Id::TutK2Messages:
             return "The messages screen shows values such as experience points, attack and damage rolls, and changes to your character. Open it with L.";
         case Id::TutK2Journal:
             return "The quest screen shows your progress and hints on what to do next. Open it with J. Choose an entry with the arrows and read its details with Shift and an arrow.";
-
-        // ---- KOTOR 2 controller twins (deliberate omissions: see strings.h).
-        case Id::TutK2SwoopRacePad:
-            return "Press B to accelerate and shift up when you hear the audio cue, and A to jump over low bars. Dodge obstacles and hit the accelerator pads with the left stick.";
-        case Id::TutK2ActionQueuePad:
-            return "Press A to add the default action to the command queue; entries from the action menu queue up the same way. Multiple actions run in the order you added them.";
-        case Id::TutK2PlasmaTorchPad:
-            return "Damaged doors are bashed open with a tool like the plasma torch. Open the equip screen from the quick menu on Y, entry Menus, step to it with the shoulder buttons and equip it. Then focus the door, pull the left trigger, and choose Bash.";
-        case Id::TutK2SpaceSuitPad:
-            return "Focus the space suit with the D-pad left and right and press A to put it on or take it off.";
-        case Id::TutK2CommRoomPad:
-            return "Focus a console with the D-pad left and right and activate it with A. To use the computers you need the programming spike from the container in the cockpit.";
-        case Id::TutK2MinesPad:
-            return "You detect mines and traps with your Awareness skill while standing still. Focus a detected mine with the D-pad left and right, pull the left trigger for the action menu, and choose Disable or Recover. Now disable or recover three proton torpedo fragments around the rocket.";
-        case Id::TutK2VibrocutterPad:
-            return "The vibrocutter is a melee weapon and beats blasters up close. Open the equip screen from the quick menu on Y, entry Menus, and place it in a weapon slot. The secondary weapon slots hold a second configuration.";
-        case Id::TutK2DialogueChoicePad:
-            return "Choose replies with the D-pad up and down and confirm with A. Pull both triggers together to repeat the last dialogue line.";
-        case Id::TutK2EquipWeaponPad:
-            return "Open the equip screen from the quick menu on Y, entry Menus, and step to it with the shoulder buttons. Choose a weapon slot with the D-pad and A and pick the weapon from the list.";
-        case Id::TutK2WeaponConfigPad:
-            return "The equip screen has two weapon configurations, active and secondary, for example for melee and ranged weapons. Fill the slots with the D-pad and A.";
-        case Id::TutK2TakeItemPad:
-            return "Focus the container with the D-pad left and right and open it with A. Take the programming spike and use it on the computer terminal.";
-        case Id::TutK2GalaxyMapPad:
-            return "Set course for Peragus: on the galaxy map, choose Peragus with the D-pad left and right; A starts the journey.";
-        case Id::TutK2SoloModePad:
-            return "You can only get through this door in solo mode: toggle it from the quick menu on Y, entry solo mode, and only the controlled party member moves. Bring 3C-FD alone to the security computer so it opens the door.";
-        case Id::TutK2RepairKitPad:
-            return "Repair kits heal droids. Pull the left trigger, step to Medical with the D-pad left and right, and press A.";
-        case Id::TutK2SecuritySpikePad:
-            return "This lock is beyond your skill; use a security spike. Focus the container, pull the left trigger for the action menu, and choose Security.";
-        case Id::SwoopRaceControlsPad:
-            return "Press B to shift up on the audio cue. Steer with the left stick. Avoid the obstacles and hit the accelerator pads to beat the time.";
-        case Id::SwoopRaceControlsK2Pad:
-            return "Press B to shift up on the audio cue and A to jump over an obstacle. Steer with the left stick. Avoid the obstacles and hit the accelerator pads to beat the time.";
-        case Id::SwoopRaceStuckHintPad:
-            return "Steer aside, then B and A.";
-        case Id::SwoopRaceStuckHintLeftPad:
-            return "Steer left, then B.";
-        case Id::SwoopRaceStuckHintRightPad:
-            return "Steer right, then B.";
-        case Id::SwoopRaceStuckBarWallLeftPad:
-            return "Steer left, then A, then B.";
-        case Id::SwoopRaceStuckBarWallRightPad:
-            return "Steer right, then A, then B.";
-        case Id::SwoopRaceStuckBarStripPad:
-            return "Follow the tone, then B.";
-        case Id::SwoopRaceStuckBarJumpPad:
-            return "A, then B.";
-
-        // ---- Controller wording for the tutorial hints above. Selected by
-        //      binding_hints::Text() when a gamepad is present; see strings.h.
-
-        case Id::TutHintCombatFeatPad:
-            return "Combat feats are in the action menu. Pull the left trigger to open it, step to Attacks with the D-pad left and right, and press A.";
-        case Id::TutHintGrenadePad:
-            return "Throw grenades from the action menu. Pull the left trigger to open it, step to Explosives with the D-pad left and right, and press A.";
-        case Id::TutHintMinePad:
-            return "Place mines from the action menu. Pull the left trigger to open it, step to Explosives with the D-pad left and right, and press A.";
-        case Id::TutHintFriendlyPowerPad:
-            return "Friendly Force powers are in the action menu. Pull the left trigger to open it, step to self powers with the D-pad left and right, and press A.";
-        case Id::TutHintHostilePowerPad:
-            return "Hostile Force powers are in the action menu. Pull the left trigger to open it, step to target powers with the D-pad left and right, and press A.";
-        case Id::TutHintActionMenuScrollPad:
-            return "In the action menu, move between entries with the D-pad up and down, and between categories with the D-pad left and right.";
-        case Id::TutHintOpenScreensPad:
-            return "Press Y for the quick menu and choose Menus to open the game screens. The left and right shoulder buttons then step between map, messages, quests, abilities, character, inventory and equip. B returns.";
-        case Id::TutHintCycleTargetsPad:
-            return "Choose targets with the left and right shoulder buttons. Step through the objects you have discovered with the D-pad left and right. In combat you can only target enemies.";
-        case Id::TutHintEquipSlotPad:
-            return "On the equip screen, choose a slot with the D-pad and A, then pick an item from the list. Hold Y and press the D-pad up or down to read an item's description.";
-        case Id::TutHintEnemyNearPad:
-            return "An enemy is near. Cycle targets with the left and right shoulder buttons and attack with A.";
-        case Id::TutHintBashPad:
-            return "To bash, focus the door or container, pull the left trigger to open the action menu, and choose Bash.";
-        case Id::TutHintAttackPad:
-            return "Focus an enemy with the left and right shoulder buttons and attack with A. One press is enough; your character then attacks automatically each round until you choose another target.";
-        case Id::TutHintAttackAutoPad:
-            return "Remember: one press of A attacks automatically each round. Only a new target changes that.";
-        case Id::TutHintMovementPad:
-            return "Pull both triggers together anytime for the keys of the current screen, and press Y for the quick menu, entry Help, for the full list. To move, push the left stick in any direction. Push the right stick left or right to turn the camera and, with it, your walking direction, so the two always point the same way. As you move, the shape of the room around you is described. Pull the right trigger to repeat your facing direction and current room.";
-        case Id::TutHintMapScreenPad:
-            return "The map shows every explored area of a level. Important areas are marked, and some areas, such as cities, are mapped before you explore them. Move around the map with the left stick. Switch between map hints with the D-pad left and right. Pull the left trigger together with the left shoulder button to hear the route to the map hint, or the right trigger with the right shoulder button to walk there automatically.";
-        case Id::TutHintJournalPad:
-            return "The quest screen shows your progress and hints on what to do next. Open it from the quick menu on Y, entry Menus, then step to it with the shoulder buttons. Choose an entry with the D-pad, and read its details by holding Y and pressing the D-pad up or down.";
-        case Id::TutHintMessagesPad:
-            return "The messages screen shows values such as experience points, attack and damage rolls, and changes to your character. Open it from the quick menu on Y, entry Menus, then step to it with the shoulder buttons.";
-        case Id::TutHintPartyDiesPad:
-            return "A party member has fallen. Members downed in combat are revived after the fight, but if all members die the game is over. Press X to control a different member.";
-        case Id::TutHintInventoryPad:
-            return "The inventory lists your party's items, shared across all members. Open it from the quick menu on Y, entry Menus, then step to it with the shoulder buttons. Move through the items with the D-pad, and read an item's description by holding Y and pressing the D-pad up or down.";
-        case Id::TutTraskGettingStartedPad:
-            return "You now have control. The basics: pull both triggers together for the keys of the current screen, or press Y for the quick menu, entry Help, for the full list. Push the left stick to walk, and the right stick left or right to turn the camera and, with it, your walking direction, so the two always point the same way. The left and right shoulder buttons switch between targets, the D-pad left and right steps through objects, and A interacts with the focused object.";
-        case Id::TutTraskEquipOpenPad:
-            return "The equip screen is where you choose armor and weapons. Open it from the quick menu on Y, entry Menus, then step to it with the shoulder buttons.";
-        case Id::TutTraskEquipBrowsePad:
-            return "Move through the equip slots with the D-pad; each slot holds an item you can assign. Hold Y and press the D-pad up or down to read the item's description.";
-        case Id::TutTraskEquipWeaponPad:
-            return "Select the weapon slot and press A, then choose a weapon from the list.";
-        case Id::TutTraskCameraPad:
-        case Id::TutTraskFootlockerPad:
-            return "You change the camera, and with it your walking direction, with the right stick. Press the right stick to turn to the next compass direction. The left and right shoulder buttons cycle through all visible objects. The D-pad left and right navigates a list of every object you have already seen, and up and down switches between object categories. Press A to walk to a selected object and activate it.";
-        case Id::TutTraskPickItemPad:
-            return "Choose a slot with the D-pad and A, browse the list, and confirm the item with A.";
-        case Id::TutTraskLeaderPad:
-            return "You control the party leader. Press X to switch the member you control.";
-        case Id::TutTraskMakeLeaderPad:
-            return "Press X to make me the leader, then open the door.";
-        case Id::TutTraskMenusPad:
-            return "Open the game screens from the quick menu on Y, entry Menus. The shoulder buttons then step between them.";
-        case Id::TutTraskTabsPad:
-            return "Switch between tabs with the left and right shoulder buttons.";
-        case Id::TutTraskActionMenuPad:
-            return "Pull the left trigger to open the action menu for your target. The D-pad left and right steps between categories, up and down between entries, and A fires the entry you are on.";
-        case Id::TutTraskMedkitPad:
-            return "Use medkits from the action menu. Pull the left trigger to open it, step to Medical with the D-pad left and right, and press A.";
-        case Id::TutTraskOpenDoorPad:
-            return "Focus the door with the D-pad left and right and open it with A.";
-        case Id::TutTraskActivateEntryPad:
-            return "In the action menu, choose an entry with the D-pad up and down and activate it with A.";
-        case Id::TutTraskTargetMenuPad:
-            return "Focus a target with the left and right shoulder buttons, or objects with the D-pad left and right. Press A for the default action, or pull the left trigger to open the action menu.";
-        case Id::TutTraskConfirmEntryPad:
-            return "Highlight the entry with the D-pad up and down and confirm with A.";
-        case Id::TutTraskPausedPad:
-            return "Even while paused, choose targets with the left and right shoulder buttons and switch the controlled member with X.";
-        case Id::TutTraskWalkToPad:
-            return "Focus the footlocker with the left and right shoulder buttons and open it with A.";
-        case Id::TutTraskSecurityPad:
-            return "Focus the door, pull the left trigger to open the action menu, and choose Security.";
-        case Id::TutTraskHealWoundedPad:
-            return "Switch to the wounded character with X, pull the left trigger and step to Medical, and choose the medkit.";
-        case Id::TutLevelUpPad:
-            return "To level up, pull the left trigger and press Y, then follow the prompts.";
-        case Id::TutStealthModePad:
-            return "Press Y for the quick menu and choose Stealth to turn stealth mode on or off. You must have a stealth field generator equipped to use it.";
 
         case Id::FloorPuzzleIntro:
             return "Floor plate puzzle: nine plates in a three by three grid, "
