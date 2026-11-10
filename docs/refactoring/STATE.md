@@ -102,7 +102,11 @@ tags in /objects; kotor-tools 98ad341 matches by tag and shows where
 people are now. The two cooperate correctly: same frame (+X east, +Y
 north), doors and placeables match on position, room kinds as kotor_kaart
 expects. No resref: the engine has no template-resref reader and the tag
-is enough.
+is enough. pad_input split into five files (9aaf284; split_file.py now
+keeps a comment that stood before a dropped forward declaration, 4d4c75c)
+and made lean (981529f): one ClaimA for both games' A, one shoulder mode
+toggle, one stick sampler. Fix 2eb952e: with the mod driving the pad, LT +
+A also interacted (check in game with a controller).
 
 Careful: never rewrite source files with PowerShell ReadAllText/WriteAllText
 (it decodes UTF-8 and writes '?' for the dashes and umlauts in comments);
@@ -166,7 +170,7 @@ prefix (menus_listbox_picker.cpp).
   defined in many files: one constant with it.
 - Stale file names in comments (swoop_race.cpp, swoop_spatial_audio.h,
   turret_game.cpp and others from before the minigame_ prefix): one pass.
-- Next file: pad_input.cpp, then transitions.cpp.
+- Next file: transitions.cpp, then engine_area.cpp.
 - F2b: share the save-variable code of exit_memory with discovery.cpp.
 - F3 menus_chargen_feats / menus_powers_levelup: about 15 same-named
   functions, 22 cloned blocks; one chart-grid module (check K2 plans).
