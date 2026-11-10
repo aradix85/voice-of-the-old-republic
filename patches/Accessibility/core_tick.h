@@ -25,8 +25,7 @@ void Dispatch();
 //    vsync off. Any code that DIVIDES by an inter-tick interval therefore
 //    needs this: with the coarse clock, consecutive ticks land in the same
 //    quantum and the interval reads as zero, which does not degrade a rate,
-//    it falsifies it (camera_announce reported 0°/s mid-turn and fired three
-//    spurious stop cues in one second — patch-20260813-200714).
+//    it falsifies it (camera_announce once reported 0°/s mid-turn).
 //  * Agreement. Sampled once, before any subsystem runs, so the whole tick
 //    shares one "now" instead of each module reading the clock a moment apart.
 //
