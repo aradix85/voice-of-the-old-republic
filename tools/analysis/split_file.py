@@ -200,9 +200,13 @@ def main() -> None:
             if el[0] == "chunk":
                 el[1].lines = pending + el[1].lines
                 el[1].lead = pending
-            else:
+            elif all(not L(k).strip() for k in range(pending[-1] + 1, funcs[el[1]]["start"])):
                 funcs[el[1]]["start"] = pending[0]
                 funcs[el[1]]["lead"] = pending
+            else:
+                # A namespace line stands between the comment and the
+                # function: carry the comment, not the lines in between.
+                funcs[el[1]]["extra_lead"] = pending
             pending = []
         merged.append(el)
     if pending:
@@ -401,6 +405,8 @@ def main() -> None:
     def fn_lines(f: str) -> list[str]:
         v = funcs[f]
         out_lines = [L(k) for k in v.get("extra_lead", [])]
+        if out_lines:
+            out_lines.append("")
         for k in range(v["start"], v["end"] + 1):
             line = L(k)
             if "strip_defaults" in v and v["sig"] <= k <= v["strip_defaults"]:
