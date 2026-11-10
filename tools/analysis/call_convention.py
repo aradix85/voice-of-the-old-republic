@@ -1,6 +1,7 @@
 """Checks every engine call's argument bytes against the engine's own `ret N`.
 
-    python tools/analysis/call_convention.py --from-dump GAME.dmp
+    python tools/analysis/call_convention.py --game k2 --from-exe swkotor2.exe
+    python tools/analysis/call_convention.py --game k1 --from-dump GAME.dmp
     python tools/analysis/call_convention.py [--game k1|k2] [--image FILE]
 
 A function-pointer typedef that pushes more or fewer bytes than the engine
@@ -9,11 +10,13 @@ restores its saved registers from the wrong slots and returns normally, and
 the function above it carries on with garbage: a crash or a wrong value far
 from the cause.
 
-The game's executable on disk is encrypted, so the check reads a memory
-image. `--from-dump` cuts it out of a full process dump (Task Manager,
-"Create dump file", or a crash dump under %LOCALAPPDATA%\\CrashDumps) and
-stores it as build/analysis/engine_image_<game>.bin; later runs use that
-file. Findings go to build/analysis/call_convention.txt.
+The check reads the game's code as it sits in memory, from
+build/analysis/engine_image_<game>.bin. `--from-exe` makes that file from
+the executable on disk. Steam's KOTOR 1 executable is encrypted there (a
+.bind section): unpack a copy with Steamless first, or use `--from-dump`,
+which cuts the image out of a full process dump (Task Manager, "Create dump
+file", or a crash dump under %LOCALAPPDATA%\\CrashDumps). Findings go to
+build/analysis/call_convention.txt.
 
 Needs capstone; --from-dump also needs minidump (pip install capstone minidump).
 """
@@ -22,6 +25,7 @@ import bisect
 import collections
 import os
 import re
+import struct
 import sys
 
 REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -167,6 +171,11 @@ def scan_sources(game: str) -> tuple[list[Use], list[str]]:
                                 (literal.group(0), int(literal.group(0), 16))))
             else:
                 skipped.append(f"{name}:{line}: {type_name}({' '.join(expr.split())[:60]})")
+    # Where the games differ the code branches on the game, with a typedef
+    # named for KOTOR 2 beside the plain one: the plain one is KOTOR 1's call.
+    split = {(u.file, u.where[0]) for u in uses if "K2" in u.type}
+    if game == "k2":
+        uses = [u for u in uses if "K2" in u.type or (u.file, u.where[0]) not in split]
     return uses, skipped
 
 
@@ -226,6 +235,31 @@ class Image:
         return self.cache[entry]
 
 
+def image_from_exe(exe: str, out_path: str) -> None:
+    """Lays the executable's sections out as the loader does."""
+    with open(exe, "rb") as f:
+        raw = f.read()
+    pe = struct.unpack_from("<I", raw, 0x3C)[0]
+    sections, optional_size = struct.unpack_from("<H12xH", raw, pe + 6)
+    optional = pe + 24
+    base, image_size = (struct.unpack_from("<I", raw, optional + off)[0] for off in (28, 56))
+    if base != IMAGE_BASE:
+        sys.exit(f"{exe}: image base 0x{base:x}, expected 0x{IMAGE_BASE:x}")
+    image = bytearray(image_size)
+    image[:0x400] = raw[:0x400]
+    for i in range(sections):
+        header = optional + optional_size + 40 * i
+        name = raw[header:header + 8].rstrip(b"\0")
+        _, address, raw_size, raw_at = struct.unpack_from("<4I", raw, header + 8)
+        if name == b".bind":
+            sys.exit(f"{exe} is encrypted (.bind section); see the top of this script")
+        image[address:address + raw_size] = raw[raw_at:raw_at + raw_size]
+    os.makedirs(OUT, exist_ok=True)
+    with open(out_path, "wb") as f:
+        f.write(image)
+    print(f"image of {os.path.basename(exe)}: {sections} sections -> {out_path}")
+
+
 def image_from_dump(dump: str, game: str, out_path: str) -> None:
     from minidump.minidumpfile import MinidumpFile
     md = MinidumpFile.parse(dump)
@@ -250,14 +284,17 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--game", choices=("k1", "k2"), default="k1")
     ap.add_argument("--image", help="memory image of the game's executable")
+    ap.add_argument("--from-exe", help="unencrypted executable to make the image from")
     ap.add_argument("--from-dump", help="full process dump to cut the image from")
     args = ap.parse_args()
 
     image_path = args.image or os.path.join(OUT, f"engine_image_{args.game}.bin")
+    if args.from_exe:
+        image_from_exe(args.from_exe, image_path)
     if args.from_dump:
         image_from_dump(args.from_dump, args.game, image_path)
     if not os.path.exists(image_path):
-        sys.exit(f"no image at {image_path}; make one with --from-dump")
+        sys.exit(f"no image at {image_path}; make one with --from-exe or --from-dump")
     image = Image(image_path)
 
     uses, skipped = scan_sources(args.game)
