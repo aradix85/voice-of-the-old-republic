@@ -137,25 +137,17 @@ const ProbeDir kProbeDirs[8] = {
     {-kSqrt2Over2,  kSqrt2Over2,  acc::strings::Id::DirNorthwest },
 };
 
-void RunStuckProbe(const Vector& pos) {
-    // Walls — borrowed pointer into the change-detector's per-area cache.
-    const acc::engine::WallEdge* walls = nullptr;
-    int wallCount = 0;
-    if (!acc::spatial::wall_surfaces::GetCachedWalls(walls, wallCount)) {
-        walls = nullptr;
-        wallCount = 0;
-    }
-
-    // Nearby blocker bodies (creatures + placeables). Self is excluded
-    // by position epsilon instead of handle compare.
-    Vector bodies[kMaxNearbyBodies];
-    int    bodyCount = 0;
+// Nearby blocker bodies (creatures + placeables) within the probe's reach.
+// Self is excluded by position epsilon instead of handle compare. Returns
+// the count written to bodies.
+int CollectNearbyBodies(const Vector& pos, Vector* bodies, int cap) {
+    int bodyCount = 0;
     const float bodyMaxReach = kProbeDistanceMeters + kBodyClearanceMeters;
     const float bodyMaxReachSq = bodyMaxReach * bodyMaxReach;
     if (void* area = acc::engine::GetCurrentArea()) {
         acc::engine::AreaObjectIterator it(area);
         for (void* obj = it.Next(); obj; obj = it.Next()) {
-            if (bodyCount >= kMaxNearbyBodies) break;
+            if (bodyCount >= cap) break;
             const int kind = acc::engine::GetObjectKind(obj);
             if (kind != static_cast<int>(acc::engine::GameObjectKind::Creature) &&
                 kind != static_cast<int>(acc::engine::GameObjectKind::Placeable)) {
@@ -171,72 +163,91 @@ void RunStuckProbe(const Vector& pos) {
             bodies[bodyCount++] = p;
         }
     }
+    return bodyCount;
+}
 
-    bool        freeDir[8] = { false, false, false, false, false, false, false, false };
-    const char* blockBy[8] = { "",    "",    "",    "",    "",    "",    "",    ""    };
-
-    for (int i = 0; i < 8; ++i) {
-        Vector b = pos;
-        b.x += kProbeDirs[i].x * kProbeDistanceMeters;
-        b.y += kProbeDirs[i].y * kProbeDistanceMeters;
-        // Z stays — SegmentCrossesWalkmesh is planar.
-
-        Vector hit;
-        if (walls && acc::engine::SegmentCrossesWalkmesh(
-                walls, wallCount, pos, b, hit)) {
-            blockBy[i] = "wall";
-            continue;
-        }
-
-        bool bodyHit = false;
-        const float sdx = b.x - pos.x;
-        const float sdy = b.y - pos.y;
-        const float lenSq = sdx * sdx + sdy * sdy;
-        if (lenSq > 1e-6f) {
-            for (int j = 0; j < bodyCount; ++j) {
-                float t = ((bodies[j].x - pos.x) * sdx +
-                           (bodies[j].y - pos.y) * sdy) / lenSq;
-                if (t < 0.0f) t = 0.0f;
-                else if (t > 1.0f) t = 1.0f;
-                const float cx = pos.x + sdx * t;
-                const float cy = pos.y + sdy * t;
-                const float ddx2 = bodies[j].x - cx;
-                const float ddy2 = bodies[j].y - cy;
-                if (ddx2 * ddx2 + ddy2 * ddy2 < kBodyClearanceMetersSq) {
-                    bodyHit = true;
-                    break;
-                }
-            }
-        }
-        if (bodyHit) {
-            blockBy[i] = "body";
-            continue;
-        }
-        freeDir[i] = true;
+// What blocks the probe ray pos -> b: "wall", "body", or nullptr when free.
+const char* ProbeBlocker(const Vector& pos, const Vector& b,
+                         const acc::engine::WallEdge* walls, int wallCount,
+                         const Vector* bodies, int bodyCount) {
+    Vector hit;
+    if (walls && acc::engine::SegmentCrossesWalkmesh(
+            walls, wallCount, pos, b, hit)) {
+        return "wall";
     }
+    const float sdx = b.x - pos.x;
+    const float sdy = b.y - pos.y;
+    const float lenSq = sdx * sdx + sdy * sdy;
+    if (lenSq <= 1e-6f) return nullptr;
+    for (int j = 0; j < bodyCount; ++j) {
+        float t = ((bodies[j].x - pos.x) * sdx +
+                   (bodies[j].y - pos.y) * sdy) / lenSq;
+        if (t < 0.0f) t = 0.0f;
+        else if (t > 1.0f) t = 1.0f;
+        const float cx = pos.x + sdx * t;
+        const float cy = pos.y + sdy * t;
+        const float ddx2 = bodies[j].x - cx;
+        const float ddy2 = bodies[j].y - cy;
+        if (ddx2 * ddx2 + ddy2 * ddy2 < kBodyClearanceMetersSq) return "body";
+    }
+    return nullptr;
+}
 
-    char buf[256];
-    int  written = 0;
-    int  freeCount = 0;
+// "Free directions: North, East", or the all-blocked line.
+void FormatFreeDirections(const bool* freeDir, char* buf, size_t bufSize) {
+    int written = 0;
+    int freeCount = 0;
     for (int i = 0; i < 8; ++i) {
         if (!freeDir[i]) continue;
         const char* word = acc::strings::Get(kProbeDirs[i].strId);
         if (freeCount == 0) {
-            written = snprintf(buf, sizeof(buf), "%s: %s",
+            written = snprintf(buf, bufSize, "%s: %s",
                                acc::strings::Get(
                                    acc::strings::Id::StuckFreeDirsPrefix),
                                word);
-        } else if (written > 0 && written < static_cast<int>(sizeof(buf))) {
-            const int rem = static_cast<int>(sizeof(buf)) - written;
+        } else if (written > 0 && written < static_cast<int>(bufSize)) {
+            const int rem = static_cast<int>(bufSize) - written;
             const int add = snprintf(buf + written, rem, ", %s", word);
             if (add > 0) written += add;
         }
         ++freeCount;
     }
     if (freeCount == 0) {
-        snprintf(buf, sizeof(buf), "%s",
+        snprintf(buf, bufSize, "%s",
                  acc::strings::Get(acc::strings::Id::StuckAllBlocked));
     }
+}
+
+void RunStuckProbe(const Vector& pos) {
+    // Walls — borrowed pointer into the change-detector's per-area cache.
+    const acc::engine::WallEdge* walls = nullptr;
+    int wallCount = 0;
+    if (!acc::spatial::wall_surfaces::GetCachedWalls(walls, wallCount)) {
+        walls = nullptr;
+        wallCount = 0;
+    }
+
+    Vector bodies[kMaxNearbyBodies];
+    const int bodyCount = CollectNearbyBodies(pos, bodies, kMaxNearbyBodies);
+
+    bool        freeDir[8] = { false, false, false, false, false, false, false, false };
+    const char* blockBy[8] = { "",    "",    "",    "",    "",    "",    "",    ""    };
+    for (int i = 0; i < 8; ++i) {
+        Vector b = pos;
+        b.x += kProbeDirs[i].x * kProbeDistanceMeters;
+        b.y += kProbeDirs[i].y * kProbeDistanceMeters;
+        // Z stays — SegmentCrossesWalkmesh is planar.
+        const char* blocker =
+            ProbeBlocker(pos, b, walls, wallCount, bodies, bodyCount);
+        if (blocker) {
+            blockBy[i] = blocker;
+        } else {
+            freeDir[i] = true;
+        }
+    }
+
+    char buf[256];
+    FormatFreeDirections(freeDir, buf, sizeof(buf));
 
     acclog::Write("StuckProbe",
         "fire pos=(%.2f,%.2f) walls=%d bodies=%d "
@@ -254,6 +265,12 @@ void RunStuckProbe(const Vector& pos) {
         buf);
 
     acc::speech::Speak(buf, /*interrupt=*/true);
+}
+
+// Walk-anim freshness: a leader footstep within kFootstepFreshnessMs.
+bool IsWalking(uint64_t now_ms) {
+    return g_last_leader_footstep_ms != 0 &&
+           (now_ms - g_last_leader_footstep_ms) < kFootstepFreshnessMs;
 }
 
 // Fires when walking but oscillating: cumulative path length to net
@@ -317,10 +334,7 @@ void TickCirclingAnnounce(const Vector& pos, uint64_t now_ms, bool walking) {
     }
 }
 
-void TickStuckAnnounce(const Vector& pos, uint64_t now_ms) {
-    const bool walking =
-        (g_last_leader_footstep_ms != 0) &&
-        ((now_ms - g_last_leader_footstep_ms) < kFootstepFreshnessMs);
+void TickStuckAnnounce(const Vector& pos, uint64_t now_ms, bool walking) {
     if (!walking) {
         g_progress_checkpoint_ms = 0;
         g_stuck_announced = false;
@@ -353,6 +367,14 @@ void TickStuckAnnounce(const Vector& pos, uint64_t now_ms) {
     }
 }
 
+void ResetProbeTriggers() {
+    g_progress_checkpoint_ms = 0;
+    g_stuck_announced = false;
+    g_circling_anchor_ms = 0;
+    g_circling_path_len  = 0.0f;
+    g_circling_announced = false;
+}
+
 }  // namespace
 
 bool WasStuckLastTick() { return g_was_stuck; }
@@ -377,12 +399,8 @@ void Tick() {
         g_last_tick_ms = 0;
         g_was_stuck = false;
         g_stuck_since_ms = 0;
-        g_progress_checkpoint_ms = 0;
-        g_stuck_announced = false;
         g_last_leader_footstep_ms = 0;
-        g_circling_anchor_ms = 0;
-        g_circling_path_len  = 0.0f;
-        g_circling_announced = false;
+        ResetProbeTriggers();
         return;
     }
 
@@ -461,12 +479,8 @@ void Tick() {
         wSpeed,
         g_was_stuck ? 1 : 0);
 
-    TickStuckAnnounce(pos, now_ms);
-
-    // Walking signal computed here so both detectors see the same value.
-    const bool walking =
-        (g_last_leader_footstep_ms != 0) &&
-        ((now_ms - g_last_leader_footstep_ms) < kFootstepFreshnessMs);
+    const bool walking = IsWalking(now_ms);
+    TickStuckAnnounce(pos, now_ms, walking);
     TickCirclingAnnounce(pos, now_ms, walking);
 }
 
