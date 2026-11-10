@@ -1,4 +1,4 @@
-# engine_offsets_types.h (81 lines)
+# engine_offsets_types.h (94 lines)
 
 Source: `patches/Accessibility/engine_offsets_types.h`
 
@@ -18,5 +18,6 @@ Why this axis: on a KOTOR 2 port each group moves independently. Every address i
 - L50 `struct Vector`: Vector — Aurora-engine 3D vector.
 - L58 `inline float DistXYSq(const Vector& a, const Vector& b)`: Distances in metres.
 - L64 `inline float DistXY(const Vector& a, const Vector& b)`
-- L68 `inline float DistXYZSq(const Vector& a, const Vector& b)`
-- L77 `struct CExoString`: CExoString - the engine's string type: heap c_string plus explicit length.
+- L69 `inline float DistXYToSegmentSq(const Vector& p, const Vector& a, const Vector& b)`: From p to the nearest point of the segment a-b, on the floor plan.
+- L81 `inline float DistXYZSq(const Vector& a, const Vector& b)`
+- L90 `struct CExoString`: CExoString - the engine's string type: heap c_string plus explicit length.

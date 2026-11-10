@@ -65,6 +65,19 @@ inline float DistXY(const Vector& a, const Vector& b) {
     return std::sqrt(DistXYSq(a, b));
 }
 
+// From p to the nearest point of the segment a-b, on the floor plan.
+inline float DistXYToSegmentSq(const Vector& p, const Vector& a, const Vector& b) {
+    const float dx = b.x - a.x;
+    const float dy = b.y - a.y;
+    const float len2 = dx * dx + dy * dy;
+    float t = 0.0f;
+    if (len2 > 1e-6f) {
+        t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / len2;
+        t = t < 0.0f ? 0.0f : (t > 1.0f ? 1.0f : t);
+    }
+    return DistXYSq(p, Vector{a.x + t * dx, a.y + t * dy, 0.0f});
+}
+
 inline float DistXYZSq(const Vector& a, const Vector& b) {
     const float dz = a.z - b.z;
     return DistXYSq(a, b) + dz * dz;

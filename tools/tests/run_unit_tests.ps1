@@ -20,6 +20,7 @@ $underTest = @(
     'minigame_turret_lead.cpp',
     'save_points.cpp',
     'shortest_paths.cpp',
+    'stuck_detect.cpp',
     'text_match.cpp',
     'walkmesh_geometry.cpp'
 )

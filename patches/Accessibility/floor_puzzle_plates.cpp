@@ -11,19 +11,6 @@ namespace acc::floor_puzzle {
 
 namespace {
 
-float DistToSegment(float px, float py, const Vector& a, const Vector& b) {
-    float dx = b.x - a.x, dy = b.y - a.y;
-    float len2 = dx * dx + dy * dy;
-    float t = 0.0f;
-    if (len2 > 1e-6f) {
-        t = ((px - a.x) * dx + (py - a.y) * dy) / len2;
-        if (t < 0.0f) t = 0.0f;
-        if (t > 1.0f) t = 1.0f;
-    }
-    float cx = a.x + t * dx - px, cy = a.y + t * dy - py;
-    return std::sqrt(cx * cx + cy * cy);
-}
-
 // Signed distance from v to [lo, hi]: positive when the span lies above.
 float ToSpan(float v, float lo, float hi) {
     if (v < lo) return lo - v;
@@ -70,12 +57,12 @@ bool PointInPoly(const Plate& p, float x, float y) {
 float DistToPlate(const Plate& p, float x, float y) {
     if (p.vertCount < 3) return 1e9f;
     if (PointInPoly(p, x, y)) return 0.0f;
-    float best = 1e9f;
-    for (int i = 0, j = p.vertCount - 1; i < p.vertCount; j = i++) {
-        float d = DistToSegment(x, y, p.poly[i], p.poly[j]);
-        if (d < best) best = d;
+    const Vector pt{x, y, 0.0f};
+    float bestSq = DistXYToSegmentSq(pt, p.poly[p.vertCount - 1], p.poly[0]);
+    for (int i = 1; i < p.vertCount; ++i) {
+        bestSq = std::min(bestSq, DistXYToSegmentSq(pt, p.poly[i - 1], p.poly[i]));
     }
-    return best;
+    return std::sqrt(bestSq);
 }
 
 SpanOffset OffsetToSpan(const Plate& p, const Vector& pos) {

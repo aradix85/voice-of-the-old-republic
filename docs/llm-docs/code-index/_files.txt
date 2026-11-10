@@ -433,6 +433,8 @@ patches/Accessibility/stealth_watch.h
 patches/Accessibility/strfmt.h
 patches/Accessibility/strings.cpp
 patches/Accessibility/strings.h
+patches/Accessibility/stuck_detect.cpp
+patches/Accessibility/stuck_detect.h
 patches/Accessibility/text_match.cpp
 patches/Accessibility/text_match.h
 patches/Accessibility/transitions.cpp
