@@ -1,4 +1,4 @@
-# MainForm.cs (733 lines)
+# MainForm.cs (730 lines)
 
 Source: `installer/KotorAccessibilityInstaller/MainForm.cs`
 
@@ -18,4 +18,4 @@ Source: `installer/KotorAccessibilityInstaller/MainForm.cs`
 - L663 `private void SetControlsEnabled(bool enabled)`
 - L672 `private static bool AnyOptionalSelected(ModSelection selection)`
 - L676 `private void OpenReadme()`
-- L693 `private void LaunchGame()`
+- L690 `private void LaunchGame()`

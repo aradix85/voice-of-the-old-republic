@@ -677,10 +677,7 @@ namespace KotorAccessibilityInstaller
         {
             try
             {
-                string url = (_language == null || _language == "en")
-                    ? Config.ModSiteUrl
-                    : $"{Config.ModSiteUrl}docs/README.{_language}.html";
-
+                string url = Config.ModSiteUrl;
                 Logger.Info($"Opening README: {url}");
                 Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
             }

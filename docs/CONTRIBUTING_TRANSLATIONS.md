@@ -192,12 +192,6 @@ detection trigger of its own. Note also that the game's own dialogue and item
 names still come from whatever `dialog.tlk` the player has; the mod translates
 only what *it* says.
 
-**Translated README (optional but nice).** If the new language should also get a
-translated landing page, copy `docs/README.de.md` to `docs/README.<lang>.md`,
-translate it, update its Jekyll front-matter (`title`, `permalink`) and the
-in-body language switcher, and add the language to the switcher line in the main
-`README.md` and the other `docs/README.*.md` files.
-
 **Completeness matters:** the `Get` switch must return a value for *every* `Id`.
 If you leave one out, that cue falls through to the empty-string fallback and
 the user hears nothing. The easiest way to guarantee completeness is to start

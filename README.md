@@ -5,11 +5,9 @@ permalink: /
 ---
 <h1>Voice of the Old Republic</h1>
 
-<p><strong>English</strong> · <a href="/voice-of-the-old-republic/docs/README.de.html">Deutsch</a> · <a href="/voice-of-the-old-republic/docs/README.fr.html">Français</a> · <a href="/voice-of-the-old-republic/docs/README.it.html">Italiano</a> · <a href="/voice-of-the-old-republic/docs/README.es.html">Español</a> · <a href="/voice-of-the-old-republic/docs/README.pl.html">Polski</a> · <a href="/voice-of-the-old-republic/docs/README.ru.html">Русский</a></p>
-
 <h2>What is this mod</h2>
 
-**Voice of the Old Republic** is a project to make the Star Wars: Knights of the Old Republic games accessible for fully blind players. It uses the Prism speech bridge to support every screen reader, adds navigational helpers, menu accessibility and special sound cues to make minigames accessible.
+**Voice of the Old Republic** is a project to make the Star Wars: Knights of the Old Republic games accessible for fully blind players. It speaks and brailles through the NVDA screen reader, adds navigational helpers, menu accessibility and special sound cues to make minigames accessible.
 
 At the current state Knights of the Old Republic I is fully playable and completable, with all minigames, quests and playstyles. It can be played with the keyboard or with an Xbox-style controller — the mod ships its own controller support (see the controller section below); only the minigames still expect the keyboard.
 
@@ -29,7 +27,7 @@ Combat works the same way in both: real-time with a pause, built on the tabletop
 
 - Windows 10 or later
 - Star Wars: Knights of the Old Republic, v1.0.3 (Steam or GoG; both are byte-identical for our purposes)
-- A screen reader. Speech is routed through Prism, which supports the full set of screen readers in active use; if your screen reader works with anything else on your system, it will work with this mod
+- The NVDA screen reader. The mod sends its speech and braille to NVDA through NV Access's controller client, which the installer places for you; when NVDA is not running, the mod is silent
 - About 200 MB of free disk space for the patcher runtime, the K1 Community Patch, and the bundled speech runtime
 
 <h3>Game versions not supported in this release</h3>
@@ -63,9 +61,9 @@ A few habits that make the early game much easier:
 
 - **Find things with Q / E**, and get back to things you have already found with the `,` / `.` cycle (see the keyboard shortcuts below).
 - **Press H** at any time to hear your health and status, and **F1** for the full list of keys.
-- **Listen to the room.** Entering a room speaks its name, shape, and exits, and a soft audio layer keeps you aware of the nearest walls as you move.
+- **Listen to the room.** Entering a room speaks its name, shape, and exits, followed by everything in it.
 - **Have a look at the settings early.** Press O for the game's Options. Under Gameplay you will find the auto-pause options, which decide when combat stops on its own — worth setting up before your first real fight — and the key mapping.
-- **And at the bottom of the Options list: Mod settings.** Nearly everything this mod adds can be adjusted or turned on and off there, the mod's own keys can be re-bound, and the audio glossary plays every sound cue with its name so you can learn what each one means.
+- **And at the bottom of the Options list: Mod settings.** Nearly everything this mod adds can be adjusted or turned on and off there, and the mod's own keys can be re-bound.
 
 After the Endar Spire you reach **Taris**, the first large world, and the story opens up from there.
 
@@ -115,12 +113,12 @@ A second cycle, on top of Q / E, that steps through the objects you have already
 - Ctrl+`,` / Ctrl+`.` — Jump to the nearest / farthest object in the category
 - `/` (US layout) or `-` (German layout) — Announce the currently focused object
 - Shift+`/` (Shift+`-`) — Autowalk to that object
-- Ctrl+`/` (Ctrl+`-`) — Arm an audio beacon that pings the way as you move
+- Ctrl+`/` (Ctrl+`-`) — Describe the route to that object, step by step
 
 <h3>Mod keys — orientation and party</h3>
 
-- AltGr (right Alt, alone) — Speak the current facing as a compass direction, in the compass voice, then the area you are in
-- N — Turn the camera to the exit of your current area that lies closest to where you are looking, measured from where you stand; each further press turns clockwise to the next exit. Where no exits are known, it turns 90° clockwise to the next cardinal direction. If a beacon is armed, point at the beacon's next waypoint instead
+- AltGr (right Alt, alone) — Speak the current facing as a compass direction, then the area you are in
+- N — Turn the camera to the exit of your current area that lies closest to where you are looking, measured from where you stand; each further press turns clockwise to the next exit. Where no exits are known, it turns 90° clockwise to the next cardinal direction
 - Ctrl+N — Exploration overview: the room you are in, how much of the area you have explored, the nearest unexplored place and the way there, and what is left to search, each with its route
 - Ctrl+Shift+N — Walk toward the nearest unexplored place; when only locked doors lead on, it tries the nearest one
 - Ctrl+L — Walk to the nearest container or item left to search, and open it
@@ -135,6 +133,7 @@ Press B to enter view mode. While view mode is active:
 - A / D — Pan the camera without moving the character
 - Enter — Interact with whatever the camera is pointing at, or autowalk to that point
 - Shift+Enter — Open the action menu on the camera target
+- W / S — Move the view-mode cursor; it stops at walls and says "Wall"
 - B again — Leave view mode
 
 <h3>Mod keys — map screen</h3>
@@ -143,7 +142,8 @@ While the in-game map is open:
 
 - Arrow keys / Up / Down — Cycle through the map's notes and landmarks
 - `,` / `.` — Cycle map pins (same vocabulary as the discovered-object cycle)
-- Shift+N — Drop a personal map marker at the cursor's current world position (auto-named after the nearest room or landmark). The new pin joins the cycle immediately and Ctrl+`-` will beacon to it
+- Shift+N — Drop a personal map marker at the cursor's current world position (auto-named after the nearest room or landmark). The new pin joins the cycle immediately and Ctrl+`-` describes the route to it
+- Pushing the cursor against the edge of the map says "Edge of the map"
 
 <h3>Mod keys — submenus</h3>
 
@@ -192,7 +192,7 @@ The button names below follow the Xbox layout: A, B, X, Y, the left and right sh
 
 - Left stick — Move (all eight directions: forward, backward, and strafing)
 - Right stick — Rotate the camera
-- R3 (press the right stick) — Turn the camera to the beacon's next waypoint, otherwise to the nearest exit and then clockwise to the next one (the keyboard's N)
+- R3 (press the right stick) — Turn the camera to the nearest exit and then clockwise to the next one (the keyboard's N)
 - Right trigger alone — Announce your facing direction and the area you are in
 
 <h3>Objects and actions</h3>
@@ -203,7 +203,7 @@ The button names below follow the Xbox layout: A, B, X, Y, the left and right sh
 - B — Close the action menu if it is open; otherwise the engine's own cancel
 - Left / right shoulder button — Cycle targets left / right (the keyboard's Q / E)
 - Left trigger alone — Open the unified action menu; press it again to close. While it is open: D-pad left / right change the action category, up / down the entry, A fires the selected action
-- Left trigger + left shoulder button — Audio beacon to the focused object
+- Left trigger + left shoulder button — Describe the route to the focused object
 - Right trigger + right shoulder button — Autowalk to the focused object
 
 <h3>Party, status, and game</h3>
@@ -237,7 +237,7 @@ Your main way to find and act on things. Q / E step through the creatures, doors
 
 <h3>Discovered-object cycle — `,` / `.`</h3>
 
-For getting back to things you've already found. `,` / `.` step through every object you've discovered in the current area — doors, containers, characters, transitions, landmarks, your own markers — grouped by category. Announce one, autowalk to it, or arm an audio beacon. (Mod settings → "Map-wide object selection" widens it to also include things you haven't found yet.)
+For getting back to things you've already found. `,` / `.` step through every object you've discovered in the current area — doors, containers, characters, transitions, landmarks, your own markers — grouped by category. Announce one, autowalk to it, or hear the route to it. (Mod settings → "Map-wide object selection" widens it to also include things you haven't found yet.)
 
 <h3>Unified action menu — Shift+Enter</h3>
 
@@ -247,32 +247,30 @@ One menu holding every action for the current target — attack, talk, Force pow
 
 KOTOR's in-game map, made navigable. Move the cursor with the arrow keys to read terrain and markers, or cycle the map's pins with `,` / `.` in the same vocabulary used in the world. Fog of war is respected, and Shift+N drops a personal marker at the cursor.
 
-<h3>Wall cues and room-shape descriptions</h3>
+<h3>Room descriptions</h3>
 
-As you move, a continuous 3D audio layer plays soft positional clicks off the nearest walls — closer walls sound louder — so you keep a constant feel for the space around you. And entering a room speaks its name, its shape (corridor, junction, dead-end, open space), and the visible exits, all computed live from the game's walk-mesh.
+Entering a room speaks its name, its shape (corridor, junction, dead-end, open space), and the visible exits, all computed live from the game's walk-mesh, followed by everything in the room. Everything the mod tells you is text, spoken and brailled by NVDA; the only sounds it adds are the cues of the swoop race and the turret minigame.
 
 <h2>Mod settings</h2>
 
 Nearly every system the mod adds can be adjusted or turned on and off while you play. Open the game's Options screen (O) and choose **Mod settings** at the bottom of the list. Up / Down move through the rows, Enter toggles a setting or opens a submenu, Left / Right move a slider, and Esc goes back.
 
 - Map-wide object selection — widens the `,` / `.` cycle to objects you have not discovered yet
+- Q and E: everything around you — Q / E step through everything within 30 metres that is not behind a wall, not only what the camera sees
 - Room shape descriptions — the spoken room name, shape, and exits when you enter a room
-- Wall sounds — the continuous positional wall-cue layer
 - Read voiced-speaker subtitles — speak the subtitles of lines that are voice-acted
 - Autoaiming — the aim assist in the turret minigame
 - Skip launch intro movies — takes effect on the next launch
-- Hint sound volume — a slider for the mod's own sound cues
-- Announcement voice settings — a submenu for the voice the mod speaks its own announcements with: its volume, its speed, which of the SAPI voices installed on your PC it uses, and whether dialogue subtitles are read by it instead of your screen reader
-- Combat announcements — a submenu with "3D positioned combat announcements" (on by default): each combat line is spoken from where it happens, through the game's own 3D sound — your attack from the enemy or door it hit, a hit on your party from the companion who took it. With NVDA the lines use your NVDA voice with its saved rate and volume (Eloquence through the IBMTTS add-on, or a SAPI or OneCore voice; after changing NVDA's voice, save its configuration with NVDA+Control+C); otherwise, and for urgent lines such as kills, the announcement voice. A line that cannot be placed is spoken the usual way
+- Hint sound volume — a slider for the minigame sound cues
 - Key bindings — re-bind the keys the mod adds
-- Audio glossary — plays every sound cue the mod uses, one at a time with its name, so you can learn what each sound means
+- Audio glossary — plays each swoop-race sound with its name, so you know them before the race
 
 <h2>Troubleshooting</h2>
 
 <h3>No speech after launching the game</h3>
 
-- Make sure your screen reader is running before you launch KOTOR.
-- The Prism speech runtime ships with the mod and is placed automatically by the installer. If you installed manually, make sure its files are present in the game folder.
+- Make sure NVDA is running. The mod speaks only through NVDA.
+- The installer places `nvdaControllerClient32.dll` in the game's `patches` folder next to `accessibility.dll`. If you installed manually, make sure it is there.
 - Check the newest patch log at `<install>\logs\patch-*.log` for errors (the installer's **Collect logs** button gathers it for you).
 
 <h3>Game crashes on startup, or the mod doesn't load</h3>
@@ -369,7 +367,7 @@ A lot of people helped me testing the game, found all the bugs I couldn't find, 
 **Foundations and dependencies:**
 
 - **Lane Dibello** — [Kotor-Patch-Manager](https://github.com/LaneDibello/Kotor-Patch-Manager), the reverse-engineered Ghidra database, and the patch framework
-- **Prism** (Ethin P.) — cross-platform speech bridge covering every major screen reader, with SAPI fallback
+- **NV Access** — NVDA and its controller client, through which the mod speaks and brailles
 - **K1 Community Patch** team (KOTORCommunityPatches) — bundled bug-fix layer
 - **xoreos / xoreos-tools** — open-source engine reimplementation; cross-reference for file formats
 - **DeadlyStream community** — modding knowledge base
@@ -378,8 +376,7 @@ A lot of people helped me testing the game, found all the bugs I couldn't find, 
 
 - Claude (Anthropic) — pair-programming partner across the Opus 4.5, 4.6, and 4.7 generations
 - Kotor-Patch-Manager — runtime DLL-injection patch framework
-- Prism — screen-reader speech bridge
-- Tolk — screen-reader library (fallback path)
+- NVDA Controller Client — speech and braille output
 - Ghidra — reverse-engineering
 - xoreos-tools — headless extraction of game file formats
 - K1 Community Patch — bundled community bug-fix layer
@@ -392,7 +389,7 @@ Building this mod has been a lot of fun and a real source of empowerment, but it
 
 <h2>License</h2>
 
-The mod source is licensed under the GNU General Public License v3 (see [LICENSE](LICENSE)). Vendored dependencies under `third_party/` keep their own licenses (Prism is MPL-2.0; Tolk is LGPL; Kotor-Patch-Manager is bundled per its upstream terms; dsoal and OpenAL Soft, when the optional spatial-audio path is enabled, are LGPL-2.1). The game itself and BioWare's data files are not redistributed by this project.
+The mod source is licensed under the GNU General Public License v3 (see [LICENSE](LICENSE)). Vendored dependencies under `third_party/` keep their own licenses (the NVDA controller client is LGPL-2.1; Kotor-Patch-Manager is bundled per its upstream terms; dsoal and OpenAL Soft, when the optional spatial-audio path is enabled, are LGPL-2.1). The game itself and BioWare's data files are not redistributed by this project.
 
 <h2>Links</h2>
 
@@ -401,14 +398,3 @@ The mod source is licensed under the GNU General Public License v3 (see [LICENSE
 - [Kotor-Patch-Manager](https://github.com/LaneDibello/Kotor-Patch-Manager)
 - [K1 Community Patch (DeadlyStream)](https://deadlystream.com/)
 - [Ko-fi (support the project)](https://ko-fi.com/jeanstiletto)
-
-<h2>Other languages</h2>
-
-- [Deutsch](/voice-of-the-old-republic/docs/README.de.html)
-- [Français](/voice-of-the-old-republic/docs/README.fr.html)
-- [Italiano](/voice-of-the-old-republic/docs/README.it.html)
-- [Español](/voice-of-the-old-republic/docs/README.es.html)
-- [Polski](/voice-of-the-old-republic/docs/README.pl.html)
-- [Русский](/voice-of-the-old-republic/docs/README.ru.html)
-
-Translations are kept in `docs/README.{de,fr,it,es,pl,ru}.md`. To improve or add a translation, see [docs/CONTRIBUTING_TRANSLATIONS.md](docs/CONTRIBUTING_TRANSLATIONS.md).

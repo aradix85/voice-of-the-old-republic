@@ -128,8 +128,8 @@ prefix (menus_listbox_picker.cpp).
      voices option, the in-game updater, the removed exploration sounds or
      the old bridge behaviour (snapshot every 250 ms, no creatures in
      /objects), the beacon (Ctrl+- is now the route), the Wall sounds
-     option, the glossary's exploration entries, the combat heartbeat. Found 2026-11-10: README.md and docs/README.*.md (settings
-     rows, voices, 3D speech, sounds, updater), ARCHITECTURE.md, CLAUDE.md,
+     option, the glossary's exploration entries, the combat heartbeat. Found 2026-11-10: README.md (done; the six
+     translated READMEs are gone, Anouk 2026-11-10), ARCHITECTURE.md, CLAUDE.md,
      CONTRIBUTING.md, ACCESSIBILITY_MODDING_GUIDE.md, docs/installer.md,
      controls-and-input, known-issues, tools.md, upstream-prs.md (stale:
      no upstream PRs any more), CONTRIBUTING_TRANSLATIONS,

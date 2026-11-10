@@ -149,39 +149,10 @@ constexpr const char* kSupportModderUrl = "https://ko-fi.com/jeanstiletto";
 constexpr const char* kLatestChangesUrl =
     "https://github.com/JeanStiletto/voice-of-the-old-republic/releases/latest";
 
-// Readme site root. Mirrors Config.ModSiteUrl in the installer (the GitHub
-// Pages build of docs/) and, like it, MUST keep the trailing slash.
+// The readme (GitHub Pages build of README.md). Mirrors Config.ModSiteUrl in
+// the installer.
 constexpr const char* kModSiteUrl =
     "https://jeanstiletto.github.io/voice-of-the-old-republic/";
-
-// ISO code used in the published readme filenames (docs/README.<code>.md ->
-// docs/README.<code>.html). English returns nullptr because it has no suffixed
-// file — its readme IS the site root, exactly as MainForm.OpenReadme treats it.
-const char* ReadmeLangCode(acc::strings::Lang l) {
-    switch (l) {
-        case acc::strings::Lang::De: return "de";
-        case acc::strings::Lang::Fr: return "fr";
-        case acc::strings::Lang::It: return "it";
-        case acc::strings::Lang::Es: return "es";
-        case acc::strings::Lang::Ru: return "ru";
-        case acc::strings::Lang::Pl: return "pl";
-        case acc::strings::Lang::En:
-        default:                     return nullptr;
-    }
-}
-
-// Build the readme URL for the language the mod is currently speaking in.
-// Same rule as the installer's end screen: English -> site root, everything
-// else -> docs/README.<code>.html. Returns `buf`.
-const char* BuildReadmeUrl(char* buf, size_t bufSize) {
-    const char* code = ReadmeLangCode(acc::strings::GetLanguage());
-    if (code == nullptr) {
-        snprintf(buf, bufSize, "%s", kModSiteUrl);
-    } else {
-        snprintf(buf, bufSize, "%sdocs/README.%s.html", kModSiteUrl, code);
-    }
-    return buf;
-}
 
 // Cue-volume slider step (percent per Left/Right press) and the cue used
 // for the audible preview. The preview rides priority group 0xb so it
@@ -582,12 +553,11 @@ bool OpenExternalUrl(const char* url) {
 // stays open, so the user is still on the same row when they come back
 // from the browser.
 void ActivateLinkRow(Option opt) {
-    char readmeUrl[192];
     const char* url = kLatestChangesUrl;
     if (opt == Option::SupportModder) {
         url = kSupportModderUrl;
     } else if (opt == Option::OpenReadme) {
-        url = BuildReadmeUrl(readmeUrl, sizeof(readmeUrl));
+        url = kModSiteUrl;
     }
     const bool ok = OpenExternalUrl(url);
     acc::speech::Speak(
