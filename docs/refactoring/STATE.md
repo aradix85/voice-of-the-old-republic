@@ -103,22 +103,18 @@ prefix (menus_listbox_picker.cpp).
 ## Open
 
 - NVDA-only speech (decision above). A+B done: positional speech and the
-  SAPI voices are out (one commit). Still to do:
-  C. Prism replaced by the NVDA Controller Client (x86 DLL, speak, cancel,
-     braille), module renamed (prism:: to speech::, 91 includes). The DLL
-     and header are already in git: third_party/tolk/x86/
-     nvdaControllerClient32.dll, third_party/tolk/include/nvdaController.h
-     (Tolk.dll there is a leftover: remove). Drop the Prism SAPI
-     workarounds then too (focus_guard SAPI worker windows, diag_focus
-     apartment probe, speech_clipboard note, transitions 1300/1771);
-     installer ships nvdaControllerClient32.dll instead of prism.dll and
-     removes the old files on upgrade; kdev install too.
+  SAPI voices are out (1e25253). C done: speech.cpp talks to the NVDA
+  Controller Client (third_party/nvda), Prism, Tolk and the SAPI
+  workarounds are gone (2439893); installer, kdev apply and release.ps1
+  ship nvdaControllerClient32.dll with its license and remove prism.dll
+  and Tolk.dll on upgrade; the Windows voices option is gone (56062f2).
+  Still to do:
   D. Exploration sounds out where text covers them (audio_cues NavCue door/
      wall/item/beacon/collision, audio_cue_player, guidance_beacon, the
      WallSounds toggle, view_mode/cycle_input/map_ui_cursor/passive_narrate
      cues): check each for a text equivalent first. Minigame audio
      (audio_bus, audio_loop, swoop, turret) stays.
-  After C (Anouk asked, 2026-11-10): review bridge.cpp together with
+  Now (Anouk asked, 2026-11-10): review bridge.cpp together with
   kotor-tools/kotor_kaart.py (does the live /objects + /rooms data match
   the map from the game files?), lean/split bridge.cpp, add tag and resref
   to /objects for the match, creatures in /objects, tests for the match;
@@ -126,7 +122,7 @@ prefix (menus_listbox_picker.cpp).
   E. Docs pass after D: README.md and docs/README.*.md (settings rows,
      voices, 3D speech, sounds), controls-and-input, installer.md, tools.md,
      known-issues, llm-docs (audio-internals, action-menu-and-combat,
-     game-flow), installer WindowsVoicesInstaller and its locale strings.
+     game-flow).
   Note for Anouk at the end: with NVDA only, NVDA's "speech interrupt for
   typed characters" (Keyboard settings) cuts lines while a key is held
   (map cursor, turret fire key); the SAPI voices used to dodge that.
@@ -142,7 +138,7 @@ prefix (menus_listbox_picker.cpp).
   defined in many files: one constant with it.
 - Stale file names in comments (swoop_race.cpp, swoop_spatial_audio.h,
   turret_game.cpp and others from before the minigame_ prefix): one pass.
-- Next file: prism.cpp, then pad_input.cpp, transitions.cpp.
+- Next file after the bridge review: pad_input.cpp, then transitions.cpp.
 - F2b: share the save-variable code of exit_memory with discovery.cpp.
 - F3 menus_chargen_feats / menus_powers_levelup: about 15 same-named
   functions, 22 cloned blocks; one chart-grid module (check K2 plans).
