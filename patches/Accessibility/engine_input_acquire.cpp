@@ -1,49 +1,38 @@
-// DirectInput device state: the change log, and the deferred reacquire and release of the keyboard
-// and mouse.
+// DirectInput device state: the change log, and the deferred reacquire and
+// release of the keyboard and mouse.
 
 #include "engine_input_internal.h"
 
+#include "engine_offsets_select.h"  // acc::off: the device fields moved 4 bytes in K2
 #include "log.h"
-#include "engine_offsets_select.h"  // acc::off — the CExoRawInputInternal
-                                    // device fields moved by 4 bytes in K2
 #include "speech.h"
 #include "strings.h"
+
+#include <windows.h>
+
+#include <atomic>
 
 namespace acc::engine {
 
 namespace {
 
-// CExoInput::SetActive(this, int active) @0x005df540. Sets the facade +
-// CExoInputInternal active flags and forwards to
-// CExoRawInputInternal::SetActive, which Acquire()s the DirectInput
-// keyboard/mouse/joystick devices on the 0->1 transition.
-//
-// KOTOR 2 @0x0072fb20 — the same three-layer chain, decompiled 2026-08-13:
-// 0x0072fb20 forwards this->internal to CExoInputInternal::SetActive
-// (0x0072df60), which stores the flag and forwards to
-// CExoRawInputInternal::SetActive (0x00733090). That last one confirms the
-// design this file depends on: it early-outs when the requested state already
-// matches, then calls IDirectInputDevice8::Acquire (vtable +0x1c) or
-// ::Unacquire (+0x20) on the keyboard, the mouse and every joystick. So the
-// 0->1 edge ForceReacquireInput drives is required on KOTOR 2 for the same
-// reason it is on KOTOR 1.
-const uintptr_t kAddrCExoInputSetActive =
-    acc::addr::Pick(0x005df540, 0x0072fb20);
-
+// CExoInput::SetActive(this, int active). Both games forward through
+// CExoInputInternal::SetActive to CExoRawInputInternal::SetActive (K2
+// 0x0072df60, 0x00733090), which early-outs when the state already matches and
+// otherwise Acquires or Unacquires the keyboard, the mouse and every joystick.
+// Hence the 0->1 edge in ForceReacquireInput.
+const uintptr_t kAddrCExoInputSetActive = acc::addr::Pick(0x005df540, 0x0072fb20);
 typedef void(__thiscall* PFN_CExoInputSetActive)(void* this_, int active);
 
-// CExoRawInputInternal fields live in engine_input.h (raw_input::kOff*) —
-// shared with the keyboard stream re-sync, which walks the same object.
-// CExoInput::internal, then CExoInputInternal::raw_input — the walk from the
-// ExoInput global to the object that owns the DirectInput devices. KOTOR 2's
-// raw_input offset is read off CExoInputInternal::SetActive, which tests that
-// field for NULL before forwarding.
+// CExoInput::internal, then CExoInputInternal::raw_input: the walk to the
+// object that owns the devices (whose fields are raw_input::kOff* in
+// engine_input.h). K2's raw_input offset is read off CExoInputInternal::
+// SetActive, which tests that field for NULL before forwarding.
 const size_t kOffInputInternal = acc::off::Same(0x04);
 const size_t kOffInternalRaw   = acc::off::Pick(0x140, 0x1a0);
 
-// Everything the probe reports, in one POD so the SEH reader can fill it and
-// the (SEH-free) caller can act on it. Split for C2712: the caller speaks and
-// formats, both of which want objects.
+// Filled under SEH, acted on outside it (speech and formatting need objects,
+// which C2712 keeps out of __try functions).
 struct DiSnapshot {
     void*        raw;
     unsigned int active;
@@ -56,17 +45,17 @@ DiSnapshot g_lastDi{};
 bool       g_haveDi = false;
 bool       g_keyboardLostWarned = false;
 
-// Pending input-acquisition change, set from focus-event wndprocs and drained
-// on the next clean tick. 0 = nothing, 1 = acquire (gained foreground),
-// 2 = release (lost foreground). Last writer wins, so a rapid loss->gain (or
-// gain->loss) flip collapses to its final state at drain — input ends up
-// matching the foreground state that actually settled.
+// Set by the focus-event wndprocs, drained on the next clean tick: 0 nothing,
+// 1 acquire (foreground gained), 2 release (foreground lost). The last writer
+// wins, so a quick flip settles on the final foreground state.
 std::atomic<int> g_pendingInputState{0};
+
+constexpr int kReacquireCycle[] = {0, 1};
+constexpr int kRelease[]        = {0};
 
 bool ReadDiSnapshot(DiSnapshot* out) {
     __try {
-        if (!acc::addr::Ok(kAddrExoInputGlobal)) return false;
-        void* exoInput = *reinterpret_cast<void**>(kAddrExoInputGlobal);
+        void* exoInput = ExoInput();
         if (!exoInput) return false;
         void* internal = *reinterpret_cast<void**>(
             static_cast<uint8_t*>(exoInput) + kOffInputInternal);
@@ -87,22 +76,35 @@ bool ReadDiSnapshot(DiSnapshot* out) {
     }
 }
 
+bool SameDi(const DiSnapshot& a, const DiSnapshot& b) {
+    return a.raw == b.raw && a.active == b.active && a.iface == b.iface &&
+           a.keyboard == b.keyboard && a.mouse == b.mouse;
+}
+
+// SetActive with each of `states` in turn; *exoOut gets the facade. False when
+// there is no facade or the call faulted.
+bool CallSetActive(const int* states, int count, void** exoOut) {
+    __try {
+        void* exoInput = ExoInput();
+        *exoOut = exoInput;
+        if (!exoInput || !acc::addr::Ok(kAddrCExoInputSetActive)) return false;
+        auto setActive = reinterpret_cast<PFN_CExoInputSetActive>(kAddrCExoInputSetActive);
+        for (int i = 0; i < count; ++i) setActive(exoInput, states[i]);
+        return true;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+}
+
 }  // namespace
 
 void LogDirectInputStateIfChanged() {
     DiSnapshot now{};
     if (!ReadDiSnapshot(&now)) return;
+    if (g_haveDi && SameDi(now, g_lastDi)) return;
 
-    if (g_haveDi && now.raw == g_lastDi.raw && now.active == g_lastDi.active &&
-        now.iface == g_lastDi.iface && now.keyboard == g_lastDi.keyboard &&
-        now.mouse == g_lastDi.mouse) {
-        return;
-    }
-
-    // A keyboard device that goes from present to NULL is the failure this
-    // whole file is about. NULL-from-the-start is a different (and normal)
-    // state — the engine has simply not built its devices yet — so it is
-    // logged but never spoken.
+    // A keyboard device going from present to NULL is the failure to warn
+    // about; NULL from the start only means the engine has not built it yet.
     const bool keyboardLost =
         g_haveDi && g_lastDi.keyboard != nullptr && now.keyboard == nullptr;
 
@@ -127,60 +129,35 @@ void LogDirectInputStateIfChanged() {
 }
 
 bool ForceReacquireInput() {
-    __try {
-        void* exoInput = *reinterpret_cast<void**>(kAddrExoInputGlobal);
-        if (!exoInput) {
-            acclog::Write("EngineInput",
-                "ForceReacquireInput: ExoInput global is null; skipped");
-            return false;
-        }
-        auto setActive = reinterpret_cast<PFN_CExoInputSetActive>(
-            kAddrCExoInputSetActive);
-        // Drive a real 0->1 edge. SetActive(1) alone no-ops when the active
-        // flag is already (stale) 1; the leading SetActive(0) forces the
-        // transition so the engine re-Acquires the DirectInput devices.
-        setActive(exoInput, 0);
-        setActive(exoInput, 1);
-        acclog::Write("EngineInput",
-            "ForceReacquireInput: CExoInput::SetActive(%p, 0)->(1) cycle "
-            "dispatched (post-load DirectInput re-acquire)", exoInput);
-        return true;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        acclog::Write("EngineInput",
-            "ForceReacquireInput: exception during SetActive cycle; skipped");
+    // SetActive(1) alone no-ops while the flag is a stale 1; the leading 0
+    // forces the edge on which the engine re-Acquires its devices.
+    void* exoInput = nullptr;
+    if (!CallSetActive(kReacquireCycle, 2, &exoInput)) {
+        acclog::Write("EngineInput", "ForceReacquireInput: SetActive cycle failed "
+                      "(ExoInput=%p); skipped", exoInput);
         return false;
     }
+    acclog::Write("EngineInput",
+        "ForceReacquireInput: CExoInput::SetActive(%p, 0)->(1) cycle "
+        "dispatched (post-load DirectInput re-acquire)", exoInput);
+    return true;
 }
 
 bool ReleaseInput() {
-    __try {
-        void* exoInput = *reinterpret_cast<void**>(kAddrExoInputGlobal);
-        if (!exoInput) {
-            acclog::Write("EngineInput",
-                "ReleaseInput: ExoInput global is null; skipped");
-            return false;
-        }
-        auto setActive = reinterpret_cast<PFN_CExoInputSetActive>(
-            kAddrCExoInputSetActive);
-        // SetActive(0) unacquires the DirectInput devices. KOTOR acquires its
-        // keyboard at background level (it keeps reading even when another
-        // window is foreground — harmless in fullscreen, how the game shipped).
-        // Windowed, that means menu nav keys bleed into the game while the user
-        // is in another window (e.g. a screen reader). Releasing on focus-loss
-        // makes input mirror foreground: the game holds the keyboard only while
-        // it owns the foreground. The regain edge re-Acquires via
-        // ForceReacquireInput.
-        setActive(exoInput, 0);
-        acclog::Write("EngineInput",
-            "ReleaseInput: CExoInput::SetActive(%p, 0) dispatched "
-            "(lost foreground — unacquire so keys don't bleed into the "
-            "background game)", exoInput);
-        return true;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        acclog::Write("EngineInput",
-            "ReleaseInput: exception during SetActive; skipped");
+    // KOTOR acquires its keyboard at background level, so a windowed game
+    // would keep reading keys typed in another window (a screen reader, say).
+    // Unacquiring on focus loss makes input follow the foreground.
+    void* exoInput = nullptr;
+    if (!CallSetActive(kRelease, 1, &exoInput)) {
+        acclog::Write("EngineInput", "ReleaseInput: SetActive failed (ExoInput=%p); "
+                      "skipped", exoInput);
         return false;
     }
+    acclog::Write("EngineInput",
+        "ReleaseInput: CExoInput::SetActive(%p, 0) dispatched "
+        "(lost foreground — unacquire so keys don't bleed into the "
+        "background game)", exoInput);
+    return true;
 }
 
 void RequestInputReacquire() {
@@ -192,7 +169,7 @@ void RequestInputRelease() {
 }
 
 void DrainPendingReacquire() {
-    int want = g_pendingInputState.exchange(0, std::memory_order_relaxed);
+    const int want = g_pendingInputState.exchange(0, std::memory_order_relaxed);
     if (want == 1) {
         acclog::Write("EngineInput",
             "DrainPendingReacquire: focus gain flagged; forcing DirectInput "

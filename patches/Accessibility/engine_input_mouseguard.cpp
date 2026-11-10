@@ -1,10 +1,15 @@
-// The no-mouse crash guard on CExoRawInputInternal::InitializeDirectInputMouse and the teardown
-// block behind it.
+// The no-mouse crash guard on CExoRawInputInternal::InitializeDirectInputMouse
+// and the teardown block behind it.
 
 #include "engine_input_internal.h"
 
-#include "log.h"
 #include "engine_game.h"
+#include "log.h"
+
+#include <windows.h>
+#include <intrin.h>  // _ReturnAddress names the failing mouse-init step
+
+#include <cstring>
 
 namespace acc::engine {
 
@@ -38,18 +43,10 @@ namespace {
 // pointer and returns 0, and the mouse update compares against 1 and skips the
 // frame's mouse handling. Nothing downstream sees a novel state.
 //
-// Why an inline trampoline rather than a hooks.toml detour: an earlier attempt
-// hooked this entry through the standard KPatchManager wrapper and broke the
-// engine's input-pipeline bring-up — the menu came up keyboard-dead and users
-// had to alt-tab after every launch. The suspected cause is the wrapper's
-// PUSHAD/PUSHFD/CALL overhead colliding with DirectInput's foreground-
-// cooperative-level handshake. A bare JMP has none of that overhead.
-//
-// Crash reports: userlogs/swkotor.exe.58504.dmp (KOTOR 1, fixed v0.4.x) and
-// userlogs/kennygamecrashes.7z :: swkotor2.exe.348.dmp (KOTOR 2). The KOTOR 2
-// half was unguarded from the first K2 build until this change: the installer
-// ran only from OnRulesInit, which is a KOTOR-1-only hook (absent from
-// kotor2.hooks.toml) and additionally gated on HandlerEnabled().
+// An inline trampoline, not a hooks.toml detour: the KPatchManager wrapper on
+// this entry left the menu keyboard-dead until an alt-tab, most likely its
+// PUSHAD/PUSHFD/CALL overhead colliding with DirectInput's cooperative-level
+// handshake. A bare JMP has none of that.
 const uintptr_t kAddrInitMouse =
     acc::addr::Pick(0x005e3fa0, 0x00731070);
 
@@ -79,8 +76,7 @@ const uintptr_t kAddrInitMouseEnd =
 // CExoRawInputInternal::ShutDownDirectInput. The engine's real teardown: it
 // Unacquires + Releases the keyboard device, then the mouse, then every
 // joystick, frees the joystick arrays, Releases the DI8 interface and NULLs
-// every one of those fields (KOTOR 1 decompile 2026-08-15; KOTOR 2 same shape,
-// disassembled the same day).
+// every one of those fields (same shape in both games).
 const uintptr_t kAddrShutDownDirectInput =
     acc::addr::Pick(0x005e3dc0, 0x00733200);
 
@@ -147,10 +143,7 @@ const char* TeardownSiteName(int index, int total) {
     return "unknown step";
 }
 
-// JMP rel32. Twin of save_crash_guard.cpp's WriteRel32Jmp — the other place in
-// this patch that hand-writes a trampoline. Kept file-local in both rather than
-// promoted to a shared header: two call sites, four lines, and no third caller
-// in sight.
+// JMP rel32 from `at` to `target`.
 void WriteJmpRel32(uint8_t* at, uintptr_t target) {
     at[0] = 0xe9;
     int32_t rel = static_cast<int32_t>(
@@ -290,8 +283,7 @@ void InstallDirectInputMouseGuard() {
         *p++ = 0x33; *p++ = 0xc0;               // XOR EAX, EAX
         *p++ = 0xc3;                            // RET
     } else {
-        // KOTOR 1 keeps the layout it has shipped with since v0.4.x, byte for
-        // byte: run the displaced prologue (which is what puts `this` in EDI),
+        // KOTOR 1: run the displaced prologue (which puts `this` in EDI),
         // re-execute the interface load, then branch to the engine's own
         // continue point or its failure epilogue.
         memcpy(p, kInitMousePrologueK1, sizeof(kInitMousePrologueK1));

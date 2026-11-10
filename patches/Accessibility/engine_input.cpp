@@ -1,44 +1,60 @@
+// The CExoInput facade: the InputIndices names for the logs, the manager's
+// code translation, the camera turn axis and stick, and the time of the last
+// engine key event. The mouse guard and the DirectInput acquire live in
+// engine_input_mouseguard.cpp and engine_input_acquire.cpp.
 
 #include "engine_input_internal.h"
+
+#include <windows.h>
+
+#include <atomic>
 
 namespace acc::engine {
 
 namespace {
 
+// Engine global holding the CExoInput facade pointer (SYMBOL ExoInput in
+// Lane's DB for K1). K2 @0x00a1b48c, by two witnesses:
+//   * the constructor at 0x0072f760 writes the CExoInput RTTI vtable
+//     (0x0099cab8) into the new object, and 0x00409c7e stores that object to
+//     0x00a1b48c;
+//   * the engine's global-pointer cluster keeps KOTOR 1's relative layout
+//     (ExoResMan/GuiMan/Aurora/AppMan/VM/Tlk/Rules deltas all match), and
+//     KOTOR 1's ExoInput is likewise the dword below ExoResMan.
+const uintptr_t kAddrExoInputGlobal = acc::addr::PickGlobal(0x007a39e4, 0x00a1b48c);
+
 // CExoInput::PollInput(this, code, inputClass) -> float. The camera's turn
 // source: UpdateCamera reads it as PollInput(ExoInput, 0x11c, 0) on both games
 // (K1 @0x005f5ee6: MOV ECX,[0x007a39e4]; PUSH 0; PUSH 0x11c; CALL 0x005df4d0.
-// K2 @0x0078c48f: MOV ECX,[0x00a1b48c]; PUSH 0; PUSH 0x11c; CALL 0x0072f9d0 —
+// K2 @0x0078c48f: MOV ECX,[0x00a1b48c]; PUSH 0; PUSH 0x11c; CALL 0x0072f9d0 -
 // a thiscall forwarder to CExoInputInternal::PollInput @0x0072c320 via
 // this+4; both RET 8, float in ST0). Digital bindings answer the GetEvents
 // level flag scaled, so this IS the engine's own view of "turn key held".
-const uintptr_t kAddrCExoInputPollInput =
-    acc::addr::Pick(0x005df4d0, 0x0072f9d0);
+const uintptr_t kAddrCExoInputPollInput = acc::addr::Pick(0x005df4d0, 0x0072f9d0);
 constexpr int kInputCodeTurnAxis = 0x11c;
-typedef float(__thiscall* PFN_CExoInputPollInput)(void* this_, int code,
-                                                  int inputClass);
+typedef float(__thiscall* PFN_CExoInputPollInput)(void* this_, int code, int inputClass);
 
 // KOTOR 2 only: CExoInput facade @0x0072fde0 -> CExoInputInternal
-// ::ReadJoystickAxes(1, &x, &y) @0x0072ed70 — the native right-stick pair
-// UpdateCamera feeds to AcclTurnCamera ahead of the edge test (camera-and-
-// swoop.md "KOTOR 2 twin"). Loops the DirectInput controllers enumerated at
-// start; with none the body never runs and both outputs stay 0. KOTOR 1 has
-// no joystick path at all.
-const uintptr_t kAddrCExoInputReadStickAxes =
-    acc::addr::Kotor2Only(0x0072fde0);
-typedef void(__thiscall* PFN_CExoInputReadStickAxes)(void* this_, float* x,
-                                                     float* y);
+// ::ReadJoystickAxes(1, &x, &y) @0x0072ed70, the native right-stick pair
+// UpdateCamera feeds to AcclTurnCamera ahead of the edge test. With no
+// controller enumerated both outputs stay 0. KOTOR 1 has no joystick path.
+const uintptr_t kAddrCExoInputReadStickAxes = acc::addr::Kotor2Only(0x0072fde0);
+typedef void(__thiscall* PFN_CExoInputReadStickAxes)(void* this_, float* x, float* y);
 
-// Last engine-delivered key PRESS, GetTickCount64 (0 = none yet). Written from
-// the input hooks (engine thread), read by the tick — atomic so the read can
-// never tear across the 64-bit value.
+// The last engine-delivered key press, GetTickCount64 (0 = none yet). Written
+// by the input hooks, read by the tick; atomic so the 64-bit read cannot tear.
 std::atomic<unsigned long long> g_lastEngineKeyMs{0};
 
-// Names for the InputIndices enum (size 132, definition lifted from Lane's
-// Ghidra SARIF: /KotOR Types/Enums/InputIndices). Index = enum value;
-// covers MOUSE_*, KEYBOARD_*, JOYSTICK_*. -1 / 0xFFFFFFFF is INPUTDEVICE_NONE.
+}  // namespace
 
-const char* InputIndexNameRaw(int code) {
+void* ExoInput() {
+    if (!acc::addr::Ok(kAddrExoInputGlobal)) return nullptr;
+    return *reinterpret_cast<void**>(kAddrExoInputGlobal);
+}
+
+// The InputIndices enum (Lane's SARIF, /KotOR Types/Enums/InputIndices):
+// index = value; -1 is INPUTDEVICE_NONE.
+const char* InputIndexName(int code) {
     static const char* const k_names[] = {
         "MOUSE_BUTTON0", "MOUSE_BUTTON1", "MOUSE_BUTTON2",
         "MOUSE_XAXIS", "MOUSE_YAXIS", "MOUSE_ZAXIS",
@@ -90,41 +106,26 @@ const char* InputIndexNameRaw(int code) {
         "JOYSTICK_BUTTON12", "JOYSTICK_BUTTON13", "JOYSTICK_BUTTON14",
     };
     if (code == -1) return "INPUTDEVICE_NONE";
-    if (code >= 0 && code < (int)(sizeof(k_names) / sizeof(k_names[0]))) {
+    if (code >= 0 && code < static_cast<int>(sizeof(k_names) / sizeof(k_names[0]))) {
         return k_names[code];
     }
-    // Engine logical-action codes that don't translate to an InputIndices
-    // value (i.e. ManagerTranslateCode passes them through unchanged) and
-    // are therefore neither in the InputIndices array nor in our translator.
-    // Naming them inline keeps the input log readable instead of "?(206)".
+    // A logical action the manager passes through untranslated.
     if (code == 0xCE) return "LOGICAL_TAB";
     return "?";
 }
 
-}  // namespace
-
-const char* InputIndexName(int code) {
-    return InputIndexNameRaw(code);
-}
-
-// CSWGuiManager::HandleInputEvent receives KOTOR-internal "logical action"
-// codes for navigation / system keys and translates them to InputIndices
-// values via two inline switch statements before dispatching to the active
-// panel's per-class override. Mapping recovered by decompiling the function
-// at 0x0040c8e0:
+// CSWGuiManager::HandleInputEvent (0x0040c8e0) translates the engine's logical
+// navigation codes to InputIndices before the panel sees them:
 //
-//   0xb4 (180), 0xdf (223)   → 0x28 = KEYBOARD_F2  (cancel / back)
-//   0xb5 (181), 0xbb (187)   → 0x27 = KEYBOARD_F1  (confirm / activate)
-//   0xb6 (182)               → 0x3d
-//   0xb7 (183)               → 0x3e
-//   0xb8 (184)               → 0x3f
-//   0xb9 (185)               → 0x40
+//   0xb4 (180), 0xdf (223)   -> 0x28 = KEYBOARD_F2  (cancel / back)
+//   0xb5 (181), 0xbb (187)   -> 0x27 = KEYBOARD_F1  (confirm / activate)
+//   0xb6 (182)               -> 0x3d
+//   0xb7 (183)               -> 0x3e
+//   0xb8 (184)               -> 0x3f
+//   0xb9 (185)               -> 0x40
 //
-// Codes outside this set pass through unchanged. Naming the four
-// 0x3d-0x40 outputs is impossible without knowing the user's `[Keymapping]`
-// — they're the InputIndices values the user has bound to nav-up/nav-down/
-// next/prev (default keys vary by user). Just print "→ KEYBOARD_X(N)" and
-// let the caller correlate against the user's keybindings.
+// Other codes pass through. 0x3d-0x40 are whatever the user's [Keymapping]
+// binds to the navigation actions, so they get no name.
 int ManagerTranslateCode(int code) {
     switch (code) {
     case 0xb4: case 0xdf: return 0x28;
@@ -138,15 +139,10 @@ int ManagerTranslateCode(int code) {
 }
 
 bool PollTurnAxis(float* out) {
-    if (!out || !acc::addr::Ok(kAddrExoInputGlobal) ||
-        !acc::addr::Ok(kAddrCExoInputPollInput)) {
-        return false;
-    }
+    void* exoInput = ExoInput();
+    if (!out || !exoInput || !acc::addr::Ok(kAddrCExoInputPollInput)) return false;
     __try {
-        void* exoInput = *reinterpret_cast<void**>(kAddrExoInputGlobal);
-        if (!exoInput) return false;
-        auto poll = reinterpret_cast<PFN_CExoInputPollInput>(
-            kAddrCExoInputPollInput);
+        auto poll = reinterpret_cast<PFN_CExoInputPollInput>(kAddrCExoInputPollInput);
         *out = poll(exoInput, kInputCodeTurnAxis, 0);
         return true;
     } __except (EXCEPTION_EXECUTE_HANDLER) {
@@ -155,15 +151,10 @@ bool PollTurnAxis(float* out) {
 }
 
 bool ReadNativeStickAxes(float* x, float* y) {
-    if (!x || !y || !acc::addr::Ok(kAddrExoInputGlobal) ||
-        !acc::addr::Ok(kAddrCExoInputReadStickAxes)) {
-        return false;
-    }
+    void* exoInput = ExoInput();
+    if (!x || !y || !exoInput || !acc::addr::Ok(kAddrCExoInputReadStickAxes)) return false;
     __try {
-        void* exoInput = *reinterpret_cast<void**>(kAddrExoInputGlobal);
-        if (!exoInput) return false;
-        auto read = reinterpret_cast<PFN_CExoInputReadStickAxes>(
-            kAddrCExoInputReadStickAxes);
+        auto read = reinterpret_cast<PFN_CExoInputReadStickAxes>(kAddrCExoInputReadStickAxes);
         *x = 0.0f;
         *y = 0.0f;
         read(exoInput, x, y);

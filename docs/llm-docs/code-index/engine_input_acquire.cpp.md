@@ -1,4 +1,4 @@
-# engine_input_acquire.cpp (209 lines)
+# engine_input_acquire.cpp (186 lines)
 
 Source: `patches/Accessibility/engine_input_acquire.cpp`
 
@@ -6,10 +6,12 @@ DirectInput device state: the change log, and the deferred reacquire and release
 
 ## Declarations (in source order)
 
-- L66 `bool ReadDiSnapshot(DiSnapshot* out)`
-- L92 `void LogDirectInputStateIfChanged()`
-- L129 `bool ForceReacquireInput()`
-- L155 `bool ReleaseInput()`
-- L186 `void RequestInputReacquire()`
-- L190 `void RequestInputRelease()`
-- L194 `void DrainPendingReacquire()`
+- L56 `bool ReadDiSnapshot(DiSnapshot* out)`
+- L79 `bool SameDi(const DiSnapshot& a, const DiSnapshot& b)`
+- L86 `bool CallSetActive(const int* states, int count, void** exoOut)`: SetActive with each of `states` in turn; *exoOut gets the facade.
+- L101 `void LogDirectInputStateIfChanged()`
+- L131 `bool ForceReacquireInput()`
+- L146 `bool ReleaseInput()`
+- L163 `void RequestInputReacquire()`
+- L167 `void RequestInputRelease()`
+- L171 `void DrainPendingReacquire()`
