@@ -256,6 +256,11 @@ patches/Accessibility/menus_modsettings.cpp
 patches/Accessibility/menus_modsettings.h
 patches/Accessibility/menus_monitors.cpp
 patches/Accessibility/menus_monitors.h
+patches/Accessibility/menus_monitors_content.cpp
+patches/Accessibility/menus_monitors_dialog.cpp
+patches/Accessibility/menus_monitors_internal.h
+patches/Accessibility/menus_monitors_inventory.cpp
+patches/Accessibility/menus_monitors_subscreens.cpp
 patches/Accessibility/menus_nav.h
 patches/Accessibility/menus_pazaakdeck.cpp
 patches/Accessibility/menus_pazaakdeck.h
