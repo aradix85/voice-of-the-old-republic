@@ -178,6 +178,10 @@ patches/Accessibility/map_shipped_hints.cpp
 patches/Accessibility/map_shipped_hints.h
 patches/Accessibility/map_ui_cursor.cpp
 patches/Accessibility/map_ui_cursor.h
+patches/Accessibility/map_ui_cursor_ambient.cpp
+patches/Accessibility/map_ui_cursor_hover.cpp
+patches/Accessibility/map_ui_cursor_internal.h
+patches/Accessibility/map_ui_cursor_transform.cpp
 patches/Accessibility/map_user_markers.cpp
 patches/Accessibility/map_user_markers.h
 patches/Accessibility/menus.cpp

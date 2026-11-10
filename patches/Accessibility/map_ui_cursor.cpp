@@ -9,29 +9,17 @@
 // from inverting CSWSAreaMap's pixel transform (4 fields, see
 // docs/navsystems-investigation.md §Q4).
 
-#include "map_ui_cursor.h"
-
-#include <windows.h>
-#include <cmath>
-#include <cstdio>
-#include <string>
+#include "map_ui_cursor_internal.h"
 
 #include "engine_area.h"
 #include "engine_keymap.h"            // MoveAxisVks — bound move/turn keys
 #include "engine_panels.h"
 #include "engine_player.h"
-#include "engine_reads.h"             // ReadCExoString — waypoint tag log
-#include "log.h"
 #include "view_mode.h"   // kHoverPauseMs — shared cursor cadence
-#include "map_shipped_hints.h"        // shipped curated hints in the hover scan
-#include "map_user_markers.h"         // IsUserMarkerPin — fog-exempt marker id
 #include "strings.h"
 #include "speech.h"
 #include "transitions.h"
 #include "room_topology.h"            // nav-graph region lookup — same source
-#include "engine_offsets_select.h"
-                                      // the in-world walking adapter speaks
-                                      // from, so cursor + walking agree
 
 namespace acc::map_ui_cursor {
 
@@ -57,98 +45,6 @@ constexpr float kMaxDtSec = 0.1f;
 // view_mode.h for the value and rationale.
 using acc::view_mode::kHoverPauseMs;
 
-// Radius (in map pixels) within which a map-note waypoint counts as
-// "under the cursor". A 16-px map-pin icon plus generous slack —
-// landmarks on the in-game map are sparse enough that 36 px overlap
-// between adjacent pins is rare even on landmark-dense maps, and the
-// hover-pause debounce discriminates anyway (the closer-of-two scan in
-// FindNearestExploredMapNote always picks the nearest pin to the
-// cursor centre). Tested live: 24 px was hard to pinpoint without
-// sighted feedback; 36 px lets the cursor catch landmarks reliably.
-constexpr int kHoverHitRadiusPx = 36;
-
-// CSWSAreaMap field layout (subset). Full layout in
-// docs/navsystems-investigation.md §Q4. The module → area_map indirection
-// and the IsWorldPointExplored entry point live in engine_area now
-// (shared with the map-context cycle filter); the transform-field
-// offsets stay local because the inverse projection is unique to the
-// cursor.
-// Same on KOTOR 2 — the fog-grid/transform block is byte-identical, witnessed
-// in K2's SetMapData 0x005F6B90 (NorthAxis +0x10, world-per-pixel +0x18/+0x1c,
-// world origin +0x20/+0x24); see the matching kAreaMap* Same rows in
-// engine_area.h.
-const size_t kAreaMapOrientationOffset      = acc::off::Same(0x10);
-const size_t kAreaMapWorldUnitsPerXPxOffset = acc::off::Same(0x18);
-const size_t kAreaMapWorldUnitsPerYPxOffset = acc::off::Same(0x1c);
-const size_t kAreaMapWorldOriginXOffset     = acc::off::Same(0x20);
-const size_t kAreaMapWorldOriginYOffset     = acc::off::Same(0x24);
-
-// CSWGuiInGameMap.map_hider field offset. Derived from the struct layout
-// in swkotor.exe.h (CSWGuiInGameMap line 8548): after panel (CSWGuiPanel)
-// + 4 labels + 5 buttons, the embedded CSWGuiMapHider sits at the offset
-// the GoG xml confirms via the previous fields. The xml gives:
-//   exit_button       @ +0x8ec  (size 0x1c4 → ends 0xab0)
-//   up_button         @ +0xab0  (size 0x1c4 → ends 0xc74)
-//   down_button       @ +0xc74  (size 0x1c4 → ends 0xe38)
-//   map_hider         @ +0xe38  (CSWGuiMapHider, size 0x248)
-// Then field11_0x238 inside map_hider holds the waypoint linked list.
-// KOTOR 2: hider embed at +0x1160, witnessed by its map-panel ctor
-// 0x00893950 (`add ecx,0x1160` before the MapHider ctor 0x00895620; the
-// same ctor's BTN_UP/BTN_DOWN wiring reproduces the already-witnessed
-// +0x610/+0x7e0 button offsets). Waypoint list at +0x248 (K1 +0x238 — the
-// hider grew +0x10), witnessed in the K2 GetNextMapNote twin 0x00896D10:
-// its node walk calls the CExoLinkedList object at [hider+0x248] and reads
-// each node's waypoint handle with the same 0x7f000000 sentinel fallback.
-const size_t kInGameMapHiderOffset                = acc::off::Pick(0xe38, 0x1160);
-const size_t kMapHiderWaypointListOffset          = acc::off::Pick(0x238, 0x248);  // CExoLinkedList
-
-// CExoLinkedList layout (visible in engine_area / from Ghidra): the
-// list holds an internal pointer; the internal exposes head/tail and
-// nodes that point at the payload. For the map-hider list, the payload
-// at each node is a `ulong` — the waypoint OBJECT HANDLE — which the
-// engine then resolves via CServerExoApp::GetGameObject. Same access
-// shape as CSWSArea.game_objects (handle array, not object pointer
-// array).
-
-// CSWSWaypoint layout offsets (already used elsewhere — re-stated here
-// so the cursor code is self-documenting).
-// DERIVED, not database-verified: this is CSWSObject.Position read on a
-// waypoint (CSWSWaypoint derives from CSWSObject, and the value is identical to
-// kServerObjectPositionOffset), so it inherits that field's +4 KOTOR 2 shift.
-// The seeded database lists CSWSObject.Position but says nothing about
-// waypoints specifically. Confirm against a real K2 waypoint read before
-// trusting map-cursor output there.
-const size_t kWaypointPositionOffset = acc::off::Pick(0x90, 0x94);
-
-// GetAreaMap / IsWorldPointExplored entry points moved to engine_area.
-// engine_area.h carries the shared constants (kAddrCServerExoAppGetModule,
-// kModuleAreaMapOffset, kAddrCSWSAreaMapIsWorldPointExplored).
-
-// Ambient categories the cursor can sit on when it is NOT directly over
-// a discrete map-note waypoint. Mutually exclusive: cursor is either in
-// fog of war (Unexplored), or in an explored layout-room that has a
-// cached Bioware-authored landmark (Landmark — Tier 1), or in an
-// explored layout-room whose CSWSArea.room_names[] entry is a mod-
-// supplied human-readable label (RoomName — Tier 2, rare in vanilla),
-// or none of the above (None — silent).
-//
-// Vanilla resref-style room ids (`m02_03e`, `stunt_01_main`, ...) never
-// reach RoomName because IsResrefStyleRoomName filters them out — those
-// rooms classify as None and the cursor stays quiet over them, by
-// design. The cursor surface is "what's HERE" — silence over a chunk
-// the engine couldn't name is honest.
-enum class AmbientKind {
-    None,
-    Unexplored,
-    Landmark,
-    RoomName,
-    // Terrain shape synthesised from a 4-direction wall probe. Falls
-    // through when no waypoint/landmark/named-room match — gives blind
-    // players a sense of corridor vs. room vs. junction the same way a
-    // sighted player reads geometry off the minimap render.
-    TerrainShape,
-};
-
 struct CursorState {
     bool   active                  = false;
     bool   announced_area_name     = false;
@@ -157,7 +53,6 @@ struct CursorState {
     Vector world                   = {0, 0, 0};
     DWORD  last_tick_ms            = 0;
     bool   at_edge                 = false;  // "Edge of the map" said for this push
-
     // Waypoint hover-pause (explicit map-note overlay — Tier 1
     // landmark-as-game-object).
     // `pending_note_is_pin` / `last_spoken_is_pin` discriminate
@@ -171,7 +66,6 @@ struct CursorState {
     DWORD  pending_note_started_ms = 0;
     void*  last_spoken_waypoint    = nullptr;
     bool   last_spoken_is_pin      = false;
-
     // Ambient hover-pause (fog-of-war + layout-room labels + terrain
     // shape). A single timer covers all kinds so flipping between e.g.
     // Landmark and RoomName doesn't double-debounce. last_spoken_*
@@ -198,7 +92,6 @@ struct CursorState {
     // the last-spoken text and comparing case-sensitively collapses
     // those into one logical region — same text, no re-announce.
     std::string last_spoken_ambient_text;
-
     // TerrainShape speak buffer: the cluster's description is built at
     // probe time (when we arm the hover-pause), cached on the pending
     // side, and consumed when the timer elapses. room_topology builds
@@ -237,290 +130,6 @@ bool IsMapPanelActive(void** outPanel) {
     return p != nullptr;
 }
 
-// GetServerApp / GetAreaMap / IsWorldPointExplored lifted to engine_area
-// in Phase 6 lay-off 1a so cycle_state can fog-of-war filter on map
-// context. The cursor calls those shared helpers via acc::engine::*.
-
-// Read CSWSAreaMap pixel-transform fields. Returns false on any read
-// fault (SEH-guarded). All four scalars are required to invert; one
-// missing → cursor stays dormant this tick.
-bool ReadAreaMapTransform(void* areaMap,
-                          uint32_t& outOrientation,
-                          float& outWuPerPx, float& outWuPerPy,
-                          float& outOriginX, float& outOriginY) {
-    if (!areaMap) return false;
-    __try {
-        auto* b = reinterpret_cast<unsigned char*>(areaMap);
-        outOrientation = *reinterpret_cast<uint32_t*>(b + kAreaMapOrientationOffset);
-        outWuPerPx     = *reinterpret_cast<float*>   (b + kAreaMapWorldUnitsPerXPxOffset);
-        outWuPerPy     = *reinterpret_cast<float*>   (b + kAreaMapWorldUnitsPerYPxOffset);
-        outOriginX     = *reinterpret_cast<float*>   (b + kAreaMapWorldOriginXOffset);
-        outOriginY     = *reinterpret_cast<float*>   (b + kAreaMapWorldOriginYOffset);
-        return true;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return false;
-    }
-}
-
-// Apply the engine's forward rotation per orientation, matching
-// CSWSAreaMap::GetMapPixelFromWorldCoord exactly. Decompile confirms:
-//   case 1: (xw, yw) -> (-xw, -yw)
-//   case 2: (xw, yw) -> (yw,  -xw)
-//   case 3: (xw, yw) -> (-yw,  xw)  (case 3 keeps yw as-is, x flipped)
-void ApplyOrientationForward(uint32_t orient, float& xw, float& yw) {
-    float ox = xw, oy = yw;
-    switch (orient) {
-        case 0: /* identity */                       break;
-        case 1: xw = -ox; yw = -oy;                  break;
-        case 2: xw =  oy; yw = -ox;                  break;
-        case 3: xw = -oy; yw =  ox;                  break;
-        default: /* unknown — leave unmolested */    break;
-    }
-}
-
-// Undo it.
-void ApplyOrientationInverse(uint32_t orient, float& xw, float& yw) {
-    float ox = xw, oy = yw;
-    switch (orient) {
-        case 0: /* identity */                       break;
-        case 1: xw = -ox; yw = -oy;                  break;  // self-inverse
-        case 2: xw = -oy; yw =  ox;                  break;  // inverse of (y,-x) = (-y, x)
-        case 3: xw =  oy; yw = -ox;                  break;  // inverse of (-y, x) = (y, -x)
-        default: /* unknown */                       break;
-    }
-}
-
-bool WorldToPixel(void* areaMap, const Vector& world, float& outPx, float& outPy) {
-    uint32_t orient; float wuPx, wuPy, ox, oy;
-    if (!ReadAreaMapTransform(areaMap, orient, wuPx, wuPy, ox, oy)) return false;
-    if (wuPx == 0.0f || wuPy == 0.0f) return false;
-    float xw = world.x, yw = world.y;
-    ApplyOrientationForward(orient, xw, yw);
-    outPx = (xw - ox) / wuPx + 0.5f;
-    outPy = (yw - oy) / wuPy + 0.5f;
-    return true;
-}
-
-bool PixelToWorld(void* areaMap, float px, float py, float zSeed, Vector& outWorld) {
-    uint32_t orient; float wuPx, wuPy, ox, oy;
-    if (!ReadAreaMapTransform(areaMap, orient, wuPx, wuPy, ox, oy)) return false;
-    float xw = px * wuPx + ox;
-    float yw = py * wuPy + oy;
-    ApplyOrientationInverse(orient, xw, yw);
-    outWorld.x = xw;
-    outWorld.y = yw;
-    outWorld.z = zSeed;
-    return true;
-}
-
-// Walk the map-hider's waypoint linked list, find the nearest waypoint
-// whose map-pixel projection lands within kHoverHitRadiusPx of the
-// cursor AND whose has_map_note != 0 AND whose position
-// IsWorldPointExplored == true. Returns the CSWSWaypoint* (server-side
-// object) of the best match, or nullptr.
-//
-// Same filter the engine's GetNext/PrevMapNote apply — we re-do the
-// scan rather than reading their cached current-node so we get spatial
-// not sequential hit detection.
-// `dump` (optional) collects the per-waypoint diagnostic lines. It is a
-// POINTER rather than a local BlockLog because this function uses __try, and
-// MSVC's C2712 forbids an object needing unwinding in a function with SEH —
-// the same constraint menus_extract.cpp documents. The caller owns the block,
-// so the whole per-tick scan folds as one unit when nothing moved. Line-level
-// dedup cannot fold this: the lines cycle (#0,#1,…,#6,#0,#1,…), so each line
-// differs from the one just before it and Trace never sees a repeat.
-void* FindNearestExploredMapNote(void* mapPanel, void* areaMap,
-                                 float cursorPx, float cursorPy,
-                                 int* outScannedCount = nullptr,
-                                 float* outBestDist2 = nullptr,
-                                 acclog::BlockLog* dump = nullptr) {
-    if (!mapPanel || !areaMap) return nullptr;
-    void* mapHider = reinterpret_cast<unsigned char*>(mapPanel) +
-                     kInGameMapHiderOffset;
-    void* internal = nullptr;
-    __try {
-        internal = *reinterpret_cast<void**>(
-            reinterpret_cast<unsigned char*>(mapHider) +
-            kMapHiderWaypointListOffset +
-            kListInternalOffset);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return nullptr;
-    }
-    if (!internal) return nullptr;
-
-    // serverApp gate removed when GetServerApp lifted to engine_area
-    // (Phase 6 lay-off 1a). ResolveServerObjectHandle handles its own
-    // chain bail-out on null AppManager / CServerExoApp internally.
-
-    void* bestObj = nullptr;
-    float bestDist2 = (float)(kHoverHitRadiusPx * kHoverHitRadiusPx);
-
-    void* node = nullptr;
-    __try {
-        node = *reinterpret_cast<void**>(
-            reinterpret_cast<unsigned char*>(internal) +
-            kListInternalHeadOffset);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return nullptr;
-    }
-
-    int guard = 0;
-    int scanned = 0;
-    while (node && guard++ < 256) {
-        ++scanned;
-        // CExoLinkedList<ulong>: each node's data is a heap-boxed ulong*,
-        // so the handle requires two indirections from `node`. Decomp of
-        // GetNextMapNote confirms: GetAtPos returns ulong* and the caller
-        // does `uVar7 = *puVar2;` to extract the handle value.
-        uint32_t handle = 0;
-        void* nextNode = nullptr;
-        __try {
-            void* dataPtr = *reinterpret_cast<void**>(
-                reinterpret_cast<unsigned char*>(node) +
-                kLinkedListNodeDataOff);
-            if (dataPtr) {
-                handle = *reinterpret_cast<uint32_t*>(dataPtr);
-            }
-            nextNode = *reinterpret_cast<void**>(
-                reinterpret_cast<unsigned char*>(node) +
-                kLinkedListNodeNextOff);
-        } __except (EXCEPTION_EXECUTE_HANDLER) {
-            break;
-        }
-        if (handle == 0) { node = nextNode; continue; }
-
-        void* obj = acc::engine::ResolveServerObjectHandle(handle);
-        if (!obj) { node = nextNode; continue; }
-
-        // Spoiler / curation gate — same checks the engine uses
-        // internally for GetNext/PrevMapNote.
-        int hasNote = 0;
-        Vector pos = {0,0,0};
-        __try {
-            hasNote = *reinterpret_cast<int*>(
-                reinterpret_cast<unsigned char*>(obj) +
-                kWaypointMapNoteEnabledOffset);
-            pos = *reinterpret_cast<Vector*>(
-                reinterpret_cast<unsigned char*>(obj) +
-                kWaypointPositionOffset);
-        } __except (EXCEPTION_EXECUTE_HANDLER) {
-            node = nextNode; continue;
-        }
-        if (hasNote == 0) { node = nextNode; continue; }
-        if (!acc::engine::IsWorldPointExplored(areaMap, pos)) {
-            node = nextNode; continue;
-        }
-
-        float ppx, ppy;
-        if (!WorldToPixel(areaMap, pos, ppx, ppy)) {
-            node = nextNode; continue;
-        }
-        if (dump) {
-            dump->Line("waypoint #%d handle=0x%x world=(%.2f,%.2f) "
-                       "pixel=(%.1f,%.1f)",
-                       scanned, handle, pos.x, pos.y, ppx, ppy);
-        }
-        float dx = ppx - cursorPx;
-        float dy = ppy - cursorPy;
-        float d2 = dx * dx + dy * dy;
-        if (d2 < bestDist2) {
-            bestDist2 = d2;
-            bestObj = obj;
-        }
-        node = nextNode;
-    }
-    if (outScannedCount) *outScannedCount = scanned;
-    if (outBestDist2) *outBestDist2 = bestObj ? bestDist2 : 1e30f;
-    return bestObj;
-}
-
-// Hit-test against the mod's own saved markers in `CSWCArea.map_pins[]`.
-// Markers are identified by IDENTITY (map_user_markers registry), not by a
-// reference-number bit test: engine map-note pins are keyed by the
-// waypoint's client object id (always high-bit set), so the former
-// `flags & 0x80000000` filter matched them too and leaked unexplored
-// notes. Engine notes are handled solely by FindNearestExploredMapNote,
-// which is fog-gated. Returns nullptr if no user marker is within hover
-// radius. The closer-of-two scan in the hover loop picks waypoint or
-// marker based on pixel distance.
-void* FindNearestUserMapPin(void* clientArea, void* areaMap,
-                            float cursorPx, float cursorPy,
-                            int* outScannedCount = nullptr,
-                            float* outBestDist2 = nullptr) {
-    if (outBestDist2) *outBestDist2 = 1e30f;
-    if (!clientArea || !areaMap) {
-        if (outScannedCount) *outScannedCount = 0;
-        return nullptr;
-    }
-    int pinCount = acc::engine::GetMapPinCount(clientArea);
-    void* bestPin = nullptr;
-    float bestDist2 = (float)(kHoverHitRadiusPx * kHoverHitRadiusPx);
-    int scanned = 0;
-    for (int i = 0; i < pinCount; ++i) {
-        void* pin = acc::engine::GetMapPinAt(clientArea, i);
-        if (!pin) continue;
-        ++scanned;
-        if (!acc::map_user_markers::IsUserMarkerPin(pin)) continue;  // ours only
-        if (!acc::engine::IsMapPinEnabled(pin)) continue;
-        Vector pos;
-        if (!acc::engine::GetMapPinPosition(pin, pos)) continue;
-        // User markers skip fog: the player dropped them, so revealing their
-        // own location to themselves isn't a spoiler.
-        float ppx, ppy;
-        if (!WorldToPixel(areaMap, pos, ppx, ppy)) continue;
-        float dx = ppx - cursorPx;
-        float dy = ppy - cursorPy;
-        float d2 = dx * dx + dy * dy;
-        if (d2 < bestDist2) {
-            bestDist2 = d2;
-            bestPin = pin;
-        }
-    }
-    if (outScannedCount) *outScannedCount = scanned;
-    if (outBestDist2) *outBestDist2 = bestPin ? bestDist2 : 1e30f;
-    return bestPin;
-}
-
-// Hit-test the mod's shipped curated hints (map_shipped_hints) — static
-// table rows with no engine object behind them. Fog-GATED like engine
-// notes (unlike user markers): a hint only becomes hoverable once its
-// cell is explored, mirroring the cycle's gate so both surfaces agree on
-// what exists.
-const acc::map_shipped_hints::ShippedHint* FindNearestShippedHint(
-        void* areaMap, float cursorPx, float cursorPy,
-        int* outScannedCount = nullptr, float* outBestDist2 = nullptr) {
-    if (outScannedCount) *outScannedCount = 0;
-    if (outBestDist2) *outBestDist2 = 1e30f;
-    if (!areaMap) return nullptr;
-    const acc::map_shipped_hints::ShippedHint* hints[8];
-    int n = acc::map_shipped_hints::CollectForCurrentModule(hints, 8);
-    const acc::map_shipped_hints::ShippedHint* best = nullptr;
-    float bestDist2 = (float)(kHoverHitRadiusPx * kHoverHitRadiusPx);
-    int scanned = 0;
-    for (int i = 0; i < n; ++i) {
-        ++scanned;
-        if (!acc::engine::IsWorldPointExplored(areaMap, hints[i]->pos)) {
-            continue;
-        }
-        float ppx, ppy;
-        if (!WorldToPixel(areaMap, hints[i]->pos, ppx, ppy)) continue;
-        float dx = ppx - cursorPx;
-        float dy = ppy - cursorPy;
-        float d2 = dx * dx + dy * dy;
-        if (d2 < bestDist2) {
-            bestDist2 = d2;
-            best = hints[i];
-        }
-    }
-    if (outScannedCount) *outScannedCount = scanned;
-    if (outBestDist2) *outBestDist2 = best ? bestDist2 : 1e30f;
-    return best;
-}
-
-bool ReadWaypointMapNoteText(void* waypoint, char* outBuf, size_t bufSize) {
-    return acc::engine::GetWaypointMapNote(waypoint, outBuf, bufSize);
-}
-
 void SeedCursorAtPlayer(void* areaMap) {
     Vector p;
     if (!acc::engine::GetPlayerPosition(p)) return;
@@ -550,78 +159,6 @@ void ResetSessionState() {
     g_state.last_spoken_ambient_room_idx  = -1;
     g_state.last_spoken_ambient_text.clear();
     g_state.pending_shape_text.clear();
-}
-
-const char* AmbientKindStr(AmbientKind k) {
-    switch (k) {
-        case AmbientKind::None:         return "none";
-        case AmbientKind::Unexplored:   return "unexplored";
-        case AmbientKind::Landmark:     return "landmark";
-        case AmbientKind::RoomName:     return "room_name";
-        case AmbientKind::TerrainShape: return "terrain_shape";
-    }
-    return "?";
-}
-
-// Render the speak-text for an ambient kind into outBuf. Source for the
-// TerrainShape branch differs by call site — the dedup-fingerprint pass
-// uses the current frame's freshly-computed shape, while the
-// hover-pause speak pass uses the stashed pending_shape_text so the
-// rendered label stays stable across the arm→speak window.
-// Returns true iff outBuf got a non-empty string.
-std::string ResolveAmbientText(AmbientKind kind, int roomIdx,
-                               const char* landmarkBuf,
-                               const char* shapeText) {
-    switch (kind) {
-        case AmbientKind::Unexplored: {
-            const char* t = acc::strings::Get(
-                acc::strings::Id::MapCursorUnexplored);
-            if (t) return std::string(t);
-            break;
-        }
-        case AmbientKind::Landmark:
-            if (landmarkBuf && landmarkBuf[0] != '\0') {
-                return std::string(landmarkBuf);
-            }
-            break;
-        case AmbientKind::RoomName: {
-            void* a = acc::engine::GetCurrentArea();
-            if (a) {
-                // GetRoomDisplayName needs a char sink; room names are
-                // short authored strings, so a local buffer is fine here.
-                char roomTmp[160] = {0};
-                acc::engine::GetRoomDisplayName(a, roomIdx,
-                                                roomTmp, sizeof(roomTmp));
-                return std::string(roomTmp);
-            }
-            break;
-        }
-        case AmbientKind::TerrainShape:
-            if (shapeText && shapeText[0] != '\0') {
-                return std::string(shapeText);
-            }
-            break;
-        case AmbientKind::None:
-            break;
-    }
-    return std::string();
-}
-
-
-// Read CSWSWaypoint.Tag for diagnostic logging. CExoString at
-// kObjectTagOffset (engine_area.h). Returns false if the read faults
-// or the tag is empty.
-bool ReadWaypointTag(void* waypoint, char* outBuf, size_t bufSize) {
-    if (!waypoint || !outBuf || bufSize < 2) return false;
-    __try {
-        // kObjectTagOffset lives at global scope in engine_area.h between
-        // two acc::engine namespace blocks — reference it directly, not
-        // through the namespace.
-        return acc::engine::ReadCExoString(
-            waypoint, kObjectTagOffset, outBuf, bufSize);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return false;
-    }
 }
 
 bool KeyDown(int vk) {
