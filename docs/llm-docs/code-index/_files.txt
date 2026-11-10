@@ -33,6 +33,11 @@ patches/Accessibility/combat_diag.cpp
 patches/Accessibility/combat_diag.h
 patches/Accessibility/combat_diag_internal.h
 patches/Accessibility/combat_log.cpp
+patches/Accessibility/combat_log_attack.cpp
+patches/Accessibility/combat_log_effects.cpp
+patches/Accessibility/combat_log_internal.h
+patches/Accessibility/combat_log_parse.cpp
+patches/Accessibility/combat_log_shields.cpp
 patches/Accessibility/combat_query.cpp
 patches/Accessibility/combat_query.h
 patches/Accessibility/combat_queue.cpp
