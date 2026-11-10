@@ -278,6 +278,8 @@ CollectAreaExits, RenderAreaExits and AxisCoversExits (ded00592).
 engine_keymap: key tables and the [Keymapping] line parser engine-free in
 engine_keymap_codes with tests (520ed847, f6541d58). spatial_wall_surfaces:
 the anomaly diagnostics of BuildSurfaceDescriptors out (414 lines).
+engine_player_party: lean (b9e67e5f: NpcObjectId, StatsFirstName, the
+leader name as four sources in order; 386 lines).
 
 Careful: never rewrite source files with PowerShell ReadAllText/WriteAllText
 (it decodes UTF-8 and writes '?' for the dashes and umlauts in comments);
@@ -341,7 +343,6 @@ prefix (menus_listbox_picker.cpp).
   things that belong together makes sense, and do it where it does.
 - Next file, by size (2026-11-10 21:15, strings*.cpp excepted):
   to judge: combat_query 585, room_topology_doors 574, log 563, menus_chargen_feats 561,
-  engine_player_party 551,
   combat_diag 543, minigame_turret_peg 536,
   menus_listbox_picker 524, menus_focus_k2 520, help 520, menus_focus 510,
   menus_powers_levelup 510. The catalog headers (engine_offsets_fields.h
