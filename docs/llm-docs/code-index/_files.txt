@@ -391,6 +391,7 @@ patches/Accessibility/qe_ring.h
 patches/Accessibility/room_topology.cpp
 patches/Accessibility/room_topology.h
 patches/Accessibility/room_topology_absorb.cpp
+patches/Accessibility/room_topology_classify.cpp
 patches/Accessibility/room_topology_diag.cpp
 patches/Accessibility/room_topology_doors.cpp
 patches/Accessibility/room_topology_internal.h
