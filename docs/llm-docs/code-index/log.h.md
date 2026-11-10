@@ -1,4 +1,4 @@
-# log.h (115 lines)
+# log.h (112 lines)
 
 Source: `patches/Accessibility/log.h`
 
@@ -14,7 +14,6 @@ Conventions: every line carries a "Tag" prefix (first arg). Trace/Edge/ Once col
 - L32 `void Trace(const char* tag, const char* fmt, ...)`: Dedup consecutive identical content per tag — emits one line then a "(repeated Nx more)" footer when the next distinct line arrives.
 - L35 `void Once(const char* tag, const char* fmt, ...)`: Write only on first observation of `tag`.
 - L39 `void Edge(const char* tag, int state, const char* fmt, ...)`: Write only when `state` differs from the previous call for `tag`.
-- L42 `void WriteHex(const char* tag, const char* label, const void* bytes, size_t len)`: Splits long byte runs across multiple lines.
-- L79 `class BlockLog`: Block-level dedup for multi-line snapshots that are re-emitted verbatim (a panel walk re-dumped on every rebuild, a manager-stack dump).
-- L108 `void BringupMark(const char* name)`: Record a milestone in the bringup timeline.
-- L112 `const char* PatchDir()`: Absolute path of \patches.
+- L76 `class BlockLog`: Block-level dedup for multi-line snapshots that are re-emitted verbatim (a panel walk re-dumped on every rebuild, a manager-stack dump).
+- L105 `void BringupMark(const char* name)`: Record a milestone in the bringup timeline.
+- L109 `const char* PatchDir()`: Absolute path of \patches.

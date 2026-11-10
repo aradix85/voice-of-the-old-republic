@@ -1,4 +1,4 @@
-# log.cpp (588 lines)
+# log.cpp (564 lines)
 
 Source: `patches/Accessibility/log.cpp`
 
@@ -25,11 +25,10 @@ Conventions: every line carries a "Tag" prefix (first arg). Trace/Edge/ Once col
 - L347 `void Trace(const char* tag, const char* fmt, ...)`
 - L384 `void Once(const char* tag, const char* fmt, ...)`
 - L407 `void Edge(const char* tag, int state, const char* fmt, ...)`
-- L443 `void WriteHex(const char* tag, const char* label, const void* bytes, size_t len)`
-- L469 `BlockLog::BlockLog(const char* tag) : tag_(tag ? tag : ""), len_(0), ended_(false), passthrough_(false), hasKey_(false), keyHash_(1469598103934665603ull)`
-- L475 `BlockLog::~BlockLog()`
-- L477 `void BlockLog::Key(const char* fmt, ...)`
-- L495 `void BlockLog::Line(const char* fmt, ...)`
-- L526 `void BlockLog::End()`
-- L568 `const char* PatchDir()`
-- L576 `void BringupMark(const char* name)`
+- L445 `BlockLog::BlockLog(const char* tag) : tag_(tag ? tag : ""), len_(0), ended_(false), passthrough_(false), hasKey_(false), keyHash_(1469598103934665603ull)`
+- L451 `BlockLog::~BlockLog()`
+- L453 `void BlockLog::Key(const char* fmt, ...)`
+- L471 `void BlockLog::Line(const char* fmt, ...)`
+- L502 `void BlockLog::End()`
+- L544 `const char* PatchDir()`
+- L552 `void BringupMark(const char* name)`

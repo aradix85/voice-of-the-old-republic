@@ -1,38 +1,28 @@
-// Swoop race minigame accessibility — see minigame_swoop_race.h for design.
+// Swoop race: entry and exit, the shift and jump keys, and the per-tick
+// dispatch to the cues, the race clock and the spatial audio.
 //
-// Phase 1 lay-off (current): entry/exit announce + keybind cheat sheet,
-// best-effort gear-shift announce derived from CSWTrackFollower.speed
-// jumps, per-tick diagnostic snapshot (speed + tunnel offset). Latches
-// the CSWMiniGame pointer on first detect because the area chain
-// (GetCurrentArea → GetClientArea → mini_game) churns during the
-// race-start transition and stops resolving the minigame even while
-// the race is still running — verified live by patch-20260524-163552.log
-// where ENTER fired at T+0 and a spurious EXIT fired at T+125 ms even
-// though the actual race continued for 40 more seconds.
+// The CSWMiniGame pointer is latched on first detect: the area chain
+// (GetCurrentArea -> GetClientArea -> mini_game) stops resolving during the
+// race-start transition while the race runs on, so the chain alone would
+// announce a false exit a few ticks after the entry.
 
 #include "minigame_swoop_race_internal.h"
 
-#include "engine_area.h"      // GetClientArea + map-pin chain (back-pointer),
-                              //   ReadGlobalNumber (MIN_RACE_GEAR / MIN_TIME_*)
-#include "engine_game.h"      // IsKotor2 — gate ladder, jump watch, K2 keys
-#include "engine_keymap.h"    // GameActionScancode — KOTOR 1's MGshoot bind
-#include "hotkeys.h"          // Pressed(SwoopShift) — keyboard shift
-#include "key_inject.h"       // Tap — KOTOR 1 shift through the MGshoot key
+#include "engine_area.h"
+#include "engine_game.h"
+#include "engine_keymap.h"
+#include "engine_rebase.h"
+#include "hotkeys.h"
+#include "key_inject.h"
 #include "log.h"
 #include "speech.h"
-#include "strings.h"          // Get(SwoopRaceStarted/Controls/Ended) +
-                              //     FmtSwoopRaceGear
-#include "engine_rebase.h"
+#include "strings.h"
 
 namespace acc::swoop_race {
 
 namespace {
 
-// ============================================================================
-// Engine struct offsets (from docs/llm-docs/re/swkotor.exe.h).
-// ============================================================================
-//
-// CSWCArea.mini_game (verified line 8726, after rooms@+0x260):
+// CSWCArea.mini_game (swkotor.exe.h line 8726, after rooms@+0x260).
 //
 // KOTOR 2 = +0x268. Witnessed as a WRITE, not inferred: the K2 area's
 // minigame-load path @0x007A2FB0 allocates 0x11c bytes, runs the CSWMiniGame
@@ -58,9 +48,9 @@ const size_t kClientAreaMiniGameOffset      = acc::off::Pick(0x264, 0x268);
 // 0x1a <- InputIndex 1 MOUSE_BUTTON1, class 1). KOTOR 1 sends 0x19 and 0xd9
 // to CSWMiniPlayer::Fire instead, whose gun bank runs onfire.ncs — so Space
 // shifts there and no keyboard key shifts on KOTOR 2 by default. The mod
-// therefore re-routes: Space -> TryShift, W -> TryJump.
-// __thiscall with one int (memory: the typedef must carry the int, or the
-// callee reads caller-frame garbage).
+// therefore routes Space -> TryJump (logged) and W -> TryShift.
+// __thiscall with one int: the typedef must carry the int, or the callee
+// reads caller-frame garbage.
 const uintptr_t kAddrK2RunOnAccelerateScript = acc::addr::Kotor2Only(0x00838e10);
 const uintptr_t kAddrK2RunOnBrakeScript      = acc::addr::Kotor2Only(0x00838ec0);
 typedef void (__thiscall* PFN_RunFollowerSlotScript)(void* follower, int flag);
@@ -70,13 +60,9 @@ typedef void (__thiscall* PFN_RunFollowerSlotScript)(void* follower, int flag);
 constexpr int kK1MGShootActionId = 217;
 constexpr int kDikSpace          = 0x39;
 
-// ============================================================================
-// SEH-guarded primitive reads. Same pattern as the rest of engine_*.
-// ============================================================================
-
-// Read CSWCArea.mini_game via the player-area chain. Source of truth at
-// the moment of detection; we latch the result so churn in this chain
-// during transitions doesn't drop us mid-race.
+// CSWCArea.mini_game via the player-area chain. Ground truth at the moment of
+// detection; the result is latched so churn in this chain during transitions
+// does not drop the race.
 void* ReadMiniGameViaArea() {
     void* serverArea = acc::engine::GetCurrentArea();
     if (!serverArea) return nullptr;
@@ -84,129 +70,61 @@ void* ReadMiniGameViaArea() {
     return SafeReadPtr(clientArea, kClientAreaMiniGameOffset);
 }
 
-// Validate a latched CSWMiniGame pointer by re-reading its vtable and
-// comparing against the value captured at latch time. Returns true iff
-// the pointer is still readable and the vtable hasn't been overwritten
-// (engine frees CSWMiniGame at race-end and the heap slot tends to get
-// reused — vtable mismatch is a reliable "no longer the same struct"
-// signal).
+// True iff the latched CSWMiniGame is still readable and its vtable is the
+// one captured at latch time. The engine frees CSWMiniGame at race end and
+// the heap slot tends to get reused, so a vtable mismatch is a reliable
+// "no longer the same struct" signal.
 bool LatchedStillValid() {
     if (!g_state.latched_mini_game || !g_state.latched_vtable) return false;
     void* vt = SafeReadPtr(g_state.latched_mini_game, kMiniGameVtableOffset);
     return vt == g_state.latched_vtable;
 }
 
-// The obstacle, accelpad and side-wall cues (the per-tick MGO walk, the
-// AsObstacle / AsEnemy downcasts, the LoopSource lifecycles) live in
-// minigame_swoop_audio*.cpp; the race lifecycle below calls
-// TickSpatialAudio() / ResetSpatialAudio().
-
-// ============================================================================
-// Speech.
-//
-// Combine opener + keybind cheat sheet into ONE interrupting utterance so
-// the two halves can't preempt each other. Without this combine, the
-// observed live behaviour was: opener cancelled by controls cancelled
-// by the spurious EXIT 125 ms later, so the user heard nothing
-// coherent.
-// ============================================================================
-
+// The opener and the key list go out as ONE interrupting utterance, so the
+// second half cannot cut off the first.
 void AnnounceEntry() {
-    const char* opener   = acc::strings::Get(acc::strings::Id::SwoopRaceStarted);
-    // KOTOR 2 rebinds the race: Space is the JUMP (OnBrake slot -> onjump.ncs)
-    // and the gear shift moved to the OnAccelerate slot — see the string's
-    // comment in strings.h for the input ids behind that.
-    const char* controls = acc::strings::Get(
-        acc::game::IsKotor2() ? acc::strings::Id::SwoopRaceControlsK2
-                              : acc::strings::Id::SwoopRaceControls);
-    if ((!opener || !*opener) && (!controls || !*controls)) return;
-
+    // KOTOR 2 rebinds the race: Space is the jump and W the shift (see
+    // kAddrK2RunOnAccelerateScript).
+    const acc::strings::Id controls = acc::game::IsKotor2()
+        ? acc::strings::Id::SwoopRaceControlsK2
+        : acc::strings::Id::SwoopRaceControls;
     char buf[512];
     std::snprintf(buf, sizeof(buf), "%s %s",
-                  opener   ? opener   : "",
-                  controls ? controls : "");
+                  acc::strings::Get(acc::strings::Id::SwoopRaceStarted),
+                  acc::strings::Get(controls));
     acc::speech::Speak(buf, /*interrupt=*/true);
     acclog::Write("SwoopRace", "spoke entry: [%s]", buf);
 }
 
-// ============================================================================
-// State transitions.
-// ============================================================================
-
 void HandleEnter(void* mg) {
-    g_state.active              = true;
-    g_state.latched_mini_game   = mg;
-    g_state.latched_vtable      = SafeReadPtr(mg, kMiniGameVtableOffset);
-    g_state.entered_at_ms       = GetTickCount64();
-    g_state.last_diag_log_ms    = 0;
-    g_state.ticks_since_lost    = 0;
-    g_state.gear                = 0;
-    g_state.last_max_speed      = 0.0f;
-    g_state.gear_from_global    = false;
-    g_state.shift_ready_announced = false;
-    g_state.airborne            = false;
-    g_state.jump_started_ms     = 0;
-    g_state.jump_peak_z         = 0.0f;
-    g_state.have_progress_mark  = false;
-    g_state.stuck_hint_spoken   = false;
-    g_state.last_hp             = -1;
-    g_state.wrecked             = false;
-    g_state.last_gear_change_ms = 0;
-    g_state.have_start_ms       = false;
-    g_state.race_start_ms       = 0;
-    g_state.race_mph            = 2;
-    g_state.race_max_speed      = 0.0f;
-    g_state.race_peak_speed     = 0.0f;
-    g_state.have_race_time      = false;
-    g_state.race_time_seconds   = 0.0f;
-    g_state.race_time_announced = false;
-    // Defensive cleanup for obstacle + accelpad loops — any active
-    // loop from a previous race must not survive into this one.
+    g_state = State{};
+    g_state.active            = true;
+    g_state.latched_mini_game = mg;
+    g_state.latched_vtable    = SafeReadPtr(mg, kMiniGameVtableOffset);
+    g_state.entered_at_ms     = GetTickCount64();
+    // Loops left over from an earlier race must not survive into this one.
     ResetSpatialAudio();
 
-    acclog::Write("SwoopRace",
-                  "ENTER mini_game=%p vtable=%p",
-                  mg, g_state.latched_vtable);
-
-    // Speak FIRST, dump SECOND. The full byte dump fires a couple dozen
-    // log writes which take real wall-time; doing them before
-    // speaking risks the engine ticking again before we queue the
-    // utterance, in which case TickGearWatch / EmitDiagSnapshot would
-    // pile up on the same audio frame.
+    // Speak before logging, so the utterance is queued before the next
+    // tick's cues can pile onto the same audio frame.
     AnnounceEntry();
     EmitEntrySummary(mg);
-    if (!g_state.full_diagnostic_emitted) {
-        EmitDiagnosticDump(mg);
-        g_state.full_diagnostic_emitted = true;
-    }
 }
 
 void HandleExit() {
-    ULONGLONG dur = GetTickCount64() - g_state.entered_at_ms;
-    acclog::Write("SwoopRace",
-                  "EXIT after %llu ms (debounced %d ticks)",
-                  dur, kExitDebounceTicks);
-    // Stop every obstacle + accelpad loop — some may still be active
-    // if the race ended while objects were in range.
+    acclog::Write("SwoopRace", "EXIT after %llu ms (debounced %d ticks)",
+                  GetTickCount64() - g_state.entered_at_ms, kExitDebounceTicks);
+    // Objects may still be in range when the race ends.
     ResetSpatialAudio();
-    g_state.active              = false;
-    g_state.latched_mini_game   = nullptr;
-    g_state.latched_vtable      = nullptr;
-    g_state.ticks_since_lost    = 0;
-    g_state.gear                = 0;
-    g_state.last_max_speed      = 0.0f;
-    g_state.gear_from_global    = false;
-    g_state.shift_ready_announced = false;
-    g_state.airborne            = false;
-    // Fallback: if the terminal-stop detector already spoke the time (the
-    // common path), this is a no-op; otherwise speak it now.
+    // A no-op when the finish detector already spoke the race end.
     SpeakRaceEndMessage();
     FlushRaceEndSpeech(/*force=*/true);   // a delayed time must not die with the module
+    g_state = State{};
 }
 
 // Run one of the K2 player bike's slot scripts through the engine's own
-// runner, mirroring the guards the client input handler applies (a live
-// swoop-type minigame with a player). SEH-guarded; false = nothing ran.
+// runner, with the guards the client input handler applies (a live
+// swoop-type minigame with a player). False = nothing ran.
 bool RunPlayerSlotScript(uintptr_t runner, const char* what) {
     if (!acc::game::IsKotor2() || !g_state.active) return false;
     void* mg = g_state.latched_mini_game;
@@ -255,39 +173,26 @@ bool TryJump() {
 }
 
 void Tick() {
-    // ---- Re-derive from area chain (ground truth when it works). ----------
     void* mgArea = ReadMiniGameViaArea();
 
     if (!g_state.active) {
-        // Idle state. Fire ENTER only for an actual swoop race
-        // (CSWMiniGame.type==1). The turret / space-combat gunner
-        // minigame shares this exact struct (same vtable) but reports
-        // type==2 and is handled by minigame_turret.cpp — entering here
-        // would mis-announce it as a swoop race (and run the gear /
-        // accel / wall heuristics, which are meaningless for a turret).
-        // type is populated by the time the area chain exposes mini_game.
-        // (Engine-confirmed: CSWMiniGame::Load only ever sets type to 1 or 2.
-        // We previously read +0x84=axis_x and matched 0/3 by coincidence.)
+        // Enter only for a swoop race (type 1). The turret / gunner minigame
+        // shares this struct and vtable but reports type 2 and is handled by
+        // minigame_turret.cpp. The type is set by the time the area chain
+        // exposes mini_game.
         if (mgArea && SafeReadU32(mgArea, kMiniGameTypeOffset) == kMiniGameTypeSwoop) {
             HandleEnter(mgArea);
         }
         return;
     }
 
-    // ---- We're active. Verify the latch is still alive. ------------------
-    //
-    // Two truth sources:
-    //   1. Area chain still reports a mini_game (might be the same
-    //      pointer, might be a fresh one for a new race).
-    //   2. Latched pointer's vtable still reads the expected value.
-    //
-    // EXIT only when BOTH say "gone" continuously for kExitDebounceTicks.
-
+    // Two truth sources: the area chain still reports a mini_game (the same
+    // pointer or a fresh one), and the latched pointer's vtable still reads
+    // the expected value. Exit only when BOTH say "gone" for
+    // kExitDebounceTicks in a row.
     if (mgArea && mgArea != g_state.latched_mini_game) {
-        // Area says minigame exists but at a different address. This
-        // shouldn't happen mid-race, but if it does (engine swap, mod-
-        // injected reset) re-latch onto the fresh struct so subsequent
-        // reads track it.
+        // A different minigame mid-race (engine swap, injected reset):
+        // re-latch so later reads track it.
         void* vt = SafeReadPtr(mgArea, kMiniGameVtableOffset);
         acclog::Write("SwoopRace",
                       "re-latch: old=%p new=%p vtable=%p",
@@ -295,19 +200,13 @@ void Tick() {
         g_state.latched_mini_game = mgArea;
         g_state.latched_vtable    = vt;
         g_state.ticks_since_lost  = 0;
-    } else if (mgArea && mgArea == g_state.latched_mini_game) {
-        // Area chain agrees with latch. Definitely alive.
-        g_state.ticks_since_lost = 0;
-    } else if (!mgArea && LatchedStillValid()) {
-        // Area chain dropped to null (we lost GetCurrentArea visibility
-        // — the race-start transition does this), but the latched
-        // struct's vtable still reads as the same address it had at
-        // ENTER, so the struct itself hasn't been freed. Stay locked.
+    } else if (mgArea || LatchedStillValid()) {
+        // The chain agrees with the latch, or it dropped to null (the
+        // race-start transition does this) while the latched struct is
+        // still the one from the entry.
         g_state.ticks_since_lost = 0;
     } else {
-        // Both sources say gone. Hold off the announcement in case
-        // it's a transient cross-tick race condition (engine briefly
-        // overwriting / reallocating struct between area-side reads).
+        // Both say gone; wait out a transient reallocation first.
         ++g_state.ticks_since_lost;
         if (g_state.ticks_since_lost >= kExitDebounceTicks) {
             HandleExit();
@@ -315,14 +214,13 @@ void Tick() {
         }
     }
 
-    // ---- In-race observation (only when the latch is alive). -------------
     if (!g_state.latched_mini_game) return;
 
     // Keyboard shift: the bare W hotkey, on BOTH games so the muscle memory
     // carries between them (KOTOR 1's Space still shifts too). On KOTOR 2
-    // Space / pad A (jump) and pad B (shift) arrive as events at the client
-    // input hook (input_pipeline.cpp); W never does (the race polls it as an
-    // axis, not an event), so it is polled here instead.
+    // Space (the jump) arrives as an event at the client input hook
+    // (input_pipeline.cpp); W never does (the race polls it as an axis, not
+    // an event), so it is polled here instead.
     if (acc::hotkeys::Pressed(acc::hotkeys::Action::SwoopShift)) {
         TryShift();
     }
@@ -332,9 +230,8 @@ void Tick() {
     TickJumpWatch(g_state.latched_mini_game);
     TickHitPoints(g_state.latched_mini_game);   // log only; see DecideWreckAtFinish
     // TickRaceTimer first so have_start_ms is current this tick: it flips true
-    // at the "Go!" launch (actual speed > 1 + fresh MIN_TIME stamp). Gate the
-    // obstacle + accelpad proximity cues behind it so they stay silent through
-    // the pre-race countdown and only begin once the race is actually underway.
+    // at the "Go!" launch (actual speed > 1 + fresh MIN_TIME stamp). The
+    // obstacle and pad cues stay silent through the countdown until then.
     TickRaceTimer(g_state.latched_mini_game);
     if (g_state.have_start_ms) {
         TickSpatialAudio(g_state.latched_mini_game);

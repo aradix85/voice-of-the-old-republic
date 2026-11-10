@@ -1,25 +1,21 @@
-// The swoop race's clock and finish: the race time from the world clock, whether the bike wrecked at the finish, and the end-of-race line.
+// The swoop race's clock and finish: the race time from the world clock,
+// whether the bike wrecked at the finish, and the end-of-race line.
 
 #include "minigame_swoop_race_internal.h"
 
-#include "engine_app.h"       // GetServerApp (real race-timer read — see
-                              //   TickRaceTimer)
-#include "engine_area.h"      // GetClientArea + map-pin chain (back-pointer),
-                              //   ReadGlobalNumber (MIN_RACE_GEAR / MIN_TIME_*)
-#include "engine_game.h"      // IsKotor2 — gate ladder, jump watch, K2 keys
+#include "engine_app.h"
+#include "engine_area.h"
+#include "engine_game.h"
+#include "engine_rebase.h"
 #include "log.h"
 #include "speech.h"
-#include "strings.h"          // Get(SwoopRaceStarted/Controls/Ended) +
-                              //     FmtSwoopRaceGear
-#include "engine_rebase.h"
+#include "strings.h"
 
 namespace acc::swoop_race {
 
 namespace {
 
-// ============================================================================
-// Real race timer (engine world clock − NWScript start-stamp globals).
-// ============================================================================
+// ----- Race timer: engine world clock − NWScript start-stamp globals -----
 //
 // KOTOR's swoop timer is NWScript-driven: each track's heartbeat stamps the
 // race START time into the global-number table (MIN_TIME_HOUR/MIN/SEC/MIL,
@@ -31,16 +27,15 @@ namespace {
 //   timer   = CServerExoApp::GetWorldTimer(server)        (CWorldTimer)
 //   GetWorldTime(timer,&day,&nowMs)                       nowMs = ms-of-day
 //   mph     = timer->minutes_per_hour  (+0x38, byte)      (compressed calendar)
-//   table   = CServerExoApp::GetGlobalVariableTable(server)
-//   sH/sM/sS/sC = GetValueNumber(table,"MIN_TIME_*")      start-stamp parts
+//   sH/sM/sS/sC = ReadGlobalNumber("MIN_TIME_*")          start-stamp parts
 //   startMs = (((sH*mph + sM)*60 + sS)*1000) + sC*10
 //   elapsedMs = nowMs − startMs
 //
 // GetWorldTimeHour/Minute divide by minutes_per_hour, so the H/M/S split is
-// NOT a normal clock — we reassemble through mph. Addresses decompiled
-// 2026-06-23 (ExecuteCommandGetTimeHour / GetTimeMillisecond / GetGlobalNumber
-// and the CWorldTimer / CSWGlobalVariableTable accessors). The start stamp is
-// constant for the race, so it's cached on first valid read.
+// NOT a normal clock — we reassemble through mph. Addresses from
+// ExecuteCommandGetTimeHour / GetTimeMillisecond and the CWorldTimer
+// accessors. The start stamp is constant for the race, so it's cached on
+// first valid read.
 //
 // KOTOR 2 uses the SAME script scheme — its three swoop tracks (211TEL, 371NAR,
 // 510OND, the Type==1 minigame areas) stamp MIN_TIME_HOUR/MIN/SEC/MIL from their
@@ -57,9 +52,6 @@ namespace {
 //     minutes_per_hour Same() below rather than a guess — and it has its own
 //     witness anyway: K2's hour/minute split @0x0051AB40 reads it with the same
 //     `movzx ecx, byte ptr [reg+0x38]` KOTOR 1's GetWorldTimeHour uses.
-// The global-variable pair moved to acc::engine::ReadGlobalNumber (engine_area),
-// which this file used to duplicate byte for byte; its K2 twins are documented
-// there.
 const uintptr_t kAddrCServerExoAppGetWorldTimer =
     acc::addr::Pick(0x004aede0, 0x0051C370);
 const uintptr_t kAddrCWorldTimerGetWorldTime =
@@ -71,17 +63,12 @@ typedef void  (__thiscall* PFN_GetWorldTime)(void* timer, uint32_t* outDay,
                                              uint32_t* outMs);
 
 // Finish detection. The engine ZEROES the speed envelope (min_speed = max_speed
-// = 0) the instant the bike crosses the finish line and race control ends —
-// observed live: the per-tick snapshot flips from e.g. [210..420] to [0..0]
-// while the bike is still coasting at ~120 u/s. So the last tick with a live
-// envelope (max_speed > 0) IS the finish crossing; we update the elapsed every
-// active tick and let the zero-transition freeze it there.
-//
-// Superseded: a "speed within 0.9 * running-max" band, which actually froze the
-// clock at the speed PEAK (mid-race), not the finish — so a slow run that peaked
-// early reported the same (or a better) time than a fast one. patch-20260623-
-// 111743: a gear-4 run and a gear-5 run both announced ~24.1 s despite a ~4 s
-// real-clock gap, because both peaked around the same world-time.
+// = 0) the instant the bike crosses the finish line and race control ends,
+// while the bike still coasts at ~120 u/s. So the last tick with a live
+// envelope (max_speed > 0) IS the finish crossing: the elapsed is updated
+// every active tick and the zero-transition freezes it there. (The speed peak
+// is not the finish: a slow run that peaked early would report a better
+// time.)
 constexpr float kRaceTimeMaxSeconds = 600.0f;   // implausible-read ceiling
 constexpr long  kRaceStartFreshMaxMs = 5000;    // start-stamp freshness window
 // Race-end announce: fire once the finish is crossed (envelope zeroed) on a bike
@@ -123,9 +110,8 @@ bool ReadWorldClockMs(void* server, uint32_t& outMs, uint32_t& outMph) {
 // 59 / 59 / 99 into the track's time globals (`<MODULE>_SWOOP_MIN` / `_SEC` /
 // `_MSEC`, module = the area resref, "211TEL" on Citadel) where a finish
 // stores the real time. That stamp is the decision here, with a zero
-// hit-point read as the fallback. Round 4 (patch-20260915-075412) ended on a
-// mine at y≈3360 with the mod speaking "61.56 seconds" — this turns that into
-// "swoop wrecked". Names for the other two tracks follow the same pattern by
+// hit-point read as the fallback, so a wreck is not announced as a finish
+// time. Names for the other two tracks follow the same pattern by
 // assumption; a miss reads -1 and the fallback decides, and the log line
 // shows which happened.
 void DecideWreckAtFinish(void* miniGame) {
@@ -158,8 +144,8 @@ void DecideWreckAtFinish(void* miniGame) {
 
 }  // namespace
 
-// Per-tick: cache the start stamp once, then freeze the elapsed at each
-// finish-band tick. Called only while the latch is alive.
+// Per tick while the latch is alive: detect the finish, cache the start
+// stamp once, and keep the elapsed current until the finish freezes it.
 void TickRaceTimer(void* miniGame) {
     void* player = SafeReadPtr(miniGame, kMiniGamePlayerOffset);
     if (!player) return;
@@ -167,20 +153,20 @@ void TickRaceTimer(void* miniGame) {
     const float maxSpeed = SafeReadFloat(player, kMiniPlayerMaxSpeedOffset);
 
     // Finish crossing = the speed envelope just zeroed (maxSpeed -> 0) on a bike
-    // that reached a real gear; see the kRaceTimeMaxSeconds block. Announce here,
-    // in the clear air right after the finish while the bike coasts, using
-    // race_time_seconds frozen at the last live-envelope tick.
+    // that reached a real gear; see the finish-detection note above
+    // kRaceTimeMaxSeconds. Announce here, in the clear air right after the
+    // finish while the bike coasts, using race_time_seconds frozen at the last
+    // live-envelope tick.
     //
     // Fallback: an abnormal end where the envelope never zeroes but the bike has
     // actually RACED and coasts below kTerminalStopSpeed. CRITICAL: the fallback
     // is gated on peak ACTUAL speed, not the envelope peak. The envelope is
     // already 70 the instant gear 1 engages at launch, so gating the fallback on
     // it would let the launch ramp (speed climbing through [1..10]) fire the
-    // speed<10 trigger and end the race at ~0 s — the launch-ramp bug. Actual
-    // peak speed only clears kRaceMinTopSpeed once the bike is genuinely fast, by
-    // which point speed is well above kTerminalStopSpeed. (Checked before the
-    // launch guard below because at the finish speed is still high but maxSpeed
-    // is already 0.)
+    // speed<10 trigger and end the race at ~0 s. Actual peak speed only clears
+    // kRaceMinTopSpeed once the bike is genuinely fast, by which point speed is
+    // well above kTerminalStopSpeed. (Checked before the launch guard below
+    // because at the finish speed is still high but maxSpeed is already 0.)
     if (g_state.have_race_time && !g_state.race_time_announced) {
         // The tracks' own finish signal: both games' heartbeat.ncs writes
         // MIN_RACE_GEAR = 6 when the bike crosses the line (see the gear-source
@@ -191,9 +177,9 @@ void TickRaceTimer(void* miniGame) {
             g_state.race_max_speed > kRaceMinTopSpeed && maxSpeed <= 0.0f;
         // The coast-to-a-stop fallback is KOTOR 1 only. On KOTOR 2 a collision
         // legitimately stops the bike dead mid-race (the hit script zeroes the
-        // acceleration and the engine bounces it back), which fired a bogus
-        // "23.22 seconds, race ended" at the first bar of the first K2 round
-        // (patch-20260914-163810); the script flag above covers K2's finish.
+        // acceleration and the engine bounces it back), which would announce a
+        // false race end at the first bar; the script flag above covers K2's
+        // finish.
         const bool coasted_to_stop =
             !acc::game::IsKotor2() &&
             g_state.race_peak_speed > kRaceMinTopSpeed && speed < kTerminalStopSpeed;
@@ -241,16 +227,12 @@ void TickRaceTimer(void* miniGame) {
                       sH, sM, sS, sC, mph, startMs, nowMs, initialElapsed);
     }
 
-    // Running top ENVELOPE speed — "did we race" ref for the envelope-zero finish
-    // (a real gear pushes max_speed past kRaceMinTopSpeed). race_peak_speed is the
-    // running top ACTUAL speed — the separate ref for the coast fallback (see the
-    // finish guard above for why the two must not be conflated).
     if (maxSpeed > g_state.race_max_speed) g_state.race_max_speed = maxSpeed;
     if (speed    > g_state.race_peak_speed) g_state.race_peak_speed = speed;
 
-    // Elapsed, every active tick. No speed-band gate: the envelope-zero finish
-    // detector (above) freezes this at the crossing, so a slow run that never
-    // reaches top gear still counts its full duration to the finish line.
+    // Elapsed, every active tick. No speed-band gate: the finish detector
+    // above freezes this at the crossing, so a slow run that never reaches
+    // top gear still counts its full duration to the finish line.
     uint32_t nowMs = 0, mph = g_state.race_mph;
     if (!ReadWorldClockMs(server, nowMs, mph)) return;
     const long elapsedMs =
@@ -267,41 +249,37 @@ void SpeakRaceEndMessage() {
     g_state.race_time_announced = true;
 
     char buf[160];
-    const char* msg = nullptr;
-    // A wreck (hit points 0) is not a finish: no time, say what happened.
+    const char* msg;
     if (g_state.wrecked) {
+        // A wreck is not a finish: no time, say what happened.
         msg = acc::strings::Get(acc::strings::Id::SwoopRaceWrecked);
+    } else if (g_state.have_race_time) {
+        // The time-bearing variant leads with the number and includes the
+        // "race ended" phrase.
+        int whole = static_cast<int>(g_state.race_time_seconds);
+        int centi = static_cast<int>(
+            (g_state.race_time_seconds - static_cast<float>(whole)) * 100.0f
+            + 0.5f);
+        if (centi >= 100) { centi = 0; ++whole; }
+        std::snprintf(buf, sizeof(buf),
+                      acc::strings::Get(acc::strings::Id::FmtSwoopRaceTime),
+                      whole, centi);
+        msg = buf;
+    } else {
+        msg = acc::strings::Get(acc::strings::Id::SwoopRaceEnded);
     }
-    // If we captured a finish-line time, speak the time-bearing variant (it
-    // leads with the number and includes the "race ended" phrase); otherwise
-    // the plain exit cue.
-    else if (g_state.have_race_time) {
-        const char* fmt = acc::strings::Get(acc::strings::Id::FmtSwoopRaceTime);
-        if (fmt && *fmt) {
-            int whole = static_cast<int>(g_state.race_time_seconds);
-            int centi = static_cast<int>(
-                (g_state.race_time_seconds - static_cast<float>(whole)) * 100.0f
-                + 0.5f);
-            if (centi >= 100) { centi = 0; ++whole; }
-            std::snprintf(buf, sizeof(buf), fmt, whole, centi);
-            msg = buf;
-        }
-    }
-    if (!msg) msg = acc::strings::Get(acc::strings::Id::SwoopRaceEnded);
-    if (msg && *msg) {
-        if (g_state.wrecked || !g_state.have_race_time) {
-            acc::speech::Speak(msg, /*interrupt=*/true);   // a wreck: say it now
-        } else {
-            // The time waits out the finish sound (see kRaceEndSpeakDelayMs);
-            // FlushRaceEndSpeech speaks it from the tick, or at once on exit.
-            std::snprintf(g_state.race_end_msg, sizeof(g_state.race_end_msg), "%s", msg);
-            g_state.race_end_pending = true;
-            g_state.race_end_due_ms  = GetTickCount64() + kRaceEndSpeakDelayMs;
-        }
+    if (g_state.wrecked || !g_state.have_race_time) {
+        acc::speech::Speak(msg, /*interrupt=*/true);
+    } else {
+        // The time waits out the finish sound (see kRaceEndSpeakDelayMs);
+        // FlushRaceEndSpeech speaks it from the tick, or at once on exit.
+        std::snprintf(g_state.race_end_msg, sizeof(g_state.race_end_msg), "%s", msg);
+        g_state.race_end_pending = true;
+        g_state.race_end_due_ms  = GetTickCount64() + kRaceEndSpeakDelayMs;
     }
     acclog::Write("SwoopRace",
                   "spoke race end: [%s] (raceTime=%.2f have=%d%s)",
-                  msg ? msg : "", g_state.race_time_seconds,
+                  msg, g_state.race_time_seconds,
                   g_state.have_race_time ? 1 : 0,
                   g_state.race_end_pending ? " delayed" : "");
 }

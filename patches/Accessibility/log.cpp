@@ -440,30 +440,6 @@ void Edge(const char* tag, int state, const char* fmt, ...) {
     e->lastSeenMs = now;
 }
 
-void WriteHex(const char* tag, const char* label, const void* bytes, size_t len) {
-    if (!bytes || len == 0) {
-        Write(tag, "%s len=0", label ? label : "");
-        return;
-    }
-    auto* p = static_cast<const unsigned char*>(bytes);
-    constexpr size_t kPerLine = 64;
-    char buf[kPerLine * 3 + 8];
-
-    if (label && *label) {
-        Write(tag, "%s len=%zu", label, len);
-    }
-    for (size_t off = 0; off < len; off += kPerLine) {
-        size_t chunk = (len - off) < kPerLine ? (len - off) : kPerLine;
-        size_t pos = 0;
-        for (size_t i = 0; i < chunk; ++i) {
-            pos += snprintf(buf + pos, sizeof(buf) - pos, "%02x ", p[off + i]);
-        }
-        // Trim trailing space.
-        if (pos > 0 && buf[pos - 1] == ' ') buf[pos - 1] = '\0';
-        Write(tag, "  +%04zx %s", off, buf);
-    }
-}
-
 // --- BlockLog --------------------------------------------------------------
 
 BlockLog::BlockLog(const char* tag)

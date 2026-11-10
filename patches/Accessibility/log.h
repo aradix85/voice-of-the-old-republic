@@ -38,9 +38,6 @@ void Once(const char* tag, const char* fmt, ...);
 // transition line includes the held count of the previous state.
 void Edge(const char* tag, int state, const char* fmt, ...);
 
-// Splits long byte runs across multiple lines. Label appears once.
-void WriteHex(const char* tag, const char* label, const void* bytes, size_t len);
-
 // Block-level dedup for multi-line snapshots that are re-emitted verbatim
 // (a panel walk re-dumped on every rebuild, a manager-stack dump). Trace's
 // line-level dedup can't fold these because the repeats are interleaved

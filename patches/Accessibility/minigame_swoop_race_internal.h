@@ -10,27 +10,20 @@
 #include <windows.h>
 #include <cstdint>
 #include <cstdio>
-#include <cstring>
 
 #include "engine_offsets_select.h"
 #include "minigame_swoop_audio.h"  // ParkedBar, the spatial audio ticks
 
 namespace acc::swoop_race {
 
-// SEH read primitives + minigame-object-array resolution are shared across
-// the minigame TUs (see minigame_aim.h). Brought into unqualified scope so
-// the dense reads below read as they did when each file had its own copy.
+// The SEH reads the minigame files share (minigame_aim.h).
 using acc::minigame::SafeReadPtr;
 using acc::minigame::SafeReadU32;
 using acc::minigame::SafeReadFloat;
 using acc::minigame::SafeReadVector;
-using acc::minigame::ResolveMgoArray;
-using acc::minigame::CallAsCast;
 
-// CSWMiniGame (line 9309). type/counts confirmed by name; obstacle data
-// pointer at +0x44 + count at +0x48 confirmed from the patch-
-// 20260524-163552.log first-fire byte dump (obstacles_ptr=0x1721AA08,
-// count=22, the resref "m03mg" sits at the +0x0c CResRef as expected).
+// CSWMiniGame (swkotor.exe.h line 9309). Type and counts confirmed by name;
+// the obstacle list at +0x44 / +0x48 verified live.
 //
 // KOTOR 2: CSWMiniGame is UNCHANGED through +0xec and merely grows a tail
 // (0xf0 -> 0x11c: a unit Vector, the swoopupgrade.2da handle, and six per-level
@@ -44,19 +37,14 @@ using acc::minigame::CallAsCast;
 //   * Load @0x0083db30 — branches on `[this+0x80] == 1` (swoop) vs `== 2`
 //     (turret) to pick the MovementPerSec default, writes UseInertia/DoBumping
 //     at +0x94/+0x95 and negates AxisX/AxisY at +0x84/+0x88;
-//   * the resref lives in the CResHelper base at +0xc on both, and the streaming
-//     sound source at +0x1c.
+//   * the streaming sound source at +0x1c.
 const size_t kMiniGameVtableOffset          = acc::off::Same(0x00);  // pointer
-const size_t kMiniGameResrefOffset          = acc::off::Same(0x0c);  // CResRef[16]
 const size_t kMiniGamePlayerOffset          = acc::off::Same(0x24);
 const size_t kMiniGameEnemyCountOffset      = acc::off::Same(0x30);
-const size_t kMiniGameObstacleDataOffset    = acc::off::Same(0x44);  // CSWMiniGameObject** (verified live)
+const size_t kMiniGameObstacleDataOffset    = acc::off::Same(0x44);  // CSWMiniGameObject**
 const size_t kMiniGameObstacleCountOffset   = acc::off::Same(0x48);
-const size_t kMiniGameTypeOffset            = acc::off::Same(0x80);  // 1=swoop, 2=turret
-                                                        // (CSWMiniGame::Load sets
-                                                        // type ONLY to 1 or 2; was
-                                                        // mis-read at +0x84=axis_x,
-                                                        // matching 0/3 by coincidence)
+// 1 = swoop, 2 = turret; CSWMiniGame::Load sets no other value.
+const size_t kMiniGameTypeOffset            = acc::off::Same(0x80);
 constexpr uint32_t kMiniGameTypeSwoop           = 1;
 
 // CSWTrackFollower (line 15028) — base of CSWMiniPlayer. The byte-by-byte
@@ -75,9 +63,8 @@ const size_t kFollowerSpeedOffset           = acc::off::Same(0x98);
 // hp / max_hp sit just below speed (swkotor.exe.h: looping +0x80,
 // sphere_radius +0x84, +0x88, hp +0x8c, max_hp +0x90, bump_damage +0x94,
 // speed +0x98; SetHitPoints @0x0066c900 / SetMaxHitPoints @0x0066c950 write
-// them). Below the script array on KOTOR 2 too — the first K2 player dump
-// (patch-20260914-143533) shows 600 / 600 there, the .are's Hit_Points /
-// Max_HPs for the Citadel bike.
+// them). Below the script array on KOTOR 2 too — a live K2 read gives
+// 600 / 600 there, the .are's Hit_Points / Max_HPs for the Citadel bike.
 const size_t kFollowerHpOffset              = acc::off::Same(0x8c);
 const size_t kFollowerMaxHpOffset           = acc::off::Same(0x90);
 
@@ -118,10 +105,10 @@ const size_t kMiniGameJumpVelocityOffset    = acc::off::Kotor2Only(0x118);
 // all disassembled): oncreate stamps -5, the countdown walks -4/-3/-2/-1, "Go"
 // writes 0, every upshift writes 1..5, the finish writes 6 — and on KOTOR 2 an
 // obstacle hit writes 0 again ("gear0" animation, engine idle), so the K2 gear
-// can go DOWN mid-race. The max_speed-plateau heuristic below cannot see that
-// (it only counts upward jumps, so a re-launch after a hit would read as gear 6,
-// 7, ...), which is why the global is now the primary source on both games and
-// the heuristic is the fallback for a modded track that does not maintain it.
+// can go DOWN mid-race. The max_speed-plateau heuristic cannot see that (it
+// only counts upward jumps, so a re-launch after a hit would read as gear 6,
+// 7, ...), so the global is the primary source on both games and the
+// heuristic is the fallback for a modded track that does not maintain it.
 // Values outside 0..5 are "no gear information" (countdown, finish, or a failed
 // read — ReadGlobalNumber returns -1 on a fault, which lands in the same bucket
 // as the -1 countdown step, deliberately).
@@ -129,71 +116,61 @@ constexpr int kGearGlobalMin = 0;
 constexpr int kGearGlobalMax = 5;
 constexpr const char* kGearGlobalName = "MIN_RACE_GEAR";
 
-// Exit-debounce. After we lose the latched pointer, hold off announcing
-// EXIT until the loss persists for this many consecutive ticks. The
-// race-start transition flips the area chain in < 5 ticks, so 60 ticks
-// (~2 s at 30 fps) is comfortably past that without making true exits
-// feel laggy.
+// Exit debounce: after the latched pointer is lost, wait this many
+// consecutive ticks before announcing the exit. The race-start transition
+// flips the area chain in < 5 ticks, so 60 ticks (~2 s at 30 fps) is well
+// past that without making a true exit feel laggy.
 constexpr int   kExitDebounceTicks        = 60;
-// The finish-line time is spoken this long after the finish so the engine's
-// race-end sound has faded under it ("the end race sound is louder than the
-// TTS", round 16). Inside the exit debounce (60 ticks ≈ 2 s); the exit path
-// flushes it regardless. A wreck is spoken immediately.
+// The finish-line time is spoken this long after the finish, so the engine's
+// race-end sound, which is louder than the speech, has faded under it.
+// Inside the exit debounce; the exit path flushes it regardless. A wreck is
+// spoken immediately.
 constexpr ULONGLONG kRaceEndSpeakDelayMs  = 1200;
 
-// ============================================================================
-// Module state. Single-threaded under the engine OnUpdate tick.
-// ============================================================================
+// The module state. Single-threaded under the engine OnUpdate tick; a fresh
+// State{} on every entry and exit.
 struct State {
-    // True iff we've announced ENTER and not yet announced EXIT.
+    // True iff the entry was announced and the exit not yet.
     bool          active                  = false;
-    // Latched CSWMiniGame pointer. Once we see a non-null mini_game via
-    // the area chain we cache it here and verify per-tick by re-reading
-    // its vtable; this is the only way to stay locked through the
-    // race-start transition shuffle.
+    // The CSWMiniGame pointer latched at entry, re-verified every tick by
+    // its vtable; the only way to stay locked through the race-start
+    // transition.
     void*         latched_mini_game       = nullptr;
     void*         latched_vtable          = nullptr;
     ULONGLONG     entered_at_ms           = 0;
-    bool          full_diagnostic_emitted = false;
     ULONGLONG     last_diag_log_ms        = 0;
-    // Exit debounce counter. Ticks since latched vtable became invalid;
-    // resets when it re-validates. Announce EXIT only when this
-    // crosses kExitDebounceTicks.
+    // Ticks since the latch stopped validating; the exit is announced when
+    // this reaches kExitDebounceTicks.
     int           ticks_since_lost        = 0;
-    // Gear-tracking state. Reset on every fresh ENTER.
+    // Gear tracking.
     //
-    // Engine model (live-confirmed in patch-20260524-165828.log):
-    // each manual shift WIDENS the speed envelope (gear 1 = [35..70],
-    // gear 2 = [60..120], …). max_speed only moves UP and only on a
-    // real shift event — within a gear, the bike accelerates from
-    // min_speed toward max_speed without changing either bound. So
-    // the true gear count is "number of distinct max_speed plateaus
-    // observed so far", not "speed bucket within current band". A
-    // jump of >= kGearShiftMaxDeltaM/s in max_speed counts as a new
-    // gear.
+    // Engine model for the plateau heuristic: each manual shift WIDENS the
+    // speed envelope (gear 1 = [35..70], gear 2 = [60..120], ...). max_speed
+    // only moves UP and only on a real shift — within a gear, the bike
+    // accelerates from min_speed toward max_speed without changing either
+    // bound. So the gear is the number of distinct max_speed plateaus seen so
+    // far; a jump of at least kGearShiftMinJump counts as a new gear.
     int           gear                    = 0;
     float         last_max_speed          = 0.0f;
     // True once MIN_RACE_GEAR has read a valid gear (0..5) this race. From
     // then on the global is the gear source and the plateau heuristic is
     // ignored, so the two never double-announce the same shift.
     bool          gear_from_global        = false;
-    // "You can shift now" cue latch. True once we've fired the cue for the
-    // CURRENT gear; re-armed by TickGearWatch on every detected shift, so the
-    // cue fires at most once per gear. See ShiftGateSpeed / TickShiftReady.
+    // "You can shift now" cue latch: true once the cue fired for the CURRENT
+    // gear; every detected shift re-arms it. See TickShiftReady.
     bool          shift_ready_announced   = false;
     ULONGLONG     last_gear_change_ms     = 0;   // see kShiftReadyHoldMs
     // ---- Hit points (CSWTrackFollower +0x8c / +0x90). K2's hit scripts take
     //      50 (obstacle) / 100 (mine) of the bike's 600 and the heartbeat ends
-    //      the race at 0 — round 3 reached that at 72 s and the mod announced
-    //      a finish time. Drops are logged only (the HUD has a damage gauge;
-    //      per-hit speech was tried in round 4 and cut as noise); `wrecked`
-    //      is decided when the race ends, see DecideWreckAtFinish.
+    //      the race at 0. Drops are logged only (per-hit speech was too
+    //      noisy; the HUD's damage gauge is the sighted equivalent);
+    //      `wrecked` is decided when the race ends, see DecideWreckAtFinish.
     int           last_hp                 = -1;
     bool          wrecked                 = false;
     // ---- Jump state (KOTOR 2 only; K1 clamps offset.z to 0 so it never
     //      arms). Edge-detected on the tunnel offset's Z so a jump start and
     //      its landing are logged with the bike's speed, gear and world
-    //      position — the data the vertical-obstacle cue will be tuned from.
+    //      position — the data a vertical-obstacle cue would be tuned from.
     bool          airborne                = false;
     ULONGLONG     jump_started_ms         = 0;
     float         jump_peak_z             = 0.0f;
@@ -205,32 +182,30 @@ struct State {
     ULONGLONG     progress_mark_ms        = 0;
     bool          stuck_hint_spoken       = false;
     ParkedBar     stuck_bar_spoken_for    = ParkedBar::None;   // re-arms when the situation changes
-    // ---- Delayed race-end time (see kRaceEndSpeakDelayMs): the finish sound
-    //      drowns speech spoken on the same frame, so the time waits.
+    // ---- Delayed race-end time (see kRaceEndSpeakDelayMs).
     bool          race_end_pending        = false;
     ULONGLONG     race_end_due_ms         = 0;
     char          race_end_msg[160]       = {};
-    // ---- Real race-timer state (see TickRaceTimer). ----
+    // ---- Race timer (see TickRaceTimer).
     // race_start_ms is the engine world-clock ms-of-day stamped at the "Go!"
     // signal, cached once from the MIN_TIME_* NWScript globals (constant for
     // the whole race). race_time_seconds is (world clock − start) frozen at
-    // the finish-line crossing — the value announced on EXIT.
+    // the finish-line crossing.
     bool          have_start_ms           = false;
     uint32_t      race_start_ms           = 0;
     uint32_t      race_mph                = 2;     // world calendar minutes/hour
-    float         race_max_speed          = 0.0f;  // running top envelope speed
-                                                   //   (envelope-finish "did we race" ref)
-    float         race_peak_speed         = 0.0f;  // running top ACTUAL speed
-                                                   //   (coast-fallback "did we race" ref —
-                                                   //   must NOT use the envelope, which is
-                                                   //   already 70 at launch and would let
-                                                   //   the 1->10 launch ramp false-trigger)
+    // Running top ENVELOPE speed: the "did we race" reference for the
+    // envelope finish.
+    float         race_max_speed          = 0.0f;
+    // Running top ACTUAL speed: the reference for the coast fallback. Not
+    // the envelope, which is already 70 at launch and would let the 1 -> 10
+    // launch ramp trigger it.
+    float         race_peak_speed         = 0.0f;
     bool          have_race_time          = false;
     float         race_time_seconds       = 0.0f;
-    // Idempotency latch: the race-end cue is spoken once — by whichever fires
-    // first, the terminal-stop detector in TickRaceTimer (preferred: lands in
-    // the clear air before the post-race heading narration) or HandleExit
-    // (fallback for an abnormal end where the bike never decelerated).
+    // The race-end cue is spoken once, by whichever fires first: the finish
+    // detector in TickRaceTimer (preferred: clear air before the post-race
+    // narration) or HandleExit (an abnormal end).
     bool          race_time_announced     = false;
 };
 
@@ -251,7 +226,6 @@ void TickJumpWatch(void* miniGame);
 void TickShiftReady(void* miniGame);
 
 // minigame_swoop_race_diag.cpp
-void EmitDiagnosticDump(void* miniGame);
 void EmitEntrySummary(void* miniGame);
 void EmitDiagSnapshot(void* miniGame);
 

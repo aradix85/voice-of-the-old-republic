@@ -1,78 +1,53 @@
-// The swoop race's spoken cues during a race: gear changes, when to shift, hit points, a stuck bike, and jumps.
+// The swoop race's cues during a race: gear changes, when to shift, hit
+// points, a stuck bike, and jumps.
 
 #include "minigame_swoop_race_internal.h"
 
-#include "engine_area.h"      // GetClientArea + map-pin chain (back-pointer),
-                              //   ReadGlobalNumber (MIN_RACE_GEAR / MIN_TIME_*)
-#include "engine_game.h"      // IsKotor2 — gate ladder, jump watch, K2 keys
-#include "engine_player.h"    // GetCameraPosition (jump-start log anchor)
+#include "audio_bus.h"
+#include "audio_cues.h"
+#include "engine_area.h"
+#include "engine_game.h"
+#include "engine_player.h"
 #include "log.h"
-#include "audio_bus.h"        // PlayCue — non-positional "you can shift now" cue
-#include "audio_cues.h"       // NavCue + GetNavCueResref (shift-ready resref)
 #include "speech.h"
-#include "strings.h"          // Get(SwoopRaceStarted/Controls/Ended) +
-                              //     FmtSwoopRaceGear
+#include "strings.h"
 
 namespace acc::swoop_race {
 
 namespace {
 
-// The obstacle / enemy position offsets, the vtable downcasts and the
-// CSWMiniGameObjectArray layout live with the per-tick audio sweeps in
-// minigame_swoop_audio*.cpp.
-//
 // There is no analog throttle in swoop (CSWMiniPlayer::Control, onfire.ncs):
 // the bike accelerates to max_speed on its own, and each accelerate press is
 // a discrete shift (onfire raises max_speed one notch, 35→60→100→150→210,
 // with the native Shift1/2/3 + Engine0N sounds).
-// ============================================================================
-// Tunable behaviour parameters.
-// ============================================================================
-// Minimum jump in max_speed that counts as a "shift up" event.
 //
-// The engine itself has NO gear concept (Ghidra-confirmed 2026-05-24
-// against CSWMiniPlayer::Control @0x66d640): the per-tick movement
-// function only clamps speed against max_speed, and max_speed is
-// settable only via the NWScript SWMG_SetPlayerMaxSpeed dispatcher
-// (CSWMiniPlayer::SetMaxSpeed @0x66cf70 has exactly one caller,
-// ExecuteCommandSWMG_SetPlayerFloatInfo @0x5cce70). So the entire
-// gear ladder lives in the per-track NWScript — different swoop
-// tracks may have different gear counts and different speed bands.
-//
-// Empirical floor from the 2026-05-24 race (tar_m03mg, gear 1 max=70,
-// gear 2 max=120, delta 50; same-gear jitter < 1 m/s). 5 m/s is well
-// above the jitter and well below the smallest plausible shift.
-constexpr float kGearShiftMaxDeltaMs      = 5.0f;
+// Minimum jump in max_speed that counts as a shift, for the plateau
+// heuristic. The engine itself has NO gear concept (CSWMiniPlayer::Control
+// @0x66d640 only clamps speed against max_speed, and max_speed is set only
+// through the NWScript SWMG_SetPlayerMaxSpeed dispatcher: SetMaxSpeed
+// @0x66cf70 has exactly one caller, ExecuteCommandSWMG_SetPlayerFloatInfo
+// @0x5cce70). So the gear ladder lives in the per-track NWScript. Measured
+// on tar_m03mg: gear 1 max 70, gear 2 max 120, same-gear jitter < 1; 5 is
+// well above the jitter and well below the smallest plausible shift.
+constexpr float kGearShiftMinJump         = 5.0f;
 
-// ----- "You can shift now" cue (Option A — exact onfire.ncs gate) -----
+// ----- "You can shift now" cue -----
 //
-// onfire.ncs (the manual-accelerate StartingConditional, decompiled from
-// build/swoop-rim/onfire.ncs 2026-06-22) only upshifts from gear N when the
-// CURRENT speed already exceeds gear N+1's min-speed; below that the accelerate
-// press is a SILENT no-op. So the earliest legal shift moment is the frame
-// speed first crosses that gate. We fire a one-shot cue there so the player can
-// shift as early as possible — the gate always sits BELOW the gear's own
-// max_speed, so you never have to redline to upshift.
+// The accelerate script (onfire.ncs on KOTOR 1, onaccelerate.ncs on KOTOR 2)
+// only upshifts from gear N when the CURRENT speed already exceeds gear N+1's
+// nominal minimum; below that the press runs the script and changes nothing.
+// The cue fires the frame speed first crosses that gate, so the player can
+// shift as early as possible; the gate sits in the top of the gear's own
+// envelope (KOTOR 2: gear 1 [35..70], gear 2 [60..110], gear 3 [100..155],
+// gear 4 [150..215]), so no redlining is needed.
 //
-// The gate ladder lives in per-track NWScript, but all three shipped swoop
-// tracks share it (Taris/Tatooine/Manaan: gear min-speeds 35/60/100/150/210;
-// only the per-track *_SWOOP_ACCEL accel rate differs). Indexed by the CURRENT
-// gear; the value is the speed you must EXCEED to upshift out of it. 0 = no
-// gate (gear 0 launch is unconditional; gear 5 is top). Gears 1..4 are gated.
-constexpr float kShiftGateSpeedK1[]       = { 0.0f, 60.0f, 100.0f, 150.0f,
-                                              210.0f, 0.0f };
-// KOTOR 2 uses the SAME ladder. A stack accounting of its onaccelerate.ncs
-// (2026-09-14) read the gates one notch lower (35 / 60 / 100 / 150) and two
-// rounds ran on that; the logs refuted it (rounds 4-5, patch-20260915-075412 /
-// -083506): every shift the engine accepted landed at 70 / 105-110 / 155 /
-// 214, and presses at 35-45 (gear 1), 76-86 (gear 2), 115-150 (gear 3),
-// 158-200 (gear 4) ran the script with no gear change. The gate out of gear
-// N is the NEXT gear's nominal minimum — 60 / 100 / 150 / 210 — i.e. the top
-// 5-10 units of each gear's envelope (gear 1 [35f..70], gear 2 [60f..110],
-// gear 3 [100f..155], gear 4 [150f..215]). The wrong table made the cue fire
-// up to 40 units early, the player pressed into a no-op and then heard the
-// next gear's cue right after the engine's own shift sound.
-constexpr float kShiftGateSpeedK2[]       = { 0.0f, 60.0f, 100.0f, 150.0f,
+// The ladder lives in per-track NWScript, but every shipped track on both
+// games uses the same one (min speeds 35/60/100/150/210; only the per-track
+// *_SWOOP_ACCEL rate differs). A static read of K2's onaccelerate.ncs
+// suggests gates one notch lower; the engine's accepted shifts (70 / 105-110
+// / 155 / 214) and its no-op presses below 60 / 100 / 150 / 210 refute that.
+// Indexed by the current gear: the speed to exceed to shift out of it.
+constexpr float kShiftGateSpeed[]         = { 0.0f, 60.0f, 100.0f, 150.0f,
                                               210.0f, 0.0f };
 constexpr int   kFirstGatedGear           = 1;
 constexpr int   kLastGatedGear            = 4;
@@ -83,41 +58,29 @@ constexpr ULONGLONG kShiftReadyHoldMs     = 800;   // see TickShiftReady
 constexpr const char* kShiftReadyCueResref =
     acc::audio::GetNavCueResref(acc::audio::NavCue::SwoopShiftReady);
 
-// ============================================================================
-// Stuck hint. The first K2 round ended pinned for 20 s: a bar hit had bounced
-// the bike against a lane-edge post, and every relaunch (speed ~6) ran straight
-// into it again — gear 1, gear 0, gear 1, gear 0 — while W-jumps from a
-// standstill went nowhere. Nothing in the audio said what to do. When the
-// race is running, the gear is 0 and the bike has not gained ground for
-// kStuckHoldMs, speak the escape once; re-arm after real progress.
-// ============================================================================
+// ----- Stuck hint -----
+//
+// On KOTOR 2 a bar hit can bounce the bike against a lane-edge post, and
+// every relaunch (speed ~6) runs straight into it again while jumps from a
+// standstill go nowhere. When the race is running, the gear is 0 and the
+// bike has not gained ground for kStuckHoldMs, speak the escape once;
+// re-arm after real progress.
 constexpr float     kStuckProgressU = 15.0f;   // forward gain that counts as progress
 constexpr ULONGLONG kStuckHoldMs    = 6000;    // no progress for this long -> hint
 // Parked right in front of a low bar (GetParkedBarSituation, KOTOR 2): the
-// situation is unambiguous and the escape is a fixed key sequence, so the
-// hint comes after this much instead — round 16 (patch-20260915-212249)
-// spent up to 11 relaunches, 50 hp each, waiting for the six-second hint,
-// and the hint then said "steer left, then W" without the jump.
+// situation is unambiguous, the escape is a fixed key sequence and every
+// relaunch into the bar costs 50 hp, so the hint comes after this much.
 constexpr ULONGLONG kStuckBarHoldMs = 1500;
 
 constexpr float kStuckWallU = 13.0f;   // |tunnel x| at/beyond this = parked at a wall
 
-// ============================================================================
-// Jump watch (KOTOR 2). Log-only for now: start + landing edges with the
-// numbers a "jump now" cue needs (speed, gear, air time, peak height, world
-// position). K1 never arms — its tunnel clamps offset.z to 0.
-// ============================================================================
+// ----- Jump watch (KOTOR 2) -----
+//
+// Log only: start and landing edges with the numbers a "jump now" cue would
+// need (speed, gear, air time, peak height, world position). K1 never arms —
+// its tunnel clamps offset.z to 0.
 constexpr float kJumpArmZ    = 0.25f;  // offset.z above this = airborne
 constexpr float kJumpLandZ   = 0.05f;  // ... and back below this = landed
-
-inline float ShiftGateSpeed(int gear) {
-    return acc::game::IsKotor2() ? kShiftGateSpeedK2[gear]
-                                 : kShiftGateSpeedK1[gear];
-}
-
-// ============================================================================
-// Gear-change detection.
-// ============================================================================
 
 // Speak the gear the bike is now in and re-arm the shift-ready cue for it.
 // Shared by both gear sources. `why` is log-only.
@@ -126,11 +89,9 @@ void AnnounceGear(int gear, const char* why) {
     g_state.shift_ready_announced = false;
     g_state.last_gear_change_ms   = GetTickCount64();
     char buf[64];
-    const char* fmt = acc::strings::Get(acc::strings::Id::FmtSwoopRaceGear);
-    if (fmt && *fmt) {
-        std::snprintf(buf, sizeof(buf), fmt, gear);
-        acc::speech::Speak(buf, /*interrupt=*/true);
-    }
+    std::snprintf(buf, sizeof(buf),
+                  acc::strings::Get(acc::strings::Id::FmtSwoopRaceGear), gear);
+    acc::speech::Speak(buf, /*interrupt=*/true);
     acclog::Write("SwoopRace", "gear -> %d (%s)", gear, why);
 }
 
@@ -160,16 +121,15 @@ void TickGearWatch(void* miniGame) {
     }
     if (g_state.gear_from_global) return;  // countdown/finish value — keep last
 
-    // ---- Fallback: max_speed-plateau heuristic (kGearShiftMaxDeltaMs), for a
-    // track whose scripts do not maintain the global. Upward jumps only.
+    // ---- Fallback: the max_speed-plateau heuristic, for a track whose
+    // scripts do not maintain the global. Upward jumps only.
     void* player = SafeReadPtr(miniGame, kMiniGamePlayerOffset);
     if (!player) return;
 
     float maxSpeed = SafeReadFloat(player, kMiniPlayerMaxSpeedOffset);
     if (maxSpeed <= 0.0f) return;  // not yet initialised
 
-    // Shift-up event: max_speed jumped by at least the noise floor.
-    if (maxSpeed > g_state.last_max_speed + kGearShiftMaxDeltaMs) {
+    if (maxSpeed > g_state.last_max_speed + kGearShiftMinJump) {
         char why[64];
         std::snprintf(why, sizeof(why), "plateau max=%.2f was %.2f",
                       maxSpeed, g_state.last_max_speed);
@@ -178,29 +138,24 @@ void TickGearWatch(void* miniGame) {
     }
 }
 
-// ============================================================================
-// Hit points (log only). K2's enemyhitfollower.ncs subtracts 50 per obstacle
+// Hit points, log only. K2's enemyhitfollower.ncs subtracts 50 per obstacle
 // collision, mine.ncs 100 per mine, both from the Citadel bike's 600; the
 // heartbeat ends the race when the percentage it keeps in the racedialog
-// local reaches 0 — round 3 (patch-20260914-204103) took exactly twelve hits
-// and the run ended at 72 s, which the mod announced as a finish time. Each
-// drop is logged; nothing is spoken here (round 4's "hit, N left" per drop
-// was cut as noise — the HUD's damage gauge is the sighted equivalent). The
-// wreck itself is decided at the race end (DecideWreckAtFinish): the engine
-// mirrors a script's hit-point write late — round 4 read 95 for three
-// seconds after the mine had zeroed the bike — so a live zero cannot be the
-// trigger, and the follower reads 0 once more when it is torn down after
-// the race. K1's obstacle script never touches hp, so nothing fires there.
-// ============================================================================
-
+// local reaches 0, after twelve obstacle hits. Nothing is spoken per drop
+// (too noisy; the HUD's damage gauge is the sighted equivalent). The wreck
+// itself is decided at the race end (DecideWreckAtFinish): the engine
+// mirrors a script's hit-point write late — a bike a mine had zeroed still
+// read 95 for three seconds — so a live zero cannot be the trigger, and the
+// follower reads 0 once more when it is torn down after the race. K1's
+// obstacle script never touches hp, so nothing fires there.
 void TickHitPoints(void* miniGame) {
     void* player = SafeReadPtr(miniGame, kMiniGamePlayerOffset);
     if (!player) return;
     const int hp = static_cast<int>(SafeReadU32(player, kFollowerHpOffset));
     if (hp < 0 || hp > 1000000) return;              // faulted / garbage
     // After the finish the engine zeroes the follower (max hp 0 too): that
-    // final "hp 400 -> 0 (drop 400 of 0)" is not a hit, so keep it out of the
-    // per-race hit count a log reader would tally.
+    // final drop to 0 is not a hit, so keep it out of the per-race hit count
+    // a log reader would tally.
     if (SafeReadU32(player, kFollowerMaxHpOffset) == 0) return;
     if (g_state.last_hp < 0) { g_state.last_hp = hp; return; }
     if (hp >= g_state.last_hp) { g_state.last_hp = hp; return; }
@@ -254,8 +209,7 @@ void TickStuckHint(void* miniGame) {
             else if (offOk && off.x <= -kStuckWallU) { id = acc::strings::Id::SwoopRaceStuckHintRight; why = "wall left"; }
             break;
     }
-    const char* msg = acc::strings::Get(id);
-    if (msg && *msg) acc::speech::Speak(msg, /*interrupt=*/true);
+    acc::speech::Speak(acc::strings::Get(id), /*interrupt=*/true);
     acclog::Write("SwoopRace", "stuck hint: no progress for %llums at y=%.1f "
                   "(gear=%d speed=%.1f tunnelX=%.1f) [%s]",
                   now - g_state.progress_mark_ms, cam.y, gear, speed,
@@ -294,36 +248,29 @@ void TickJumpWatch(void* miniGame) {
                   air, g_state.jump_peak_z, g_state.gear);
 }
 
-// ============================================================================
-// "You can shift now" cue (Option A — exact onfire.ncs gate, see
-// kShiftGateSpeed).
-// ============================================================================
-//
-// Fires a one-shot cue the frame current speed first crosses the gate for the
-// current gear, i.e. the earliest frame a manual shift would actually take.
-// Latched per gear (TickGearWatch re-arms it on each real shift). Self-guards
-// against a non-stock gate ladder: never announces a gate that sits at or above
-// the gear's own max_speed (an unreachable gate the bike can't climb to), so a
-// mod track with a different ladder degrades to silence, never a false cue.
+// The "you can shift now" cue (see kShiftGateSpeed): one cue the frame the
+// current speed first crosses the gate for the current gear, i.e. the
+// earliest frame a manual shift would take. Latched per gear (AnnounceGear
+// re-arms it). Never announces a gate at or above the gear's own max_speed,
+// so a modded track with a different ladder degrades to silence, never a
+// false cue.
 void TickShiftReady(void* miniGame) {
     if (g_state.shift_ready_announced) return;
     // Hold after a gear change. On KOTOR 2 a late shift (at the old gear's
-    // top speed) is already above the NEXT gate, so the cue fired in the same
-    // tick as the "gear N" speech and read as a shift confirmation
-    // (round 3, 2026-09-14). A short gap keeps it a separate event; on K1 the
-    // gates sit a notch higher so the hold never applies.
+    // top speed) is already above the NEXT gate, so the cue would fire in the
+    // same tick as the "gear N" speech and read as a shift confirmation. A
+    // short gap keeps it a separate event.
     if (GetTickCount64() - g_state.last_gear_change_ms < kShiftReadyHoldMs) return;
 
     const int gear = g_state.gear;
     if (gear < kFirstGatedGear || gear > kLastGatedGear) return;  // launch / top gear: no gate
-    const float gate = ShiftGateSpeed(gear);
-    if (gate <= 0.0f) return;
+    const float gate = kShiftGateSpeed[gear];
 
     void* player = SafeReadPtr(miniGame, kMiniGamePlayerOffset);
     if (!player) return;
 
     const float maxSpeed = SafeReadFloat(player, kMiniPlayerMaxSpeedOffset);
-    if (maxSpeed <= 0.0f || gate >= maxSpeed) return;  // self-guard: gate unreachable
+    if (maxSpeed <= 0.0f || gate >= maxSpeed) return;  // gate unreachable
 
     const float speed = SafeReadFloat(player, kFollowerSpeedOffset);
     if (speed <= gate) return;

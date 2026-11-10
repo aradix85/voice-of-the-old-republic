@@ -1,20 +1,14 @@
-# minigame_swoop_race.h (52 lines)
+# minigame_swoop_race.h (34 lines)
 
 Source: `patches/Accessibility/minigame_swoop_race.h`
 
 Swoop race minigame accessibility.
 
-Polls CSWCArea.mini_game (+0x264) once per tick. Null→non-null transition speaks the entry opener + keybind cheat sheet; inverse speaks the exit cue. Continuous obstacle / accelerator-pad cues layer on top once the obstacle array's offset inside CSWMiniGame is locked (a first-fire diagnostic dump captures candidate bytes).
-
-Detection via the engine pointer (not area-tag prefix): the engine sets mini_game when the minigame controller constructs at module-load, so the transition is one-shot and unambiguous. Tag matching would miss user-added modules and fire on dialog-only swoop screens that look like the platform but aren't the actual race.
-
-CSWMiniGame: +0x24 player, +0x28 area, +0x30 enemy_count, +0x48 obstacle_count, +0x80 type (1=swoop, 2=turret — engine- confirmed from CSWMiniGame::Load, which only ever sets type to 1 or 2; the turret/gunner game is handled by minigame_turret.cpp), +0xbc lateral_acceleration. CSWMiniPlayer (extends CSWTrackFollower → CSWMiniGameObject): +0x1c4 Vector offset (lateral/vertical in tunnel frame), +0x1d8/+0x1dc min/max_speed.
-
-All reads SEH-guarded.
+Detects the race through the engine pointer CSWCArea.mini_game (type 1; type 2 is the turret game, minigame_turret.cpp), not through the area tag: the engine sets it when the minigame controller is built at module load, so the transition is one-shot, while tag matching would miss modded modules and fire on dialog-only swoop screens. On entry it speaks the opener and the keys; during the race the gear, the moment to shift, the obstacle and pad audio (minigame_swoop_audio.h), a stuck hint and the race time.
 
 ## Declarations (in source order)
 
-- L31 `void Tick()`: No-op when not in a minigame; cheap when idle.
-- L33 `bool IsActive()`
-- L44 `bool TryShift()`: Shift up a gear.
-- L49 `bool TryJump()`: KOTOR 2 only (KOTOR 1 has no jump): run the OnBrake track script, the jump.
+- L17 `void Tick()`: Once per engine tick; cheap when no race is running.
+- L19 `bool IsActive()`
+- L26 `bool TryShift()`: Shift up a gear.
+- L31 `bool TryJump()`: KOTOR 2 only (KOTOR 1 has no jump): run the OnBrake track script, the jump.

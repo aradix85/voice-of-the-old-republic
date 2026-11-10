@@ -1,20 +1,20 @@
-# minigame_swoop_race.cpp (348 lines)
+# minigame_swoop_race.cpp (245 lines)
 
 Source: `patches/Accessibility/minigame_swoop_race.cpp`
 
-Swoop race minigame accessibility — see minigame_swoop_race.h for design.
+Swoop race: entry and exit, the shift and jump keys, and the per-tick dispatch to the cues, the race clock and the spatial audio.
 
-Phase 1 lay-off (current): entry/exit announce + keybind cheat sheet, best-effort gear-shift announce derived from CSWTrackFollower.speed jumps, per-tick diagnostic snapshot (speed + tunnel offset). Latches the CSWMiniGame pointer on first detect because the area chain (GetCurrentArea → GetClientArea → mini_game) churns during the race-start transition and stops resolving the minigame even while the race is still running — verified live by patch-20260524-163552.log where ENTER fired at T+0 and a spurious EXIT fired at T+125 ms even though the actual race continued for 40 more seconds.
+The CSWMiniGame pointer is latched on first detect: the area chain (GetCurrentArea -> GetClientArea -> mini_game) stops resolving during the race-start transition while the race runs on, so the chain alone would announce a false exit a few ticks after the entry.
 
 ## Declarations (in source order)
 
-- L80 `void* ReadMiniGameViaArea()`: Read CSWCArea.mini_game via the player-area chain.
-- L93 `bool LatchedStillValid()`: Validate a latched CSWMiniGame pointer by re-reading its vtable and comparing against the value captured at latch time.
-- L114 `void AnnounceEntry()`
-- L136 `void HandleEnter(void* mg)`
-- L184 `void HandleExit()`
-- L210 `bool RunPlayerSlotScript(uintptr_t runner, const char* what)`: Run one of the K2 player bike's slot scripts through the engine's own runner, mirroring the guards the client input handler applies (a live swoop-type minigame with a player).
-- L230 `bool IsActive()`
-- L232 `bool TryShift()`
-- L253 `bool TryJump()`
-- L257 `void Tick()`
+- L66 `void* ReadMiniGameViaArea()`: CSWCArea.mini_game via the player-area chain.
+- L77 `bool LatchedStillValid()`: True iff the latched CSWMiniGame is still readable and its vtable is the one captured at latch time.
+- L85 `void AnnounceEntry()`: The opener and the key list go out as ONE interrupting utterance, so the second half cannot cut off the first.
+- L99 `void HandleEnter(void* mg)`
+- L114 `void HandleExit()`
+- L128 `bool RunPlayerSlotScript(uintptr_t runner, const char* what)`: Run one of the K2 player bike's slot scripts through the engine's own runner, with the guards the client input handler applies (a live swoop-type minigame with a player).
+- L148 `bool IsActive()`
+- L150 `bool TryShift()`
+- L171 `bool TryJump()`
+- L175 `void Tick()`
