@@ -6,12 +6,6 @@
 // here knows about nav-graph nodes, clusters, or the corridor / junction /
 // Area vocabulary those produce.
 //
-// The two systems' names got entangled during development: the probes
-// lived in a file called wall_topology.cpp which was, in substance, room
-// topology. The Phase-1 structure pass (refactoring candidate 12) split
-// them by name - the probes became this file, and the rest became
-// room_topology.* on the consumer side.
-//
 // Probes fail open: with no wall cache, ProbeDistance returns -1 and
 // IsAlcoveAlongAxis returns true, so a caller can never be blocked by
 // missing geometry.

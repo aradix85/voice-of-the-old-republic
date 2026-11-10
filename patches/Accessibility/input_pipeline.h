@@ -29,7 +29,7 @@ unsigned int NextSeq();
 // Overlay-Esc consume latch — defeats a poll-vs-event race on the Escape key.
 //
 // The in-world overlays (unified action menu, combat queue, examine view,
-// help) close via interact_hotkey's Win32 poll, which can disarm the overlay
+// help) close via input_poll_router's Win32 poll, which can disarm the overlay
 // BEFORE the engine's matching Esc DirectInput event reaches
 // OnClientHandleInputEvent. When the poll wins the frame the consume guard
 // there sees an already-inactive overlay, lets Esc fall through, and the

@@ -266,7 +266,7 @@ extern "C" int __cdecl OnHandleInputEvent(void* thisPtr, int param_1, int param_
     void* panel = ResolveActivePanel();
 
     // The in-world action menu (Shift+Enter, Shift+1..7) is not routed here:
-    // it takes its keys through interact_hotkey's Win32 poll.
+    // it takes its keys through input_poll_router's Win32 poll.
 
     // Panel handlers, each with first refusal over those below it.
     // Shift+Up/Down peeks at a description; before every handler that takes

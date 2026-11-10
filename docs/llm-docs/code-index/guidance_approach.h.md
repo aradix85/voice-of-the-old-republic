@@ -4,7 +4,7 @@ Source: `patches/Accessibility/guidance_approach.h`
 
 Unified approach tracker — the single "I dispatched a walk-to-act, watch whether it arrives, settles, or stalls" state machine.
 
-Replaces three previously-independent observers that all keyed on the same signal (player movement after a dispatch): - guidance_autowalk's in-flight tracker + walk-blocked one-shot (Shift+-), - interact_hotkey's g_approach dialog/use watchdog (Enter), - cycle_input's autowalk block-watch (Shift+- announce wrapper).
+Replaces three previously-independent observers that all keyed on the same signal (player movement after a dispatch): - guidance_autowalk's in-flight tracker + walk-blocked one-shot (Shift+-), - the interact dispatch's dialog/use watchdog (Enter), - cycle_input's autowalk block-watch (Shift+- announce wrapper).
 
 One arm, one tick, one set of thresholds. Whoever dispatches a walk (Shift+- autowalk, Enter loot/talk/door/...) arms it with the target identity + the lifecycle flags; TickApproach() drives it: - SUCCESS  → a conversation opens (talk), an interaction panel opens (loot), or the PC settles within reach of the target. Disarm quietly. - BLOCKED  → the PC stalls (no movement for the stall window) while still far from the target (wedged against geometry / no walkable point in range). Cancel the bouncing walk, restore input if the caller disabled it, clear dialog-pending state (talk only), and — if the arm asked for it — announce "way blocked" with the target's live distance + direction.
 

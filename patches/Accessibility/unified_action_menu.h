@@ -84,13 +84,13 @@ void ReannounceCurrent();
 // AND not suspended.
 bool IsSuspended();
 
-// Per-tick panel-stack notification, driven by interact_hotkey. `blocked` is
+// Per-tick panel-stack notification, driven by input_poll_router. `blocked` is
 // the current IsForegroundUiBlocking() state. Suspends on the rising edge and
 // resumes (re-asserting pause + re-speaking the current category) on the
 // falling edge; a no-op when the state is unchanged or the menu is inactive.
 void SetForegroundBlocked(bool blocked);
 
-// Routed by interact_hotkey's Win32 poll. `code` is one of the engine
+// Routed by input_poll_router's Win32 poll. `code` is one of the engine
 // logical nav codes (kInputNav*, kInputEnter*, kInputEsc*, kInputHome/End)
 // or the internal kInputCatFirst / kInputCatLast. `value` 0 = release
 // (ignored). Returns true when consumed.

@@ -23,8 +23,8 @@ Engine read/primitive layers live in engine_radial (target) and engine_actionbar
 - L71 `bool IsActive()`
 - L78 `void ReannounceCurrent()`: Re-speak the current category against the live menus, re-locating the cursor on the same slot.
 - L85 `bool IsSuspended()`: True while armed but suspended under a blocking engine panel (a MessageBox or a hotkey-opened sub-screen).
-- L91 `void SetForegroundBlocked(bool blocked)`: Per-tick panel-stack notification, driven by interact_hotkey.
-- L97 `bool HandleInputEvent(int code, int value)`: Routed by interact_hotkey's Win32 poll.
+- L91 `void SetForegroundBlocked(bool blocked)`: Per-tick panel-stack notification, driven by input_poll_router.
+- L97 `bool HandleInputEvent(int code, int value)`: Routed by input_poll_router's Win32 poll.
 - L99 `void ForceDisarm(const char* reason)`
 - L104 `int PersonalSelection(int col)`: Bare-key announce support: the user's last-selected index for a personal column / target row, kept in lock-step with the engine's per-slot selection so a bare 1..7 press announces what the engine actually fires.
 - L105 `int TargetSelection(int row)`

@@ -1,4 +1,4 @@
-# hotkeys.h (243 lines)
+# hotkeys.h (241 lines)
 
 Source: `patches/Accessibility/hotkeys.h`
 
@@ -10,24 +10,24 @@ We don't piggyback on the engine's [Keymapping] because it's bare DIK→Action w
 
 - L18 `enum ModifierBit`: Required + forbidden masks let one VK host multiple actions (e.g.
 - L27 `enum class Action`: One per logical gesture.
-- L161 `struct Binding`: vk + optional altVk for layout portability (same physical key reports different VKs on US QWERTY vs German QWERTZ).
-- L169 `void BeginTick()`: Call at start/end of every per-frame dispatch.
-- L170 `void EndTick()`
-- L174 `bool Pressed(Action a)`: True iff binding VK (or altVk) is down this tick + was up last tick + modifiers match + KOTOR is foreground.
-- L178 `bool Held(Action a)`: Pure held-state query — no edge, no foreground gate.
-- L183 `void Consume(Action a)`: Claim the current tick's rising edge so other consumers don't see it.
-- L189 `void ClaimRisingEdge(Action a)`: Pre-claim the NEXT rising edge.
-- L192 `bool ShiftHeld()`: Direct OS-level modifier reads — no edge, no foreground gate.
-- L193 `bool CtrlHeld()`
-- L197 `uint32_t CurrentModifiers()`: Current OS modifier mask (kMod* bits) — the same read BeginTick uses for edge matching.
-- L205 `bool ModifiedComboOwns(int vk)`: True iff some registered binding on `vk` (primary or alt key) REQUIRES at least one modifier and currently matches the live keyboard (its key is down, every required modifier is held, no forbidden modifier is held).
-- L207 `bool IsForegroundGame()`
-- L211 `Binding Get(Action a)`: IsUserRebindable returns false for diagnostic probes (excluded from the rebind UI).
-- L212 `void Set(Action a, Binding b)`
-- L213 `bool IsUserRebindable(Action a)`
-- L217 `void SetUserBinding(Action a, Binding b)`: Apply a user rebind: update the live binding AND persist it to acc_settings.ini so it survives a relaunch.
-- L221 `void ResetUserBindings()`: Reset every user-rebindable action to its factory default and rewrite the persisted overrides to match.
-- L229 `Action FindConflict(Action self, int vk, uint32_t mods)`: Conflict scan for the configurator.
-- L233 `const char* Name(Action a)`: Describe(a) goes into a rotating static buffer so multiple calls in one log line stay valid (acclog::FmtPtr convention).
-- L234 `const char* Describe(Action a)`
-- L240 `const char* VkLabel(int vk)`: Spoken/printable label for a bare VK ("V", "F5", "Enter", ...).
+- L159 `struct Binding`: vk + optional altVk for layout portability (same physical key reports different VKs on US QWERTY vs German QWERTZ).
+- L167 `void BeginTick()`: Call at start/end of every per-frame dispatch.
+- L168 `void EndTick()`
+- L172 `bool Pressed(Action a)`: True iff binding VK (or altVk) is down this tick + was up last tick + modifiers match + KOTOR is foreground.
+- L176 `bool Held(Action a)`: Pure held-state query — no edge, no foreground gate.
+- L181 `void Consume(Action a)`: Claim the current tick's rising edge so other consumers don't see it.
+- L187 `void ClaimRisingEdge(Action a)`: Pre-claim the NEXT rising edge.
+- L190 `bool ShiftHeld()`: Direct OS-level modifier reads — no edge, no foreground gate.
+- L191 `bool CtrlHeld()`
+- L195 `uint32_t CurrentModifiers()`: Current OS modifier mask (kMod* bits) — the same read BeginTick uses for edge matching.
+- L203 `bool ModifiedComboOwns(int vk)`: True iff some registered binding on `vk` (primary or alt key) REQUIRES at least one modifier and currently matches the live keyboard (its key is down, every required modifier is held, no forbidden modifier is held).
+- L205 `bool IsForegroundGame()`
+- L209 `Binding Get(Action a)`: IsUserRebindable returns false for diagnostic probes (excluded from the rebind UI).
+- L210 `void Set(Action a, Binding b)`
+- L211 `bool IsUserRebindable(Action a)`
+- L215 `void SetUserBinding(Action a, Binding b)`: Apply a user rebind: update the live binding AND persist it to acc_settings.ini so it survives a relaunch.
+- L219 `void ResetUserBindings()`: Reset every user-rebindable action to its factory default and rewrite the persisted overrides to match.
+- L227 `Action FindConflict(Action self, int vk, uint32_t mods)`: Conflict scan for the configurator.
+- L231 `const char* Name(Action a)`: Describe(a) goes into a rotating static buffer so multiple calls in one log line stay valid (acclog::FmtPtr convention).
+- L232 `const char* Describe(Action a)`
+- L238 `const char* VkLabel(int vk)`: Spoken/printable label for a bare VK ("V", "F5", "Enter", ...).

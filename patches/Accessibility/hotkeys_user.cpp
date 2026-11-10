@@ -102,8 +102,6 @@ Action FindConflict(Action self, int vk, uint32_t mods) {
 // The developer probes stay out of the configurator.
 bool IsUserRebindable(Action a) {
     switch (a) {
-    case Action::ProbeAudioCycle:
-    case Action::ProbeAudioFire:
     case Action::ProbeCameraDump:
     case Action::ProbeCameraDistDump:
     case Action::ProbeCameraDistClampToggle:

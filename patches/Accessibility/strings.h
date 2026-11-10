@@ -1535,7 +1535,7 @@ enum class Id : int {
     // finish-line crossing — see minigame_swoop_race.cpp TickRaceTimer.
     FmtSwoopRaceTime,
 
-    // ---- Turret (space-combat gunner) minigame (CSWMiniGame.type==3).
+    // ---- Turret (space-combat gunner) minigame (CSWMiniGame.type==2).
     //      Shares the CSWMiniGame struct with swoop racing (same vtable)
     //      but is a distinct game: the player swings a 2D reticle
     //      (CSWMiniPlayer.offset +0x1c4 — X horizontal, Y vertical) and

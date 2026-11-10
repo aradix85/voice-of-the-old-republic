@@ -1,4 +1,4 @@
-# endar_softlock.h (58 lines)
+# endar_softlock.h (57 lines)
 
 Source: `patches/Accessibility/endar_softlock.h`
 
@@ -10,6 +10,6 @@ The tutorial's room-3 -> room-5 -> bridge sequence is scripted: the west corrido
 
 - L22 `void OnAreaChanged(void* area)`: From transitions on area change.
 - L26 `void Tick()`: Per-frame, from core_tick.
-- L40 `void RegisterMsgRule()`: Register the door-guidance rule with the feedback router.
-- L52 `bool BlockCompanionAttempt(void* target)`: Interact-dispatch guard for one case only: the Trask door (end_door19) tried while Trask himself is the party leader (Tab swapped to him).
-- L55 `bool WouldBlockCompanionAttempt(void* target)`: The same test without speaking: would BlockCompanionAttempt refuse it?
+- L39 `void RegisterMsgRule()`: Register the door-guidance rule with the feedback router.
+- L51 `bool BlockCompanionAttempt(void* target)`: Interact-dispatch guard for one case only: the Trask door (end_door19) tried while Trask himself is the party leader (Tab swapped to him).
+- L54 `bool WouldBlockCompanionAttempt(void* target)`: The same test without speaking: would BlockCompanionAttempt refuse it?

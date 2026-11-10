@@ -14,7 +14,7 @@
 //
 // Self-disarms when the target becomes unresolvable.
 //
-// Input routing lives in interact_hotkey.cpp.
+// Input routing lives in input_poll_router.cpp.
 
 #pragma once
 

@@ -116,8 +116,6 @@ enum class Action : int {
 
 
     // ----- Diagnostic probes (NOT user-rebindable) -----
-    ProbeAudioCycle,           // F10    (Ctrl forbidden)
-    ProbeAudioFire,            // F11    (Ctrl forbidden)
     ProbeCameraDump,           // F12    (Ctrl forbidden)
     ProbeCameraDistDump,       // Ctrl+F12 — Option-B camera-distance snapshot
     ProbeCameraDistClampToggle,// Ctrl+F11 — cycle distance clamp modes

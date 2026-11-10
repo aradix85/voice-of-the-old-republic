@@ -35,7 +35,7 @@ void RegisterMsgRule();
 // (strref 1437, resolved through the TLK so it stays language-independent).
 // Shared so other router rules can hang area-specific door guidance off the
 // engine's own locked report instead of intercepting the interact dispatch —
-// see the WARNING in interact_hotkey.cpp for why that distinction matters.
+// endar_softlock.h says why that distinction matters.
 // False until the TLK table is live (main menu / early load).
 bool IsGenericLockedMessage(const char* text);
 

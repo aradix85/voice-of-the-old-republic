@@ -4,7 +4,7 @@
 // Replaces three previously-independent observers that all keyed on the same
 // signal (player movement after a dispatch):
 //   - guidance_autowalk's in-flight tracker + walk-blocked one-shot (Shift+-),
-//   - interact_hotkey's g_approach dialog/use watchdog (Enter),
+//   - the interact dispatch's dialog/use watchdog (Enter),
 //   - cycle_input's autowalk block-watch (Shift+- announce wrapper).
 //
 // One arm, one tick, one set of thresholds. Whoever dispatches a walk (Shift+-

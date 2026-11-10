@@ -1,9 +1,6 @@
 // per-tick Win32 hotkey router.
 //
-// Split out of interact_hotkey.cpp by the Phase-1 structure pass
-// (refactoring candidate 19). The file it came from was named for one
-// feature but had become the home of general cross-subsystem routing:
-// this reads every Action rising edge once per tick and offers it, in a
+// Reads every Action rising edge once per tick and offers it, in a
 // fixed order, to the action-bar / target-row openers, level-up, the bare
 // number-key announces, examine view, the combat queue, the unified
 // action menu, bare-R narration, and only then Enter/Shift+Enter interact

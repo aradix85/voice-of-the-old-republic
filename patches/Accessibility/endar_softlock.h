@@ -32,11 +32,10 @@ void Tick();
 // off our interact dispatch. That distinction is the whole point: a door hint
 // keyed on a tag at dispatch time has to guess whether the door is dead, and a
 // wrong guess that returns before the engine call suppresses the story trigger
-// attached to the open attempt (see the WARNING in interact_hotkey.cpp — that
-// is exactly how v0.6.0/v0.6.1 stranded players at end_door19 and
-// end_door10_cut2). Keyed on the engine's report instead, a hint can only ever
-// speak when the door genuinely refused to open, and it never displaces the
-// attempt itself.
+// attached to the open attempt (that is exactly how v0.6.0/v0.6.1 stranded
+// players at end_door19 and end_door10_cut2). Keyed on the engine's report
+// instead, a hint can only ever speak when the door genuinely refused to open,
+// and it never displaces the attempt itself.
 void RegisterMsgRule();
 
 // Interact-dispatch guard for one case only: the Trask door (end_door19)

@@ -72,8 +72,6 @@ const char* const kActionNames[] = {
     "EditboxCancel",
     "HelpMenuOpen",
     "HelpContext",
-    "ProbeAudioCycle",
-    "ProbeAudioFire",
     "ProbeCameraDump",
     "ProbeCameraDistDump",
     "ProbeCameraDistClampToggle",

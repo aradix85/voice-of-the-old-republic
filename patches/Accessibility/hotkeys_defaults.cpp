@@ -131,10 +131,8 @@ void InitDefaults() {
     bind(Action::HelpContext,          VK_F1, 0, kModCtrl, kModShift | kModAlt | kModAltGr);
 
     // ----- Diagnostic probes -----
-    // The bare F-keys forbid Ctrl so the Ctrl+F11 / Ctrl+F12 camera-distance
-    // probes (probe_camera_distance.h) don't fire them too. F11 is unbound.
-    bind(Action::ProbeAudioCycle,            VK_F10, 0, 0, kModCtrl);
-    bind(Action::ProbeAudioFire,             0,      0, 0, 0);
+    // Bare F12 forbids Ctrl so the Ctrl+F12 camera-distance probe
+    // (probe_camera_distance.h) does not fire it too.
     bind(Action::ProbeCameraDump,            VK_F12, 0, 0, kModCtrl);
     bind(Action::ProbeCameraDistDump,        VK_F12, 0, kModCtrl, 0);
     bind(Action::ProbeCameraDistClampToggle, VK_F11, 0, kModCtrl, 0);

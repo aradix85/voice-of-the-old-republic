@@ -199,7 +199,7 @@ constexpr int kInputDefaultAction = 0xef;
 constexpr int kInputHome     = 32;
 constexpr int kInputEnd      = 33;
 
-// Internal routing codes (NOT engine InputIndices) — interact_hotkey
+// Internal routing codes (NOT engine InputIndices) — input_poll_router
 // synthesises these for the unified action menu when Ctrl is held with
 // Home/End, to jump to the first / last category. Picked well outside the
 // engine's small InputIndex range so they can't collide with a real event.
