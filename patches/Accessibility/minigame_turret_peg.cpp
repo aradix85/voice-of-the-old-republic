@@ -148,138 +148,121 @@ constexpr ULONGLONG kInvulnWindowMs = 1200;  // a fighter hit within this is sti
 
 }  // namespace
 
-// Drive the continuous peg tone on the selected fighter. Loudness (via source
-// distance) encodes the aim error to THAT fighter — faint off-aim, peaks on
-// target. When the selected fighter leaves the census (destroyed / out of
-// range), AUTO-ADVANCE to the nearest remaining fighter and lock it; if none
-// remain, announce "target lost" and fall silent.
-void DriveSelectedPeg(const int occSlot[], const float occDist[],
-                      const Vector occPos[], const TargetInfo occInfo[],
-                      int occCount, const Vector& aimDir, bool haveAim,
-                      const Vector& listener, bool selectedAliveInPool) {
-    int idx = CensusIndexOf(occSlot, occCount, g_state.selected_slot);
-    // True only when the locked fighter was already in the census on entry
-    // (not a fresh re-pick this tick) — gates the HP/hit read so the info we
-    // log belongs to the fighter we were tracking.
-    const bool trackingExisting = (idx >= 0);
+namespace {
 
-    if (idx < 0) {
-        // The locked fighter is not in the census this tick.
-        if (g_state.selected_slot >= 0) {
-            // Distinguish a KILL (the fighter left the MGO pool entirely —
-            // AsEnemy no longer resolves it) from a fighter that is still
-            // alive but merely dropped out of the census this tick (flew
-            // beyond cue range / off-screen, or a one-tick position-read miss).
-            // selectedAliveInPool is set by TickFighterCues' Pass-1 walk
-            // regardless of range.
-            const bool killed = !selectedAliveInPool;
+constexpr float kRad2Deg = 57.2957795f;
 
-            if (!killed) {
-                // Alive, just out of view. HOLD the lock and fall silent —
-                // do NOT re-pick and do NOT announce. The player keeps the
-                // same target and can wait for it to come back or manually
-                // retarget with Q/E. (Re-picking here jolted the lock, and a
-                // transient read miss could trip it spuriously; re-pick now
-                // happens only on round start and on a kill.)
-                if (g_state.peg_cue.IsActive()) {
-                    g_state.peg_cue.Stop();
-                    acclog::Write("Turret",
-                                  "peg off (out of view) — holding lock slot=%d",
-                                  g_state.selected_slot);
-                }
-                g_state.selected_on_target = false;  // re-arm fire-now on return
-                g_state.selected_behind    = false;  // re-evaluate gate on return
-                // (no assist write this tick — we hold the lock but don't steer)
-                return;
-            }
+float Wrap180(float d) {
+    while (d > 180.0f)  d -= 360.0f;
+    while (d < -180.0f) d += 360.0f;
+    return d;
+}
 
-            // KILL: the selected fighter left the pool. The global per-slot
-            // down-detector in TickFighterCues already announced "Fighter N
-            // destroyed", so here we only transition the lock — stop the cue
-            // and auto-advance to the nearest remaining fighter (silently).
+float Clamp1(float v) { return v > 1.0f ? 1.0f : (v < -1.0f ? -1.0f : v); }
+
+// The census index of the locked fighter in `idx`, after keeping or moving
+// the lock. False when there is nothing to drive this tick.
+bool ResolveLock(int& idx, const int occSlot[], const float occDist[],
+                 const Vector occPos[], const TargetInfo occInfo[], int occCount,
+                 const Vector& listener, bool selectedAliveInPool) {
+    if (idx >= 0) return true;
+
+    // The locked fighter is not in the census this tick.
+    if (g_state.selected_slot >= 0) {
+        // Distinguish a KILL (the fighter left the MGO pool entirely —
+        // AsEnemy no longer resolves it) from a fighter that is still
+        // alive but merely dropped out of the census this tick (flew
+        // beyond cue range / off-screen, or a one-tick position-read miss).
+        // selectedAliveInPool is set by TickFighterCues' Pass-1 walk
+        // regardless of range.
+        const bool killed = !selectedAliveInPool;
+
+        if (!killed) {
+            // Alive, just out of view. HOLD the lock and fall silent —
+            // do NOT re-pick and do NOT announce. The player keeps the
+            // same target and can wait for it to come back or manually
+            // retarget with Q/E. (Re-picking here jolted the lock, and a
+            // transient read miss could trip it spuriously; re-pick now
+            // happens only on round start and on a kill.)
             if (g_state.peg_cue.IsActive()) {
                 g_state.peg_cue.Stop();
-                acclog::Write("Turret", "peg off (selected destroyed) slot=%d",
+                acclog::Write("Turret",
+                              "peg off (out of view) — holding lock slot=%d",
                               g_state.selected_slot);
             }
+            g_state.selected_on_target = false;  // re-arm fire-now on return
+            g_state.selected_behind    = false;  // re-evaluate gate on return
+            // (no assist write this tick — we hold the lock but don't steer)
+            return false;
+        }
 
-            if (occCount > 0) {
-                AnnounceSelectedTarget(0, occSlot, occDist, occPos, occInfo, occCount,
-                                       listener, /*speak=*/false);
-                idx = 0;
-            } else {
-                g_state.selected_slot = -1;
-                acclog::Write("Turret", "no fighters remain (after kill)");
-                return;
-            }
+        // KILL: the selected fighter left the pool. The global per-slot
+        // down-detector in TickFighterCues already announced "Fighter N
+        // destroyed", so here we only transition the lock — stop the cue
+        // and auto-advance to the nearest remaining fighter (silently).
+        if (g_state.peg_cue.IsActive()) {
+            g_state.peg_cue.Stop();
+            acclog::Write("Turret", "peg off (selected destroyed) slot=%d",
+                          g_state.selected_slot);
+        }
+
+        if (occCount > 0) {
+            AnnounceSelectedTarget(0, occSlot, occDist, occPos, occInfo, occCount,
+                                   listener, /*speak=*/false);
+            idx = 0;
         } else {
-            // Nothing selected yet (game start / all clear). Auto-pick the
-            // nearest fighter the instant one is in range, so the player
-            // begins the round already locked without pressing Q/E — same
-            // nearest-first rule as the lose-target auto-advance above.
-            if (occCount > 0) {
-                AnnounceSelectedTarget(0, occSlot, occDist, occPos, occInfo, occCount,
-                                       listener);
-                idx = 0;
-            } else {
-                return;  // no fighters in range yet — wait
-            }
+            g_state.selected_slot = -1;
+            acclog::Write("Turret", "no fighters remain (after kill)");
+            return false;
+        }
+    } else {
+        // Nothing selected yet (game start / all clear). Auto-pick the
+        // nearest fighter the instant one is in range, so the player
+        // begins the round already locked without pressing Q/E — same
+        // nearest-first rule as the lose-target auto-advance above.
+        if (occCount > 0) {
+            AnnounceSelectedTarget(0, occSlot, occDist, occPos, occInfo, occCount,
+                                   listener);
+            idx = 0;
+        } else {
+            return false;  // no fighters in range yet — wait
         }
     }
+    return true;
+}
 
-    if (!haveAim) {
-        return;  // hold the cue; can't read the crosshair this tick
-    }
-
-    constexpr float kRad2Deg = 57.2957795f;
-    auto wrap180 = [](float d) {
-        while (d > 180.0f)  d -= 360.0f;
-        while (d < -180.0f) d += 360.0f;
-        return d;
-    };
-    auto clamp1 = [](float v) { return v > 1.0f ? 1.0f : (v < -1.0f ? -1.0f : v); };
-
-    const Vector& sp = occPos[idx];
-    const float   sd = occDist[idx];
-
-    // Range-window cue: punctuate the locked fighter crossing INTO killable
-    // range (enter) and back OUT of it (leave). Fires independent of the
-    // front-cone gate — it's about distance, not bearing. Same sample for both
-    // for now; the crosshair tone swelling (enter) vs fading (leave) is the
-    // current disambiguator. Played at a compressed, always-audible point in
-    // the fighter's direction so it pans toward it (the lock-locator trick).
-    {
-        const Vector& ve = g_state.vel_ema;
-        const float measured = g_state.have_vel
-            ? std::sqrt(ve.x * ve.x + ve.y * ve.y + ve.z * ve.z) : 0.0f;
-        const float killable = KillableRangeM(occInfo[idx].radius,
-                                              TargetSpeed(&occInfo[idx], measured));
-        const int wasInRange = g_state.selected_in_range;          // -1/0/1
-        const int nowInRange = (sd > 0.0f && sd <= killable) ? 1 : 0;
-        if (wasInRange >= 0 && nowInRange != wasInRange) {
-            const Vector pos = PlayRangeCueAt(sp, sd, listener);
-            if (!nowInRange) {
-                // LEAVE: schedule a 2nd tap so a double-tap unambiguously means
-                // "window closed / reacquire", vs the single tap for ENTER.
-                g_state.leave_tap_due_ms = GetTickCount64() + kLeaveTapGapMs;
-                g_state.leave_tap_pos    = pos;
-            }
-            acclog::Write("Turret", "range cue: %s slot=%d dist=%.0fm",
-                          nowInRange ? "ENTER" : "LEAVE",
-                          g_state.selected_slot, sd);
+// Range-window cue: punctuate the locked fighter crossing INTO killable
+// range (enter) and back OUT of it (leave). Fires independent of the
+// front-cone gate — it's about distance, not bearing. Same sample for both
+// for now; the crosshair tone swelling (enter) vs fading (leave) is the
+// current disambiguator. Played at a compressed, always-audible point in
+// the fighter's direction so it pans toward it (the lock-locator trick).
+void TickRangeCue(const Vector& sp, float sd, const TargetInfo& info,
+                  const Vector& listener) {
+    const Vector& ve = g_state.vel_ema;
+    const float measured = g_state.have_vel
+        ? std::sqrt(ve.x * ve.x + ve.y * ve.y + ve.z * ve.z) : 0.0f;
+    const float killable = KillableRangeM(info.radius,
+                                          TargetSpeed(&info, measured));
+    const int wasInRange = g_state.selected_in_range;          // -1/0/1
+    const int nowInRange = (sd > 0.0f && sd <= killable) ? 1 : 0;
+    if (wasInRange >= 0 && nowInRange != wasInRange) {
+        const Vector pos = PlayRangeCueAt(sp, sd, listener);
+        if (!nowInRange) {
+            // LEAVE: schedule a 2nd tap so a double-tap unambiguously means
+            // "window closed / reacquire", vs the single tap for ENTER.
+            g_state.leave_tap_due_ms = GetTickCount64() + kLeaveTapGapMs;
+            g_state.leave_tap_pos    = pos;
         }
-        g_state.selected_in_range = nowInRange;
+        acclog::Write("Turret", "range cue: %s slot=%d dist=%.0fm",
+                      nowInRange ? "ENTER" : "LEAVE",
+                      g_state.selected_slot, sd);
     }
+    g_state.selected_in_range = nowInRange;
+}
 
-    // Fighter position relative to the listener (gun). We solve the whole lead
-    // in this frame so the answer is "where to point the turret".
-    const Vector P = {sp.x - listener.x, sp.y - listener.y, sp.z - listener.z};
-    // |P|. Equal to the census distance sd when `listener` is the camera; a
-    // hitscan area passes the barrel instead (see TickFighterCues).
-    const float  pLen = std::sqrt(P.x * P.x + P.y * P.y + P.z * P.z);
-
-    // ---- Smoothed relative velocity (Δ relative-pos / Δt, EMA). ------------
-    const ULONGLONG now = GetTickCount64();
+// ---- Smoothed relative velocity (Δ relative-pos / Δt, EMA). ------------
+void UpdateMotionEstimate(const Vector& P, ULONGLONG now) {
     if (g_state.have_last_pos && now > g_state.last_selected_pos_ms) {
         const float dt = (now - g_state.last_selected_pos_ms) / 1000.0f;
         const Vector vinst = {(P.x - g_state.last_selected_pos.x) / dt,
@@ -329,26 +312,23 @@ void DriveSelectedPeg(const int occSlot[], const float occDist[],
     g_state.last_selected_pos    = P;
     g_state.last_selected_pos_ms = now;
     g_state.have_last_pos        = true;
-    const Vector v = g_state.vel_ema;
-    const float  vmag = std::sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
+}
 
-    // ---- Combat fields of the selected target (census snapshot). ----------
-    int   hp = -1, maxHp = -1;
-    float radius = 0.0f, engineSpeed = 0.0f;
-    if (trackingExisting) {
-        const TargetInfo& ti = occInfo[idx];
-        hp          = ti.hp;
-        maxHp       = ti.max_hp;
-        radius      = ti.radius;
-        engineSpeed = ti.engine_speed;
-    }
+struct LeadSolution {
+    Vector aimRel;     // listener-relative point the cue aims at
+    Vector aimRelLin;  // linear-only baseline (LeadCheck diagnostic)
+    float  t;
+    float  dist;
+    float  frac;
+};
 
-    // ---- Lead: aim at the intercept point. Solve |P + v·t| = boltSpeed·t for
-    // the smallest positive t (a·t² + b·t + c = 0), then I = P + v·t. Falls
-    // back to the current position when velocity isn't established yet or no
-    // valid intercept exists. Clamped to the bolt lifespan. A hitscan area's
-    // hits don't fly, so it aims at the target itself. ----------------------
-    const Arena& arena      = g_state.arena;
+// ---- Lead: aim at the intercept point. Solve |P + v·t| = boltSpeed·t for
+// the smallest positive t (a·t² + b·t + c = 0), then I = P + v·t. Falls
+// back to the current position when velocity isn't established yet or no
+// valid intercept exists. Clamped to the bolt lifespan. A hitscan area's
+// hits don't fly, so it aims at the target itself. ----------------------
+LeadSolution SolveLead(const Vector& P, const Vector& v, float vmag, float radius,
+                       const Arena& arena) {
     const float  boltSpeed  = arena.bolt_speed;
     const float  boltLife   = arena.bolt_life;
     Vector aimRel = P;           // listener-relative point the cue aims at
@@ -427,61 +407,15 @@ void DriveSelectedPeg(const int occSlot[], const float occDist[],
             }
         }
     }
+    return {aimRel, aimRelLin, leadT, leadDist, leadFrac};
+}
 
-    // Aim error to the intercept point (this drives the cue); also the error to
-    // the CURRENT fighter (no-lead) for diagnostic comparison.
-    const float aimTgtDist =
-        std::sqrt(aimRel.x * aimRel.x + aimRel.y * aimRel.y + aimRel.z * aimRel.z);
-    Vector tdir = {0.0f, 0.0f, 0.0f};
-    float  angle = 0.0f;
-    if (aimTgtDist > 0.0f) {
-        tdir.x = aimRel.x / aimTgtDist;
-        tdir.y = aimRel.y / aimTgtDist;
-        tdir.z = aimRel.z / aimTgtDist;
-        angle = AngleBetweenDeg(aimDir, tdir);
-    }
-    float angleNow = 0.0f;
-    if (pLen > 0.0f) {
-        const Vector nd = {P.x / pLen, P.y / pLen, P.z / pLen};
-        angleNow = AngleBetweenDeg(aimDir, nd);
-    }
-
-    // Hitbox half-angle at the INTERCEPT distance — "on target" = a bolt fired
-    // now lands in the sphere when it arrives.
-    const float subtendDeg =
-        (radius > 0.0f && aimTgtDist > 0.0f) ? std::atan(radius / aimTgtDist) * kRad2Deg : 0.0f;
-    const float onTargetAngle =
-        (subtendDeg > 0.0f) ? subtendDeg : kFallbackOnTargetDeg;
-    const bool  onTarget = (angle <= onTargetAngle);
-
-    // ---- Makeability (full-autoaim only) -----------------------------------
-    // The lead cancels the crossing drift, so the limiter is the extrapolation
-    // horizon: makeable while the bolt's flight time is short enough that the
-    // prediction stays reliable. crossingSpeed is kept for the diagnostic only.
-    const bool fullAuto = acc::menus::modsettings::GetToggle(
-                              acc::menus::modsettings::Option::TurretAutoAim);
-    float crossingSpeed = 0.0f;
-    if (pLen > 1e-3f) {
-        const Vector rhat = {P.x / pLen, P.y / pLen, P.z / pLen};
-        const float  vrad = v.x * rhat.x + v.y * rhat.y + v.z * rhat.z;
-        const Vector vtan = {v.x - vrad * rhat.x, v.y - vrad * rhat.y, v.z - vrad * rhat.z};
-        crossingSpeed = std::sqrt(vtan.x * vtan.x + vtan.y * vtan.y + vtan.z * vtan.z);
-    }
-    // A hitscan area has no flight to extrapolate, so every target is makeable.
-    const float makeHorizon = MakeHorizonSec(radius, TargetSpeed(
-        trackingExisting ? &occInfo[idx] : nullptr, vmag));
-    const bool  makeable = arena.hitscan ||
-                           (g_state.have_vel && leadT > 0.0f && leadT <= makeHorizon);
-    // In full-autoaim the cue must stay honest: the solid "fire" tone fires only
-    // when the shot actually connects, so it can't lie while the gun tracks a
-    // target that's crossing too fast to hit. Assisted mode is untouched — there
-    // the tone reflects the player's own aim, which is already honest.
-    const bool  onTargetCue = onTarget && (!fullAuto || makeable);
-
-    // "Fire now": one-shot the instant the combined aim crosses INTO the hitbox
-    // (false->true). Played at a compressed, always-audible point toward the
-    // fighter so it pans correctly. selected_on_target latches so it fires once
-    // per entry, not every tick you hold the cone.
+// "Fire now": one-shot the instant the combined aim crosses INTO the hitbox
+// (false->true). Played at a compressed, always-audible point toward the
+// fighter so it pans correctly. selected_on_target latches so it fires once
+// per entry, not every tick you hold the cone.
+void TickFireNowCue(bool onTargetCue, const Vector& sp, float sd,
+                    const Vector& listener, float angle, float subtendDeg) {
     if (onTargetCue && !g_state.selected_on_target) {
         Vector firePos = sp;
         if (sd > 0.0f) {
@@ -495,7 +429,15 @@ void DriveSelectedPeg(const int occSlot[], const float occDist[],
                       g_state.selected_slot, angle, subtendDeg, sd);
     }
     g_state.selected_on_target = onTargetCue;
+}
 
+// The peg itself: a solid loop while a shot connects, else ticks whose
+// interval shrinks toward the cone. Returns the solid loop's source
+// distance, for the log.
+float DrivePegSound(bool onTargetCue, float angle, float onTargetAngle,
+                    float subtendDeg, float aimTgtDist, const Vector& aimRel,
+                    const Vector& tdir, const Vector& aimDir,
+                    const Vector& listener) {
     // Loudness: rise gently from the hitbox edge (kPegEdgeDist) to a peak at
     // dead-centre (kPegMinDist); beyond the edge, fade to faint over
     // kPegRampDeg. Continuous at the boundary.
@@ -584,15 +526,292 @@ void DriveSelectedPeg(const int occSlot[], const float occDist[],
             acc::audio::PlayCue3D(kTickCueResref, tickPos);
         }
     }
+    return srcDist;
+}
+
+// Passive sign calibration: learn the sign of d(worldAim)/d(offset) per axis
+// from frame-to-frame motion (player swing or our own writes). Voted for
+// stability; target-independent (uses aim motion, not the target).
+void CalibrateOffsetSigns(float offAz, float offEl, float aimAz, float aimEl) {
+    if (g_state.calib_have) {
+        const float dOffAz = Wrap180(offAz - g_state.calib_last_off_az);
+        const float dAimAz = Wrap180(aimAz - g_state.calib_last_aim_az);
+        if (std::fabs(dOffAz) > 1.0f && std::fabs(dAimAz) > 0.3f) {
+            g_state.calib_vote_az += (dOffAz * dAimAz > 0.0f) ? 1 : -1;
+            if (g_state.calib_vote_az >  3) g_state.calib_vote_az =  3;
+            if (g_state.calib_vote_az < -3) g_state.calib_vote_az = -3;
+            g_state.calib_sign_az = (g_state.calib_vote_az >= 0) ? 1 : -1;
+        }
+        const float dOffEl = offEl - g_state.calib_last_off_el;
+        const float dAimEl = aimEl - g_state.calib_last_aim_el;
+        if (std::fabs(dOffEl) > 1.0f && std::fabs(dAimEl) > 0.3f) {
+            g_state.calib_vote_el += (dOffEl * dAimEl > 0.0f) ? 1 : -1;
+            if (g_state.calib_vote_el >  3) g_state.calib_vote_el =  3;
+            if (g_state.calib_vote_el < -3) g_state.calib_vote_el = -3;
+            g_state.calib_sign_el = (g_state.calib_vote_el >= 0) ? 1 : -1;
+        }
+    }
+    g_state.calib_last_off_az = offAz; g_state.calib_last_aim_az = aimAz;
+    g_state.calib_last_off_el = offEl; g_state.calib_last_aim_el = aimEl;
+    g_state.calib_have = true;
+}
+
+// Steer the gun by writing offset toward the locked intercept.
+//  * Full-autoaim: snap hard, every tick.
+//  * Magnetism (default): console-style sticky aim — proximity-ramped pull,
+//    applied every tick and blended with the player's own WASD (no yield),
+//    engaging out to kMagnetEngageDeg and capped per tick. See the tunables.
+// Returns whether it steered; `gain` gets the gain used.
+bool SteerGun(bool steer, float offAz, float offEl, float angle, float errAz,
+              float errEl, bool fullAuto, float& gain) {
+    const Arena& arena = g_state.arena;
+    gain = 0.0f;
+    if (steer && !fullAuto && angle > kMagnetEngageDeg)
+        steer = false;  // target too far off-aim (or behind) — you swing onto it
+    if (!steer) return false;
+
+    const int sAz = g_state.calib_sign_az ? g_state.calib_sign_az : 1;
+    const int sEl = g_state.calib_sign_el ? g_state.calib_sign_el : 1;
+    // The error in offset units: the full correction would set the
+    // offset to (current - error). errAz is the SHORTER way round in the
+    // world, which on a bounded azimuth (107PER: -135..+70) can run
+    // through the arc the gun cannot enter — the pull would then press
+    // against the engine's clamp forever. When the shorter way leaves the
+    // arc and the longer way stays inside it, take the longer way.
+    float errAzOff = sAz * errAz;
+    const float errElOff = sEl * errEl;
+    const bool azBounded = arena.limits_read && !arena.az_free;
+    const bool elBounded = arena.limits_read && !arena.el_free;
+    if (azBounded) {
+        const float want = offAz - errAzOff;
+        if (want < arena.az_lo || want > arena.az_hi) {
+            const float alt = want + (want < arena.az_lo ? 360.0f : -360.0f);
+            if (alt >= arena.az_lo && alt <= arena.az_hi) errAzOff = offAz - alt;
+        }
+    }
+    float newAz, newEl;
+    if (fullAuto) {
+        // Full lock-on (turret-only autoplay): snap hard, uncapped.
+        gain  = kAssistGainAuto;
+        newAz = offAz - errAzOff * gain;
+        newEl = offEl - errElOff * gain;
+    } else {
+        // Magnetism (shared facility, minigame_aim.h): proximity-ramped
+        // (t=0 at the engage edge, 1 dead-on), per-tick-capped pull blended
+        // on top of the player's own WASD swing.
+        const acc::minigame::MagnetParams mp{
+            kMagnetGainFar, kMagnetGainNear, kMagnetMaxStepDeg};
+        gain  = acc::minigame::MagnetGain(1.0f - angle / kMagnetEngageDeg, mp);
+        newAz = acc::minigame::MagnetStep(offAz, errAzOff, gain, mp);
+        newEl = acc::minigame::MagnetStep(offEl, errElOff, gain, mp);
+    }
+    // Keep the write inside what KeepInTunnel will allow, so the value
+    // we write is the value the gun takes. A free azimuth wraps 0..360;
+    // a bounded axis clamps to the tunnel. Before the limits are read
+    // the azimuth wraps as it always has and elevation is left alone.
+    if (azBounded) {
+        if (newAz < arena.az_lo) newAz = arena.az_lo;
+        if (newAz > arena.az_hi) newAz = arena.az_hi;
+    } else {
+        while (newAz >= 360.0f) newAz -= 360.0f;
+        while (newAz <   0.0f)  newAz += 360.0f;
+    }
+    if (elBounded) {
+        if (newEl < arena.el_lo) newEl = arena.el_lo;
+        if (newEl > arena.el_hi) newEl = arena.el_hi;
+    }
+    WriteOffset(newAz, newEl);
+    return true;
+}
+
+// ---- Full-autoaim makeability retarget --------------------------------
+// Hold the lock while the shot is makeable. Once it's been unmakeable past
+// the debounce (and no recent manual Q/E to honour), hand the lock to the
+// nearest fighter — range dominates crossingSpeed·range, so nearest is the
+// most makeable — instead of chasing this one through its unhittable orbit.
+// Silent (AnnounceSelectedTarget's locator ping only) so it never spams
+// speech. Assisted mode never auto-retargets (fullAuto gate).
+void AutoaimRetarget(bool justLandedHit, bool makeable, float leadT,
+                     float crossingSpeed, float sd, const int occSlot[],
+                     const float occDist[], const Vector occPos[],
+                     const TargetInfo occInfo[], int occCount,
+                     const Vector& listener) {
+    const ULONGLONG nowMs  = GetTickCount64();
+    const bool      graced = (nowMs - g_state.last_manual_cycle_ms) < kManualGraceMs;
+
+    // (1) Switch-on-hit: we just damaged the locked fighter, so it's now in
+    // its invuln window — spread to the nearest OTHER fighter that isn't also
+    // mid-invuln (census is nearest-first; fall back to nearest other if all
+    // are cooling). Nearest = shortest flight, so the freshly-baselined lead
+    // is reliable. Bypasses the commit cooldown by design.
+    bool switched = false;
+    if (justLandedHit && !graced && occCount > 1) {
+        int pick = -1, fallback = -1;
+        for (int a = 0; a < occCount; ++a) {
+            if (occSlot[a] == g_state.selected_slot) continue;
+            if (fallback < 0) fallback = a;
+            const ULONGLONG lh = g_state.last_hit_ms[occSlot[a]];
+            if (nowMs - lh >= kInvulnWindowMs) { pick = a; break; }
+        }
+        if (pick < 0) pick = fallback;
+        if (pick >= 0) {
+            acclog::Write("TurretAssist",
+                          "spread (on hit) slot=%d->%d vulnerable=%d",
+                          g_state.selected_slot, occSlot[pick], (pick != fallback) ? 1 : 0);
+            AnnounceSelectedTarget(pick, occSlot, occDist, occPos, occInfo, occCount,
+                                   listener, /*speak=*/false);
+            g_state.unmakeable_since_ms = 0;
+            g_state.last_retarget_ms    = nowMs;
+            switched = true;
+        }
+    }
+
+    // (2) Unmakeable fallback: stuck on a target we can't hit at all (too far)
+    // — debounced + cooldown'd switch to nearest. Skipped if we just spread.
+    if (!switched) {
+        if (makeable) {
+            g_state.unmakeable_since_ms = 0;
+        } else {
+            if (g_state.unmakeable_since_ms == 0) g_state.unmakeable_since_ms = nowMs;
+            const bool cooling   = (nowMs - g_state.last_retarget_ms)    < kRetargetCooldownMs;
+            const bool debounced = (nowMs - g_state.unmakeable_since_ms) >= kRetargetDebounceMs;
+            if (!graced && !cooling && debounced && occSlot[0] != g_state.selected_slot) {
+                acclog::Write("TurretAssist",
+                              "retarget (unmakeable) slot=%d->%d leadT=%.2f crossing=%.0f range=%.0f",
+                              g_state.selected_slot, occSlot[0], leadT, crossingSpeed, sd);
+                AnnounceSelectedTarget(0, occSlot, occDist, occPos, occInfo, occCount,
+                                       listener, /*speak=*/false);
+                g_state.unmakeable_since_ms = 0;
+                g_state.last_retarget_ms    = nowMs;
+            }
+        }
+    }
+}
+
+}  // namespace
+
+// Drive the continuous peg tone on the selected fighter. Loudness (via source
+// distance) encodes the aim error to THAT fighter — faint off-aim, peaks on
+// target. When the selected fighter leaves the census (destroyed / out of
+// range), AUTO-ADVANCE to the nearest remaining fighter and lock it; if none
+// remain, announce "target lost" and fall silent.
+void DriveSelectedPeg(const int occSlot[], const float occDist[],
+                      const Vector occPos[], const TargetInfo occInfo[],
+                      int occCount, const Vector& aimDir, bool haveAim,
+                      const Vector& listener, bool selectedAliveInPool) {
+    int idx = CensusIndexOf(occSlot, occCount, g_state.selected_slot);
+    // True only when the locked fighter was already in the census on entry
+    // (not a fresh re-pick this tick) — gates the HP/hit read so the info we
+    // log belongs to the fighter we were tracking.
+    const bool trackingExisting = (idx >= 0);
+
+    if (!ResolveLock(idx, occSlot, occDist, occPos, occInfo, occCount, listener,
+                     selectedAliveInPool)) {
+        return;
+    }
+
+    if (!haveAim) {
+        return;  // hold the cue; can't read the crosshair this tick
+    }
+
+    const Vector& sp = occPos[idx];
+    const float   sd = occDist[idx];
+
+    TickRangeCue(sp, sd, occInfo[idx], listener);
+
+    // Fighter position relative to the listener (gun). We solve the whole lead
+    // in this frame so the answer is "where to point the turret".
+    const Vector P = {sp.x - listener.x, sp.y - listener.y, sp.z - listener.z};
+    // |P|. Equal to the census distance sd when `listener` is the camera; a
+    // hitscan area passes the barrel instead (see TickFighterCues).
+    const float  pLen = std::sqrt(P.x * P.x + P.y * P.y + P.z * P.z);
+
+    const ULONGLONG now = GetTickCount64();
+    UpdateMotionEstimate(P, now);
+    const Vector v = g_state.vel_ema;
+    const float  vmag = std::sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
+
+    // ---- Combat fields of the selected target (census snapshot). ----------
+    int   hp = -1, maxHp = -1;
+    float radius = 0.0f, engineSpeed = 0.0f;
+    if (trackingExisting) {
+        const TargetInfo& ti = occInfo[idx];
+        hp          = ti.hp;
+        maxHp       = ti.max_hp;
+        radius      = ti.radius;
+        engineSpeed = ti.engine_speed;
+    }
+
+    const Arena& arena = g_state.arena;
+    const LeadSolution lead = SolveLead(P, v, vmag, radius, arena);
+    const Vector& aimRel    = lead.aimRel;
+    const Vector& aimRelLin = lead.aimRelLin;
+    const float   leadT     = lead.t;
+    const float   leadDist  = lead.dist;
+    const float   leadFrac  = lead.frac;
+
+    // Aim error to the intercept point (this drives the cue); also the error to
+    // the CURRENT fighter (no-lead) for diagnostic comparison.
+    const float aimTgtDist =
+        std::sqrt(aimRel.x * aimRel.x + aimRel.y * aimRel.y + aimRel.z * aimRel.z);
+    Vector tdir = {0.0f, 0.0f, 0.0f};
+    float  angle = 0.0f;
+    if (aimTgtDist > 0.0f) {
+        tdir.x = aimRel.x / aimTgtDist;
+        tdir.y = aimRel.y / aimTgtDist;
+        tdir.z = aimRel.z / aimTgtDist;
+        angle = AngleBetweenDeg(aimDir, tdir);
+    }
+    float angleNow = 0.0f;
+    if (pLen > 0.0f) {
+        const Vector nd = {P.x / pLen, P.y / pLen, P.z / pLen};
+        angleNow = AngleBetweenDeg(aimDir, nd);
+    }
+
+    // Hitbox half-angle at the INTERCEPT distance — "on target" = a bolt fired
+    // now lands in the sphere when it arrives.
+    const float subtendDeg =
+        (radius > 0.0f && aimTgtDist > 0.0f) ? std::atan(radius / aimTgtDist) * kRad2Deg : 0.0f;
+    const float onTargetAngle =
+        (subtendDeg > 0.0f) ? subtendDeg : kFallbackOnTargetDeg;
+    const bool  onTarget = (angle <= onTargetAngle);
+
+    // ---- Makeability (full-autoaim only) -----------------------------------
+    // The lead cancels the crossing drift, so the limiter is the extrapolation
+    // horizon: makeable while the bolt's flight time is short enough that the
+    // prediction stays reliable. crossingSpeed is kept for the diagnostic only.
+    const bool fullAuto = acc::menus::modsettings::GetToggle(
+                              acc::menus::modsettings::Option::TurretAutoAim);
+    float crossingSpeed = 0.0f;
+    if (pLen > 1e-3f) {
+        const Vector rhat = {P.x / pLen, P.y / pLen, P.z / pLen};
+        const float  vrad = v.x * rhat.x + v.y * rhat.y + v.z * rhat.z;
+        const Vector vtan = {v.x - vrad * rhat.x, v.y - vrad * rhat.y, v.z - vrad * rhat.z};
+        crossingSpeed = std::sqrt(vtan.x * vtan.x + vtan.y * vtan.y + vtan.z * vtan.z);
+    }
+    // A hitscan area has no flight to extrapolate, so every target is makeable.
+    const float makeHorizon = MakeHorizonSec(radius, TargetSpeed(
+        trackingExisting ? &occInfo[idx] : nullptr, vmag));
+    const bool  makeable = arena.hitscan ||
+                           (g_state.have_vel && leadT > 0.0f && leadT <= makeHorizon);
+    // In full-autoaim the cue must stay honest: the solid "fire" tone fires only
+    // when the shot actually connects, so it can't lie while the gun tracks a
+    // target that's crossing too fast to hit. Assisted mode is untouched — there
+    // the tone reflects the player's own aim, which is already honest.
+    const bool  onTargetCue = onTarget && (!fullAuto || makeable);
+
+    TickFireNowCue(onTargetCue, sp, sd, listener, angle, subtendDeg);
+    const float srcDist = DrivePegSound(onTargetCue, angle, onTargetAngle, subtendDeg,
+                                        aimTgtDist, aimRel, tdir, aimDir, listener);
 
     const float lateral = std::sin(angle * 0.01745329f) * aimTgtDist;
 
     // Per-axis error to the INTERCEPT direction (the cue's target).
     const float aimAz = std::atan2(aimDir.x, aimDir.y) * kRad2Deg;
-    const float aimEl = std::asin(clamp1(aimDir.z))   * kRad2Deg;
+    const float aimEl = std::asin(Clamp1(aimDir.z))   * kRad2Deg;
     const float tgtAz = std::atan2(tdir.x,   tdir.y)  * kRad2Deg;
-    const float tgtEl = std::asin(clamp1(tdir.z))     * kRad2Deg;
-    const float errAz = wrap180(aimAz - tgtAz);
+    const float tgtEl = std::asin(Clamp1(tdir.z))     * kRad2Deg;
+    const float errAz = Wrap180(aimAz - tgtAz);
     const float errEl = aimEl - tgtEl;
 
     // ---- Aim-assist: STEER THE GUN by writing offset (+0x1c4). --------------
@@ -605,97 +824,14 @@ void DriveSelectedPeg(const int occSlot[], const float occDist[],
     //     yield to a sustained manual WASD swing.
     float offAz = 0.0f, offEl = 0.0f;
     const bool haveOffset = ReadOffset(offAz, offEl);
-
-    // Passive sign calibration: learn the sign of d(worldAim)/d(offset) per axis
-    // from frame-to-frame motion (player swing or our own writes). Voted for
-    // stability; target-independent (uses aim motion, not the target).
     if (haveOffset && haveAim) {
-        if (g_state.calib_have) {
-            const float dOffAz = wrap180(offAz - g_state.calib_last_off_az);
-            const float dAimAz = wrap180(aimAz - g_state.calib_last_aim_az);
-            if (std::fabs(dOffAz) > 1.0f && std::fabs(dAimAz) > 0.3f) {
-                g_state.calib_vote_az += (dOffAz * dAimAz > 0.0f) ? 1 : -1;
-                if (g_state.calib_vote_az >  3) g_state.calib_vote_az =  3;
-                if (g_state.calib_vote_az < -3) g_state.calib_vote_az = -3;
-                g_state.calib_sign_az = (g_state.calib_vote_az >= 0) ? 1 : -1;
-            }
-            const float dOffEl = offEl - g_state.calib_last_off_el;
-            const float dAimEl = aimEl - g_state.calib_last_aim_el;
-            if (std::fabs(dOffEl) > 1.0f && std::fabs(dAimEl) > 0.3f) {
-                g_state.calib_vote_el += (dOffEl * dAimEl > 0.0f) ? 1 : -1;
-                if (g_state.calib_vote_el >  3) g_state.calib_vote_el =  3;
-                if (g_state.calib_vote_el < -3) g_state.calib_vote_el = -3;
-                g_state.calib_sign_el = (g_state.calib_vote_el >= 0) ? 1 : -1;
-            }
-        }
-        g_state.calib_last_off_az = offAz; g_state.calib_last_aim_az = aimAz;
-        g_state.calib_last_off_el = offEl; g_state.calib_last_aim_el = aimEl;
-        g_state.calib_have = true;
+        CalibrateOffsetSigns(offAz, offEl, aimAz, aimEl);
     }
 
-    // Steer the gun by writing offset toward the locked intercept.
-    //  * Full-autoaim: snap hard, every tick.
-    //  * Magnetism (default): console-style sticky aim — proximity-ramped pull,
-    //    applied every tick and blended with the player's own WASD (no yield),
-    //    engaging out to kMagnetEngageDeg and capped per tick. See the tunables.
     const ULONGLONG nowMsA = GetTickCount64();
-    bool  steer = haveOffset && haveAim;
-    float gain  = 0.0f;
-    if (steer && !fullAuto && angle > kMagnetEngageDeg)
-        steer = false;  // target too far off-aim (or behind) — you swing onto it
-    if (steer) {
-        const int sAz = g_state.calib_sign_az ? g_state.calib_sign_az : 1;
-        const int sEl = g_state.calib_sign_el ? g_state.calib_sign_el : 1;
-        // The error in offset units: the full correction would set the
-        // offset to (current - error). errAz is the SHORTER way round in the
-        // world, which on a bounded azimuth (107PER: -135..+70) can run
-        // through the arc the gun cannot enter — the pull would then press
-        // against the engine's clamp forever. When the shorter way leaves the
-        // arc and the longer way stays inside it, take the longer way.
-        float errAzOff = sAz * errAz;
-        const float errElOff = sEl * errEl;
-        const bool azBounded = arena.limits_read && !arena.az_free;
-        const bool elBounded = arena.limits_read && !arena.el_free;
-        if (azBounded) {
-            const float want = offAz - errAzOff;
-            if (want < arena.az_lo || want > arena.az_hi) {
-                const float alt = want + (want < arena.az_lo ? 360.0f : -360.0f);
-                if (alt >= arena.az_lo && alt <= arena.az_hi) errAzOff = offAz - alt;
-            }
-        }
-        float newAz, newEl;
-        if (fullAuto) {
-            // Full lock-on (turret-only autoplay): snap hard, uncapped.
-            gain  = kAssistGainAuto;
-            newAz = offAz - errAzOff * gain;
-            newEl = offEl - errElOff * gain;
-        } else {
-            // Magnetism (shared facility, minigame_aim.h): proximity-ramped
-            // (t=0 at the engage edge, 1 dead-on), per-tick-capped pull blended
-            // on top of the player's own WASD swing.
-            const acc::minigame::MagnetParams mp{
-                kMagnetGainFar, kMagnetGainNear, kMagnetMaxStepDeg};
-            gain  = acc::minigame::MagnetGain(1.0f - angle / kMagnetEngageDeg, mp);
-            newAz = acc::minigame::MagnetStep(offAz, errAzOff, gain, mp);
-            newEl = acc::minigame::MagnetStep(offEl, errElOff, gain, mp);
-        }
-        // Keep the write inside what KeepInTunnel will allow, so the value
-        // we write is the value the gun takes. A free azimuth wraps 0..360;
-        // a bounded axis clamps to the tunnel. Before the limits are read
-        // the azimuth wraps as it always has and elevation is left alone.
-        if (azBounded) {
-            if (newAz < arena.az_lo) newAz = arena.az_lo;
-            if (newAz > arena.az_hi) newAz = arena.az_hi;
-        } else {
-            while (newAz >= 360.0f) newAz -= 360.0f;
-            while (newAz <   0.0f)  newAz += 360.0f;
-        }
-        if (elBounded) {
-            if (newEl < arena.el_lo) newEl = arena.el_lo;
-            if (newEl > arena.el_hi) newEl = arena.el_hi;
-        }
-        WriteOffset(newAz, newEl);
-    }
+    float gain = 0.0f;
+    const bool steer = SteerGun(haveOffset && haveAim, offAz, offEl, angle, errAz,
+                                errEl, fullAuto, gain);
 
     // Throttled assist/calibration log (~1/s).
     if (aimTgtDist > 0.0f && nowMsA - g_state.assist_last_log_ms >= 1000) {
@@ -796,64 +932,9 @@ void DriveSelectedPeg(const int occSlot[], const float occDist[],
                   lateral, sd, aimTgtDist, srcDist, hp, maxHp, radius, subtendDeg,
                   onTarget ? 1 : 0, elevErr, elevBand, pitchMult);
 
-    // ---- Full-autoaim makeability retarget --------------------------------
-    // Hold the lock while the shot is makeable. Once it's been unmakeable past
-    // the debounce (and no recent manual Q/E to honour), hand the lock to the
-    // nearest fighter — range dominates crossingSpeed·range, so nearest is the
-    // most makeable — instead of chasing this one through its unhittable orbit.
-    // Silent (AnnounceSelectedTarget's locator ping only) so it never spams
-    // speech. Assisted mode never auto-retargets (fullAuto gate).
     if (fullAuto && occCount > 0) {
-        const ULONGLONG nowMs  = GetTickCount64();
-        const bool      graced = (nowMs - g_state.last_manual_cycle_ms) < kManualGraceMs;
-
-        // (1) Switch-on-hit: we just damaged the locked fighter, so it's now in
-        // its invuln window — spread to the nearest OTHER fighter that isn't also
-        // mid-invuln (census is nearest-first; fall back to nearest other if all
-        // are cooling). Nearest = shortest flight, so the freshly-baselined lead
-        // is reliable. Bypasses the commit cooldown by design.
-        bool switched = false;
-        if (justLandedHit && !graced && occCount > 1) {
-            int pick = -1, fallback = -1;
-            for (int a = 0; a < occCount; ++a) {
-                if (occSlot[a] == g_state.selected_slot) continue;
-                if (fallback < 0) fallback = a;
-                const ULONGLONG lh = g_state.last_hit_ms[occSlot[a]];
-                if (nowMs - lh >= kInvulnWindowMs) { pick = a; break; }
-            }
-            if (pick < 0) pick = fallback;
-            if (pick >= 0) {
-                acclog::Write("TurretAssist",
-                              "spread (on hit) slot=%d->%d vulnerable=%d",
-                              g_state.selected_slot, occSlot[pick], (pick != fallback) ? 1 : 0);
-                AnnounceSelectedTarget(pick, occSlot, occDist, occPos, occInfo, occCount,
-                                       listener, /*speak=*/false);
-                g_state.unmakeable_since_ms = 0;
-                g_state.last_retarget_ms    = nowMs;
-                switched = true;
-            }
-        }
-
-        // (2) Unmakeable fallback: stuck on a target we can't hit at all (too far)
-        // — debounced + cooldown'd switch to nearest. Skipped if we just spread.
-        if (!switched) {
-            if (makeable) {
-                g_state.unmakeable_since_ms = 0;
-            } else {
-                if (g_state.unmakeable_since_ms == 0) g_state.unmakeable_since_ms = nowMs;
-                const bool cooling   = (nowMs - g_state.last_retarget_ms)    < kRetargetCooldownMs;
-                const bool debounced = (nowMs - g_state.unmakeable_since_ms) >= kRetargetDebounceMs;
-                if (!graced && !cooling && debounced && occSlot[0] != g_state.selected_slot) {
-                    acclog::Write("TurretAssist",
-                                  "retarget (unmakeable) slot=%d->%d leadT=%.2f crossing=%.0f range=%.0f",
-                                  g_state.selected_slot, occSlot[0], leadT, crossingSpeed, sd);
-                    AnnounceSelectedTarget(0, occSlot, occDist, occPos, occInfo, occCount,
-                                           listener, /*speak=*/false);
-                    g_state.unmakeable_since_ms = 0;
-                    g_state.last_retarget_ms    = nowMs;
-                }
-            }
-        }
+        AutoaimRetarget(justLandedHit, makeable, leadT, crossingSpeed, sd, occSlot,
+                        occDist, occPos, occInfo, occCount, listener);
     }
 }
 
