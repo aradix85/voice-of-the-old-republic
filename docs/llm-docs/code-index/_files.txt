@@ -65,6 +65,7 @@ patches/Accessibility/dialog_speech.cpp
 patches/Accessibility/dialog_speech.h
 patches/Accessibility/dialog_speech_internal.h
 patches/Accessibility/dialog_speech_marker.cpp
+patches/Accessibility/dialog_speech_marker.h
 patches/Accessibility/dialog_speech_speaker.cpp
 patches/Accessibility/discovery.cpp
 patches/Accessibility/discovery.h

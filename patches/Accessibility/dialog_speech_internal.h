@@ -1,5 +1,5 @@
-// Internal to the dialog_speech module (dialog_speech*.cpp); no other file includes
-// it. The public interface is dialog_speech.h. Here: what the files share.
+// Internal to the dialog_speech module (dialog_speech*.cpp); no other file
+// includes it. The public interface is dialog_speech.h.
 
 #pragma once
 
@@ -9,44 +9,26 @@
 #include <cstdint>
 #include <cstring>
 
-
 namespace acc::dialog_speech {
 
-// ---- Speaker resolution chain --------------------------------------------
-//
-// PRIMARY (per-line, covers overheard NPC-to-NPC):
-//   gui = ResolveGuiInGame()  (CGuiInGame*)
-//     ↓ +0x170  current_dialog_speaker (CLIENT object id)
-//   ClientToServerObjectId → ResolveServerObjectHandle → CSWSObject*
-//
-// FALLBACK (1-on-1 dialog + barks where the GUI field isn't populated):
-//   player = GetPlayerServerCreature()  (CSWSCreature*)
-//     ↓ +0x54  dialog_owner (SERVER object id)
-//   ResolveServerObjectHandle → CSWSObject*
-//
-// Either way we land on a CSWSObject*, validate kind == Creature(5), then
-// read +0xa74 stats → +0x186 appearance / +0xdc race. The GUI field is
-// authoritative for the *current line's* speaker; the player-partner field
-// only ever names the player's own conversation partner, so it's wrong in
-// multi-party / overheard scenes — hence GUI-first.
-//
-// Returns false if no link resolves, the object isn't a creature, or SEH
-// faults — caller treats false as "unknown speaker, default to speaking".
+// The speaker of a line or bark, a creature.
 struct SpeakerInfo {
-    void* speaker;          // CSWSCreature* (validated via kind=Creature)
-    int   appearance;       // appearance.2da row index, -1 if unread
-    int   raceEnum;         // RACE enum (HUMAN=6, DROID=5, 0 otherwise)
-    char  tag[32];          // CSWSObject.tag (or "" if unread)
+    void* speaker    = nullptr;  // CSWSCreature*
+    int   appearance = -1;       // appearance.2da row, -1 if unread
+    int   raceEnum   = 0;        // RACE enum (HUMAN=6, DROID=5), 0 if unread
+    char  tag[32]    = {};       // CSWSObject.tag, "" if unread
 };
 
-// Helpers shared across the files, by the file that defines them.
-
-// dialog_speech_speaker.cpp
+// dialog_speech_speaker.cpp. True when the speaker's voice-over already says
+// the subtitle, so the HumanSubtitles rule may silence it.
 bool IsSuppressibleSpeaker(const SpeakerInfo& info);
-bool ResolveDialogSpeaker(SpeakerInfo& out);
-bool ResolveBarkSpeaker(void* barkPanel, SpeakerInfo& out);
 
-// dialog_speech_marker.cpp
-bool ExtractSkillCheckMarker(const char* line, char* out, size_t outSize);
+// The current dialog line's speaker: the GUI's per-line speaker first, then
+// the player's own conversation partner. False when neither resolves to a
+// creature, which the caller treats as "unknown, keep speaking".
+bool ResolveDialogSpeaker(SpeakerInfo& out);
+
+// The owner of a bark bubble. False for an ownerless bark.
+bool ResolveBarkSpeaker(void* barkPanel, SpeakerInfo& out);
 
 }  // namespace acc::dialog_speech

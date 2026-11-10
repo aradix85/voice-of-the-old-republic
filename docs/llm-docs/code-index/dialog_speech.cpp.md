@@ -1,17 +1,18 @@
-# dialog_speech.cpp (449 lines)
+# dialog_speech.cpp (362 lines)
 
 Source: `patches/Accessibility/dialog_speech.cpp`
 
-transient (engine LYT loader use-after-free)
+Dialog narration, polled each tick (see dialog_speech.h).
 
 ## Declarations (in source order)
 
-- L32 `DialogPanelMatch FindActiveDialogPanel()`
-- L70 `void* FindBarkBubblePanel()`: Find a BarkBubble panel (independent lifecycle from main dialog).
-- L75 `int ReadListBoxRowCount(void* panel, size_t lbOffset)`: Read row count of a CSWGuiListBox at panel + offset.
-- L93 `bool ReadFirstVisibleText(void* panel, char* outBuf, size_t bufSize)`: Walk a panel's controls[] for the first child whose text resolves non-empty.
-- L129 `void TickComputerRows(void* panel)`: For the Computer dialog variant, also speak the message_listbox (terminal output) when its row count grows.
-- L179 `void TickDialogPanel()`: ---- NPC line + replies count for the main dialog panel.
-- L335 `void TickCameraFeed()`: ---- Security-camera feed — its own panel, its own lifecycle.
-- L363 `void TickBark()`: ---- BarkBubble — independent lifecycle.
-- L437 `void Tick()`
+- L34 `DialogPanelMatch FindActiveDialogPanel()`: The first dialog-kind panel in the manager's panels[].
+- L64 `int ReadListBoxRowCount(void* panel, size_t lbOffset)`
+- L80 `bool ReadFirstVisibleText(void* panel, char* outBuf, size_t bufSize)`: The text of a panel's first child that has any.
+- L109 `bool RecordTutorialLine(const char* line)`: Records a tutorial line's keyboard hint for the popup fired at the next reply break or bark close.
+- L121 `bool SilenceLine(bool suppressible, bool tutorialManaged, bool voicedLine, bool forcedSpoken)`: A line stays silent when its speaker's voice-over already says it, when the tutorial popup carries it, or when it is a curated voiced line whose speaker can't be resolved (the KOTOR 2 prologue narrator); unless it is ...
+- L134 `void TickComputerRows(void* panel)`: A computer terminal's output rows, spoken as they are appended.
+- L182 `void TickDialogPanel()`: The main dialog panel: the NPC line, a terminal's output, and R to repeat the line.
+- L278 `void TickCameraFeed()`: A console's "view camera" swaps the terminal for CSWGuiDialogComputerCamera: a live picture whose one control, LBL_RETURN, holds the engine's own "press Enter to cancel the live feed and return".
+- L303 `void TickBark()`: Bark bubbles, with their own lifecycle.
+- L352 `void Tick()`
