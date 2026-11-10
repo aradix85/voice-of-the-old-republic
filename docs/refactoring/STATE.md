@@ -197,6 +197,9 @@ chain too.
 peek_description: item descriptions split off (371fb862), lean (60556349:
 one block cursor step, item-block cache in the item file, HandleShiftArrow
 as a dispatch, journal address and offset in the engine catalog).
+menus_modsettings: glossary and list input split off (417505e0), lean
+(0fc9fb0c: persist key in the option table, shared ResetState and
+StepListCursor, Enter dispatched by row kind, no state file).
 
 Careful: never rewrite source files with PowerShell ReadAllText/WriteAllText
 (it decodes UTF-8 and writes '?' for the dashes and umlauts in comments);
@@ -255,7 +258,9 @@ prefix (menus_listbox_picker.cpp).
   EngineYawToCompass/CompassToSector/SectorString. One helper in
   engine_compass (bearing of a vector, and its compass word). kRadToDeg is
   defined in many files: one constant with it.
-- Next file: menus_modsettings.cpp (828), menus_chain_input.cpp (824), hotkeys.cpp
+- Goal (Anouk, 2026-11-10): split every file above 600 lines where that is
+  possible; files of 500-600 lines only when a split clearly helps.
+- Next file: menus_chain_input.cpp (824), hotkeys.cpp
   (821), engine_input.cpp (817), minigame_swoop_audio_accelpad.cpp (816),
   interact_dispatch.cpp (778); 24 files of 600-800 lines and 17 of
   500-600 after that (sizes of 2026-11-10 18:05, strings*.cpp excepted).
