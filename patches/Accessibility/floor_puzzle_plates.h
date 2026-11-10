@@ -26,10 +26,22 @@ struct Plate {
     float    minX = 0.0f, maxX = 0.0f, minY = 0.0f, maxY = 0.0f;
 };
 
+// Fills center (the vertex mean) and the axis-aligned span from poly.
+void ComputeCenterAndSpan(Plate& p);
+
 bool PointInPoly(const Plate& p, float x, float y);
 
 // 0 when inside; else the closest XY distance to any polygon edge.
 float DistToPlate(const Plate& p, float x, float y);
+
+// Signed metres from a point to the plate's span on each axis: positive
+// when the plate lies north / east, 0 on an axis where the point is
+// within the span.
+struct SpanOffset {
+    float north;
+    float east;
+};
+SpanOffset OffsetToSpan(const Plate& p, const Vector& pos);
 
 // Trigger tag -> slot. Tags authored as kFloorPanel01..09 / kPanelReset;
 // compare case-insensitively.

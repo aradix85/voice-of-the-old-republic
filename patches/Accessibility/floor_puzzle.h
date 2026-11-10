@@ -4,7 +4,7 @@
 // The room holds a 3x3 grid of floor triggers (tags kFloorPanel01..09,
 // row-major from the north-west corner) plus a reset trigger
 // (kPanelReset) south of the grid. Each plate's OnEnter script
-// (k_punk_floor01..09, decompiled 2026-07-16) toggles a lit/dark state
+// (k_punk_floor01..09, decompiled) toggles a lit/dark state
 // on ITSELF plus its orthogonal neighbours — a classic lights-out
 // puzzle; all nine lit at once opens the massive door (unk44_massdoor).
 // The lit state lives as NWScript local boolean index 10 on the visible

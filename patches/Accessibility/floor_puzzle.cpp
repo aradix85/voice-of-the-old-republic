@@ -8,17 +8,16 @@
 #include <cstring>
 #include <string>
 
+#include "engine_area.h"
+#include "engine_keymap.h"   // GameActionVk: the game's live solo-mode bind
+#include "engine_player.h"
 #include "floor_puzzle_plates.h"
-#include "engine_area.h"     // AreaObjectIterator, GetObjectKind/Tag, GetTriggerGeometry, GetObjectLocalBoolean, ResolveServerObjectHandle, GetCurrentArea, GetCurrentAreaResName
-#include "engine_keymap.h"   // GameActionVk — the game's live solo-mode bind
-#include "engine_player.h"   // GetPlayerPosition, GetPlayerYawDegrees, GetPartyMembers, GetSoloMode
-#include "hotkeys.h"         // VkLabel
+#include "hotkeys.h"
 #include "log.h"
 #include "speech.h"
 #include "strfmt.h"
 #include "strings.h"
-#include "view_mode.h"       // IsActive, TryGetCursorPosition — cursor drives
-                             // the distance/entry stream while view mode is on
+#include "view_mode.h"
 
 namespace acc::floor_puzzle {
 
@@ -46,20 +45,26 @@ constexpr int kLitBooleanIndex = 10;
 constexpr int kSoloModeActionId = 207;
 constexpr int kSoloModeDefaultVk = 'V';
 
-// Nearest-plate announcements: re-announce on identity change, but not
-// faster than this (walking a lane past the grid changes the nearest
-// plate every ~2m; unthrottled that is chatter, throttled it reads as a
-// position stream).
+// Nearest-plate announcements: re-announce when the line changes, but not
+// faster than this (walking a lane past the grid changes it every ~2m;
+// unthrottled that is chatter, throttled it reads as a position stream).
 constexpr DWORD kNearestMinGapMs = 700;
 
 // One-shot intro fires when the leader first comes this close to the
 // grid centre (the room is ~15m long; 12m covers "walked in").
 constexpr float kIntroRadiusM = 12.0f;
+constexpr int   kCenterPlate  = 4;   // FloorPanel05
 
 // Board-delta announcements within this window of the leader entering a
 // plate are attributed to that step; outside it they were caused by a
 // follower walking the grid.
 constexpr DWORD kLeaderToggleWindowMs = 600;
+
+// Entry announcements are HELD up to this long to merge with the toggle
+// delta into ONE utterance: the plate script usually runs a poll after we
+// see the position change, and speaking the entry at once let the delta
+// line interrupt it mid-word one tick later.
+constexpr DWORD kEntryMergeWindowMs = 500;
 
 // Grid-position word per plate index (tag number - 1). Rows run
 // north->south, columns west->east: kFloorPanel01 is the north-west
@@ -70,46 +75,28 @@ constexpr Id kPlateWord[kPlateCount] = {
     Id::DirSouthwest, Id::DirSouth,  Id::DirSoutheast,
 };
 
-Plate g_plates[kTrackCount];
-bool  g_cacheReady = false;
+// Per-visit state, reset whenever the area changes.
+struct Visit {
+    Plate plates[kTrackCount];
+    bool  cacheReady = false;
+    bool  lit[kPlateCount] = {};
+    bool  haveLit = false;
+    int   curPlate = -1;            // -1 none, 0..8 plate, 9 reset
+    std::string lastNearestLine;    // last spoken off-plate announcement
+    DWORD nearestSpokenAt = 0;
+    DWORD lastEntryAt = 0;          // leader stepped onto a plate at this tick
+    int   pendingEntry = -1;        // held entry announcement; -1 none
+    DWORD pendingEntryAt = 0;
+    bool  introSpoken = false;
+    bool  solvedQuiet = false;
+};
 
+Visit g_visit;
 void* g_area         = nullptr;
 bool  g_isPuzzleArea = false;
+DWORD g_lastScan     = 0;
 
-bool  g_lit[kPlateCount] = {};
-bool  g_haveLit    = false;
-int   g_curPlate   = -1;     // -1 none, 0..8 plate, 9 reset
-std::string g_lastNearestLine;   // last spoken off-plate announcement
-DWORD g_nearestSpokenAt = 0;
-DWORD g_lastEntryAt = 0;     // leader stepped onto a plate (0..8) at this tick
-
-// Entry announcements are HELD briefly to be merged with the toggle
-// delta into ONE utterance: the plate script usually runs a poll after
-// we see the position change, and speaking the entry immediately meant
-// the delta line interrupted it mid-word one tick later (both interrupt).
-// -1 = nothing pending.
-int   g_pendingEntry   = -1;
-DWORD g_pendingEntryAt = 0;
-constexpr DWORD kEntryMergeWindowMs = 500;
-bool  g_introSpoken    = false;
-bool  g_solvedQuiet    = false;
-DWORD g_lastScan = 0;
-
-void ResetAreaState() {
-    for (auto& p : g_plates) p = Plate{};
-    g_cacheReady = false;
-    g_haveLit    = false;
-    g_curPlate   = -1;
-    g_lastNearestLine.clear();
-    g_nearestSpokenAt = 0;
-    g_lastEntryAt = 0;
-    g_pendingEntry   = -1;
-    g_pendingEntryAt = 0;
-    g_introSpoken    = false;
-    g_solvedQuiet    = false;
-}
-
-// ---- Naming -----------------------------------------------------------------
+// ---- Naming and phrases -----------------------------------------------------
 
 // Short name: the bare direction word ("North-West", "Center") used inside
 // delta lists; kResetIndex gets the full reset-plate noun.
@@ -125,199 +112,160 @@ std::string FullName(int idx) {
     return acc::strfmt::Format(Get(Id::FmtPlateName), ShortName(idx));
 }
 
-// ---- Geometry ----------------------------------------------------------------
-
-// World-cardinal offsets to the plate's AREA, e.g. "2 metres north" —
-// per user direction the puzzle is walked with cardinal stutter-steps
-// (align north once, then forward/back + strafe), and the player aims
-// at the plate as a whole, not its centre point. An axis is spoken only
-// when the player is OUTSIDE the plate's span on that axis, measured to
-// the near edge of the span. Standing anywhere in the gap beside a
-// plate therefore yields a single word ("1 metre north" = one step
-// north lands on it); the earlier centre-based version reported a
-// diagonal ("1 metre north, 1 metre east") from the same spot, which
-// read as two moves where one was needed (2026-07-16 session review).
-// Empty when inside both spans (i.e. on the plate).
+// World-cardinal steps to the plate's AREA, e.g. "2 metres north": the
+// puzzle is walked with cardinal stutter-steps (align north once, then
+// forward/back + strafe) toward the plate as a whole, not its centre. An
+// axis is spoken only when the player is outside the plate's span on it,
+// so standing in the gap beside a plate gives one word ("1 metre north" =
+// one step north lands on it). Empty on the plate.
 std::string AxisPhrase(const Vector& playerPos, const Plate& p) {
-    const char* fmt = Get(Id::FmtRouteSegment);
+    const SpanOffset off = OffsetToSpan(p, playerPos);
     std::string out;
-    float dN = 0.0f;
-    if (playerPos.y < p.minY)      dN = p.minY - playerPos.y;  // go north
-    else if (playerPos.y > p.maxY) dN = p.maxY - playerPos.y;  // go south
-    float dE = 0.0f;
-    if (playerPos.x < p.minX)      dE = p.minX - playerPos.x;  // go east
-    else if (playerPos.x > p.maxX) dE = p.maxX - playerPos.x;  // go west
-    if (dN != 0.0f) {
-        int m = static_cast<int>(std::fabs(dN) + 0.5f);
-        if (m < 1) m = 1;
-        out = acc::strfmt::Format(fmt, m,
-                                  Get(dN > 0 ? Id::DirNorth : Id::DirSouth));
-    }
-    if (dE != 0.0f) {
-        int m = static_cast<int>(std::fabs(dE) + 0.5f);
-        if (m < 1) m = 1;
+    auto add = [&out](float d, Id plus, Id minus) {
+        if (d == 0.0f) return;
+        int m = static_cast<int>(std::fabs(d) + 0.5f);
         if (!out.empty()) out += ", ";
-        out += acc::strfmt::Format(fmt, m,
-                                   Get(dE > 0 ? Id::DirEast : Id::DirWest));
-    }
+        out += acc::strfmt::Format(Get(Id::FmtRouteSegment), m < 1 ? 1 : m,
+                                   Get(d > 0 ? plus : minus));
+    };
+    add(off.north, Id::DirNorth, Id::DirSouth);
+    add(off.east, Id::DirEast, Id::DirWest);
     return out;
 }
 
-// ---- Cache -------------------------------------------------------------------
-
-bool BuildCache(void* area) {
-    int trigFound = 0, plcFound = 0;
-    acc::engine::AreaObjectIterator iter(area);
-    void* obj = nullptr;
-    while ((obj = iter.Next()) != nullptr) {
-        int kind = acc::engine::GetObjectKind(obj);
-        char tag[64];
-        if (kind == static_cast<int>(acc::engine::GameObjectKind::Trigger)) {
-            if (!acc::engine::GetObjectTag(obj, tag, sizeof(tag))) continue;
-            int slot = TrigSlotForTag(tag);
-            if (slot < 0) continue;
-            Plate& p = g_plates[slot];
-            p.vertCount = acc::engine::GetTriggerGeometry(obj, p.poly,
-                                                          kMaxPolyVerts);
-            if (p.vertCount < 3) continue;
-            // The GIT authors trigger polygons as position + local
-            // offsets; the engine normally translates to world on load.
-            // Defend against a local-space read: room coordinates here
-            // are all > 60, local offsets all within a few metres of 0.
-            if (std::fabs(p.poly[0].x) < 30.0f &&
-                std::fabs(p.poly[0].y) < 30.0f) {
-                Vector base{};
-                if (acc::engine::GetObjectPosition(obj, base)) {
-                    for (int i = 0; i < p.vertCount; ++i) {
-                        p.poly[i].x += base.x;
-                        p.poly[i].y += base.y;
-                        p.poly[i].z += base.z;
-                    }
-                    acclog::Write("FloorPuzzle",
-                                  "trigger %s geometry was local-space; "
-                                  "translated by (%.1f,%.1f)",
-                                  tag, base.x, base.y);
-                }
-            }
-            p.trigHandle = acc::engine::GetObjectHandle(obj);
-            p.center = {0.0f, 0.0f, 0.0f};
-            for (int i = 0; i < p.vertCount; ++i) {
-                p.center.x += p.poly[i].x;
-                p.center.y += p.poly[i].y;
-                p.center.z += p.poly[i].z;
-            }
-            p.center.x /= p.vertCount;
-            p.center.y /= p.vertCount;
-            p.center.z /= p.vertCount;
-            p.minX = p.maxX = p.poly[0].x;
-            p.minY = p.maxY = p.poly[0].y;
-            for (int i = 1; i < p.vertCount; ++i) {
-                if (p.poly[i].x < p.minX) p.minX = p.poly[i].x;
-                if (p.poly[i].x > p.maxX) p.maxX = p.poly[i].x;
-                if (p.poly[i].y < p.minY) p.minY = p.poly[i].y;
-                if (p.poly[i].y > p.maxY) p.maxY = p.poly[i].y;
-            }
-            ++trigFound;
-        } else if (kind ==
-                   static_cast<int>(acc::engine::GameObjectKind::Placeable)) {
-            if (!acc::engine::GetObjectTag(obj, tag, sizeof(tag))) continue;
-            int slot = PlcSlotForTag(tag);
-            if (slot < 0) continue;
-            g_plates[slot].plcHandle = acc::engine::GetObjectHandle(obj);
-            ++plcFound;
-        }
-    }
-    if (trigFound < kTrackCount || plcFound < kPlateCount) {
-        acclog::Write("FloorPuzzle",
-                      "cache incomplete: triggers=%d/10 placeables=%d/9 — "
-                      "retrying next scan",
-                      trigFound, plcFound);
-        return false;
-    }
-    // Geometry sanity line: the NW plate should sit near (71.1, 92.3)
-    // world if the engine stores trigger polygons world-space (GIT
-    // authoring says local + position; the engine translates on load).
-    acclog::Write("FloorPuzzle",
-                  "cache ready: plate01 verts=%d center=(%.1f,%.1f) "
-                  "reset center=(%.1f,%.1f)",
-                  g_plates[0].vertCount, g_plates[0].center.x,
-                  g_plates[0].center.y, g_plates[kResetIndex].center.x,
-                  g_plates[kResetIndex].center.y);
-    return true;
-}
-
-// ---- Announce composition ------------------------------------------------
-
-void SpeakIntro(const Vector& playerPos) {
-    if (DistXYSq(playerPos, g_plates[4].center) > kIntroRadiusM * kIntroRadiusM) return;
-    g_introSpoken = true;
-    std::string line(Get(Id::FloorPuzzleIntro));
-    // On-demand read hint — name the actual key bound to the board readout
-    // (DialogRepeatLine, default R), so a rebind is reflected.
-    line += " ";
-    line += acc::strfmt::Format(
-        Get(Id::FmtFloorReadHint),
-        acc::hotkeys::Describe(acc::hotkeys::Action::DialogRepeatLine));
-    // Point the player at the in-story clue to the solution.
-    line += " ";
-    line += Get(Id::FloorPuzzleStoryHint);
-    uint32_t followers[12];
-    int followerCount = acc::engine::GetPartyMembers(
-        followers, static_cast<int>(sizeof(followers) / sizeof(followers[0])));
-    if (followerCount > 0 && !acc::engine::GetSoloMode()) {
-        int vk = acc::engine_keymap::GameActionVk(kSoloModeActionId);
-        if (vk == 0) vk = kSoloModeDefaultVk;
-        line += " ";
-        line += acc::strfmt::Format(Get(Id::FmtFloorSoloHint),
-                                    acc::hotkeys::VkLabel(vk));
-    }
-    acc::speech::Speak(line.c_str(), /*interrupt=*/true);
-    acclog::Write("FloorPuzzle", "intro spoken (followers=%d solo=%d)",
-                  followerCount, acc::engine::GetSoloMode() ? 1 : 0);
+std::string WithLitCount(std::string list, int litCount) {
+    if (!list.empty()) list += ". ";
+    return list + acc::strfmt::Format(Get(Id::FmtPlateLitCount), litCount);
 }
 
 // Itemized flip list, phrased as the TRANSITION each plate just made
 // ("North-West lights up, West goes dark") + running lit count.
 std::string DeltaText(const bool* flipped, const bool* lit, int litCount) {
+    if (litCount == 0) return Get(Id::PlatesAllDark);
     std::string out;
-    if (litCount == 0) {
-        out = Get(Id::PlatesAllDark);
-        return out;
-    }
     for (int i = 0; i < kPlateCount; ++i) {
         if (!flipped[i]) continue;
         if (!out.empty()) out += ", ";
         out += acc::strfmt::Format(
             Get(lit[i] ? Id::FmtPlateLit : Id::FmtPlateDark), ShortName(i));
     }
-    if (!out.empty()) out += ". ";
-    out += acc::strfmt::Format(Get(Id::FmtPlateLitCount), litCount);
-    return out;
+    return WithLitCount(out, litCount);
 }
 
-// Live board summary spoken on demand (R key). Unlike DeltaText this
-// ignores flips — it names every lit plate plus the count so the player
-// can re-orient at any point ("North-West, Center, South-East. 3 of 9
-// lit."). Reuses the delta strings; nothing lit -> "all dark".
+// Live board summary spoken on demand (R key): every lit plate plus the
+// count, so the player can re-orient at any point ("North-West, Center,
+// South-East. 3 of 9 lit."); nothing lit -> "all dark".
 std::string BoardStateText(const bool* lit, int litCount) {
-    if (litCount == 0) return std::string(Get(Id::PlatesAllDark));
+    if (litCount == 0) return Get(Id::PlatesAllDark);
     std::string out;
     for (int i = 0; i < kPlateCount; ++i) {
         if (!lit[i]) continue;
         if (!out.empty()) out += ", ";
         out += ShortName(i);
     }
-    out += ". ";
-    out += acc::strfmt::Format(Get(Id::FmtPlateLitCount), litCount);
-    return out;
+    return WithLitCount(out, litCount);
+}
+
+// ---- Cache -------------------------------------------------------------------
+
+// The GIT authors trigger polygons as position + local offsets and the
+// engine translates them to world on load. Defend against a local-space
+// read: room coordinates here are all > 60, local offsets all within a
+// few metres of 0.
+void ToWorldIfLocal(void* obj, const char* tag, Plate& p) {
+    if (std::fabs(p.poly[0].x) >= 30.0f || std::fabs(p.poly[0].y) >= 30.0f) {
+        return;
+    }
+    Vector base{};
+    if (!acc::engine::GetObjectPosition(obj, base)) return;
+    for (int i = 0; i < p.vertCount; ++i) {
+        p.poly[i].x += base.x;
+        p.poly[i].y += base.y;
+        p.poly[i].z += base.z;
+    }
+    acclog::Write("FloorPuzzle",
+                  "trigger %s geometry was local-space; translated by (%.1f,%.1f)",
+                  tag, base.x, base.y);
+}
+
+// True when the trigger is a puzzle plate with usable geometry.
+bool AddTriggerPlate(void* obj, const char* tag) {
+    int slot = TrigSlotForTag(tag);
+    if (slot < 0) return false;
+    Plate& p = g_visit.plates[slot];
+    p.vertCount = acc::engine::GetTriggerGeometry(obj, p.poly, kMaxPolyVerts);
+    if (p.vertCount < 3) return false;
+    ToWorldIfLocal(obj, tag, p);
+    p.trigHandle = acc::engine::GetObjectHandle(obj);
+    ComputeCenterAndSpan(p);
+    return true;
+}
+
+// True when the placeable is a plate's lit-state carrier.
+bool AddPlatePlaceable(void* obj, const char* tag) {
+    int slot = PlcSlotForTag(tag);
+    if (slot < 0) return false;
+    g_visit.plates[slot].plcHandle = acc::engine::GetObjectHandle(obj);
+    return true;
+}
+
+bool BuildCache(void* area) {
+    using acc::engine::GameObjectKind;
+    int trigFound = 0, plcFound = 0;
+    acc::engine::AreaObjectIterator iter(area);
+    void* obj = nullptr;
+    while ((obj = iter.Next()) != nullptr) {
+        int kind = acc::engine::GetObjectKind(obj);
+        bool trigger = kind == static_cast<int>(GameObjectKind::Trigger);
+        if (!trigger && kind != static_cast<int>(GameObjectKind::Placeable)) {
+            continue;
+        }
+        char tag[64];
+        if (!acc::engine::GetObjectTag(obj, tag, sizeof(tag))) continue;
+        if (trigger) {
+            trigFound += AddTriggerPlate(obj, tag) ? 1 : 0;
+        } else {
+            plcFound += AddPlatePlaceable(obj, tag) ? 1 : 0;
+        }
+    }
+    if (trigFound < kTrackCount || plcFound < kPlateCount) {
+        acclog::Write("FloorPuzzle",
+                      "cache incomplete: triggers=%d/%d placeables=%d/%d — "
+                      "retrying next scan",
+                      trigFound, kTrackCount, plcFound, kPlateCount);
+        return false;
+    }
+    // Geometry sanity line: the NW plate sits near (71.1, 92.3) world.
+    const Plate* plates = g_visit.plates;
+    acclog::Write("FloorPuzzle",
+                  "cache ready: plate01 verts=%d center=(%.1f,%.1f) "
+                  "reset center=(%.1f,%.1f)",
+                  plates[0].vertCount, plates[0].center.x, plates[0].center.y,
+                  plates[kResetIndex].center.x, plates[kResetIndex].center.y);
+    return true;
+}
+
+// ---- Live reads --------------------------------------------------------------
+
+// The live lit/dark state off the plate placeables. Returns the lit count;
+// fills lit[0..kPlateCount). Cheap enough for the per-frame R path.
+int ReadLiveBoard(bool* lit) {
+    int litCount = 0;
+    for (int i = 0; i < kPlateCount; ++i) {
+        void* plc = acc::engine::ResolveServerObjectHandle(
+            g_visit.plates[i].plcHandle);
+        lit[i] = plc &&
+                 acc::engine::GetObjectLocalBoolean(plc, kLitBooleanIndex);
+        if (lit[i]) ++litCount;
+    }
+    return litCount;
 }
 
 // Board-navigation position: the view-mode virtual cursor when view mode
-// is active, otherwise the real party leader. In view mode the leader is
-// frozen in place, so without this the distance/entry stream would never
-// move; feeding it the cursor lets "Stepped on Plate X" and the nearest-
-// plate offsets track where the player is scanning. The cursor never steps
-// on a plate, so no lit/dark toggle — and thus no delta — can fire off it.
+// is active, otherwise the party leader. In view mode the leader is
+// frozen, so the cursor lets "Stepped on Plate X" and the nearest-plate
+// offsets track where the player is scanning. The cursor never steps on a
+// plate, so no lit/dark toggle (and thus no delta) can fire off it.
 bool GetNavPosition(Vector& out) {
     if (acc::view_mode::IsActive() &&
         acc::view_mode::TryGetCursorPosition(out)) {
@@ -326,33 +274,15 @@ bool GetNavPosition(Vector& out) {
     return acc::engine::GetPlayerPosition(out);
 }
 
-// Read the live lit/dark state off the plate placeables. Returns the lit
-// count; fills lit[0..kPlateCount). Cheap enough to call every frame (the
-// R board-read path does, so the one-tick key edge is never missed).
-int ReadLiveBoard(bool* lit) {
-    int litCount = 0;
-    for (int i = 0; i < kPlateCount; ++i) {
-        void* plc = acc::engine::ResolveServerObjectHandle(
-            g_plates[i].plcHandle);
-        lit[i] = plc &&
-                 acc::engine::GetObjectLocalBoolean(plc, kLitBooleanIndex);
-        if (lit[i]) ++litCount;
-    }
-    return litCount;
-}
-
 // ---- Tick steps ------------------------------------------------------------
 
-// On-demand board read (R) — every frame, ABOVE the scan throttle.
-// The rising edge from Pressed() lives for exactly one OnUpdate tick
-// (~16ms). The 150ms scan throttle early-returns on ~8 of every 9
-// frames, so checking R inside the throttled body dropped most presses
-// (the "R often does nothing" report). Sample it here, unthrottled, and
-// read the live board on demand. In the puzzle room bare R reports the
-// board rather than a dialog line (no dialog panel here); input_pipeline
-// also swallows the engine's native R so it can't ALSO interact.
+// On-demand board read (R), every frame, ABOVE the scan throttle: the
+// rising edge from Pressed() lives for one OnUpdate tick and the throttle
+// skips most frames. In the puzzle room bare R reports the board (no
+// dialog panel here); input_pipeline swallows the engine's native R so it
+// can't ALSO interact.
 void MaybeReadBoard() {
-    if (!g_isPuzzleArea || !g_cacheReady ||
+    if (!IsActive() ||
         !acc::hotkeys::Pressed(acc::hotkeys::Action::DialogRepeatLine)) {
         return;
     }
@@ -370,21 +300,19 @@ bool TrackArea() {
     void* area = acc::engine::GetCurrentArea();
     if (area != g_area) {
         g_area = area;
-        ResetAreaState();
-        g_isPuzzleArea = false;
-        if (area) {
-            char resname[64];
-            if (acc::engine::GetCurrentAreaResName(resname, sizeof(resname)) &&
-                _stricmp(resname, kPuzzleModule) == 0) {
-                g_isPuzzleArea = true;
-                acclog::Write("FloorPuzzle", "puzzle module entered (%s)",
-                              resname);
-            }
+        g_visit = Visit{};
+        char resname[64];
+        g_isPuzzleArea =
+            area &&
+            acc::engine::GetCurrentAreaResName(resname, sizeof(resname)) &&
+            _stricmp(resname, kPuzzleModule) == 0;
+        if (g_isPuzzleArea) {
+            acclog::Write("FloorPuzzle", "puzzle module entered (%s)", resname);
         }
     }
-    if (!area || !g_isPuzzleArea) return false;
-    if (!g_cacheReady) g_cacheReady = BuildCache(area);
-    return g_cacheReady;
+    if (!g_isPuzzleArea) return false;
+    if (!g_visit.cacheReady) g_visit.cacheReady = BuildCache(area);
+    return g_visit.cacheReady;
 }
 
 // One scan of the board: the live lit state and the plates that flipped
@@ -399,9 +327,9 @@ struct BoardScan {
 BoardScan ReadBoardScan() {
     BoardScan b{};
     b.litCount = ReadLiveBoard(b.lit);
-    if (g_haveLit) {
+    if (g_visit.haveLit) {
         for (int i = 0; i < kPlateCount; ++i) {
-            b.flipped[i] = (b.lit[i] != g_lit[i]);
+            b.flipped[i] = (b.lit[i] != g_visit.lit[i]);
             b.anyFlip |= b.flipped[i];
         }
     } else {
@@ -409,24 +337,24 @@ BoardScan ReadBoardScan() {
         // the puzzle was solved on an earlier visit — stay quiet without
         // announcing success again.
         if (b.litCount == kPlateCount) {
-            g_solvedQuiet = true;
+            g_visit.solvedQuiet = true;
             acclog::Write("FloorPuzzle",
                           "board already all-lit on entry — quiet mode");
         }
-        g_haveLit = true;
+        g_visit.haveLit = true;
     }
-    std::memcpy(g_lit, b.lit, sizeof(g_lit));
+    std::memcpy(g_visit.lit, b.lit, sizeof(g_visit.lit));
     return b;
 }
 
 // Speaks the solve once; true while the module stays quiet after it.
 bool QuietAfterSolve(const BoardScan& b) {
-    if (!g_solvedQuiet && b.litCount == kPlateCount && b.anyFlip) {
-        g_solvedQuiet = true;
+    if (!g_visit.solvedQuiet && b.litCount == kPlateCount && b.anyFlip) {
+        g_visit.solvedQuiet = true;
         acc::speech::Speak(Get(Id::FloorPuzzleSolved), /*interrupt=*/true);
         acclog::Write("FloorPuzzle", "solved — module going quiet");
     }
-    return g_solvedQuiet;
+    return g_visit.solvedQuiet;
 }
 
 // Where the player is this scan and the plate they stand on.
@@ -437,25 +365,58 @@ struct NavScan {
     bool   entered;   // stepped onto a plate this scan
 };
 
-// Leader while walking; the virtual cursor while view mode (B) is
-// active, so the distance/entry stream follows what the player scans.
 NavScan TrackNavPlate(DWORD now) {
     NavScan n{};
     n.plate = -1;
     n.havePos = GetNavPosition(n.pos);
     if (!n.havePos) return n;
     for (int i = 0; i < kTrackCount; ++i) {
-        if (PointInPoly(g_plates[i], n.pos.x, n.pos.y)) { n.plate = i; break; }
+        if (PointInPoly(g_visit.plates[i], n.pos.x, n.pos.y)) {
+            n.plate = i;
+            break;
+        }
     }
-    n.entered = n.plate != g_curPlate && n.plate >= 0;
+    n.entered = n.plate != g_visit.curPlate && n.plate >= 0;
     // Reset counts too: its script darkens the board, and that delta
     // must not read as a follower toggle when it lands a poll later.
-    if (n.entered) g_lastEntryAt = now;
+    if (n.entered) g_visit.lastEntryAt = now;
     // Stepping off into open floor: drop the nearest anchor so the
     // off-plate stream re-announces the closest plate once.
-    if (n.plate < 0 && g_curPlate >= 0) g_lastNearestLine.clear();
-    g_curPlate = n.plate;
+    if (n.plate < 0 && g_visit.curPlate >= 0) g_visit.lastNearestLine.clear();
+    g_visit.curPlate = n.plate;
     return n;
+}
+
+// One-shot orientation line near the grid, with the board-read key, the
+// in-story clue and, when followers would toggle plates too, the solo-mode
+// key. True when spoken.
+bool MaybeSpeakIntro(const Vector& playerPos) {
+    const Vector& centre = g_visit.plates[kCenterPlate].center;
+    if (DistXYSq(playerPos, centre) > kIntroRadiusM * kIntroRadiusM) {
+        return false;
+    }
+    g_visit.introSpoken = true;
+    std::string line(Get(Id::FloorPuzzleIntro));
+    line += " ";
+    line += acc::strfmt::Format(
+        Get(Id::FmtFloorReadHint),
+        acc::hotkeys::Describe(acc::hotkeys::Action::DialogRepeatLine));
+    line += " ";
+    line += Get(Id::FloorPuzzleStoryHint);
+    uint32_t followers[12];
+    int followerCount = acc::engine::GetPartyMembers(
+        followers, static_cast<int>(sizeof(followers) / sizeof(followers[0])));
+    if (followerCount > 0 && !acc::engine::GetSoloMode()) {
+        int vk = acc::engine_keymap::GameActionVk(kSoloModeActionId);
+        if (vk == 0) vk = kSoloModeDefaultVk;
+        line += " ";
+        line += acc::strfmt::Format(Get(Id::FmtFloorSoloHint),
+                                    acc::hotkeys::VkLabel(vk));
+    }
+    acc::speech::Speak(line.c_str(), /*interrupt=*/true);
+    acclog::Write("FloorPuzzle", "intro spoken (followers=%d solo=%d)",
+                  followerCount, acc::engine::GetSoloMode() ? 1 : 0);
+    return true;
 }
 
 // The reset plate gets no explanatory sentence: its name plus the
@@ -469,39 +430,37 @@ std::string EntryText(int plate) {
 bool AnnounceEntryOrDelta(const BoardScan& b, const NavScan& n, DWORD now) {
     // A flip within the attribution window of the leader's own step is
     // "their" toggle; a flip outside it means a follower walked the grid.
-    bool leaderCaused =
-        (now - g_lastEntryAt) <= kLeaderToggleWindowMs && g_lastEntryAt != 0;
+    bool leaderCaused = g_visit.lastEntryAt != 0 &&
+                        (now - g_visit.lastEntryAt) <= kLeaderToggleWindowMs;
 
     if (n.entered) {
-        if (g_pendingEntry >= 0) {
+        if (g_visit.pendingEntry >= 0) {
             // The previous entry never saw its delta (fast crossing) —
             // speak it before the new entry claims the merge slot.
-            std::string old = EntryText(g_pendingEntry);
+            std::string old = EntryText(g_visit.pendingEntry);
             acc::speech::Speak(old.c_str(), /*interrupt=*/true);
             acclog::Write("FloorPuzzle", "announce: [%s] (pending flush)",
                           old.c_str());
         }
-        g_pendingEntry   = n.plate;
-        g_pendingEntryAt = now;
+        g_visit.pendingEntry   = n.plate;
+        g_visit.pendingEntryAt = now;
     }
 
     std::string line;
     if (b.anyFlip) {
-        if (g_pendingEntry >= 0) {
-            line = EntryText(g_pendingEntry);
-            line += ". ";
-            g_pendingEntry = -1;
+        if (g_visit.pendingEntry >= 0) {
+            line = EntryText(g_visit.pendingEntry) + ". ";
+            g_visit.pendingEntry = -1;
         } else if (!leaderCaused) {
-            line = Get(Id::FloorPartyToggled);
-            line += ": ";
+            line = std::string(Get(Id::FloorPartyToggled)) + ": ";
         }
         line += DeltaText(b.flipped, b.lit, b.litCount);
-    } else if (g_pendingEntry >= 0 &&
-               (now - g_pendingEntryAt) >= kEntryMergeWindowMs) {
+    } else if (g_visit.pendingEntry >= 0 &&
+               (now - g_visit.pendingEntryAt) >= kEntryMergeWindowMs) {
         // No toggle followed (reset plate on an already-dark board, or a
         // timing miss) — the entry still gets spoken, just alone.
-        line = EntryText(g_pendingEntry);
-        g_pendingEntry = -1;
+        line = EntryText(g_visit.pendingEntry);
+        g_visit.pendingEntry = -1;
     }
     if (line.empty()) return false;
     acc::speech::Speak(line.c_str(), /*interrupt=*/true);
@@ -511,48 +470,42 @@ bool AnnounceEntryOrDelta(const BoardScan& b, const NavScan& n, DWORD now) {
     return true;
 }
 
-// Off-plate: nearest-plate stream.
-// No separate close-range warning: solve-run data (2026-07-16,
-// patch-20260716-204901.log) showed 12 of 19 warnings were redundant
-// with a deliberate step or fired after leaving a plate; the stream's
+// Off-plate stream: the nearest plate and the cardinal steps to it.
+// Re-announces whenever the spoken line changes, not just the nearest
+// identity (identity-only gating left walking toward one plate silent),
+// and stays quiet while standing still. No separate close-range warning:
+// it mostly fired redundantly with a deliberate step, and the stream's
 // 1-metre floor covers the rest.
 void AnnounceNearest(const Vector& pos, DWORD now) {
     int   nearest = -1;
     float nearestDist = 1e9f;
     for (int i = 0; i < kTrackCount; ++i) {
-        float d = DistToPlate(g_plates[i], pos.x, pos.y);
+        float d = DistToPlate(g_visit.plates[i], pos.x, pos.y);
         if (d < nearestDist) { nearestDist = d; nearest = i; }
     }
     if (nearest < 0) return;
 
-    // Re-announce whenever the SPOKEN CONTENT changes, not just the
-    // nearest identity: with identity-only gating, walking several steps
-    // toward the same plate was silent (23s gaps in the 2026-07-16
-    // session review). Content-change gating speaks each step that
-    // changes the situation and stays quiet when standing still.
     std::string say = FullName(nearest);
-    std::string axes = AxisPhrase(pos, g_plates[nearest]);
-    if (!axes.empty()) {
-        say += ", ";
-        say += axes;
+    std::string axes = AxisPhrase(pos, g_visit.plates[nearest]);
+    if (!axes.empty()) say += ", " + axes;
+    if (say == g_visit.lastNearestLine ||
+        (now - g_visit.nearestSpokenAt) < kNearestMinGapMs) {
+        return;
     }
-    if (say != g_lastNearestLine &&
-        (now - g_nearestSpokenAt) >= kNearestMinGapMs) {
-        g_lastNearestLine = say;
-        g_nearestSpokenAt = now;
-        acc::speech::Speak(say.c_str(), /*interrupt=*/true);
-        acclog::Write("FloorPuzzle", "nearest: [%s] dist=%.2f", say.c_str(),
-                      nearestDist);
-    }
+    g_visit.lastNearestLine = say;
+    g_visit.nearestSpokenAt = now;
+    acc::speech::Speak(say.c_str(), /*interrupt=*/true);
+    acclog::Write("FloorPuzzle", "nearest: [%s] dist=%.2f", say.c_str(),
+                  nearestDist);
 }
 
 }  // namespace
 
-bool IsActive() { return g_isPuzzleArea && g_cacheReady; }
+bool IsActive() { return g_isPuzzleArea && g_visit.cacheReady; }
 
 bool IsPuzzlePlateTrigger(uint32_t handle) {
-    if (!g_isPuzzleArea || !g_cacheReady || handle == 0) return false;
-    for (const Plate& p : g_plates) {
+    if (!IsActive() || handle == 0) return false;
+    for (const Plate& p : g_visit.plates) {
         if (p.trigHandle == handle) return true;
     }
     return false;
@@ -569,14 +522,9 @@ void Tick() {
     BoardScan board = ReadBoardScan();
     if (QuietAfterSolve(board)) return;
     NavScan nav = TrackNavPlate(now);
-    if (AnnounceEntryOrDelta(board, nav, now)) return;
-    if (!nav.havePos) return;
-
-    if (!g_introSpoken) {
-        SpeakIntro(nav.pos);
-        if (g_introSpoken) return;
-    }
-    if (g_curPlate < 0) AnnounceNearest(nav.pos, now);
+    if (AnnounceEntryOrDelta(board, nav, now) || !nav.havePos) return;
+    if (!g_visit.introSpoken && MaybeSpeakIntro(nav.pos)) return;
+    if (g_visit.curPlate < 0) AnnounceNearest(nav.pos, now);
 }
 
 }  // namespace acc::floor_puzzle

@@ -2,6 +2,7 @@
 
 #include "floor_puzzle_plates.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
@@ -23,7 +24,34 @@ float DistToSegment(float px, float py, const Vector& a, const Vector& b) {
     return std::sqrt(cx * cx + cy * cy);
 }
 
+// Signed distance from v to [lo, hi]: positive when the span lies above.
+float ToSpan(float v, float lo, float hi) {
+    if (v < lo) return lo - v;
+    if (v > hi) return hi - v;
+    return 0.0f;
+}
+
 }  // namespace
+
+void ComputeCenterAndSpan(Plate& p) {
+    if (p.vertCount < 1) return;
+    p.center = {0.0f, 0.0f, 0.0f};
+    p.minX = p.maxX = p.poly[0].x;
+    p.minY = p.maxY = p.poly[0].y;
+    for (int i = 0; i < p.vertCount; ++i) {
+        const Vector& v = p.poly[i];
+        p.center.x += v.x;
+        p.center.y += v.y;
+        p.center.z += v.z;
+        p.minX = std::min(p.minX, v.x);
+        p.maxX = std::max(p.maxX, v.x);
+        p.minY = std::min(p.minY, v.y);
+        p.maxY = std::max(p.maxY, v.y);
+    }
+    p.center.x /= p.vertCount;
+    p.center.y /= p.vertCount;
+    p.center.z /= p.vertCount;
+}
 
 bool PointInPoly(const Plate& p, float x, float y) {
     if (p.vertCount < 3) return false;
@@ -48,6 +76,10 @@ float DistToPlate(const Plate& p, float x, float y) {
         if (d < best) best = d;
     }
     return best;
+}
+
+SpanOffset OffsetToSpan(const Plate& p, const Vector& pos) {
+    return SpanOffset{ToSpan(pos.y, p.minY, p.maxY), ToSpan(pos.x, p.minX, p.maxX)};
 }
 
 int TrigSlotForTag(const char* tag) {
