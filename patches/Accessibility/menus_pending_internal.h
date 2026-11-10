@@ -9,13 +9,12 @@
 #include <cstdint>
 #include <cstdio>
 
-
 namespace acc::menus::pending {
 
 enum class Kind {
     None,
-    MoveCursor,        // x, y, a = target (self-dedup)
-    ClickAt,           // x, y, a = target (self-dedup)
+    MoveCursor,        // x, y, a = target (log only)
+    ClickAt,           // x, y, a = target (log only)
     Activate,          // a = target
     EquipSelect,       // a = panel, b = slot
     EquipCommit,       // a = panel, b = row, c = btn
@@ -44,11 +43,22 @@ struct PendingOp {
     int   code = 0;
 };
 
-// Kept local to the drain block (not a public surface). Needed for the
-// slider HandleInputEvent dispatch; menus.cpp has its own copy in its
-// FireActivate. Typedef + constant are non-ODR-violating across TUs.
-constexpr int kVtableHandleInputEvent = 15;
 typedef void (__thiscall* PFN_ControlHandleInputEvent)(void* this_, int code, int state);
+
+// A control's or panel's own HandleInputEvent (vtable slot 15); nullptr when
+// the object or its vtable is missing.
+inline PFN_ControlHandleInputEvent HandleInputEventOf(void* obj) {
+    constexpr int kVtableHandleInputEvent = 15;
+    if (!obj) return nullptr;
+    void** vtable = *reinterpret_cast<void***>(obj);
+    if (!vtable) return nullptr;
+    return reinterpret_cast<PFN_ControlHandleInputEvent>(vtable[kVtableHandleInputEvent]);
+}
+
+// The log note for a RaiseIsActiveIfZero result.
+inline const char* RaiseNote(uint32_t prevIsActive) {
+    return prevIsActive == 0 ? "->1" : " (preserved)";
+}
 
 // Helpers shared across the files, by the file that defines them.
 

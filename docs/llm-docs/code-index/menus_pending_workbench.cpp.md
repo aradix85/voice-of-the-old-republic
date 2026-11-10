@@ -1,4 +1,4 @@
-# menus_pending_workbench.cpp (296 lines)
+# menus_pending_workbench.cpp (297 lines)
 
 Source: `patches/Accessibility/menus_pending_workbench.cpp`
 
@@ -6,9 +6,11 @@ The workbench's deferred ops: selecting an upgrade slot, installing or removing 
 
 ## Declarations (in source order)
 
-- L25 `void* ReadUpgradeSlotInstalled(void* panel)`: K2: the installed-mod pointer (field35) of the currently-open upgrade slot.
-- L43 `bool IsUpgradePickerNoneRow(void* row)`: K2: true iff `row` is the engine's "-" none/remove picker entry (key -1).
-- L63 `void DrainWorkbenchSlotSelect(const PendingOp& op)`: Workbench slot activation.
-- L188 `void DrainWorkbenchUpgradeCommit(const PendingOp& op)`: Workbench upgrade commit.
-- L228 `void DrainWorkbenchUpgradeInstallK2(const PendingOp& op)`: K2 upgrade install/remove — ONE step.
-- L279 `void DrainWorkbenchPickerCancel(const PendingOp& op)`: Back out of the mod-picker without committing (Esc).
+- L27 `void* ReadUpgradeSlotInstalled(void* panel)`: K2: the installed-mod pointer (field35) of the currently-open upgrade slot.
+- L45 `bool IsUpgradePickerNoneRow(void* row)`: K2: true iff `row` is the engine's "-" none/remove picker entry (key -1).
+- L56 `int UpgradeItemListRows(void* panel)`: Rows in the panel's LB_ITEMS (the control with id 0).
+- L76 `void AnnounceSlotOutcome(int slotIdx, int saberFlag, void* prevItem, void* newItem)`: The non-saber slot click installed, removed or found nothing: say so, with the slot's type name from the engine's strref table, so the user hears WHICH slot they acted on rather than a position number.
+- L126 `void DrainWorkbenchSlotSelect(const PendingOp& op)`: Workbench slot activation.
+- L191 `void DrainWorkbenchUpgradeCommit(const PendingOp& op)`: Workbench upgrade commit.
+- L229 `void DrainWorkbenchUpgradeInstallK2(const PendingOp& op)`: K2 upgrade install/remove — ONE step.
+- L280 `void DrainWorkbenchPickerCancel(const PendingOp& op)`: Back out of the mod-picker without committing (Esc).

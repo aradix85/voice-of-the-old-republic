@@ -1,12 +1,8 @@
-// deferred menu-side operation queue.
-//
-// g_pendingActivate, g_pendingCursorMove, g_pendingSliderInput,
-// g_pendingEquipSelect, g_pendingEquipCommit) flag/target pairs collapse
-// to a single tagged op stored here. Input handlers in menus.cpp call
-// `Queue*` to enqueue; `Drain` runs once per tick from `TickPendingOps`
-// and dispatches the op against deep engine functions (MoveMouseToPosition,
-// manager LMouseDown/Up, vtable[15] HandleInputEvent, OnEnterSlot/
-// OnSelectSlot, OnItemSelected/OnOKPressed).
+// The deferred menu-side operation queue: one tagged op at a time. Input
+// handlers call `Queue*` to enqueue; `Drain` runs once per tick from
+// `TickPendingOps` and dispatches the op against deep engine functions
+// (MoveMouseToPosition, manager LMouseDown/Up, vtable[15] HandleInputEvent,
+// OnEnterSlot/OnSelectSlot, OnItemSelected/OnOKPressed).
 //
 // Why deferred: invoking these mid-input-dispatch recurses through
 // HandleMouseMove → UpdateMouseOverControl, the same re-entrancy class
@@ -44,10 +40,7 @@ namespace acc::menus::pending {
 uint32_t RaiseIsActiveIfZero(void* control);
 
 // Queue a cursor-warp to (x, y). On drain calls MoveMouseToPosition(gm, x, y).
-// `target` is the chain control we're warping to — kept on the op struct
-// for diagnostic logging only (the self-dedup that used to consume it via
-// CursorMoveTarget() / ClearCursorMoveTarget() was replaced by the
-// channel-0 dedup primed from AnnounceControl's MarkSpoken call).
+// `target` is the chain control we're warping to, for the log only.
 bool QueueMoveCursor(int x, int y, void* target);
 
 // Queue a click-at-point. On drain runs MoveMouseToPosition(gm, x, y) then
@@ -173,10 +166,8 @@ bool QueueGalaxyInput(void* panel, int engineCode, bool announcePlanet);
 // was a silent no-op without this dedicated path.
 bool QueueWagerInput(void* panel, int code);
 
-// True if an op is currently queued. All input-handler debounce sites
-// uniformly check this before queueing — single-slot queue means there's
-// no per-kind discrimination to do (the old code's per-site debounce
-// subsets were inconsistent; uniformly safe now).
+// True if an op is currently queued. Input handlers check this before
+// queueing; with one slot there is nothing per kind to tell apart.
 bool IsPending();
 
 // Drain the queue. Called once per tick from TickPendingOps after all

@@ -1,24 +1,17 @@
-// deferred menu-side operation queue.
-//
-// (why ops are deferred, single-slot queue, ClickAt as combined move+click).
-//
-// Body of `Drain` mirrors the original `TickPendingOps` block in menus.cpp:
-// same dispatch order (cursor warp → click → activate → equip-select →
-// equip-commit → slider), same engine entry points, same diagnostic log
-// lines. The only behavioural change is at the queue level — every Queue*
-// uniformly debounces against `IsPending()`, where the old code's per-site
-// debounce subsets were inconsistent (e.g. EquipPicker Enter checked
-// EquipSelect/Commit, but Slider Left/Right didn't).
+// The deferred menu-side operation queue (see menus_pending.h for why the
+// ops are deferred). Here: the single-slot queue, the check that an op's
+// engine addresses exist on this build, Drain, and the small ops (cursor,
+// click, slider, store, crafting, galaxy map, wager).
 
 #include "menus_pending_internal.h"
 
 #include "engine_manager.h"
 #include "engine_offsets.h"
 #include "log.h"
-#include "menus_crafting.h"  // DispatchRowCommit for CraftRowCommit
-#include "menus_galaxymap.h"        // DispatchInput for GalaxyInput
-#include "minigame_pazaak.h"                 // DispatchWagerInput for WagerInput
-#include "menus_store.h"     // DispatchTradeAction for StoreItemActivate
+#include "menus_crafting.h"
+#include "menus_galaxymap.h"
+#include "menus_store.h"
+#include "minigame_pazaak.h"
 
 namespace acc::menus::pending {
 
@@ -28,6 +21,35 @@ PendingOp g_op;
 
 void Reset() {
     g_op = PendingOp{};
+}
+
+// Takes the op if the slot is free; false while another op is pending.
+bool Queue(const PendingOp& op) {
+    if (g_op.kind != Kind::None) return false;
+    g_op = op;
+    return true;
+}
+
+PendingOp Op(Kind kind, void* a, void* b = nullptr, void* c = nullptr) {
+    PendingOp op;
+    op.kind = kind;
+    op.a = a;
+    op.b = b;
+    op.c = c;
+    return op;
+}
+
+PendingOp CodeOp(Kind kind, void* a, int code) {
+    PendingOp op = Op(kind, a);
+    op.code = code;
+    return op;
+}
+
+PendingOp PointOp(Kind kind, int x, int y, void* target) {
+    PendingOp op = Op(kind, target);
+    op.x = x;
+    op.y = y;
+    return op;
 }
 
 // CSWGuiManager mouseOverControl pointer at +0x8 (per the decompilation
@@ -41,11 +63,9 @@ void* MouseOver(void* gm) {
 
 void DrainMoveCursor(void* gm, const PendingOp& op) {
     auto move = reinterpret_cast<PFN_MoveMouseToPosition>(kAddrMoveMouseToPosition);
-    // Capture mouseOver BEFORE the move. Disambiguates whether
-    // MoveMouseToPosition itself produces the 45-px-shifted hit-test
-    // result (before==something-else, after==shifted-button) vs. the
-    // engine pre-setting mouseOver during panel init (before==after,
-    // never refreshed by our move at all). See chat.
+    // mouseOver before and after the move tells whether MoveMouseToPosition
+    // itself produces a shifted hit-test result or the engine pre-set
+    // mouseOver during panel init and the move never refreshed it.
     void* moBefore = MouseOver(gm);
     move(gm, op.x, op.y);
     acclog::Write("Update", "MoveMouseToPosition(%d, %d) target=%p mouseOver before=%p after=%p",
@@ -56,15 +76,13 @@ void DrainMoveCursor(void* gm, const PendingOp& op) {
 // Combined move + click. Click-sim via manager's HandleLMouseDown/Up.
 // Dispatches against mouseOverControl, which on Options-style tabbed
 // panels resolves to the button one step above the chain target
-// (consistent 45-px hit-test shift — see chat investigation). That
-// activates the wrong tab.
+// (a consistent 45-px hit-test shift). That activates the wrong tab.
 //
-// Direct vtable[6]/[7] on the chain target was tried as a workaround
-// (commit reverted) — it crashes the game on the second tab+ click.
-// The button's own HandleLMouseDown/Up depend on manager-side state
-// (probably the +0x1c mouse_held bit and/or other setup we'd skip).
-// Need a different approach for the off-by-1; for now keep the original
-// pipeline so behavior is at least stable.
+// Direct vtable[6]/[7] on the chain target crashes the game on the second
+// tab click: the button's own HandleLMouseDown/Up depend on manager-side
+// state (probably the +0x1c mouse_held bit and/or other setup we'd skip).
+// The off-by-one needs a different approach; until then this pipeline
+// keeps the behaviour stable.
 void DrainClickAt(void* gm, const PendingOp& op) {
     auto move = reinterpret_cast<PFN_MoveMouseToPosition>(kAddrMoveMouseToPosition);
     auto down = reinterpret_cast<PFN_ManagerLMouseDown>(kAddrManagerLMouseDown);
@@ -85,24 +103,16 @@ void DrainClickAt(void* gm, const PendingOp& op) {
                   moBefore, moAfterDown, moAfterUp);
 }
 
-// Slider value adjustment via vtable[15].HandleInputEvent(500/501, 1).
-// The slider's HandleInputEvent runs SetCurValue (clamped to
-// [0, max_value]) and the gui_object callback that propagates to the
-// audio system, then plays the click feedback sound. Per-frame focus
-// monitor catches the cur_value change at +0x74 on the next tick.
+// Slider value adjustment via HandleInputEvent(500/501, 1). The slider's
+// handler runs SetCurValue (clamped to [0, max_value]) and the gui_object
+// callback that propagates to the audio system, then plays the click
+// feedback sound. The focus monitor catches the cur_value change at +0x74
+// on the next tick.
 void DrainSliderInput(const PendingOp& op) {
-    if (op.a) {
-        void** vtable = *reinterpret_cast<void***>(op.a);
-        if (vtable) {
-            auto fn = reinterpret_cast<PFN_ControlHandleInputEvent>(
-                vtable[kVtableHandleInputEvent]);
-            if (fn) {
-                acclog::Write("Update", "slider HandleInputEvent target=%p code=%d",
-                              op.a, op.code);
-                fn(op.a, op.code, 1);
-            }
-        }
-    }
+    auto fn = HandleInputEventOf(op.a);
+    if (!fn) return;
+    acclog::Write("Update", "slider HandleInputEvent target=%p code=%d", op.a, op.code);
+    fn(op.a, op.code, 1);
 }
 
 // Store item Enter — dispatch the engine's per-mode click handler
@@ -136,182 +146,17 @@ void DrainGalaxyInput(const PendingOp& op) {
 // panel's HandleInputEvent (0x2f decrement / 0x30 increment). The generic
 // vtable[15] activate (0x27) they ignore, so this is the dedicated Enter
 // path. The engine clamps to [1, max] and repaints LBL_WAGERVAL; the
-// per-tick wager observer announces the new amount.
+// per-tick wager service announces the new amount.
 void DrainWagerInput(const PendingOp& op) {
     acc::pazaak::DispatchWagerInput(op.a, op.code);
 }
 
-}  // namespace
-
-// Raise a control's is_active flag from 0 to 1 and return what it was.
-//
-// Every engine dispatch we fire by hand needs this first, because several
-// engine onClick handlers gate on `this->is_active != 0` (memory:
-// oncontrolentered_is_active_gate) and silently divert to a different code
-// path when the flag is zero. For MessageBox OK buttons that divergent path
-// appeared to corrupt engine state during close — three Windows __fastfail
-// dumps in one day all landed between a FireActivate and the next frame,
-// with the same MessageBox singleton in the foreground each time.
-//
-// ONLY raise 0 -> 1. HandleLMouseDown's real behaviour is a CONDITIONAL
-// raise, not an unconditional write. Some controls (tab buttons in
-// InGameOptions, equip-slot buttons in InGameEquip) carry non-zero
-// engine-bookkeeping values in this field — a selected-tab marker, equip-state
-// flags. Clobbering those with 1 corrupts the engine's view of which tab is
-// selected, which surfaces later as a crash in an unrelated subsystem on the
-// next render/physics tick. A FireActivate audit across 9 events found 5->1
-// (Feedback tab) was the only non-trivial clobber in all of testing, and the
-// session it appeared in is the one that crashed in CSWRoomSurfaceMesh AABB
-// traversal moments after a tab-subdialog close.
-//
-// This lived inline at seven sites; by the last copy the rationale above had
-// been dropped entirely, which is precisely how an unconditional write gets
-// reintroduced. One home for the rule and its reason.
-uint32_t RaiseIsActiveIfZero(void* control) {
-    uint32_t* isActive = reinterpret_cast<uint32_t*>(
-        reinterpret_cast<unsigned char*>(control) + kControlIsActiveOffset);
-    uint32_t prev = *isActive;
-    if (prev == 0) *isActive = 1;
-    return prev;
-}
-
-bool QueueMoveCursor(int x, int y, void* target) {
-    if (g_op.kind != Kind::None) return false;
-    g_op.kind = Kind::MoveCursor;
-    g_op.x = x;
-    g_op.y = y;
-    g_op.a = target;
-    return true;
-}
-
-bool QueueClickAt(int x, int y, void* target) {
-    if (g_op.kind != Kind::None) return false;
-    g_op.kind = Kind::ClickAt;
-    g_op.x = x;
-    g_op.y = y;
-    g_op.a = target;
-    return true;
-}
-
-bool QueueActivate(void* target) {
-    if (g_op.kind != Kind::None) return false;
-    g_op.kind = Kind::Activate;
-    g_op.a = target;
-    return true;
-}
-
-bool QueueEquipSelect(void* panel, void* slot) {
-    if (g_op.kind != Kind::None) return false;
-    g_op.kind = Kind::EquipSelect;
-    g_op.a = panel;
-    g_op.b = slot;
-    return true;
-}
-
-bool QueueEquipCommit(void* panel, void* row, void* btn) {
-    if (g_op.kind != Kind::None) return false;
-    g_op.kind = Kind::EquipCommit;
-    g_op.a = panel;
-    g_op.b = row;
-    g_op.c = btn;
-    return true;
-}
-
-bool QueueEquipPickerCancel(void* panel) {
-    if (g_op.kind != Kind::None) return false;
-    g_op.kind = Kind::EquipPickerCancel;
-    g_op.a = panel;
-    return true;
-}
-
-bool QueueWorkbenchSlotSelect(void* panel, void* slot) {
-    if (g_op.kind != Kind::None) return false;
-    g_op.kind = Kind::WorkbenchSlotSelect;
-    g_op.a = panel;
-    g_op.b = slot;
-    return true;
-}
-
-bool QueueWorkbenchUpgradeCommit(void* panel, void* row, void* btnAssemble) {
-    if (g_op.kind != Kind::None) return false;
-    g_op.kind = Kind::WorkbenchUpgradeCommit;
-    g_op.a = panel;
-    g_op.b = row;
-    g_op.c = btnAssemble;
-    return true;
-}
-
-bool QueueWorkbenchUpgradeInstallK2(void* panel, void* row) {
-    if (g_op.kind != Kind::None) return false;
-    g_op.kind = Kind::WorkbenchUpgradeInstallK2;
-    g_op.a = panel;
-    g_op.b = row;
-    return true;
-}
-
-bool QueueWorkbenchPickerCancel(void* panel) {
-    if (g_op.kind != Kind::None) return false;
-    g_op.kind = Kind::WorkbenchPickerCancel;
-    g_op.a = panel;
-    return true;
-}
-
-bool QueueSliderInput(void* target, int code) {
-    if (g_op.kind != Kind::None) return false;
-    g_op.kind = Kind::SliderInput;
-    g_op.a = target;
-    g_op.code = code;
-    return true;
-}
-
-bool QueueStoreItemActivate(void* panel, void* row) {
-    if (g_op.kind != Kind::None) return false;
-    g_op.kind = Kind::StoreItemActivate;
-    g_op.a = panel;
-    g_op.b = row;
-    return true;
-}
-
-bool QueueCraftRowCommit(void* panel, void* listBox, void* row) {
-    if (g_op.kind != Kind::None) return false;
-    g_op.kind = Kind::CraftRowCommit;
-    g_op.a = panel;
-    g_op.b = listBox;
-    g_op.c = row;
-    return true;
-}
-
-bool QueueGalaxyInput(void* panel, int engineCode, bool announcePlanet) {
-    if (g_op.kind != Kind::None) return false;
-    g_op.kind = Kind::GalaxyInput;
-    g_op.a = panel;
-    g_op.code = engineCode;
-    g_op.x = announcePlanet ? 1 : 0;
-    return true;
-}
-
-bool QueueWagerInput(void* panel, int code) {
-    if (g_op.kind != Kind::None) return false;
-    g_op.kind = Kind::WagerInput;
-    g_op.a = panel;
-    g_op.code = code;
-    return true;
-}
-
-bool IsPending() {
-    return g_op.kind != Kind::None;
-}
-
-// Are the engine addresses this op needs actually resolved for the running
-// build? On KOTOR 1 every one of these is known and this is always true; on
-// KOTOR 2 the unported ones resolve to 0 and calling them would fault outside
-// any SEH frame.
-//
-// Deliberately a lookup rather than a blanket "is this KOTOR 2" test: the ops
-// resolve independently, so as the port progresses each becomes available on
-// its own without this needing to be revisited as a whole. It also covers the
-// KOTOR 1 relink, where an address missing from the rebase table resolves to 0
-// for exactly the same reason.
+// Are the engine addresses this op needs resolved for the running build?
+// On KOTOR 1 every one of these is known; on KOTOR 2 an unported one
+// resolves to 0, and calling it would fault outside any SEH frame. A
+// lookup per op rather than one "is this KOTOR 2" test: the ops resolve
+// independently, and it also covers an address missing from the KOTOR 1
+// rebase table.
 bool EngineOpsReady(Kind kind) {
     using acc::addr::Ok;
     switch (kind) {
@@ -336,11 +181,106 @@ bool EngineOpsReady(Kind kind) {
         return Ok(kAddrCSWGuiUpgradeShowItems);
     default:
         // Activate / EquipPickerCancel / SliderInput / StoreItemActivate /
-        // GalaxyInput / WagerInput dispatch through the control's (or panel's)
-        // own vtable rather than a hardcoded address, so they carry no build
-        // dependency.
+        // CraftRowCommit / GalaxyInput / WagerInput dispatch through the
+        // control's (or panel's) own vtable rather than a hardcoded address,
+        // so they carry no build dependency.
         return true;
     }
+}
+
+}  // namespace
+
+// Raise a control's is_active flag from 0 to 1 and return what it was.
+//
+// Every engine dispatch we fire by hand needs this first, because several
+// engine onClick handlers gate on `this->is_active != 0` and silently divert
+// to a different code path when the flag is zero. For MessageBox OK buttons
+// that divergent path appeared to corrupt engine state during close — three
+// Windows __fastfail dumps all landed between a FireActivate and the next
+// frame, with the same MessageBox singleton in the foreground each time.
+//
+// ONLY raise 0 -> 1. HandleLMouseDown's real behaviour is a CONDITIONAL
+// raise, not an unconditional write. Some controls (tab buttons in
+// InGameOptions, equip-slot buttons in InGameEquip) carry non-zero
+// engine-bookkeeping values in this field — a selected-tab marker, equip-state
+// flags. Clobbering those with 1 corrupts the engine's view of which tab is
+// selected, which surfaces later as a crash in an unrelated subsystem on the
+// next render/physics tick (5 -> 1 on the Feedback tab was followed by a
+// crash in CSWRoomSurfaceMesh AABB traversal after a tab-subdialog close).
+// One home for the rule and its reason, so an unconditional write is not
+// reintroduced at a call site.
+uint32_t RaiseIsActiveIfZero(void* control) {
+    uint32_t* isActive = reinterpret_cast<uint32_t*>(
+        reinterpret_cast<unsigned char*>(control) + kControlIsActiveOffset);
+    uint32_t prev = *isActive;
+    if (prev == 0) *isActive = 1;
+    return prev;
+}
+
+bool QueueMoveCursor(int x, int y, void* target) {
+    return Queue(PointOp(Kind::MoveCursor, x, y, target));
+}
+
+bool QueueClickAt(int x, int y, void* target) {
+    return Queue(PointOp(Kind::ClickAt, x, y, target));
+}
+
+bool QueueActivate(void* target) {
+    return Queue(Op(Kind::Activate, target));
+}
+
+bool QueueEquipSelect(void* panel, void* slot) {
+    return Queue(Op(Kind::EquipSelect, panel, slot));
+}
+
+bool QueueEquipCommit(void* panel, void* row, void* btn) {
+    return Queue(Op(Kind::EquipCommit, panel, row, btn));
+}
+
+bool QueueEquipPickerCancel(void* panel) {
+    return Queue(Op(Kind::EquipPickerCancel, panel));
+}
+
+bool QueueWorkbenchSlotSelect(void* panel, void* slot) {
+    return Queue(Op(Kind::WorkbenchSlotSelect, panel, slot));
+}
+
+bool QueueWorkbenchUpgradeCommit(void* panel, void* row, void* btnAssemble) {
+    return Queue(Op(Kind::WorkbenchUpgradeCommit, panel, row, btnAssemble));
+}
+
+bool QueueWorkbenchUpgradeInstallK2(void* panel, void* row) {
+    return Queue(Op(Kind::WorkbenchUpgradeInstallK2, panel, row));
+}
+
+bool QueueWorkbenchPickerCancel(void* panel) {
+    return Queue(Op(Kind::WorkbenchPickerCancel, panel));
+}
+
+bool QueueSliderInput(void* target, int code) {
+    return Queue(CodeOp(Kind::SliderInput, target, code));
+}
+
+bool QueueStoreItemActivate(void* panel, void* row) {
+    return Queue(Op(Kind::StoreItemActivate, panel, row));
+}
+
+bool QueueCraftRowCommit(void* panel, void* listBox, void* row) {
+    return Queue(Op(Kind::CraftRowCommit, panel, listBox, row));
+}
+
+bool QueueGalaxyInput(void* panel, int engineCode, bool announcePlanet) {
+    PendingOp op = CodeOp(Kind::GalaxyInput, panel, engineCode);
+    op.x = announcePlanet ? 1 : 0;
+    return Queue(op);
+}
+
+bool QueueWagerInput(void* panel, int code) {
+    return Queue(CodeOp(Kind::WagerInput, panel, code));
+}
+
+bool IsPending() {
+    return g_op.kind != Kind::None;
 }
 
 void Drain(void* gm) {
@@ -359,75 +299,36 @@ void Drain(void* gm) {
     PendingOp op = g_op;
     Reset();
 
-    // Every branch below CALLS the engine directly, and an engine address that
-    // is not resolved for the running build hands back 0 — so dispatching would
-    // be a call through a null pointer, outside any __try. That is a crash, not
-    // a degraded feature.
-    //
-    // This is the whole reason the queue exists: these ops fire on activation
-    // (Enter on a menu item), so on KOTOR 2 the very first Enter would take the
-    // process down while everything else appeared to work. Declining the op
-    // instead means activation does nothing and says so in the log, which is a
-    // missing feature and diagnosable.
-    //
-    // Checked per op rather than once, because the ops need different
-    // addresses and they resolve independently — see EngineOpsReady below.
-    if (op.kind != Kind::None && !EngineOpsReady(op.kind)) {
+    // Every op CALLS the engine, and an address not resolved for the running
+    // build is 0: dispatching would call through a null pointer outside any
+    // __try. These ops fire on Enter, so that would take the process down on
+    // the first activation; declining leaves a missing feature that says so
+    // in the log.
+    if (!EngineOpsReady(op.kind)) {
         acclog::Write("Update",
                       "pending op kind=%d DECLINED — engine addresses not "
-                      "resolved for this build (KOTOR 2 port in progress)",
+                      "resolved for this build",
                       static_cast<int>(op.kind));
         return;
     }
 
     switch (op.kind) {
-    case Kind::None:
-        break;
-    case Kind::MoveCursor:
-        DrainMoveCursor(gm, op);
-        break;
-    case Kind::ClickAt:
-        DrainClickAt(gm, op);
-        break;
-    case Kind::Activate:
-        DrainActivate(op);
-        break;
-    case Kind::EquipSelect:
-        DrainEquipSelect(op);
-        break;
-    case Kind::EquipCommit:
-        DrainEquipCommit(op);
-        break;
-    case Kind::EquipPickerCancel:
-        DrainEquipPickerCancel(op);
-        break;
-    case Kind::WorkbenchSlotSelect:
-        DrainWorkbenchSlotSelect(op);
-        break;
-    case Kind::WorkbenchUpgradeCommit:
-        DrainWorkbenchUpgradeCommit(op);
-        break;
-    case Kind::WorkbenchUpgradeInstallK2:
-        DrainWorkbenchUpgradeInstallK2(op);
-        break;
-    case Kind::WorkbenchPickerCancel:
-        DrainWorkbenchPickerCancel(op);
-        break;
-    case Kind::SliderInput:
-        DrainSliderInput(op);
-        break;
-    case Kind::StoreItemActivate:
-        DrainStoreItemActivate(op);
-        break;
-    case Kind::CraftRowCommit:
-        DrainCraftRowCommit(op);
-        break;
-    case Kind::GalaxyInput:
-        DrainGalaxyInput(op);
-        break;
-    case Kind::WagerInput:
-        DrainWagerInput(op);
-        break;
+    case Kind::None:                      break;
+    case Kind::MoveCursor:                DrainMoveCursor(gm, op);              break;
+    case Kind::ClickAt:                   DrainClickAt(gm, op);                 break;
+    case Kind::Activate:                  DrainActivate(op);                    break;
+    case Kind::EquipSelect:               DrainEquipSelect(op);                 break;
+    case Kind::EquipCommit:               DrainEquipCommit(op);                 break;
+    case Kind::EquipPickerCancel:         DrainEquipPickerCancel(op);           break;
+    case Kind::WorkbenchSlotSelect:       DrainWorkbenchSlotSelect(op);         break;
+    case Kind::WorkbenchUpgradeCommit:    DrainWorkbenchUpgradeCommit(op);      break;
+    case Kind::WorkbenchUpgradeInstallK2: DrainWorkbenchUpgradeInstallK2(op);   break;
+    case Kind::WorkbenchPickerCancel:     DrainWorkbenchPickerCancel(op);       break;
+    case Kind::SliderInput:               DrainSliderInput(op);                 break;
+    case Kind::StoreItemActivate:         DrainStoreItemActivate(op);           break;
+    case Kind::CraftRowCommit:            DrainCraftRowCommit(op);              break;
+    case Kind::GalaxyInput:               DrainGalaxyInput(op);                 break;
+    case Kind::WagerInput:                DrainWagerInput(op);                  break;
     }
 }
 

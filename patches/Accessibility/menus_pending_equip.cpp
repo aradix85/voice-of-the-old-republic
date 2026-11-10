@@ -1,4 +1,5 @@
-// The equipment screen's deferred ops: opening a slot's item picker, equipping the chosen row, and the engine's own cancel.
+// The equipment screen's deferred ops: opening a slot's item picker,
+// equipping the chosen row, and the engine's own cancel.
 
 #include "menus_pending_internal.h"
 
@@ -32,8 +33,7 @@ void DrainEquipSelect(const PendingOp& op) {
         auto onSelect = reinterpret_cast<PFN_InGameEquipOnSelectSlot>(
             kAddrInGameEquipOnSelectSlot);
         acclog::Write("Update", "EquipSelect panel=%p slot=%p is_active=%u%s",
-                      panel, slotBtn, prevIsActive,
-                      prevIsActive == 0 ? "->1" : " (preserved)");
+                      panel, slotBtn, prevIsActive, RaiseNote(prevIsActive));
         onEnter(panel, slotBtn);
         onSelect(panel, slotBtn);
         acclog::Write("Update", "EquipSelect done panel=%p slot=%p", panel, slotBtn);
@@ -62,10 +62,8 @@ void DrainEquipCommit(const PendingOp& op) {
         acclog::Write("Update", "EquipCommit panel=%p row=%p btn=%p "
                       "row.is_active=%u%s btn.is_active=%u%s",
                       panel, row, btn,
-                      prevRowActive,
-                      prevRowActive == 0 ? "->1" : " (preserved)",
-                      prevBtnActive,
-                      prevBtnActive == 0 ? "->1" : " (preserved)");
+                      prevRowActive, RaiseNote(prevRowActive),
+                      prevBtnActive, RaiseNote(prevBtnActive));
         onItem(panel, row);
         onOK(panel, btn);
         acclog::Write("Update", "EquipCommit done panel=%p row=%p btn=%p",
@@ -91,30 +89,21 @@ void DrainEquipCommit(const PendingOp& op) {
 // directly — the engine's live preview, same as mouse hover). Without the
 // engine's cancel, an Escape left whatever the last arrow landed on
 // permanently worn, and left every slot reading "unavailable" for the rest
-// of the panel's life. Both were live in patch-20260817-065149.log (K2) and
-// patch-20260813-204335.log (K1).
+// of the panel's life, on both games.
 //
 // ManagerTranslateCode rather than a literal 0x28: it is our port of the
 // engine's own logical->InputIndices switch, verified on both games, and
 // it keeps the cancel keyed to the same constant the input log prints.
 void DrainEquipPickerCancel(const PendingOp& op) {
     void* panel = op.a;
-    if (panel) {
-        void** vtable = *reinterpret_cast<void***>(panel);
-        if (vtable) {
-            auto fn = reinterpret_cast<PFN_ControlHandleInputEvent>(
-                vtable[kVtableHandleInputEvent]);
-            if (fn) {
-                int code = acc::engine::ManagerTranslateCode(kInputEsc1);
-                acclog::Write("Update", "EquipPickerCancel panel=%p "
-                              "HandleInputEvent(code=0x%x) (engine revert + "
-                              "CloseDescription)", panel, code);
-                fn(panel, code, 1);
-                acclog::Write("Update", "EquipPickerCancel done panel=%p",
-                              panel);
-            }
-        }
-    }
+    auto fn = HandleInputEventOf(panel);
+    if (!fn) return;
+    int code = acc::engine::ManagerTranslateCode(kInputEsc1);
+    acclog::Write("Update", "EquipPickerCancel panel=%p "
+                  "HandleInputEvent(code=0x%x) (engine revert + "
+                  "CloseDescription)", panel, code);
+    fn(panel, code, 1);
+    acclog::Write("Update", "EquipPickerCancel done panel=%p", panel);
 }
 
 }  // namespace acc::menus::pending
