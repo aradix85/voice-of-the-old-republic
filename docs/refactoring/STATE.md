@@ -154,6 +154,8 @@ transform offsets now in engine_area.h). kdev links through a response
 file now (fe280ca: 274 objects passed the command-line limit).
 menus_monitors split into five (a45c491) and made lean (5bbac2b: the
 unused guiId column, FindListBoxChild and an old diagnostic gone).
+minigame_pazaak split into five (e5a4708) and made lean (7a0cc5f: named
+zones, helpers for the repeated speech lines).
 
 Careful: never rewrite source files with PowerShell ReadAllText/WriteAllText
 (it decodes UTF-8 and writes '?' for the dashes and umlauts in comments);
@@ -212,8 +214,7 @@ prefix (menus_listbox_picker.cpp).
   EngineYawToCompass/CompassToSector/SectorString. One helper in
   engine_compass (bearing of a vector, and its compass word). kRadToDeg is
   defined in many files: one constant with it.
-- Next file: minigame_pazaak.cpp, then
-  menus_pending.cpp, cycle_input.cpp, menus.cpp, menus_internal.cpp,
+- Next file: menus_pending.cpp, then cycle_input.cpp, menus.cpp, menus_internal.cpp,
   core_tick.cpp (sizes of 2026-11-10, strings*.cpp excepted).
 - F2b: share the save-variable code of exit_memory with discovery.cpp.
 - F3 menus_chargen_feats / menus_powers_levelup: about 15 same-named
