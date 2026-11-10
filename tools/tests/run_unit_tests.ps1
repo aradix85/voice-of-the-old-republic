@@ -19,7 +19,7 @@ $src  = Join-Path $repo 'patches\Accessibility'
 $out  = Join-Path $repo "build\unit_tests\$Mode"
 
 # The sources under test. Each must build without the game: no hooks, no
-# engine addresses, no Windows API.
+# engine addresses. Only log.cpp uses the Windows API (file, clock, lock).
 $underTest = @(
     'bridge_http.cpp',
     'camera_orient_pick.cpp',
@@ -27,6 +27,7 @@ $underTest = @(
     'engine_compass.cpp',
     'engine_keymap_codes.cpp',
     'floor_puzzle_plates.cpp',
+    'log.cpp',
     'minigame_turret_lead.cpp',
     'save_points.cpp',
     'shortest_paths.cpp',
