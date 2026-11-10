@@ -6,36 +6,6 @@ Play3DOneShotSound gain chain, CExoSoundSource lifecycle, sound-mode pause exemp
 > Each section below is one former memory note, preserved verbatim. Verify
 > addresses/offsets against current code before relying.
 
-## prism_speak_voice_id
-_Per-cue SAPI voice selection via prism::SpeakUrgent(text, voiceId); used to make compass turn-announce sound distinct from other urgent cues_
-
-`prism::SpeakUrgent(const char*, size_t voiceId)` selects a SAPI voice
-before dispatch. Caching is internal: consecutive calls with the same id
-skip the `prism_backend_set_voice` round-trip. Out-of-range ids fall
-back silently (we cache the voice count at SAPI acquire).
-
-Why: NVDA-cancel-on-typed-char eats normal `Speak` while the user holds
-WASD/A/D, but the SAPI bypass channel originally used a single voice so
-every urgent cue (map cursor, walking cue, region cue) sounded identical.
-Voice differentiation lets the user tell them apart without parsing
-words mid-spin.
-
-How to apply: every urgent cue currently passes `voiceId=0`. We tried
-voices 1 and 2 to make compass/turn cues sound distinct, but the user's
-NVDA-via-SAPI bridge mapped voice 1 back to NVDA (defeating the bypass)
-and voice 2 was indistinguishable in practice on that box. Until the
-urgent-cue surface grows enough to warrant differentiation, all callers
-use voice 0. The voice-id parameter stays in the API so future cues can
-opt into a different voice without an API rev — just be aware that any
-non-0 id needs to be empirically tested on the user's setup before
-adopting it.
-
-Underlying API: Prism's `prism_backend_set_voice` is optional — older
-prism.dll builds don't export it. The wrapper degrades to no-op (call
-still speaks, just on whatever voice was last selected).
-
----
-
 ## play3doneshotsound_volume_amplifies
 _How a one-shot cue's final loudness is computed; corrects the discredited \"4.0x amplifies\" claim. SetVolume clamps per-source byte to 127; group volume is the unclamped lever._
 
@@ -43,8 +13,9 @@ _How a one-shot cue's final loudness is computed; corrects the discredited \"4.0
 CORRECTS the earlier claim that Play3DOneShotSound's float arg amplifies >1.0.
 That was wrong: the float was being fed into `fixed_variance` (a pitch field)
 under a mislabelled typedef and then zeroed by the pitch-neutraliser detour, so
-`kAccCueGain=4.0` did NOTHING to volume. `PlayCue3D`'s `volume` param is dead
-(`(void)volume;` in audio_bus.cpp).
+`kAccCueGain=4.0` did NOTHING to volume. Today `PlayCue`/`PlayCue3D` take a
+`baseVolume` byte that `EffectiveVolumeByte` (audio_bus.cpp) scales by the
+cue-volume slider and writes as `volume_byte` (lever 1 below).
 
 **Verified gain chain (Ghidra, 2026-06-01).** Final hardware amplitude is computed
 in `CExoSoundSourceInternal::SetVolume` @0x005db800, re-invoked at playback from
@@ -74,19 +45,19 @@ max_dist=10. See [[setsoundmode-priority-group-pause-exemption]] for the pause-e
    Override\ keyed by resref. The WAV path is the guaranteed one; the 2da path is plausible but
    needs an in-game listen test (Miles may clamp the float to 1.0).
 
-Runtime probe `probe_priority_groups.cpp` dumps the live table; group dump captured in
-patch logs (entries 0-26 valid). Relates to [[project_play3doneshotsound_silent_resref]].
+The runtime probe `probe_priority_groups.cpp` that dumped the live table is
+removed (see git history); its dump showed entries 0-26 valid. Relates to [[project_play3doneshotsound_silent_resref]].
 
 ---
 
 ## play3doneshotsound_silent_resref
 _Engine creates no source and produces no audio when a CResRef doesn't resolve in chitin.key — fire-counters can't detect it_
 
-`CExoSound::Play3DOneShotSound` and `PlayOneShotSound` return successfully (no exception, no error indicator) when their `CResRef*` arg points to a string that doesn't resolve through the engine's `Override → streamwaves → streamsounds → streammusic → BIF/RIM` chain. The engine creates no `CExoSoundSourceInternal`, no audio thread work happens, and no sound plays — but our caller-side log lines (`CuePlayer: play cue=Wall ...`) keep saying "play" because we only check the function's return code.
+`CExoSound::Play3DOneShotSound` and `PlayOneShotSound` return successfully (no exception, no error indicator) when their `CResRef*` arg points to a string that doesn't resolve through the engine's `Override → streamwaves → streamsounds → streammusic → BIF/RIM` chain. The engine creates no `CExoSoundSourceInternal`, no audio thread work happens, and no sound plays — but a caller-side "play" log line still appears, because only the return code is checked.
 
-**Why:** confirmed 2026-05-07 via per-fire `OnCalculatePitchVarianceFrequency` resref logging. The Wall cue's resref `gui_select` was missing from `chitin.key` for the entire install (only `gui_invselect` exists). 958 `play cue=Wall` log entries → 0 `gui_select` PitchHook fires that session, while every other cue (`fs_metal_droid2`, `gui_quest`, `mgs_s1`, `gui_close`, `gui_invadd`) had matching counts. Replaced with `as_nt_wtrdrip_09` after verifying it exists in `build/sounds-extracted-full/`.
+**Why:** confirmed 2026-05-07 via per-fire `OnCalculatePitchVarianceFrequency` resref logging. The Wall cue's resref `gui_select` was missing from `chitin.key` for the entire install (only `gui_invselect` exists). 958 `play cue=Wall` log entries → 0 `gui_select` PitchHook fires that session, while every other cue (`fs_metal_droid2`, `gui_quest`, `mgs_s1`, `gui_close`, `gui_invadd`) had matching counts. Replaced with `as_nt_wtrdrip_09`. (The wall cue was removed later with the other exploration sounds; the lesson stands.)
 
-**How to apply:** any time we add or change a cue resref, verify it exists in the full extraction at `build/sounds-extracted-full/` (or directly in `chitin.key` via `unkeybif l`) before shipping. Audible silence is the only symptom — the rest of the patch behaves as if the cue fired. The 16-char `CResRef` truncation makes >16-char resrefs silently fail the same way; longest current pick is `as_nt_wtrdrip_09` at exactly 16. The `OnCalculatePitchVarianceFrequency` heartbeat is a permanent canary — if a cue type fires hundreds of times but never appears in `PitchHook` lines, that resref is dead.
+**How to apply:** any time we add or change a cue resref, verify it exists in `chitin.key` (for example with `unkeybif l`) or in a full sound extraction before shipping. Audible silence is the only symptom — the rest of the patch behaves as if the cue fired. The 16-char `CResRef` truncation makes >16-char resrefs silently fail the same way; longest current pick is `as_nt_wtrdrip_09` at exactly 16. The `OnCalculatePitchVarianceFrequency` heartbeat is a permanent canary — if a cue type fires hundreds of times but never appears in `PitchHook` lines, that resref is dead.
 
 ---
 
@@ -104,8 +75,8 @@ obstacle 4 Hz ping cadence and the 2 s wall-scrape re-fire with a true
 continuous loop?" — yes, the API exists and is fully decompiled.
 
 **How to apply:** When a feature needs sustained spatial audio that
-swells/pans naturally over time (wall scrape, obstacle approach,
-beacon hum, ambient zones), reach for CExoSoundSource instead of the
+swells/pans naturally over time (a swoop wall scrape, obstacle
+approach, ambient zones), reach for CExoSoundSource instead of the
 PlayCue3D one-shot wrapper. Lifecycle:
 
 1. `operator new` ~16 bytes (struct is vtable + internal*; 16 is safe)
@@ -138,19 +109,13 @@ internal=null if true. All methods null-check internal and no-op, so
 this is safe but means we should also check GetLooping() or similar
 before assuming the source is live.
 
-**Strong candidates for first use:**
-- Wall scrape in swoop_race: one source per pin, position-updated per
-  tick, Stop on release. Replaces the 2 s re-fire heartbeat with a
-  continuous raspy tone.
-- Obstacle proximity: one source per in-range obstacle. ~22 concurrent
-  sources on m03mg — may stress voice budget; verify before committing.
+**In use:** `audio_loop.cpp` wraps this lifecycle as `LoopSource`
+(outer struct from CRT `malloc`, which is safe because we never free what
+the engine allocated). The swoop race (`minigame_swoop_race.cpp`) and the
+audio-glossary audition in Mod settings use it.
 
-Open questions:
-- Which `operator new` does the engine use? Internal allocator vs MSVC
-  CRT. For our outer-struct alloc (vtable + internal pointer, ~16
-  bytes), CRT malloc/free should be safe since we're not freeing what
-  the engine allocated.
-- Voice budget pressure with many concurrent loops — needs live test.
+Not built yet: one continuous source per in-range swoop obstacle. That
+is ~22 concurrent sources on m03mg, so test the voice budget first.
 
 ---
 
@@ -216,8 +181,7 @@ showed `0x0061a5b6` as THE per-step humanoid caller (203 fires across
 EIP to `CSWCCreature::PlayFootstep @0x0061a2d0` — Lane HAD labelled it,
 the "Rolling" name was just a lure. Suppression hook landed at 0x0061a31a
 (engine's own field6_0x20==0 JZ) with `skip_original_bytes = true`.
-See `audio_footstep_suppress.cpp` and the Lay-off 5 entry in
-`docs/navsystem-progress.md`.
+See `audio_footstep_suppress.cpp`.
 
 **UPDATE 2026-08-05 — the trio IS the droid drive-loop path.** The
 "vehicles / wheeled units" guess above was right, and it matters:
@@ -248,33 +212,23 @@ It never fired on Endar Spire because no wheeled droid was near — the
 
 ---
 
-## cue_systems_party_filter
-_Focus-narration cue (passive_narrate) and the continuous proximity beacon (spatial_change_detector) are separate; each needs its own party-follower exclusion._
-
-
-There are TWO independent mod systems that emit a "person/Npc" sound cue
-for nearby creatures — easy to confuse when a party-cue complaint comes in:
-
-1. **passive_narrate.cpp** — fires `PlayCue3D` once on focus change
-   (ShowObject delta / Q/E). Logs `PassiveNarrate: fire cue`. Already
-   suppresses party via `IsActivePartyMember` (auto path: fully silent;
-   explicit Q/E: name speaks, no cue).
-2. **spatial_change_detector.cpp** — the CONTINUOUS proximity beacon
-   (T1 per-sector + T2 foremost-in-front). Iterates `AreaObjectIterator`,
-   classifies via `filter::ObjectMatches`, fires through
-   `PlayCueAtPosition`. Logs `CuePlayer: play cue=Npc ...` and
-   `ChangeDetector:`.
+## party_follower_filter
+_filter::ObjectMatches excludes only the PC; anything that announces nearby creatures on its own must skip party followers itself._
 
 `filter::ObjectMatches` excludes only the **leader/PC**
 (`GetPlayerServerCreature`), NOT party **followers** — deliberately, so
-Q/E can still cycle onto companions. So system (2) beaconed companions
-continuously while walking (in an empty area, the only fires). Fixed
-2026-06-04: the scan loop fetches `GetPartyMembers` once per tick and
-skips matching handles (server-side; matches `GetObjectHandle` on
-iterated objects). See [[feedback_trust_dev_audio_reads]].
+Q/E can still cycle onto companions. A system that announces creatures
+without a key press must skip followers itself, or companions trailing
+the player are announced over and over.
 
-Diagnosing which system fired: grep `CuePlayer`/`ChangeDetector` (beacon)
-vs `PassiveNarrate: fire cue` (focus). Related party-handle plumbing:
+**passive_narrate.cpp** does this in `IsActivePartyMember`: it fetches
+`GetPartyMembers` and compares server handles (`GetObjectHandle` on the
+resolved object). On the automatic focus-follow path a follower is fully
+silent; on an explicit Q/E press the name and status still speak.
+
+History: the continuous proximity beacon (`spatial_change_detector.cpp`,
+removed with the exploration sounds) needed the same fix on 2026-06-04.
+See [[feedback_trust_dev_audio_reads]]. Related party-handle plumbing:
 [[project_cserverexoapp_facade_split]].
 
 ---
@@ -283,7 +237,9 @@ vs `PassiveNarrate: fire cue` (focus). Related party-handle plumbing:
 _Droid-language subtitles are onomatopoeia not translations; HK-47 speaks Basic; meaning carried by player replies_
 
 
-Verified from extracted .dlg + binary dialog.tlk (German, lang 2) on 2026-06-05.
+Verified from extracted .dlg + binary dialog.tlk on 2026-06-05 against a
+German install (lang 2). The quoted lines are the German TLK text; the
+English TLK was not re-checked.
 
 **T3-M4 and generic droids speak ONLY onomatopoeia in subtitles** — no
 translated/meaningful text exists in their lines. TLK strings literally read
@@ -293,20 +249,19 @@ translated/meaningful text exists in their lines. TLK strings literally read
 which the mod already narrates from the reply list. So we miss nothing by not
 "translating" droidic.
 
-**HK-47 speaks Basic** — full VO + meaningful German subtitles (race==DROID but
-intelligible). Already spoken (droid appearance never suppressed by
-[[feedback_first_sight_title_only]]-adjacent human-mask in dialog_speech.cpp).
+**HK-47 speaks Basic** — full VO + meaningful subtitles (race==DROID but
+intelligible).
 
-**Inverse implication (minor):** dialog_speech.cpp never suppresses non-human
-appearances, so it currently TTS-reads the beep-text aloud during T3
-conversations. Noise, not lost info. If we want to suppress: key on
-onomatopoeia content (small beep-word set, or Sound resref prefix "n_gendro_"),
-NOT on race==DROID — that would wrongly silence HK-47.
+**Current behaviour:** `IsSuppressibleSpeaker` in dialog_speech.cpp
+suppresses the subtitle read-out for race==DROID speakers as well as for
+human appearances. So T3's beep text is not read, and HK-47's voiced
+Basic line is not doubled by speech. The per-tag lists
+(`kNeverSuppressTagsK1`, `kAlwaysSuppressTagsK1`) override the rule for
+single speakers.
 
-**Tool:** build/dlgdump/ (.NET 10) — reads chitin.key/BIF + RIM/MOD + binary
-dialog.tlk. Modes: `list <substr>`, `dump <resref>` (BIF), `find <substr>`
-(scan modules/rims for DLG), `dumparc <archive> <resref>`. Reusable for any
-.dlg subtitle/VO inspection. Companion party convos live in module archives
+**Tool:** the check used a local .NET tool (build/dlgdump/, never
+committed) that reads chitin.key/BIF, RIM/MOD archives and the binary
+dialog.tlk. Companion party convos live in module archives
 (ebo_m12aa.mod = Ebon Hawk), NOT in dialog.bif (only 32 DLGs there).
 
 ---

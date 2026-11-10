@@ -4,6 +4,12 @@
 `kotor2-port-feasibility.md`, whose *measurements* remain valid — the sigscan
 result especially — but whose cost estimate predates the RTTI finding below.
 
+> **Fork note (v0.9.1+bridge).** In this fork the mod speaks English only,
+> through NVDA only, and has no beacon, wall cues or update checker. Entries
+> below about locales, per-language string tables, German or other non-English
+> TLK anchors, Prism, the beacon or `update_checker` describe the code as it
+> was when they were written. They are kept as history, not as current state.
+
 **Controller support is a separate, self-contained workstream** — investigated,
 planned and fully implemented 2026-08-06 (Phases 0–5), built clean, awaiting its
 first live round. It does not block or depend on the batches below. Plan, as-built

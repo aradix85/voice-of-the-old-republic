@@ -96,7 +96,7 @@ there. In the world:
   selected entry, because the menu is an overlay and claims the press first
 - B — close the action menu when it is up; otherwise the engine's own
 - RT (alone) — announce the facing (the keyboard's AltGr)
-- LT + LB — audio beacon to the focused object
+- LT + LB — speak the route to the focused object
 - RT + RB — walk to the focused object
 - LT + RT — the current screen's keys (the keyboard's Ctrl+F1)
 - LT + X — own status (the keyboard's H); RT + X — the action queue (Shift+H).
@@ -123,8 +123,8 @@ reaching it would take a raw-HID reader, which was weighed and declined. So H
 and Shift+H sit on the triggers, where the mod already has a modifier.
 
 Each trigger's solo job fires on RELEASE, and a chord taken during the hold
-cancels it. This is not a user-facing rule — it is only what makes LT+LB a
-beacon rather than a beacon plus an unwanted action menu, and firing on press
+cancels it. This is not a user-facing rule — it is only what makes LT+LB speak the
+route without also opening the action menu, and firing on press
 cannot do it because on press we do not yet know a chord is coming.
 
 The solo jobs are only CLAIMED where the triggers are sampled (`pad::Tick`, in
@@ -252,7 +252,7 @@ announcement in the mod speaks with `interrupt=false`, which works on the
 keyboard only because the screen reader itself cuts queued speech on a
 keypress. A pad press produces no keystroke, so entries queue and the lag grows
 with every press. Fixed by issuing the cancel ourselves at the pad seam
-(`NoteNavPress` → `prism::Silence()`) — precisely what the reader would have
+(`NoteNavPress` → `acc::speech::Silence()`) — precisely what the reader would have
 done. Deliberately NOT fixed by flipping the announce paths to `interrupt=true`:
 that would change keyboard behaviour and break the announcements that
 intentionally queue (title, then focus).
@@ -633,14 +633,14 @@ that the menu steps prove the seam before the world steps rely on it.
 13. Pull LT and let go again — the menu closes. Repeat with B: same close. After
     either, the D-Pad steps objects again and A interacts again.
 14. **The collision test.** Pull and hold LT, press LB, release LT. Expect the
-    beacon only — and NO action menu. Then the same with RT + RB (autowalk).
-    Press each a second time to cancel.
+    route only — and NO action menu. Then the same with RT + RB: the walk to
+    the focused object only.
 15. Pull RT alone and let go — the facing in degrees, same phrasing as keyboard
     AltGr. Then on the map screen, same button: the map variant of that line.
 16. Hold LT, pull RT, release both — this screen's keys. Neither the action menu
     nor degrees may also fire.
-17. Press the right stick — the camera turns to the beacon's next waypoint, or
-    to the next compass direction with no beacon armed. Then, **with a mouse
+17. Press the right stick — the camera turns to the nearest exit, and to the
+    next exit clockwise on each further press. Then, **with a mouse
     connected, right-click**: mouse-look must still work. That is the
     `MOUSE_BUTTON1` guard, and it is the one regression here that would hurt a
     player who never touches a pad.
@@ -649,7 +649,7 @@ that the menu steps prove the seam before the world steps rely on it.
 
 If the triggers do nothing at all, grep the log for `Pad: XInput` — either the
 bind line naming the DLL, or the "no XInput DLL resolved" line. If a chord
-fires its action *and* the engine's (a beacon plus a target cycle), the consume
+fires its action *and* the engine's (a route plus a target cycle), the consume
 is not landing: grep `Diag.ClientHIE` for `CONSUMED — pad binding`.
 
 **World — drive loop (Phase 2).** With T3-M4 (or any wheeled droid) as leader,

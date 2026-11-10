@@ -672,8 +672,8 @@ matching the Duros's in-dialog "moving one switch moves the neighbour".
   again — try that first when adding a new puzzle.
 - Unknown tags stay silent (no "Position 0" leak onto ordinary
   containers / doors).
-- Labels are inline per-locale {de, en}; the registry sentinel-terminates
-  on `labelDe == nullptr`.
+- Labels are `strings.h` ids (`LabelEntry {value, Id}`); each label table
+  ends with an `Id::Count_` sentinel.
 - Limitation: only covers state-as-fixed-offset-field. Puzzles whose
   state lives in a named script local (`SetLocalInt(...)`) will need a
   local-vars iteration reader behind the same registry API — add a
@@ -779,7 +779,7 @@ SHIPPED in v0.4.2 (2026-06-08, tag v0.4.2). Three commits + chargen:
 (1) menus_chain.cpp Enter handler gates InGameLevelUp activation on
 `bit_flags(+0x44) & 0x8`; if clear, blocks + SpeakLevelUpDoStepFirst() names
 the bit3-set step ("Zuerst %s abschließen"). New strings FmtLevelUpDoStepFirst
-/ LevelUpStepLocked (5 locales). (2) Display: menus_extract.cpp DisabledSuffix
+/ LevelUpStepLocked. (2) Display: menus_extract.cpp DisabledSuffix
 now keys on bit 3 (not bit 1) for InGameLevelUp + the new CharGen kind, so
 not-yet-your-turn steps announce "nicht verfügbar"; the old comment claiming
 "SetEnabled never called, use bit 1" was WRONG. (3) Double-announce fix:
