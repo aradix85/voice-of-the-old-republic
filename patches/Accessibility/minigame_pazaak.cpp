@@ -1,10 +1,11 @@
-// Pazaak minigame accessibility — see pazaak.h + docs/pazaak-investigation.md.
+// Pazaak minigame accessibility — see minigame_pazaak.h and
+// docs/pazaak-investigation.md. Here: finding the board, the per-tick
+// snapshot and its spoken deltas, and Tick.
 //
 // Design (no engine detour hook):
-//   * Identify the live board panel structurally — the foreground modal
-//     whose deep fields match the CSWPazaak model layout — then track it by
-//     pointer until it leaves the manager. The panel's vtable is learned on
-//     first sight and logged so it can be promoted to a hard constant later.
+//   * Identify the live board panel by its vtable, or structurally — the
+//     foreground modal whose deep fields match the CSWPazaak model layout —
+//     then track it by pointer until it leaves the manager.
 //   * Read the model each tick and announce deltas. Pure state observation,
 //     so we poll rather than hook (hook-vs-poll principle).
 //   * Drive play through the engine's own CSWGuiPazaakGame handlers
@@ -21,12 +22,12 @@
 
 #include "minigame_pazaak_internal.h"
 
-#include "engine_game.h"      // IsKotor2 — Batch 1 decline
-#include "engine_manager.h"   // GetForegroundPanel, IsPanelInManager, kAddrGuiManagerPtr
-#include "engine_panels.h"    // IdentifyPanel, PanelKind
+#include "engine_game.h"
+#include "engine_manager.h"
+#include "engine_panels.h"
+#include "engine_rebase.h"
 #include "log.h"
 #include "strings.h"
-#include "engine_rebase.h"
 
 namespace acc::pazaak {
 
@@ -197,7 +198,7 @@ void AnnounceDeltas(void* panel, const Snap& cur) {
 void ResetState() {
     g_panel = nullptr;
     g_prev = Snap{};
-    g_zone = 0;
+    g_zone = kZoneHand;
     g_col = 0;
     g_optMode = false;
     g_optSlot = -1;
@@ -213,9 +214,7 @@ void ResetState() {
 bool IsBoardForeground() { return g_boardForeground; }
 
 void Tick() {
-    void* mgr = nullptr;
-    __try { mgr = *reinterpret_cast<void**>(kAddrGuiManagerPtr); }
-    __except (EXCEPTION_EXECUTE_HANDLER) { return; }
+    void* mgr = acc::engine::GetGuiManager();
     if (!mgr) { if (g_panel) ResetState(); return; }
 
     void* fg = acc::engine::GetForegroundPanel(mgr);
@@ -237,19 +236,12 @@ void Tick() {
     if (!g_panel && fg &&
         acc::engine::IdentifyPanel(fg) == acc::engine::PanelKind::Unknown &&
         LooksLikePazaak(fg)) {
+        ResetState();
         g_panel = fg;
-        __try { g_learnedVtable = *reinterpret_cast<uintptr_t*>(fg); }
-        __except (EXCEPTION_EXECUTE_HANDLER) { g_learnedVtable = 0; }
         // Disable the visual tutorial so its help popups can't stack on top of
         // the board and freeze the turn engine (see kTutorialActiveOffset).
         WriteIntAt(fg, kTutorialActiveOffset, 0);
-        g_prev = Snap{};
-        g_started = false;
-        g_resultAnnounced = false;
-        g_zone = 0;
-        g_col = 0;
-        acclog::Write("Pazaak", "acquired board panel=%p vtable=0x%08x",
-                      fg, (unsigned)g_learnedVtable);
+        acclog::Write("Pazaak", "acquired board panel=%p", fg);
     }
     if (!g_panel) return;
 
@@ -266,7 +258,7 @@ void Tick() {
         if (g_prev.valid && cur.pBoard < g_prev.pBoard) {
             // New set dealt (board cleared) — re-arm the result latch + cursor.
             g_resultAnnounced = false;
-            g_zone = 0;
+            g_zone = kZoneHand;
             g_col = 0;
         }
         AnnounceDeltas(g_panel, cur);

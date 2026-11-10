@@ -1,8 +1,9 @@
-// Pazaak as speech: card names, the hand, the boards and totals, and the sign choice of a plus-or-minus card.
+// Pazaak as speech: card names, the hand, the boards and totals, and the
+// sign choice of a plus-or-minus card.
 
 #include "minigame_pazaak_internal.h"
 
-#include "engine_game.h"      // IsKotor2 — Batch 1 decline
+#include "engine_game.h"
 #include "speech.h"
 #include "strings.h"
 
@@ -10,17 +11,20 @@ namespace acc::pazaak {
 
 namespace {
 
-// ---- On-demand readouts (c / t) ------------------------------------------
+// Appends a card name to a comma-separated list.
+void AppendCard(char* out, size_t n, const CardView& c, bool inHand) {
+    char card[96];
+    FormatCard(c, inHand, card, sizeof(card));
+    if (out[0]) strncat(out, ", ", n - strlen(out) - 1);
+    strncat(out, card, n - strlen(out) - 1);
+}
+
 void BuildBoard(void* player, char* out, size_t n) {
     using namespace acc::strings;
     out[0] = '\0';
     int cnt = BoardCount(player);
     for (int i = 0; i < cnt; ++i) {
-        CardView c = ReadCard(player, kPlayerBoardOffset, i);
-        char card[96];
-        FormatCard(c, false, card, sizeof(card));
-        if (out[0]) strncat(out, ", ", n - strlen(out) - 1);
-        strncat(out, card, n - strlen(out) - 1);
+        AppendCard(out, n, ReadCard(player, kPlayerBoardOffset, i), false);
     }
     if (!out[0]) snprintf(out, n, "%s", Get(Id::PazaakBoardEmpty));
 }
@@ -37,10 +41,9 @@ int SignCardMagnitude(int index) {
 
 }  // namespace
 
-// ---- Card label synthesis (docs/pazaak-investigation.md §5) ---------------
-// Thin wrapper over the shared synthesizer (acc::pazaak::FormatCardLabel,
-// defined below the anonymous namespace and declared in pazaak.h). inHand
-// selects the Hand context (both faces + current); board cards are Committed.
+// A card's label from FormatCardLabel (docs/pazaak-investigation.md §5):
+// inHand selects the Hand context (both faces + current); board cards are
+// Committed.
 void FormatCard(const CardView& c, bool inHand, char* out, size_t n) {
     FormatCardLabel(c.index, c.flip,
                     inHand ? CardContext::Hand : CardContext::Committed, out, n,
@@ -58,10 +61,7 @@ void SpeakHand(void* player) {
     for (int i = 0; i < kHandSlots; ++i) {
         CardView c = ReadCard(player, kPlayerHandOffset, i);
         if (c.index < 0) continue;
-        char card[96];
-        FormatCard(c, true, card, sizeof(card));
-        if (line[0]) strncat(line, ", ", sizeof(line) - strlen(line) - 1);
-        strncat(line, card, sizeof(line) - strlen(line) - 1);
+        AppendCard(line, sizeof(line), c, true);
         ++count;
     }
     if (count == 0) { Say(Get(Id::PazaakHandEmpty), true); return; }
@@ -71,16 +71,8 @@ void SpeakHand(void* player) {
 }
 
 void SpeakTable(void* model) {
-    using namespace acc::strings;
-    void* p = PlayerOf(model);
-    void* e = EnemyOf(model);
-    char pb[400], eb[400], msg[480];
-    BuildBoard(p, pb, sizeof(pb));
-    BuildBoard(e, eb, sizeof(eb));
-    snprintf(msg, sizeof(msg), Get(Id::PazaakFmtYourBoard), pb, CallGetTotal(p));
-    Say(msg, true);
-    snprintf(msg, sizeof(msg), Get(Id::PazaakFmtOppBoard), eb, CallGetTotal(e));
-    Say(msg);
+    SpeakBoardSide(model, true);
+    SpeakBoardSide(model, false, /*interrupt=*/false);
 }
 
 // Speak the sign chooser's current face ("plus 3" / "minus 1" / "plus 2").
@@ -110,7 +102,7 @@ void SpeakOppHandCount(void* model) {
 }
 
 // Announce one board side as a whole ("Your board: ..., total N").
-void SpeakBoardSide(void* model, bool playerSide) {
+void SpeakBoardSide(void* model, bool playerSide, bool interrupt) {
     using namespace acc::strings;
     void* pl = playerSide ? PlayerOf(model) : EnemyOf(model);
     char b[400], msg[480];
@@ -118,7 +110,7 @@ void SpeakBoardSide(void* model, bool playerSide) {
     snprintf(msg, sizeof(msg),
              Get(playerSide ? Id::PazaakFmtYourBoard : Id::PazaakFmtOppBoard),
              b, CallGetTotal(pl));
-    Say(msg, true);
+    Say(msg, interrupt);
 }
 
 // Render one of the six classic ±N flip faces into `out`.
@@ -137,8 +129,8 @@ void FormatFlipFaces(int mag, int flip, CardContext ctx, char* out, size_t n) {
     }
 }
 
-// Shared card-label synthesizer — see pazaak.h. Used by the board game (via
-// the FormatCard wrapper above) and the side-deck builder (menus_pazaakdeck).
+// Shared card-label synthesizer — see minigame_pazaak.h. Used by the board
+// game (through FormatCard) and the side-deck builder (menus_pazaakdeck).
 //
 // The two games number their cards identically up to 17 and diverge after:
 //

@@ -69,7 +69,7 @@ constexpr int kWagerMoreCode = 0x30;  // increment
 // HandleInputEvent(panel, code, 1) directly — the same path the engine's own
 // button-push callbacks take. `code` is kWagerLessCode / kWagerMoreCode.
 // SEH-guarded; no-op on a stale/non-popup pointer. The per-tick wager
-// observer (ObserveWager) announces the resulting amount.
+// service (ServiceWagerPopup) announces the resulting amount.
 void DispatchWagerInput(void* panel, int code);
 
 void Tick();

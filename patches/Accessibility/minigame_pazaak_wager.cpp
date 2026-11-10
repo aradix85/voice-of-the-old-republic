@@ -1,16 +1,17 @@
-// The wager popup before a match: the amount spoken as it changes, and Left and Right held down to step it faster.
+// The wager popup before a match: the amount spoken as it changes, and Left
+// and Right held down to step it faster.
 
 #include "minigame_pazaak_internal.h"
 
-#include "engine_panels.h"    // IdentifyPanel, PanelKind
+#include "engine_panels.h"
 #include "strings.h"
 
 namespace acc::pazaak {
 
 namespace {
 
-// CSWGuiWagerPopup (the wager popup, a different panel from
-// the board): current wager at +0xc94, maximum at +0xc98. The chain labels the
+// CSWGuiWagerPopup (a different panel from the board): current wager at
+// +0xc94, maximum at +0xc98. The chain labels the
 // less/more buttons but only re-reads on focus change, so we poll the amount
 // and announce it when it changes (pure observation).
 //
@@ -22,7 +23,6 @@ namespace {
 const size_t kWagerCurOffset = acc::off::Pick(0xc94, 0xE30);
 const size_t kWagerMaxOffset = acc::off::Pick(0xc98, 0xE34);
 
-// ---- Wager popup: observe value + Left/Right hold-to-repeat stepper -------
 void* g_wagerPanel = nullptr;
 int   g_wagerLast  = -1;
 
@@ -33,8 +33,8 @@ int   g_wagerLast  = -1;
 // with Left/Right instead, polled here so we can mirror the hold-to-repeat:
 // a tap is one credit, holding accelerates toward the cap/floor. Per-step
 // click feedback comes free (HandleInputEvent plays the wager-click sound);
-// the spoken value is suppressed during the race and announced once on
-// release (Option A).
+// the spoken value is held back while it races and announced once on
+// release.
 int      g_wagerHeldDir   = 0;  // -1 decrease, +1 increase, 0 idle
 unsigned g_wagerHoldStart = 0;  // GetTickCount at key-down
 unsigned g_wagerNextStep  = 0;  // earliest tick for the next auto-repeat step
@@ -49,12 +49,17 @@ void StepWager(void* fg, int dir) {
     DispatchWagerInput(fg, dir < 0 ? kWagerLessCode : kWagerMoreCode);
 }
 
+void SpeakWager(int cur, int max) {
+    char msg[96];
+    snprintf(msg, sizeof(msg), acc::strings::Get(acc::strings::Id::PazaakFmtWager), cur, max);
+    Say(msg, true);
+}
+
 }  // namespace
 
 // Run every tick while the wager popup may be foreground (from Tick). Owns the
 // wager Left/Right stepper and announces the amount when it settles.
 void ServiceWagerPopup(void* fg) {
-    using namespace acc::strings;
     if (!fg || acc::engine::IdentifyPanel(fg) != acc::engine::PanelKind::PazaakWager) {
         g_wagerPanel     = nullptr;
         g_wagerLast      = -1;
@@ -99,11 +104,9 @@ void ServiceWagerPopup(void* fg) {
         }
     } else {  // no direction held
         if (g_wagerRepeating) {
-            // Option A: silent during the race, announce the final value on
-            // release. Stamp g_wagerLast so the change-announce stays quiet.
-            char msg[96];
-            snprintf(msg, sizeof(msg), Get(Id::PazaakFmtWager), cur, max);
-            Say(msg, true);
+            // Silent while it raced: the final value on release. Stamp
+            // g_wagerLast so the change-announce stays quiet.
+            SpeakWager(cur, max);
             g_wagerLast = cur;
         }
         g_wagerHeldDir   = 0;
@@ -113,9 +116,7 @@ void ServiceWagerPopup(void* fg) {
     // Value-change announce for taps (and any non-key change). Suppressed
     // mid-race; the release branch above owns that announcement.
     if (!firstSight && !g_wagerRepeating && cur != g_wagerLast) {
-        char msg[96];
-        snprintf(msg, sizeof(msg), Get(Id::PazaakFmtWager), cur, max);
-        Say(msg, true);
+        SpeakWager(cur, max);
     }
     g_wagerPanel = fg;
     g_wagerLast  = cur;

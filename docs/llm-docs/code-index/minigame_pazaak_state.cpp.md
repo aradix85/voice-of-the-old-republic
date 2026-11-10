@@ -1,4 +1,4 @@
-# minigame_pazaak_state.cpp (22 lines)
+# minigame_pazaak_state.cpp (21 lines)
 
 Source: `patches/Accessibility/minigame_pazaak_state.cpp`
 

@@ -7,11 +7,10 @@ namespace acc::pazaak {
 
 Snap      g_prev;
 void*     g_panel = nullptr;
-uintptr_t g_learnedVtable = 0;
 bool      g_started = false;
 bool      g_resultAnnounced = false;
 bool      g_boardForeground = false;
-int  g_zone = 0;
+int  g_zone = kZoneHand;
 int  g_col  = 0;
 bool g_optMode   = false;
 int  g_optSlot   = -1;

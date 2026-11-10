@@ -1,10 +1,12 @@
-// The pazaak game as the engine holds it: reading the panel, the model, the players and their cards, and calling the engine's own play, stand, end-turn and wager handlers.
+// The pazaak game as the engine holds it: reading the panel, the model, the
+// players and their cards, and calling the engine's own play, stand,
+// end-turn and wager handlers.
 
 #include "minigame_pazaak_internal.h"
 
-#include "engine_game.h"      // IsKotor2 — Batch 1 decline
-#include "log.h"
+#include "engine_game.h"
 #include "engine_rebase.h"
+#include "log.h"
 
 namespace acc::pazaak {
 
@@ -12,15 +14,14 @@ namespace {
 
 // ---- Engine surfaces (docs/pazaak-investigation.md §13) -------------------
 // HandleContinue / HandleStand are __thiscall(this, CSWGuiControl* param_1) —
-// param_1 is the originating button (null when invoked programmatically). Their
-// first guard is `param_1 == 0 || param_1->is_active != 0`, so we MUST pass an
-// explicit control; omitting it leaves param_1 as stack garbage that the guard
-// dereferences, faulting (and silently no-op'ing the action).
+// param_1 is the originating button, null when invoked programmatically. Their
+// first guard is `param_1 == 0 || param_1->is_active != 0`, so the typedef must
+// carry the argument and we pass null; leaving it out hands the guard stack
+// garbage to dereference.
 typedef int  (__thiscall* PFN_GetTotal)(void* player);
 typedef void (__thiscall* PFN_HandleCtrl)(void* panel, void* control);
 typedef void (__thiscall* PFN_HandleInt)(void* panel, int index);
 
-//
 // KOTOR 2 twins, all four reached from its CSWGuiPazaakGame constructor
 // @0x0088aac0 and its own ctor-registered handlers, then body-matched against
 // KOTOR 1's:
@@ -120,7 +121,7 @@ int BoardCount(void* player) {
 }
 
 CardView BoardLast(void* player, int count) {
-    if (count <= 0) return CardView{ -1, 0 };
+    if (count <= 0) return CardView{ -1, 0, 0 };
     return ReadCard(player, kPlayerBoardOffset, count - 1);
 }
 

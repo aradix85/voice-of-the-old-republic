@@ -1,8 +1,9 @@
-// The pazaak keys: moving between the hand and the boards, playing a card, standing, ending the turn, and the shortcut keys.
+// The pazaak keys: moving between the hand and the boards, playing a card,
+// standing, ending the turn, and the shortcut keys.
 
 #include "minigame_pazaak_internal.h"
 
-#include "engine_input.h"     // kInputNav* / kInputEnter* / kInputEsc*
+#include "engine_input.h"
 #include "hotkeys.h"
 #include "log.h"
 #include "strings.h"
@@ -50,12 +51,22 @@ void ActEndTurn(void* panel, int state) {
     }
 }
 
-// ---- Arrow-zone navigation helpers ---------------------------------------
+// Closes the sign chooser of a plus-or-minus card.
+void CloseSignChooser() {
+    g_optMode = false;
+    g_optSlot = -1;
+}
+
+void SpeakAction(int col) {
+    using namespace acc::strings;
+    Say(Get(col == 0 ? Id::PazaakStandLabel : Id::PazaakEndTurnLabel), true);
+}
+
 int ZoneLen(void* model, int zone) {
-    if (zone == 0) return kHandSlots;                  // your hand (4 slots)
-    if (zone == 1) return BoardCount(PlayerOf(model)); // your played cards
-    if (zone == 2) return BoardCount(EnemyOf(model));  // opponent played cards
-    return 2;                                          // actions: Stand, End turn
+    if (zone == kZoneHand)    return kHandSlots;
+    if (zone == kZoneMyBoard) return BoardCount(PlayerOf(model));
+    if (zone == kZoneOppBoard) return BoardCount(EnemyOf(model));
+    return 2;                                          // Stand, End turn
 }
 
 // Hand slots can be empty (index < 0) when a card has been played or the hand
@@ -81,23 +92,22 @@ int NextHandCol(void* player, int from, int dir) {
 
 // Up/Down entered a zone — read its summary so the user gets oriented.
 void AnnounceZoneEntry(void* model, int zone) {
-    using namespace acc::strings;
-    if (zone == 0)      SpeakHand(PlayerOf(model));
-    else if (zone == 1) SpeakBoardSide(model, true);
-    else if (zone == 2) SpeakBoardSide(model, false);
-    else Say(Get(g_col == 0 ? Id::PazaakStandLabel : Id::PazaakEndTurnLabel), true);
+    if (zone == kZoneHand)          SpeakHand(PlayerOf(model));
+    else if (zone == kZoneMyBoard)  SpeakBoardSide(model, true);
+    else if (zone == kZoneOppBoard) SpeakBoardSide(model, false);
+    else                            SpeakAction(g_col);
 }
 
 // Left/Right moved within a zone — read the single focused element.
 void AnnounceZoneElement(void* model, int zone, int col) {
     using namespace acc::strings;
     char card[96];
-    if (zone == 0) {
+    if (zone == kZoneHand) {
         CardView c = ReadCard(PlayerOf(model), kPlayerHandOffset, col);
         FormatCard(c, true, card, sizeof(card));
         Say(card, true);
-    } else if (zone == 1 || zone == 2) {
-        void* pl = (zone == 1) ? PlayerOf(model) : EnemyOf(model);
+    } else if (zone == kZoneMyBoard || zone == kZoneOppBoard) {
+        void* pl = (zone == kZoneMyBoard) ? PlayerOf(model) : EnemyOf(model);
         int cnt = BoardCount(pl);
         if (cnt == 0) { Say(Get(Id::PazaakBoardEmpty), true); return; }
         if (col >= cnt) col = cnt - 1;
@@ -105,14 +115,14 @@ void AnnounceZoneElement(void* model, int zone, int col) {
         FormatCard(c, false, card, sizeof(card));
         Say(card, true);
     } else {
-        Say(Get(col == 0 ? Id::PazaakStandLabel : Id::PazaakEndTurnLabel), true);
+        SpeakAction(col);
     }
 }
 
 // Enter on the focused zone element (driven from TryHandleInput).
 void HandleEnter(void* panel, void* model, int state) {
     using namespace acc::strings;
-    if (g_zone == 0) {  // your hand
+    if (g_zone == kZoneHand) {
         if (state != kStatePlayerInteractive) {
             Say(Get(state == kStatePlayerPlayed ? Id::PazaakNoPlayable
                                                 : Id::PazaakNotYourTurn), true);
@@ -134,11 +144,11 @@ void HandleEnter(void* panel, void* model, int state) {
         } else {
             PlayAndAnnounce(panel, player, g_col);
         }
-    } else if (g_zone == 3) {  // actions
+    } else if (g_zone == kZoneActions) {
         if (g_col == 0) ActStand(panel, state);
         else            ActEndTurn(panel, state);
     }
-    // zones 1 / 2 (boards) are read-only — Enter does nothing.
+    // The boards are read-only: Enter does nothing there.
 }
 
 }  // namespace
@@ -190,9 +200,8 @@ void PollShortcuts(void* panel) {
 // consumes the key. Letters fall through to PollShortcuts; Esc (outside the
 // sub-zone) falls through to the engine's quit-confirm.
 bool TryHandleInput(void* /*activePanel*/, int param_1, int param_2, int& rv) {
-    // Both games since the minigame port (2026-08-15). g_boardForeground is set
-    // by Tick(), which only arms once it has acquired a real board panel, so
-    // this stays inert everywhere else on its own.
+    // g_boardForeground is set by Tick(), which only arms once it has acquired
+    // a real board panel, so this stays inert everywhere else on its own.
     if (!g_boardForeground || !g_panel) return false;
     void* panel = g_panel;
 
@@ -237,13 +246,13 @@ bool TryHandleInput(void* /*activePanel*/, int param_1, int param_2, int& rv) {
                     WriteIntAt(card, kCardValueOffset, g_optValue);
                 }
                 int slot = g_optSlot;
-                g_optMode = false; g_optSlot = -1;
+                CloseSignChooser();
                 PlayAndAnnounce(panel, player, slot);
             } else {
-                g_optMode = false; g_optSlot = -1;
+                CloseSignChooser();
             }
         } else {  // Esc cancels the sign chooser without playing.
-            g_optMode = false; g_optSlot = -1;
+            CloseSignChooser();
             Say(acc::strings::Get(acc::strings::Id::PazaakCancelled), true);
         }
         return true;
@@ -260,11 +269,11 @@ bool TryHandleInput(void* /*activePanel*/, int param_1, int param_2, int& rv) {
     if (isNav) {
         if (param_1 == kInputNavUp || param_1 == kInputNavDown) {
             const int dir = (param_1 == kInputNavUp) ? -1 : 1;
-            if ((dir < 0 && g_zone > 0) || (dir > 0 && g_zone < 3)) {
+            if ((dir < 0 && g_zone > kZoneHand) || (dir > 0 && g_zone < kZoneActions)) {
                 g_zone += dir;
                 // Land on the first filled hand slot when entering the hand;
                 // other zones have no gaps, so just clamp.
-                if (g_zone == 0)
+                if (g_zone == kZoneHand)
                     g_col = FirstHandCol(PlayerOf(model));
                 else if (g_col >= ZoneLen(model, g_zone))
                     g_col = 0;
@@ -273,7 +282,7 @@ bool TryHandleInput(void* /*activePanel*/, int param_1, int param_2, int& rv) {
         } else if (param_1 == kInputNavLeft || param_1 == kInputNavRight) {
             const int dir = (param_1 == kInputNavLeft) ? -1 : 1;
             int next;
-            if (g_zone == 0) {
+            if (g_zone == kZoneHand) {
                 next = NextHandCol(PlayerOf(model), g_col, dir);  // skip empty slots
             } else {
                 next = g_col + dir;

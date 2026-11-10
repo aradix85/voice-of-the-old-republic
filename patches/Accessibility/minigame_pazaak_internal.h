@@ -29,8 +29,7 @@ const size_t kPanelStateOffset = acc::off::Pick(0x86d4, 0x9650); // game_state
 // CPazaakPlayer is 0x70 bytes (hand[4]=0x20 + board[9]=0x48 + stand + score).
 // CSWPazaak.player is at +0x08, so enemy follows at +0x78 (NOT +0x98), and the
 // per-player stand/score sit at +0x68/+0x6c — see swkotor.exe.h structs
-// CPazaakPlayer / CSWPazaak. (Earlier 0x98/0x88/0x8c read dead space + deck
-// cards, so every opponent read came back zero/garbage.)
+// CPazaakPlayer / CSWPazaak.
 //
 // KOTOR 2 keeps this model exactly, with ONE change that cascades through all of
 // it: CPazaakCard grew from 8 bytes to 12. The third dword is the resolved value
@@ -102,14 +101,16 @@ struct Snap {
 
 extern Snap      g_prev;
 extern void*     g_panel;
-extern uintptr_t g_learnedVtable;
 extern bool      g_started;
 extern bool      g_resultAnnounced;
 extern bool      g_boardForeground;  // board is the top foreground panel (for the input hook)
 
 // Cursor / card-options sub-zone state. Arrow-zone model (same as the deck
-// builder): zone 0 = your hand, 1 = your board, 2 = opponent board,
-// 3 = actions (Stand / End turn). Up/Down switch zones, Left/Right move within.
+// builder): Up/Down switch zones, Left/Right move within one.
+constexpr int kZoneHand     = 0;   // your hand
+constexpr int kZoneMyBoard  = 1;   // your played cards
+constexpr int kZoneOppBoard = 2;   // the opponent's played cards
+constexpr int kZoneActions  = 3;   // Stand, End turn
 extern int  g_zone;
 extern int  g_col;
 extern bool g_optMode;
@@ -148,7 +149,7 @@ void SpeakHand(void* player);
 void SpeakTable(void* model);
 void SpeakSignOption(int index, bool interrupt);
 void SpeakOppHandCount(void* model);
-void SpeakBoardSide(void* model, bool playerSide);
+void SpeakBoardSide(void* model, bool playerSide, bool interrupt = true);
 
 // minigame_pazaak_input.cpp
 void ConsumeConflicts();
