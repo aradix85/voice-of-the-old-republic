@@ -539,9 +539,90 @@ inline int SwoopVolumeByte(float dist, float range) {
 // minigame_swoop_audio.cpp
 const char* ReadAurObjectName(void* aurObject);
 
+// ============================================================================
+// Continuous obstacle-proximity cue parameters.
+// ============================================================================
+//
+//   kObstacleCueRangeM     — only obstacles within this 3D distance from
+//                            the listener fire cues. Sized for ~1-1.3 s
+//                            of advance warning at the top observed bike
+//                            speed (~190 units/s in gear 3 on Taris), so
+//                            the user has time to choose a lane before
+//                            the obstacle arrives (30 m gave ~150 ms: too
+//                            late).
+//
+//   kObstacleWarnLoopResref — engine sample looped for each obstacle.
+//                            cb_gr_boncehard2 — a short metallic grenade-bounce
+//                            SFX with steady pitch/volume, so looping it reads as
+//                            a constant metallic clicking that can't be ignored
+//                            in the ~0.7s in-range window (a sustained drone's
+//                            faint attack is lost in that window).
+//
+//   kObstacleForwardMargin — obstacles whose Y (forward axis on the
+//                            tunnel track — the bike moves from low Y to
+//                            high Y, confirmed live) are dropped if they
+//                            sit behind the listener by more than this
+//                            margin. Small negative margin allows
+//                            immediately-adjacent obstacles (mid-pass) to
+//                            keep cueing for one tick so the spatial pan
+//                            completes its sweep.
+constexpr float       kObstacleCueRangeM     = 300.0f;
+constexpr float       kObstacleForwardMargin = 10.0f;
+
+// The bike, the listener and this tick's collections, shared by the steps
+// of TickObstacleCues. POD apart from the initialisers: this file is
+// SEH-heavy by convention (see CLAUDE.md).
+struct ObstacleTick {
+    bool   k2           = false;
+    Vector bikePos      = {0, 0, 0};
+    bool   bikeOk       = false;
+    float  bikeSpeed    = 0.0f;
+    float  playerRadius = 0.0f;
+    bool   justLanded   = false;
+    bool   parked       = false;
+    Vector listener     = {0, 0, 0};
+
+    // In-range warn-loop hazards, before the nearest-N cut.
+    struct Candidate {
+        int         slot;
+        float       dist;
+        Vector      pos;
+        const char* name;
+    };
+    Candidate candidates[kMgoArraySlotCount];
+    int candidateCount = 0;
+
+    // This tick's bars (K2), published to g_state after the sweep so the pair
+    // lookup inside it reads a consistent (last tick's) list.
+    SpatialAudioState::BarInfo newBars[kMgoArraySlotCount];
+    int newBarCount = 0;
+
+    int slotsSeen = 0, obstaclesFound = 0, ahead = 0, inRange = 0;
+    int postsSkipped = 0, scenerySkipped = 0, barsSeen = 0, minesInRange = 0;
+};
+
+// One obstacle as the steps see it. K2 boxes are unrotated on straight +Y
+// tracks (the axis probe has asserted +Y), so the world box is the origin
+// plus the local box.
+struct ObstacleView {
+    void*       obstacle  = nullptr;
+    Vector      pos       = {0, 0, 0};
+    const char* name      = nullptr;
+    bool        haveBox   = false;
+    float       x0 = 0.0f, x1 = 0.0f, y0 = 0.0f, y1 = 0.0f, z0 = 0.0f;
+    bool        scenery   = false;
+    bool        post      = false;
+    // Where the hazard really is: box centre laterally (clamped to the
+    // lane), leading edge forward, base height.
+    Vector      hazardPos = {0, 0, 0};
+};
+
 // minigame_swoop_audio_obstacles.cpp
-void TrackMinePasses(void* player, const Vector& bikePos, float playerRadius);
 void TickObstacleCues(void* miniGame);
+
+// minigame_swoop_audio_bars.cpp
+void TrackMinePasses(void* player, const Vector& bikePos, float playerRadius);
+void HandleBar(int i, const ObstacleView& v, HazardInfo& hz, ObstacleTick& t);
 
 // minigame_swoop_audio_accelpad.cpp
 void TickAccelpadCues(void* miniGame);
