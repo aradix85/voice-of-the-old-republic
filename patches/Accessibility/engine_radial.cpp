@@ -1,12 +1,11 @@
+// The engine's target action menu (CSWGuiTargetActionMenu): its rows, their
+// action lists and selection, and dispatching a row's action.
 
 #include "engine_radial_internal.h"
 
-#include "engine_offsets.h"   // kButtonGuiStringPtrOffset,
-                              // kButtonTextOffset, kLabelGuiStringPtrOffset,
-                              // kLabelTextOffset, kAurGuiStringCStrOffset,
-                              // kVtableCAurGUIStringInternal, CExoString
-#include "engine_app.h"       // GetClientApp
-#include "engine_panels.h"    // ResolveGuiInGame, ResolveMainInterface
+#include "engine_offsets.h"
+#include "engine_app.h"
+#include "engine_panels.h"
 #include "log.h"
 
 namespace acc::engine_radial {
@@ -31,9 +30,7 @@ const size_t kTamNameLabelOffset      = acc::off::Pick(0x15CC, 0x1668);
 // + SelectNext/Prev/DoTargetAction to mark the active action in
 // action_lists[row]. Source-of-truth for "which descriptor is selected
 // right now"; the rendered target_actions[r].action_button only catches
-// up after the engine's next paint pass, which is why we sometimes see
-// `gui_string=[] action_button=[]` immediately after PopulateMenus even
-// though the data is fully populated.
+// up after the engine's next paint pass.
 // K2: selected-id 2-D array stays at +0x24; the target-type byte moved
 // 0x1AEA -> 0x1BAA (both witnessed in the K2 DoTargetAction).
 const size_t kTamField1Offset         = acc::off::Same(0x24);
@@ -44,130 +41,74 @@ const size_t kIfActionStride          = acc::off::Pick(0x38, 0x3c);
 // Engine entry points (k1_win_gog_swkotor.exe.xml symbol table).
 // K2 twin found by the six-StrRef "can't do that" switch shared with
 // DoPersonalAction; disambiguated by its TAM-layout reads (lists at +0,
-// selected array +0x24, target-type byte +0x1baa). NOTE K2 ret 8 —
-// verify the K1 typedef's arg count against it before clearing gates.
+// selected array +0x24, target-type byte +0x1baa).
 const uintptr_t kAddrDoTargetAction = acc::addr::Pick(0x00689610, 0x007445D0);
 
-void* RowActionAddr(void* tam, int row) {
-    if (!tam || row < 0 || row >= acc::engine_radial::kRowCount) return nullptr;
-    return reinterpret_cast<unsigned char*>(tam) +
-           kTamTargetActionsOffset + row * kTargetActionStride;
+bool ValidRow(int row) { return row >= 0 && row < kRowCount; }
+
+// action_lists[row]: its descriptor array and size. Raw reads; the caller
+// holds the SEH frame.
+struct ActionList {
+    unsigned char* entries;
+    int32_t        size;
+};
+
+ActionList ReadActionList(unsigned char* tam, int row) {
+    size_t listOff = kTamActionListsOffset + row * kActionListStride;
+    return {*reinterpret_cast<unsigned char**>(tam + listOff),
+            *reinterpret_cast<int32_t*>(tam + listOff + kActionListSizeOffset)};
+}
+
+unsigned char* Entry(const ActionList& list, int index) {
+    return list.entries + index * kIfActionStride;
+}
+
+int32_t EntryId(const ActionList& list, int index) {
+    return *reinterpret_cast<int32_t*>(Entry(list, index) + kIfActionIdOffset);
+}
+
+// The selected-action slot for this row under the menu's current target
+// type, or nullptr when the type is out of range. Raw read; the caller holds
+// the SEH frame.
+int32_t* SelectedIdSlot(unsigned char* tam, int row) {
+    uint8_t targetType = *(tam + kTamTargetTypeOffset);
+    if (targetType >= 4) return nullptr;
+    return reinterpret_cast<int32_t*>(
+        tam + kTamField1Offset +
+        (static_cast<size_t>(targetType) * 3 + row) * sizeof(int32_t));
 }
 
 void* RowActionButtonAddr(void* tam, int row) {
-    void* rowBase = RowActionAddr(tam, row);
-    if (!rowBase) return nullptr;
-    return reinterpret_cast<unsigned char*>(rowBase) + kRowActionButtonOffset;
+    if (!tam || !ValidRow(row)) return nullptr;
+    return reinterpret_cast<unsigned char*>(tam) + kTamTargetActionsOffset +
+           row * kTargetActionStride + kRowActionButtonOffset;
 }
 
-// Find the CSWGuiInterfaceAction* in action_lists[row].data that matches
-// the engine's currently-selected action_id (field1[target_type*3 + row]).
-// Returns data[0] when field1 holds -1 ("no selection, use default") or
-// when no entry matches the stored id (engine fallback). Returns nullptr
-// when the row is empty / the data pointer is null / a fault occurs.
+// The descriptor in action_lists[row] whose id is the engine's selected
+// one. data[0] when nothing is selected (-1) or no entry has the stored id,
+// as the engine's SelectNextAction lookup does; nullptr for an empty row or
+// a fault.
 void* FindSelectedActionDescriptor(void* tam, int row) {
-    if (!tam || row < 0 || row >= acc::engine_radial::kRowCount) return nullptr;
+    if (!tam || !ValidRow(row)) return nullptr;
     __try {
         auto* base = reinterpret_cast<unsigned char*>(tam);
-        size_t listOff = kTamActionListsOffset + row * kActionListStride;
-        void* dataPtr = *reinterpret_cast<void**>(base + listOff);
-        int32_t size  = *reinterpret_cast<int32_t*>(base + listOff + kActionListSizeOffset);
-        if (!dataPtr || size <= 0) return nullptr;
+        ActionList list = ReadActionList(base, row);
+        if (!list.entries || list.size <= 0) return nullptr;
 
-        uint8_t targetType = *(base + kTamTargetTypeOffset);
-        int32_t selectedId = kActionIdNone;
-        if (targetType < 4) {
-            selectedId = *reinterpret_cast<int32_t*>(
-                base + kTamField1Offset +
-                (static_cast<size_t>(targetType) * 3 + row) * sizeof(int32_t));
-        }
-
-        // -1 = "no selection, default to first"; otherwise scan for match
-        // and fall through to data[0] when no entry has the stored id
-        // (mirrors what the engine does in SelectNextAction's lookup loop).
+        int32_t* slot = SelectedIdSlot(base, row);
+        int32_t selectedId = slot ? *slot : kActionIdNone;
         if (selectedId != kActionIdNone) {
-            auto* entries = reinterpret_cast<unsigned char*>(dataPtr);
-            for (int i = 0; i < size; ++i) {
-                int32_t id = *reinterpret_cast<int32_t*>(
-                    entries + i * kIfActionStride + kIfActionIdOffset);
-                if (id == selectedId) {
-                    return entries + i * kIfActionStride;
-                }
+            for (int i = 0; i < list.size; ++i) {
+                if (EntryId(list, i) == selectedId) return Entry(list, i);
             }
         }
-        return dataPtr;
+        return list.entries;
     } __except (EXCEPTION_EXECUTE_HANDLER) {
         return nullptr;
     }
 }
 
 }  // namespace
-
-bool ReadInt32(void* base, size_t offset, int32_t* out) {
-    if (!base || !out) return false;
-    __try {
-        *out = *reinterpret_cast<int32_t*>(
-            reinterpret_cast<unsigned char*>(base) + offset);
-        return true;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return false;
-    }
-}
-
-// Local copy of the gui_string read path used by ExtractAnnounceableText —
-// pulled in here so the engine layer doesn't depend on menus.cpp's helpers.
-// See engine_offsets.h for why we validate the vtable before dereffing
-// gui_string.
-bool ReadGuiStringLocal(void* control, size_t guiStringPtrOffset,
-                        char* outBuf, size_t bufSize) {
-    if (!control || !outBuf || bufSize == 0) return false;
-    outBuf[0] = '\0';
-    __try {
-        void* gs = *reinterpret_cast<void**>(
-            reinterpret_cast<unsigned char*>(control) + guiStringPtrOffset);
-        if (!gs) return false;
-        uintptr_t vt = *reinterpret_cast<uintptr_t*>(gs);
-        if (vt != kVtableCAurGUIStringInternal) return false;
-        const char* cstr = *reinterpret_cast<const char**>(
-            reinterpret_cast<unsigned char*>(gs) + kAurGuiStringCStrOffset);
-        if (!cstr) return false;
-        size_t i = 0;
-        for (; i + 1 < bufSize; ++i) {
-            char c = cstr[i];
-            outBuf[i] = c;
-            if (c == '\0') return i > 0;
-        }
-        outBuf[i] = '\0';
-        return i > 0;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        outBuf[0] = '\0';
-        return false;
-    }
-}
-
-// Inline CExoString fallback. Same shape as engine_picker's ReadExoString
-// but copy-pasted to avoid the cross-module include.
-bool ReadCExoStringLocal(void* base, size_t offset,
-                         char* outBuf, size_t bufSize) {
-    if (!base || !outBuf || bufSize == 0) return false;
-    outBuf[0] = '\0';
-    __try {
-        auto* es = reinterpret_cast<CExoString*>(
-            reinterpret_cast<unsigned char*>(base) + offset);
-        if (!es->c_string) return false;
-        size_t i = 0;
-        for (; i + 1 < bufSize; ++i) {
-            char c = es->c_string[i];
-            outBuf[i] = c;
-            if (c == '\0') return i > 0;
-        }
-        outBuf[i] = '\0';
-        return i > 0;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        outBuf[0] = '\0';
-        return false;
-    }
-}
 
 void* ResolveTargetActionMenu() {
     void* mainIf = acc::engine::ResolveMainInterface();
@@ -177,23 +118,17 @@ void* ResolveTargetActionMenu() {
 }
 
 int RowActionCount(void* tam, int row) {
-    if (!tam || row < 0 || row >= kRowCount) return 0;
+    if (!tam || !ValidRow(row)) return 0;
     int32_t size = 0;
     size_t offset = kTamActionListsOffset + row * kActionListStride +
                     kActionListSizeOffset;
     if (!ReadInt32(tam, offset, &size)) return 0;
-    if (size < 0) return 0;
-    return static_cast<int>(size);
+    return size < 0 ? 0 : static_cast<int>(size);
 }
 
 uint32_t ReadSelectedRowActionId(void* tam, int row) {
-    void* descriptor = FindSelectedActionDescriptor(tam, row);
-    if (!descriptor) return 0;
     int32_t id = 0;
-    __try {
-        id = *reinterpret_cast<int32_t*>(
-            reinterpret_cast<unsigned char*>(descriptor) + kIfActionIdOffset);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
+    if (!ReadInt32(FindSelectedActionDescriptor(tam, row), kIfActionIdOffset, &id)) {
         return 0;
     }
     return static_cast<uint32_t>(id);
@@ -205,48 +140,33 @@ bool ReadRowActionLabel(void* tam, int row, char* outBuf, size_t bufSize) {
     void* btn = RowActionButtonAddr(tam, row);
     if (!btn) return false;
 
-    // gui_string is the rendered text — same priority order menus.cpp's
-    // ExtractAnnounceableText uses for any other CSWGuiButton.
-    if (ReadGuiStringLocal(btn, kButtonGuiStringPtrOffset, outBuf, bufSize)) {
+    // The rendered text first; the engine sometimes leaves gui_string null
+    // between SelectNextAction calls, so then the inline CExoString.
+    if (acc::engine::ReadGuiString(btn, kButtonGuiStringPtrOffset, outBuf, bufSize)) {
         return true;
     }
-    // Fall back to the inline CExoString. The engine sometimes leaves
-    // gui_string null transiently between SelectNextAction calls.
-    if (ReadCExoStringLocal(btn, kButtonTextOffset, outBuf, bufSize)) {
+    if (acc::engine::ReadCExoString(btn, kButtonTextOffset, outBuf, bufSize)) {
         return true;
     }
-    // Source-of-truth fallback: read the label directly from
-    // action_lists[row].data[selected]. This is the descriptor the engine
-    // *will* render into action_button on its next paint pass — at populate
-    // time the rendered button text is empty (verified in
-    // patch-20260505-101621.log: action_lists[1].data[0] peek showed
-    // [Security] while target_actions[1].action_button was []). Without
-    // this fallback the user hears "Action 1/1" with no label on the very
-    // first arm of a freshly-populated row.
+    // Right after PopulateMenus the button is still empty until the next
+    // paint pass; the selected descriptor holds the label it will show.
     void* descriptor = FindSelectedActionDescriptor(tam, row);
-    if (descriptor &&
-        ReadCExoStringLocal(descriptor, kIfActionLabelOffset,
-                            outBuf, bufSize)) {
-        return true;
-    }
-    return false;
+    return descriptor &&
+           acc::engine::ReadCExoString(descriptor, kIfActionLabelOffset,
+                                       outBuf, bufSize);
 }
 
 bool ReadTargetName(void* tam, char* outBuf, size_t bufSize) {
     if (!tam || !outBuf || bufSize == 0) return false;
     outBuf[0] = '\0';
     void* nameLabel = reinterpret_cast<unsigned char*>(tam) + kTamNameLabelOffset;
-    if (ReadGuiStringLocal(nameLabel, kLabelGuiStringPtrOffset, outBuf, bufSize)) {
-        return true;
-    }
-    if (ReadCExoStringLocal(nameLabel, kLabelTextOffset, outBuf, bufSize)) {
-        return true;
-    }
-    return false;
+    return acc::engine::ReadGuiString(nameLabel, kLabelGuiStringPtrOffset,
+                                      outBuf, bufSize) ||
+           acc::engine::ReadCExoString(nameLabel, kLabelTextOffset, outBuf, bufSize);
 }
 
 bool DispatchRowAction(void* tam, int row) {
-    if (!tam || row < 0 || row >= kRowCount) return false;
+    if (!tam || !ValidRow(row)) return false;
     __try {
         auto fn = reinterpret_cast<PFN_DoTargetAction>(kAddrDoTargetAction);
         fn(tam, row, 0);  // trailing 0: DoTargetAction purges 8 (ret 8)
@@ -258,27 +178,18 @@ bool DispatchRowAction(void* tam, int row) {
 }
 
 bool SelectActionInRow(void* tam, int row, int index) {
-    if (!tam || row < 0 || row >= kRowCount || index < 0) return false;
+    if (!tam || !ValidRow(row) || index < 0) return false;
     __try {
-        auto* base   = reinterpret_cast<unsigned char*>(tam);
-        size_t listOff = kTamActionListsOffset + row * kActionListStride;
-        void* dataPtr = *reinterpret_cast<void**>(base + listOff);
-        int32_t size  = *reinterpret_cast<int32_t*>(
-            base + listOff + kActionListSizeOffset);
-        if (!dataPtr || index >= size) return false;
+        auto* base = reinterpret_cast<unsigned char*>(tam);
+        ActionList list = ReadActionList(base, row);
+        if (!list.entries || index >= list.size) return false;
 
-        auto* entries = reinterpret_cast<unsigned char*>(dataPtr);
-        int32_t actionId = *reinterpret_cast<int32_t*>(
-            entries + index * kIfActionStride + kIfActionIdOffset);
+        int32_t actionId = EntryId(list, index);
         if (actionId == 0) return false;
 
-        uint8_t targetType = *(base + kTamTargetTypeOffset);
-        if (targetType >= 4) return false;
-
-        *reinterpret_cast<int32_t*>(
-            base + kTamField1Offset +
-            (static_cast<size_t>(targetType) * 3 + row) * sizeof(int32_t)) =
-                actionId;
+        int32_t* slot = SelectedIdSlot(base, row);
+        if (!slot) return false;
+        *slot = actionId;
         return true;
     } __except (EXCEPTION_EXECUTE_HANDLER) {
         acclog::Write("Radial", "SelectActionInRow SEH-FAULT row=%d idx=%d",
@@ -288,36 +199,23 @@ bool SelectActionInRow(void* tam, int row, int index) {
 }
 
 uint32_t ReadRowActionIdAtIndex(void* tam, int row, int index) {
-    if (!tam || row < 0 || row >= kRowCount || index < 0) return 0;
+    if (!tam || !ValidRow(row) || index < 0) return 0;
     __try {
-        auto* base   = reinterpret_cast<unsigned char*>(tam);
-        size_t listOff = kTamActionListsOffset + row * kActionListStride;
-        void* dataPtr = *reinterpret_cast<void**>(base + listOff);
-        int32_t size  = *reinterpret_cast<int32_t*>(
-            base + listOff + kActionListSizeOffset);
-        if (!dataPtr || index >= size) return 0;
-        return static_cast<uint32_t>(*reinterpret_cast<int32_t*>(
-            reinterpret_cast<unsigned char*>(dataPtr) +
-            index * kIfActionStride + kIfActionIdOffset));
+        ActionList list = ReadActionList(reinterpret_cast<unsigned char*>(tam), row);
+        if (!list.entries || index >= list.size) return 0;
+        return static_cast<uint32_t>(EntryId(list, index));
     } __except (EXCEPTION_EXECUTE_HANDLER) {
         return 0;
     }
 }
 
 int FindRowIndexByActionId(void* tam, int row, uint32_t actionId) {
-    if (!tam || row < 0 || row >= kRowCount || actionId == 0) return -1;
+    if (!tam || !ValidRow(row) || actionId == 0) return -1;
     __try {
-        auto* base   = reinterpret_cast<unsigned char*>(tam);
-        size_t listOff = kTamActionListsOffset + row * kActionListStride;
-        void* dataPtr = *reinterpret_cast<void**>(base + listOff);
-        int32_t size  = *reinterpret_cast<int32_t*>(
-            base + listOff + kActionListSizeOffset);
-        if (!dataPtr) return -1;
-        auto* entries = reinterpret_cast<unsigned char*>(dataPtr);
-        for (int i = 0; i < size; ++i) {
-            uint32_t id = static_cast<uint32_t>(*reinterpret_cast<int32_t*>(
-                entries + i * kIfActionStride + kIfActionIdOffset));
-            if (id == actionId) return i;
+        ActionList list = ReadActionList(reinterpret_cast<unsigned char*>(tam), row);
+        if (!list.entries) return -1;
+        for (int i = 0; i < list.size; ++i) {
+            if (static_cast<uint32_t>(EntryId(list, i)) == actionId) return i;
         }
         return -1;
     } __except (EXCEPTION_EXECUTE_HANDLER) {
@@ -326,56 +224,31 @@ int FindRowIndexByActionId(void* tam, int row, uint32_t actionId) {
 }
 
 int RetargetRowActions(void* tam, int row, uint32_t targetClientHandle) {
-    if (!tam || row < 0 || row >= kRowCount) return -1;
+    if (!tam || !ValidRow(row)) return -1;
     __try {
-        auto* base   = reinterpret_cast<unsigned char*>(tam);
-        size_t listOff = kTamActionListsOffset + row * kActionListStride;
-        void* dataPtr = *reinterpret_cast<void**>(base + listOff);
-        int32_t size  = *reinterpret_cast<int32_t*>(
-            base + listOff + kActionListSizeOffset);
-        if (!dataPtr || size <= 0) return -1;
+        ActionList list = ReadActionList(reinterpret_cast<unsigned char*>(tam), row);
+        if (!list.entries || list.size <= 0) return -1;
 
-        auto* entries = reinterpret_cast<unsigned char*>(dataPtr);
         uint32_t prev = *reinterpret_cast<uint32_t*>(
-            entries + kIfActionTargetOffset);
-        for (int i = 0; i < size; ++i) {
-            *reinterpret_cast<uint32_t*>(
-                entries + i * kIfActionStride + kIfActionTargetOffset) =
-                    targetClientHandle;
+            Entry(list, 0) + kIfActionTargetOffset);
+        for (int i = 0; i < list.size; ++i) {
+            *reinterpret_cast<uint32_t*>(Entry(list, i) + kIfActionTargetOffset) =
+                targetClientHandle;
         }
         if (prev != targetClientHandle) {
             acclog::Write("Radial",
                 "retarget row=%d stale creature_id 0x%08x -> 0x%08x "
-                "(%d entries)", row, prev, targetClientHandle, size);
+                "(%d entries)", row, prev, targetClientHandle, list.size);
         }
-        return size;
+        return list.size;
     } __except (EXCEPTION_EXECUTE_HANDLER) {
         acclog::Write("Radial", "RetargetRowActions SEH-FAULT row=%d", row);
         return -1;
     }
 }
 
-// Call vtable->AsSWCxxx(gameObject) at the given vtable byte-offset.
-// Returns nullptr on null input or any fault.
-void* CallVtableAsClass(void* gameObject, size_t vtableOffset) {
-    if (!gameObject) return nullptr;
-    __try {
-        unsigned char** vtablePtr =
-            *reinterpret_cast<unsigned char***>(gameObject);
-        if (!vtablePtr) return nullptr;
-        unsigned char* slot =
-            *reinterpret_cast<unsigned char**>(
-                reinterpret_cast<unsigned char*>(vtablePtr) + vtableOffset);
-        if (!slot) return nullptr;
-        auto fn = reinterpret_cast<PFN_AsClass>(slot);
-        return fn(gameObject);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return nullptr;
-    }
-}
-
 bool IsCreatureClientTarget(uint32_t handle) {
-    if (handle == 0u || handle == 0xFFFFFFFFu || handle == 0x7F000000u) {
+    if (handle == 0u || handle == 0xFFFFFFFFu || handle == kInvalidObjectId) {
         return false;
     }
     uint32_t client = handle | 0x80000000u;  // engine convention: client high bit
@@ -383,7 +256,7 @@ bool IsCreatureClientTarget(uint32_t handle) {
     if (!exoApp) return false;
     void* gameObject = nullptr;
     __try {
-        auto fn = reinterpret_cast<PFN_GetGameObject>(kAddrCClientGetGameObject);
+        auto fn = reinterpret_cast<PFN_GetGameObject>(kAddrCClientExoAppGetGameObject);
         gameObject = fn(exoApp, client);
     } __except (EXCEPTION_EXECUTE_HANDLER) {
         return false;

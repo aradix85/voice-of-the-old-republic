@@ -2,13 +2,9 @@
 
 #include "engine_radial_internal.h"
 
-#include "engine_offsets.h"   // kButtonGuiStringPtrOffset,
-                              // kButtonTextOffset, kLabelGuiStringPtrOffset,
-                              // kLabelTextOffset, kAurGuiStringCStrOffset,
-                              // kVtableCAurGUIStringInternal, CExoString
-#include "engine_app.h"       // GetClientApp
-#include "engine_player.h"    // kClientObjectServerObjectOffset,
-                              // GetClientLeader (for Security skill check)
+#include "engine_offsets.h"
+#include "engine_app.h"
+#include "engine_player.h"
 #include "log.h"
 
 namespace acc::engine_radial {
@@ -68,8 +64,7 @@ const size_t kDoorField17Offset        = acc::off::Pick(0x138, 0x13c);
 
 // Read a CResRef (fixed 16-byte string) into outBuf, treating the buffer
 // as NUL-terminated within the 16-byte window.
-void ReadResRefLocal(void* base, size_t offset,
-                     char* outBuf, size_t bufSize) {
+void ReadResRef(void* base, size_t offset, char* outBuf, size_t bufSize) {
     if (!outBuf || bufSize == 0) return;
     outBuf[0] = '\0';
     if (!base) return;
@@ -88,17 +83,6 @@ void ReadResRefLocal(void* base, size_t offset,
     } __except (EXCEPTION_EXECUTE_HANDLER) {
         outBuf[0] = '\0';
     }
-}
-
-// Read a CSWGuiButton's text via every path we know about (gui_string ->
-// inline CExoString) into outBuf. Always NUL-terminates; safe on a stale
-// embedded button.
-void ReadButtonText(void* button, char* outBuf, size_t bufSize) {
-    if (!button || !outBuf || bufSize == 0) return;
-    outBuf[0] = '\0';
-    if (ReadGuiStringLocal(button, kButtonGuiStringPtrOffset,
-                           outBuf, bufSize)) return;
-    if (ReadCExoStringLocal(button, kButtonTextOffset, outBuf, bufSize)) return;
 }
 
 }  // namespace
@@ -128,7 +112,7 @@ void LogState(void* tam, const char* tag) {
     }
 
     // Parsed action_lists.
-    for (int r = 0; r < acc::engine_radial::kRowCount; ++r) {
+    for (int r = 0; r < kRowCount; ++r) {
         size_t base = kTamActionListsOffset + r * kActionListStride;
         int32_t dataPtr = 0, size = 0, cap = 0;
         ReadInt32(tam, base + 0x00, &dataPtr);
@@ -140,7 +124,7 @@ void LogState(void* tam, const char* tag) {
     }
 
     // Per-row is_action + action_button.text length (via gui_string).
-    for (int r = 0; r < acc::engine_radial::kRowCount; ++r) {
+    for (int r = 0; r < kRowCount; ++r) {
         size_t rowBase = kTamTargetActionsOffset + r * kTargetActionStride;
         int32_t isAction = 0;
         ReadInt32(tam, rowBase + kRowIsActionOffset, &isAction);
@@ -148,8 +132,8 @@ void LogState(void* tam, const char* tag) {
         char label[128] = "";
         void* btn = reinterpret_cast<unsigned char*>(tam) + rowBase +
                     kRowActionButtonOffset;
-        ReadGuiStringLocal(btn, kButtonGuiStringPtrOffset,
-                           label, sizeof(label));
+        acc::engine::ReadGuiString(btn, kButtonGuiStringPtrOffset,
+                                   label, sizeof(label));
         size_t labelLen = 0;
         for (; labelLen < sizeof(label) && label[labelLen]; ++labelLen) {}
 
@@ -159,7 +143,7 @@ void LogState(void* tam, const char* tag) {
     }
 
     char nameBuf[64] = "";
-    acc::engine_radial::ReadTargetName(tam, nameBuf, sizeof(nameBuf));
+    ReadTargetName(tam, nameBuf, sizeof(nameBuf));
     acclog::Write("Radial.State", "[%s] name_label.text=[%s]",
                   tag ? tag : "?", nameBuf);
 }
@@ -186,7 +170,7 @@ void LogStateWide(void* tam, const char* tag) {
     }
 
     // For each row: full button text dump + field4/field5 + is_action.
-    for (int r = 0; r < acc::engine_radial::kRowCount; ++r) {
+    for (int r = 0; r < kRowCount; ++r) {
         size_t rowBase = kTamTargetActionsOffset + r * kTargetActionStride;
         unsigned char* row =
             reinterpret_cast<unsigned char*>(tam) + rowBase;
@@ -194,10 +178,10 @@ void LogStateWide(void* tam, const char* tag) {
         char actLbl[96]   = "";
         char upBtn[96]    = "";
         char downBtn[96]  = "";
-        ReadButtonText(row + kRowActionButtonOffset, actBtn, sizeof(actBtn));
-        ReadButtonText(row + kRowActionLabelOffset,  actLbl, sizeof(actLbl));
-        ReadButtonText(row + kRowUpButtonOffset,     upBtn,  sizeof(upBtn));
-        ReadButtonText(row + kRowDownButtonOffset,   downBtn, sizeof(downBtn));
+        acc::engine::ReadButtonText(row + kRowActionButtonOffset, actBtn, sizeof(actBtn));
+        acc::engine::ReadButtonText(row + kRowActionLabelOffset,  actLbl, sizeof(actLbl));
+        acc::engine::ReadButtonText(row + kRowUpButtonOffset,     upBtn,  sizeof(upBtn));
+        acc::engine::ReadButtonText(row + kRowDownButtonOffset,   downBtn, sizeof(downBtn));
         int32_t f4 = 0, f5 = 0, isAct = 0;
         ReadInt32(tam, rowBase + kRowField4Offset, &f4);
         ReadInt32(tam, rowBase + kRowField5Offset, &f5);
@@ -218,7 +202,7 @@ void LogStateWide(void* tam, const char* tag) {
     // Peek action_lists[r].data[0] when the engine reserved capacity but
     // didn't update size — maybe the action descriptor was written but
     // the size update was skipped, leaving us a recoverable label.
-    for (int r = 0; r < acc::engine_radial::kRowCount; ++r) {
+    for (int r = 0; r < kRowCount; ++r) {
         size_t base = kTamActionListsOffset + r * kActionListStride;
         int32_t dataPtr = 0, sizeF = 0, cap = 0;
         ReadInt32(tam, base + 0x00, &dataPtr);
@@ -231,10 +215,10 @@ void LogStateWide(void* tam, const char* tag) {
         char    icon[16]  = "";
         int32_t actionId = 0;
         int32_t targetId = 0;
-        ReadCExoStringLocal(peek, kIfActionLabelOffset, label, sizeof(label));
+        acc::engine::ReadCExoString(peek, kIfActionLabelOffset, label, sizeof(label));
         ReadInt32(peek, kIfActionIdOffset,    &actionId);
         ReadInt32(peek, kIfActionTargetOffset, &targetId);
-        ReadResRefLocal(peek, kIfActionIconOffset, icon, sizeof(icon));
+        ReadResRef(peek, kIfActionIconOffset, icon, sizeof(icon));
 
         acclog::Write("Radial.StateW", "[%s] action_lists[%d].data[0] peek "
             "label=[%s] action_id=0x%x target_id=0x%08x icon=[%s] "
@@ -250,7 +234,7 @@ void LogTargetDiag(uint32_t targetClient, const char* tag) {
     const char* t = tag ? tag : "?";
 
     if (targetClient == 0u || targetClient == 0xFFFFFFFFu ||
-        targetClient == 0x7F000000u) {
+        targetClient == kInvalidObjectId) {
         acclog::Write("Radial.Diag", "[%s] target=0x%08x — sentinel/invalid",
                       t, targetClient);
         return;
@@ -266,7 +250,7 @@ void LogTargetDiag(uint32_t targetClient, const char* tag) {
     void* gameObject = nullptr;
     __try {
         auto fn = reinterpret_cast<PFN_GetGameObject>(
-            kAddrCClientGetGameObject);
+            kAddrCClientExoAppGetGameObject);
         gameObject = fn(exoApp, targetClient);
     } __except (EXCEPTION_EXECUTE_HANDLER) {
         gameObject = nullptr;
@@ -319,10 +303,9 @@ void LogTargetDiag(uint32_t targetClient, const char* tag) {
             "is_hostile=%d state=%d field17=%d",
             t, asDoor, cannotBash, canUseActions, isHostile, state, field17);
 
-        // Server-side door's Security gate — `*(int *)(server_door + 0x2d8)`
+        // Server-side door's Security gate (kServerDoorSecurityGateOffset)
         // must be 0 for CSWCDoor::GetTargetActions to add the Security row.
-        // Reach via the same +0xf8 chain we use for player creature; the
-        // SWS object lives at the same offset for every client object.
+        // The server object sits at the same offset on every client object.
         void* serverDoor = nullptr;
         __try {
             serverDoor = *reinterpret_cast<void**>(
@@ -338,7 +321,7 @@ void LogTargetDiag(uint32_t targetClient, const char* tag) {
                                  kServerDoorSecurityGateOffset, &securityGate);
         }
         if (gateRead) {
-            acclog::Write("Radial.Diag", "[%s] server_door=%p +0x2d8(security_gate)=%d "
+            acclog::Write("Radial.Diag", "[%s] server_door=%p security_gate=%d "
                 "(must be 0 to add Security row)",
                 t, serverDoor, securityGate);
         } else {
@@ -397,7 +380,7 @@ void LogTargetDiag(uint32_t targetClient, const char* tag) {
                 t, field17);
         }
         if (gateRead && securityGate != 0) {
-            acclog::Write("Radial.Diag", "[%s] door precondition fail — server_door+0x2d8 "
+            acclog::Write("Radial.Diag", "[%s] door precondition fail — server_door security_gate "
                 "= %d != 0 (door rejects Security row at the server-side gate)",
                 t, securityGate);
         }

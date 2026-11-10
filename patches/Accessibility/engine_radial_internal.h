@@ -9,7 +9,9 @@
 #include <cstdint>
 #include <cstdio>
 
+#include "engine_area.h"
 #include "engine_rebase.h"
+#include "engine_reads.h"
 #include "engine_offsets_select.h"
 
 namespace acc::engine_radial {
@@ -64,13 +66,6 @@ const size_t kIfActionIdOffset       = acc::off::Same(0x08);  // ulong
 const size_t kIfActionTargetOffset   = acc::off::Same(0x1c);  // ulong
 const size_t kIfActionIconOffset     = acc::off::Same(0x20);  // CResRef (16B)
 
-// CClientExoApp::GetGameObject @ 0x005ED580 — same address engine_area /
-// engine_picker use. (this, handle) -> CGameObject*. K2 twin 0x0073F4D0
-// (see kAddrCClientExoAppGetGameObject in engine_area.h for the witness);
-// kept as Pick here purely for consistency — this module stays K1-gated
-// until the Batch 6 triage.
-const uintptr_t kAddrCClientGetGameObject = acc::addr::Pick(0x005ED580, 0x0073F4D0);
-
 // GameObjectMethods vtable indices we care about for runtime-class probing.
 // Layout from swkotor.exe.h:14638. Each entry is one __thiscall pointer
 // (4 bytes on x86); offsets are byte offsets into the vtable.
@@ -98,15 +93,17 @@ const size_t kVtableAsSWCPlaceableOffset = acc::off::Pick(0x48, 0x4c);
 // SetMainInterfaceTarget class of bug); push a matching pad.
 typedef void (__thiscall* PFN_DoTargetAction)(void* this_, int row, int pad);
 typedef void* (__thiscall* PFN_GetGameObject)(void* exoApp, uint32_t handle);
-typedef void* (__thiscall* PFN_AsClass)(void* gameObject);
 typedef bool (__thiscall* PFN_GetCanUseSkill)(void* stats, uint16_t skillIdx);
 
-// Helpers shared across the files, by the file that defines them.
+inline bool ReadInt32(void* base, size_t offset, int32_t* out) {
+    return acc::engine::TryReadU32(base, offset, reinterpret_cast<uint32_t*>(out));
+}
 
-// engine_radial.cpp
-bool ReadInt32(void* base, size_t offset, int32_t* out);
-bool ReadGuiStringLocal(void* control, size_t guiStringPtrOffset, char* outBuf, size_t bufSize);
-bool ReadCExoStringLocal(void* base, size_t offset, char* outBuf, size_t bufSize);
-void* CallVtableAsClass(void* gameObject, size_t vtableOffset);
+// The game object's AsSWCxxx downcast at the given vtable byte offset, or
+// nullptr.
+inline void* CallVtableAsClass(void* gameObject, size_t vtableOffset) {
+    return acc::engine::CallDowncast(
+        gameObject, static_cast<int>(vtableOffset / sizeof(void*)));
+}
 
 }  // namespace acc::engine_radial

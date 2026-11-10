@@ -1,26 +1,26 @@
-# engine_radial.cpp (396 lines)
+# engine_radial.cpp (269 lines)
 
 Source: `patches/Accessibility/engine_radial.cpp`
 
-kButtonTextOffset, kLabelGuiStringPtrOffset, kLabelTextOffset, kAurGuiStringCStrOffset, kVtableCAurGUIStringInternal, CExoString
+The engine's target action menu (CSWGuiTargetActionMenu): its rows, their action lists and selection, and dispatching a row's action.
 
 ## Declarations (in source order)
 
-- L51 `void* RowActionAddr(void* tam, int row)`
-- L57 `void* RowActionButtonAddr(void* tam, int row)`
-- L68 `void* FindSelectedActionDescriptor(void* tam, int row)`: Find the CSWGuiInterfaceAction* in action_lists[row].data that matches the engine's currently-selected action_id (field1[target_type*3 + row]).
-- L106 `bool ReadInt32(void* base, size_t offset, int32_t* out)`
-- L121 `bool ReadGuiStringLocal(void* control, size_t guiStringPtrOffset, char* outBuf, size_t bufSize)`: Local copy of the gui_string read path used by ExtractAnnounceableText — pulled in here so the engine layer doesn't depend on menus.cpp's helpers.
-- L150 `bool ReadCExoStringLocal(void* base, size_t offset, char* outBuf, size_t bufSize)`: Inline CExoString fallback.
-- L172 `void* ResolveTargetActionMenu()`
-- L179 `int RowActionCount(void* tam, int row)`
-- L189 `uint32_t ReadSelectedRowActionId(void* tam, int row)`
-- L202 `bool ReadRowActionLabel(void* tam, int row, char* outBuf, size_t bufSize)`
-- L235 `bool ReadTargetName(void* tam, char* outBuf, size_t bufSize)`
-- L248 `bool DispatchRowAction(void* tam, int row)`
-- L260 `bool SelectActionInRow(void* tam, int row, int index)`
-- L290 `uint32_t ReadRowActionIdAtIndex(void* tam, int row, int index)`
-- L307 `int FindRowIndexByActionId(void* tam, int row, uint32_t actionId)`
-- L328 `int RetargetRowActions(void* tam, int row, uint32_t targetClientHandle)`
-- L360 `void* CallVtableAsClass(void* gameObject, size_t vtableOffset)`: Call vtable->AsSWCxxx(gameObject) at the given vtable byte-offset.
-- L377 `bool IsCreatureClientTarget(uint32_t handle)`
+- L47 `bool ValidRow(int row)`
+- L56 `ActionList ReadActionList(unsigned char* tam, int row)`
+- L62 `unsigned char* Entry(const ActionList& list, int index)`
+- L66 `int32_t EntryId(const ActionList& list, int index)`
+- L73 `int32_t* SelectedIdSlot(unsigned char* tam, int row)`: The selected-action slot for this row under the menu's current target type, or nullptr when the type is out of range.
+- L81 `void* RowActionButtonAddr(void* tam, int row)`
+- L91 `void* FindSelectedActionDescriptor(void* tam, int row)`: The descriptor in action_lists[row] whose id is the engine's selected one.
+- L113 `void* ResolveTargetActionMenu()`
+- L120 `int RowActionCount(void* tam, int row)`
+- L129 `uint32_t ReadSelectedRowActionId(void* tam, int row)`
+- L137 `bool ReadRowActionLabel(void* tam, int row, char* outBuf, size_t bufSize)`
+- L159 `bool ReadTargetName(void* tam, char* outBuf, size_t bufSize)`
+- L168 `bool DispatchRowAction(void* tam, int row)`
+- L180 `bool SelectActionInRow(void* tam, int row, int index)`
+- L201 `uint32_t ReadRowActionIdAtIndex(void* tam, int row, int index)`
+- L212 `int FindRowIndexByActionId(void* tam, int row, uint32_t actionId)`
+- L226 `int RetargetRowActions(void* tam, int row, uint32_t targetClientHandle)`
+- L250 `bool IsCreatureClientTarget(uint32_t handle)`
