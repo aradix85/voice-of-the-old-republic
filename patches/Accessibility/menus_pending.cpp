@@ -10,36 +10,138 @@
 // debounce subsets were inconsistent (e.g. EquipPicker Enter checked
 // EquipSelect/Commit, but Slider Left/Right didn't).
 
-#include <windows.h>
-#include <cstdint>
-#include <cstdio>
+#include "menus_pending_internal.h"
 
-#include "menus_pending.h"
-
-#include "engine_input.h"
 #include "engine_manager.h"
 #include "engine_offsets.h"
-#include "engine_panels.h"   // IdentifyPanel / PanelKind — chargen sub-screen close
 #include "log.h"
-#include "engine_reads.h"    // LookupTlk for workbench slot-type strref
-#include "menus.h"           // ClearPendingAnnounce — partner of InvalidateChain
-#include "menus_chain.h"     // ValidateChainPanel — post-Activate stale-pointer guard
-#include "menus_chargen_attr.h"     // IsChargenAttributesPanel — chargen sub-screen close
-#include "menus_chargen_feats.h"    // IsChargenFeatsPanel — chargen sub-screen close
-#include "menus_chargen_skills.h"   // IsChargenSkillsPanel — chargen sub-screen close
 #include "menus_crafting.h"  // DispatchRowCommit for CraftRowCommit
 #include "menus_galaxymap.h"        // DispatchInput for GalaxyInput
 #include "minigame_pazaak.h"                 // DispatchWagerInput for WagerInput
-#include "menus_internal.h"  // PowersPanel*/FeatsPanel* Accept/Back — chargen sub-screen close
-#include "menus_inventory.h"  // filter list-rebuild repair + item-row selection sync
-#include "menus_journal.h"   // Sort/Swap post-activate list-rebuild repair
-#include "menus_listbox.h"   // ClearWorkbenchUpgradeArmLatch (post-slot-select cleanup)
-#include "menus_powers_levelup.h"   // IsPowersLevelUpPanel — chargen sub-screen close
 #include "menus_store.h"     // DispatchTradeAction for StoreItemActivate
-#include "speech.h"           // Speak — workbench slot-click outcome announce
-#include "strings.h"         // WorkbenchSlotInstalled / Removed / NoMatch
 
 namespace acc::menus::pending {
+
+namespace {
+
+PendingOp g_op;
+
+void Reset() {
+    g_op = PendingOp{};
+}
+
+// CSWGuiManager mouseOverControl pointer at +0x8 (per the decompilation
+// in docs/menu-nav-design.md). Reading it directly lets us verify what
+// the engine's hit-test resolved the cursor to — the difference between
+// "click landed on tab T" and "click landed on the inline listbox" is
+// invisible from cursor coords alone.
+void* MouseOver(void* gm) {
+    return *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(gm) + 0x8);
+}
+
+void DrainMoveCursor(void* gm, const PendingOp& op) {
+    auto move = reinterpret_cast<PFN_MoveMouseToPosition>(kAddrMoveMouseToPosition);
+    // Capture mouseOver BEFORE the move. Disambiguates whether
+    // MoveMouseToPosition itself produces the 45-px-shifted hit-test
+    // result (before==something-else, after==shifted-button) vs. the
+    // engine pre-setting mouseOver during panel init (before==after,
+    // never refreshed by our move at all). See chat.
+    void* moBefore = MouseOver(gm);
+    move(gm, op.x, op.y);
+    acclog::Write("Update", "MoveMouseToPosition(%d, %d) target=%p mouseOver before=%p after=%p",
+                  op.x, op.y, op.a,
+                  moBefore, MouseOver(gm));
+}
+
+// Combined move + click. Click-sim via manager's HandleLMouseDown/Up.
+// Dispatches against mouseOverControl, which on Options-style tabbed
+// panels resolves to the button one step above the chain target
+// (consistent 45-px hit-test shift — see chat investigation). That
+// activates the wrong tab.
+//
+// Direct vtable[6]/[7] on the chain target was tried as a workaround
+// (commit reverted) — it crashes the game on the second tab+ click.
+// The button's own HandleLMouseDown/Up depend on manager-side state
+// (probably the +0x1c mouse_held bit and/or other setup we'd skip).
+// Need a different approach for the off-by-1; for now keep the original
+// pipeline so behavior is at least stable.
+void DrainClickAt(void* gm, const PendingOp& op) {
+    auto move = reinterpret_cast<PFN_MoveMouseToPosition>(kAddrMoveMouseToPosition);
+    auto down = reinterpret_cast<PFN_ManagerLMouseDown>(kAddrManagerLMouseDown);
+    auto up   = reinterpret_cast<PFN_ManagerLMouseUp>(kAddrManagerLMouseUp);
+    void* moBefore = MouseOver(gm);
+    move(gm, op.x, op.y);
+    acclog::Write("Update", "MoveMouseToPosition(%d, %d) target=%p mouseOver before=%p after=%p",
+                  op.x, op.y, op.a,
+                  moBefore, MouseOver(gm));
+    moBefore = MouseOver(gm);
+    int dResult = down(gm, /*press=*/1);
+    void* moAfterDown = MouseOver(gm);
+    int uResult = up(gm);
+    void* moAfterUp = MouseOver(gm);
+    acclog::Write("Update", "click-sim Down=%d Up=%d at (%d,%d) target=%p "
+                  "mouseOver before=%p afterDown=%p afterUp=%p",
+                  dResult, uResult, op.x, op.y, op.a,
+                  moBefore, moAfterDown, moAfterUp);
+}
+
+// Slider value adjustment via vtable[15].HandleInputEvent(500/501, 1).
+// The slider's HandleInputEvent runs SetCurValue (clamped to
+// [0, max_value]) and the gui_object callback that propagates to the
+// audio system, then plays the click feedback sound. Per-frame focus
+// monitor catches the cur_value change at +0x74 on the next tick.
+void DrainSliderInput(const PendingOp& op) {
+    if (op.a) {
+        void** vtable = *reinterpret_cast<void***>(op.a);
+        if (vtable) {
+            auto fn = reinterpret_cast<PFN_ControlHandleInputEvent>(
+                vtable[kVtableHandleInputEvent]);
+            if (fn) {
+                acclog::Write("Update", "slider HandleInputEvent target=%p code=%d",
+                              op.a, op.code);
+                fn(op.a, op.code, 1);
+            }
+        }
+    }
+}
+
+// Store item Enter — dispatch the engine's per-mode click handler
+// with the row as param_1. The engine reads the row's obj_id at
+// +0x1c4 and either opens the confirmation MessageBox or sells/buys
+// directly (depending on its internal cost vs. level threshold).
+// After the engine call, PopulateInventoryItemListBox /
+// PopulateStoreItemListBox repopulates rows; menus_store's per-tick
+// monitor detects the listbox size change and rebinds the chain.
+void DrainStoreItemActivate(const PendingOp& op) {
+    acc::menus::store::DispatchTradeAction(op.a, op.b);
+}
+
+// K2 workbench / crafting list-row commit — select the row, then fire
+// the panel's own commit button. No direct engine addresses involved
+// (button dispatch goes through vtable[15]), so no EngineOpsReady gate.
+void DrainCraftRowCommit(const PendingOp& op) {
+    acc::menus::crafting::DispatchRowCommit(op.a, op.b, op.c);
+}
+
+// Galaxy-map planet cycle / accept / cancel. DispatchInput calls the
+// panel's own HandleInputEvent (the engine's NextPlanet/PrevPlanet skip
+// hidden / unselectable planets), then re-reads LBL_PLANETNAME when this
+// was an Up/Down cycle (op.x == 1).
+void DrainGalaxyInput(const PendingOp& op) {
+    acc::menus::galaxymap::DispatchInput(op.a, op.code, op.x != 0);
+}
+
+// Pazaak wager less/more step — the popup's BTN_LESS / BTN_MORE speed
+// buttons only respond to their push callback, which re-dispatches to the
+// panel's HandleInputEvent (0x2f decrement / 0x30 increment). The generic
+// vtable[15] activate (0x27) they ignore, so this is the dedicated Enter
+// path. The engine clamps to [1, max] and repaints LBL_WAGERVAL; the
+// per-tick wager observer announces the new amount.
+void DrainWagerInput(const PendingOp& op) {
+    acc::pazaak::DispatchWagerInput(op.a, op.code);
+}
+
+}  // namespace
 
 // Raise a control's is_active flag from 0 to 1 and return what it was.
 //
@@ -72,90 +174,6 @@ uint32_t RaiseIsActiveIfZero(void* control) {
     if (prev == 0) *isActive = 1;
     return prev;
 }
-
-namespace {
-
-enum class Kind {
-    None,
-    MoveCursor,        // x, y, a = target (self-dedup)
-    ClickAt,           // x, y, a = target (self-dedup)
-    Activate,          // a = target
-    EquipSelect,       // a = panel, b = slot
-    EquipCommit,       // a = panel, b = row, c = btn
-    EquipPickerCancel, // a = panel — the engine's own cancel (revert + close)
-    WorkbenchSlotSelect,    // a = panel, b = slot
-    WorkbenchUpgradeCommit, // a = panel, b = row, c = btnAssemble
-    WorkbenchUpgradeInstallK2, // a = panel, b = row — K2 one-step install/remove
-    WorkbenchPickerCancel,  // a = panel — close the mod-picker zone (re-enable slots)
-    SliderInput,       // a = target, code = direction (500 inc / 501 dec)
-    StoreItemActivate, // a = panel (CSWGuiStore), b = row (StoreItemEntry)
-    CraftRowCommit,    // a = panel (K2 workbench screen), b = listbox,
-                       // c = row (commit button re-resolved at drain)
-    GalaxyInput,       // a = panel (galaxy map), code = engine event,
-                       // x = announce-planet flag (0/1)
-    WagerInput,        // a = panel (pazaak wager popup), code = engine event
-                       // (0x2f less / 0x30 more)
-};
-
-struct PendingOp {
-    Kind  kind = Kind::None;
-    int   x = 0;
-    int   y = 0;
-    void* a = nullptr;
-    void* b = nullptr;
-    void* c = nullptr;
-    int   code = 0;
-};
-
-PendingOp g_op;
-
-// Kept local to the drain block (not a public surface). Needed for the
-// slider HandleInputEvent dispatch; menus.cpp has its own copy in its
-// FireActivate. Typedef + constant are non-ODR-violating across TUs.
-constexpr int kVtableHandleInputEvent = 15;
-typedef void (__thiscall* PFN_ControlHandleInputEvent)(void* this_, int code, int state);
-
-void Reset() {
-    g_op = PendingOp{};
-}
-
-// Sentinel returned by ReadUpgradeSlotInstalled when the field can't be read
-// (bad slot pointer / SEH fault) — distinct from nullptr (slot empty).
-void* const kUpgradeSlotUnknown = reinterpret_cast<void*>(~uintptr_t(0));
-
-// K2: the installed-mod pointer (field35) of the currently-open upgrade slot.
-// The panel holds the active slot button at +0x3dbc; its custom_value indexes
-// field35. SEH-guarded, in its own function so the SEH-using Drain stays free
-// of unwinding objects (MSVC C2712). Returns kUpgradeSlotUnknown on any fault.
-void* ReadUpgradeSlotInstalled(void* panel) {
-    if (!panel) return kUpgradeSlotUnknown;
-    __try {
-        auto* base = reinterpret_cast<unsigned char*>(panel);
-        void* slotBtn = *reinterpret_cast<void**>(
-            base + kUpgradePanelActiveSlotPtrOff);
-        if (!slotBtn) return kUpgradeSlotUnknown;
-        int cv = *reinterpret_cast<int*>(
-            reinterpret_cast<unsigned char*>(slotBtn) + kUpgradeSlotCustomValueOff);
-        if (cv < 0 || cv > 5) return kUpgradeSlotUnknown;
-        return *reinterpret_cast<void**>(
-            base + kUpgradeSlotInstalledItemsOff + cv * 4);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return kUpgradeSlotUnknown;
-    }
-}
-
-// K2: true iff `row` is the engine's "-" none/remove picker entry (key -1).
-bool IsUpgradePickerNoneRow(void* row) {
-    if (!row) return false;
-    __try {
-        return *reinterpret_cast<int32_t*>(
-            reinterpret_cast<unsigned char*>(row) + kUpgradePickerRowKeyOff) == -1;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return false;
-    }
-}
-
-}  // namespace
 
 bool QueueMoveCursor(int x, int y, void* target) {
     if (g_op.kind != Kind::None) return false;
@@ -324,735 +342,6 @@ bool EngineOpsReady(Kind kind) {
         return true;
     }
 }
-
-namespace {
-
-// CSWGuiManager mouseOverControl pointer at +0x8 (per the decompilation
-// in docs/menu-nav-design.md). Reading it directly lets us verify what
-// the engine's hit-test resolved the cursor to — the difference between
-// "click landed on tab T" and "click landed on the inline listbox" is
-// invisible from cursor coords alone.
-void* MouseOver(void* gm) {
-    return *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(gm) + 0x8);
-}
-
-void DrainMoveCursor(void* gm, const PendingOp& op) {
-    auto move = reinterpret_cast<PFN_MoveMouseToPosition>(kAddrMoveMouseToPosition);
-    // Capture mouseOver BEFORE the move. Disambiguates whether
-    // MoveMouseToPosition itself produces the 45-px-shifted hit-test
-    // result (before==something-else, after==shifted-button) vs. the
-    // engine pre-setting mouseOver during panel init (before==after,
-    // never refreshed by our move at all). See chat.
-    void* moBefore = MouseOver(gm);
-    move(gm, op.x, op.y);
-    acclog::Write("Update", "MoveMouseToPosition(%d, %d) target=%p mouseOver before=%p after=%p",
-                  op.x, op.y, op.a,
-                  moBefore, MouseOver(gm));
-}
-
-// Combined move + click. Click-sim via manager's HandleLMouseDown/Up.
-// Dispatches against mouseOverControl, which on Options-style tabbed
-// panels resolves to the button one step above the chain target
-// (consistent 45-px hit-test shift — see chat investigation). That
-// activates the wrong tab.
-//
-// Direct vtable[6]/[7] on the chain target was tried as a workaround
-// (commit reverted) — it crashes the game on the second tab+ click.
-// The button's own HandleLMouseDown/Up depend on manager-side state
-// (probably the +0x1c mouse_held bit and/or other setup we'd skip).
-// Need a different approach for the off-by-1; for now keep the original
-// pipeline so behavior is at least stable.
-void DrainClickAt(void* gm, const PendingOp& op) {
-    auto move = reinterpret_cast<PFN_MoveMouseToPosition>(kAddrMoveMouseToPosition);
-    auto down = reinterpret_cast<PFN_ManagerLMouseDown>(kAddrManagerLMouseDown);
-    auto up   = reinterpret_cast<PFN_ManagerLMouseUp>(kAddrManagerLMouseUp);
-    void* moBefore = MouseOver(gm);
-    move(gm, op.x, op.y);
-    acclog::Write("Update", "MoveMouseToPosition(%d, %d) target=%p mouseOver before=%p after=%p",
-                  op.x, op.y, op.a,
-                  moBefore, MouseOver(gm));
-    moBefore = MouseOver(gm);
-    int dResult = down(gm, /*press=*/1);
-    void* moAfterDown = MouseOver(gm);
-    int uResult = up(gm);
-    void* moAfterUp = MouseOver(gm);
-    acclog::Write("Update", "click-sim Down=%d Up=%d at (%d,%d) target=%p "
-                  "mouseOver before=%p afterDown=%p afterUp=%p",
-                  dResult, uResult, op.x, op.y, op.a,
-                  moBefore, moAfterDown, moAfterUp);
-}
-
-// Direct activate via vtable[15].HandleInputEvent(0x27, 1). Bypasses
-// hit-test, so a button covered by a listbox extent (e.g. Close
-// in an Options sub-dialog) still fires its onClick when we target it.
-//
-// Raise is_active=1 before the dispatch to mirror what HandleLMouseDown
-// does in the engine's mouse pipeline. Several engine onClick handlers
-// gate on `this->is_active != 0` (memory: oncontrolentered_is_active_gate)
-// and silently divert to a different code path when the flag is zero.
-// For MessageBox OK buttons that divergent path appeared to corrupt
-// engine state during close — three Windows __fastfail dumps today all
-// landed between this FireActivate and the next frame, with the same
-// MessageBox foreground each time (quit-confirm, save-overwrite,
-// tutorial-hint — all the same engine MessageBox singleton). Forcing
-// is_active=1 keeps the dispatch on the same code path the mouse
-// pipeline takes.
-//
-// ONLY raise from 0 → 1: HandleLMouseDown's actual behaviour is a
-// conditional raise, not an unconditional write. Some controls (tab
-// buttons in InGameOptions, equip-slot buttons in InGameEquip) carry
-// non-zero engine-bookkeeping values in this field (selected-tab
-// marker, equip-state flags). Clobbering those with 1 corrupts the
-// engine's view of which tab is selected, which surfaces later as a
-// crash in unrelated subsystems on the next render/physics tick. A
-// session FireActivate audit across 9 events found 5→1 (Feedback tab)
-// was the only non-trivial clobber across all of testing, and the only
-// session it appeared in is the one that crashed in CSWRoomSurfaceMesh
-// AABB traversal moments after a tab-subdialog close.
-//
-// Post-activation re-announce is handled generically by
-// MonitorFocusedControl on the next tick: toggles flip +0x1c8 bit 0
-// synchronously inside FireActivate, cycles rewrite the value-display
-// button's CExoString in place, sliders mutate cur_value at +0x74. All
-// three produce a different ExtractAnnounceableText on next entry, and
-// the monitor speaks the diff.
-void DrainActivate(const PendingOp& op) {
-    if (op.a) {
-        // Snapshot the panel kind before dispatch — used post-fn to
-        // decide whether op.a may have freed itself. Done up front
-        // because the LevelUp Accept path is exactly when we
-        // *can't* re-identify the panel safely after fn() returns.
-        acc::engine::PanelKind panelKindAtDispatch =
-            acc::engine::IdentifyPanel(acc::menus::chain::g_chainPanel);
-
-        // Capture chargen sub-screen close intent before the
-        // dispatch — the sub-screen panel may be freed inside fn()
-        // when Accept/Cancel close it, so reading its vtable
-        // afterwards is unsafe. Sub-screens of InGameLevelUp share
-        // a .gui-id convention: BTN_ACCEPT=11 ("OK" / "Accept"),
-        // BTN_BACK=12 ("Cancel"). Closing one of these via id
-        // 11/12 is the same shape as the InGameOptions sub-screen
-        // Esc close that already InvalidateChain's in menus.cpp —
-        // without it, the parent InGameLevelUp panel's updated
-        // chain entries ("Attribute, unavailable" etc.) can
-        // stay silent on restore because channel-0 dedup and the
-        // monitor's last-text cache still hold pre-close text.
-        bool chargenSubClosing = false;
-        if (panelKindAtDispatch != acc::engine::PanelKind::InGameLevelUp) {
-            void* chainPanel = acc::menus::chain::g_chainPanel;
-            if (acc::menus::powers_levelup::IsPowersLevelUpPanel(
-                    chainPanel)) {
-                // Engine-member compare (gui-id audit): the powers
-                // panel's Accept/Back are ctor-bound embedded members,
-                // so pointer equality is exact — no id convention, no
-                // text disambiguation. This also fixes KOTOR 2, where
-                // the old id 11/12 probe missed entirely (K2 numbers
-                // Accept=10/Back=9; 11 is RECOMMENDED_BTN).
-                chargenSubClosing =
-                    op.a == acc::menus::detail::PowersPanelAcceptButton(
-                                chainPanel) ||
-                    op.a == acc::menus::detail::PowersPanelBackButton(
-                                chainPanel);
-            } else if (acc::menus::chargen_feats::IsChargenFeatsPanel(
-                           chainPanel)) {
-                // Engine-member compare (gui-id audit), same as the
-                // powers panel above: the feats panel's Accept/Back
-                // are ctor-bound embedded members, so pointer
-                // equality is exact. The id 11/12 probe was doubly
-                // wrong on KOTOR 2 — it numbers Accept=10/Back=9,
-                // and its id 12 is LB_FEATS, a listbox.
-                chargenSubClosing =
-                    op.a == acc::menus::detail::FeatsPanelAcceptButton(
-                                chainPanel) ||
-                    op.a == acc::menus::detail::FeatsPanelBackButton(
-                                chainPanel);
-            } else if (acc::menus::chargen_attr::IsChargenAttributesPanel(
-                           chainPanel) ||
-                       acc::menus::chargen_skills::IsChargenSkillsPanel(
-                           chainPanel)) {
-                // Still id-based (11/12 = Accept/Cancel by the
-                // InGameLevelUp sub-screen convention) until those
-                // surfaces get their audit batch.
-                int btnId = *reinterpret_cast<int*>(
-                    reinterpret_cast<unsigned char*>(op.a) + kControlIdOffset);
-                if (btnId == 11 || btnId == 12) {
-                    // Disambiguate Accept/Cancel from same-id
-                    // sibling controls (e.g. chargen-skills row arrows
-                    // sometimes get id 11/12 too — Demolitions' right
-                    // arrow has id 11). Accept/Cancel are labeled
-                    // buttons; arrows have empty rendered text.
-                    char text[32];
-                    bool hasText = acc::engine::ReadButtonText(
-                        op.a, text, sizeof(text)) && text[0] != '\0';
-                    if (hasText) {
-                        chargenSubClosing = true;
-                    }
-                }
-            }
-        }
-
-        // Inventory item rows: point the listbox selection at the row we
-        // are about to activate. Its handler reads the selection instead
-        // of the control it was passed, so without this every Enter uses
-        // row 0's item — see inventory::SyncListBoxSelection. Done here
-        // rather than at queue time so nothing can move the selection in
-        // the window before dispatch.
-        if (panelKindAtDispatch == acc::engine::PanelKind::InGameInventory &&
-            acc::engine::IsInventoryItemRow(op.a)) {
-            acc::menus::inventory::SyncListBoxSelection(
-                acc::menus::chain::g_chainPanel, op.a);
-        }
-
-        // Never dispatch into a panel whose identity no longer holds:
-        // if the chain's panel address has been reused by a different
-        // panel class, op.a describes the OLD object's layout and the
-        // handler we are about to call lives in freed memory. That is
-        // the KOTOR 2 chargen crash (patch-20260819-221733: the
-        // Abilities panel's buttons dispatched with is_active reading
-        // 2622030025, and the Skills panel that took over the block
-        // then died in the engine's own handler).
-        if (!acc::menus::chain::ChainPanelIdentityHolds()) {
-            acclog::Write("Update",
-                          "FireActivate SKIPPED target=%p — chain panel "
-                          "identity broken (stale/reused address)", op.a);
-            acc::menus::chain::InvalidateChain();
-            return;
-        }
-
-        uint32_t prevIsActive = RaiseIsActiveIfZero(op.a);
-        acclog::Write("Update", "FireActivate target=%p is_active=%u%s",
-                      op.a, prevIsActive,
-                      prevIsActive == 0 ? "->1" : " (preserved)");
-        void** vtable = *reinterpret_cast<void***>(op.a);
-        if (vtable) {
-            auto fn = reinterpret_cast<PFN_ControlHandleInputEvent>(
-                vtable[kVtableHandleInputEvent]);
-            if (fn) {
-                acclog::Write("Update", "FireActivate dispatch target=%p vtable=%p fn=%p",
-                              op.a, vtable, fn);
-                fn(op.a, kInputActivate, 1);
-                acclog::Write("Update", "FireActivate returned target=%p", op.a);
-            }
-        }
-        // Self-destroying-button hazard: some buttons free themselves
-        // inside the onClick we just dispatched. Accept on
-        // InGameLevelUp is the known case (commits the level-up AND
-        // pops the panel — the button's own memory is freed before
-        // fn returns). Within the same tick the engine defers both
-        // the panels[] pop and the controls[] removal, and the freed
-        // memory still reads as the same engine vtable bytes, so
-        // panel-presence, controls[]-membership, and vtable-range
-        // checks all see a healthy-looking state. The next tick's
-        // MonitorFocusedControl would then dereference the freed
-        // pointer in g_chain and FromControl's internal SEH-caught
-        // AV would interact with /GS to fastfail the process.
-        //
-        // The guard must be scoped tightly: nulling the chain entry
-        // unconditionally is wrong for toggles, sliders, cycles, and
-        // tabs — those mutate state in place, the engine does NOT
-        // refocus afterward, and the chain entry needs to survive so
-        // the next-tick monitor speaks the new value ("on"/"off",
-        // updated slider %, new cycle text). Nulling them silently
-        // drops the post-toggle announce.
-        //
-        // Scope: only the InGameLevelUp panel kind, which is the only
-        // panel known to free a control synchronously inside Activate.
-        // If a future panel kind exhibits the same teardown shape,
-        // add it to this gate; don't widen unconditionally.
-        if (panelKindAtDispatch == acc::engine::PanelKind::InGameLevelUp) {
-            int clearedIdx = -1;
-            for (int i = 0; i < acc::menus::chain::g_chainCount; ++i) {
-                if (acc::menus::chain::g_chain[i].control == op.a) {
-                    acc::menus::chain::g_chain[i].control = nullptr;
-                    clearedIdx = i;
-                    break;
-                }
-            }
-            if (clearedIdx >= 0) {
-                acclog::Write("Update",
-                              "FireActivate post: chain[%d].control=%p "
-                              "nulled (self-destroy-risk, panel=InGameLevelUp)",
-                              clearedIdx, op.a);
-            }
-        }
-        // Chargen sub-screen close — drop the whole chain so the
-        // parent InGameLevelUp's chain restore is treated as a fresh
-        // binding. Same mechanism the InGameOptions sub-screen Esc
-        // path uses (menus.cpp escIsOptionsSub branch). ClearPendingAnnounce
-        // partners with InvalidateChain to also flush any in-flight
-        // SetActive echo that would carry pre-close text past the
-        // chain rebuild.
-        if (chargenSubClosing) {
-            acc::menus::chain::InvalidateChain();
-            acc::menus::ClearPendingAnnounce();
-            acclog::Write("Update",
-                          "FireActivate post: chain invalidated "
-                          "(chargen sub-screen close, target=%p)",
-                          op.a);
-        }
-        // Journal Sort/Swap repair. Both buttons mutate the quest list,
-        // which leaves our cached chain pointing at the old (Sort: about
-        // to be freed and rebuilt) rows. Sort rebuilds lazily in Draw()
-        // next frame, so force a synchronous PopulateItemListBox first or
-        // the chain rebuild would capture half-constructed rows (base
-        // CSWGuiObject vtable, "control N" text — patch-20260603-090028.log).
-        // Swap already repopulated synchronously inside its handler, so
-        // just invalidate the chain to re-bind to the new list. The new
-        // title is announced separately by the ContentChange monitor.
-        if (panelKindAtDispatch == acc::engine::PanelKind::InGameJournal) {
-            if (acc::menus::journal::IsSortButton(
-                    acc::menus::chain::g_chainPanel, op.a)) {
-                acc::menus::journal::ForceRepopulate(
-                    acc::menus::chain::g_chainPanel);
-                acc::menus::chain::InvalidateChain();
-                acclog::Write("Update",
-                              "FireActivate post: journal Sort — "
-                              "repopulated + chain invalidated");
-            } else if (acc::menus::journal::IsSwapButton(
-                           acc::menus::chain::g_chainPanel, op.a)) {
-                acc::menus::chain::InvalidateChain();
-                acclog::Write("Update",
-                              "FireActivate post: journal Swap — "
-                              "chain invalidated");
-            }
-        }
-        // Inventory filter repair — the journal-Sort case exactly. The
-        // "Show: …" button dispatches cmd 0x29, which only picks the
-        // next filter and raises the panel's repopulate bit; the list is
-        // rebuilt through CheckFilter LAZILY in Draw() next frame. The row
-        // controls are pooled and reused, so nothing dangles, but the
-        // chain keeps the pre-filter row count and row→item mapping
-        // (verified in patch-20260731-083448.log: count stayed 209 while
-        // the same pointers began speaking different items). Invalidating
-        // alone would race — an engine focus echo can rebind before Draw
-        // and capture the old list again — so force the repopulate first,
-        // which also clears the pending bit so Draw won't rebuild twice.
-        if (panelKindAtDispatch == acc::engine::PanelKind::InGameInventory &&
-            acc::menus::inventory::IsFilterButton(
-                acc::menus::chain::g_chainPanel, op.a)) {
-            acc::menus::inventory::ForceRepopulate(
-                acc::menus::chain::g_chainPanel);
-            acc::menus::chain::InvalidateChain();
-            acclog::Write("Update",
-                          "FireActivate post: inventory filter — "
-                          "repopulated + chain invalidated");
-        }
-
-        // Companion full-panel-pop guard: if the engine cleared the
-        // panel from mgr.panels[] inside the dispatch (rarer — the
-        // observed cases defer the pop), drop the whole chain.
-        acc::menus::chain::ValidateChainPanel();
-    } else {
-        acclog::Write("Update", "FireActivate target=NULL (skipped)");
-    }
-}
-
-// Equip-screen slot activation. Mirrors the engine's mouse-driven path:
-//   1. Raise slot_btn->is_active = 1 (LMouseDown sets this flag normally;
-//      OnSelectSlot's prologue gates on it and returns early if zero).
-//   2. OnEnterSlot(panel, slot_btn) — populates panel.items_listbox with
-//      items matching the slot's type. Sets panel.selected_slot.
-//   3. OnSelectSlot(panel, slot_btn) — if items_listbox.size > 1, stages
-//      the equip (raises panel.field33_0x4270 |= 1, pre-selects row 1,
-//      shows description). If size == 1 (only protoitem template), pops
-//      the engine's empty-slot modal — which is the correct
-//      behaviour for a slot the player has no fitting items for.
-//
-// Dispatched here (not synchronously from the input hook) for the same
-// reason MoveMouseToPosition is — these functions reach deep into GUI
-// state that's mid-update during input dispatch.
-void DrainEquipSelect(const PendingOp& op) {
-    void* panel   = op.a;
-    void* slotBtn = op.b;
-    if (panel && slotBtn) {
-        uint32_t prevIsActive = RaiseIsActiveIfZero(slotBtn);
-        auto onEnter  = reinterpret_cast<PFN_InGameEquipOnEnterSlot>(
-            kAddrInGameEquipOnEnterSlot);
-        auto onSelect = reinterpret_cast<PFN_InGameEquipOnSelectSlot>(
-            kAddrInGameEquipOnSelectSlot);
-        acclog::Write("Update", "EquipSelect panel=%p slot=%p is_active=%u%s",
-                      panel, slotBtn, prevIsActive,
-                      prevIsActive == 0 ? "->1" : " (preserved)");
-        onEnter(panel, slotBtn);
-        onSelect(panel, slotBtn);
-        acclog::Write("Update", "EquipSelect done panel=%p slot=%p", panel, slotBtn);
-    }
-}
-
-// Equip-row commit. OnItemSelected is the function that calls EquipItem
-// and actually equips the item; OnOKPressed is just cleanup (closes the
-// description panel, clears previously_equipped_*). Both gates the
-// engine cares about (description_listbox.bit_flags & 2,
-// items_listbox.bit_flags & 8, panel.field33_0x4270 & 1) were raised
-// earlier by OnSelectSlot — we just need to raise row->is_active and
-// btn_equip->is_active before invoking, mirroring what HandleLMouseDown
-// would do in mouse-driven play.
-void DrainEquipCommit(const PendingOp& op) {
-    void* panel = op.a;
-    void* row   = op.b;
-    void* btn   = op.c;
-    if (panel && row && btn) {
-        uint32_t prevRowActive = RaiseIsActiveIfZero(row);
-        uint32_t prevBtnActive = RaiseIsActiveIfZero(btn);
-        auto onItem = reinterpret_cast<PFN_InGameEquipOnItemSelected>(
-            kAddrInGameEquipOnItemSelected);
-        auto onOK   = reinterpret_cast<PFN_InGameEquipOnOKPressed>(
-            kAddrInGameEquipOnOKPressed);
-        acclog::Write("Update", "EquipCommit panel=%p row=%p btn=%p "
-                      "row.is_active=%u%s btn.is_active=%u%s",
-                      panel, row, btn,
-                      prevRowActive,
-                      prevRowActive == 0 ? "->1" : " (preserved)",
-                      prevBtnActive,
-                      prevBtnActive == 0 ? "->1" : " (preserved)");
-        onItem(panel, row);
-        onOK(panel, btn);
-        acclog::Write("Update", "EquipCommit done panel=%p row=%p btn=%p",
-                      panel, row, btn);
-    }
-}
-
-// Equip-picker cancel — the engine's own "back out of the item zone".
-//
-// This one needs no direct handler address: CSWGuiInGameEquip::HandleInputEvent
-// already implements the whole cancel, and it is one switch case away from
-// the code the user's Escape key produces. With the picker-open bit set,
-// case 0x28 restores previously_equipped_id / previously_equipped_item (and
-// the off-hand weapon a two-hander displaced), releases both remembered
-// copies, and calls CloseDescription — which runs ShowDescription(0), the
-// ONLY thing that re-raises the interactive bit on all nine slot buttons and
-// labels, clears the picker-open bit, re-focuses the slot button and re-runs
-// OnEnterSlot. With the bit clear the same case closes the whole equipment
-// screen instead, so this must only ever be queued while the picker is up.
-//
-// Why this matters beyond the announcement: browsing the list EQUIPS as it
-// goes (OnItemSelected is the row's select handler and calls EquipItem
-// directly — the engine's live preview, same as mouse hover). Without the
-// engine's cancel, an Escape left whatever the last arrow landed on
-// permanently worn, and left every slot reading "unavailable" for the rest
-// of the panel's life. Both were live in patch-20260817-065149.log (K2) and
-// patch-20260813-204335.log (K1).
-//
-// ManagerTranslateCode rather than a literal 0x28: it is our port of the
-// engine's own logical->InputIndices switch, verified on both games, and
-// it keeps the cancel keyed to the same constant the input log prints.
-void DrainEquipPickerCancel(const PendingOp& op) {
-    void* panel = op.a;
-    if (panel) {
-        void** vtable = *reinterpret_cast<void***>(panel);
-        if (vtable) {
-            auto fn = reinterpret_cast<PFN_ControlHandleInputEvent>(
-                vtable[kVtableHandleInputEvent]);
-            if (fn) {
-                int code = acc::engine::ManagerTranslateCode(kInputEsc1);
-                acclog::Write("Update", "EquipPickerCancel panel=%p "
-                              "HandleInputEvent(code=0x%x) (engine revert + "
-                              "CloseDescription)", panel, code);
-                fn(panel, code, 1);
-                acclog::Write("Update", "EquipPickerCancel done panel=%p",
-                              panel);
-            }
-        }
-    }
-}
-
-// Workbench slot activation. Mirrors EquipSelect's shape but against
-// the RE'd CSWGuiUpgrade slot-pick chain at 0x006c3c30 (OnEnterSlot)
-// and 0x006c6500 (OnSlotSelected). Direct call bypasses click-sim
-// because the upgrade.gui labels at IDs 5..11 cover the slot buttons
-// at IDs 12..18 in z-order — MoveMouseToPosition's hit-test resolves
-// mouseOver to a label, so the engine's mouse pipeline never reaches
-// the slot button. OnSlotSelected is the function that populates
-// LB_ITEMS with the inventory mods compatible with the slot.
-void DrainWorkbenchSlotSelect(const PendingOp& op) {
-    void* panel   = op.a;
-    void* slotBtn = op.b;
-    if (panel && slotBtn) {
-        uint32_t prevIsActive = RaiseIsActiveIfZero(slotBtn);
-        auto onEnter  = reinterpret_cast<PFN_CSWGuiUpgradeOnEnterSlot>(
-            kAddrCSWGuiUpgradeOnEnterSlot);
-        auto onSelect = reinterpret_cast<PFN_CSWGuiUpgradeOnSlotSelected>(
-            kAddrCSWGuiUpgradeOnSlotSelected);
-        acclog::Write("Update", "WorkbenchSlotSelect panel=%p slot=%p is_active=%u%s",
-                      panel, slotBtn, prevIsActive,
-                      prevIsActive == 0 ? "->1" : " (preserved)");
-
-        // Slot index lives at slot_btn+0x58 (set by OnPanelAdded). Engine
-        // reads it via `edi = [ebx+0x58]` at OnSlotSelected+0x46. The
-        // installed-upgrade pointer for each slot lives at
-        // panel.field35_0x2f74[slot_idx*4] (4-byte CSWSItem*); the
-        // non-saber install path mutates this from 0 → item on install
-        // and item → 0 on remove (verified in OnSlotSelected non-saber
-        // branch and the InsertUpgrade path).
-        int slotIdx = *reinterpret_cast<int*>(
-            reinterpret_cast<unsigned char*>(slotBtn) + kUpgradeSlotCustomValueOff);
-        void** field35Slot = reinterpret_cast<void**>(
-            reinterpret_cast<unsigned char*>(panel) + kUpgradeSlotInstalledItemsOff + slotIdx * 4);
-        void* prevItem = *field35Slot;
-
-        onEnter(panel, slotBtn);
-        onSelect(panel, slotBtn);
-
-        void* newItem = *field35Slot;
-
-        // Post-call: decide whether the picker should stay armed.
-        // OnSlotSelected branches on panel.field25_0x2f4c:
-        //   * value 1 (true lightsaber): builds compatible-mods list
-        //     from upcrystals_2da / upgrades_2da and AddControls-
-        //     replaces LB_ITEMS — picker UX engages.
-        //   * value 2/3/4 (4-slot / 3-slot / 2-slot non-saber categories):
-        //     directly installs the upgrade staged by OnPanelAdded
-        //     (panel.field_0x2f84[slot_idx] tag lookup against party
-        //     inventory), or removes the existing upgrade if the slot
-        //     was already filled. LB_ITEMS is NOT populated.
-        //
-        // If LB_ITEMS row count is still 0 after dispatch, we're in
-        // the non-saber install/remove path — disarm the picker and
-        // announce the outcome by comparing field35_0x2f74[slot_idx]
-        // before vs after.
-        uint8_t saberFlag = *(reinterpret_cast<unsigned char*>(panel) + kUpgradePanelCategoryOff);
-        int lbRows = 0;
-        auto* controls = reinterpret_cast<CExoArrayList*>(
-            reinterpret_cast<unsigned char*>(panel) + kPanelControlsOffset);
-        if (controls && controls->data) {
-            for (int i = 0; i < controls->size; ++i) {
-                void* c = controls->data[i];
-                if (!c) continue;
-                int cid = *reinterpret_cast<int*>(
-                    reinterpret_cast<unsigned char*>(c) + kControlIdOffset);
-                if (cid == 0) {
-                    auto* lbList = reinterpret_cast<CExoArrayList*>(
-                        reinterpret_cast<unsigned char*>(c) + kListBoxControlsOffset);
-                    lbRows = (lbList && lbList->data) ? lbList->size : 0;
-                    break;
-                }
-            }
-        }
-
-        acclog::Write("Update", "WorkbenchSlotSelect done panel=%p slot=%p "
-                      "saber=%d slot_idx=%d field35: %p -> %p lb_rows=%d",
-                      panel, slotBtn, (int)saberFlag, slotIdx,
-                      prevItem, newItem, lbRows);
-
-        if (lbRows == 0) {
-            acc::menus::listbox::ClearWorkbenchUpgradeArmLatch();
-            acc::strings::Id outcome = acc::strings::Id::Count_;
-            const char* outcomeTag = "no-change";
-            if (prevItem == nullptr && newItem != nullptr) {
-                outcome = acc::strings::Id::WorkbenchSlotInstalled;
-                outcomeTag = "installed";
-            } else if (prevItem != nullptr && newItem == nullptr) {
-                outcome = acc::strings::Id::WorkbenchSlotRemoved;
-                outcomeTag = "removed";
-            } else if (prevItem == nullptr && newItem == nullptr) {
-                outcome = acc::strings::Id::WorkbenchSlotNoMatch;
-                outcomeTag = "no-match";
-            }
-            // Look up the slot's actual type name from the engine's
-            // strref table (e.g. "Vibrationszelle", "Energiezelle",
-            // "Sch\xE4rfe") so the user hears WHICH slot they just
-            // acted on, not just the generic position number.
-            char slotName[128] = {0};
-            int upgradeType = -1;
-            uint32_t strref = 0;
-            // Per-game index + table read; see LookupUpgradeSlotType.
-            if (acc::engine::LookupUpgradeSlotType(
-                    slotIdx, (int)saberFlag, &upgradeType, &strref)) {
-                acc::engine::LookupTlk(strref, slotName, sizeof(slotName));
-                acclog::Write("WorkbenchSlotSelect",
-                              "non-saber path (saber=%d slot_idx=%d "
-                              "upgrade_type=%d strref=%u name=\"%s\") -> %s; picker disarmed",
-                              (int)saberFlag, slotIdx,
-                              upgradeType, strref, slotName, outcomeTag);
-            } else {
-                acclog::Write("WorkbenchSlotSelect",
-                              "non-saber path (saber=%d slot_idx=%d "
-                              "no table entry) -> %s; picker disarmed",
-                              (int)saberFlag, slotIdx, outcomeTag);
-            }
-            if (outcome != acc::strings::Id::Count_) {
-                const char* result = acc::strings::Get(outcome);
-                char msg[256];
-                if (slotName[0] != '\0') {
-                    snprintf(msg, sizeof(msg), "%s, %s", slotName, result);
-                } else {
-                    snprintf(msg, sizeof(msg), "%s", result);
-                }
-                acc::speech::Speak(msg, /*interrupt=*/false);
-            }
-        }
-    }
-}
-
-// Workbench upgrade commit. Two-step via direct engine dispatch on
-// the RE'd OnUpgradeSelected (row-stage) + OnAssemble (install).
-// OnAssemble calls FinishUpgrading on the parent UpgradeItemSelect
-// and PopModalPanel — the upgrade panel closes synchronously when
-// this returns. Mirrors EquipCommit's row-then-OK shape.
-void DrainWorkbenchUpgradeCommit(const PendingOp& op) {
-    void* panel = op.a;
-    void* row   = op.b;
-    void* btn   = op.c;
-    if (panel && row && btn) {
-        uint32_t prevRowActive = RaiseIsActiveIfZero(row);
-        uint32_t prevBtnActive = RaiseIsActiveIfZero(btn);
-        auto onRow = reinterpret_cast<PFN_CSWGuiUpgradeOnUpgradeSelected>(
-            kAddrCSWGuiUpgradeOnUpgradeSelected);
-        auto onAsm = reinterpret_cast<PFN_CSWGuiUpgradeOnAssemble>(
-            kAddrCSWGuiUpgradeOnAssemble);
-        acclog::Write("Update", "WorkbenchUpgradeCommit panel=%p row=%p btn=%p "
-                      "row.is_active=%u%s btn.is_active=%u%s",
-                      panel, row, btn,
-                      prevRowActive,
-                      prevRowActive == 0 ? "->1" : " (preserved)",
-                      prevBtnActive,
-                      prevBtnActive == 0 ? "->1" : " (preserved)");
-        onRow(panel, row);
-        onAsm(panel, btn);
-        acclog::Write("Update", "WorkbenchUpgradeCommit done panel=%p row=%p btn=%p",
-                      panel, row, btn);
-    } else {
-        acclog::Write("Update", "WorkbenchUpgradeCommit panel=%p row=%p btn=%p (skipped)",
-                      panel, row, btn);
-    }
-}
-
-// K2 upgrade install/remove — ONE step. On K2 the picker row's own
-// activate handler (CSWGuiUpgrade::OnUpgradeSelected @0x008cdb00) does the
-// whole job itself: it reads the row's obj id (+0x1d0), and if it resolves
-// to an inventory mod it installs it into the slot (removing+returning any
-// existing one first); if the row is the engine's "-" none entry
-// (obj id 0x7f000000, key +0x1e0 == -1) it just removes the current mod.
-// It self-guards greyed rows (routes them to the can't-select stub) and
-// calls CloseItems at the end, closing the picker and refocusing the slot.
-// So there is NO separate assemble step per pick — that is what OnAssemble
-// (Assemble) does, and firing it here with K1's button id popped the
-// whole panel back to the item list without installing (the round-1 K2
-// bug). K1 keeps its two-step WorkbenchUpgradeCommit above.
-void DrainWorkbenchUpgradeInstallK2(const PendingOp& op) {
-    void* panel = op.a;
-    void* row   = op.b;
-    if (panel && row) {
-        // Read the currently-open slot's installed-mod pointer (field35)
-        // before and after the engine call, so we announce what actually
-        // happened rather than assuming success — an incompatible slot/mod
-        // leaves field35 unchanged and must not say "installed".
-        bool isNoneRow = IsUpgradePickerNoneRow(row);
-        void* before = ReadUpgradeSlotInstalled(panel);
-
-        uint32_t prevRowActive = RaiseIsActiveIfZero(row);
-        auto onRow = reinterpret_cast<PFN_CSWGuiUpgradeOnUpgradeSelected>(
-            kAddrCSWGuiUpgradeOnUpgradeSelected);
-        onRow(panel, row);
-
-        void* after = ReadUpgradeSlotInstalled(panel);
-
-        acc::strings::Id say = acc::strings::Id::Count_;
-        if (before != kUpgradeSlotUnknown && after != kUpgradeSlotUnknown) {
-            if (after != nullptr && after != before) {
-                say = acc::strings::Id::WorkbenchSlotInstalled;
-            } else if (after == nullptr && before != nullptr) {
-                say = acc::strings::Id::WorkbenchSlotRemoved;
-            } else if (!isNoneRow) {
-                // Real mod, nothing changed → engine refused (slot/mod
-                // incompatible, requirements unmet). The none row on an
-                // already-empty slot legitimately changes nothing — stay
-                // silent there and let the slot re-announce.
-                say = acc::strings::Id::WorkbenchUpgradeFailed;
-            }
-        }
-        if (say != acc::strings::Id::Count_) {
-            acc::speech::Speak(acc::strings::Get(say), /*interrupt=*/false);
-        }
-        acclog::Write("Update", "WorkbenchUpgradeInstallK2 done panel=%p row=%p "
-                      "none=%d before=%p after=%p row.is_active=%u%s -> say=%d",
-                      panel, row, isNoneRow ? 1 : 0, before, after,
-                      prevRowActive, prevRowActive == 0 ? "->1" : " (preserved)",
-                      (int)say);
-    } else {
-        acclog::Write("Update", "WorkbenchUpgradeInstallK2 panel=%p row=%p (skipped)",
-                      panel, row);
-    }
-}
-
-// Back out of the mod-picker without committing (Esc). OnSlotSelected's
-// ShowItems(1) disabled the sibling slot buttons; the engine only undoes
-// that on commit. Mirror its close tail so the slots stop reading
-// "unavailable": ShowItems(0) re-enables them (and SetActiveControl's back
-// to the slot zone), then clear the panel's "picker open" bit.
-void DrainWorkbenchPickerCancel(const PendingOp& op) {
-    void* panel = op.a;
-    if (panel) {
-        auto showItems = reinterpret_cast<PFN_CSWGuiUpgradeShowItems>(
-            kAddrCSWGuiUpgradeShowItems);
-        showItems(panel, 0);
-        uint32_t* flag = reinterpret_cast<uint32_t*>(
-            reinterpret_cast<unsigned char*>(panel) + kUpgradePickerOpenFlagOff);
-        *flag &= ~1u;
-        acclog::Write("Update", "WorkbenchPickerCancel panel=%p (ShowItems(0) + "
-                      "cleared picker-open bit)", panel);
-    } else {
-        acclog::Write("Update", "WorkbenchPickerCancel panel=%p (skipped)", panel);
-    }
-}
-
-// Slider value adjustment via vtable[15].HandleInputEvent(500/501, 1).
-// The slider's HandleInputEvent runs SetCurValue (clamped to
-// [0, max_value]) and the gui_object callback that propagates to the
-// audio system, then plays the click feedback sound. Per-frame focus
-// monitor catches the cur_value change at +0x74 on the next tick.
-void DrainSliderInput(const PendingOp& op) {
-    if (op.a) {
-        void** vtable = *reinterpret_cast<void***>(op.a);
-        if (vtable) {
-            auto fn = reinterpret_cast<PFN_ControlHandleInputEvent>(
-                vtable[kVtableHandleInputEvent]);
-            if (fn) {
-                acclog::Write("Update", "slider HandleInputEvent target=%p code=%d",
-                              op.a, op.code);
-                fn(op.a, op.code, 1);
-            }
-        }
-    }
-}
-
-// Store item Enter — dispatch the engine's per-mode click handler
-// with the row as param_1. The engine reads the row's obj_id at
-// +0x1c4 and either opens the confirmation MessageBox or sells/buys
-// directly (depending on its internal cost vs. level threshold).
-// After the engine call, PopulateInventoryItemListBox /
-// PopulateStoreItemListBox repopulates rows; menus_store's per-tick
-// monitor detects the listbox size change and rebinds the chain.
-void DrainStoreItemActivate(const PendingOp& op) {
-    acc::menus::store::DispatchTradeAction(op.a, op.b);
-}
-
-// K2 workbench / crafting list-row commit — select the row, then fire
-// the panel's own commit button. No direct engine addresses involved
-// (button dispatch goes through vtable[15]), so no EngineOpsReady gate.
-void DrainCraftRowCommit(const PendingOp& op) {
-    acc::menus::crafting::DispatchRowCommit(op.a, op.b, op.c);
-}
-
-// Galaxy-map planet cycle / accept / cancel. DispatchInput calls the
-// panel's own HandleInputEvent (the engine's NextPlanet/PrevPlanet skip
-// hidden / unselectable planets), then re-reads LBL_PLANETNAME when this
-// was an Up/Down cycle (op.x == 1).
-void DrainGalaxyInput(const PendingOp& op) {
-    acc::menus::galaxymap::DispatchInput(op.a, op.code, op.x != 0);
-}
-
-// Pazaak wager less/more step — the popup's BTN_LESS / BTN_MORE speed
-// buttons only respond to their push callback, which re-dispatches to the
-// panel's HandleInputEvent (0x2f decrement / 0x30 increment). The generic
-// vtable[15] activate (0x27) they ignore, so this is the dedicated Enter
-// path. The engine clamps to [1, max] and repaints LBL_WAGERVAL; the
-// per-tick wager observer announces the new amount.
-void DrainWagerInput(const PendingOp& op) {
-    acc::pazaak::DispatchWagerInput(op.a, op.code);
-}
-
-}  // namespace
 
 void Drain(void* gm) {
     if (g_op.kind == Kind::None) return;

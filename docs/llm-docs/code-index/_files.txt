@@ -266,6 +266,10 @@ patches/Accessibility/menus_pazaakdeck.cpp
 patches/Accessibility/menus_pazaakdeck.h
 patches/Accessibility/menus_pending.cpp
 patches/Accessibility/menus_pending.h
+patches/Accessibility/menus_pending_activate.cpp
+patches/Accessibility/menus_pending_equip.cpp
+patches/Accessibility/menus_pending_internal.h
+patches/Accessibility/menus_pending_workbench.cpp
 patches/Accessibility/menus_powers_levelup.cpp
 patches/Accessibility/menus_powers_levelup.h
 patches/Accessibility/menus_skillflow_nav.cpp
