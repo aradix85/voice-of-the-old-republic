@@ -15,6 +15,7 @@ $underTest = @(
     'bridge_http.cpp',
     'dialog_speech_marker.cpp',
     'engine_compass.cpp',
+    'minigame_turret_lead.cpp',
     'save_points.cpp',
     'shortest_paths.cpp'
 )

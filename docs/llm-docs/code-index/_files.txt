@@ -326,6 +326,8 @@ patches/Accessibility/minigame_turret_arena.cpp
 patches/Accessibility/minigame_turret_assist.cpp
 patches/Accessibility/minigame_turret_census.cpp
 patches/Accessibility/minigame_turret_internal.h
+patches/Accessibility/minigame_turret_lead.cpp
+patches/Accessibility/minigame_turret_lead.h
 patches/Accessibility/minigame_turret_peg.cpp
 patches/Accessibility/minigame_turret_state.cpp
 patches/Accessibility/minigame_turret_targets.cpp

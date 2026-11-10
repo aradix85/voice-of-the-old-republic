@@ -9,46 +9,15 @@ namespace acc::turret_game {
 
 namespace {
 
-// ----- Predictive lead (intercept aiming) -----
-// The cue aims at where the fighter WILL BE when a bolt arrives, not where it
-// is now — the audio analog of a sighted player pulling ahead of the target.
-// The bolt speed and lifespan are read off the player's gun bank at entry
-// (Arena) — the area's own MiniGame -> Player -> Gun_Banks -> Bullet values:
-// 300 u/s for 3 s on K1's M12ab, 600 u/s on K2's Dxun and Onderon. With K1's
-// (slow-ish) bolt the measured critBoltSpeed (149 close / 753 mid / 1366 far)
-// means lead is unnecessary close but ESSENTIAL at mid/far, where the
-// ~13.5deg lead exceeds the hitbox window — so leading converts mid-range
-// from a systematic miss into a hittable shot. We solve the intercept in the
-// LISTENER frame (relative position + relative velocity) so the result is
-// directly "where to point the turret" and ship motion folds in automatically.
-// The intercept is clamped to the bolt lifespan; a hitscan area gets no lead.
-constexpr float kVelEmaAlpha    = 0.25f;   // velocity smoothing (per-tick Δpos)
-// Range-gate the lead: it is UNNECESSARY when the fighter would stay inside its
-// own hitbox during the bolt's flight (the centre-aim margin already covers
-// that drift), and applying it there only pulls the loud spot off the ship and
-// adds velocity-jitter — which measurably hurt the close-range aim that wins
-// the game. So ramp the lead in by how far the fighter drifts during flight
-// relative to its radius: none below kLeadGateLowFrac·radius, full by
-// kLeadGateHighFrac·radius. This auto-adapts to each fighter's actual speed.
-constexpr float kLeadGateLowFrac  = 0.75f;  // start leading at 0.75·radius drift
-constexpr float kLeadGateHighFrac = 1.5f;   // full lead by 1.5·radius drift
-
-// ----- Curve-aware lead (centripetal turn model) -----
-// The fighters hold ~constant speed and only TURN (relVel sat at ~74 u/s at every
-// range in the logs), so their acceleration is essentially centripetal. We
-// estimate it as the PERPENDICULAR component of d(vel_ema)/dt — discarding the
-// along-track part enforces the constant-speed prior and kills most of the noise
-// — smooth it harder than velocity (a second derivative is noisier), and fold a
-// 0.5*a*t^2 term into the intercept via a fixed-point flight-time solve. Heavy
-// smoothing is safe because the curve term is weighted by t^2, which is tiny on
-// the close fast passes (short flight, noisiest estimate) and only grows at
-// mid-range where the turn is steady and easy to track. The correction is
-// leadFrac-gated, flight-time-capped, and clamped to never exceed the linear
-// lead, so it sharpens mid-range aim without destabilising close or far shots.
-constexpr float kAccelEmaAlpha       = 0.12f;  // centripetal-accel smoothing (< vel alpha)
+// The fighter's motion, for the lead (minigame_turret_lead.h). Velocity is an
+// EMA of the per-tick position change. The fighters hold about constant speed
+// and only turn, so their acceleration is taken as the perpendicular part of
+// d(velocity)/dt (the along-track part is noise), clamped, and smoothed
+// harder than the velocity since a second derivative is noisier.
+constexpr float kVelEmaAlpha         = 0.25f;
+constexpr float kAccelEmaAlpha       = 0.12f;
 constexpr int   kAccelSettleSamples  = 5;      // ticks before the turn estimate is trusted
 constexpr float kMaxCentripetalAccel = 300.0f; // u/s^2 sanity clamp on the estimate
-constexpr float kAccelLeadCapSeconds = 1.0f;   // cap on the flight-time used in 0.5*a*t^2
 
 // ----- Aim-assist (magnetism — the DEFAULT, always-on mode) -----
 // Steering writes the aim field directly: offset.z (azimuth) and offset.x
@@ -161,94 +130,6 @@ void UpdateMotionEstimate(const Vector& P, ULONGLONG now) {
     g_state.last_selected_pos    = P;
     g_state.last_selected_pos_ms = now;
     g_state.have_last_pos        = true;
-}
-
-// ---- Lead: aim at the intercept point. Solve |P + v·t| = boltSpeed·t for
-// the smallest positive t (a·t² + b·t + c = 0), then I = P + v·t. Falls
-// back to the current position when velocity isn't established yet or no
-// valid intercept exists. Clamped to the bolt lifespan. A hitscan area's
-// hits don't fly, so it aims at the target itself. ----------------------
-LeadSolution SolveLead(const Vector& P, const Vector& v, float vmag, float radius,
-                       const Arena& arena) {
-    const float  boltSpeed  = arena.bolt_speed;
-    const float  boltLife   = arena.bolt_life;
-    Vector aimRel = P;           // listener-relative point the cue aims at
-    Vector aimRelLin = P;        // linear-only baseline (LeadCheck diagnostic)
-    float  leadT = 0.0f, leadDist = 0.0f, leadFrac = 0.0f;
-    if (g_state.have_vel && !arena.hitscan) {
-        const float a  = (v.x * v.x + v.y * v.y + v.z * v.z) - boltSpeed * boltSpeed;
-        const float bq = 2.0f * (P.x * v.x + P.y * v.y + P.z * v.z);
-        const float cq = (P.x * P.x + P.y * P.y + P.z * P.z);
-        float t = -1.0f;
-        if (std::fabs(a) < 1e-3f) {
-            if (std::fabs(bq) > 1e-6f) t = -cq / bq;
-        } else {
-            const float disc = bq * bq - 4.0f * a * cq;
-            if (disc >= 0.0f) {
-                const float sq = std::sqrt(disc);
-                const float t1 = (-bq + sq) / (2.0f * a);
-                const float t2 = (-bq - sq) / (2.0f * a);
-                if (t1 > 0.0f)                       t = t1;
-                if (t2 > 0.0f && (t < 0.0f || t2 < t)) t = t2;
-            }
-        }
-        if (t > 0.0f && t <= boltLife) {
-            leadT = t;
-            const float fullLead = vmag * t;  // drift during flight
-            // Range-gate: ramp lead in by drift relative to the hitbox radius,
-            // so close shots (drift < ~0.75·radius) keep the pure ship aim.
-            const float lo = kLeadGateLowFrac  * radius;
-            const float hi = kLeadGateHighFrac * radius;
-            if (radius > 0.0f && hi > lo) {
-                leadFrac = (fullLead - lo) / (hi - lo);
-                if (leadFrac < 0.0f)      leadFrac = 0.0f;
-                else if (leadFrac > 1.0f) leadFrac = 1.0f;
-            } else {
-                leadFrac = 1.0f;  // no radius this tick — lead fully
-            }
-            aimRel.x = P.x + v.x * t * leadFrac;
-            aimRel.y = P.y + v.y * t * leadFrac;
-            aimRel.z = P.z + v.z * t * leadFrac;
-            leadDist = fullLead * leadFrac;  // applied lead
-            aimRelLin = aimRel;              // capture the linear baseline
-
-            // Curve-aware refinement (constant centripetal accel). A few
-            // flight-time fixed-point iterations layer a 0.5·a·t² turn term onto
-            // the linear lead. The accel part is leadFrac-gated, flight-time-
-            // capped, and clamped to never exceed the linear lead — sharpening
-            // mid-range aim without destabilising close or far shots. This is the
-            // SHARED aim point: cue, magnetism, and autoaim all read aimRel.
-            if (g_state.have_accel) {
-                const Vector ac = g_state.accel_ema;
-                float tc = t;
-                Vector pred = aimRel;
-                float corrMag = leadDist;
-                for (int it = 0; it < 3; ++it) {
-                    const float te = (tc < kAccelLeadCapSeconds) ? tc : kAccelLeadCapSeconds;
-                    const float half = 0.5f * te * te * leadFrac;
-                    Vector linPart = {v.x * tc * leadFrac, v.y * tc * leadFrac, v.z * tc * leadFrac};
-                    Vector accPart = {ac.x * half, ac.y * half, ac.z * half};
-                    const float lpm = std::sqrt(linPart.x * linPart.x + linPart.y * linPart.y + linPart.z * linPart.z);
-                    const float apm = std::sqrt(accPart.x * accPart.x + accPart.y * accPart.y + accPart.z * accPart.z);
-                    if (apm > lpm && apm > 1e-4f) {  // curve part can't exceed linear lead
-                        const float s = lpm / apm;
-                        accPart.x *= s; accPart.y *= s; accPart.z *= s;
-                    }
-                    const Vector corr = {linPart.x + accPart.x, linPart.y + accPart.y, linPart.z + accPart.z};
-                    pred = {P.x + corr.x, P.y + corr.y, P.z + corr.z};
-                    corrMag = std::sqrt(corr.x * corr.x + corr.y * corr.y + corr.z * corr.z);
-                    const float pd = std::sqrt(pred.x * pred.x + pred.y * pred.y + pred.z * pred.z);
-                    tc = pd / boltSpeed;
-                    if (tc > boltLife) tc = boltLife;
-                    else if (tc < 0.0f)       tc = 0.0f;
-                }
-                aimRel   = pred;
-                leadT    = tc;
-                leadDist = corrMag;
-            }
-        }
-    }
-    return {aimRel, aimRelLin, leadT, leadDist, leadFrac};
 }
 
 // Passive sign calibration: learn the sign of d(worldAim)/d(offset) per axis
@@ -399,7 +280,8 @@ void AutoaimRetarget(bool justLandedHit, bool makeable, float leadT,
             const bool debounced = (nowMs - g_state.unmakeable_since_ms) >= kRetargetDebounceMs;
             if (!graced && !cooling && debounced && occSlot[0] != g_state.selected_slot) {
                 acclog::Write("TurretAssist",
-                              "retarget (unmakeable) slot=%d->%d leadT=%.2f crossing=%.0f range=%.0f",
+                              "retarget (unmakeable) slot=%d->%d leadT=%.2f "
+                              "crossing=%.0f range=%.0f",
                               g_state.selected_slot, occSlot[0], leadT, crossingSpeed, sd);
                 AnnounceSelectedTarget(0, occSlot, occDist, occPos, occInfo, occCount,
                                        listener, /*speak=*/false);

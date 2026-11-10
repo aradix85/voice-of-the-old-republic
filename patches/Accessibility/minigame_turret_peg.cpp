@@ -1,10 +1,12 @@
 // DriveSelectedPeg: per tick, the audio peg that guides the aim onto the
-// selected target (pitch and pan, lock and fire cues, lead, aim assist).
+// selected target (pan and pitch, the lock, the range and fire cues), with
+// the lead and the aim assist from minigame_turret_assist.cpp.
 
 #include "minigame_turret_internal.h"
 
-#include "audio_bus.h"        // PlayCue3D — one-shot lock-confirmation ping
-#include "menus_modsettings.h" // TurretAutoAim easy-mode toggle
+#include "audio_bus.h"
+#include "menus_modsettings.h"
+#include "minigame_turret_lead.h"
 #include "log.h"
 
 namespace acc::turret_game {
@@ -23,9 +25,8 @@ constexpr float kBehindPanDist = 9.0f;  // pinned tick distance while behind
 
 // ----- Elevation channel (peg playback PITCH = vertical aim error) -----
 // Stereo pan carries azimuth (left/right) but nothing about elevation, so the
-// peg's loudness alone left the up/down axis blind — the dominant miss at
-// range (QC: vertically on-target only ~15% of frames; targets span -7°..+73°
-// elevation against a fixed aim). We add the orthogonal channel as PITCH: the
+// up/down axis was blind, the dominant miss at range (targets span -7°..+73°
+// elevation). The orthogonal channel is PITCH: the
 // peg plays at its natural rate while the aim is within the hitbox's elevation
 // tolerance ("sounds normal" = on the vertical line, a shot connects), and
 // glides off-pitch outside it — HIGHER when the target is above the aim (press
@@ -332,7 +333,10 @@ void DriveSelectedPeg(const int occSlot[], const float occDist[],
     }
 
     const Arena& arena = g_state.arena;
-    const LeadSolution lead = SolveLead(P, v, vmag, radius, arena);
+    const LeadSolution lead = SolveLead(
+        P, (g_state.have_vel && !arena.hitscan) ? &v : nullptr,
+        g_state.have_accel ? &g_state.accel_ema : nullptr,
+        radius, arena.bolt_speed, arena.bolt_life);
     const Vector& aimRel    = lead.aimRel;
     const Vector& aimRelLin = lead.aimRelLin;
     const float   leadT     = lead.t;
@@ -490,8 +494,10 @@ void DriveSelectedPeg(const int occSlot[], const float occDist[],
     DrainLeadProbes(g_state.selected_slot, sp, now);
     if (g_state.have_vel && leadT > 0.0f && now - g_state.lead_probe_push_ms >= 200) {
         g_state.lead_probe_push_ms = now;
-        const Vector wLin   = {listener.x + aimRelLin.x, listener.y + aimRelLin.y, listener.z + aimRelLin.z};
-        const Vector wCurve = {listener.x + aimRel.x,    listener.y + aimRel.y,    listener.z + aimRel.z};
+        const Vector wLin   = {listener.x + aimRelLin.x, listener.y + aimRelLin.y,
+                               listener.z + aimRelLin.z};
+        const Vector wCurve = {listener.x + aimRel.x, listener.y + aimRel.y,
+                               listener.z + aimRel.z};
         PushLeadProbe(g_state.selected_slot, wLin, wCurve,
                       now + static_cast<ULONGLONG>(leadT * 1000.0f));
     }
