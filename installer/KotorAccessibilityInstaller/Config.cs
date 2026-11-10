@@ -85,7 +85,7 @@ namespace KotorAccessibilityInstaller
         //
         // Shipped pin: 2026-02-09 commit, which IS the v1.10.1 release point
         // (DeadlyStream uploaded 2 days later on 2026-02-11 with the same
-        // tslpatchdata content). See docs/installer.md for the recipe.
+        // tslpatchdata content). See archiev/installer-design-original.md for the recipe.
 
         public static string K1cpRepoOwner => SourcePins.K1cp.RepoOwner;
         public static string K1cpRepoName => SourcePins.K1cp.RepoName;
@@ -100,7 +100,7 @@ namespace KotorAccessibilityInstaller
         // Packaged from third_party/Kotor-Patch-Manager/Patches/<name>/; the
         // patch IDs must match each manifest.toml. Feature-equivalent to the
         // community 3C-FD tool's 4GB + borderless patches (see
-        // docs/installer.md, "KOTOR 2 mod bundle").
+        // archiev/installer-design-original.md, "KOTOR 2 mod bundle").
 
         public const string K2FourGbKPatchAssetName = "4GBPatch.kpatch";
         public const string K2FourGbPatchId = "4gb-patch";

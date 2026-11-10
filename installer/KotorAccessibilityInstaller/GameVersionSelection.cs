@@ -3,7 +3,7 @@ namespace KotorAccessibilityInstaller
     /// <summary>
     /// User's choice from <see cref="GameVersionSelectionForm"/>: which game(s)
     /// the installer should target. KOTOR 1 is the fully supported path; KOTOR 2
-    /// support is in preparation (see docs/installer.md, "KOTOR 2 mod bundle").
+    /// support is in preparation (see archiev/installer-design-original.md, "KOTOR 2 mod bundle").
     /// </summary>
     public sealed class GameVersionSelection
     {

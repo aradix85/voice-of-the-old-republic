@@ -84,7 +84,7 @@ Always read these before diving into work — they capture decisions and current
 - **`docs/tools.md`** — installs and paths (game, JDK, Ghidra, VS Build Tools, patch manager, kdev). Update when new tools are installed.
 - **`docs/kdev-design.md`** — kdev's design decisions, project layout, subcommand contracts, exit codes, completion status.
 - **`docs/controls-and-input.md`** — canonical KOTOR 1 keyboard/mouse control survey + accessibility-gap backlog.
-- **`docs/installer.md`** — end-user installer design, bundled-mods plan, beta-prep notes.
+- **`docs/installer.md`** — what the installer does: where the mod comes from, the flows, what lands in the game folder, the pins. The original design notes and research are in `archiev/installer-design-original.md`.
 - **`docs/kotor2-controller-plan.md`** — controller support for KOTOR 2: the phased work plan, the confirmed pad→InputIndex code table, and the defects one live test round exposed. Written to be executed cold. Engine reference is `docs/llm-docs/k2-controller-support.md`.
 - **`docs/kotor1-controller-port.md`** — the same support backported to KOTOR 1, whose engine has no gamepad path at all (decompile evidence inside). Records what differs — the mod is the pad driver there — the shared binding set, and the combined test round.
 - **`docs/known-issues.md`** — five-bucket status tracker (Bugs / Planned / Monitor / Polish / Beta Preparations).

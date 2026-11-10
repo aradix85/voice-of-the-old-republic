@@ -159,7 +159,7 @@ namespace KotorAccessibilityInstaller
 
                 Logger.Info($"Scheduling deletion of uninstaller: {uninstallerPath}");
 
-                // ping (not timeout) — see docs/installer.md / arena IMPLEMENTATION.md
+                // ping (not timeout) — see archiev/installer-design-original.md / arena IMPLEMENTATION.md
                 // gotcha note: timeout refuses to run without an interactive console.
                 var psi = new ProcessStartInfo
                 {

@@ -23,7 +23,7 @@ namespace KotorAccessibilityInstaller.ModInstallers
     /// Component set mirrors the archive's namespaces.ini minus the two Extras:
     /// "Trayus Sith Lord Masks" is visual-only and "Gand Warrior's Awareness
     /// Check" is a rebalance — both outside our bundle filters
-    /// (docs/installer.md, "KOTOR 2 mod bundle").
+    /// (archiev/installer-design-original.md, "KOTOR 2 mod bundle").
     ///
     /// Requires TSLRCM 1.8.3+; the KOTOR 2 flow gates this installer on TSLRCM
     /// presence before it ever runs.

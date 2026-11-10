@@ -23,7 +23,7 @@ namespace KotorAccessibilityInstaller
     /// site's markup and could break on any forum-software upgrade, so every
     /// step throws a descriptive error and callers fall back to handing the
     /// user the page URL for a manual browser download. The long-term plan
-    /// stays a permission-based mirror (docs/installer.md, "KOTOR 2 mod
+    /// stays a permission-based mirror (archiev/installer-design-original.md, "KOTOR 2 mod
     /// bundle"); this client exists so users are not blocked until then.
     /// </summary>
     public sealed class DeadlyStreamClient : IDisposable
