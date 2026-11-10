@@ -1,4 +1,4 @@
-# engine_offsets_addresses.h (1056 lines)
+# engine_offsets_addresses.h (1061 lines)
 
 Source: `patches/Accessibility/engine_offsets_addresses.h`
 
@@ -37,4 +37,4 @@ A .data pointer must never be left bare `constexpr`: that hands out the KOTOR 1 
 - L960 `typedef void (__thiscall* PFN_AddItemProperty)(void* item, CExoString* accum)`: Per-category property-block builders that GetPropertyDescription calls in fixed order (decompile-verified at 0055f340).
 - L997 `typedef CExoString* (__thiscall* PFN_CExoStringCtor)(CExoString* this_)`: CExoString default constructor — __thiscall(CExoString* this).
 
-Also 111 constants or variables at namespace scope.
+Also 112 constants or variables at namespace scope.

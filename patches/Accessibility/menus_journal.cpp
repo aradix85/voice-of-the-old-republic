@@ -17,22 +17,6 @@ namespace acc::menus::journal {
 
 namespace {
 
-// CSWGuiInGameJournal::OnControlEntered @ 0x00645100. Outer gate is
-// `if (param_1 != NULL)` only (decompiled — see peek_description.cpp's
-// RefreshJournal for the same call). Idempotent w.r.t. screen state: just
-// clears+repopulates item_description_label for the passed-in row.
-// K2 twin 0x007FC390: takes the row control, resolves its quest, rebuilds
-// the planet-prefixed description text — same role, same (this, control)
-// shape.
-const std::uintptr_t kAddrJournalOnControlEntered = acc::addr::Pick(0x00645100, 0x007FC390);
-
-// CSWGuiInGameJournal.item_description_label @ +0x1a4 (a CSWGuiListBox with
-// exactly one row whose label holds the planet-prefixed entry text).
-// K2 +0x1b0: the ctor 0x007FAE60 constructs title label @0x68 then a
-// LISTBOX @0x1b0 (member-ctor call order read off the disassembly), bound
-// to the same LBL_ITEM_DESCRIPTION tag.
-const std::size_t    kJournalDescriptionListBoxOffset = acc::off::Pick(0x1a4, 0x1b0);
-
 typedef void (__thiscall* PFN_PanelOnControl)(void* panel, void* control);
 typedef void (__thiscall* PFN_PanelThiscall)(void* panel);
 

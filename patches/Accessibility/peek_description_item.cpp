@@ -121,7 +121,20 @@ bool TryReadWorkbenchSaberDescription(void* panel, void* row,
     return true;
 }
 
+// The focused item's non-empty description blocks (Tags / Values /
+// Properties / Description), rebuilt when the item changes and dropped on
+// Shift release.
+void* g_blockCacheItem = nullptr;
+acc::engine::ItemDescriptionBlocks g_blocks;
+const char* g_blockPtrs[4] = {nullptr, nullptr, nullptr, nullptr};
+int g_blockCount = 0;
+
 }  // namespace
+
+void ResetItemBlocks() {
+    g_blockCacheItem = nullptr;
+    g_blockCount = 0;
+}
 
 // Shift+Up/Down over an item's four categorised description blocks. Rebuilds the
 // cache when `item` changes, advances the shared cursor (clamped at both ends —
@@ -155,15 +168,7 @@ bool SpeakItemBlocks(void* item, bool down) {
         return false;
     }
 
-    int prev = g_blockIdx;
-    if (g_blockIdx == kCursorReset) {
-        g_blockIdx = 0;  // first press speaks block 0 in either direction
-    } else if (down) {
-        if (g_blockIdx < g_blockCount - 1) ++g_blockIdx;
-    } else {
-        if (g_blockIdx > 0) --g_blockIdx;
-    }
-    if (g_blockIdx >= g_blockCount) g_blockIdx = g_blockCount - 1;
+    const int prev = StepBlockCursor(down, g_blockCount);
 
     char spoken[4096];
     TrimCopy(spoken, sizeof(spoken), g_blockPtrs[g_blockIdx]);
@@ -270,14 +275,10 @@ bool HandleWorkbenchSlotTooltip(void* panel, void* control, bool down) {
 // DriveListBoxSelection, where the listbox's selection_index IS the user's
 // cursor. HandleItemTooltip below reads that field and nothing else.
 //
-// A chain-navigated panel must never be listed here. Its cursor is
-// g_chainIndex; selection_index sits wherever the engine last left it, so
-// every peek would describe that one row. InGameQuestItems was listed and did
-// exactly that — patch-20260731-095910.log shows "Peek.Item: panel=
-// InGameQuestItems row sel=0/16" repeating unchanged while the chain stepped
-// 0 -> 1 -> 2, so all 16 quest items read out the first one's description. It
-// now goes through the chain-focus branch in HandleShiftArrow instead, which
-// is also where its Enter handler (isQuestItemRow) already resolved the row.
+// A chain-navigated panel (such as InGameQuestItems) must never be listed
+// here: its cursor is g_chainIndex and selection_index stays wherever the
+// engine last left it, so every peek would describe that one row. Those go
+// through the chain-focus branch in HandleShiftArrow.
 constexpr ItemTooltipPanelInfo kItemTooltipPanels[] = {
     { acc::engine::PanelKind::Container,        ContainerFindLb,        0 },
     { acc::engine::PanelKind::InGameEquip,      InGameEquipFindLb,      1 },

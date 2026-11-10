@@ -1,4 +1,4 @@
-# menus_journal.cpp (264 lines)
+# menus_journal.cpp (248 lines)
 
 Source: `patches/Accessibility/menus_journal.cpp`
 
@@ -10,11 +10,11 @@ For screen-reader users we repurpose Enter on a journal row: it refreshes item_d
 
 ## Declarations (in source order)
 
-- L43 `bool IsButtonAtOffset(void* panel, void* control, std::size_t offset)`: Embedded button objects live AT panel+offset (the ctor constructs them in place via &this->sort_button etc.), so the chain captures &button == that address.
-- L49 `bool ReadRowText(void* row, char* outBuf, std::size_t bufSize)`
-- L71 `bool IsJournalEntry(void* control)`
-- L82 `void SpeakDescription(void* panel, void* focusedRow)`
-- L165 `bool IsSortButton(void* panel, void* control)`
-- L177 `bool IsSwapButton(void* panel, void* control)`
-- L181 `void LogEntryCounts(void* panel)`
-- L240 `void ForceRepopulate(void* panel)`
+- L27 `bool IsButtonAtOffset(void* panel, void* control, std::size_t offset)`: Embedded button objects live AT panel+offset (the ctor constructs them in place via &this->sort_button etc.), so the chain captures &button == that address.
+- L33 `bool ReadRowText(void* row, char* outBuf, std::size_t bufSize)`
+- L55 `bool IsJournalEntry(void* control)`
+- L66 `void SpeakDescription(void* panel, void* focusedRow)`
+- L149 `bool IsSortButton(void* panel, void* control)`
+- L161 `bool IsSwapButton(void* panel, void* control)`
+- L165 `void LogEntryCounts(void* panel)`
+- L224 `void ForceRepopulate(void* panel)`

@@ -352,7 +352,6 @@ patches/Accessibility/peek_description.cpp
 patches/Accessibility/peek_description.h
 patches/Accessibility/peek_description_internal.h
 patches/Accessibility/peek_description_item.cpp
-patches/Accessibility/peek_description_state.cpp
 patches/Accessibility/probe_camera_distance.cpp
 patches/Accessibility/probe_camera_distance.h
 patches/Accessibility/probe_camera_state.cpp

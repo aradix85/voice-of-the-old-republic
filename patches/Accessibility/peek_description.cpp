@@ -1,3 +1,6 @@
+// Shift+Up/Down description peek: the panel descriptions (inventory,
+// journal, abilities, store, galaxy map, any control's tooltip) and the
+// dispatch to the item-description paths in peek_description_item.cpp.
 
 #include "peek_description_internal.h"
 
@@ -6,11 +9,11 @@
 #include "engine_rebase.h"
 #include "hotkeys.h"
 #include "log.h"
-#include "menus_abilities.h"  // RefreshDetail (abilities description repaint)
-#include "menus_crafting.h"   // ResolveRowCommit — K2 crafting row peek gate
-#include "menus_galaxymap.h"  // SpeakDescription — galaxy-map LBL_DESC peek
-#include "menus_internal.h"   // panel-member control resolvers
-#include "menus_listbox.h"    // IsEquipPickerArmed
+#include "menus_abilities.h"
+#include "menus_crafting.h"
+#include "menus_galaxymap.h"
+#include "menus_internal.h"
+#include "menus_listbox.h"
 #include "speech.h"
 
 namespace acc::peek {
@@ -32,24 +35,19 @@ const std::uintptr_t kAddrInventoryOnControlEntered = acc::addr::Pick(0x006b3d10
 // 0x008B8000/0x008B8070, and K1's exact 0xa3df unlimited-stock strref.
 const std::uintptr_t kAddrStoreOnControlEntered = acc::addr::Pick(0x006c0aa0, 0x008B6E90);
 
-// CSWGuiInGameJournal::OnControlEntered — no is_active gate, direct call.
-// (Duplicate of menus_journal.cpp's file-local copy — keep the two values
-// in sync. K2 twin 0x007FC390, identified with the journal batch 3d work.)
-const std::uintptr_t kAddrJournalOnControlEntered = acc::addr::Pick(0x00645100, 0x007FC390);
-
-static void RefreshInventory(void* panel, void* focused) {
+void RefreshInventory(void* panel, void* focused) {
     if (!panel || !focused) return;
     CallOnControlEnteredWithActive(kAddrInventoryOnControlEntered,
                                    panel, focused);
 }
 
-static void RefreshStore(void* panel, void* focused) {
+void RefreshStore(void* panel, void* focused) {
     if (!panel || !focused) return;
     CallOnControlEnteredWithActive(kAddrStoreOnControlEntered,
                                    panel, focused);
 }
 
-static void RefreshJournal(void* panel, void* focused) {
+void RefreshJournal(void* panel, void* focused) {
     if (!panel || !focused) return;
     if (!acc::addr::Ok(kAddrJournalOnControlEntered)) {
         acclog::Write("Peek", "RefreshJournal skipped: address unresolved on build %s",
@@ -65,21 +63,15 @@ static void RefreshJournal(void* panel, void* focused) {
 // through the abilities module's OnEnterSkill path (NOT OnAbilitySelectionChanged,
 // which is mouse-coordinate-driven and corrupts the stack via a ret-4 mismatch).
 // `focused` is unused — the selection lives on the ability_listbox.
-static void RefreshAbilities(void* panel, void* /*focused*/) {
+void RefreshAbilities(void* panel, void* /*focused*/) {
     if (!panel) return;
     acc::menus::abilities::RefreshDetail(panel);
 }
 
-// Panel kind → description-listbox offset + optional refresh adapter.
-// Adding a panel = one row. refresh=nullptr reads whatever the engine
-// already populated.
-//
-// Journal's slot is named `item_description_label` in SARIF but its
-// DATATYPE is CSWGuiListBox — misnamed, treat as listbox.
-//
-// Options sub-panels also have description_listbox members but
-// IdentifyPanel currently lumps them all under InGameOptions —
-// settings-tooltip support waits on per-tab kind discrimination.
+// Panel kind -> description-listbox offset + optional refresh adapter;
+// refresh=nullptr reads whatever the engine already populated. Equip is not
+// here: DriveListBoxSelection bypasses its onSelectionChanged, so its
+// description_listbox stays stale and it goes through the item-tooltip path.
 struct PanelPeekInfo {
     acc::engine::PanelKind kind;
     std::size_t            descListBoxOffset;
@@ -87,21 +79,13 @@ struct PanelPeekInfo {
 };
 
 const PanelPeekInfo kPanels[] = {
-    // Inventory description_listbox: K1 0x844 (Lane's DB), K2 0x878 — its ctor
-    // 0x008A6170 builds two listboxes at +0x588/+0x878 in the same
-    // items-then-description order as K1's +0x564/+0x844.
-    { acc::engine::PanelKind::InGameInventory,  acc::off::Pick(0x0844, 0x0878), RefreshInventory  },  // CSWGuiInGameInventory.description_listbox
-    // Duplicate of menus_journal.cpp's kJournalDescriptionListBoxOffset —
-    // keep the two values in sync (same arrangement as the journal
-    // OnControlEntered address above).
-    { acc::engine::PanelKind::InGameJournal,    acc::off::Pick(0x01a4, 0x01b0), RefreshJournal    },  // CSWGuiInGameJournal.item_description_label (a CSWGuiListBox)
-    { acc::engine::PanelKind::InGameAbilities,  kAbilitiesDescListBoxOffset, RefreshAbilities },  // LB_DESC (0x33bc); refresh repaints it for the focused entry
-    { acc::engine::PanelKind::Store,            kStoreDescriptionListBoxOffset, RefreshStore      },  // CSWGuiStore.description_listbox
-    // CSWGuiInGameEquip is handled via the item-tooltip path below: its
-    // arrow-key nav goes through DriveListBoxSelection which bypasses the
-    // engine's onSelectionChanged callback, so description_listbox at
-    // +0x33b8 stays stale. Instead we derive the focused row from
-    // items_listbox.selection_index and read the item description directly.
+    // Inventory description_listbox: K2's ctor 0x008A6170 builds the items and
+    // description listboxes at +0x588/+0x878, in K1's +0x564/+0x844 order.
+    { acc::engine::PanelKind::InGameInventory, acc::off::Pick(0x0844, 0x0878),
+      RefreshInventory },
+    { acc::engine::PanelKind::InGameJournal, kJournalDescriptionListBoxOffset, RefreshJournal },
+    { acc::engine::PanelKind::InGameAbilities, kAbilitiesDescListBoxOffset, RefreshAbilities },
+    { acc::engine::PanelKind::Store, kStoreDescriptionListBoxOffset, RefreshStore },
 };
 
 const PanelPeekInfo* LookupPanel(acc::engine::PanelKind k) {
@@ -111,21 +95,28 @@ const PanelPeekInfo* LookupPanel(acc::engine::PanelKind k) {
     return nullptr;
 }
 
-bool ShiftHeld() {
-    // OS-level query; the engine-side flag can latch stale on swallowed
-    // up-edges.
-    return acc::hotkeys::ShiftHeld();
-}
-
 }  // namespace
+
+int g_blockIdx = kCursorReset;
+
+int StepBlockCursor(bool down, int count) {
+    const int prev = g_blockIdx;
+    if (g_blockIdx == kCursorReset) {
+        g_blockIdx = 0;  // the first press speaks block 0 in either direction
+    } else if (down) {
+        if (g_blockIdx < count - 1) ++g_blockIdx;
+    } else {
+        if (g_blockIdx > 0) --g_blockIdx;
+    }
+    if (g_blockIdx >= count) g_blockIdx = count - 1;  // the list may have shrunk
+    return prev;
+}
 
 // Several OnControlEntered overrides early-out on `entry->is_active != 0`.
 // HandleLMouseDown sets that on click; our keyboard chain step doesn't,
 // so equipped inventory rows stay at 0 forever. Save → force 1 → call →
 // restore around the engine call only.
-void CallOnControlEnteredWithActive(std::uintptr_t addr,
-                                           void* panel, void* focused)
-{
+void CallOnControlEnteredWithActive(std::uintptr_t addr, void* panel, void* focused) {
     // Guard before touching is_active: on a rebased build an unmapped address
     // is 0, and we must not force the flag and then fail to make the call that
     // restores it.
@@ -178,32 +169,95 @@ void OnShiftReleased() {
                       g_blockIdx);
     }
     g_blockIdx = kCursorReset;
-    // Drop the item-block cache so the next peek rebuilds for whatever item is
-    // focused then (the user may have moved to a different row meanwhile).
-    g_blockCacheItem = nullptr;
-    g_blockCount = 0;
+    // The next peek rebuilds for whatever item is focused then.
+    ResetItemBlocks();
 }
+
+namespace {
+
+// Chain-navigated rows whose focused control is the item entry itself. The K2
+// workbench lists are checked for row membership first: their category and
+// action buttons are only 0x1d0 bytes, so ResolveRowItem's id read on one
+// would pull garbage from past the control.
+bool IsChainItemRow(acc::engine::PanelKind kind, void* panel, void* focused) {
+    if (kind == acc::engine::PanelKind::InGameInventory ||
+        kind == acc::engine::PanelKind::InGameQuestItems ||
+        kind == acc::engine::PanelKind::Store) {
+        return true;
+    }
+    void* lb = nullptr;
+    return acc::menus::crafting::ResolveRowCommit(panel, focused, &lb);
+}
+
+// Fallback for panels without a description listbox: the focused control's
+// own .gui tooltip (LevelUp, PartySelection, options widgets and the like).
+bool SpeakControlTooltip(acc::engine::PanelKind kind, void* focused) {
+    if (!focused) return false;
+    char tip[8192];
+    if (!acc::engine::ReadControlTooltip(focused, tip, sizeof(tip))) {
+        acclog::Write("Peek.Control", "panel=%s control=%p no tooltip; pass through",
+                      acc::engine::PanelKindName(kind), focused);
+        return false;
+    }
+    acc::speech::Speak(tip, /*interrupt=*/true);
+    acclog::Write("Peek.Control", "panel=%s control=%p tooltip=\"%s\"",
+                  acc::engine::PanelKindName(kind), focused, tip);
+    return true;
+}
+
+// Re-stage the panel's description for the focused row, then page its rows.
+void PageDescriptionListBox(acc::engine::PanelKind kind, const PanelPeekInfo& info,
+                            void* panel, void* focused, bool down) {
+    if (info.refresh) {
+        __try {
+            info.refresh(panel, focused);
+        } __except (EXCEPTION_EXECUTE_HANDLER) {
+            acclog::Write("Peek", "panel=%s refresh SEH (focused=%p); reading stale rows",
+                          acc::engine::PanelKindName(kind), focused);
+        }
+    }
+
+    void* lb = reinterpret_cast<unsigned char*>(panel) + info.descListBoxOffset;
+    auto* lbList = reinterpret_cast<CExoArrayList*>(
+        reinterpret_cast<unsigned char*>(lb) + kListBoxControlsOffset);
+    const int rowCount = (lbList && lbList->data) ? lbList->size : 0;
+    if (rowCount <= 0) {
+        acclog::Write("Peek", "panel=%s lb=%p rowCount=0; silent",
+                      acc::engine::PanelKindName(kind), lb);
+        return;
+    }
+
+    const int prev = StepBlockCursor(down, rowCount);
+    void* row = lbList->data[g_blockIdx];
+    char text[8192];
+    const char* src = row ? ReadRowText(row, text, sizeof(text)) : nullptr;
+    if (src) {
+        acc::speech::Speak(text, /*interrupt=*/true);
+        acclog::Write("Peek", "panel=%s block %d/%d (was %d) src=%s text=\"%s\"",
+                      acc::engine::PanelKindName(kind), g_blockIdx, rowCount, prev, src,
+                      text);
+    } else {
+        acclog::Write("Peek", "panel=%s block %d/%d (was %d) row=%p no-text; silent",
+                      acc::engine::PanelKindName(kind), g_blockIdx, rowCount, prev, row);
+    }
+}
+
+}  // namespace
 
 bool HandleShiftArrow(int param_1, int param_2, void* activePanel,
                       void* focusedControl) {
-    // Press edge only — release events fall through.
-    if (param_2 == 0) return false;
+    if (param_2 == 0) return false;  // press edge only
     if (param_1 != kInputNavUp && param_1 != kInputNavDown) return false;
-    if (!ShiftHeld()) return false;
+    if (!acc::hotkeys::ShiftHeld()) return false;
     if (!activePanel) return false;
 
     const bool down = (param_1 == kInputNavDown);
-    auto kind = acc::engine::IdentifyPanel(activePanel);
+    const auto kind = acc::engine::IdentifyPanel(activePanel);
 
-    // Slot path runs before picker-listbox because InGameEquip hosts
-    // both surfaces; the picker is empty until a slot is drilled into.
-    //
-    // Skip the slot path while the picker is armed — chain focus stays
-    // on the originating slot button while picker rows are driven by
-    // DriveListBoxSelection, so without this gate the slot-index match
-    // would hit the slot, find the handle at 0x7f000000 (engine moves
-    // the item out for the swap), and silently early-out instead of
-    // letting the item-tooltip path read the row the user is sitting on.
+    // Equip and Workbench-upgrade slot buttons speak the installed item. While
+    // the panel's picker is armed, chain focus stays on the slot button but the
+    // user is on a picker row (driven by DriveListBoxSelection), so the slot
+    // path is skipped and the item-tooltip path below reads that row.
     if (kind == acc::engine::PanelKind::InGameEquip && focusedControl &&
         !acc::menus::listbox::IsEquipPickerArmed()) {
         int slotIdx = acc::menus::detail::EquipSlotIndexFromButton(
@@ -214,19 +268,6 @@ bool HandleShiftArrow(int param_1, int param_2, void* activePanel,
         }
     }
 
-    // Workbench upgrade slot button (matched by position in the panel's
-    // embedded button run — UpgradeSlotIndexFromButton): speak the
-    // installed mod's description, or "empty". Runs before the item-tooltip
-    // path because that path targets LB_ITEMS — the mod picker shown only
-    // after a slot is drilled into.
-    //
-    // Skip while the picker is armed — exactly like the InGameEquip case
-    // above: once a slot is drilled into, chain focus STAYS on the slot
-    // button while the offered-mod rows are driven by DriveListBoxSelection
-    // (verified from the patch log: Shift+arrow kept hitting the slot button
-    // with the picker open). Without this gate we'd keep reading the slot's
-    // installed mod instead of letting the item-tooltip path read the
-    // offered crystal the user is actually sitting on.
     if (kind == acc::engine::PanelKind::WorkbenchUpgrade && focusedControl &&
         !acc::menus::listbox::IsWorkbenchUpgradePickerArmed()) {
         if (acc::menus::detail::UpgradeSlotIndexFromButton(
@@ -236,141 +277,31 @@ bool HandleShiftArrow(int param_1, int param_2, void* activePanel,
         }
     }
 
-    // Galaxy / star-map travel screen: read LBL_DESC for the currently
-    // displayed planet. The planet itself is cycled with plain Up/Down
-    // (galaxymap::TryHandleInput); Shift+Down is the description peek.
+    // Plain Up/Down cycles the planets; Shift peeks the shown planet's LBL_DESC.
     if (kind == acc::engine::PanelKind::InGameGalaxyMap) {
         acc::menus::galaxymap::SpeakDescription(activePanel);
         return true;
     }
 
-    // Item-tooltip path (Container, Equip picker, Workbench listboxes).
     if (const ItemTooltipPanelInfo* itemInfo = LookupItemTooltipPanel(kind)) {
         HandleItemTooltip(kind, *itemInfo, activePanel, down);
         return true;
     }
 
-    // Inventory / Store / QuestItems: the chain-focused control is the item
-    // entry row itself (client item handle at +0x1c4). Read the item and
-    // navigate its four categorised blocks, instead of paging the single-row
-    // description listbox the engine renders. Falls through to the listbox
-    // path only if the focused row doesn't resolve to an item (e.g. focus
-    // parked on a non-item control).
-    //
-    // All three are chain-navigated and all three build their rows from the
-    // same CSWGuiInGameItemEntry class, so the chain entry is the only thing
-    // that knows where the user is — see the membership rule on
-    // kItemTooltipPanels.
-    if (kind == acc::engine::PanelKind::InGameInventory ||
-        kind == acc::engine::PanelKind::InGameQuestItems ||
-        kind == acc::engine::PanelKind::Store) {
+    // Walk the focused item's categorised blocks instead of the single-row
+    // description the engine renders; a row without an item falls through.
+    if (IsChainItemRow(kind, activePanel, focusedControl)) {
         if (void* item = ResolveRowItem(focusedControl)) {
-            acclog::Write("Peek.Blocks",
-                          "panel=%s focused row item=%p -> block nav",
+            acclog::Write("Peek.Blocks", "panel=%s row item=%p -> block nav",
                           acc::engine::PanelKindName(kind), item);
             if (SpeakItemBlocks(item, down)) return true;
         }
     }
 
-    // K2 workbench screens (upgradesel item list, create/breakdown lists):
-    // same chain-focused row model as the trio above, but gated on actual
-    // row membership first — the panels' category/action BUTTONS are only
-    // 0x1d0 bytes, so ResolveRowItem's id read on one would pull garbage
-    // from past the control. ResolveRowCommit does the membership scan.
-    // Create-list rows are panel-local template items whose handle may not
-    // resolve; those fall through silently to the generic tooltip path.
-    {
-        void* peekLb = nullptr;
-        if (acc::menus::crafting::ResolveRowCommit(activePanel, focusedControl,
-                                                   &peekLb)) {
-            if (void* item = ResolveRowItem(focusedControl)) {
-                acclog::Write("Peek.Blocks",
-                              "panel=%s crafting row item=%p -> block nav",
-                              acc::engine::PanelKindName(kind), item);
-                if (SpeakItemBlocks(item, down)) return true;
-            }
-        }
-    }
-
     const PanelPeekInfo* info = LookupPanel(kind);
-    if (!info) {
-        // Generic fallback: focused control's own .gui tooltip strref.
-        // Covers LevelUp / PartySelection / options widgets / etc.
-        if (focusedControl) {
-            char tip[8192];
-            if (acc::engine::ReadControlTooltip(focusedControl, tip,
-                                                sizeof(tip))) {
-                acc::speech::Speak(tip, /*interrupt=*/true);
-                acclog::Write("Peek.Control",
-                              "panel=%s control=%p tooltip=\"%s\"",
-                              acc::engine::PanelKindName(kind),
-                              focusedControl, tip);
-                return true;
-            }
-            acclog::Write("Peek.Control",
-                          "panel=%s control=%p no tooltip; pass through",
-                          acc::engine::PanelKindName(kind), focusedControl);
-        }
-        return false;  // unknown / no tooltip — pass through to plain nav
-    }
-
-    // Re-stage description for the focused row. SEH-guarded against
-    // stale entries during panel teardown.
-    if (info->refresh) {
-        __try {
-            info->refresh(activePanel, focusedControl);
-        } __except (EXCEPTION_EXECUTE_HANDLER) {
-            acclog::Write("Peek", "panel=%s refresh SEH (focused=%p); "
-                          "reading stale rows",
-                          acc::engine::PanelKindName(kind), focusedControl);
-        }
-    }
-
-    // Inline at known offset; address is the listbox base, no lookup.
-    void* lb = reinterpret_cast<unsigned char*>(activePanel) +
-               info->descListBoxOffset;
-
-    auto* lbList = reinterpret_cast<CExoArrayList*>(
-        reinterpret_cast<unsigned char*>(lb) + kListBoxControlsOffset);
-    int rowCount = (lbList && lbList->data) ? lbList->size : 0;
-
-    if (rowCount <= 0) {
-        // Consume the key anyway (predictable-behaviour rule).
-        acclog::Write("Peek", "panel=%s lb=%p rowCount=0; silent",
-                      acc::engine::PanelKindName(kind), lb);
-        return true;
-    }
-
-    int prev = g_blockIdx;
-    if (g_blockIdx == kCursorReset) {
-        // First press after a release speaks block 0 in either direction.
-        g_blockIdx = 0;
-    } else if (down) {
-        if (g_blockIdx < rowCount - 1) ++g_blockIdx;
-    } else {
-        if (g_blockIdx > 0) --g_blockIdx;
-    }
-
-    // Clamp — panel may have re-populated with fewer rows.
-    if (g_blockIdx >= rowCount) g_blockIdx = rowCount - 1;
-
-    void* row = lbList->data[g_blockIdx];
-    char text[8192];
-    const char* src = row ? ReadRowText(row, text, sizeof(text)) : nullptr;
-    if (src) {
-        // interrupt=true: each press is a discrete read; fast double-
-        // press should land on the latest block, not queue both.
-        acc::speech::Speak(text, /*interrupt=*/true);
-        acclog::Write("Peek", "panel=%s block %d/%d (was %d) src=%s text=\"%s\"",
-                      acc::engine::PanelKindName(kind),
-                      g_blockIdx, rowCount, prev, src, text);
-    } else {
-        acclog::Write("Peek", "panel=%s block %d/%d (was %d) row=%p no-text; silent",
-                      acc::engine::PanelKindName(kind),
-                      g_blockIdx, rowCount, prev, row);
-    }
-
-    return true;
+    if (!info) return SpeakControlTooltip(kind, focusedControl);
+    PageDescriptionListBox(kind, *info, activePanel, focusedControl, down);
+    return true;  // consumed even when silent
 }
 
 }  // namespace acc::peek

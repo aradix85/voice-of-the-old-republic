@@ -1033,6 +1033,11 @@ const uintptr_t kAddrInventoryPopulateItemListBox = acc::addr::Pick(0x006b4810, 
 // over a row and rewrites item_description_label with the full text.
 const uintptr_t kVtableCSWGuiJournalItemEntry          = acc::addr::Pick(0x007518c0, 0x009A2554);
 
+// CSWGuiInGameJournal::OnControlEntered(this, row): no is_active gate;
+// clears and repopulates item_description_label for the row. K2 twin
+// 0x007FC390 resolves the row's quest and rebuilds the same text.
+const uintptr_t kAddrJournalOnControlEntered = acc::addr::Pick(0x00645100, 0x007FC390);
+
 // ---------------------------------------------------------------------------
 // .data global pointers - deliberately NOT passed through acc::addr::R().
 //

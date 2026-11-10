@@ -2093,6 +2093,10 @@ const size_t    kSwsItemBaseItemIdOffset         = acc::off::Same(0xc);
 // KOTOR 2 has no CSWGuiQuestItem class at all — the sub-screen this button
 // opened does not exist there. KOTOR 2's journal offers BTN_MESSAGES instead.
 const size_t    kJournalItemsListBoxOffset             = acc::off::Pick(0x5c4, 0x5e8);
+// item_description_label: a CSWGuiListBox with one row holding the
+// planet-prefixed entry text. K2 +0x1b0: the ctor 0x007FAE60 builds the title
+// label at 0x68, then this listbox (bound to LBL_ITEM_DESCRIPTION).
+const size_t    kJournalDescriptionListBoxOffset       = acc::off::Pick(0x1a4, 0x1b0);
 const size_t    kJournalQuestItemsButtonOffset         = acc::off::Kotor1Only(0x8a4);
 // K2 (ctor 0x007FAE60 by tag): BTN_SWAPTEXT @0x8d8 — engine-witnessed a
 // second time by the K2 journal HandleInputEvent (case 0x27 swaps mode and
