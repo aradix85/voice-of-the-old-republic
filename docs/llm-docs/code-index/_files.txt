@@ -424,6 +424,8 @@ patches/Accessibility/stealth_watch.h
 patches/Accessibility/strfmt.h
 patches/Accessibility/strings.cpp
 patches/Accessibility/strings.h
+patches/Accessibility/text_match.cpp
+patches/Accessibility/text_match.h
 patches/Accessibility/transitions.cpp
 patches/Accessibility/transitions.h
 patches/Accessibility/transitions_centre.cpp

@@ -256,20 +256,6 @@ bool LookupTlk(uint32_t strref, char* outBuf, size_t bufSize) {
     return ok;
 }
 
-// See engine_reads.h for why every engine-rendered-vs-TLK compare has to
-// come through here rather than strcmp.
-bool EqualsTrimmed(const char* a, const char* b) {
-    if (!a || !b) return false;
-    while (*a == ' ' || *a == '\t' || *a == '\n' || *a == '\r') ++a;
-    while (*b == ' ' || *b == '\t' || *b == '\n' || *b == '\r') ++b;
-    size_t la = strlen(a), lb = strlen(b);
-    while (la > 0 && (a[la - 1] == ' ' || a[la - 1] == '\t' ||
-                      a[la - 1] == '\n' || a[la - 1] == '\r')) --la;
-    while (lb > 0 && (b[lb - 1] == ' ' || b[lb - 1] == '\t' ||
-                      b[lb - 1] == '\n' || b[lb - 1] == '\r')) --lb;
-    return la == lb && memcmp(a, b, la) == 0;
-}
-
 bool ExtractTextOrStrRef(void* control,
                          size_t cexoOffset, size_t strRefOffset,
                          char* outBuf, size_t bufSize) {

@@ -1,4 +1,4 @@
-# locked_recall.cpp (152 lines)
+# locked_recall.cpp (153 lines)
 
 Source: `patches/Accessibility/locked_recall.cpp`
 
@@ -12,11 +12,11 @@ Wiring: * RegisterMsgRule() — adds the strref-1437 rule to the feedback router
 
 ## Declarations (in source order)
 
-- L53 `bool IsLockedMessage(const char* text)`
-- L66 `const char* Lookup(uint32_t handle)`
-- L73 `void Store(uint32_t handle, const char* bark)`
-- L96 `bool RuleLocked(const char* text)`: Feedback-router rule.
-- L125 `void RegisterMsgRule()`
-- L129 `bool IsGenericLockedMessage(const char* text)`
-- L133 `void MaybeCapture(const char* barkText, bool ownerless)`
-- L144 `void Tick()`
+- L54 `bool IsLockedMessage(const char* text)`
+- L67 `const char* Lookup(uint32_t handle)`
+- L74 `void Store(uint32_t handle, const char* bark)`
+- L97 `bool RuleLocked(const char* text)`: Feedback-router rule.
+- L126 `void RegisterMsgRule()`
+- L130 `bool IsGenericLockedMessage(const char* text)`
+- L134 `void MaybeCapture(const char* barkText, bool ownerless)`
+- L145 `void Tick()`

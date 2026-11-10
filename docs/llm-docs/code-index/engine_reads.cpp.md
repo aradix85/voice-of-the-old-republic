@@ -1,4 +1,4 @@
-# engine_reads.cpp (608 lines)
+# engine_reads.cpp (594 lines)
 
 Source: `patches/Accessibility/engine_reads.cpp`
 
@@ -19,21 +19,20 @@ Source: `patches/Accessibility/engine_reads.cpp`
 - L197 `bool TryReadU16(void* base, size_t offset, uint16_t* out)`
 - L208 `bool TryReadPtr(void* base, size_t offset, void** out)`
 - L235 `bool LookupTlk(uint32_t strref, char* outBuf, size_t bufSize)`: Out-arg: the engine copy-constructs `out` from a stack-local CExoString, allocating a fresh c_string via its own CRT.
-- L261 `bool EqualsTrimmed(const char* a, const char* b)`: See engine_reads.h for why every engine-rendered-vs-TLK compare has to come through here rather than strcmp.
-- L273 `bool ExtractTextOrStrRef(void* control, size_t cexoOffset, size_t strRefOffset, char* outBuf, size_t bufSize)`
-- L292 `bool LooksLikeReadableText(const char* buf, size_t len)`: True iff buf looks like real localised text rather than uninitialised memory.
-- L313 `bool ReadControlTooltip(void* control, char* outBuf, size_t bufSize)`
-- L391 `bool IsGlyphMarkerByte(unsigned char ch)`: True for the byte-level glyph markers KOTOR 2 embeds in a rendered gui_string.
-- L395 `bool ReadGuiString(void* control, size_t guiStringPtrOffset, char* outBuf, size_t bufSize)`
-- L445 `bool ExtractTextOrStrRefIndirect(void* control, size_t cexoOffset, size_t strRefOffset, size_t textObjectOffset, char* outBuf, size_t bufSize)`
-- L478 `bool ReadLabelText(void* label, char* outBuf, size_t bufSize)`
-- L498 `bool ReadButtonText(void* button, char* outBuf, size_t bufSize)`
-- L518 `bool IsToggle(void* control)`
-- L531 `bool IsSlider(void* control)`: Vtable-identity predicates run from per-tick menu monitors.
-- L541 `uint32_t ReadControlBitFlags(void* control)`
-- L551 `bool IsControlVisible(void* control)`
-- L555 `int ReadListBoxRowCount(void* listBox)`
-- L568 `bool IsListBox(void* control)`
-- L578 `bool IsEditbox(void* control)`
-- L592 `bool ReadToggleState(void* toggle)`
-- L596 `void DumpControlVtable(void* control, char* out, size_t outSize)`
+- L259 `bool ExtractTextOrStrRef(void* control, size_t cexoOffset, size_t strRefOffset, char* outBuf, size_t bufSize)`
+- L278 `bool LooksLikeReadableText(const char* buf, size_t len)`: True iff buf looks like real localised text rather than uninitialised memory.
+- L299 `bool ReadControlTooltip(void* control, char* outBuf, size_t bufSize)`
+- L377 `bool IsGlyphMarkerByte(unsigned char ch)`: True for the byte-level glyph markers KOTOR 2 embeds in a rendered gui_string.
+- L381 `bool ReadGuiString(void* control, size_t guiStringPtrOffset, char* outBuf, size_t bufSize)`
+- L431 `bool ExtractTextOrStrRefIndirect(void* control, size_t cexoOffset, size_t strRefOffset, size_t textObjectOffset, char* outBuf, size_t bufSize)`
+- L464 `bool ReadLabelText(void* label, char* outBuf, size_t bufSize)`
+- L484 `bool ReadButtonText(void* button, char* outBuf, size_t bufSize)`
+- L504 `bool IsToggle(void* control)`
+- L517 `bool IsSlider(void* control)`: Vtable-identity predicates run from per-tick menu monitors.
+- L527 `uint32_t ReadControlBitFlags(void* control)`
+- L537 `bool IsControlVisible(void* control)`
+- L541 `int ReadListBoxRowCount(void* listBox)`
+- L554 `bool IsListBox(void* control)`
+- L564 `bool IsEditbox(void* control)`
+- L578 `bool ReadToggleState(void* toggle)`
+- L582 `void DumpControlVtable(void* control, char* out, size_t outSize)`

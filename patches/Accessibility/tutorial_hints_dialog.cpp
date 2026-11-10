@@ -11,13 +11,15 @@
 
 #include "engine_game.h"  // IsKotor2
 #include "strings.h"
+#include "text_match.h"
 
 namespace acc::tutorial_hints {
 
 namespace {
 
 using acc::strings::Id;
-using acc::engine::EqualsTrimmed;
+using acc::text::EqualsTrimmed;
+using acc::text::MatchesWithTokens;
 
 struct DialogHint {
     uint32_t strref;
@@ -195,61 +197,6 @@ constexpr uint32_t kVoicedSuppressedK2[] = {
 constexpr int kVoicedSuppressedCount =
     static_cast<int>(sizeof(kVoicedSuppressedK2) / sizeof(kVoicedSuppressedK2[0]));
 TlkTexts<kVoicedSuppressedCount, 512> s_voicedText;
-
-// strstr for a length-bounded needle.
-const char* FindSegment(const char* hay, const char* needle, size_t n) {
-    if (n == 0) return hay;
-    const size_t hayLen = std::strlen(hay);
-    if (hayLen < n) return nullptr;
-    for (size_t i = 0; i + n <= hayLen; ++i) {
-        if (std::memcmp(hay + i, needle, n) == 0) return hay + i;
-    }
-    return nullptr;
-}
-
-// EqualsTrimmed for lines the engine token-substitutes at render time
-// (<FullName> and friends, the treatinj medbay lines): the stored text's
-// literal segments must appear left to right in the rendered line, a token
-// matches any run of characters, and padding spaces at either end do not
-// count. Without a token it is EqualsTrimmed.
-bool MatchesWithTokens(const char* rendered, const char* stored) {
-    if (std::strchr(stored, '<') == nullptr) return EqualsTrimmed(rendered, stored);
-    while (*rendered == ' ') ++rendered;
-    while (*stored == ' ') ++stored;
-    const char* r = rendered;
-    const char* s = stored;
-    bool first = true;
-    bool endsWithToken = false;
-    while (*s) {
-        if (*s == '<') {
-            const char* close = std::strchr(s, '>');
-            if (!close) { endsWithToken = true; break; }  // malformed tail
-            s = close + 1;
-            endsWithToken = (*s == '\0');
-            first = false;
-            continue;
-        }
-        const char* tok = std::strchr(s, '<');
-        const size_t segLen = tok ? static_cast<size_t>(tok - s) : std::strlen(s);
-        size_t cmpLen = segLen;
-        if (!tok) {  // the final literal: its trailing padding does not count
-            while (cmpLen > 0 && s[cmpLen - 1] == ' ') --cmpLen;
-        }
-        if (first) {
-            if (std::strncmp(r, s, cmpLen) != 0) return false;
-            r += cmpLen;
-        } else {
-            const char* hit = FindSegment(r, s, cmpLen);
-            if (!hit) return false;
-            r = hit + cmpLen;
-        }
-        s += segLen;
-        first = false;
-    }
-    if (endsWithToken) return true;  // a trailing token swallows the rest
-    while (*r == ' ') ++r;
-    return *r == '\0';
-}
 
 }  // namespace
 

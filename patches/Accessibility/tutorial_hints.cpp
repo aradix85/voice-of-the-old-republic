@@ -10,6 +10,7 @@
 #include "engine_game.h"     // IsKotor2: per-game strref and row tables
 #include "engine_offsets_select.h"
 #include "strings.h"
+#include "text_match.h"
 
 namespace acc::tutorial_hints {
 
@@ -224,7 +225,7 @@ const char* HintForMouseText(const char* text) {
         return nullptr;
     }
     const int i = s_mouseText.Find(
-        [&](const char* stored) { return acc::engine::EqualsTrimmed(text, stored); });
+        [&](const char* stored) { return acc::text::EqualsTrimmed(text, stored); });
     if (i < 0) return nullptr;
     const char* s = acc::strings::Get(msgs[i].hint);
     return s[0] ? s : nullptr;

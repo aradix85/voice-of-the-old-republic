@@ -7,6 +7,7 @@
 #include "engine_panels.h"
 #include "engine_player.h"   // ReadPartyPortrait / PartyTableIsNPCAvailable
 #include "engine_reads.h"
+#include "text_match.h"
 #include "log.h"
 #include "menus_inventory.h"
 #include "menus_pazaakdeck.h"
@@ -306,7 +307,7 @@ bool IsDecorativeControl(void* panel, void* c,
         CallDowncast(c, kVtableAsButton) != nullptr) {
         char btnText[64];
         if (ReadButtonText(c, btnText, sizeof(btnText)) &&
-            EqualsTrimmed(btnText, closeCaption)) {
+            acc::text::EqualsTrimmed(btnText, closeCaption)) {
             acclog::Write("Menus.Chain",
                           "filter close button panel=%p ctrl=%p "
                           "text=\"%s\" (TLK %u)",

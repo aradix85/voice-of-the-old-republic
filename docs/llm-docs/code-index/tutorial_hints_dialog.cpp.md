@@ -1,4 +1,4 @@
-# tutorial_hints_dialog.cpp (292 lines)
+# tutorial_hints_dialog.cpp (239 lines)
 
 Source: `patches/Accessibility/tutorial_hints_dialog.cpp`
 
@@ -6,9 +6,7 @@ The dialogue-line side of the tutorial hints: the mouse-worded tutorial lines re
 
 ## Declarations (in source order)
 
-- L122 `const DialogHint* ActiveDialogHints(int* count)`
-- L200 `const char* FindSegment(const char* hay, const char* needle, size_t n)`: strstr for a length-bounded needle.
-- L215 `bool MatchesWithTokens(const char* rendered, const char* stored)`: EqualsTrimmed for lines the engine token-substitutes at render time ( and friends, the treatinj medbay lines): the stored text's literal segments must appear left to right in the rendered line, a token matches any run...
-- L256 `const char* HintForDialogLine(const char* renderedLine, uint32_t* outStrref)`
-- L272 `bool IsForcedSpokenDialogLine(const char* renderedLine)`
-- L282 `bool IsVoicedSuppressedLine(const char* renderedLine)`
+- L124 `const DialogHint* ActiveDialogHints(int* count)`
+- L203 `const char* HintForDialogLine(const char* renderedLine, uint32_t* outStrref)`
+- L219 `bool IsForcedSpokenDialogLine(const char* renderedLine)`
+- L229 `bool IsVoicedSuppressedLine(const char* renderedLine)`

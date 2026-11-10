@@ -5,6 +5,7 @@
 #include <cstring>
 
 #include "engine_reads.h"     // LookupTlk
+#include "text_match.h"
 #include "log.h"
 #include "msg_router.h"
 #include "narrated_target.h"
@@ -48,7 +49,7 @@ char s_pendingReplay[512] = {0};
 
 // Guards a stray padding space between the router's rendered line and our TLK
 // resolution of the same strref. Shared implementation — see engine_reads.h.
-using acc::engine::EqualsTrimmed;
+using acc::text::EqualsTrimmed;
 
 bool IsLockedMessage(const char* text) {
     if (!s_lockedTextBuilt) {
