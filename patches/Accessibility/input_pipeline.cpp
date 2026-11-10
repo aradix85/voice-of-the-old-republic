@@ -1,80 +1,57 @@
+// The engine's in-world input route, CClientExoAppInternal::HandleInputEvent
+// (both games): which presses the mod takes before the engine sees them, the
+// preparation of the bare action keys 1..7, and the frame sequence counter.
+
 #include "input_pipeline.h"
 
-#include <windows.h>
-#include <cstdint>
-
-#include "unified_action_menu.h"  // CurrentSelection — read the user's last
-                               // chosen variant per slot so bare 4..7
-                               // fires the same variant the submenu last
-                               // announced
-#include "combat_diag.h"       // LogPreFire — combat-queue probe snapshot
-                               // before the engine's bare 1..7 dispatch
-#include "combat_queue.h"      // ReportPrePressDepth — snapshot queue
-                               // depth before dispatch so combat_queue's
-                               // announce can detect engine cap-hits
-#include "engine_actionbar.h"  // PrepareBareDispatch — keeps action_lists
-                               // fresh against narrated_target so the
-                               // engine's bare 1..7 switch hits a valid
-                               // creature_id instead of stale data;
-                               // SelectVariant — stamp the engine's
-                               // selected_action_id so DoPersonalAction
-                               // fires the user's choice, not variant 0
-#include "engine_player.h"     // GetClientLeader — bare medical direct send
-#include "engine_area.h"       // ResolveServerObjectHandle (sanity-check the
-                               // narrated handle still resolves to a live
-                               // game object before stamping it)
-#include "engine_input.h"
-#include "examine_view.h"      // IsActive — in-world overlay Esc consume
-#include "help.h"              // IsMenuOpen — in-world overlay Esc consume
-#include "engine_radial.h"     // SelectActionInRow — stamp field1[target_type*3
-                               // +row] so DoTargetAction fires the user's
-                               // last-cycled variant for bare 1..3
-#include "engine_keymap.h"   // VksForCode — map this engine code back to the
-                             // physical-key VK(s) so we can detect a
-                             // modifier-shadowed mod hotkey
-#include "engine_manager.h"  // kAddrGuiManagerPtr, modal_stack offsets
-#include "hotkeys.h"         // ModifiedComboOwns / CurrentModifiers — the
-                             // registry decides if this press belongs to a mod
-                             // hotkey rather than the engine's bare action
-#include "floor_puzzle.h"    // IsActive — puzzle room owns bare R (board readout)
-#include "minigame_swoop_race.h"  // TryShift / TryJump — KOTOR 2 swoop keys
-#include "engine_panels.h"   // HasActiveDialogPanel — suppress the bare 1..7
-                             // combat dispatch while a dialog reply listbox
-                             // owns the number keys
-#include "log.h"
-#include "narrated_target.h" // TryGet — pull the unified "current focus"
-                             // slot to drive deterministic targeting
-#include "passive_narrate.h" // ReannounceCurrentShowObjectTarget — Q/E
-#include "qe_ring.h"         // Q/E all around (mod setting)
-#include "engine_rebase.h"
+#include "combat_diag.h"
+#include "combat_queue.h"
+#include "engine_actionbar.h"
+#include "engine_area.h"
 #include "engine_game.h"
-                             // re-announce path for the single-enemy
-                             // combat case where the engine's cycle
-                             // is a no-op but the user still expects
-                             // an audible confirmation
+#include "engine_input.h"
+#include "engine_keymap.h"
+#include "engine_manager.h"
+#include "engine_panels.h"
+#include "engine_player.h"
+#include "engine_radial.h"
+#include "engine_reads.h"
+#include "engine_rebase.h"
+#include "examine_view.h"
+#include "floor_puzzle.h"
+#include "help.h"
+#include "hotkeys.h"
+#include "log.h"
+#include "minigame_swoop_race.h"
+#include "narrated_target.h"
+#include "passive_narrate.h"
+#include "qe_ring.h"
+#include "unified_action_menu.h"
+
+#include <windows.h>
+
+#include <cstdint>
 
 namespace acc::input {
 
 namespace {
 
-// Process-wide. ULONG so InterlockedIncrement is the simplest tool. Wraps
-// after 4G events — fine, the diagnostic only cares about adjacency.
-volatile LONG s_seq = 0;
+volatile LONG s_seq = 0;   // wraps after 4G events; only adjacency matters
 
-// Overlay-Esc consume latch. 0 = unset; otherwise the GetTickCount() of the
-// last poll-driven overlay close via Esc. Window kept tight: the poll and the
-// engine event for one physical press land in the same frame (or adjacent),
-// so a few hundred ms is plenty without risking a later unrelated Esc.
+// The overlay-Esc and editbox-submit latches: GetTickCount() of the poll-side
+// close, 0 when unset. The poll and the engine event of one press land in the
+// same or the next frame, so the window is short.
 DWORD s_escClosedAt = 0;
 constexpr DWORD kEscLatchWindowMs = 150;
-
-// Editbox-submit consume latch — same shape as the Esc latch above, but for
-// the Enter that confirms a save-name editbox. The editbox monitor sets it and
-// the interact poller consumes it on the SAME tick (both run inside one
-// Dispatch, monitor before interact), so the window only needs to cover that
-// single tick plus a couple of frames of slack.
 DWORD s_editboxSubmitAt = 0;
 constexpr DWORD kEditboxSubmitLatchWindowMs = 150;
+
+bool ConsumeLatch(DWORD& at, DWORD window) {
+    if (at == 0) return false;
+    const DWORD elapsed = GetTickCount() - at;  // wrap-safe
+    at = 0;                                     // single-shot
+    return elapsed <= window;
+}
 
 }  // namespace
 
@@ -87,10 +64,7 @@ void NoteOverlayEscClosed() {
 }
 
 bool ConsumeOverlayEscLatch() {
-    if (s_escClosedAt == 0) return false;
-    DWORD elapsed = GetTickCount() - s_escClosedAt;  // wrap-safe unsigned diff
-    s_escClosedAt = 0;                               // single-shot
-    return elapsed <= kEscLatchWindowMs;
+    return ConsumeLatch(s_escClosedAt, kEscLatchWindowMs);
 }
 
 void NoteEditboxSubmitClosed() {
@@ -98,605 +72,323 @@ void NoteEditboxSubmitClosed() {
 }
 
 bool ConsumeEditboxSubmitLatch() {
-    if (s_editboxSubmitAt == 0) return false;
-    DWORD elapsed = GetTickCount() - s_editboxSubmitAt;  // wrap-safe unsigned diff
-    s_editboxSubmitAt = 0;                               // single-shot
-    return elapsed <= kEditboxSubmitLatchWindowMs;
+    return ConsumeLatch(s_editboxSubmitAt, kEditboxSubmitLatchWindowMs);
 }
-
-}  // namespace acc::input
 
 namespace {
 
-// SetTarget + RePopulate the engine's action lists against the narrated
-// target (kInvalidObjectId when none resolves — PopulateMenus then builds
-// empty target rows instead of stale ones). Shared by the bare 1..7 dispatch
-// prep and the ModShadow-consumed Shift+1..7 path; both run inside
-// HandleInputEvent, the context where repopulating is proven safe (the
-// poll/tick context is NOT — see the phantom-confirm note in
-// unified_action_menu::OpenPersonal).
+constexpr uint32_t kReservedMods =
+    acc::hotkeys::kModShift | acc::hotkeys::kModCtrl | acc::hotkeys::kModAlt;
+
+struct InputEvent {
+    int          code;
+    int          value;      // 0 on release
+    uint32_t     callerEip;
+    unsigned int seq;
+};
+
+// The two event args sit in the engine's frame at the addresses the hook
+// passes (LEA of the slots); the return address is one slot below.
+bool ReadEvent(void* p1_addr, void* p2_addr, InputEvent* ev) {
+    __try {
+        ev->code      = *reinterpret_cast<int*>(p1_addr);
+        ev->value     = *reinterpret_cast<int*>(p2_addr);
+        ev->callerEip = *(reinterpret_cast<uint32_t*>(p1_addr) - 1);
+        return true;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+}
+
+void LogEvent(const InputEvent& ev, void* this_ptr) {
+    const int translated = acc::engine::ManagerTranslateCode(ev.code);
+    if (translated != ev.code) {
+        acclog::Write("Diag.ClientHIE",
+                      "seq=%u this=%p caller=0x%08x key=logical(%d) -> %s(%d) val=%d",
+                      ev.seq, this_ptr, ev.callerEip, ev.code,
+                      acc::engine::InputIndexName(translated), translated, ev.value);
+    } else {
+        acclog::Write("Diag.ClientHIE",
+                      "seq=%u this=%p caller=0x%08x key=%s(%d) val=%d",
+                      ev.seq, this_ptr, ev.callerEip,
+                      acc::engine::InputIndexName(ev.code), ev.code, ev.value);
+    }
+}
+
+bool IsGuiNavForward(int code) {
+    return code >= 0xb6 && code <= 0xb9;
+}
+
+// The engine's logical codes for bare 1..7: 1..3 are DoTargetAction rows 0..2;
+// 4..7 are DoPersonalAction columns 0..3, linear in the key number, though the
+// codes of keys 6 and 7 are swapped (6 = 0xee, 7 = 0xec).
+int TargetRowForCode(int code) {
+    switch (code) {
+        case 0xe2: return 0;
+        case 0xe4: return 1;
+        case 0xe6: return 2;
+        default:   return -1;
+    }
+}
+
+int PersonalColumnForCode(int code) {
+    switch (code) {
+        case 0xe8: return 0;   // key 4, Friendly Force
+        case 0xea: return 1;   // key 5, Medical
+        case 0xee: return 2;   // key 6, Miscellaneous
+        case 0xec: return 3;   // key 7, Explosives
+        default:   return -1;
+    }
+}
+
+bool IsBareActionCode(int code) {
+    return TargetRowForCode(code) >= 0 || PersonalColumnForCode(code) >= 0;
+}
+
+const char* BareLabel(int code) {
+    static const char* const kLabels[] = {
+        "bare-1", "bare-2", "bare-3", "bare-4", "bare-5", "bare-6", "bare-7",
+    };
+    const int row = TargetRowForCode(code);
+    if (row >= 0) return kLabels[row];
+    const int col = PersonalColumnForCode(code);
+    return col >= 0 ? kLabels[3 + col] : "bare-?";
+}
+
+// SetTarget + RePopulate of the engine's action lists against the narrated
+// target (kInvalidObjectId when none resolves: empty target rows rather than
+// stale ones). Only from HandleInputEvent: repopulating from the poll/tick
+// context synthesised a phantom confirm.
 void PrepareBareDispatchForNarratedTarget() {
-    uint32_t targetClient = 0x7F000000u;
+    uint32_t targetClient = kInvalidObjectId;
     acc::narrated_target::Slot slot{};
     if (acc::narrated_target::TryGet(slot) && !slot.isMapPin &&
-        slot.handle != 0u && slot.handle != 0x7F000000u)
-    {
-        void* obj = acc::engine::ResolveServerObjectHandle(slot.handle);
-        if (obj) {
-            targetClient = (slot.handle & 0x80000000u)
-                ? slot.handle
-                : (slot.handle | 0x80000000u);
-        }
+        slot.handle != 0u && slot.handle != kInvalidObjectId &&
+        acc::engine::ResolveServerObjectHandle(slot.handle)) {
+        targetClient = slot.handle | 0x80000000u;   // the engine wants client handles
     }
     (void)acc::engine_actionbar::PrepareBareDispatch(targetClient);
 }
 
-}  // namespace
-
-// CClientExoAppInternal::ProcessInput @ 0x006227e0 — frame-boundary seq tick.
-//
-// Hooked at 0x006227fb (after SEH frame + locals are set up, BEFORE the
-// register-save PUSHes write to the relocated cut bytes' positions). At
-// hook entry: ECX = this. The 5-byte cut covers PUSH EBX, PUSH EBP, PUSH
-// ESI, MOV ESI,ECX — all register-only, position-independent.
-//
-// Originally emitted "Diag.ProcInput: frame=N seq=M" each frame as part of
-// the input-routing investigation (Esc/pause Bug 1 + 2a, both fixed). The
-// visible per-frame line was deleted because at 60 fps it was 99.8% of
-// log volume. The seq bump stays so frame boundaries remain encoded as
-// gaps in the Diag.ClientHIE / Menus.Input streams. If a future
-// investigation needs explicit frame markers, restore the acclog::Write
-// call here — one line of code.
-extern "C" void __cdecl OnProcessInput(void* /*this_ptr*/) {
-    // Batch 3c: live on BOTH games (KOTOR 2 hooks it at 0x007B0EAB — the
-    // seq bump is engine-free, so there is no chain to port).
-    acc::input::NextSeq();
+// PopulateMenus hands out fresh action ids, so the user's chosen variant is
+// stamped again after the repopulate (DoPersonalAction falls back to variant
+// 0 when the selected id matches nothing). The column layout is the engine's,
+// not that of our labels.
+void RestampPersonalColumn(int col) {
+    void* mi = acc::engine_actionbar::ResolveMainInterface();
+    if (!mi) return;
+    const int idx = acc::unified_menu::PersonalSelection(col);
+    (void)acc::engine_actionbar::SelectVariant(mi, col, idx);
+    acc::engine_actionbar::LogDispatchDiag(mi, col, idx);
+    // A K2 medical entry cannot fire through the engine's dispatch (its
+    // preamble wipes the two-step pick, see SendUseItemRequestK2), so the
+    // use-item request goes straight at the controlled leader: instant
+    // self-use. The engine's dispatch after us only re-arms its pick.
+    if (!acc::engine_actionbar::EntryIsMedicalK2(mi, col, idx)) return;
+    const uint32_t aid = acc::engine_actionbar::ReadVariantActionId(mi, col, idx);
+    void* leader = acc::engine::GetClientLeader();
+    if (aid != 0 && leader) {
+        const bool sent = acc::engine_actionbar::SendUseItemRequestK2(aid, leader);
+        acclog::Write("ActionBar", "bare medical direct send id=0x%08x sent=%d",
+                      aid, sent ? 1 : 0);
+    }
 }
 
-// CClientExoAppInternal::HandleInputEvent @ 0x00621210 — upstream client-app
-// route. Captures every event ProcessInput dispatches via the upstream branch
-// (in-world hotkeys, screenshot, pause, party-cycle, target actions, Esc
-// path, hotkeys 0xd1-0xd8, etc.). Pair with the existing manager-route hook
-// to see both routes; events that appear in both with adjacent seq values
-// indicate upstream→manager synthesis (the val=1 hypothesis from the doc).
-//
-// Hooked at function entry. 5-byte cut covers PUSH ECX/EBX/EBP/ESI/EDI —
-// all register-only. ECX = this; param_1 / param_2 live at [esp+4] /
-// [esp+8] in the engine's frame at hook time.
-//
-// `source = "esp+X"` emits LEA per project_kpatchmanager_lea_bug — the
-// handler receives the *address* of each stack slot and dereferences once.
-// We also reach back to (slot - 1) for the return EIP, useful for
-// distinguishing direct ProcessInput dispatches from synthetic re-issues
-// (the doc-mentioned LAB_00622111 path inside `case 0xdf`).
-extern "C" int __cdecl OnClientHandleInputEvent(void* this_ptr,
-                                                void* p1_addr,
-                                                void* p2_addr) {
-    // Batch 3c: live on BOTH games. KOTOR 2 enters via the frame-unpacking
-    // OnClientHandleInputEventK2 wrapper below (same param-address shape).
-    // The whole chain is ported: ManagerTranslateCode is a pure switch, the
-    // InputIndex code space is byte-verified identical across the games (see
-    // the manager-forward block's decompile note), and every engine touch
-    // (PrepareBareDispatch, SelectVariant, SelectActionInRow, dialog-panel
-    // probe) runs on Pick'd constants. Combat-queue attribution stays
-    // KOTOR-1-gated inline until Batch 4 resolves combat internals.
-    if (!p1_addr || !p2_addr) return 0;
+// The same for the target rows: DoTargetAction searches the row's list for
+// the stamped id, falling back to the first entry.
+void RestampTargetRow(int row) {
+    void* tam = acc::engine_radial::ResolveTargetActionMenu();
+    if (!tam) return;
+    const int idx = acc::unified_menu::TargetSelection(row);
+    (void)acc::engine_radial::SelectActionInRow(tam, row, idx);
+}
 
-    int param_1 = 0;
-    int param_2 = 0;
-    uint32_t caller_eip = 0;
+// KOTOR 2 swoop race: Space (event 0xd9) is the engine's jump, and the mod's
+// runner takes it so every jump is logged beside the race state. No-op
+// outside a K2 race; on KOTOR 1 Space is the shift and stays the engine's.
+bool TrySwoopJump(const InputEvent& ev) {
+    if (!acc::game::IsKotor2() || ev.value == 0 || ev.code != 0xd9) return false;
+    if (!acc::swoop_race::TryJump()) return false;
+    acclog::Write("Diag.ClientHIE", "seq=%u code=0x%x CONSUMED — K2 swoop jump",
+                  ev.seq, ev.code);
+    return true;
+}
 
+// In the Rakatan floor-plate room bare R reads the board (floor_puzzle), so
+// the engine's DefaultAction on the same press is swallowed. Modified R goes
+// on to the modifier reservation.
+bool TryPuzzleBareR(const InputEvent& ev) {
+    if (ev.value == 0 || ev.code != kInputDefaultAction || !acc::floor_puzzle::IsActive()) {
+        return false;
+    }
+    if ((acc::hotkeys::CurrentModifiers() & kReservedMods) != 0) return false;
+    acclog::Write("Diag.ClientHIE", "seq=%u DefaultAction(R) CONSUMED — puzzle room owns "
+                  "bare R (board readout)", ev.seq);
+    return true;
+}
+
+// The engine reads modifier-blind scancodes and has no combos of its own:
+// Shift+4 still fires bare 4. So in-world every modified press is the mod's
+// (a hotkey, or kept free for one) and the engine never sees it; bare keys
+// stay the engine's. Movement keys never arrive here; Esc and the GUI arrow
+// forward keep their own routes below. Shift+1..7 open the unified menu from
+// the poller this frame, which reads the lists without repopulating, so they
+// are rebuilt here as for a bare press.
+bool TryModifierReservation(const InputEvent& ev) {
+    if (ev.value == 0) return false;
+    const uint32_t m = acc::hotkeys::CurrentModifiers();
+    if ((m & kReservedMods) == 0) return false;
+    if (ev.code == kInputEsc1 || ev.code == kInputEsc2 || IsGuiNavForward(ev.code)) return false;
+
+    int vks[4];
+    const int nv = acc::engine_keymap::VksForCode(ev.code, vks, 4);
+    bool owned = false;
+    for (int i = 0; i < nv && !owned; ++i) owned = acc::hotkeys::ModifiedComboOwns(vks[i]);
+    acclog::Write("Diag.ModShadow", "seq=%u code=%s(%d) mods=0x%x CONSUMED — %s",
+        ev.seq, acc::engine::InputIndexName(ev.code), ev.code, m,
+        owned ? "mod hotkey owns this combo; engine action suppressed"
+              : "modifier space reserved (no mod binding yet); engine action suppressed");
+    if (IsBareActionCode(ev.code) && !acc::engine::HasActiveDialogPanel()) {
+        PrepareBareDispatchForNarratedTarget();
+    }
+    return true;
+}
+
+// The mod's in-world overlays (action menus, queue, examine, help) have no
+// engine panel, so Esc lands here, where the engine would open the pause menu
+// while the overlay's own poll closes it. Taken while an overlay is open, or
+// was just closed by this same press (the latch). Not while the unified menu
+// is suspended under an engine panel: Esc then dismisses that panel.
+bool TryOverlayEsc(const InputEvent& ev) {
+    if (ev.value == 0 || (ev.code != kInputEsc1 && ev.code != kInputEsc2)) return false;
+    const bool overlayActive =
+        (acc::unified_menu::IsActive() && !acc::unified_menu::IsSuspended()) ||
+        acc::combat::queue::IsActive() || acc::examine_view::IsActive() ||
+        acc::help::IsMenuOpen();
+    // The live overlay first, so the latch is not spent on an Esc not ours.
+    if (!overlayActive && !ConsumeOverlayEscLatch()) return false;
+    acclog::Write("Diag.ClientHIE", "seq=%u Esc CONSUMED — in-world overlay %s "
+                  "(suppressing engine pause-menu open)", ev.seq,
+                  overlayActive ? "active" : "just-closed (latch)");
+    return true;
+}
+
+// Bare 1..7: the engine rebuilds its action lists only on a combat-mode flip,
+// a sub-screen close or mouse hover, not on a Q/E target change, so between
+// rounds they hold a stale creature_id (grenades at friends). Rebuild them
+// against the narrated target before the engine's switch runs, and stamp the
+// chosen variants again. Not while a dialog's reply list owns the number keys:
+// the refresh would make the combat side fire as well.
+void PrepareBareActionKey(const InputEvent& ev) {
+    if (ev.value == 0 || !IsBareActionCode(ev.code) || acc::engine::HasActiveDialogPanel()) {
+        return;
+    }
+    // The queue depth before the engine's AddAction (which drops a fifth
+    // action), the press attribution for the AddAction detour's "X, position
+    // N", and a no-op watch on the personal columns (target rows act without
+    // a combat-round add).
+    acc::combat::queue::ReportPrePressDepth();
+    acc::combat::queue::ArmUserQueueAdd();
+    const int col = PersonalColumnForCode(ev.code);
+    if (col >= 0) acc::combat::queue::ArmNoOpWatch();
+    acc::combat_diag::LogPreFire(BareLabel(ev.code));
+
+    PrepareBareDispatchForNarratedTarget();
+    if (col >= 0) RestampPersonalColumn(col);
+    const int row = TargetRowForCode(ev.code);
+    if (row >= 0) RestampTargetRow(row);
+}
+
+// Q (205) / E (204). With "Q and E: everything around you" the mod cycles all
+// objects around and points the engine's target and lists at the landing.
+// Otherwise the re-announce for the single-enemy case (where the engine's
+// cycle changes nothing) waits a frame, so it never speaks the old target
+// before the engine's ShowObject speaks the new one.
+bool TryQE(const InputEvent& ev) {
+    if (ev.value == 0 || (ev.code != 204 && ev.code != 205)) return false;
+    if (acc::passive_narrate::IsInSynthesizedQE()) return false;  // our own re-issue
+    if (acc::qe_ring::HandlePress(ev.code == 204 ? +1 : -1)) {
+        PrepareBareDispatchForNarratedTarget();
+        acclog::Write("Diag.ClientHIE", "seq=%u Q/E CONSUMED — all-around cycle", ev.seq);
+        return true;
+    }
+    acc::passive_narrate::RequestQEReannounce(ev.code);
+    return false;
+}
+
+// A MessageBox goes on the modal stack without changing sw_gui_status, so the
+// arrow codes are routed here, where nothing handles them, instead of to the
+// manager: the user could not move between the popup's buttons. Forward them
+// to CSWGuiManager::HandleInputEvent (same code space in both games).
+void ForwardModalArrows(const InputEvent& ev) {
+    if (ev.value == 0 || !IsGuiNavForward(ev.code)) return;
+    void* mgr = nullptr;
+    uint32_t modalSize = 0;
+    if (!acc::engine::TryReadPtr(reinterpret_cast<void*>(kAddrGuiManagerPtr), 0, &mgr) ||
+        !mgr || !acc::engine::TryReadU32(mgr, kMgrModalStackSizeOffset, &modalSize) ||
+        static_cast<int>(modalSize) <= 0) {
+        return;
+    }
+    using PFN_MgrHIE = void(__thiscall*)(void*, int, int);
+    const uintptr_t kAddrMgrHIE = acc::addr::Pick(0x0040c8e0, 0x00410AA0);
     __try {
-        auto* slot1 = reinterpret_cast<int*>(p1_addr);
-        auto* slot2 = reinterpret_cast<int*>(p2_addr);
-        param_1 = *slot1;
-        param_2 = *slot2;
-        // [esp+0] (one slot below esp+4) holds the caller's return address.
-        caller_eip = *(reinterpret_cast<uint32_t*>(p1_addr) - 1);
+        reinterpret_cast<PFN_MgrHIE>(kAddrMgrHIE)(mgr, ev.code, ev.value);
+        acclog::Write("Diag.ClientHIE", "seq=%u arrow forwarded to manager (modal_stack=%d)",
+                      ev.seq, static_cast<int>(modalSize));
     } __except (EXCEPTION_EXECUTE_HANDLER) {
-        acclog::Write("Diag.ClientHIE",
-                      "deref faulted (this=%p p1=%p p2=%p)",
+        acclog::Write("Diag.ClientHIE", "seq=%u arrow-forward fault (mgr=%p)", ev.seq, mgr);
+    }
+}
+
+// 1 consumes the event (the hook's consumed exit), 0 lets the engine run.
+int HandleClientInputEvent(void* this_ptr, void* p1_addr, void* p2_addr) {
+    if (!p1_addr || !p2_addr) return 0;
+    InputEvent ev{};
+    if (!ReadEvent(p1_addr, p2_addr, &ev)) {
+        acclog::Write("Diag.ClientHIE", "deref faulted (this=%p p1=%p p2=%p)",
                       this_ptr, p1_addr, p2_addr);
         return 0;
     }
+    ev.seq = NextSeq();
+    // 128 is a DirectInput key press (codes 65/66 are the mouse axes, with
+    // pixel values): the keyboard-liveness stamp.
+    if (ev.value == 128) acc::engine::NoteEngineKeyEvent();
+    LogEvent(ev, this_ptr);
 
-    unsigned int seq = acc::input::NextSeq();
-    // Keyboard-liveness stamp. 128 is the raw DirectInput press value; releases
-    // are 0 and the mouse axes (codes 65/66, see below) carry pixel positions,
-    // so this counts key presses only. See engine_input.h NoteEngineKeyEvent.
-    if (param_2 == 128) acc::engine::NoteEngineKeyEvent();
-    int translated = acc::engine::ManagerTranslateCode(param_1);
-    if (translated != param_1) {
-        acclog::Write("Diag.ClientHIE",
-                      "seq=%u this=%p caller=0x%08x key=logical(%d) -> %s(%d) val=%d",
-                      seq, this_ptr, caller_eip, param_1,
-                      acc::engine::InputIndexName(translated), translated,
-                      param_2);
-    } else {
-        acclog::Write("Diag.ClientHIE",
-                      "seq=%u this=%p caller=0x%08x key=%s(%d) val=%d",
-                      seq, this_ptr, caller_eip,
-                      acc::engine::InputIndexName(param_1), param_1, param_2);
+    if (TrySwoopJump(ev) || TryPuzzleBareR(ev) || TryModifierReservation(ev) ||
+        TryOverlayEsc(ev)) {
+        return 1;
     }
-
-    // Codes 65 and 66 arriving here are the MOUSE axes (they carry pixel
-    // positions). Nothing to do with them here.
-
-    // ---- KOTOR 2 swoop race: Space jumps ----------------------------------
-    // K2's HandleInputEvent sends event 0xd9 (the MGshoot keymap row = Space)
-    // and 0x1a (right mouse) to the bike's OnBrake runner, the JUMP; the gear
-    // shift (OnAccelerate) gets only the left mouse button, so the mod gives
-    // the shift a keyboard key of its own (bare W, polled in swoop_race Tick
-    // because W is an axis there, not an event). Space still goes through the
-    // mod's own runner and is swallowed, so every jump is logged beside the
-    // race state. Presses only; the engine's case early-outs on release
-    // anyway. TryJump is a no-op (returns false, pass through) outside an
-    // active K2 swoop race. KOTOR 2 only: on KOTOR 1 Space is the shift, and
-    // its 0xd9 must reach the engine untouched.
-    if (acc::game::IsKotor2() && param_2 != 0 && param_1 == 0xd9 &&
-        acc::swoop_race::TryJump()) {
-        acclog::Write("Diag.ClientHIE", "seq=%u code=0x%x CONSUMED — K2 swoop jump",
-                      seq, param_1);
-        return 1;  // consume → consumed_exit
-    }
-
-    // ---- Puzzle-room bare-R ownership --------------------------------------
-    // In the Rakatan floor-plate room the mod binds bare R to the board-state
-    // readout (floor_puzzle::Tick). Vanilla R is "default action on current
-    // target" (case 0xef), so without this the same press would ALSO interact
-    // with whatever is targeted while the player is just reading the board.
-    // Swallow the UNMODIFIED DefaultAction here so bare R only speaks the
-    // board. Modified R (Shift+R = force radial) falls through to the modifier
-    // reservation below, which consumes it exactly like any other combo.
-    if (param_2 != 0 && param_1 == kInputDefaultAction &&
-        acc::floor_puzzle::IsActive()) {
-        uint32_t m = acc::hotkeys::CurrentModifiers();
-        if ((m & (acc::hotkeys::kModShift | acc::hotkeys::kModCtrl |
-                  acc::hotkeys::kModAlt)) == 0) {
-            acclog::Write("Diag.ClientHIE",
-                "seq=%u DefaultAction(R) CONSUMED — puzzle room owns bare R "
-                "(board readout)", seq);
-            return 1;  // consume → consumed_exit (POP*5 + RET 8)
-        }
-    }
-
-    // ---- Modifier-space reservation (in-world) -----------------------------
-    // The engine reads DirectInput scancodes, which are modifier-blind: it has
-    // NO modifier combos of its own, so Shift+4 still fires the bare "4" action,
-    // Shift+L still opens Quests, etc. That means ANY modified press of an
-    // engine-bound key is, by definition, not meant for the engine — it's either
-    // one of our mod hotkeys (Shift+1..7, Shift+L, …) or a combo the user will
-    // bind once free hotkey configuration lands. So we reserve the entire
-    // modifier space in-world: on a press with Shift/Ctrl/Alt held, swallow the
-    // engine event. Bare keys (no modifier) still reach the engine, so the user
-    // keeps every vanilla shortcut on its unmodified key. The mod's own Win32
-    // poller fires the intended hotkey this frame (when a binding exists;
-    // otherwise the combo is simply reserved, doing nothing — never the wrong
-    // engine action).
-    //
-    // Safe to be this broad here: this in-world handler only receives the
-    // engine's quick-action codes (quick-menu screens, action-menu numbers, Q/E
-    // cycle, Esc/back, F1) — movement/camera keys never route through it
-    // (verified: no WASD codes ever appear in Diag.ClientHIE) — and the modifier
-    // keys themselves don't arrive as events. We still let Esc and the GUI
-    // nav-forward codes through: they keep their own routing below (overlay-close
-    // + modal arrow forwarding) and aren't part of the reservable hotkey space.
-    //
-    // Press edge only (param_2 != 0): releases for a consumed press are no-ops
-    // here (the engine's switch-cases early-out on release), so we let them pass.
-    if (param_2 != 0) {
-        uint32_t m = acc::hotkeys::CurrentModifiers();
-        const bool modHeld =
-            (m & (acc::hotkeys::kModShift | acc::hotkeys::kModCtrl |
-                  acc::hotkeys::kModAlt)) != 0;
-        const bool passThrough =
-            param_1 == kInputEsc1 || param_1 == kInputEsc2 ||
-            (param_1 >= 0xb6 && param_1 <= 0xb9);  // GUI nav-forward range
-        if (modHeld && !passThrough) {
-            // Name the key + note whether a mod binding actually claims this
-            // combo today (purely for the log — we reserve it either way).
-            int vks[4];
-            int nv = acc::engine_keymap::VksForCode(param_1, vks, 4);
-            bool owned = false;
-            for (int i = 0; i < nv; ++i) {
-                if (acc::hotkeys::ModifiedComboOwns(vks[i])) { owned = true; break; }
-            }
-            acclog::Write("Diag.ModShadow",
-                "seq=%u code=%s(%d) mods=0x%x CONSUMED — %s",
-                seq, acc::engine::InputIndexName(param_1), param_1, m,
-                owned ? "mod hotkey owns this combo; engine action suppressed"
-                      : "modifier space reserved (no mod binding yet); engine "
-                        "action suppressed");
-            // Shift+1..7 open the unified action menu via the Win32 poller
-            // later this same frame — and that opener deliberately reads the
-            // engine's action lists WITHOUT re-populating (doing so from the
-            // poll/tick context synthesised a phantom confirm, 2026-06-07).
-            // The bare-key prep below never runs for a consumed press, so
-            // without this the menu shows whatever target the lists were
-            // last built for — the "column N is empty" misfires on the
-            // Star Forge captive Jedi (patch-20260717-093733.log). Run the
-            // same SetTarget + RePopulate here, in the engine's own
-            // input-dispatch context, where the bare path has proven safe.
-            // Dialog gate mirrors the bare path: while a reply listbox owns
-            // the number keys, nothing may repopulate or fire.
-            if ((param_1 == 0xe2 || param_1 == 0xe4 || param_1 == 0xe6 ||
-                 param_1 == 0xe8 || param_1 == 0xea || param_1 == 0xec ||
-                 param_1 == 0xee) &&
-                !acc::engine::HasActiveDialogPanel()) {
-                PrepareBareDispatchForNarratedTarget();
-            }
-            return 1;  // consume → consumed_exit (POP*5 + RET 8)
-        }
-    }
-
-    // In-world overlay Esc consume — the menu-vs-pause-menu fix.
-    //
-    // Our keyboard-driven in-world menus (the Shift-number action menus,
-    // the action queue, examine view) have NO engine GUI panel, so an Esc
-    // press lands HERE in the in-world handler instead of the GUI manager.
-    // CClientExoAppInternal::HandleInputEvent case 0xdf, when in-world
-    // (sw_gui_status==1, input_class==0), calls ShowSWInGameGui(7) — which
-    // opens the in-game / Options menu. The overlay's own close runs on a
-    // separate path (input_poll_router's Win32 poll), so without this the
-    // user gets BOTH: the overlay closes AND the game menu pops (confirmed
-    // in patch-20260606-224421.log: Esc press seq=4395 → ClientHIE while
-    // the action bar was armed → Options opened).
-    //
-    // Native engine panels don't have this problem: their Esc routes to
-    // the GUI manager, where menus_chain::HandleEsc consumes it (the
-    // drill / sub-panel close path). These in-DLL overlays can't reuse
-    // that path, so we consume the Esc at the in-world layer instead —
-    // swallowing the press so case 0xdf never runs. The overlay still
-    // closes (with speech) via its own Win32-poll handler this frame.
-    //
-    // Press edge only (param_2 != 0): case 0xdf early-returns on release,
-    // so the matching release is already a no-op and we let it pass (the
-    // consumed-exit pattern needs the release through the normal path).
-    // Suspended-menu exception: while the unified menu is suspended under a
-    // blocking engine panel (MessageBox / sub-screen), Esc belongs to THAT
-    // panel — it's how the user dismisses it. Consuming it here would close
-    // the menu (or nothing) and leave the popup stuck, so we let Esc through
-    // to the panel's own handler when suspended.
-    if (param_2 != 0 &&
-        (param_1 == kInputEsc1 || param_1 == kInputEsc2)) {
-        const bool overlayActive =
-            (acc::unified_menu::IsActive() &&
-             !acc::unified_menu::IsSuspended()) ||
-            acc::combat::queue::IsActive() ||
-            acc::examine_view::IsActive() ||
-            acc::help::IsMenuOpen();
-        // The poll path may have already closed the overlay this frame,
-        // leaving overlayActive false even though THIS Esc is the one that
-        // closed it. ConsumeOverlayEscLatch() catches that case (see the
-        // latch note in input_pipeline.h). Order: check the live overlay
-        // first so we don't burn the latch on an Esc that wasn't ours.
-        if (overlayActive || acc::input::ConsumeOverlayEscLatch()) {
-            acclog::Write("Diag.ClientHIE",
-                          "seq=%u Esc CONSUMED — in-world overlay %s "
-                          "(suppressing engine pause-menu open)", seq,
-                          overlayActive ? "active" : "just-closed (latch)");
-            return 1;  // consume → consumed_exit 0x00622120 (POP*5 + RET 8)
-        }
-    }
-
-    // Bare 1..7 dispatch prep. Logical codes (raw input logs + decompile):
-    //   * The engine's keymap routes bare 1..3 → logical action codes
-    //     0xe2/0xe4/0xe6 (DoTargetAction row 0/1/2).
-    //   * Bare 4..7 → DoPersonalAction, LINEAR in key number (key N → column
-    //     N-4). The logical codes for 6/7 are themselves swapped (key 6=0xee,
-    //     key 7=0xec), so by logical code:
-    //         0xe8 (key 4) → DoPersonalAction(slot=0)  Friendly Force
-    //         0xea (key 5) → DoPersonalAction(slot=1)  Medical
-    //         0xee (key 6) → DoPersonalAction(slot=2)  Miscellaneous
-    //         0xec (key 7) → DoPersonalAction(slot=3)  Explosives
-    //   * Both DoTargetAction and DoPersonalAction read `creature_id` from
-    //     the action-list item (CSWGuiInterfaceAction+0x1c) and bail
-    //     silently when GetGameObject(creature_id) returns NULL.
-    //   * action_list items are only repopulated by
-    //     CSWGuiMainInterface::PopulateMenus, which the engine triggers on
-    //     combat-mode flip, sub-screen close, or mouse passive-cursor
-    //     hover — NOT on Q/E target change. Between rounds the items
-    //     carry whatever creature_id was last baked (often the wrong
-    //     target — the grenades-at-friends footgun).
-    //
-    // Closing the gap synchronously here means the engine's switch-case
-    // (which runs after our void handler returns + the wrapper's cut
-    // bytes execute) lands on action_lists rebuilt against our
-    // deterministically-chosen target.
-    //
-    // Target choice:
-    //   - If acc::narrated_target::TryGet returns a game-object slot AND
-    //     the handle still resolves to a live server creature: stamp it.
-    //     The narrated slot's TryGet does its own staleness check, but
-    //     we re-resolve here too because PopulateMenus internally hits
-    //     GetGameObject and we want the same answer to feed both calls.
-    //   - Otherwise stamp kInvalidObjectId (0x7F000000). PopulateMenus
-    //     then builds empty target_actions and, for personal-action
-    //     items the engine flags hostile-targeted, leaves creature_id
-    //     unresolved — engine bails silently instead of mistargeting.
-    //     Self-buff personal items (self-use medpacs, stims) still get
-    //     creature_id=player from GetPersonalActions regardless, so
-    //     pressing 5 still fires the medikit even without a narrated
-    //     enemy.
-    //
-    // Engine convention is client-side handles (high bit 0x80000000);
-    // narrated_target stores server-side. OR the bit before stamping.
-    //
-    // Dialog gate: while a dialog reply listbox is foreground, the engine
-    // routes the same number keys (1..7) to BOTH the dialog reply selection
-    // AND the combat handler that lands here as 0xe2..0xee. In vanilla the
-    // combat side bails silently because action_lists are stale — but our
-    // PrepareBareDispatch refresh below would make DoTargetAction /
-    // DoPersonalAction actually fire a default combat action mid-dialog
-    // (reported 2026-06-03: picking a reply with a number also attacked /
-    // used an item). Skip the whole prep path when a dialog owns the keys
-    // so we restore the vanilla "number selects the reply, nothing else"
-    // behaviour.
-    if (param_2 != 0 &&
-        (param_1 == 0xe2 || param_1 == 0xe4 || param_1 == 0xe6 ||
-         param_1 == 0xe8 || param_1 == 0xea || param_1 == 0xec ||
-         param_1 == 0xee) &&
-        !acc::engine::HasActiveDialogPanel())
-    {
-        // Diag probe — snapshot state before the engine's switch-case
-        // dispatches DoTargetAction / DoPersonalAction. POST state lands
-        // in the next Tick's DELTA line (we don't get a clean post hook
-        // for bare keys — the engine fires after our prologue returns).
-        const char* diag_label = "bare-?";
-        switch (param_1) {
-            case 0xe2: diag_label = "bare-1"; break;
-            case 0xe4: diag_label = "bare-2"; break;
-            case 0xe6: diag_label = "bare-3"; break;
-            case 0xe8: diag_label = "bare-4"; break;
-            case 0xea: diag_label = "bare-5"; break;
-            case 0xec: diag_label = "bare-7"; break;  // engine slot swap (6↔7)
-            case 0xee: diag_label = "bare-6"; break;
-        }
-        // Snapshot queue depth right before the engine dispatches so
-        // combat_queue's announce can detect engine cap-hits without
-        // a separate post-engine hook. The bare-press dispatch goes
-        // through DoTargetAction / DoPersonalAction which lands in
-        // CSWSCombatRound::AddAction; that function silently free's the
-        // node when internal->count > 3.
-        // Combat-queue attribution — cleared for KOTOR 2 in Batch 4: the
-        // combat-round internals it reads (actions list, list internals,
-        // creature→round) are all witnessed and Pick'd there, and the K2
-        // AddAction detour is installed.
-        acc::combat::queue::ReportPrePressDepth();
-        // Attribute the resulting CSWSCombatRound::AddAction to this press
-        // so its detour speaks the authoritative "X, position N" cue (and
-        // engine auto-attacks, which have no press, stay silent).
-        acc::combat::queue::ArmUserQueueAdd();
-        // Watch for a swallowed press on the PERSONAL columns only (4..7 —
-        // note the engine's 6/7 swap above). Bare 1..3 are target rows, which
-        // act without a combat-round add as a matter of course; see
-        // ArmNoOpWatch for the footlocker evidence.
-        if (param_1 == 0xe8 || param_1 == 0xea || param_1 == 0xec ||
-            param_1 == 0xee) {
-            acc::combat::queue::ArmNoOpWatch();
-        }
-        acc::combat_diag::LogPreFire(diag_label);
-
-        // Fire the refresh. PrepareBareDispatch logs its own status line
-        // (`ActionBar.Prep: target=0x... — SetTarget + RePopulate done`)
-        // — between that and the upstream `Diag.ClientHIE: ... key=?(N)
-        // val=128` line printed earlier in this same call, the trigger
-        // and its outcome are both already in the log without us adding
-        // a third line per press.
-        PrepareBareDispatchForNarratedTarget();
-
-        // Stamp the engine's per-column selected_action_id with the
-        // user's last-chosen variant for the personal-action keys
-        // (0xe8/0xea/0xec/0xee = bare 4/5/6/7). DoPersonalAction
-        // reads `*(mi + 0x1bac + slot*4)` and falls back to variant
-        // 0 if the field doesn't match any list entry — and
-        // PopulateMenus (called by PrepareBareDispatch above) freshly
-        // assigns action_ids, invalidating any previously-stamped
-        // value. So we re-stamp AFTER RePopulate, using the current
-        // descriptor's action_id at the index our submenu shadow
-        // tracks.
-        // Logical-code → column mapping MUST match the engine's own
-        // DoPersonalAction dispatch, or we stamp the chosen variant onto
-        // the wrong column. Ground truth from a clean seabed log
-        // (patch-20260615-010243): keyboard 6 emits 0xee and the engine
-        // fires column 2 (Misc/Schallgenerator); keyboard 7 emits 0xec and
-        // the engine routes to column 3 (Explosives). So the engine is
-        // LINEAR in key number (key 4→col0, 5→col1, 6→col2, 7→col3) — the
-        // earlier "engine swaps 6↔7" belief was wrong (it was read off our
-        // own announce, not a real " uses " line). In logical-code terms:
-        //   0xe8 (key 4) → col 0   Friendly Force
-        //   0xea (key 5) → col 1   Medical
-        //   0xee (key 6) → col 2   Misc
-        //   0xec (key 7) → col 3   Explosives
-        // NOTE (was stale): this warned that the announce path labelled key
-        // 7 as Misc and called that mismatch a live bug. The announce path
-        // is now in input_poll_router.cpp and uses this same mapping (key 6
-        // -> Misc, key 7 -> Explosives); it records the old crossed
-        // behaviour in the past tense at input_poll_router.cpp:166-174.
-        // Still do not "align" this restamp to an announce path — the
-        // restamp must follow the engine's column layout, not our labels.
-        int barSlot = -1;
-        switch (param_1) {
-            case 0xe8: barSlot = 0; break;
-            case 0xea: barSlot = 1; break;
-            case 0xec: barSlot = 3; break;
-            case 0xee: barSlot = 2; break;
-        }
-        if (barSlot >= 0) {
-            void* mi = acc::engine_actionbar::ResolveMainInterface();
-            if (mi) {
-                int idx = acc::unified_menu::PersonalSelection(barSlot);
-                (void)acc::engine_actionbar::SelectVariant(mi, barSlot, idx);
-                acc::engine_actionbar::LogDispatchDiag(mi, barSlot, idx);
-                // K2 medical entries cannot fire through the engine's own
-                // dispatch (its preamble wipes the two-step pick state — see
-                // SendUseItemRequestK2), so bare 4..7 on a medical entry
-                // sends the use-item request directly at the controlled
-                // leader: instant self-use, the one-press combat reflex.
-                // The engine's dispatch still runs after our handler and
-                // harmlessly re-arms its pick; the queue-add attribution and
-                // no-op watch armed above cover this send too.
-                if (acc::engine_actionbar::EntryIsMedicalK2(mi, barSlot,
-                                                            idx)) {
-                    uint32_t aid = acc::engine_actionbar::ReadVariantActionId(
-                        mi, barSlot, idx);
-                    void* leader = acc::engine::GetClientLeader();
-                    if (aid != 0 && leader) {
-                        bool sent = acc::engine_actionbar::
-                            SendUseItemRequestK2(aid, leader);
-                        acclog::Write("ActionBar",
-                                      "bare medical direct send id=0x%08x "
-                                      "sent=%d", aid, sent ? 1 : 0);
-                    }
-                }
-            }
-        }
-
-        // Same restamp for the target-action keys (0xe2/0xe4/0xe6 = bare
-        // 1/2/3). DoTargetAction reads field1[target_type*3+row] and
-        // searches action_lists[row] for the matching action_id, falling
-        // back to data[0] on no-match. PopulateMenus reassigns action_ids
-        // just like for personal columns, so we re-stamp at the shadow
-        // index target_action_menu tracks. Without this, a Shift+1+cycle
-        // session would only affect Enter inside the submenu, not the
-        // subsequent bare 1 fires — breaking parity with Shift+4..7.
-        int targetRow = -1;
-        switch (param_1) {
-            case 0xe2: targetRow = 0; break;
-            case 0xe4: targetRow = 1; break;
-            case 0xe6: targetRow = 2; break;
-        }
-        if (targetRow >= 0) {
-            void* tam = acc::engine_radial::ResolveTargetActionMenu();
-            if (tam) {
-                int idx = acc::unified_menu::TargetSelection(targetRow);
-                (void)acc::engine_radial::SelectActionInRow(tam, targetRow, idx);
-            }
-        }
-    }
-
-    // Q/E hostile-cycle re-announce. The engine's HandleInputEvent
-    // case 0xcc (E=next, 204) / 0xcd (Q=prev, 205) dispatches to
-    // SelectNearestObject + ShowObject; the sighted player sees the
-    // red hostile-hilite shift to the new target (or stay put if only
-    // one valid target exists in 30u). The single-enemy case is
-    // engine-side a no-op — no transition, no announcement, blind
-    // player has no audible confirmation that they're still on the
-    // same target.
-    //
-    // Our detour fires at HandleInputEvent's PROLOGUE — before the
-    // engine's switch-case actually processes Q/E. Calling reannounce
-    // here would speak the OLD target even when the engine is about
-    // to change focus (a forthcoming ShowObject delta will then speak
-    // the NEW target), producing the "wrong sound on cycling"
-    // double-fire reported 2026-05-27.
-    //
-    // Fix: defer via RequestQEReannounce. The Tick handler drains it
-    // next frame, AFTER the engine had its chance to process. If the
-    // engine changed focus (ShowObject fired), OnEngineShowObject's
-    // delta path clears the pending flag and only the new-target cue
-    // plays. If it stayed (single-enemy case), the Tick drain fires
-    // the reannounce. Press-edge only (val != 0).
-    // Mod setting "Q and E: everything around you": the mod cycles every
-    // object around the player instead of the engine's camera-view halo,
-    // then points the engine's target and action lists at the landing so R
-    // and 1..3 act on it (same prep as a bare 1..7 press).
-    if (param_2 != 0 && (param_1 == 204 || param_1 == 205) &&
-        !acc::passive_narrate::IsInSynthesizedQE() &&
-        acc::qe_ring::HandlePress(param_1 == 204 ? +1 : -1)) {
-        PrepareBareDispatchForNarratedTarget();
-        acclog::Write("Diag.ClientHIE",
-                      "seq=%u Q/E CONSUMED — all-around cycle", seq);
-        return 1;  // consume → consumed_exit
-    }
-
-    if (param_2 != 0 && (param_1 == 204 || param_1 == 205)) {
-        // passive_narrate's sentinel-skip retry path calls HandleInputEvent
-        // itself to re-issue Q/E after the engine emptied its candidate
-        // halo. That synthetic event routes back through this detour;
-        // RequestQEReannounce no-ops on `inside_retry`, so the call is
-        // safe, but skipping it here keeps the diagnostic log uncluttered.
-        if (!acc::passive_narrate::IsInSynthesizedQE()) {
-            acc::passive_narrate::RequestQEReannounce(param_1);
-        }
-    }
-
-    // Bug-2a fix: arrow-key navigation in modal popups. When the engine
-    // pushes a MessageBox (Alt+F4 quit-confirm, save-overwrite warning,
-    // dialog-skip prompt, …) it lands on modal_stack but DOES NOT change
-    // sw_gui_status — popups are modals, not sub-screens. So
-    // ProcessInput's routing rule (which uses sw_gui_status==1 as the
-    // primary gate to client-app) sends arrow keys 0xb6-0xb9 here to the
-    // upstream-app handler. Upstream's switch has no case for direction
-    // codes → they fall to the default return-zero arm and are silently
-    // dropped. The manager (where the modal would receive them) never
-    // sees them, so the user can't move focus between popup buttons.
-    //
-    // Fix: when modal_stack is non-empty, forward direction codes
-    // ourselves by calling CSWGuiManager::HandleInputEvent directly. This
-    // mirrors what the engine SHOULD do but doesn't. Press-only —
-    // releases for nav arrows are no-ops in the panel-class overrides
-    // anyway (see project memory note on CSWGuiNavigable: focus walk runs
-    // on press, release falls through to event_list scan but no
-    // subscribers exist for direction codes on most panels).
-    //
-    // Engine address @ 0x0040c8e0 from project memory (existing manager
-    // hook lives mid-function at 0x0040c907). Manager pointer is the same
-    // global slot the existing modal-stack reader uses.
-    if (param_2 != 0 &&
-        param_1 >= 0xb6 && param_1 <= 0xb9)
-    {
-        void* mgr = nullptr;
-        int modalSize = 0;
-        __try {
-            mgr = *reinterpret_cast<void**>(kAddrGuiManagerPtr);
-            if (mgr) {
-                auto* base = reinterpret_cast<unsigned char*>(mgr);
-                modalSize = *reinterpret_cast<int*>(
-                    base + kMgrModalStackSizeOffset);
-            }
-        } __except (EXCEPTION_EXECUTE_HANDLER) {
-            mgr = nullptr;
-        }
-
-        if (mgr && modalSize > 0) {
-            using PFN_MgrHIE = void(__thiscall*)(void*, int, int);
-            // CSWGuiManager::HandleInputEvent. KOTOR 2 address verified by
-            // decompiling both: identical `this->field_0x68 = code` write,
-            // identical `value == 0` early-out, and a switch whose case values
-            // and axis-to-direction translations match byte for byte — so the
-            // engine InputIndex codes are the same in both games.
-            const uintptr_t kAddrMgrHIE = acc::addr::Pick(0x0040c8e0, 0x00410AA0);
-            auto fn = reinterpret_cast<PFN_MgrHIE>(kAddrMgrHIE);
-            __try {
-                fn(mgr, param_1, param_2);
-                acclog::Write("Diag.ClientHIE",
-                              "seq=%u arrow forwarded to manager (modal_stack=%d)",
-                              seq, modalSize);
-            } __except (EXCEPTION_EXECUTE_HANDLER) {
-                acclog::Write("Diag.ClientHIE",
-                              "seq=%u arrow-forward fault (mgr=%p)",
-                              seq, mgr);
-            }
-        }
-    }
-
-    // Not consumed — fall through to the engine's own handler. The wrapper's
-    // cut bytes (5 register pushes) execute, then resume at function entry+5.
+    PrepareBareActionKey(ev);
+    if (TryQE(ev)) return 1;
+    ForwardModalArrows(ev);
     return 0;
 }
 
-// ---------------------------------------------------------------------------
-// KOTOR 2 frame-unpacking wrapper — CClientExoAppInternal::HandleInputEvent
-// @0x007B12C0, hooked at 0x007B12EE (kotor2.hooks.toml has the full byte
-// story). Parameters arrive as ecx = this and ebp = the engine's frame:
-// [ebp+8]/[ebp+0xc] are the two event args and [ebp+4] the return address —
-// the same "slot address, return address one below" relationship the KOTOR 1
-// esp+4-LEA shape gives, so the shared handler (including its caller_eip
-// read at param-slot minus one) runs unchanged.
-extern "C" int __cdecl OnClientHandleInputEventK2(void* this_ptr,
-                                                  void* frame_ebp) {
+}  // namespace
+
+}  // namespace acc::input
+
+// CClientExoAppInternal::ProcessInput (K1 hook 0x006227fb, K2 0x007B0EAB):
+// the frame boundary, kept as a gap in the sequence of the input logs.
+extern "C" void __cdecl OnProcessInput(void* /*this_ptr*/) {
+    acc::input::NextSeq();
+}
+
+// CClientExoAppInternal::HandleInputEvent, hooked at its entry (K1 0x00621210):
+// every event ProcessInput sends the client-app way (in-world hotkeys, pause,
+// party cycle, target actions, Esc). The parameters are the addresses of the
+// two stack slots (KPatchManager's LEA for "esp+X" sources).
+extern "C" int __cdecl OnClientHandleInputEvent(void* this_ptr, void* p1_addr,
+                                                void* p2_addr) {
+    return acc::input::HandleClientInputEvent(this_ptr, p1_addr, p2_addr);
+}
+
+// KOTOR 2 (0x007B12C0, hooked at 0x007B12EE): ecx = this, ebp = the engine's
+// frame with the args at [ebp+8]/[ebp+0xc] and the return address at [ebp+4],
+// the same slot layout as K1, so the shared handler runs unchanged.
+extern "C" int __cdecl OnClientHandleInputEventK2(void* this_ptr, void* frame_ebp) {
     if (!frame_ebp) return 0;
     unsigned char* frame = static_cast<unsigned char*>(frame_ebp);
-    return OnClientHandleInputEvent(this_ptr, frame + 8, frame + 12);
+    return acc::input::HandleClientInputEvent(this_ptr, frame + 8, frame + 12);
 }
