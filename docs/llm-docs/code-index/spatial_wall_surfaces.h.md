@@ -1,4 +1,4 @@
-# spatial_wall_surfaces.h (92 lines)
+# spatial_wall_surfaces.h (90 lines)
 
 Source: `patches/Accessibility/spatial_wall_surfaces.h`
 
@@ -12,12 +12,12 @@ Each clustered surface is also reduced to a single straight segment (two extreme
 
 ## Declarations (in source order)
 
-- L42 `struct WallSurfaceDesc`: One wall surface = chain of collinear endpoint-sharing edges clustered at area-load via union-find.
-- L54 `void Tick()`: Main thread, once per frame: rebuilds the caches when the player is in a new area.
-- L59 `bool GetCachedWalls(const acc::engine::WallEdge*& outBuf, int& outCount)`: The cached perimeter edges, portal seams filtered.
-- L65 `void RebuildForArea(void* area)`: Rebuild for this area.
-- L69 `void Clear()`: Reset to "no area" state.
-- L74 `bool SegmentCrossesSurface(const Vector& a, const Vector& b, Vector& outHitPoint)`: 2D segment-vs-surface intersection.
-- L89 `int FloorZCandidatesAt(float x, float y, float* outZ, int maxOut)`: Floor heights of the walkmesh triangles containing (x,y), one entry per stacked storey (bridge over tunnel), exact on ramps via plane interpolation.
+- L40 `struct WallSurfaceDesc`: One wall surface = chain of collinear endpoint-sharing edges clustered at area-load via union-find.
+- L52 `void Tick()`: Main thread, once per frame: rebuilds the caches when the player is in a new area.
+- L57 `bool GetCachedWalls(const acc::engine::WallEdge*& outBuf, int& outCount)`: The cached perimeter edges, portal seams filtered.
+- L63 `void RebuildForArea(void* area)`: Rebuild for this area.
+- L67 `void Clear()`: Reset to "no area" state.
+- L72 `bool SegmentCrossesSurface(const Vector& a, const Vector& b, Vector& outHitPoint)`: 2D segment-vs-surface intersection.
+- L87 `int FloorZCandidatesAt(float x, float y, float* outZ, int maxOut)`: Floor heights of the walkmesh triangles containing (x,y), one entry per stacked storey (bridge over tunnel), exact on ramps via plane interpolation.
 
 Also 3 constants or variables at namespace scope.

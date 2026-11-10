@@ -35,10 +35,8 @@ constexpr int kMaxWallSurfaces = 1024;
 // clustered at area-load via union-find.
 //
 // a/b = the two extreme endpoints (only ones used by exactly one edge).
-// Consumed by room_topology to skip a redundant merge pass.
-//
-// edge_count == 0 flags a degenerate surface (closed loop or zero free
-// endpoints) — GetSurfaceDesc returns false for those.
+// edge_count == 0 flags a surface without such a pair (a closed loop or a
+// fork); SegmentCrossesSurface skips those.
 struct WallSurfaceDesc {
     Vector a;
     Vector b;

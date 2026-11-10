@@ -1,4 +1,4 @@
-# spatial_wall_surfaces.cpp (547 lines)
+# spatial_wall_surfaces.cpp (415 lines)
 
 Source: `patches/Accessibility/spatial_wall_surfaces.cpp`
 
@@ -16,10 +16,10 @@ Each clustered surface is also reduced to a single straight segment (two extreme
 - L88 `int UfFind(int i)`
 - L96 `void UfUnion(int i, int j)`
 - L116 `void ClusterEdgesIntoSurfaces()`: Cluster the cached wall edges (g_walls[0..g_wall_count-1]) into connected-and-collinear surfaces.
-- L180 `void BuildSurfaceDescriptors()`
-- L371 `void Tick()`
-- L383 `bool GetCachedWalls(const acc::engine::WallEdge*& outBuf, int& outCount)`
-- L390 `void Clear()`
-- L396 `void RebuildForArea(void* area)`
-- L437 `bool SegmentCrossesSurface(const Vector& a, const Vector& b, Vector& outHitPoint)`
-- L489 `int FloorZCandidatesAt(float x, float y, float* outZ, int maxOut)`
+- L169 `void BuildSurfaceDescriptors()`
+- L239 `void Tick()`
+- L251 `bool GetCachedWalls(const acc::engine::WallEdge*& outBuf, int& outCount)`
+- L258 `void Clear()`
+- L264 `void RebuildForArea(void* area)`
+- L305 `bool SegmentCrossesSurface(const Vector& a, const Vector& b, Vector& outHitPoint)`
+- L357 `int FloorZCandidatesAt(float x, float y, float* outZ, int maxOut)`
