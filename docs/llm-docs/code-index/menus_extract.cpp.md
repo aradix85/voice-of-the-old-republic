@@ -1,4 +1,4 @@
-# menus_extract.cpp (331 lines)
+# menus_extract.cpp (330 lines)
 
 Source: `patches/Accessibility/menus_extract.cpp`
 

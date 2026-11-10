@@ -9,7 +9,7 @@
 //
 //   * Auto-enter when chain focus lands on the editbox. The focus-enter
 //     speech ("Eingabefeld. <text>") is produced by FromControl in
-//     menus_extract.cpp (step 6b) — same pattern as slider / cycle / label
+//     menus_extract_controls.cpp (TryEditbox) — same pattern as slider / cycle / label
 //     extractions. The per-tick monitor here only initialises the diff
 //     snapshot on this edge; it does not speak.
 //   * In edit mode, this dispatcher consumes:

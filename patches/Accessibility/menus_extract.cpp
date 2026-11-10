@@ -285,8 +285,7 @@ const char* FromControl(void* control,
     // needs the owning panel too (its category label is a spatial sibling).
     void* owner = ResolveOwnerPanel(control, ownerPanel);
 
-    if (!source) source = TryVirtualRowAnchor(control, ownerPanel, outBuf, bufSize);
-    if (!source) source = TryTooltip(control, outBuf, bufSize);
+    if (!source) source = TryVirtualRowAnchor(control, owner, outBuf, bufSize);
     if (!source) source = TryButton(control, outBuf, bufSize);
     if (!source) source = TryButtonToggle(control, outBuf, bufSize);
     if (!source) source = TryLabel(control, outBuf, bufSize);

@@ -1,4 +1,4 @@
-# menus_extract_rows.cpp (274 lines)
+# menus_extract_rows.cpp (265 lines)
 
 Source: `patches/Accessibility/menus_extract_rows.cpp`
 
@@ -16,5 +16,5 @@ Rows that only exist in the mod's model of a screen (virtual rows): the characte
 - L139 `const char* TryPazaakWager(void* control, void* owner, char* outBuf, size_t bufSize)`: Pazaak wager popup (CSWGuiWagerPopup).
 - L168 `const char* TryJournalQuestItemsButton(void* control, void* owner, char* outBuf, size_t bufSize)`: Journal quest-items button.
 - L190 `const char* TryKeyBindingRow(void* control, void* owner, char* outBuf, size_t bufSize)`: Keyboard-mapping row (CSWGuiKeyMapButton).
-- L246 `const char* TryVirtualRowAnchor(void* control, void* ownerPanel, char* outBuf, size_t bufSize)`: 0.
-- L260 `void ForEachWagerRowAnchor(void* panel, bool (*callback)(void* labelControl, int sortCy, void* userData), void* userData)`
+- L238 `const char* TryVirtualRowAnchor(void* control, void* owner, char* outBuf, size_t bufSize)`: Per-kind row formatter for virtual chain entries.
+- L251 `void ForEachWagerRowAnchor(void* panel, bool (*callback)(void* labelControl, int sortCy, void* userData), void* userData)`

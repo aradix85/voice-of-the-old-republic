@@ -226,26 +226,17 @@ const char* TryKeyBindingRow(void* control, void* owner,
 
 }  // namespace
 
-// 0. Per-kind row formatter for virtual chain entries. Runs BEFORE
-//    the standard text-extraction ladder because the formatted
-//    phrase must OVERRIDE the bare label text. lbl_class's inline
-//    CExoString is "Soldier"; the user navigating the stat chain
-//    expects "Class: Soldier" with the context word, so without
-//    this early hook the AsLabel path (section 4) would return the
-//    bare value and never reach the per-kind handler.
+// Per-kind row formatter for virtual chain entries. Runs BEFORE the
+// standard text-extraction ladder because the formatted phrase must
+// OVERRIDE the bare label text: lbl_class's inline CExoString is
+// "Soldier", the stat chain says "Class: Soldier", and the AsLabel path
+// would return the bare value first.
 //
-//    Only fires when `control` is a registered anchor for the
-//    owning panel's kind (IsStatRowAnchor short-circuits otherwise),
-//    so non-virtual controls in InGameCharacter still hit the
-//    standard ladder.
-//
-//    Owner is resolved here rather than reusing step 10 resolution: that
-//    one runs after the standard extract sections and we need the owner
-//    now. Cost is one extra FindOwningPanel call when ownerPanel is null
-//    (announce-control path).
-const char* TryVirtualRowAnchor(void* control, void* ownerPanel,
+// Only fires when `control` is a registered anchor for the owning panel's
+// kind (IsStatRowAnchor short-circuits otherwise), so non-virtual
+// controls in InGameCharacter still hit the standard ladder.
+const char* TryVirtualRowAnchor(void* control, void* owner,
                                 char* outBuf, size_t bufSize) {
-    void* owner = ResolveOwnerPanel(control, ownerPanel);
     const char* source = nullptr;
     if (!source) source = TryCharsheetStatRow(control, owner, outBuf, bufSize);
     if (!source) source = TryCreditsRow(control, owner, outBuf, bufSize);

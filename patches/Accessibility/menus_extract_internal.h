@@ -34,7 +34,6 @@ void* ResolveOwnerPanel(void* control, void* ownerPanel);
 bool IsPanelDirectChild(void* panel, void* control);
 
 // menus_extract_controls.cpp
-const char* TryTooltip(void* control, char* outBuf, size_t bufSize);
 const char* TryButton(void* control, char* outBuf, size_t bufSize);
 const char* TryButtonToggle(void* control, char* outBuf, size_t bufSize);
 const char* TryLabel(void* control, char* outBuf, size_t bufSize);
@@ -46,7 +45,7 @@ const char* TryItemEntryRow(void* control, char* outBuf, size_t bufSize);
 const char* TrySiblingLabel(void* control, void* owner, char* outBuf, size_t bufSize);
 
 // menus_extract_rows.cpp
-const char* TryVirtualRowAnchor(void* control, void* ownerPanel, char* outBuf, size_t bufSize);
+const char* TryVirtualRowAnchor(void* control, void* owner, char* outBuf, size_t bufSize);
 
 // menus_extract_icons.cpp
 const char* TryPartyPortrait(void* control, char* outBuf, size_t bufSize, bool& claimedVtable);
