@@ -50,6 +50,9 @@ patches/Accessibility/core_tick.cpp
 patches/Accessibility/core_tick.h
 patches/Accessibility/cycle_input.cpp
 patches/Accessibility/cycle_input.h
+patches/Accessibility/cycle_input_announce.cpp
+patches/Accessibility/cycle_input_focus.cpp
+patches/Accessibility/cycle_input_internal.h
 patches/Accessibility/cycle_state.cpp
 patches/Accessibility/cycle_state.h
 patches/Accessibility/diag_chargen_feats.cpp
