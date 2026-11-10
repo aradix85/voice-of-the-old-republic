@@ -421,6 +421,19 @@ prefix (menus_listbox_picker.cpp).
   in the old combat_query say returns garbage for anyone but the PC.
   ReadClientCreatureHitPoints is the read the character sheet uses.
   Compare Ctrl+H or the bridge with the character sheet in game.
+- Bug, found by Anouk in play (2026-11-10): a locked container that opens
+  through a dialog on the object itself is labelled "opens only through
+  the story". ReadLockNeed answers StoryOnly for key-required without a
+  key name, and gives TryIt only to doors with an OnFailToOpen script.
+  Two on Taris: Sealed Strongbox (tar_m03ab; UTP Conversation
+  tar03_strongbox, OnUsed k_ptar_boxused) and Security Crate (tar_m03ad;
+  tar03_puzzle, k_ptar_puzzlebox). Fix: a placeable with a Conversation
+  or an OnUsed script gets TryIt, or a wording of its own; needs the
+  CSWSPlaceable offsets of those two fields, verified. Also check that
+  Enter next to such a container starts the dialog (her attempts were
+  from 15 m and the walk was cancelled), and whether the six holograms
+  of the Security Crate (placeables with OnUsed, no inventory) are in
+  the , / . cycle.
 - Tab: on a leader swap both party_leader_announce's Tab window and
   TickLeaderChange speak the new name. Check in game whether it is heard
   twice; if so the Tab path only needs the no-swap case.
