@@ -5,10 +5,10 @@
 
 #include <windows.h>
 #include <cmath>
-#include <cstdlib>
 #include <cstring>
 #include <string>
 
+#include "floor_puzzle_plates.h"
 #include "engine_area.h"     // AreaObjectIterator, GetObjectKind/Tag, GetTriggerGeometry, GetObjectLocalBoolean, ResolveServerObjectHandle, GetCurrentArea, GetCurrentAreaResName
 #include "engine_keymap.h"   // GameActionVk — the game's live solo-mode bind
 #include "engine_player.h"   // GetPlayerPosition, GetPlayerYawDegrees, GetPartyMembers, GetSoloMode
@@ -60,23 +60,6 @@ constexpr float kIntroRadiusM = 12.0f;
 // plate are attributed to that step; outside it they were caused by a
 // follower walking the grid.
 constexpr DWORD kLeaderToggleWindowMs = 600;
-
-constexpr int kPlateCount = 9;
-constexpr int kResetIndex = 9;   // g_plates slot for the reset trigger
-constexpr int kTrackCount = 10;
-constexpr int kMaxPolyVerts = 8;
-
-struct Plate {
-    uint32_t trigHandle = 0;
-    uint32_t plcHandle  = 0;   // FloorPanelNN placeable (lit-state carrier)
-    Vector   poly[kMaxPolyVerts];
-    int      vertCount  = 0;
-    Vector   center     = {0.0f, 0.0f, 0.0f};
-    // Axis-aligned span (the plates are authored as axis-aligned quads).
-    // Directions speak the plate as an AREA, not a point: an axis counts
-    // only when the player is outside this span on it.
-    float    minX = 0.0f, maxX = 0.0f, minY = 0.0f, maxY = 0.0f;
-};
 
 // Grid-position word per plate index (tag number - 1). Rows run
 // north->south, columns west->east: kFloorPanel01 is the north-west
@@ -144,45 +127,6 @@ std::string FullName(int idx) {
 
 // ---- Geometry ----------------------------------------------------------------
 
-bool PointInPoly(const Plate& p, float x, float y) {
-    if (p.vertCount < 3) return false;
-    bool in = false;
-    for (int i = 0, j = p.vertCount - 1; i < p.vertCount; j = i++) {
-        const Vector& a = p.poly[i];
-        const Vector& b = p.poly[j];
-        if ((a.y > y) != (b.y > y) &&
-            x < (b.x - a.x) * (y - a.y) / (b.y - a.y) + a.x) {
-            in = !in;
-        }
-    }
-    return in;
-}
-
-float DistToSegment(float px, float py, const Vector& a, const Vector& b) {
-    float dx = b.x - a.x, dy = b.y - a.y;
-    float len2 = dx * dx + dy * dy;
-    float t = 0.0f;
-    if (len2 > 1e-6f) {
-        t = ((px - a.x) * dx + (py - a.y) * dy) / len2;
-        if (t < 0.0f) t = 0.0f;
-        if (t > 1.0f) t = 1.0f;
-    }
-    float cx = a.x + t * dx - px, cy = a.y + t * dy - py;
-    return std::sqrt(cx * cx + cy * cy);
-}
-
-// 0 when inside; else the closest XY distance to any polygon edge.
-float DistToPlate(const Plate& p, float x, float y) {
-    if (p.vertCount < 3) return 1e9f;
-    if (PointInPoly(p, x, y)) return 0.0f;
-    float best = 1e9f;
-    for (int i = 0, j = p.vertCount - 1; i < p.vertCount; j = i++) {
-        float d = DistToSegment(x, y, p.poly[i], p.poly[j]);
-        if (d < best) best = d;
-    }
-    return best;
-}
-
 // World-cardinal offsets to the plate's AREA, e.g. "2 metres north" —
 // per user direction the puzzle is walked with cardinal stutter-steps
 // (align north once, then forward/back + strafe), and the player aims
@@ -220,25 +164,6 @@ std::string AxisPhrase(const Vector& playerPos, const Plate& p) {
 }
 
 // ---- Cache -------------------------------------------------------------------
-
-// Trigger tag -> slot. Tags authored as kFloorPanel01..09 / kPanelReset;
-// compare case-insensitively.
-int TrigSlotForTag(const char* tag) {
-    if (_stricmp(tag, "kPanelReset") == 0) return kResetIndex;
-    if (_strnicmp(tag, "kFloorPanel", 11) == 0) {
-        int n = atoi(tag + 11);
-        if (n >= 1 && n <= kPlateCount) return n - 1;
-    }
-    return -1;
-}
-
-int PlcSlotForTag(const char* tag) {
-    if (_strnicmp(tag, "FloorPanel", 10) == 0) {
-        int n = atoi(tag + 10);
-        if (n >= 1 && n <= kPlateCount) return n - 1;
-    }
-    return -1;
-}
 
 bool BuildCache(void* area) {
     int trigFound = 0, plcFound = 0;

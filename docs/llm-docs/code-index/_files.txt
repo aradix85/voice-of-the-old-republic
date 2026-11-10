@@ -171,6 +171,8 @@ patches/Accessibility/filter_objects.cpp
 patches/Accessibility/filter_objects.h
 patches/Accessibility/floor_puzzle.cpp
 patches/Accessibility/floor_puzzle.h
+patches/Accessibility/floor_puzzle_plates.cpp
+patches/Accessibility/floor_puzzle_plates.h
 patches/Accessibility/focus_guard.cpp
 patches/Accessibility/focus_guard.h
 patches/Accessibility/focus_guard_bigpicture.cpp
