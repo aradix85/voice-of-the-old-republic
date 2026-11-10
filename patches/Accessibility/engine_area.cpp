@@ -1,10 +1,12 @@
-// Game objects and areas: the server object array, handle resolution (server and client side), object kind, position and tag, area and room names, and the iterator over an area's objects.
+// Game objects and areas: the server object array, handle resolution
+// (server and client side), object kind, position and tag, area and room
+// names, and the iterator over an area's objects.
 
 #include "engine_area_internal.h"
-#include "engine_reads.h"   // ExtractTextOrStrRef, ReadCExoString
 
+#include "engine_game.h"    // IsKotor2: GetRoom's K2 shape
 #include "engine_player.h"  // GetPlayerArea
-#include "engine_game.h"    // IsKotor2 — K2 flags real locked doors Static
+#include "engine_reads.h"   // ExtractTextOrStrRef, ReadCExoString
 
 namespace acc::engine {
 
@@ -13,8 +15,8 @@ namespace {
 typedef void* (__thiscall* PFN_CSWSAreaGetRoom)(void* this_,
                                                 Vector* pos,
                                                 int* outRoomIndex);
-// KOTOR 2's GetRoom twin grew a parameter (decompiled 2026-08-05 after the
-// fuel-depot door-diag crash): (pos, outAux, inOutRoomIndex). outAux gets a
+// KOTOR 2's GetRoom twin grew a parameter (found after the Peragus fuel-depot
+// door-diag crash): (pos, outAux, inOutRoomIndex). outAux gets a
 // hit detail from the ray intersect (nullable — the engine null-checks it);
 // inOutRoomIndex is read as a try-this-room-first HINT before the full scan
 // and written with the found index. Calling it with the 2-arg K1 shape left
@@ -53,6 +55,22 @@ void* GetServerObjectArray() {
     } __except (EXCEPTION_EXECUTE_HANDLER) {
         return nullptr;
     }
+}
+
+// CGameObjectArray::GetGameObject returns *false on hit, true on miss*: the
+// "no match" branch falls through to `return true` after writing NULL to the
+// out-param (decompiled @0x004d8230).
+void* LookupGameObject(void* objectArray, uint32_t id) {
+    auto resolve = reinterpret_cast<PFN_GetGameObject>(
+        kAddrCGameObjectArrayGetGameObject);
+    void* out = nullptr;
+    bool miss = true;
+    __try {
+        miss = resolve(objectArray, id, &out);
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return nullptr;
+    }
+    return (!miss && out) ? out : nullptr;
 }
 
 }  // namespace
@@ -96,21 +114,7 @@ void* ResolveServerObjectHandle(uint32_t handle) {
     if (IsSentinelHandle(handle)) return nullptr;
 
     void* objectArray = GetServerObjectArray();
-    if (!objectArray) return nullptr;
-
-    // CGameObjectArray::GetGameObject returns *false on hit, true on miss*
-    // — same inverted-bool convention as AreaObjectIterator::Next. See the
-    // comment at line ~225 of this file for the decompilation evidence.
-    auto resolve = reinterpret_cast<PFN_GetGameObject>(
-        kAddrCGameObjectArrayGetGameObject);
-    void* out = nullptr;
-    bool miss = true;
-    __try {
-        miss = resolve(objectArray, handle, &out);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return nullptr;
-    }
-    return (!miss && out) ? out : nullptr;
+    return objectArray ? LookupGameObject(objectArray, handle) : nullptr;
 }
 
 void* ResolveClientObject(uint32_t handle) {
@@ -186,33 +190,20 @@ bool GetAreaDisplayName(void* area, char* outBuf, size_t bufSize) {
         outBuf[0] != '\0') {
         return true;
     }
-    // Modder-assigned tag (CExoString at +0x158) — better "tar_m02ac" than
-    // empty silence per feedback_never_silence_fallback_announcement.
-    __try {
-        return ReadCExoString(area, kAreaTagOffset, outBuf, bufSize);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return false;
-    }
+    // Modder-assigned tag (CExoString at +0x158): "tar_m02ac" beats silence.
+    return ReadCExoString(area, kAreaTagOffset, outBuf, bufSize);
 }
 
 bool GetObjectTag(void* gameObject, char* outBuf, size_t bufSize) {
     if (!gameObject || !outBuf || bufSize < 2) return false;
     outBuf[0] = '\0';
-    __try {
-        return ReadCExoString(gameObject, kObjectTagOffset, outBuf, bufSize);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return false;
-    }
+    return ReadCExoString(gameObject, kObjectTagOffset, outBuf, bufSize);
 }
 
 bool GetAreaTag(void* area, char* outBuf, size_t bufSize) {
     if (!area || !outBuf || bufSize < 2) return false;
     outBuf[0] = '\0';
-    __try {
-        return ReadCExoString(area, kAreaTagOffset, outBuf, bufSize);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return false;
-    }
+    return ReadCExoString(area, kAreaTagOffset, outBuf, bufSize);
 }
 
 bool GetRoomDisplayName(void* area, int roomIndex,
@@ -248,16 +239,10 @@ AreaObjectIterator::AreaObjectIterator(void* area)
         size_    = 0;
     }
     objectArray_ = GetServerObjectArray();
-    if (!objectArray_) {
-        // Without the resolver, every Next() would fail anyway — short-circuit.
-        size_ = 0;
-    }
 }
 
 void* AreaObjectIterator::Next() {
     if (!handles_ || !objectArray_) return nullptr;
-    auto resolve = reinterpret_cast<PFN_GetGameObject>(
-        kAddrCGameObjectArrayGetGameObject);
     while (index_ < size_) {
         uint32_t id = 0;
         __try {
@@ -266,21 +251,8 @@ void* AreaObjectIterator::Next() {
             size_ = 0;
             return nullptr;
         }
-        if (id == 0 || id == 0xFFFFFFFFu) continue;  // sentinels
-
-        // CGameObjectArray::GetGameObject returns *false on hit, true on
-        // miss* — the function-internal "no match" branch falls through to
-        // `return true` after writing NULL to the out-param. Flag interpreted
-        // as the canonical "did the lookup fail" rather than "did it
-        // succeed". Decompiled @0x004d8230, verified 2026-05-04.
-        void* out = nullptr;
-        bool miss = true;
-        __try {
-            miss = resolve(objectArray_, id, &out);
-        } __except (EXCEPTION_EXECUTE_HANDLER) {
-            miss = true;
-        }
-        if (!miss && out) return out;
+        if (IsSentinelHandle(id)) continue;
+        if (void* out = LookupGameObject(objectArray_, id)) return out;
     }
     return nullptr;
 }

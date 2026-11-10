@@ -1,13 +1,14 @@
-// What it takes to open a locked door or container: a key, the Security DC, and who in the party has the best Security.
+// What it takes to open a locked door or container: a key, the Security DC,
+// and who in the party has the best Security.
 
 #include "engine_area_internal.h"
-#include "engine_reads.h"   // ExtractTextOrStrRef, ReadCExoString
 
-#include "log.h"            // seam-filter telemetry
-#include "strings.h"        // door state suffix lookup (DoorOpen/DoorLocked)
-#include "engine_game.h"    // IsKotor2 — K2 flags real locked doors Static
+#include "engine_game.h"    // IsKotor1: the lock fields are KOTOR 1 offsets
 #include "engine_offsets_select.h"
-#include "party_status.h"   // best Security in the party, for lock detail
+#include "engine_reads.h"   // ReadCExoString
+#include "log.h"
+#include "party_status.h"   // best Security in the party
+#include "strings.h"        // the lock need words
 
 namespace acc::engine {
 
@@ -48,7 +49,7 @@ void LogLockOnce(void* obj, int kind, const LockFields& f, const char* key,
     s_logged[s_next] = handle;
     s_next = (s_next + 1) % 64;
     char tag[64] = {0};
-    TryReadTag(obj, tag, sizeof(tag));
+    GetObjectTag(obj, tag, sizeof(tag));
     acclog::Write("LockNeed",
                   "tag=%s kind=%d locked=%d keyRequired=%d dc=%d key='%s' "
                   "failToOpen='%s' -> %d",

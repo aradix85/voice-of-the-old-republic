@@ -1,10 +1,12 @@
-// Door state: open, locked, static, cosmetic, a transition destination, the doors that were locked when the area loaded, and the door part of a spoken name.
+// Door state: open, locked, static, cosmetic, a transition destination, the
+// doors that were locked when the area loaded, and the door part of a spoken
+// name.
 
 #include "engine_area_internal.h"
 
-#include "log.h"            // seam-filter telemetry
-#include "strings.h"        // door state suffix lookup (DoorOpen/DoorLocked)
-#include "engine_game.h"    // IsKotor2 — K2 flags real locked doors Static
+#include "engine_game.h"    // IsKotor2: K2 flags real locked doors Static
+#include "log.h"
+#include "strings.h"        // the door state words
 
 namespace acc::engine {
 
@@ -21,9 +23,8 @@ uint32_t s_lockedAtLoad[kMaxSnapshotDoors];
 int      s_lockedAtLoadCount = 0;
 void*    s_lockSnapshotArea  = nullptr;  // also the "snapshot exists" flag
 
-// One SEH-guarded read of the two live door state fields. Both callers
-// (the suffix builder and the lock snapshot) want them under one guard.
-// Leaves the outputs untouched and returns false on fault.
+// One SEH-guarded read of the two live door state fields. Leaves the outputs
+// untouched and returns false on fault.
 bool ReadDoorFlags(void* serverDoor, uint32_t& locked, uint8_t& openState) {
     if (!serverDoor) return false;
     __try {
@@ -88,8 +89,8 @@ void BuildDoorSuffix(void* serverDoor, char* outBuf, size_t bufSize) {
     // all meaningless on a door that can't be used). IsDoorCosmetic carries
     // the KOTOR 2 exception: Obsidian flags real, lock-bearing doors Static
     // too (Harbinger HammerHeadDoor2: Static=1 + Locked=1 + OpenLockDC in the
-    // template, and the engine still ran its lock — a mine opened it in the
-    // 2026-08-11 session), so lock evidence beats the Static flag there.
+    // template, and the engine still ran its lock — a mine opened it), so
+    // lock evidence beats the Static flag there.
     if (IsDoorCosmetic(serverDoor)) {
         AppendCommaSeparated(outBuf, bufSize,
             acc::strings::Get(acc::strings::Id::DoorCosmetic));
@@ -105,12 +106,9 @@ void BuildDoorSuffix(void* serverDoor, char* outBuf, size_t bufSize) {
     // open while still Locked=1, and was read "locked" as the player walked
     // through it).
     if (openState != 0) {
-        // Treat any non-zero open_state as "open enough to mention".
-        // Stock KOTOR uses 0=closed, ≥1=opening/open in our observations
-        // (CSWCDoor.state=2 was the post-open value seen in the May 5
-        // logs); the server-side byte mirrors that. If the value space
-        // turns out wider, the worst case is we read "open" for an
-        // animating door — better signal than silent.
+        // Any non-zero open_state is "open enough to mention": 0 is closed,
+        // 1 and up opening/open (CSWCDoor.state=2 after opening; the server
+        // byte mirrors it). At worst an animating door reads "open".
         AppendCommaSeparated(outBuf, bufSize,
             acc::strings::Get(acc::strings::Id::DoorOpen));
     } else if (locked != 0) {
@@ -170,13 +168,9 @@ void ResetDoorLockSnapshot() {
 }
 
 bool IsDoorOpen(void* serverDoor) {
-    if (!serverDoor) return false;
-    __try {
-        return *(reinterpret_cast<unsigned char*>(serverDoor) +
-                 kDoorOpenStateOffset) != 0;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return false;
-    }
+    uint32_t locked = 0;
+    uint8_t  open   = 0;
+    return ReadDoorFlags(serverDoor, locked, open) && open != 0;
 }
 
 bool IsDoorLocked(void* serverDoor) {

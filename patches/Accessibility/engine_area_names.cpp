@@ -1,11 +1,13 @@
-// Object names as the mod speaks them: the authored name cleaned up, player-name tokens filled in, a fallback for unnamed objects, and the state suffix (door, lock, container) appended.
+// Object names as the mod speaks them: the authored name cleaned up,
+// player-name tokens filled in, a fallback for unnamed objects, and the
+// state suffix (door, lock, container) appended.
 
 #include "engine_area_internal.h"
-#include "engine_app.h"     // GetServerApp, GetClientApp
-#include "engine_player.h"  // player and leader names
-#include "engine_reads.h"   // ExtractTextOrStrRef, ReadCExoString
 
-#include "strings.h"        // door state suffix lookup (DoorOpen/DoorLocked)
+#include "engine_app.h"     // GetClientApp
+#include "engine_player.h"  // player and leader names
+#include "engine_reads.h"   // ExtractTextOrStrRef, ReadLocStringOtherLanguage
+#include "strings.h"        // DoorLocked, for a locked container
 
 namespace acc::engine {
 
@@ -25,9 +27,9 @@ namespace {
 //    inside action prompts ("Open Medical Bay Container{Chems}").
 //
 //  * An unsubstituted <FullName> token — the Peragus medbay tank announced as
-//    "<FullName>'s Kolto Tank" (four times in the beta log). Handled by the
-//    shared SubstitutePlayerNameToken above, which the message router also
-//    calls; the token is not specific to object names.
+//    "<FullName>'s Kolto Tank". Handled by SubstitutePlayerNameToken
+//    (below), which the message router also calls; the token is not
+//    specific to object names.
 void CleanAuthoredName(char* buf, size_t bufSize) {
     if (!buf || bufSize < 2 || !buf[0]) return;
 
@@ -62,20 +64,14 @@ void SubstitutePlayerNameToken(char* buf, size_t bufSize) {
     if (!hit) return;
 
     // The chargen-name slot is the right source, but it comes back empty
-    // on KOTOR 2 (witnessed 2026-08-13: the Peragus tank announced as
-    // "'s Kolto Tank" with nothing before the possessive). Fall back to
-    // the active leader, which resolves in-world on both games.
+    // on KOTOR 2 (the Peragus tank read "'s Kolto Tank"). Fall back to the
+    // active leader, which resolves in-world on both games.
     char pcName[64] = "";
     if (!GetPlayerCharacterName(pcName, sizeof(pcName)) || pcName[0] == '\0') {
-        pcName[0] = '\0';
-        if (!GetActiveLeaderName(pcName, sizeof(pcName))) {
-            pcName[0] = '\0';
-        }
+        if (!GetActiveLeaderName(pcName, sizeof(pcName))) pcName[0] = '\0';
     }
-    // Substituting an empty string leaves dangling grammar — "'s Kolto
-    // Tank" — which is worse than the raw token,
-    // because at least the token tells the listener a name is missing
-    // rather than sounding like a finished sentence. Leave it alone.
+    // No name: keep the token. "'s Kolto Tank" sounds like a finished
+    // phrase; the token at least tells the listener a name is missing.
     if (pcName[0] == '\0') return;
 
     size_t nameLen = strlen(pcName);
@@ -94,16 +90,6 @@ bool TryReadLocString(void* base, size_t locStringOffset,
                       char* outBuf, size_t bufSize) {
     return ExtractTextOrStrRef(base, locStringOffset,
                                locStringOffset + 4, outBuf, bufSize);
-}
-
-// Last-resort: speak the modder-assigned tag instead of an empty name.
-// Better "g_dnt_carth" than nothing.
-bool TryReadTag(void* obj, char* outBuf, size_t bufSize) {
-    __try {
-        return ReadCExoString(obj, kObjectTagOffset, outBuf, bufSize);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return false;
-    }
 }
 
 // Append ", <text>" to outBuf if there's room. No-op when text is empty
@@ -136,13 +122,9 @@ static bool TryResolveDisplayNameOnce(void* clientApp, uint32_t handle,
         auto fn = reinterpret_cast<PFN_GetObjectName>(
             kAddrCClientExoAppGetObjectName);
         fn(clientApp, handle, &out);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return false;
-    }
-    if (!out.c_string || out.length == 0 || out.length >= bufSize) {
-        return false;
-    }
-    __try {
+        if (!out.c_string || out.length == 0 || out.length >= bufSize) {
+            return false;
+        }
         memcpy(outBuf, out.c_string, out.length);
     } __except (EXCEPTION_EXECUTE_HANDLER) {
         outBuf[0] = '\0';
@@ -161,25 +143,17 @@ bool GetObjectDisplayNameByHandle(uint32_t handle,
     void* clientApp = GetClientApp();
     if (!clientApp) return false;
 
-    // Try the handle as-is first. Then, if that fails AND the handle
-    // looked server-side (high bit clear), retry with the high bit
-    // set. CClientExoApp::GetObjectName resolves only the client-side
-    // namespace (verified 2026-05-10 in patch-20260510-003647.log:
-    // 0x8000002c → "Sith-Soldier" succeeded; 0x0000002c → empty/tag
-    // fallback). Server-side IDs with high bit cleared share their
-    // low 24 bits with the matching client handle per
-    // memory:project_object_handle_namespaces, so OR'ing 0x80000000
-    // is the namespace-cross conversion.
+    // Try the handle as-is, then, for a server-side handle (high bit clear),
+    // the matching client handle: CClientExoApp::GetObjectName resolves only
+    // the client namespace (0x8000002c resolves, 0x0000002c does not), and
+    // the two share their low 24 bits, so OR'ing 0x80000000 crosses over.
     if (TryResolveDisplayNameOnce(clientApp, handle, outBuf, bufSize)) {
         return true;
     }
-    if ((handle & 0x80000000u) == 0u) {
-        outBuf[0] = '\0';
-        if (TryResolveDisplayNameOnce(clientApp,
-                                      handle | 0x80000000u,
-                                      outBuf, bufSize)) {
-            return true;
-        }
+    if ((handle & 0x80000000u) == 0u &&
+        TryResolveDisplayNameOnce(clientApp, handle | 0x80000000u,
+                                  outBuf, bufSize)) {
+        return true;
     }
     outBuf[0] = '\0';
     return false;
@@ -224,7 +198,7 @@ bool GetObjectBaseName(void* gameObject, char* outBuf, size_t bufSize) {
     switch (K(kind)) {
         case K::Door:
             // Bare LocName only. The state ("locked"/"open"/
-            // "entriegelt") + transition destination + description
+            // "unlocked") + transition destination + description
             // enrichment lives in AppendObjectStateSuffix, which
             // GetObjectName applies on top — so narration can slot a
             // disambiguating number in between the two halves.
@@ -237,9 +211,7 @@ bool GetObjectBaseName(void* gameObject, char* outBuf, size_t bufSize) {
             // localized via dialog.tlk). Generic spawns like
             // tar02_woman02 / tar02_maintdrd have empty first_name
             // strrefs, so the per-stats path below would otherwise fall
-            // through to the raw tag. Verified in combat.cpp /
-            // combat_queue.cpp where the same accessor returns
-            // "Sith-Soldier" etc.
+            // through to the raw tag.
             uint32_t handle = GetObjectHandle(gameObject);
             if (handle != 0u &&
                 GetObjectDisplayNameByHandle(handle, outBuf, bufSize) &&
@@ -274,11 +246,9 @@ bool GetObjectBaseName(void* gameObject, char* outBuf, size_t bufSize) {
                 // an item dropped in the world usually carries no LocName of
                 // its own (the displayed name comes from its template / base
                 // item), so this fell through to the raw tag and announced a
-                // resref — "g_w_sbrcrstl11" instead of a lightsaber crystal
-                // (patch-20260813-150242, spoken eight times). The engine's
-                // universal accessor gives the string a sighted player reads
-                // in the tooltip. Falls through to the tag as before when it
-                // has nothing either.
+                // resref — "g_w_sbrcrstl11" instead of a lightsaber crystal.
+                // The engine's universal accessor gives the string a sighted
+                // player reads in the tooltip; the tag stays the last resort.
                 uint32_t handle = GetObjectHandle(gameObject);
                 outBuf[0] = '\0';
                 got = handle != 0u &&
@@ -333,7 +303,8 @@ bool GetObjectBaseName(void* gameObject, char* outBuf, size_t bufSize) {
         CleanAuthoredName(outBuf, bufSize);
         return outBuf[0] != '\0';
     }
-    if (!TryReadTag(gameObject, outBuf, bufSize)) return false;
+    // Last resort: the modder-assigned tag. "g_dnt_carth" beats nothing.
+    if (!GetObjectTag(gameObject, outBuf, bufSize)) return false;
     CleanAuthoredName(outBuf, bufSize);
     return outBuf[0] != '\0';
 }

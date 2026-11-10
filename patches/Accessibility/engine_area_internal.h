@@ -21,7 +21,6 @@ bool IsSentinelHandle(uint32_t handle);
 
 // engine_area_names.cpp
 bool TryReadLocString(void* base, size_t locStringOffset, char* outBuf, size_t bufSize);
-bool TryReadTag(void* obj, char* outBuf, size_t bufSize);
 void AppendCommaSeparated(char* outBuf, size_t bufSize, const char* text);
 
 // engine_area_doors.cpp

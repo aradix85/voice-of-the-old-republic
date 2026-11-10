@@ -1,8 +1,41 @@
-// What kind of object this is: a usable placeable, an empty container and its item count, a landmark waypoint, a transition trigger and its geometry, a detected trap, and an object's local booleans.
+// What kind of object this is: a usable placeable, an empty container and its
+// item count, a landmark waypoint, a transition trigger and its geometry, a
+// detected trap, and an object's local booleans.
 
 #include "engine_area_internal.h"
 
 namespace acc::engine {
+
+namespace {
+
+// Item count of a loot container; false for anything else. Gated on kind
+// first: has_inventory / item_repository live at placeable offsets that map
+// to unrelated fields on other kinds. Switches, computer panels and other
+// usable-but-not-lootable placeables carry HasInventory == 0 and a null
+// repository.
+bool ReadContainerCount(void* gameObject, int& count) {
+    if (!gameObject ||
+        GetObjectKind(gameObject) != static_cast<int>(GameObjectKind::Placeable)) {
+        return false;
+    }
+    __try {
+        auto* base = reinterpret_cast<unsigned char*>(gameObject);
+        if (*reinterpret_cast<int*>(base + kPlaceableHasInventoryOffset) == 0) {
+            return false;
+        }
+        void* repo = *reinterpret_cast<void**>(
+            base + kPlaceableItemRepositoryOffset);
+        if (!repo) return false;
+        count = *reinterpret_cast<int*>(
+            reinterpret_cast<unsigned char*>(repo) +
+            kItemRepositoryItemCountOffset);
+        return true;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+}
+
+}  // namespace
 
 bool IsUsablePlaceable(void* placeable) {
     if (!placeable) return false;
@@ -17,33 +50,8 @@ bool IsUsablePlaceable(void* placeable) {
 }
 
 bool IsEmptyContainer(void* gameObject) {
-    if (!gameObject) return false;
-    // Gate on kind FIRST: has_inventory / item_repository live at
-    // placeable offsets that map to unrelated fields on other object
-    // kinds, so reading them on a creature/door could fake an empty
-    // container.
-    int kind = GetObjectKind(gameObject);
-    if (kind != static_cast<int>(GameObjectKind::Placeable)) {
-        return false;
-    }
-    __try {
-        auto* base = reinterpret_cast<unsigned char*>(gameObject);
-        // Only true loot containers qualify; switches / computer panels and
-        // other usable-but-not-lootable placeables carry HasInventory == 0
-        // and a null repository, and must never get an "empty" tag.
-        if (*reinterpret_cast<int*>(base + kPlaceableHasInventoryOffset) == 0) {
-            return false;
-        }
-        void* repo = *reinterpret_cast<void**>(
-            base + kPlaceableItemRepositoryOffset);
-        if (!repo) return false;
-        int count = *reinterpret_cast<int*>(
-            reinterpret_cast<unsigned char*>(repo) +
-            kItemRepositoryItemCountOffset);
-        return count <= 0;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return false;
-    }
+    int count = 0;
+    return ReadContainerCount(gameObject, count) && count <= 0;
 }
 
 bool IsLandmarkWaypoint(void* waypoint) {
@@ -63,18 +71,11 @@ bool IsTransitionTrigger(void* trigger) {
         // with length-or-strref at +4 (same dual-slot convention
         // ExtractTextOrStrRef consumes for doors). A trigger with no
         // destination has a null text pointer and the GFF "no strref"
-        // sentinel 0xFFFFFFFF in the +4 slot.
-        //
-        // The old probe read the first 12 bytes as a Vector and tested
-        // != 0.0f — but the 0xFFFFFFFF sentinel decodes as NaN, and
-        // NaN != 0.0f is true, so EVERY destination-less trigger (traps,
-        // banter/dialogue triggers, shield triggers) classified as a
-        // transition: they polluted the transition cycling category and
-        // fired the Transition proximity cue on approach (2026-07-16
-        // Southern Strand session). Mirror ExtractTextOrStrRef's
-        // resolution order instead, with LookupTlk's strref validity
-        // bounds, minus the actual TLK call (this predicate runs per
-        // object per tick in the change detector).
+        // sentinel 0xFFFFFFFF in the +4 slot. (Not a Vector test: that
+        // sentinel decodes as NaN, and NaN != 0.0f made every
+        // destination-less trigger a transition.) This mirrors
+        // ExtractTextOrStrRef's resolution order with LookupTlk's strref
+        // bounds, minus the TLK call: it runs per object per tick.
         unsigned char* p = reinterpret_cast<unsigned char*>(trigger) +
                            kTriggerTransitionDestOffset;
         const char* text = *reinterpret_cast<const char**>(p);
@@ -82,9 +83,8 @@ bool IsTransitionTrigger(void* trigger) {
         // Inline text: aux is its length. 0xFFFFFFFF is never a length: it
         // is the "no strref" sentinel next to a non-null (empty) text slot,
         // which is what plain script triggers carry (Endar Spire's
-        // "nulltrigger", "Trask on Bridge" and the explosion triggers all
-        // have TransitionDestination strref -1 and no LinkedTo, yet were
-        // cycled and Q/E-listed as exits, 2026-11-08).
+        // "nulltrigger", "Trask on Bridge" and the explosion triggers have
+        // TransitionDestination strref -1 and no LinkedTo).
         if (text) return aux > 0 && aux <= 0x10000u;
         // No inline text: aux is the TLK strref (0 / -1 / out-of-range
         // all mean "no destination", matching LookupTlk).
@@ -157,24 +157,8 @@ bool TrapDetectedByAnyOf(void* gameObject,
 }
 
 int GetContainerItemCount(void* gameObject) {
-    if (!gameObject ||
-        GetObjectKind(gameObject) != static_cast<int>(GameObjectKind::Placeable)) {
-        return -1;
-    }
-    __try {
-        auto* base = reinterpret_cast<unsigned char*>(gameObject);
-        if (*reinterpret_cast<int*>(base + kPlaceableHasInventoryOffset) == 0) {
-            return -1;
-        }
-        void* repo = *reinterpret_cast<void**>(
-            base + kPlaceableItemRepositoryOffset);
-        if (!repo) return -1;
-        return *reinterpret_cast<int*>(
-            reinterpret_cast<unsigned char*>(repo) +
-            kItemRepositoryItemCountOffset);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return -1;
-    }
+    int count = 0;
+    return ReadContainerCount(gameObject, count) ? count : -1;
 }
 
 }  // namespace acc::engine

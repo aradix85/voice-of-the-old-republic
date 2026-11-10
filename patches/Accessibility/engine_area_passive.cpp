@@ -1,24 +1,25 @@
-// Keeps Q/E targeting and passive narration live while the engine holds a finished, obscuring fade (the Endar Spire opening).
+// Keeps Q/E targeting and passive narration live while the engine holds a
+// finished, obscuring fade (the Endar Spire opening).
 
 #include "engine_area_internal.h"
-#include "engine_app.h"     // GetServerApp, GetClientApp
 
-#include "log.h"            // seam-filter telemetry
-#include "engine_rebase.h"
+#include "engine_app.h"     // GetClientApp
 #include "engine_offsets_select.h"
+#include "engine_rebase.h"
+#include "log.h"
 
 namespace acc::engine {
 
-// Root-cause fix (2026-07-19, rev 2): the Endar Spire opening HOLDS the global
-// fade panel at alpha=1.0 for a long scripted stretch *after* the fade
-// animation finishes (IsFadeDone), while the player still has full world
-// control. The engine re-asserts that alpha every frame — proven: an alpha=0
-// write from our tick is reverted before MainLoop's gate reads it, so clearing
-// the fade can never win. MainLoop gates DoPassiveSelection behind
-// !IsGlobalFadeObscuring (alpha > 0.001), which freezes the Q/E candidate halo
-// AND passive hover-narration. For a sighted player a black screen means
-// "nothing to target"; a blind player is actively navigating that (to them
-// irrelevant) black screen and needs targeting + narration live.
+// The Endar Spire opening HOLDS the global fade panel at alpha=1.0 for a long
+// scripted stretch *after* the fade animation finishes (IsFadeDone), while the
+// player still has full world control. The engine re-asserts that alpha every
+// frame (an alpha=0 write from our tick is reverted before MainLoop's gate
+// reads it), so clearing the fade can never win. MainLoop gates
+// DoPassiveSelection behind !IsGlobalFadeObscuring (alpha > 0.001), which
+// freezes the Q/E candidate halo AND passive hover-narration. For a sighted
+// player a black screen means "nothing to target"; a blind player is actively
+// navigating that (to them irrelevant) black screen and needs targeting and
+// narration live.
 //
 // So rather than fight the fade, DRIVE the selection ourselves: when the ONLY
 // thing MainLoop is waiting on is the held obscuring fade (input is normal
@@ -31,7 +32,7 @@ namespace acc::engine {
 // SEH-guarded. Offsets: gui_in_game +0x40, fade +0x6c, panel.alpha +0x4c,
 // input_class +0x9c, area_not_ready +0x288.
 bool MaybeDrivePassiveSelection() {
-    // K2 witnessed 2026-08-02 in the K2 client MainLoop twin FUN_00781be0
+    // K2: the client MainLoop twin FUN_00781be0
     // (its gate at +0x500-line reads `([internal+0x9c]==0 || ==4) &&
     // [internal+0x288]==0` — byte-for-byte K1's gate), and in the K2
     // IsGlobalFadeObscuring twin 0x007CBC70, which reads
@@ -42,15 +43,12 @@ bool MaybeDrivePassiveSelection() {
     const size_t kFadeAlphaOffset      = acc::off::Pick(0x4c, 0x50);  // CSWGuiFade.panel.alpha
     const size_t kInputClassOffset     = acc::off::Same(0x9c);   // internal.input_class
     const size_t kAreaNotReadyOffset   = acc::off::Same(0x288);  // internal.area_not_ready
-    // These two R() lookups re-run every tick and A12 flagged them as
-    // recomputed work. Measured and deliberately LEFT AS IS: R() is a binary
-    // search over a 223-entry sorted table, so this is ~16 comparisons a
-    // frame — below the noise floor. Caching them costs more than it saves:
-    // a function-local `static` needs a thread-safe init guard, which counts
-    // as object unwinding and trips C2712 in this SEH function (tried, it
-    // does), and hoisting to namespace scope would make the value depend on
-    // static-init ordering against CurrentBuild().
-    // K2 twins witnessed 2026-08-02 at the K2 MainLoop gate (FUN_00781be0):
+    // The two address lookups below run every tick: a binary search over a
+    // small sorted table, below the noise floor. Caching them does not pay:
+    // a function-local `static` needs a thread-safe init guard, which trips
+    // C2712 in this SEH function, and a namespace-scope one would depend on
+    // static-init order against CurrentBuild().
+    // K2 twins at the K2 MainLoop gate (FUN_00781be0):
     // `if (!FUN_007cbc40()) if (!FUN_007cbc70()) FUN_0079a4c0(dt);` — the
     // same IsGlobalFading -> IsGlobalFadeObscuring -> DoPassiveSelection
     // sequence as K1's 0x00603b44/0x00603b50/0x00603b61.
