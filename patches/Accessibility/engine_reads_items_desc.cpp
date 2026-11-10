@@ -1,4 +1,5 @@
-// An item's description, split into its blocks (tags, values, properties, description text).
+// An item's description, split into its blocks (tags, values, properties,
+// description text).
 
 #include "engine_reads_items_internal.h"
 
@@ -12,6 +13,11 @@ typedef CExoString* (__thiscall* PFN_GetPropertyDescription)(void* this_,
                                                               CExoString* out);
 
 typedef void* (__thiscall* PFN_GetBaseItem)(void* item);
+
+// One of the engine's per-category property builders.
+void AddProps(uintptr_t builder, void* item, CExoString* acc) {
+    reinterpret_cast<PFN_AddItemProperty>(builder)(item, acc);
+}
 
 // Read item_type / weapon_type via CSWItem::GetBaseItem (the CSWItem subobject
 // is at offset 0 of CSWSItem, so the item pointer is a valid `this`). Offsets
@@ -63,46 +69,32 @@ void ComputeSectionOffsets(void* item, uint8_t weaponType,
         reinterpret_cast<PFN_CExoStringCtor>(kAddrCExoStringDefaultCtor)(&acc);
 
         if (k2) {
-            reinterpret_cast<PFN_AddItemProperty>(
-                kAddrItemAddK2StatsHeader)(item, &acc);
+            AddProps(kAddrItemAddK2StatsHeader, item, &acc);
         }
-        reinterpret_cast<PFN_AddItemProperty>(
-            kAddrItemAddFeatRequirements)(item, &acc);
+        AddProps(kAddrItemAddFeatRequirements, item, &acc);
         offTags = acc.c_string ? strlen(acc.c_string) : 0;
 
         if (k2) {
-            reinterpret_cast<PFN_AddItemProperty>(
-                kAddrItemAddK2Extra1)(item, &acc);
-            reinterpret_cast<PFN_AddItemProperty>(
-                kAddrItemAddK2Extra2)(item, &acc);
-            reinterpret_cast<PFN_AddItemProperty>(
-                kAddrItemAddK2Extra3)(item, &acc);
-            reinterpret_cast<PFN_AddItemProperty>(
-                kAddrItemAddK2Extra4)(item, &acc);
+            AddProps(kAddrItemAddK2Extra1, item, &acc);
+            AddProps(kAddrItemAddK2Extra2, item, &acc);
+            AddProps(kAddrItemAddK2Extra3, item, &acc);
+            AddProps(kAddrItemAddK2Extra4, item, &acc);
         }
         const bool saber = k2 && baseItemId == 0x2d;
         if (weaponType != 0 || saber) {
-            reinterpret_cast<PFN_AddItemProperty>(
-                kAddrItemAddDamageProperties)(item, &acc);
-            reinterpret_cast<PFN_AddItemProperty>(
-                kAddrItemAddRangeProperties)(item, &acc);
+            AddProps(kAddrItemAddDamageProperties, item, &acc);
+            AddProps(kAddrItemAddRangeProperties, item, &acc);
             if (!saber) {
-                reinterpret_cast<PFN_AddItemProperty>(
-                    kAddrItemAddCriticalThreatProps)(item, &acc);
+                AddProps(kAddrItemAddCriticalThreatProps, item, &acc);
             }
-            reinterpret_cast<PFN_AddItemProperty>(
-                kAddrItemAddOnHitProperties)(item, &acc);
-            reinterpret_cast<PFN_AddItemProperty>(
-                kAddrItemAddWeaponSizeProperties)(item, &acc);
+            AddProps(kAddrItemAddOnHitProperties, item, &acc);
+            AddProps(kAddrItemAddWeaponSizeProperties, item, &acc);
         }
-        reinterpret_cast<PFN_AddItemProperty>(
-            kAddrItemAddAttackModifierProps)(item, &acc);
-        reinterpret_cast<PFN_AddItemProperty>(
-            kAddrItemAddDefenceProperties)(item, &acc);
+        AddProps(kAddrItemAddAttackModifierProps, item, &acc);
+        AddProps(kAddrItemAddDefenceProperties, item, &acc);
         offValues = acc.c_string ? strlen(acc.c_string) : offTags;
 
-        reinterpret_cast<PFN_AddItemProperty>(
-            kAddrItemAddMiscellaneousProps)(item, &acc);
+        AddProps(kAddrItemAddMiscellaneousProps, item, &acc);
         offProps = acc.c_string ? strlen(acc.c_string) : offValues;
     } __except (EXCEPTION_EXECUTE_HANDLER) {
         acclog::Write("Engine.Reads",
@@ -119,11 +111,9 @@ bool ReadItemDescriptionViaTlk(void* item, char* outBuf, size_t bufSize,
                                uint32_t& outStrref) {
     outStrref = 0xFFFFFFFF;
     if (!item || !outBuf || bufSize < 2) return false;
-    __try {
-        outStrref = *reinterpret_cast<uint32_t*>(
-            reinterpret_cast<unsigned char*>(item) +
-            kItemDescriptionLocStringOffset + kExoLocStringStrRefOffset);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
+    if (!TryReadU32(item, kItemDescriptionLocStringOffset + kExoLocStringStrRefOffset,
+                    &outStrref)) {
+        outStrref = 0xFFFFFFFF;
         return false;
     }
     if (outStrref == 0xFFFFFFFF) return false;  // no TLK entry for this locstring
@@ -206,9 +196,9 @@ bool BuildItemDescriptionBlocks(void* item, ItemDescriptionBlocks* out) {
     CopySlice(out->properties, sizeof(out->properties), full, offValues, offProps);
 
     // Description: prefer the TLK strref (clean cp1252) over the inline copy that
-    // GetPropertyDescription emits — some German items have a corrupt inline
-    // description (umlauts collapsed to 0xFD). Fall back to the GetPropertyDescription
-    // tail when there's no usable strref.
+    // GetPropertyDescription emits, which some items carry corrupt (accented
+    // letters collapsed to 0xFD). Without a usable strref, the tail of the
+    // GetPropertyDescription text.
     uint32_t descStrref = 0xFFFFFFFF;
     bool descViaTlk = ReadItemDescriptionViaTlk(item, out->description,
                                                 sizeof(out->description),

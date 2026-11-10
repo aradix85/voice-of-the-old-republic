@@ -1,31 +1,25 @@
-# engine_reads_items.cpp (392 lines)
+# engine_reads_items.cpp (267 lines)
 
 Source: `patches/Accessibility/engine_reads_items.cpp`
 
-item / creature domain readers.
-
-Split out of engine_reads.cpp by the Phase-1 structure pass (refactoring candidate 4). engine_reads.cpp kept the generic GUI-control readers (control text, tooltips, TLK lookup, toggle/slider/listbox predicates); this file owns the domain layer that grew on top of them:
-
-* client/server handle translation and item resolution * feat / spell / action description resolvers * item stack, charge and inventory-row reads * the item property-description block reconstruction * creature Force-point reads
-
-Declarations stay in engine_reads.h - splitting that header is a separate, deferred item, so every existing includer is unaffected.
+Item and creature reads on top of the generic readers of engine_reads.cpp: client/server handle translation and item resolution, stack, charge and inventory-row reads, item names in another language, the workbench slots and a creature's Force points. Item descriptions are in engine_reads_items_desc.cpp, action descriptions in _actions.cpp; all are declared in engine_reads.h.
 
 ## Declarations (in source order)
 
-- L40 `int ReadItemStackSize(void* item)`: Read CSWSItem.stack_size (2 bytes) and bit_flags (4 bytes).
-- L61 `bool ReadItemChargesRaw(void* item, int* outCharges)`: Read CSWSItem.charges (+0x258) when the item is a charged item (max_charges @ +0x25c > 0).
-- L77 `bool IsItemEntryRow(void* control)`
-- L93 `uint32_t ReadItemRowHandle(void* rowControl)`: obj_id the row was built for.
-- L106 `uint32_t ClientToServerObjectId(uint32_t clientHandle)`
-- L123 `void* ResolveItemFromClientHandle(uint32_t clientHandle)`
-- L141 `void* ResolveItemFromServerHandle(uint32_t serverHandle)`
-- L157 `int ReadItemRowStackCount(void* rowControl)`
-- L165 `int ReadItemCharges(void* item)`
-- L170 `int ReadItemRowCharges(void* rowControl)`
-- L178 `bool ReadLocStringOtherLanguage(void* base, size_t locStringOffset, char* outBuf, size_t bufSize)`
-- L225 `bool ReadItemRowName(void* rowControl, char* outBuf, size_t bufSize)`
-- L257 `int ReadItemStack(void* item)`
-- L261 `bool IsInventoryItemRow(void* control)`
-- L272 `void* GetWorkbenchSlotInstalledItem(void* upgradePanel, void* slotControl)`
-- L294 `WorkbenchPickerInfo GetWorkbenchPickerInfo(void* upgradePanel)`
-- L333 `bool ReadCreatureForcePoints(void* clientCreature, int* outCur, int* outMax)`
+- L25 `uintptr_t ReadVtable(void* control)`
+- L31 `bool IsItemEntryRow(void* control)`
+- L38 `uint32_t ReadItemRowHandle(void* rowControl)`: The obj_id the row was built for (same offset on both row classes); 0 when the control is no row or the read faults.
+- L47 `bool ReadItemChargesRaw(void* item, int* outCharges)`: Charged items (max_charges > 0) cannot stack; false for any other item.
+- L60 `uint32_t ClientToServerObjectId(uint32_t clientHandle)`
+- L77 `void* ResolveItemFromServerHandle(uint32_t serverHandle)`
+- L90 `void* ResolveItemFromClientHandle(uint32_t clientHandle)`
+- L96 `int ReadItemStack(void* item)`: CSWSItem.stack_size; 0 on a fault and for infinite-stock items (the store reads that flag itself).
+- L106 `int ReadItemRowStackCount(void* rowControl)`
+- L110 `int ReadItemCharges(void* item)`
+- L115 `int ReadItemRowCharges(void* rowControl)`
+- L120 `bool ReadLocStringOtherLanguage(void* base, size_t locStringOffset, char* outBuf, size_t bufSize)`
+- L166 `bool ReadItemRowName(void* rowControl, char* outBuf, size_t bufSize)`
+- L191 `bool IsInventoryItemRow(void* control)`
+- L196 `void* GetWorkbenchSlotInstalledItem(void* upgradePanel, void* slotControl)`
+- L207 `WorkbenchPickerInfo GetWorkbenchPickerInfo(void* upgradePanel)`
+- L233 `bool ReadCreatureForcePoints(void* clientCreature, int* outCur, int* outMax)`

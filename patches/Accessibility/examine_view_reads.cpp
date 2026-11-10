@@ -18,21 +18,12 @@ namespace acc::examine_view {
 
 namespace {
 
-typedef void* (__thiscall* PFN_GetFeat)(void* rules, unsigned short featIdx);
-typedef void* (__thiscall* PFN_GetSpell)(void* spells, int spellId);
 typedef int (__thiscall* PFN_GetIntThis)(void* this_);
 typedef int (__thiscall* PFN_GetIntThisInt)(void* this_, int arg);
 
 // CClientExoApp::GetLastTarget, the read combat_query uses too.
 typedef uint32_t (__thiscall* PFN_GetLastTarget)(void* this_);
 const uintptr_t kAddrCClientExoAppGetLastTargetLocal = acc::addr::R(0x005EDD80);
-
-// CSWRules sits at offset 0 of CSWSRules: the same pointer.
-void* GetCSWRules() {
-    void* rules = nullptr;
-    acc::engine::TryReadPtr(reinterpret_cast<void*>(kAddrRulesGlobal), 0, &rules);
-    return rules;
-}
 
 // The engine's side-effect-free int accessors; -1 when the call faults.
 int CallIntThis(void* this_, uintptr_t addr) {
@@ -61,15 +52,6 @@ bool CallFlag(void* serverCreature, uintptr_t addr) {
 bool IsCreature(void* obj) {
     return obj && acc::engine::GetObjectKind(obj) ==
                       static_cast<int>(acc::engine::GameObjectKind::Creature);
-}
-
-// The name strref at `offset` of a rules row, through the dual-game TLK path.
-// (The engine's own GetNameText accessors were KOTOR 1-only addresses.)
-bool ReadRowName(void* row, size_t offset, char* outBuf, size_t outBufSize) {
-    uint32_t strRef = 0;
-    if (!row || !acc::engine::TryReadU32(row, offset, &strRef)) return false;
-    if (strRef == 0 || strRef == 0xffffffff) return false;
-    return acc::engine::LookupTlk(strRef, outBuf, outBufSize);
 }
 
 }  // namespace
@@ -192,38 +174,18 @@ bool IsHostileCreature(void* serverObject) {
     return faction >= 0 && FactionWordIdFor(faction) == acc::strings::Id::FactionHostile;
 }
 
-// Rules->spells (CSWSpellArray), GetSpell(spellId), then the row's name.
 bool ResolveSpellName(int spellId, char* outBuf, size_t outBufSize) {
     if (!outBuf || outBufSize < 2) return false;
     outBuf[0] = '\0';
-    void* rules = GetCSWRules();
-    void* spellArray = nullptr;
-    if (!rules || !acc::engine::TryReadPtr(rules, kRulesSpellsOffset, &spellArray) ||
-        !spellArray) {
-        return false;
-    }
-    void* spell = nullptr;
-    __try {
-        spell = reinterpret_cast<PFN_GetSpell>(kAddrCSWSpellArrayGetSpell)(spellArray, spellId);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return false;
-    }
-    return ReadRowName(spell, kSpellNameStrRefOffset, outBuf, outBufSize);
+    return acc::engine::ReadRowStrRefText(acc::engine::GetSpellRow(spellId),
+                                          kSpellNameStrRefOffset, outBuf, outBufSize);
 }
 
-// CSWRules::GetFeat(featIdx), then the row's name (offset 0x08 in both games).
 bool ResolveFeatName(unsigned short featIdx, char* outBuf, size_t outBufSize) {
     if (!outBuf || outBufSize < 2) return false;
     outBuf[0] = '\0';
-    void* rules = GetCSWRules();
-    if (!rules) return false;
-    void* feat = nullptr;
-    __try {
-        feat = reinterpret_cast<PFN_GetFeat>(kAddrCSWRulesGetFeat)(rules, featIdx);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return false;
-    }
-    return ReadRowName(feat, kFeatNameStrRefOffset, outBuf, outBufSize);
+    return acc::engine::ReadRowStrRefText(acc::engine::GetFeatRow(featIdx),
+                                          kFeatNameStrRefOffset, outBuf, outBufSize);
 }
 
 }  // namespace acc::examine_view

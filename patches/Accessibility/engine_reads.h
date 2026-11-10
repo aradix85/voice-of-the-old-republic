@@ -287,6 +287,15 @@ int ReadItemStack(void* item);
 // inventory rows do.
 void* ItemFromActionId(uint32_t actionId);
 
+// The rules rows of a feat (CSWRules::GetFeat) and of a Force power
+// (CSWSpellArray::GetSpell), or nullptr.
+void* GetFeatRow(uint16_t featIdx);
+void* GetSpellRow(int spellId);
+
+// The TLK text of the strref at `offset` of such a row; false when there is
+// none.
+bool ReadRowStrRefText(void* row, size_t offset, char* outBuf, size_t bufSize);
+
 // CSWGuiInGameItemEntry rows (Inventory + Container loot listbox).
 // Store rows excluded — they get a price+stock suffix from
 // menus_store::AnnounceChainStepSuffix instead.
