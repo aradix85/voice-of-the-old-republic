@@ -89,6 +89,48 @@ void ResetNavGraphRetry() {
     g_navgraph_retry = NavGraphRetryState{};
 }
 
+namespace {
+
+// Region adjacency for the exploration overview: which regions share a
+// nav edge that does not cross a wall, and whether every such edge runs
+// through a door. Labels never read this.
+void BuildClusterLinks(const acc::engine::navgraph::NavGraphSnapshot& g, int n) {
+    g_graph.cluster_links.clear();
+    for (int i = 0; i < n; ++i) {
+        int lo = 0, hi = 0;
+        acc::engine::navgraph::NeighbourRange(g, i, lo, hi);
+        for (int e = lo; e < hi; ++e) {
+            const int j = static_cast<int>(g.conns[e]);
+            if (j == i || j < 0 || j >= n) continue;  // pairs dedupe below
+            int ca = g_graph.node_cluster_id[i];
+            int cb = g_graph.node_cluster_id[j];
+            if (ca == cb) continue;
+            if (ca > cb) std::swap(ca, cb);
+            const EdgeResult er = ClassifyEdge(nullptr, g_graph.node_pos[i],
+                                               g_graph.node_pos[j],
+                                               "ClusterLinks");
+            if (er.kind == kEdgeBlocked) continue;
+            const bool viaDoor = er.kind == kEdgeDoor && er.doorIdx >= 0;
+            ClusterLink* found = nullptr;
+            for (ClusterLink& l : g_graph.cluster_links) {
+                if (l.a == ca && l.b == cb) { found = &l; break; }
+            }
+            if (!found) {
+                ClusterLink l;
+                l.a       = ca;
+                l.b       = cb;
+                l.viaDoor = viaDoor;
+                if (viaDoor) l.doorPos = g_graph.doors[er.doorIdx].pos;
+                g_graph.cluster_links.push_back(l);
+            } else if (found->viaDoor && !viaDoor) {
+                found->viaDoor = false;  // a free way round the door
+            }
+        }
+    }
+}
+
+}  // namespace
+
 void BuildForArea(void* area) {
     if (!area) return;
     if (HasGraphForArea(area)) return;
@@ -216,41 +258,7 @@ void BuildForArea(void* area) {
         g_graph.node_cluster_id[i] = UFFind(i);
     }
 
-    // Region adjacency for the exploration overview: which regions share a
-    // nav edge that does not cross a wall, and whether every such edge runs
-    // through a door. Labels never read this.
-    g_graph.cluster_links.clear();
-    for (int i = 0; i < n; ++i) {
-        int lo = 0, hi = 0;
-        acc::engine::navgraph::NeighbourRange(g, i, lo, hi);
-        for (int e = lo; e < hi; ++e) {
-            const int j = static_cast<int>(g.conns[e]);
-            if (j == i || j < 0 || j >= n) continue;  // pairs dedupe below
-            int ca = g_graph.node_cluster_id[i];
-            int cb = g_graph.node_cluster_id[j];
-            if (ca == cb) continue;
-            if (ca > cb) std::swap(ca, cb);
-            const EdgeResult er = ClassifyEdge(nullptr, g_graph.node_pos[i],
-                                               g_graph.node_pos[j],
-                                               "ClusterLinks");
-            if (er.kind == kEdgeBlocked) continue;
-            const bool viaDoor = er.kind == kEdgeDoor && er.doorIdx >= 0;
-            ClusterLink* found = nullptr;
-            for (ClusterLink& l : g_graph.cluster_links) {
-                if (l.a == ca && l.b == cb) { found = &l; break; }
-            }
-            if (!found) {
-                ClusterLink l;
-                l.a       = ca;
-                l.b       = cb;
-                l.viaDoor = viaDoor;
-                if (viaDoor) l.doorPos = g_graph.doors[er.doorIdx].pos;
-                g_graph.cluster_links.push_back(l);
-            } else if (found->viaDoor && !viaDoor) {
-                found->viaDoor = false;  // a free way round the door
-            }
-        }
-    }
+    BuildClusterLinks(g, n);
 
     g_graph.built = true;
     acclog::Write("WallTopo",
@@ -354,6 +362,110 @@ bool GetClusterLinks(void* area, std::vector<ClusterLink>& out) {
     return true;
 }
 
+namespace {
+
+// The labelled nodes nearest to a position, by floor-plan distance: the
+// engine stores every path-graph node at z = 0, so a 3D distance would pin
+// elevated areas (the Taris sewers platform at z 28) to the neutral "Area".
+struct NodeScan {
+    int   best = -1;          // reachable, not filtered: the primary pick
+    float bestSq = 1e30f;
+    int   filtered = -1;      // reachable, dropped by the walkmesh-shape
+    float filteredSq = 1e30f; //   gate: the rescue pick
+    int   blocked = -1;       // nearest unreachable one, for the log
+    float blockedSq = 1e30f;
+    bool  blockedByZ = false;
+    int   blockedSeen = 0;
+};
+
+// A node is reachable when it is on the caller's floor (zTrusted: its
+// calibrated floor within the wall test's own z tolerance, so "same floor"
+// means one thing in both filters) and no wall lies between
+// (requireWallReachable: against the seam-filtered wall cache, so a room
+// does not speak the label of the corridor next door). With a trusted z
+// the ray runs floor to floor and other-storey walls drop out; without it
+// the test is plain 2D, for cursor callers.
+NodeScan ScanNodes(const Vector& worldPos, bool requireWallReachable, bool zTrusted) {
+    const acc::engine::WallEdge* walls = nullptr;
+    int wallCount = 0;
+    const bool testWalls =
+        acc::spatial::wall_surfaces::GetCachedWalls(walls, wallCount) &&
+        requireWallReachable;
+
+    NodeScan s;
+    for (int i = 0; i < g_graph.node_count; ++i) {
+        if (g_graph.node_label[i].empty()) continue;
+        const float d2 = DistXYSq(g_graph.node_pos[i], worldPos);
+
+        const bool zVetoed =
+            zTrusted && std::fabs(worldPos.z - g_graph.node_floor_z[i]) >
+                            acc::engine::kWallCrossZToleranceM;
+        bool reachable = !zVetoed;
+        if (reachable && testWalls) {
+            Vector hit{};
+            Vector nodeEnd = g_graph.node_pos[i];
+            if (zTrusted) nodeEnd.z = g_graph.node_floor_z[i];
+            reachable = !acc::engine::SegmentCrossesWalkmesh(
+                walls, wallCount, worldPos, nodeEnd, hit);
+        }
+
+        if (g_graph.node_filtered[i]) {
+            if (reachable && d2 < s.filteredSq) {
+                s.filteredSq = d2;
+                s.filtered = i;
+            }
+        } else if (reachable) {
+            if (d2 < s.bestSq) {
+                s.bestSq = d2;
+                s.best = i;
+            }
+        } else {
+            ++s.blockedSeen;
+            if (d2 < s.blockedSq) {
+                s.blockedSq = d2;
+                s.blocked = i;
+                s.blockedByZ = zVetoed;
+            }
+        }
+    }
+    return s;
+}
+
+// Logged only when the filter rejected a candidate nearer than the pick, or
+// rejected every one (a sign the wall cache or the position is wrong).
+// Callers ask for it on room changes, not per tick.
+void LogScan(const NodeScan& s, const Vector& worldPos) {
+    if (s.blocked >= 0 && (s.best < 0 || s.blockedSq < s.bestSq)) {
+        acclog::Write(
+            "WallTopo",
+            "LookupAt WALL-FILTERED at (%.1f,%.1f,%.1f): nearest candidate node[%d] "
+            "(%.1f,%.1f) \"%s\" at %.1fm is %s; picked node[%d] (%.1f,%.1f) \"%s\" "
+            "at %.1fm instead (blocked-seen=%d)",
+            worldPos.x, worldPos.y, worldPos.z, s.blocked,
+            g_graph.node_pos[s.blocked].x, g_graph.node_pos[s.blocked].y,
+            g_graph.node_label[s.blocked].c_str(), std::sqrt(s.blockedSq),
+            s.blockedByZ ? "on another level (z-veto)" : "behind a wall", s.best,
+            s.best >= 0 ? g_graph.node_pos[s.best].x : 0.0f,
+            s.best >= 0 ? g_graph.node_pos[s.best].y : 0.0f,
+            s.best >= 0 ? g_graph.node_label[s.best].c_str() : "(none)",
+            s.best >= 0 ? std::sqrt(s.bestSq) : -1.0f, s.blockedSeen);
+    }
+    if (s.best < 0 && s.blockedSeen > 0) {
+        acclog::Write(
+            "WallTopo",
+            "LookupAt ALL-BLOCKED at (%.1f,%.1f,%.1f): every labelled node (%d "
+            "candidates) was wall-filtered. Falling back to neutral Area. Possible "
+            "overfire - check wall cache vs player position.",
+            worldPos.x, worldPos.y, worldPos.z, s.blockedSeen);
+    }
+}
+
+bool InSnapRange(int node, float distSq) {
+    return node >= 0 && distSq <= kMaxSnapM * kMaxSnapM;
+}
+
+}  // namespace
+
 bool LookupAt(void* area, const Vector& worldPos,
               std::string& outLabel, int& outSig,
               int& outClusterId,
@@ -368,211 +480,45 @@ bool LookupAt(void* area, const Vector& worldPos,
     if (!HasGraphForArea(area)) return false;
     if (g_graph.node_count <= 0) return false;
 
-    // 2D nearest-node. The engine stores all path-graph nodes at z=0
-    // (the nav data is logically 2D — verified across every area in
-    // logged play, including multi-elevation maps). Including dz in
-    // the distance broke elevated areas: Taris Sewers spawns the
-    // player at z≈28m on the upper platform, which alone exceeds the
-    // 15m snap radius and pins every position to the neutral "Area"
-    // fallback. Multi-floor disambiguation needs to come from room-id,
-    // not z against an always-zero graph.
-    //
-    // Two parallel best-candidate slots:
-    //   - `best`         : reachable, unfiltered (primary)
-    //   - `bestFiltered` : reachable, walkmesh-gate-rejected (rescue)
-    // Primary wins whenever a candidate sits within snap range. Rescue
-    // is consulted only when no primary in range — recovers the
-    // Bucket-3 "alcove dropped by the geometry gate, no other labelled
-    // cluster nearby → would have emitted the neutral Area" case without
-    // re-introducing wall-curve artefacts on inhabited terrain (those
-    // get absorbed by the core-merge / straggler-absorb passes upstream,
-    // or lose on distance to a real labelled cluster).
-    //
-    // Wall-reachability filter (made for the
-    // Endar Spire starting room speaking corridor labels from the
-    // *adjacent* hallway): test segment (worldPos → candidate.pos)
-    // against the seam-filtered perimeter wall cache. Applied
-    // identically to both primary and rescue scans.
-    //
-    // Track best-blocked separately so we can still log "would have
-    // picked X but it's behind a wall" for diagnostic tuning.
-    const acc::engine::WallEdge* walls = nullptr;
-    int wallCount = 0;
-    bool haveWalls = acc::spatial::wall_surfaces::GetCachedWalls(
-        walls, wallCount);
+    const NodeScan s = ScanNodes(worldPos, requireWallReachable, zTrusted);
+    if (allowDiagLog) LogScan(s, worldPos);
 
-    int   best           = -1;
-    float bestSq         = 1e30f;
-    int   bestFiltered   = -1;
-    float bestFilteredSq = 1e30f;
-    int   bestBlocked    = -1;
-    float bestBlockedSq  = 1e30f;
-    bool  bestBlockedZ   = false;
-    int   blockedSeen    = 0;
-    for (int i = 0; i < g_graph.node_count; ++i) {
-        if (g_graph.node_label[i].empty()) continue;
-        float dx = g_graph.node_pos[i].x - worldPos.x;
-        float dy = g_graph.node_pos[i].y - worldPos.y;
-        float d2 = dx * dx + dy * dy;
-
-        bool reachable = true;
-        bool zVetoed   = false;
-        if (zTrusted) {
-            // Vertical veto: the candidate's calibrated floor sits more
-            // than a same-floor tolerance from the caller's height —
-            // another storey / hull level, whatever the 2D distance says.
-            // Same threshold as the wall test's z-guard so "same floor"
-            // means one thing across both filters.
-            float dz = worldPos.z - g_graph.node_floor_z[i];
-            if (dz < 0.0f) dz = -dz;
-            if (dz > acc::engine::kWallCrossZToleranceM) {
-                reachable = false;
-                zVetoed   = true;
-            }
-        }
-        if (reachable && haveWalls && requireWallReachable) {
-            Vector hitTmp{};
-            Vector nodeEnd = g_graph.node_pos[i];
-            // With a trusted z the segment runs floor-to-floor, so the
-            // z-guard inside SegmentCrossesWalkmesh keeps same-floor
-            // walls (ledge edges included) and drops other-storey ones
-            // along the whole ray. Untrusted z keeps the historical z=0
-            // endpoint — pure 2D behaviour for cursor callers.
-            if (zTrusted) nodeEnd.z = g_graph.node_floor_z[i];
-            reachable = !acc::engine::SegmentCrossesWalkmesh(
-                walls, wallCount, worldPos, nodeEnd, hitTmp);
-        }
-
-        if (g_graph.node_filtered[i]) {
-            // Rescue-only candidate. Wall-filtered diagnostics ignore
-            // these (they're not "would have been picked" by the
-            // primary scan in any case).
-            if (reachable && d2 < bestFilteredSq) {
-                bestFilteredSq = d2;
-                bestFiltered   = i;
-            }
-            continue;
-        }
-
-        if (reachable) {
-            if (d2 < bestSq) {
-                bestSq = d2;
-                best   = i;
-            }
-        } else {
-            ++blockedSeen;
-            if (d2 < bestBlockedSq) {
-                bestBlockedSq = d2;
-                bestBlocked   = i;
-                bestBlockedZ  = zVetoed;
-            }
+    // The primary pick wins when in range. Otherwise the rescue pick: an
+    // alcove the shape gate misjudged, with no labelled cluster in range.
+    // The merge passes upstream absorb wall-curve artefacts inside inhabited
+    // regions, so a surviving filtered node is almost always a real alcove.
+    int pick = -1;
+    if (InSnapRange(s.best, s.bestSq)) {
+        pick = s.best;
+    } else if (InSnapRange(s.filtered, s.filteredSq)) {
+        pick = s.filtered;
+        if (allowDiagLog) {
+            acclog::Write(
+                "WallTopo",
+                "LookupAt RESCUE at (%.1f,%.1f,%.1f): no unfiltered candidate in "
+                "range (best primary %.1fm); using filtered node[%d] (%.1f,%.1f) "
+                "\"%s\" at %.1fm",
+                worldPos.x, worldPos.y, worldPos.z,
+                s.best >= 0 ? std::sqrt(s.bestSq) : -1.0f, pick,
+                g_graph.node_pos[pick].x, g_graph.node_pos[pick].y,
+                g_graph.node_label[pick].c_str(), std::sqrt(s.filteredSq));
         }
     }
-
-    // Diagnostic: log the snap decision whenever the wall filter
-    // actually rejected a candidate that would have been closer than
-    // our pick. Silent when the nearest candidate is already
-    // reachable (no filtering happened). Called from
-    // SpeakRoomChange / LogWallTopoComparison — both fire on room
-    // transitions, not per-tick, so logging here is bounded.
-    if (allowDiagLog &&
-        bestBlocked >= 0 &&
-        (best < 0 || bestBlockedSq < bestSq)) {
-        float bDist = std::sqrt(bestBlockedSq);
-        float pDist = best >= 0 ? std::sqrt(bestSq) : -1.0f;
-        acclog::Write(
-            "WallTopo",
-            "LookupAt WALL-FILTERED at (%.1f,%.1f,%.1f): nearest "
-            "candidate node[%d] (%.1f,%.1f) \"%s\" at %.1fm is %s; "
-            "picked node[%d] (%.1f,%.1f) \"%s\" at %.1fm "
-            "instead (blocked-seen=%d)",
-            worldPos.x, worldPos.y, worldPos.z,
-            bestBlocked,
-            g_graph.node_pos[bestBlocked].x,
-            g_graph.node_pos[bestBlocked].y,
-            g_graph.node_label[bestBlocked].c_str(),
-            bDist,
-            bestBlockedZ ? "on another level (z-veto)" : "behind a wall",
-            best,
-            best >= 0 ? g_graph.node_pos[best].x : 0.0f,
-            best >= 0 ? g_graph.node_pos[best].y : 0.0f,
-            best >= 0 ? g_graph.node_label[best].c_str() : "(none)",
-            pDist,
-            blockedSeen);
-    }
-    // Sanity: every candidate filtered out is a strong signal the
-    // wall cache or the player position is wrong. Surfaces overfire.
-    if (allowDiagLog && best < 0 && blockedSeen > 0) {
-        acclog::Write(
-            "WallTopo",
-            "LookupAt ALL-BLOCKED at (%.1f,%.1f,%.1f): every labelled "
-            "node (%d candidates) was wall-filtered. Falling back to "
-            "neutral Area. Possible overfire — check wall cache vs "
-            "player position.",
-            worldPos.x, worldPos.y, worldPos.z, blockedSeen);
-    }
-
-    // Primary wins when in range.
-    if (best >= 0) {
-        float bestDist = std::sqrt(bestSq);
-        if (bestDist <= kMaxSnapM &&
-            !g_graph.node_label[best].empty()) {
-            outLabel     = g_graph.node_label[best];
-            outSig       = g_graph.node_sig[best];
-            outClusterId = g_graph.node_cluster_id[best];
-            if (outExits) *outExits = g_graph.node_exits[best];
-            return true;
-        }
-    }
-
-    // Rescue: no primary in range, but a filtered candidate is. Recovers
-    // alcoves the walkmesh-shape gate misjudged when no labelled cluster
-    // sits within snap radius. Merge passes upstream eliminate the
-    // wall-curve case (artefacts inside inhabited regions get absorbed
-    // by the core-merge / straggler-absorb passes), so surviving filtered
-    // singletons are graph-isolated and almost always genuine alcoves.
-    if (bestFiltered >= 0) {
-        float fDist = std::sqrt(bestFilteredSq);
-        if (fDist <= kMaxSnapM &&
-            !g_graph.node_label[bestFiltered].empty()) {
-            if (allowDiagLog) {
-                float pDist = best >= 0 ? std::sqrt(bestSq) : -1.0f;
-                acclog::Write(
-                    "WallTopo",
-                    "LookupAt RESCUE at (%.1f,%.1f,%.1f): no unfiltered "
-                    "candidate in range (best primary %.1fm); using "
-                    "filtered node[%d] (%.1f,%.1f) \"%s\" at %.1fm",
-                    worldPos.x, worldPos.y, worldPos.z,
-                    pDist,
-                    bestFiltered,
-                    g_graph.node_pos[bestFiltered].x,
-                    g_graph.node_pos[bestFiltered].y,
-                    g_graph.node_label[bestFiltered].c_str(),
-                    fDist);
-            }
-            outLabel     = g_graph.node_label[bestFiltered];
-            outSig       = g_graph.node_sig[bestFiltered];
-            outClusterId = g_graph.node_cluster_id[bestFiltered];
-            if (outExits) *outExits = g_graph.node_exits[bestFiltered];
-            return true;
-        }
-    }
-
-    // No primary, no rescue: emit the neutral "Area" when the graph
-    // has at least one candidate (so the player gets one stable "you're
-    // in an area" cue). Return false only when the graph is empty.
-    if (best < 0 && bestFiltered < 0 && blockedSeen == 0) {
-        return false;
-    }
-    const char* fallback =
-        acc::strings::Get(acc::strings::Id::AreaNoun);
-    if (fallback && fallback[0]) {
-        outLabel = fallback;
-        outSig = kKindOpenArea & 0xff;
-        outClusterId = kClusterIdOpenArea;
+    if (pick >= 0) {
+        outLabel     = g_graph.node_label[pick];
+        outSig       = g_graph.node_sig[pick];
+        outClusterId = g_graph.node_cluster_id[pick];
+        if (outExits) *outExits = g_graph.node_exits[pick];
         return true;
     }
-    return false;
+
+    // Candidates, but none in range: the neutral "Area", so the player gets
+    // one stable cue. False only when the graph had no candidate at all.
+    if (s.best < 0 && s.filtered < 0 && s.blockedSeen == 0) return false;
+    outLabel = acc::strings::Get(acc::strings::Id::AreaNoun);
+    outSig = kKindOpenArea & 0xff;
+    outClusterId = kClusterIdOpenArea;
+    return true;
 }
 
 }  // namespace acc::room_topology

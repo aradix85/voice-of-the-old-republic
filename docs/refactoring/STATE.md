@@ -270,6 +270,10 @@ engine_picker: Drive in named steps and lean (f1d01f52, 348 lines).
 minigame_swoop_audio_internal.h: layout and tuning constants to
 minigame_swoop_audio_tuning.h (7eaf1d81).
 Nothing above 600 lines is left except the catalog headers.
+The 500-600 files, judged one by one: input_poll_router: PollHotkey as a
+gate list of named steps (56de760d, 355 lines). room_topology: LookupAt
+as ScanNodes, LogScan and the pick; BuildClusterLinks out of BuildForArea
+(524 lines, kept whole).
 
 Careful: never rewrite source files with PowerShell ReadAllText/WriteAllText
 (it decodes UTF-8 and writes '?' for the dashes and umlauts in comments);
@@ -332,9 +336,9 @@ prefix (menus_listbox_picker.cpp).
   possible; for files above 500 lines, judge whether a split into modules of
   things that belong together makes sense, and do it where it does.
 - Next file, by size (2026-11-10 21:15, strings*.cpp excepted):
-  to judge: combat_query 585, room_topology 578, room_topology_label_kinds
-  576, room_topology_doors 574, log 563, menus_chargen_feats 561,
-  input_poll_router 559, engine_player_party 551, spatial_wall_surfaces
+  to judge: combat_query 585, room_topology_label_kinds 576 (ClassifyAsArea
+  ccn 54), room_topology_doors 574, log 563, menus_chargen_feats 561,
+  engine_player_party 551, spatial_wall_surfaces
   546, combat_diag 543, minigame_turret_peg 536, engine_keymap 536,
   menus_listbox_picker 524, menus_focus_k2 520, help 520, menus_focus 510,
   menus_powers_levelup 510. The catalog headers (engine_offsets_fields.h
