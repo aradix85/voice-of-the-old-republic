@@ -52,8 +52,7 @@ namespace KotorAccessibilityInstaller
     /// a file that is not an installer at all routes the user to the manual
     /// browser download), then — when the KOTOR 2 folder is known — runs the installer
     /// silently with Inno Setup's <c>/VERYSILENT /DIR=...</c>. Silent install
-    /// is the default because the TSLRCM wizard is English-only while this
-    /// installer speaks the user's language.
+    /// is the default.
     ///
     /// The silent run is verified by fingerprinting the game's
     /// <c>dialog.tlk</c> before and after: TSLRCM always replaces it, so an

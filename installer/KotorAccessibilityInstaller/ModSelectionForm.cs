@@ -40,8 +40,6 @@ namespace KotorAccessibilityInstaller
         private CheckBox _thematicCheckBox;
         private Label _thematicDescription;
 
-        private Label _footnoteLabel;
-
         private Button _backButton;
         private Button _nextButton;
 
@@ -53,19 +51,8 @@ namespace KotorAccessibilityInstaller
         /// </summary>
         public ModSelection Selection { get; private set; } = ModSelection.AllOn();
 
-        /// <summary>
-        /// Detected locale of the game install, used to extend the footnote.
-        /// A Russian install gets two extra paragraphs: confirmation that the
-        /// translation was found, and the translation author's statement that
-        /// K1CP is untested against it. Folded into the existing footnote
-        /// rather than shown as its own dialog so the flow keeps the same
-        /// number of steps for everyone.
-        /// </summary>
-        private readonly GameLocale _gameLocale;
-
-        public ModSelectionForm(GameLocale gameLocale = GameLocale.Unknown)
+        public ModSelectionForm()
         {
-            _gameLocale = gameLocale;
             InitializeComponents();
             ApplyLocale();
             FormClosing += (s, e) =>
@@ -82,7 +69,7 @@ namespace KotorAccessibilityInstaller
         private void InitializeComponents()
         {
             Text = Config.DisplayName;
-            Size = new Size(640, 470);
+            Size = new Size(640, 395);
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
             MinimizeBox = false;
@@ -163,19 +150,10 @@ namespace KotorAccessibilityInstaller
                 TextAlign = ContentAlignment.TopLeft
             };
 
-            // --- IT/ES footnote on K1CP ---
-            _footnoteLabel = new Label
-            {
-                Location = new Point(20, 275),
-                Size = new Size(600, 75),
-                TextAlign = ContentAlignment.TopLeft,
-                Font = new Font(FontFamily.GenericSansSerif, 8, FontStyle.Italic)
-            };
-
-            _backButton = new Button { Location = new Point(20, 365), Size = new Size(140, 35) };
+            _backButton = new Button { Location = new Point(20, 290), Size = new Size(140, 35) };
             _backButton.Click += (s, e) => Close();
 
-            _nextButton = new Button { Location = new Point(480, 365), Size = new Size(140, 35) };
+            _nextButton = new Button { Location = new Point(480, 290), Size = new Size(140, 35) };
             _nextButton.Click += (s, e) =>
             {
                 // RestoredCutContent + SwoopUpgrades forced false because no
@@ -208,7 +186,6 @@ namespace KotorAccessibilityInstaller
                 // _cutContentCheckBox, _cutContentDescription,
                 // _swoopCheckBox, _swoopDescription,
                 _thematicCheckBox, _thematicDescription,
-                _footnoteLabel,
                 _backButton, _nextButton
             });
 
@@ -233,8 +210,6 @@ namespace KotorAccessibilityInstaller
             _thematicCheckBox.Text = InstallerLocale.Get("ModSelection_ThematicCheckbox");
             _thematicDescription.Text = InstallerLocale.Get("ModSelection_ThematicDescription");
 
-            _footnoteLabel.Text = BuildFootnote();
-
             _backButton.Text = InstallerLocale.Get("ModSelection_BackButton");
             _nextButton.Text = InstallerLocale.Get("ModSelection_NextButton");
 
@@ -250,40 +225,6 @@ namespace KotorAccessibilityInstaller
             string body = $"{_titleLabel.Text}. {_descriptionLabel.Text}";
             AccessibleDescription = body;
             _nextButton.AccessibleDescription = body;
-        }
-
-        /// <summary>
-        /// Base footnote, plus the locale-specific paragraphs for the two
-        /// translations KOTOR never shipped through a store: a Russian
-        /// community translation, or the official Polish LEM localisation.
-        /// </summary>
-        private string BuildFootnote()
-        {
-            string footnote = InstallerLocale.Get("ModSelection_FootnoteBody");
-
-            if (_gameLocale == GameLocale.Russian)
-            {
-                return string.Join("\n\n", new[]
-                {
-                    $"{InstallerLocale.Get("Russian_Detected_Heading")}: " +
-                    InstallerLocale.Get("Russian_Detected_Body"),
-                    $"{InstallerLocale.Get("Russian_K1cpUntested_Heading")}: " +
-                    InstallerLocale.Get("Russian_K1cpUntested_Body"),
-                    footnote
-                });
-            }
-
-            if (_gameLocale == GameLocale.Polish)
-            {
-                return string.Join("\n\n", new[]
-                {
-                    $"{InstallerLocale.Get("Polish_Detected_Heading")}: " +
-                    InstallerLocale.Get("Polish_Detected_Body"),
-                    footnote
-                });
-            }
-
-            return footnote;
         }
     }
 }

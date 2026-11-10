@@ -84,8 +84,6 @@ namespace KotorAccessibilityInstaller.ModInstallers
                 return results;
             }
 
-            var locale = GameLocaleDetector.Detect(gameDir);
-
             int selectedCount = 0;
             foreach (var inst in pipeline)
                 if (inst.IsSelected(selection)) selectedCount++;
@@ -117,7 +115,6 @@ namespace KotorAccessibilityInstaller.ModInstallers
                 var ctx = new ModInstallContext
                 {
                     GameDir = gameDir,
-                    Locale = locale,
                     HoloPatcherExePath = holoPatcherExePath,
                     Progress = p =>
                     {

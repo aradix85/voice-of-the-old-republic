@@ -23,14 +23,9 @@ namespace KotorAccessibilityInstaller
     /// The descriptive name lives in the KEY name, so both are matched now, and
     /// against either wording.</para>
     ///
-    /// <para><b>Structural blind spot (found 2026-08-04).</b> This can only ever
-    /// see the English DeadlyStream edition, because only that one runs an Inno
-    /// installer. Non-English players get the localized Steam Workshop edition
-    /// via <see cref="WorkshopTslrcmForm"/> — a file copy into the game folder
-    /// that registers nothing at all. For those users a registry miss is not
-    /// weak evidence of absence, it is *no* evidence, and our own installer is
-    /// what put them in that state. See <see cref="CountPatchedModules"/> and
-    /// the caller.</para>
+    /// <para>This can only see a TSLRCM that ran its Inno installer; a copy put
+    /// in place by hand registers nothing. See <see cref="CountPatchedModules"/>
+    /// and the caller.</para>
     ///
     /// <para>The caller still does not treat a miss here as proof of absence —
     /// see <see cref="InstallFlow"/>. Being wrong in that direction silently

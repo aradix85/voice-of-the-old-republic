@@ -1,4 +1,4 @@
-# ModInstallerCoordinator.cs (150 lines)
+# ModInstallerCoordinator.cs (147 lines)
 
 Source: `installer/KotorAccessibilityInstaller/ModInstallers/ModInstallerCoordinator.cs`
 

@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Reflection;
-using System.Security.Cryptography;
 using System.Security.Principal;
 using System.Text;
 using System.Windows.Forms;
@@ -115,13 +115,8 @@ namespace KotorAccessibilityInstaller
                 // prefill just leaves Install disabled until corrected.
                 resolvedK1Path = k1Path ?? gamePath ?? GamePathDetector.DefaultGamePath;
 
-                // Detect the game's own language before the optional-mods screen so
-                // the Russian notes can ride that screen's footnote instead of
-                // adding a step. Content-based for Russian — see GameLocaleDetector.
-                GameLocale gameLocale = GameLocaleDetector.Detect(resolvedK1Path);
-
                 // Optional mods: K1CP / cut content / companion + swoop. All default on.
-                var selectionForm = new ModSelectionForm(gameLocale);
+                var selectionForm = new ModSelectionForm();
                 Application.Run(selectionForm);
                 if (!selectionForm.ProceedWithInstall)
                 {
@@ -253,139 +248,16 @@ namespace KotorAccessibilityInstaller
             }
 
             // Subscribed Workshop items override everything we are about to
-            // install. Ask before, not after — except for the localized TSLRCM
-            // item this run may be about to use, which is resolved just below.
-            var preflightLocale = GameLocale.English;
-            WorkshopTslrcmForm.TryGetWorkshopItem(preflightLocale, out string preflightItemId);
-            if (k2Path != null && !ConfirmNoWorkshopContent(k2Path, preflightItemId)) return;
-
-            // For the record only. The game's own language stops being a usable
-            // signal the moment the English TSLRCM replaces dialog.tlk, so the
-            // routing below keys off the installer's language instead — but
-            // knowing what the game WAS is worth having in the log.
-            if (k2Path != null)
-                Logger.Info($"KOTOR 2 text language before TSLRCM: {GameLocaleDetector.Detect(k2Path)}");
+            // install. Ask before, not after.
+            if (k2Path != null && !ConfirmNoWorkshopContent(k2Path)) return;
 
             var summary = new StringBuilder();
             summary.AppendLine(InstallerLocale.Get("ModInstall_SummaryHeading"));
             const string tslrcmName = "TSLRCM 1.8.6";
 
-            // WHICH TSLRCM this user gets. Non-English players take the
-            // localized Steam Workshop edition; everyone else takes the English
-            // DeadlyStream installer.
-            //
-            // This is not a preference, it is the only correct answer for them.
-            // The DeadlyStream exe is English-only and ships a full English
-            // dialog.tlk that replaces the player's — turning a German game's
-            // entire text English, losing a translation that was already right.
-            // The localized editions exist only as Workshop items and get the
-            // text table right for each locale: de/fr/it/es embed their new
-            // strings in the content files and leave the player's own table
-            // alone, and Russian — which has no vanilla localized table at all
-            // — brings its own. See WorkshopTslrcmForm.
-            var tslrcmLocale = GameLocale.English;
-            bool wantsLocalizedTslrcm =
-                k2Path != null &&
-                tslrcmLocale != GameLocale.English && tslrcmLocale != GameLocale.Unknown &&
-                WorkshopTslrcmForm.TryGetWorkshopItem(tslrcmLocale, out _);
-
-            // The Workshop items are only reachable from a Steam-managed
-            // install — subscribing needs Steam with KOTOR 2 in the account's
-            // library, and the download lands in that library's steamapps
-            // folder. On a GOG (or otherwise non-Steam) copy the choice is the
-            // English edition or no TSLRCM; say so up front rather than
-            // dead-ending the user in a Workshop wait that can never finish.
-            bool isSteamInstall = k2Path != null &&
-                GamePathDetector.IsSteamPath(GameTarget.Kotor2, k2Path);
-            bool useLocalizedTslrcm = wantsLocalizedTslrcm && isSteamInstall;
-
             bool installTslrcm = selectionForm.InstallTslrcm;
-            bool preserveTlk = false;
-            if (installTslrcm && wantsLocalizedTslrcm && !isSteamInstall)
-            {
-                // Which offer this user gets depends on the GAME's text, not
-                // the installer language: preserving the text table is only
-                // worth anything when a localized table is actually in place.
-                // The FIGS Workshop editions prove the reconstruction works —
-                // they ship no tlk at all and defer to the vanilla localized
-                // table, embedding only ~28 new strings in 10 companion
-                // dialogs (docs/installer.md, "Localization — REWRITTEN
-                // 2026-08-04"). English content + the player's own table is
-                // that same edition minus those strings and the 7 trap-kit
-                // items, both of which RestoreLocalizedTlk accounts for.
-                var gameTextLocale = GameLocaleDetector.Detect(k2Path);
-                bool canPreserve =
-                    gameTextLocale == GameLocale.German || gameTextLocale == GameLocale.French ||
-                    gameTextLocale == GameLocale.Italian || gameTextLocale == GameLocale.Spanish;
-
-                if (canPreserve)
-                {
-                    Logger.Info($"Localized TSLRCM ({tslrcmLocale}) unavailable: the KOTOR 2 " +
-                                $"install is not Steam-managed; game text is {gameTextLocale} — " +
-                                "offering the preserve-tlk English install");
-                    var choice = MessageBox.Show(
-                        InstallerLocale.Format("K2Lang_NoSteamPreserve_Format", tslrcmLocale.ToString()),
-                        InstallerLocale.Get("K2Prep_Title"),
-                        MessageBoxButtons.YesNoCancel,
-                        MessageBoxIcon.Question);
-                    if (choice == DialogResult.Yes)
-                    {
-                        preserveTlk = true;
-                        Logger.Info("User chose the English TSLRCM with the localized text preserved");
-                    }
-                    else if (choice == DialogResult.No)
-                    {
-                        Logger.Info("User chose the fully English TSLRCM");
-                    }
-                    else
-                    {
-                        Logger.Info("User skipped TSLRCM at the non-Steam offer");
-                        installTslrcm = false;
-                    }
-                }
-                else
-                {
-                    Logger.Info($"Localized TSLRCM ({tslrcmLocale}) unavailable: the KOTOR 2 " +
-                                $"install is not Steam-managed and its text is {gameTextLocale}, " +
-                                "so there is nothing to preserve; offering the English edition");
-                    var choice = MessageBox.Show(
-                        InstallerLocale.Format("K2Lang_NoSteam_Format", tslrcmLocale.ToString()),
-                        InstallerLocale.Get("K2Prep_Title"),
-                        MessageBoxButtons.YesNo,
-                        MessageBoxIcon.Warning);
-                    if (choice != DialogResult.Yes)
-                    {
-                        Logger.Info("User declined the English TSLRCM on a non-Steam install");
-                        installTslrcm = false;
-                    }
-                }
-            }
-
-            // Back up the localized table BEFORE anything can touch it. If
-            // even the backup fails, honour what the user was promised —
-            // their text stays — by not installing at all.
-            string preservedTlkBackup = null;
-            if (installTslrcm && preserveTlk)
-            {
-                preservedTlkBackup = BackupLocalizedTlk(k2Path);
-                if (preservedTlkBackup == null)
-                {
-                    MessageBox.Show(
-                        InstallerLocale.Get("K2Lang_PreserveBackupFailed"),
-                        InstallerLocale.Get("K2Prep_Title"),
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Warning);
-                    installTslrcm = false;
-                }
-            }
-
             bool tslrcmPresent;
-            bool tlkRestored = false;
-            if (installTslrcm && useLocalizedTslrcm)
-            {
-                tslrcmPresent = RunLocalizedTslrcmInstall(k2Path, tslrcmLocale, summary, tslrcmName);
-            }
-            else if (installTslrcm)
+            if (installTslrcm)
             {
                 // Three signals, strongest first.
                 //
@@ -401,16 +273,6 @@ namespace KotorAccessibilityInstaller
                 //    Pack — the failure that leaves a player with a mod set
                 //    they believe is complete and is not.
                 var outcome = RunTslrcmInstall(k2Path);
-
-                // All installing (silent, wizard fallback, manual download)
-                // happens inside RunTslrcmInstall, so the localized table can
-                // be put back now — before K2CP and the Tweak Pack run, whose
-                // TSLPatcher appends must land on the localized file, exactly
-                // as they do after a Workshop-edition install. The presence
-                // signals below don't read dialog.tlk, so restoring first
-                // changes nothing about them.
-                if (preservedTlkBackup != null)
-                    tlkRestored = RestoreLocalizedTlk(k2Path, preservedTlkBackup);
 
                 if (outcome == TslrcmOutcome.SilentInstalled)
                 {
@@ -443,21 +305,13 @@ namespace KotorAccessibilityInstaller
                         _tslrcmWasAlreadyInstalled ? "ModInstall_SummaryAlready_Format"
                                                    : "ModInstall_SummaryOk_Format", tslrcmName)
                     : InstallerLocale.Format("ModInstall_SummaryFailed_Format", tslrcmName, "(not installed)"));
-                if (tlkRestored)
-                    summary.AppendLine(InstallerLocale.Get("K2Lang_PreserveDone"));
             }
             else
             {
-                // The user unticked TSLRCM (or declined the English edition on
-                // a non-Steam install), which in practice means "it is
-                // already there" or "not this time". The registry answers the
-                // presence question for the English
-                // DeadlyStream edition and CANNOT answer it for the localized
-                // Workshop edition, which registers nothing — so on a miss we
-                // ask rather than concluding absence from a signal that does
-                // not exist for half our users. Silently skipping their mods is
-                // exactly the failure the install path above already refuses to
-                // risk; this branch just never inherited that reasoning.
+                // The user unticked TSLRCM, which in practice means "it is
+                // already there" or "not this time". The registry only knows an
+                // installer-made TSLRCM, so on a miss we ask rather than silently
+                // skipping the mods that build on it.
                 if (TslrcmDetector.IsInstalled())
                 {
                     tslrcmPresent = true;
@@ -539,103 +393,19 @@ namespace KotorAccessibilityInstaller
         }
 
         /// <summary>
-        /// TSLRCM step: silent install when the KOTOR 2 folder is known,
-        /// visible English wizard as fallback (no folder detected, or the
-        /// silent run failed and the user accepts the fallback). Returns the
-        /// form's outcome so the caller can tell a self-verified silent install
-        /// from a wizard handoff whose result only the user knows.
-        /// </summary>
-        /// <summary>
-        /// TSLRCM for a non-English player: the localized Steam Workshop
-        /// edition, copied into the game folder.
-        ///
-        /// <para>The user subscribes in Steam's own UI (the one manual step we
-        /// cannot automate — the items are UGC-depot hosted, so there is no
-        /// anonymous download), we copy the content out, and we tell them to
-        /// unsubscribe. Unsubscribing is what makes this safe: while the item
-        /// stays subscribed, the game reads it from a separate folder whose
-        /// files hard-conflict with directory-installed mods. Once copied and
-        /// unsubscribed, they are ordinary game files that K2CP and the Tweak
-        /// Pack patch normally.</para>
-        ///
-        /// <para>Returns whether TSLRCM ended up installed.</para>
-        /// </summary>
-        private static bool RunLocalizedTslrcmInstall(
-            string k2Path, GameLocale locale, StringBuilder summary, string tslrcmName)
-        {
-            WorkshopTslrcmForm.TryGetWorkshopItem(locale, out string itemId);
-            Logger.Info($"TSLRCM: taking the localized Workshop edition for {locale} (item {itemId})");
-
-            // What the offer promises about the text table differs for the one
-            // locale whose item brings its own — see ItemShipsTextTable.
-            string textTableNote = InstallerLocale.Get(
-                WorkshopTslrcmForm.ItemShipsTextTable(locale)
-                    ? "K2Lang_Offer_BringsText"
-                    : "K2Lang_Offer_KeepsText");
-
-            var offer = MessageBox.Show(
-                InstallerLocale.Format("K2Lang_Offer_Text", locale.ToString(), textTableNote),
-                InstallerLocale.Get("K2Prep_Title"),
-                MessageBoxButtons.YesNo,
-                MessageBoxIcon.Question);
-
-            if (offer != DialogResult.Yes)
-            {
-                // Declining the localized edition means declining TSLRCM. We do
-                // NOT quietly fall back to the English one: that would replace
-                // their text table with English, which is the outcome this whole
-                // path exists to avoid, and doing it as an unrequested fallback
-                // would be the worst way to arrive there.
-                Logger.Info("User declined the localized TSLRCM; TSLRCM not installed");
-                summary.AppendLine(InstallerLocale.Format("ModInstall_SummarySkipped_Format", tslrcmName));
-                return TslrcmDetector.IsInstalled();
-            }
-
-            var form = new WorkshopTslrcmForm(k2Path, locale, itemId);
-            Application.Run(form);
-
-            if (form.Success)
-            {
-                string done = InstallerLocale.Get("K2Lang_Done_Text");
-                if (form.TextTableInstalled)
-                    done += "\n\n" + InstallerLocale.Get("K2Lang_Done_TextInstalled");
-
-                MessageBox.Show(
-                    done,
-                    InstallerLocale.Get("K2Prep_Title"),
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Information);
-                summary.AppendLine(InstallerLocale.Format("ModInstall_SummaryOk_Format", tslrcmName));
-                return true;
-            }
-
-            if (form.FailureReason != null)
-            {
-                MessageBox.Show(
-                    InstallerLocale.Format("K2Lang_Failed_Format", form.FailureReason),
-                    InstallerLocale.Get("K2Prep_Title"),
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Warning);
-                summary.AppendLine(InstallerLocale.Format("ModInstall_SummaryFailed_Format",
-                    tslrcmName, form.FailureReason));
-            }
-            else
-            {
-                summary.AppendLine(InstallerLocale.Format("ModInstall_SummarySkipped_Format", tslrcmName));
-            }
-
-            // An earlier install may still be there even though this attempt
-            // did not complete.
-            return TslrcmDetector.IsInstalled();
-        }
-
-        /// <summary>
         /// Set by <see cref="RunTslrcmInstall"/> when Setup reported success
         /// without changing anything, i.e. TSLRCM was already there. Only
         /// affects the wording of the summary line.
         /// </summary>
         private static bool _tslrcmWasAlreadyInstalled;
 
+        /// <summary>
+        /// TSLRCM step: silent install when the KOTOR 2 folder is known,
+        /// visible wizard as fallback (no folder detected, or the silent run
+        /// failed and the user accepts the fallback). Returns the form's
+        /// outcome so the caller can tell a self-verified silent install from
+        /// a wizard handoff whose result only the user knows.
+        /// </summary>
         private static TslrcmOutcome RunTslrcmInstall(string k2Path)
         {
             string statusLine = k2Path != null
@@ -762,16 +532,9 @@ namespace KotorAccessibilityInstaller
         ///
         /// Returns false when the user chose to stop.
         /// </summary>
-        /// <param name="expectedItemId">
-        /// The localized TSLRCM item this run intends to install, or null. It is
-        /// excluded from the check: warning "unsubscribe from everything" and
-        /// then immediately asking the user to subscribe to that very item reads
-        /// as the installer contradicting itself. Every OTHER subscribed item is
-        /// still a genuine conflict and still warned about.
-        /// </param>
-        private static bool ConfirmNoWorkshopContent(string k2Path, string expectedItemId)
+        private static bool ConfirmNoWorkshopContent(string k2Path)
         {
-            string workshopDir = FindWorkshopContentDir(k2Path, expectedItemId);
+            string workshopDir = FindWorkshopContentDir(k2Path);
             if (workshopDir == null) return true;
 
             Logger.Warning($"Steam Workshop content present for KOTOR 2: {workshopDir}");
@@ -795,7 +558,7 @@ namespace KotorAccessibilityInstaller
         /// (<c>steamapps/common/&lt;game&gt;</c>) so it follows a game installed to a
         /// secondary Steam library rather than assuming the default one.
         /// </summary>
-        private static string FindWorkshopContentDir(string k2Path, string expectedItemId)
+        private static string FindWorkshopContentDir(string k2Path)
         {
             try
             {
@@ -808,14 +571,7 @@ namespace KotorAccessibilityInstaller
                                                Config.Kotor2WorkshopAppId);
                 if (!Directory.Exists(workshop)) return null;
 
-                foreach (var entry in Directory.EnumerateFileSystemEntries(workshop))
-                {
-                    if (expectedItemId != null &&
-                        Path.GetFileName(entry).Equals(expectedItemId, StringComparison.OrdinalIgnoreCase))
-                        continue;
-                    return workshop;
-                }
-                return null;
+                return Directory.EnumerateFileSystemEntries(workshop).Any() ? workshop : null;
             }
             catch (Exception ex)
             {
@@ -875,129 +631,6 @@ namespace KotorAccessibilityInstaller
             if (string.IsNullOrEmpty(path)) return;
             try { if (File.Exists(path)) File.Delete(path); }
             catch (Exception ex) { Logger.Warning($"Could not delete temp file {path}: {ex.Message}"); }
-        }
-
-        // Preserve-tlk mode: the English TSLRCM install with the player's
-        // localized dialog.tlk put back afterwards. See the offer site in
-        // RunKotor2ModFlow for why this reconstructs the FIGS Workshop
-        // editions; measurements behind it are in docs/installer.md.
-        //
-        // Backup file in the game root while the install runs; TSLRCM's own
-        // English table is kept afterwards under the same name the Russian
-        // Workshop path already uses for a superseded table.
-        private const string LocalizedTlkBackupName = "dialog.tlk.localized.bak";
-        private const string EnglishTlkBackupName = "dialog.tlk.english.bak";
-
-        /// <summary>Copy the localized table aside; null when that fails.</summary>
-        private static string BackupLocalizedTlk(string k2Path)
-        {
-            try
-            {
-                string tlk = Path.Combine(k2Path, "dialog.tlk");
-                string backup = Path.Combine(k2Path, LocalizedTlkBackupName);
-                File.Copy(tlk, backup, overwrite: true);
-                Logger.Info($"Preserve-tlk: backed up {tlk} to {backup}");
-                return backup;
-            }
-            catch (Exception ex)
-            {
-                Logger.Error("Preserve-tlk: could not back up dialog.tlk", ex);
-                return null;
-            }
-        }
-
-        /// <summary>
-        /// Put the localized table back after the English install, keeping
-        /// TSLRCM's English one as <see cref="EnglishTlkBackupName"/>, and
-        /// remove the trap-kit items whose description StrRefs exist only in
-        /// that English table (mirroring the FIGS Workshop editions' forced
-        /// omission — the engine then falls back to the vanilla BIF items).
-        /// Returns whether a replaced table was actually restored; failure is
-        /// reported to the user, since silently leaving the game English is
-        /// the one outcome this mode promised to prevent.
-        /// </summary>
-        private static bool RestoreLocalizedTlk(string k2Path, string backupPath)
-        {
-            try
-            {
-                string tlk = Path.Combine(k2Path, "dialog.tlk");
-                if (!FilesDiffer(tlk, backupPath))
-                {
-                    // The install never replaced the table (cancelled, failed,
-                    // or nothing ran) — nothing to restore, nothing to clean.
-                    Logger.Info("Preserve-tlk: dialog.tlk unchanged; nothing to restore");
-                    TryDeleteTempFile(backupPath);
-                    return false;
-                }
-
-                string englishBackup = Path.Combine(k2Path, EnglishTlkBackupName);
-                File.Copy(tlk, englishBackup, overwrite: true);
-                File.Copy(backupPath, tlk, overwrite: true);
-                TryDeleteTempFile(backupPath);
-                Logger.Info("Preserve-tlk: restored the localized dialog.tlk; " +
-                            $"TSLRCM's English table kept as {EnglishTlkBackupName}");
-
-                RemoveTrapKitOverrides(k2Path);
-                return true;
-            }
-            catch (Exception ex)
-            {
-                Logger.Error($"Preserve-tlk: restore failed; the localized table remains as {LocalizedTlkBackupName}", ex);
-                MessageBox.Show(
-                    InstallerLocale.Get("K2Lang_PreserveRestoreFailed"),
-                    InstallerLocale.Get("K2Prep_Title"),
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Warning);
-                return false;
-            }
-        }
-
-        /// <summary>
-        /// The 7 <c>g_i_trapkit*.uti</c> files the English install drops into
-        /// Override differ from vanilla by one description StrRef each,
-        /// re-pointed at corrected text in TSLRCM's English tlk — dangling
-        /// once the localized table is back. Deleting them reverts to the
-        /// vanilla BIF items, exactly the state the localized Workshop
-        /// editions ship. Wildcard rather than a name list so it tracks
-        /// whatever the installer actually wrote.
-        /// </summary>
-        private static void RemoveTrapKitOverrides(string k2Path)
-        {
-            try
-            {
-                string overrideDir = Path.Combine(k2Path, "override");
-                if (!Directory.Exists(overrideDir)) return;
-
-                int removed = 0;
-                foreach (var file in Directory.EnumerateFiles(overrideDir, "g_i_trapkit*.uti"))
-                {
-                    File.Delete(file);
-                    removed++;
-                    Logger.Info($"Preserve-tlk: removed {Path.GetFileName(file)}");
-                }
-                Logger.Info($"Preserve-tlk: {removed} trap-kit override file(s) removed; vanilla descriptions apply");
-            }
-            catch (Exception ex)
-            {
-                // Non-fatal: a surviving trap kit shows a blank description,
-                // nothing worse.
-                Logger.Warning($"Preserve-tlk: trap-kit cleanup incomplete: {ex.Message}");
-            }
-        }
-
-        /// <summary>Length check first, SHA-256 only on a length tie.</summary>
-        private static bool FilesDiffer(string a, string b)
-        {
-            var infoA = new FileInfo(a);
-            var infoB = new FileInfo(b);
-            if (!infoA.Exists || !infoB.Exists) return true;
-            if (infoA.Length != infoB.Length) return true;
-
-            using var streamA = File.OpenRead(a);
-            using var streamB = File.OpenRead(b);
-            byte[] hashA = SHA256.HashData(streamA);
-            byte[] hashB = SHA256.HashData(streamB);
-            return !hashA.AsSpan().SequenceEqual(hashB);
         }
 
         /// <summary>

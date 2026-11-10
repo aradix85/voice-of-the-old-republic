@@ -4,7 +4,7 @@ namespace KotorAccessibilityInstaller.ModInstallers
 {
     /// <summary>
     /// Per-install context handed to each <see cref="IModInstaller"/> by the
-    /// coordinator. Holds the game path, detected locale, HoloPatcher driver
+    /// coordinator. Holds the game path, HoloPatcher driver
     /// path (extracted from the bundled resource), and UI hooks for progress
     /// + status updates.
     /// </summary>
@@ -12,9 +12,6 @@ namespace KotorAccessibilityInstaller.ModInstallers
     {
         /// <summary>Absolute path to the KOTOR install root.</summary>
         public string GameDir { get; init; }
-
-        /// <summary>Detected game locale via dialog.tlk header.</summary>
-        public GameLocale Locale { get; init; }
 
         /// <summary>
         /// Absolute path to a HoloPatcher.exe instance the installer can drive.
@@ -52,7 +49,7 @@ namespace KotorAccessibilityInstaller.ModInstallers
         /// <summary>Name + version as the user would recognise it on the mod page.</summary>
         public string ModDisplayName { get; init; }
 
-        /// <summary>Localized explanation of why the automatic download did not work.</summary>
+        /// <summary>Explanation of why the automatic download did not work.</summary>
         public string Reason { get; init; }
 
         /// <summary>Page to open in the browser.</summary>

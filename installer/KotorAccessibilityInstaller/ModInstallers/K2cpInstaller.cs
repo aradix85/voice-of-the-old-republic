@@ -31,11 +31,6 @@ namespace KotorAccessibilityInstaller.ModInstallers
     /// matching the pinned archive release stays recorded in
     /// <c>sources.json</c> for provenance.</para>
     ///
-    /// <para>K2CP has no translation subfolders: it is English-only upstream, so
-    /// non-English installs receive the bugfix strings in English while the rest
-    /// of the game stays localised (same known limitation as K1CP on
-    /// Italian/Spanish, here for every non-English locale).</para>
-    ///
     /// <para>Still unverified: whether K2CP ships <c>.lyt</c>/<c>.vis</c> files
     /// with LF-only line endings. K1CP needed a CRLF normalisation pass (see
     /// <see cref="K1cpInstaller"/>) and the KOTOR 2 engine uses the same
@@ -207,12 +202,6 @@ namespace KotorAccessibilityInstaller.ModInstallers
                                    "(structurally valid; trust-DeadlyStream policy).");
                     ctx.StatusUpdate?.Invoke(InstallerLocale.Format(
                         "ModInstall_NewerThanTested_Format", "KOTOR 2 Community Patch"));
-                }
-
-                if (ctx.Locale != GameLocale.English)
-                {
-                    Logger.Info($"K2CP: game locale is {ctx.Locale}; K2CP ships English-only — " +
-                                "bugfix strings will appear in English.");
                 }
 
                 ctx.StatusUpdate?.Invoke(InstallerLocale.Get("ModInstall_K2cpApplying"));

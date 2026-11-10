@@ -20,11 +20,6 @@ namespace KotorAccessibilityInstaller.ModInstallers
     ///   <item>List blobs under <c>tslpatchdata/</c> at the pinned commit via git tree API.</item>
     ///   <item>Download each blob via raw.githubusercontent.com into a staging dir,
     ///         with bounded concurrency and per-file retry on transient failure.</item>
-    ///   <item>If the install locale has a packaged translation (DE/FR/RU), overlay
-    ///         <c>translation_&lt;lang&gt;/append.tlk</c> onto <c>tslpatchdata/append.tlk</c>.
-    ///         IT/ES installs: install K1CP in English; the bugfix strings appear in
-    ///         English while the rest of the game stays localised (known limitation,
-    ///         surfaced on the mod-selection screen footnote).</item>
     ///   <item>Invoke HoloPatcher headless against the staged tslpatchdata.</item>
     ///   <item>Clean up staging.</item>
     /// </list>
@@ -69,8 +64,6 @@ namespace KotorAccessibilityInstaller.ModInstallers
                 ctx.StatusUpdate?.Invoke(InstallerLocale.Get("ModInstall_K1cpStaging"));
                 ctx.Progress?.Invoke(55);
                 Logger.Info($"K1CP tslpatchdata staged at: {tslpatchdataDir}");
-
-                ApplyLocaleOverlay(tslpatchdataDir, ctx.Locale);
 
                 ctx.StatusUpdate?.Invoke(InstallerLocale.Get("ModInstall_K1cpApplying"));
                 ctx.Progress?.Invoke(60);
@@ -121,74 +114,6 @@ namespace KotorAccessibilityInstaller.ModInstallers
                     }
                 }
             }
-        }
-
-        private static void ApplyLocaleOverlay(string tslpatchdataDir, GameLocale locale)
-        {
-            // K1CP ships per-locale append.tlk overlays under
-            // tslpatchdata/translation_{german,french,russian}/. The default
-            // tslpatchdata/append.tlk is English. To install the localised
-            // strings we copy the matching translation's append.tlk over the
-            // base before invoking HoloPatcher.
-            string translationDir = locale switch
-            {
-                GameLocale.German => "translation_german",
-                GameLocale.French => "translation_french",
-                // Russian is now detectable (GameLocaleDetector's CP1251 content
-                // probe), but the overlay is still deliberately unwired. Two
-                // reasons, both needing a human decision rather than a guess:
-                //
-                //  1. K1CP ships TWO Russian overlays under
-                //     tslpatchdata/translation_russian/ (olegkuz1997 and
-                //     JayDominus). They are different translations; picking the
-                //     wrong one gives the player K1CP's bugfix strings in a
-                //     different voice from the rest of their game.
-                //  2. The Allard translation's author states that K1CP has not
-                //     been tested against it at all. The mod-selection screen
-                //     surfaces that to the user (Russian_K1cpUntested_Body).
-                //
-                // Until one is chosen, a Russian install gets the English
-                // append.tlk — the same treatment as Italian and Spanish.
-                _ => null,
-            };
-
-            if (translationDir == null)
-            {
-                if (locale == GameLocale.Italian || locale == GameLocale.Spanish ||
-                    locale == GameLocale.Polish)
-                {
-                    Logger.Info($"K1CP: no official translation for {locale}; " +
-                                "installing English append.tlk (bugfix strings will appear in English).");
-                }
-                else if (locale == GameLocale.Russian)
-                {
-                    Logger.Info("K1CP: Russian install detected. K1CP ships two Russian overlays and " +
-                                "neither has been chosen yet, so the English append.tlk is used " +
-                                "(bugfix strings will appear in English). See ApplyLocaleOverlay.");
-                }
-                else if (locale == GameLocale.English)
-                {
-                    Logger.Info("K1CP: English install — using default append.tlk, no overlay needed.");
-                }
-                else
-                {
-                    Logger.Warning($"K1CP: unknown locale {locale}; installing English append.tlk.");
-                }
-                return;
-            }
-
-            string overlaySource = Path.Combine(tslpatchdataDir, translationDir, "append.tlk");
-            string overlayTarget = Path.Combine(tslpatchdataDir, "append.tlk");
-
-            if (!File.Exists(overlaySource))
-            {
-                Logger.Warning($"K1CP: expected locale overlay missing at {overlaySource}; " +
-                               "falling back to English append.tlk.");
-                return;
-            }
-
-            File.Copy(overlaySource, overlayTarget, overwrite: true);
-            Logger.Info($"K1CP: locale overlay applied — {translationDir}/append.tlk -> tslpatchdata/append.tlk");
         }
 
         // Text-format resource extensions the engine parses with the

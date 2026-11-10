@@ -388,7 +388,6 @@ installer/KotorAccessibilityInstaller/CancelConfirm.cs
 installer/KotorAccessibilityInstaller/Config.cs
 installer/KotorAccessibilityInstaller/DeadlyStreamClient.cs
 installer/KotorAccessibilityInstaller/EventLogView.cs
-installer/KotorAccessibilityInstaller/GameLocale.cs
 installer/KotorAccessibilityInstaller/GamePathDetector.cs
 installer/KotorAccessibilityInstaller/GameStoreLinksForm.cs
 installer/KotorAccessibilityInstaller/GameTarget.cs
@@ -438,4 +437,3 @@ installer/KotorAccessibilityInstaller/UninstallFlow.cs
 installer/KotorAccessibilityInstaller/UninstallForm.cs
 installer/KotorAccessibilityInstaller/UpdateAvailableForm.cs
 installer/KotorAccessibilityInstaller/WelcomeForm.cs
-installer/KotorAccessibilityInstaller/WorkshopTslrcmForm.cs
