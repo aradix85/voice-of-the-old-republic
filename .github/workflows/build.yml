@@ -105,8 +105,15 @@ jobs:
 
           New install: run VoiceOfTheOldRepublicInstaller.exe as administrator; it downloads Accessibility.kpatch from this release. Update by hand: close the game, then copy accessibility.dll to the game folder as patches\accessibility.dll.
           "@
-          gh release delete bridge-latest --cleanup-tag --yes 2>$null
-          gh release create bridge-latest out/accessibility.dll out/Accessibility.kpatch `
-            out/VoiceOfTheOldRepublicInstaller.exe `
-            --target '${{ github.sha }}' --prerelease `
-            --title "Bridge build $short" --notes $notes
+          # The releases API now and then answers HTTP 500: retry before failing.
+          foreach ($attempt in 1..3) {
+            gh release delete bridge-latest --cleanup-tag --yes 2>$null
+            gh release create bridge-latest out/accessibility.dll out/Accessibility.kpatch `
+              out/VoiceOfTheOldRepublicInstaller.exe `
+              --target '${{ github.sha }}' --prerelease `
+              --title "Bridge build $short" --notes $notes
+            if ($LASTEXITCODE -eq 0) { exit 0 }
+            Write-Host "release create failed (attempt $attempt of 3)"
+            if ($attempt -lt 3) { Start-Sleep -Seconds 30 }
+          }
+          exit 1
