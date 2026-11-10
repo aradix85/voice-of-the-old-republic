@@ -1,4 +1,4 @@
-# menus.cpp (351 lines)
+# menus.cpp (232 lines)
 
 Source: `patches/Accessibility/menus.cpp`
 
@@ -6,16 +6,19 @@ The menu side's own state and per-tick glue: the speech dedup channels, the focu
 
 ## Declarations (in source order)
 
-- L73 `void MarkSpoken(int channel, const char* text)`
-- L79 `void SpeakIfChanged(int channel, const char* text, unsigned repeatAfterMs)`
-- L93 `bool AlreadySpokenOnAnyChannel(const char* text)`
-- L107 `bool acc::menus::detail::IsMultiRowListBox(void* control)`
-- L121 `void* CurrentPanelIfLive()`: See menus_internal.h for why every deref of g_currentPanel has to come through here.
-- L177 `void ValidatePanels()`
-- L193 `void TickMonitors()`
-- L212 `void PollHomeEndKeys()`
-- L243 `void TickPendingOps()`: Drain the menu-side pending-op queue (menus_pending).
-- L266 `void DrainPendingAnnounce()`: Drain the pending-announce slot.
-- L340 `void ClearPendingAnnounce()`
-- L345 `bool IsDrilledIntoSubScreen()`
-- L346 `void SetDrilledIntoSubScreen(bool drilled)`
+- L42 `void* CurrentPanelIfLive()`: IsPanelInManager compares pointers only, so it is safe on a freed panel.
+- L67 `bool SameAsLast(int channel, const char* text)`
+- L71 `void Remember(int channel, const char* text)`
+- L89 `void MarkSpoken(int channel, const char* text)`
+- L97 `void SpeakIfChanged(int channel, const char* text, unsigned repeatAfterMs)`: Queued, never interrupting: focus events fire about ten times a second while a panel builds, and interrupting cut every line mid-word.
+- L107 `bool AlreadySpokenOnAnyChannel(const char* text)`
+- L111 `bool detail::IsMultiRowListBox(void* control)`
+- L115 `void ValidatePanels()`
+- L123 `void TickMonitors()`
+- L139 `void PollHomeEndKeys()`: The engine drops KEYBOARD_HOME (32) and KEYBOARD_END (33) before the manager hook (no keymap action targets them), so they are polled here and fed through the hook as if the engine had routed them.
+- L157 `void TickPendingOps()`: After all monitors, which keeps deep engine re-entry off the input hook's stack.
+- L168 `bool IsChainSiblingEcho(void* panel, void* control)`: After a chain step the engine can echo a SetActive on a sibling chain control (the InGameOptions hit-test miss: the chain steps to Gameplay, the engine activates Load Game).
+- L185 `void DrainPendingAnnounce()`
+- L223 `void ClearPendingAnnounce()`
+- L228 `bool IsDrilledIntoSubScreen()`
+- L229 `void SetDrilledIntoSubScreen(bool drilled)`
