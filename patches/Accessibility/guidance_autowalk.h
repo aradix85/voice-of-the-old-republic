@@ -67,7 +67,7 @@ const uintptr_t kAddrCSWSCreatureAddMoveToPointAction = acc::addr::Pick(0x004F8B
 // +0xc..0x14 loc, +0x18 target_object} — keep our struct layout in sync.
 const uintptr_t kAddrCSWSCreatureForceMoveToPoint = acc::addr::Pick(0x004EDBA0, 0x00581070);
 
-// CSWSObject::AddUseObjectAction — __thiscall(ulong, ulong) → int.
+// CSWSObject::AddUseObjectAction: __thiscall(ulong target) -> int, ret 4.
 // Forwards to AddAction(this, 0x28=ACTION_USEOBJECT, ...).
 // K2 witnessed by decompile: guard [this+0xec]!=0 (K1's commandable gate at
 // +0xe8, the uniform +4 CSWSObject shift), then

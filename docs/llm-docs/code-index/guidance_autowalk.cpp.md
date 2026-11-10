@@ -1,4 +1,4 @@
-# guidance_autowalk.cpp (369 lines)
+# guidance_autowalk.cpp (360 lines)
 
 Source: `patches/Accessibility/guidance_autowalk.cpp`
 
@@ -11,5 +11,5 @@ movement-key cancel.
 - L123 `bool WalkTo(const Vector& destination)`
 - L213 `bool ForceWalkTo(const Vector& destination)`
 - L259 `bool UseObject(unsigned long targetHandle)`
-- L299 `bool CancelMovement()`
-- L324 `void PollMovementKeysCancel()`
+- L290 `bool CancelMovement()`
+- L315 `void PollMovementKeysCancel()`

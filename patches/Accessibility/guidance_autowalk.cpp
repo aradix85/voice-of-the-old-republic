@@ -265,26 +265,17 @@ bool UseObject(unsigned long targetHandle) {
         return false;
     }
 
-    // KOTOR 1's takes TWO args (ret 8; the second is unused). KOTOR 2 dropped
-    // the unused arg entirely (byte-verified ret 4) — pushing two dwords there
-    // leaves +4 on the stack after the callee's purge and corrupts this frame
-    // (the SetMainInterfaceTarget stack-imbalance class). One typedef per game.
+    // One stack argument on both games (ret 4; KOTOR 1 read from the running
+    // image at 0x0057C810). A second pushed dword stays on the stack: this
+    // function's epilogue then restores EDI, ESI and EBX one slot off and the
+    // caller carries on with garbage in them.
     typedef int (__thiscall* PFN_AddUseObjectAction)(
-        void* this_, unsigned long target, unsigned long param2);
-    typedef int (__thiscall* PFN_AddUseObjectActionK2)(
         void* this_, unsigned long target);
 
     int ret = 0;
     __try {
-        if (acc::game::IsKotor2()) {
-            auto fn = reinterpret_cast<PFN_AddUseObjectActionK2>(
-                kAddrCSWSObjectAddUseObjectAction);
-            ret = fn(creature, targetHandle);
-        } else {
-            auto fn = reinterpret_cast<PFN_AddUseObjectAction>(
-                kAddrCSWSObjectAddUseObjectAction);
-            ret = fn(creature, targetHandle, 0);
-        }
+        ret = reinterpret_cast<PFN_AddUseObjectAction>(
+            kAddrCSWSObjectAddUseObjectAction)(creature, targetHandle);
     } __except (EXCEPTION_EXECUTE_HANDLER) {
         acclog::Write("Autowalk", "UseObject SEH-FAULT target=0x%08lx",
                       targetHandle);
