@@ -3,17 +3,9 @@
 // See menus_modsettings.h for the design summary. This TU owns the
 // sentinel pointer, the toggle bits, and the input router.
 
-#include <windows.h>
-#include <shellapi.h>   // ShellExecuteA — the link rows' browser handoff
-#include <cstddef>
-#include <cstdio>
-#include <cstring>
-
-#include "menus_modsettings.h"
+#include "menus_modsettings_internal.h"
 
 #include "audio_bus.h"        // global cue-volume slider get/set
-#include "audio_cues.h"       // NavCue + GetNavCueResref
-#include "audio_loop.h"       // LoopSource — glossary audition via CExoSoundSource
 #include "engine_input.h"
 #include "engine_manager.h"  // IsPanelInManager for close-time rebind guard
 #include "engine_panels.h"
@@ -21,12 +13,8 @@
 #include "log.h"
 #include "menus_chain.h"
 #include "menus_keybinds.h"  // nested keybind configurator submenu
-#include "menus_nav.h"       // ClampedCursorStep — shared Up/Down/Home/End ladder
 #include "mod_settings_store.h"  // persist toggles across launches
 #include "speech.h"
-#include "strings.h"
-
-#pragma comment(lib, "shell32.lib")  // ShellExecuteA
 
 namespace acc::menus::modsettings {
 
@@ -36,213 +24,6 @@ namespace {
 // gives a stable, unique pointer that we can use as the chain entry's
 // `control` field without ever pointing at an engine-allocated control.
 char s_rootSentinel = 0;
-
-// Toggle state. In-memory only — persistence is a follow-up.
-//
-// Defaults per user 2026-05-27 (ExtendedCycling semantics revised 2026-06-14):
-//   - ExtendedCycling = OFF. In-world `,`/`.` are ALWAYS live; OFF means the
-//     cycle is restricted to the DISCOVERY tier (objects the player has
-//     organically had narrated — see discovery.*). Turning it ON widens the
-//     cycle to everything in the area (the old "extended/spoilery" listing).
-//     The filter lives in cycle_state::BuildCategoryListing.
-//   - RoomShapes      = ON. Preserves the current corridor / junction /
-//     plaza announce flow on cluster transitions.
-//   - AudioGlossary   = unused slot (RowKind::Submenu, not a toggle).
-// Index order MUST match the Option enum.
-bool s_toggles[static_cast<int>(Option::Count)] = {
-    /* ExtendedCycling */ false,
-    /* RoomShapes      */ true,
-    /* HumanSubtitles  */ false,  // default off — humans AND droids have VO,
-                                  // so TTS over the same line clashes (humans,
-                                  // HK-47) or reads meaningless beep-text (T3).
-                                  // Genuine aliens still read because the
-                                  // suppression filter gates on appearance /
-                                  // race (see IsSuppressibleSpeaker), not on
-                                  // this toggle alone.
-    /* QEAllAround */ false,      // default off. ON: Q/E cycle every object
-                                  // around the player within the engine's
-                                  // target range, clockwise from straight
-                                  // ahead, instead of only what the camera
-                                  // shows (qe_ring). Camera-independent.
-    /* TurretAutoAim   */ false,  // "Autoaiming" — OFF by default. When ON, the
-                                  // turret PERMANENTLY locks aim onto the
-                                  // selected fighter (full auto-track), so the
-                                  // player just selects + fires — for players
-                                  // who want no challenge or have stronger
-                                  // hearing impairments. The DEFAULT (toggle
-                                  // off) is the always-on slight aim-magnetism
-                                  // in minigame_turret.cpp, which keeps the minigame
-                                  // skill-based but playable by ear.
-    /* SkipIntros      */ false,  // unused — state lives in filesystem
-                                  // (biologo.bik vs biologo.bik.disabled);
-                                  // StateText + Enter both special-case
-                                  // this index and call into intro_skip.
-    /* CueVolume       */ false,  // unused — RowKind::Slider; value lives in
-                                  // audio_bus (Get/SetGlobalCueVolumePercent).
-    /* Keybindings     */ false,  // unused — RowKind::Submenu (configurator pivot)
-    /* AudioGlossary   */ false,  // unused — RowKind::Submenu
-    /* SupportModder   */ false,  // unused — RowKind::Link
-    /* LatestChanges   */ false,  // unused — RowKind::Link
-    /* OpenReadme      */ false,  // unused — RowKind::Link
-};
-
-// Submenu state. `s_open` flips on OpenSubMenu / Close; `s_focused`
-// is the currently-selected option index while open. `s_parentPanel`
-// is the panel the user came from so Close can rebind the chain.
-// `s_fgAtOpen` is the engine-foreground panel captured at OpenSubMenu
-// time — used as the divergence baseline so we don't false-fire on
-// stack configurations that are stable from the user's perspective.
-// (In-game Options leaves the InGameMenu strip at panels[top]; the
-// strip never equals our parent but the user is still "in" the panel
-// they selected.)
-//
-// s_glossaryOpen flips when the user presses Enter on the
-// AudioGlossary row. While true, HandleInput routes Up/Down/Enter/Esc
-// to the glossary-specific handlers; Esc returns to the root submenu
-// rather than the parent panel. s_glossaryFocused is the per-mode
-// focus index (independent of the root focus so the user returns to
-// the AudioGlossary row when they Esc out).
-//
-bool   s_open            = false;
-int    s_focused         = 0;
-void*  s_parentPanel     = nullptr;
-void*  s_fgAtOpen        = nullptr;
-bool   s_glossaryOpen    = false;
-int    s_glossaryFocused = 0;
-// True while the nested keybind configurator (menus_keybinds) owns input.
-// Unlike the glossary it keeps its own state in that TU; we only track that we
-// routed into it so HandleInput / Tick / Close can defer to it.
-bool   s_keybindsOpen    = false;
-
-// Pending glossary playback. Stamped by Enter on a glossary row;
-// drained by Tick() once GetTickCount() ≥ s_pendingFireAt. The pause
-// exists so the row name announcement ("Wall") finishes before the cue
-// plays — without it the speech bleeds over the sample and the user
-// can't cleanly correlate name with sound. 750 ms tuned by feel
-// 2026-05-27: long enough to clear the speech tail at default rate,
-// short enough that it doesn't feel laggy.
-bool                s_pendingValid  = false;
-DWORD               s_pendingFireAt = 0;
-acc::audio::NavCue  s_pendingCue    = acc::audio::NavCue::SwoopShiftReady;
-constexpr DWORD     kGlossaryDelayMs = 750;
-
-// Audition playback handle. The glossary fires its sample through a
-// self-managed CExoSoundSource (non-looping, 2D) rather than
-// CExoSound::PlayOneShotSound. The one-shot mixer path is muted while the
-// in-game menu pauses the world (engine SetSoundMode); a directly-driven
-// source uses the same channel the GUI's own click sounds use, which stays
-// audible under that pause. Reused across fires — each Start() stops the
-// prior sample first; Close() stops any in-flight tail.
-acc::audio::LoopSource s_glossaryPreview;
-
-enum class RowKind {
-    Toggle,    // Enter flips s_toggles[idx]; speech reads "Name: state"
-    Submenu,   // Enter opens a nested view; speech reads "Name" only
-    Slider,    // Left/Right adjust a percent; speech reads "Name: N percent"
-    Link,      // Enter opens a URL in the browser; speech reads "Name" only
-};
-
-// Link-row targets: the original author's Ko-fi page (README.md's support
-// section) and this fork's changelog.
-constexpr const char* kSupportModderUrl = "https://ko-fi.com/jeanstiletto";
-constexpr const char* kLatestChangesUrl =
-    "https://github.com/aradix85/voice-of-the-old-republic/blob/bridge/docs/CHANGELOG.md";
-
-// The README of this fork (branch bridge). Same as Config.ReadmeUrl in the
-// installer.
-constexpr const char* kReadmeUrl =
-    "https://github.com/aradix85/voice-of-the-old-republic/blob/bridge/README.md";
-
-// Cue-volume slider step (percent per Left/Right press) and the cue used
-// for the audible preview. The preview rides priority group 0xb so it
-// survives the in-game Options pause (SetSoundMode mutes everything else),
-// and plays at the slider-scaled per-source volume so the user hears the
-// level they just dialled in. The swoop race's shift chirp is short and
-// clean.
-// The only slider is the cue volume; it steps 10 percent per press.
-constexpr int kSliderStep               = 10;
-constexpr int kCueVolumePreviewGroup    = 0x0b;
-constexpr acc::audio::NavCue kCueVolumePreviewCue = acc::audio::NavCue::SwoopShiftReady;
-
-struct OptionSpec {
-    Option              option;
-    acc::strings::Id    label;
-    RowKind             kind;
-};
-
-// Every row's label + kind, indexed BY Option (order must stay in lock-step
-// with the enum — Spec() indexes straight into it). Where a row is *seen* is
-// decided by the display tables below, not by this one.
-constexpr OptionSpec k_options[] = {
-    { Option::ExtendedCycling, acc::strings::Id::ModSettingExtendedCycling, RowKind::Toggle  },
-    { Option::RoomShapes,      acc::strings::Id::ModSettingRoomShapes,      RowKind::Toggle  },
-    { Option::HumanSubtitles,  acc::strings::Id::ModSettingHumanSubtitles,  RowKind::Toggle  },
-    { Option::QEAllAround,     acc::strings::Id::ModSettingQEAllAround,     RowKind::Toggle  },
-    { Option::TurretAutoAim,   acc::strings::Id::ModSettingTurretAutoAim,   RowKind::Toggle  },
-    { Option::SkipIntros,      acc::strings::Id::ModSettingSkipIntros,      RowKind::Toggle  },
-    { Option::CueVolume,       acc::strings::Id::ModSettingCueVolume,       RowKind::Slider  },
-    { Option::Keybindings,     acc::strings::Id::KeybindsRootLabel,         RowKind::Submenu },
-    { Option::AudioGlossary,   acc::strings::Id::ModSettingAudioGlossary,   RowKind::Submenu },
-    { Option::SupportModder,   acc::strings::Id::ModSettingSupportModder,   RowKind::Link    },
-    { Option::LatestChanges,   acc::strings::Id::ModSettingLatestChanges,   RowKind::Link    },
-    { Option::OpenReadme,      acc::strings::Id::ModSettingOpenReadme,      RowKind::Link    },
-};
-constexpr int k_optionCount = static_cast<int>(
-    sizeof(k_options) / sizeof(k_options[0]));
-static_assert(k_optionCount == static_cast<int>(Option::Count),
-              "k_options must cover every Option enumerator");
-
-// Spec for `opt`. Callers must have ruled out Option::Count first.
-const OptionSpec& Spec(Option opt) {
-    return k_options[static_cast<int>(opt)];
-}
-
-// ---- Display table ---------------------------------------------------------
-//
-// Top-to-bottom order of the list.
-constexpr Option k_rootRows[] = {
-    Option::ExtendedCycling,
-    Option::QEAllAround,
-    Option::RoomShapes,
-    Option::HumanSubtitles,
-    Option::TurretAutoAim,
-    Option::SkipIntros,
-    Option::CueVolume,
-    Option::Keybindings,
-    Option::AudioGlossary,
-    Option::SupportModder,
-    Option::LatestChanges,
-    Option::OpenReadme,
-};
-constexpr int k_rootRowCount = static_cast<int>(
-    sizeof(k_rootRows) / sizeof(k_rootRows[0]));
-
-// Every option is a row of the list: a row added to the enum but not here
-// would be invisible with nothing else to catch it.
-static_assert(k_rootRowCount == k_optionCount,
-              "every Option must appear in the display table");
-
-// Option under the cursor, or Option::Count when the index has gone out of
-// range.
-Option FocusedOption() {
-    if (s_focused < 0 || s_focused >= k_rootRowCount) return Option::Count;
-    return k_rootRows[s_focused];
-}
-
-// Stable acc_settings.ini keys for the toggles that persist across launches.
-// SkipIntros is filesystem-backed (the .bik rename IS its state), and
-// CueVolume / AudioGlossary aren't toggles — those return nullptr (not
-// persisted through this path; CueVolume persists via audio_bus).
-const char* PersistKey(Option opt) {
-    switch (opt) {
-        case Option::ExtendedCycling: return "ExtendedCycling";
-        case Option::RoomShapes:      return "RoomShapes";
-        case Option::HumanSubtitles:  return "HumanSubtitles";
-        case Option::QEAllAround:     return "QEAllAround";
-        case Option::TurretAutoAim:   return "TurretAutoAim";
-        default:                      return nullptr;  // not persisted here
-    }
-}
 
 // Pull persisted toggle values into s_toggles once, on first access. The
 // scaffold defaults in s_toggles[] act as the fallback for absent keys, so
@@ -257,23 +38,6 @@ void EnsureTogglesLoaded() {
         s_toggles[i] = acc::settings::GetBool(key, s_toggles[i]);
     }
 }
-
-// Glossary entries — one row per swoop-race cue, in audio_cues.h order.
-struct GlossaryEntry {
-    acc::audio::NavCue  cue;
-    acc::strings::Id    label;
-};
-
-constexpr GlossaryEntry k_glossary[] = {
-    { acc::audio::NavCue::SwoopAccelpadBoost,       acc::strings::Id::GlossaryEntrySwoopAccelpadBoost },
-    { acc::audio::NavCue::SwoopObstacleWarn,        acc::strings::Id::GlossaryEntrySwoopObstacleWarn  },
-    { acc::audio::NavCue::SwoopWallImpact,          acc::strings::Id::GlossaryEntrySwoopWallImpact    },
-    { acc::audio::NavCue::SwoopSteerAligned,        acc::strings::Id::GlossaryEntrySwoopAligned       },
-    { acc::audio::NavCue::SwoopShiftReady,          acc::strings::Id::GlossaryEntrySwoopShiftReady    },
-    { acc::audio::NavCue::SwoopJumpNow,             acc::strings::Id::GlossaryEntrySwoopJumpNow       },
-};
-constexpr int k_glossaryCount = static_cast<int>(
-    sizeof(k_glossary) / sizeof(k_glossary[0]));
 
 const char* StateText(Option opt) {
     // SkipIntros: state is the filesystem (biologo.bik vs .disabled),
@@ -291,54 +55,6 @@ const char* StateText(Option opt) {
     bool on = s_toggles[static_cast<int>(opt)];
     return acc::strings::Get(on ? acc::strings::Id::ModSettingStateOn
                                 : acc::strings::Id::ModSettingStateOff);
-}
-
-// Speak the current focused option. Toggle rows read as "Name: value";
-// Submenu and Link rows read just "Name" (nothing to compose with).
-// `interrupt` is false only on the two open paths, where the view's title
-// has just been spoken and the row should queue behind it.
-void SpeakFocusedOption(bool interrupt = true) {
-    const Option opt = FocusedOption();
-    if (opt == Option::Count) return;
-    const auto& row = Spec(opt);
-    const char* name = acc::strings::Get(row.label);
-    char line[160];
-    if (row.kind == RowKind::Toggle) {
-        snprintf(line, sizeof(line),
-                 acc::strings::Get(acc::strings::Id::FmtModSettingOption),
-                 name, StateText(opt));
-    } else if (row.kind == RowKind::Slider) {
-        snprintf(line, sizeof(line),
-                 acc::strings::Get(acc::strings::Id::FmtModSettingSlider),
-                 name, acc::audio::GetGlobalCueVolumePercent());
-    } else {
-        snprintf(line, sizeof(line), "%s", name);
-    }
-    acc::speech::Speak(line, interrupt);
-    acclog::Write("ModSettings", "speak focused idx=%d \"%s\"", s_focused, line);
-}
-
-// Speak the current focused glossary entry — just the localised name.
-// State / cue resref aren't spoken; the user hears the cue itself one
-// second after Enter, which is the meaningful signal.
-void SpeakFocusedGlossaryEntry() {
-    if (s_glossaryFocused < 0 || s_glossaryFocused >= k_glossaryCount) return;
-    const char* name =
-        acc::strings::Get(k_glossary[s_glossaryFocused].label);
-    acc::speech::Speak(name, /*interrupt=*/true);
-    acclog::Write("ModSettings", "glossary speak focused idx=%d \"%s\"",
-                  s_glossaryFocused, name);
-}
-
-// Cancel any pending delayed glossary playback. Called from every
-// glossary navigation / close path so a queued cue doesn't fire after
-// the user has moved on.
-void CancelPendingGlossaryCue() {
-    if (!s_pendingValid) return;
-    acclog::Write("ModSettings", "glossary cancel pending cue=%d",
-                  static_cast<int>(s_pendingCue));
-    s_pendingValid  = false;
-    s_pendingFireAt = 0;
 }
 
 // True iff the engine pushed a new panel on top of whatever was
@@ -365,6 +81,58 @@ bool ForegroundDivergedFromParent() {
 }
 
 }  // namespace
+
+// Spec for `opt`. Callers must have ruled out Option::Count first.
+const OptionSpec& Spec(Option opt) {
+    return k_options[static_cast<int>(opt)];
+}
+
+// Option under the cursor, or Option::Count when the index has gone out of
+// range.
+Option FocusedOption() {
+    if (s_focused < 0 || s_focused >= k_rootRowCount) return Option::Count;
+    return k_rootRows[s_focused];
+}
+
+// Stable acc_settings.ini keys for the toggles that persist across launches.
+// SkipIntros is filesystem-backed (the .bik rename IS its state), and
+// CueVolume / AudioGlossary aren't toggles — those return nullptr (not
+// persisted through this path; CueVolume persists via audio_bus).
+const char* PersistKey(Option opt) {
+    switch (opt) {
+        case Option::ExtendedCycling: return "ExtendedCycling";
+        case Option::RoomShapes:      return "RoomShapes";
+        case Option::HumanSubtitles:  return "HumanSubtitles";
+        case Option::QEAllAround:     return "QEAllAround";
+        case Option::TurretAutoAim:   return "TurretAutoAim";
+        default:                      return nullptr;  // not persisted here
+    }
+}
+
+// Speak the current focused option. Toggle rows read as "Name: value";
+// Submenu and Link rows read just "Name" (nothing to compose with).
+// `interrupt` is false only on the two open paths, where the view's title
+// has just been spoken and the row should queue behind it.
+void SpeakFocusedOption(bool interrupt) {
+    const Option opt = FocusedOption();
+    if (opt == Option::Count) return;
+    const auto& row = Spec(opt);
+    const char* name = acc::strings::Get(row.label);
+    char line[160];
+    if (row.kind == RowKind::Toggle) {
+        snprintf(line, sizeof(line),
+                 acc::strings::Get(acc::strings::Id::FmtModSettingOption),
+                 name, StateText(opt));
+    } else if (row.kind == RowKind::Slider) {
+        snprintf(line, sizeof(line),
+                 acc::strings::Get(acc::strings::Id::FmtModSettingSlider),
+                 name, acc::audio::GetGlobalCueVolumePercent());
+    } else {
+        snprintf(line, sizeof(line), "%s", name);
+    }
+    acc::speech::Speak(line, interrupt);
+    acclog::Write("ModSettings", "speak focused idx=%d \"%s\"", s_focused, line);
+}
 
 bool IsRootAnchor(void* control) {
     return control == &s_rootSentinel;
@@ -483,247 +251,6 @@ void AutoCloseSilent() {
     s_parentPanel = nullptr;
     s_fgAtOpen    = nullptr;
 }
-
-namespace {
-
-// Open the nested Audio glossary submenu and announce its title + first
-// row. Called from HandleInput when the user presses Enter on the
-// AudioGlossary row in the root submenu.
-void OpenGlossarySubMenu() {
-    s_glossaryOpen    = true;
-    s_glossaryFocused = 0;
-    CancelPendingGlossaryCue();
-    acclog::Write("ModSettings", "glossary opened");
-    acc::speech::Speak(
-        acc::strings::Get(acc::strings::Id::ModSettingsAudioGlossaryOpened),
-        /*interrupt=*/true);
-    if (k_glossaryCount > 0) {
-        acc::speech::Speak(
-            acc::strings::Get(k_glossary[s_glossaryFocused].label),
-            /*interrupt=*/false);
-    }
-}
-
-// Close the glossary submenu, returning the user to the root. Speaks
-// the root row they came from so they have an audible anchor after the
-// nested Esc.
-void CloseGlossarySubMenu() {
-    if (!s_glossaryOpen) return;
-    acclog::Write("ModSettings", "glossary closed");
-    s_glossaryOpen    = false;
-    s_glossaryFocused = 0;
-    CancelPendingGlossaryCue();
-    s_glossaryPreview.Stop();  // silence any in-flight audition on close
-    // Re-announce the root focus (the AudioGlossary row) so the user
-    // knows they're back at the outer level. The root focus is
-    // unchanged from before — it was the AudioGlossary row that was
-    // Enter'd in the first place.
-    SpeakFocusedOption();
-}
-
-// Hand `url` to the default browser. Returns false if the shell refused
-// (no browser association, blocked protocol handler) so the caller can
-// speak the failure instead of leaving the user waiting for a page that
-// never came.
-//
-// Deliberately nothing beyond the handoff. The first cut also minimised
-// the game window (ShowWindow SW_MINIMIZE) on the theory that a fullscreen
-// game would bury the browser; in testing the browser came up fine on its
-// own, and the forced minimise made alt-tabbing BACK into the game
-// misbehave badly. Letting the shell do the window management is both
-// simpler and what actually works — do not reintroduce the minimise.
-bool OpenExternalUrl(const char* url) {
-    HINSTANCE rc = ShellExecuteA(nullptr, "open", url, nullptr, nullptr,
-                                 SW_SHOWNORMAL);
-    // ShellExecute's success contract is "> 32"; anything at or below is an
-    // error code in the return value itself.
-    const bool ok = reinterpret_cast<INT_PTR>(rc) > 32;
-    acclog::Write("ModSettings", "open url \"%s\" rc=%d ok=%d",
-                  url, static_cast<int>(reinterpret_cast<INT_PTR>(rc)),
-                  ok ? 1 : 0);
-    return ok;
-}
-
-// Enter on a Link row: open the URL, then speak the outcome. The submenu
-// stays open, so the user is still on the same row when they come back
-// from the browser.
-void ActivateLinkRow(Option opt) {
-    const char* url = kLatestChangesUrl;
-    if (opt == Option::SupportModder) {
-        url = kSupportModderUrl;
-    } else if (opt == Option::OpenReadme) {
-        url = kReadmeUrl;
-    }
-    const bool ok = OpenExternalUrl(url);
-    acc::speech::Speak(
-        acc::strings::Get(ok ? acc::strings::Id::ModSettingLinkOpened
-                             : acc::strings::Id::ModSettingLinkFailed),
-        /*interrupt=*/true);
-}
-
-// Adjust the cue-volume slider by delta (clamped to 0..100), re-announce it,
-// and play a hint-sound cue at the new level on priority group 0xb (survives
-// the in-game Options pause), reusing the glossary preview handle.
-void AdjustSlider(int delta) {
-    int next = acc::audio::GetGlobalCueVolumePercent() + delta;
-    if (next < 0)   next = 0;
-    if (next > 100) next = 100;
-    acc::audio::SetGlobalCueVolumePercent(next);
-    acclog::Write("ModSettings", "cue volume adjust delta=%+d -> %d", delta, next);
-    SpeakFocusedOption();
-    if (next > 0) {
-        const Vector kCentre = { 0.0f, 0.0f, 0.0f };
-        s_glossaryPreview.Start(
-            acc::audio::GetNavCueResref(kCueVolumePreviewCue), kCentre,
-            /*looping=*/false, /*spatial=*/false,
-            /*priorityGroup=*/kCueVolumePreviewGroup,
-            /*volumeByte=*/127 * next / 100);
-    } else {
-        s_glossaryPreview.Stop();  // muted - silence any in-flight tail
-    }
-}
-
-// Input for the option list.
-bool HandleInputList(int keyCode) {
-    // Left / Right: adjust the focused Slider row;
-    // ignored on every other kind (they fall through to the parent-input
-    // block in HandleInput, which consumes them so they don't leak to the
-    // engine).
-    if (keyCode == kInputNavLeft || keyCode == kInputNavRight) {
-        const Option opt = FocusedOption();
-        if (opt != Option::Count) {
-            const RowKind kind = Spec(opt).kind;
-            if (kind == RowKind::Slider) {
-                AdjustSlider(keyCode == kInputNavRight ? kSliderStep : -kSliderStep);
-                return true;
-            }
-        }
-        return false;
-    }
-    // Up / Down / Home / End: step or jump focus with end-clamp (no wrap —
-    // sighted "list box" semantics match Options panels above and below).
-    // Home / End used to be swallowed by the block-everything switch in
-    // HandleInput without moving anything, which read as a dead key.
-    {
-        const bool up   = (keyCode == kInputNavUp);
-        const bool down = (keyCode == kInputNavDown);
-        const bool home = (keyCode == kInputHome);
-        const bool end  = (keyCode == kInputEnd);
-        if (up || down || home || end) {
-            s_focused = acc::menus::nav::ClampedCursorStep(
-                s_focused, k_rootRowCount, up, down, home, end);
-            SpeakFocusedOption();
-            return true;
-        }
-    }
-    // Enter: Toggle rows flip + re-announce; Submenu rows pivot to the
-    // nested view; Link rows hand their URL to the browser.
-    if (keyCode == kInputEnter1 || keyCode == kInputEnter2) {
-        const Option opt = FocusedOption();
-        if (opt == Option::Count) return true;
-        const auto& row = Spec(opt);
-        if (row.kind == RowKind::Submenu) {
-            if (row.option == Option::AudioGlossary) {
-                OpenGlossarySubMenu();
-            } else if (row.option == Option::Keybindings) {
-                s_keybindsOpen = true;
-                acc::menus::keybinds::Open();
-            }
-            return true;
-        }
-        if (row.kind == RowKind::Link) {
-            ActivateLinkRow(row.option);
-            return true;
-        }
-        // Slider: Enter replays the preview at the current level (Left/
-        // Right do the actual adjusting). delta=0 keeps the value put.
-        if (row.kind == RowKind::Slider) {
-            AdjustSlider(0);
-            return true;
-        }
-        // SkipIntros: filesystem rename instead of s_toggles flip.
-        // Speak "Name: state" first (matches other toggles' rhythm)
-        // and then a side-effect cue clarifying "takes effect on next
-        // launch". Failure path speaks the toggle-failed string.
-        if (row.option == Option::SkipIntros) {
-            auto before = acc::intro_skip::CurrentState();
-            bool wantDisable =
-                (before != acc::intro_skip::State::Disabled);
-            bool ok = acc::intro_skip::SetDisabled(wantDisable);
-            acclog::Write("ModSettings",
-                "toggle SkipIntros: target=%s ok=%d",
-                wantDisable ? "disabled" : "enabled", ok ? 1 : 0);
-            SpeakFocusedOption();
-            const char* followup = !ok
-                ? acc::strings::Get(acc::strings::Id::ModSettingSkipIntrosToggleFailed)
-                : (wantDisable
-                    ? acc::strings::Get(acc::strings::Id::ModSettingSkipIntrosOnNextLaunch)
-                    : acc::strings::Get(acc::strings::Id::ModSettingPlayIntrosOnNextLaunch));
-            acc::speech::Speak(followup, /*interrupt=*/false);
-            return true;
-        }
-        const int idx = static_cast<int>(opt);
-        s_toggles[idx] = !s_toggles[idx];
-        if (const char* key = PersistKey(opt)) {
-            acc::settings::SetBool(key, s_toggles[idx]);
-        }
-        acclog::Write("ModSettings", "toggle idx=%d new=%d",
-                      idx, s_toggles[idx] ? 1 : 0);
-        SpeakFocusedOption();
-        return true;
-    }
-    // Esc: back to the parent panel.
-    if (keyCode == kInputEsc1 || keyCode == kInputEsc2) {
-        Close();
-        return true;
-    }
-    return false;
-}
-
-bool HandleInputGlossary(int keyCode) {
-    // Same clamped ladder as the root list — Home / End jump to the first /
-    // last cue entry.
-    {
-        const bool up   = (keyCode == kInputNavUp);
-        const bool down = (keyCode == kInputNavDown);
-        const bool home = (keyCode == kInputHome);
-        const bool end  = (keyCode == kInputEnd);
-        if (up || down || home || end) {
-            if (k_glossaryCount <= 0) return true;
-            s_glossaryFocused = acc::menus::nav::ClampedCursorStep(
-                s_glossaryFocused, k_glossaryCount, up, down, home, end);
-            CancelPendingGlossaryCue();
-            SpeakFocusedGlossaryEntry();
-            return true;
-        }
-    }
-    // Enter: arm the 1 s delayed playback. Re-pressing Enter replaces
-    // the pending deadline so a held / re-mashed key just shifts the
-    // fire-at forward; the user always hears the cue exactly once,
-    // 1 s after the most recent Enter.
-    if (keyCode == kInputEnter1 || keyCode == kInputEnter2) {
-        if (s_glossaryFocused < 0 || s_glossaryFocused >= k_glossaryCount) {
-            return true;
-        }
-        s_pendingCue    = k_glossary[s_glossaryFocused].cue;
-        s_pendingFireAt = GetTickCount() + kGlossaryDelayMs;
-        s_pendingValid  = true;
-        acclog::Write("ModSettings",
-                      "glossary armed cue=%d delay=%lums (idx=%d)",
-                      static_cast<int>(s_pendingCue),
-                      (unsigned long)kGlossaryDelayMs,
-                      s_glossaryFocused);
-        return true;
-    }
-    // Esc: return to the root submenu (NOT the parent panel).
-    if (keyCode == kInputEsc1 || keyCode == kInputEsc2) {
-        CloseGlossarySubMenu();
-        return true;
-    }
-    return false;
-}
-
-}  // namespace
 
 bool HandleInput(int keyCode) {
     if (!s_open) return false;
