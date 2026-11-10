@@ -450,8 +450,9 @@ def main() -> None:
         return funcs[f]["shared"] and C(funcs[f]["sig"]).lstrip().startswith("inline ")
     written = {}
     ns = cfg.get("namespace", "acc::" + module)
+    src_name = os.path.basename(cfg["source"])
     for key, spec in cfg["files"].items():
-        name = f"{module}.cpp" if key == "" else f"{module}_{key}.cpp"
+        name = src_name if key == "" else f"{module}_{key}.cpp"
         head = top_comment if spec.get("desc") is None else fmt_desc(spec["desc"])
         body = head + ["", f'#include "{module}_internal.h"', "", f"namespace {ns} {{", ""]
         def class_in_header(f: str) -> bool:
@@ -491,7 +492,7 @@ def main() -> None:
             # An inline function other files call must be defined in the header.
             ps += ([""] + fn_lines(f)) if is_inline_shared(f) else [signature(f)]
         if ps:
-            fname = f"{module}.cpp" if key == "" else f"{module}_{key}.cpp"
+            fname = src_name if key == "" else f"{module}_{key}.cpp"
             hdr += ["", f"// {fname}"] + ps
     hdr += ["", f"}}  // namespace {ns}", ""]
     written[f"{module}_internal.h"] = hdr
@@ -504,6 +505,11 @@ def main() -> None:
 
     for name, body in written.items():
         text = re.sub(r"\n{3,}", "\n\n", "\n".join(body))
+        if name != src_name and os.path.exists(os.path.join(folder, name)):
+            # The module already has this file (an earlier split): never
+            # overwrite it, leave the new text beside it to merge by hand.
+            print(f"LET OP: {name} bestaat al; samenvoegen met {name}.split")
+            name += ".split"
         with open(os.path.join(folder, name), "w", encoding="latin-1", newline="") as f:
             f.write(text.replace("\n", nl))
         print(f"{name}: {text.count(chr(10))} regels")
