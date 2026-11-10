@@ -348,6 +348,13 @@ patches/Accessibility/tutorial_popup.cpp
 patches/Accessibility/tutorial_popup.h
 patches/Accessibility/unified_action_menu.cpp
 patches/Accessibility/unified_action_menu.h
+patches/Accessibility/unified_action_menu_fire.cpp
+patches/Accessibility/unified_action_menu_input.cpp
+patches/Accessibility/unified_action_menu_internal.h
+patches/Accessibility/unified_action_menu_medpicker.cpp
+patches/Accessibility/unified_action_menu_open.cpp
+patches/Accessibility/unified_action_menu_speech.cpp
+patches/Accessibility/unified_action_menu_state.cpp
 patches/Accessibility/view_mode.cpp
 patches/Accessibility/view_mode.h
 patches/Accessibility/wall_probe.cpp
