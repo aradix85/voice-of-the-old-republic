@@ -96,14 +96,7 @@ const size_t kTamTargetTypeOffset     = acc::off::Pick(0x1AEA, 0x1BAA);
 constexpr int    kActionIdNone            = -1;
 const size_t kIfActionStride          = acc::off::Pick(0x38, 0x3c);
 
-// Engine entry points (k1_win_gog_swkotor.exe.xml symbol table; GoG bytes
-// match Steam per project_ghidra_gog_steam_bytes_match).
-// K2 twins found via the TAM target-type-byte (+0x1baa) displacement scan
-// and disambiguated by decompile: 0x00744260 steps +1 (wraps forward),
-// 0x00744410 steps -1 (wraps to size-1) — both write the +0x24 selected
-// array and PlayGuiSound(7), K1's bodies line for line.
-const uintptr_t kAddrSelectNextAction = acc::addr::Pick(0x006865b0, 0x00744260);
-const uintptr_t kAddrSelectPrevAction = acc::addr::Pick(0x00686680, 0x00744410);
+// Engine entry points (k1_win_gog_swkotor.exe.xml symbol table).
 // K2 twin found by the six-StrRef "can't do that" switch shared with
 // DoPersonalAction; disambiguated by its TAM-layout reads (lists at +0,
 // selected array +0x24, target-type byte +0x1baa). NOTE K2 ret 8 —
@@ -189,11 +182,10 @@ const size_t kDoorIsHostileOffset      = acc::off::Pick(0x114, 0x118);
 const size_t kDoorStateOffset          = acc::off::Pick(0x11c, 0x120);
 const size_t kDoorField17Offset        = acc::off::Pick(0x138, 0x13c);
 
-typedef void (__thiscall* PFN_RowOp)(void* this_, int row);
-// DoTargetAction shares the (this, int row) shape with Select Next/Prev but does
-// ret 8 (Ghidra BYTES_PURGED="8" vs 4 for the Select ops) — it purges a second
-// dword it doesn't use. A bare PFN_RowOp under-pushes by 4 and corrupts the
-// caller's frame (the SetMainInterfaceTarget class of bug); push a matching pad.
+// DoTargetAction takes (this, int row) but does ret 8 (Ghidra
+// BYTES_PURGED="8"): it purges a second dword it doesn't use. Typed without it,
+// the call under-pushes by 4 and corrupts the caller's frame (the
+// SetMainInterfaceTarget class of bug); push a matching pad.
 typedef void (__thiscall* PFN_DoTargetAction)(void* this_, int row, int pad);
 typedef void* (__thiscall* PFN_GetGameObject)(void* exoApp, uint32_t handle);
 typedef void* (__thiscall* PFN_AsClass)(void* gameObject);

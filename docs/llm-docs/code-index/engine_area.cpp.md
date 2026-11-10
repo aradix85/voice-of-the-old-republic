@@ -1,4 +1,4 @@
-# engine_area.cpp (1361 lines)
+# engine_area.cpp (1278 lines)
 
 Source: `patches/Accessibility/engine_area.cpp`
 
@@ -64,4 +64,4 @@ game_objects[] is an array of handles, not pointers. Initial code treated entrie
 - L1119 `bool IsDoorStatic(void* serverDoor)`
 - L1130 `bool IsDoorCosmetic(void* serverDoor)`
 - L1164 `bool MaybeDrivePassiveSelection()`: Root-cause fix (2026-07-19, rev 2): the Endar Spire opening HOLDS the global fade panel at alpha=1.0 for a long scripted stretch *after* the fade animation finishes (IsFadeDone), while the player still has full world ...
-- L1329 `void* AreaObjectIterator::Next()`
+- L1246 `void* AreaObjectIterator::Next()`

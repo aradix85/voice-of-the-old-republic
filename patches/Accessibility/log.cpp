@@ -76,15 +76,6 @@ DedupEntry* GetOrCreateEntry(const char* tag) {
     return e;
 }
 
-// --- Pointer registry ------------------------------------------------------
-struct PtrName {
-    const void* ptr;
-    char        name[32];
-};
-constexpr int kMaxPtrNames = 32;
-PtrName g_ptrNames[kMaxPtrNames];
-int     g_ptrNameCount = 0;
-
 // --- Internal write (no dedup, must be called under lock) -----------------
 void RawWriteLocked(const char* tag, const char* content) {
     SYSTEMTIME ts;

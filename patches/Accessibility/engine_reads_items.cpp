@@ -433,10 +433,6 @@ bool ReadItemPropertyDescription(void* item, char* outBuf, size_t bufSize) {
     return ok;
 }
 
-typedef CExoString* (__thiscall* PFN_GetKeyedPropertyString)(void* this_,
-                                                             CExoString* out,
-                                                             uint8_t key);
-
 namespace {
 
 typedef void* (__thiscall* PFN_GetBaseItem)(void* item);

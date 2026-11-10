@@ -1,4 +1,4 @@
-# menus.cpp (1032 lines)
+# menus.cpp (1023 lines)
 
 Source: `patches/Accessibility/menus.cpp`
 
@@ -14,14 +14,14 @@ Phase 0 of the long-term nav plan extracted the foundation (core_dllmain + engin
 - L166 `void MarkSpoken(int channel, const char* text)`
 - L172 `void SpeakIfChanged(int channel, const char* text, unsigned repeatAfterMs)`
 - L186 `bool AlreadySpokenOnAnyChannel(const char* text)`
-- L254 `void* CurrentPanelIfLive()`: See menus_internal.h for why every deref of g_currentPanel has to come through here.
-- L456 `extern "C" void __cdecl OnSetActiveControl(void* panel, void* newControl)`: GATE CLEARED for KOTOR 2 on 2026-07-31 — the first handler to run on both games.
-- L584 `extern "C" void __cdecl OnListBoxSetActiveControl(void* listBox, void* newRow, int param2)`: CSWGuiListBox::SetActiveControl — hooked mid-function at 0x0041c16b.
-- L824 `void ValidatePanels()`
-- L843 `void TickMonitors()`
-- L868 `void PollHomeEndKeys()`
-- L904 `void TickPendingOps()`: Drain the menu-side pending-op queue.
-- L928 `void DrainPendingAnnounce()`: Drain the pending-announce slot.
-- L1017 `void ClearPendingAnnounce()`
-- L1022 `bool IsDrilledIntoSubScreen()`
-- L1023 `void SetDrilledIntoSubScreen(bool drilled)`
+- L245 `void* CurrentPanelIfLive()`: See menus_internal.h for why every deref of g_currentPanel has to come through here.
+- L447 `extern "C" void __cdecl OnSetActiveControl(void* panel, void* newControl)`: GATE CLEARED for KOTOR 2 on 2026-07-31 — the first handler to run on both games.
+- L575 `extern "C" void __cdecl OnListBoxSetActiveControl(void* listBox, void* newRow, int param2)`: CSWGuiListBox::SetActiveControl — hooked mid-function at 0x0041c16b.
+- L815 `void ValidatePanels()`
+- L834 `void TickMonitors()`
+- L859 `void PollHomeEndKeys()`
+- L895 `void TickPendingOps()`: Drain the menu-side pending-op queue.
+- L919 `void DrainPendingAnnounce()`: Drain the pending-announce slot.
+- L1008 `void ClearPendingAnnounce()`
+- L1013 `bool IsDrilledIntoSubScreen()`
+- L1014 `void SetDrilledIntoSubScreen(bool drilled)`

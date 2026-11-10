@@ -1,4 +1,4 @@
-# engine_scriptvar.cpp (130 lines)
+# engine_scriptvar.cpp (126 lines)
 
 Source: `patches/Accessibility/engine_scriptvar.cpp`
 
@@ -8,8 +8,8 @@ Promoted from the throwaway scriptvar_poc — the in-save named-variable primiti
 
 ## Declarations (in source order)
 
-- L71 `void ExoInit(ExoStr* s, const char* cstr)`
-- L77 `void ExoFree(ExoStr* s)`
-- L82 `void* PlayerVarTable()`: creature+0x100, or nullptr when no server-side player creature is loaded.
-- L91 `bool GetPlayerVarString(const char* name, char* outBuf, size_t bufSize)`
-- L113 `bool SetPlayerVarString(const char* name, const char* value)`
+- L67 `void ExoInit(ExoStr* s, const char* cstr)`
+- L73 `void ExoFree(ExoStr* s)`
+- L78 `void* PlayerVarTable()`: creature+0x100, or nullptr when no server-side player creature is loaded.
+- L87 `bool GetPlayerVarString(const char* name, char* outBuf, size_t bufSize)`
+- L109 `bool SetPlayerVarString(const char* name, const char* value)`

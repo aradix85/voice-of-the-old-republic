@@ -927,7 +927,7 @@ const uintptr_t kAddrServerExoAppGetItemByGameObjectID = acc::addr::Pick(0x004ae
 // whole property block and returns ONLY the description — for a crystal that's
 // usually just the bare "Spezial:" header, since crystal templates carry no
 // item properties (the bonus lives on the assembled saber / in the workbench's
-// keyed-property line, see kAddrCSWSItemGetKeyedPropertyString). The caller
+// keyed-property line, CSWSItem::GetKeyedPropertyString @0x0055f510). The caller
 // passes uninitialised stack memory for `out`; the function constructs a
 // CExoString in place by allocating a heap c_string. We then read out the
 // c_string and deliberately leak the allocation rather than calling
@@ -939,18 +939,6 @@ const uintptr_t kAddrServerExoAppGetItemByGameObjectID = acc::addr::Pick(0x004ae
 // description_indentified GetString tail with K1's exact 0x7dac fallback.
 // Called by all three K2 OnControlEntered twins at K1's exact position.
 const uintptr_t kAddrCSWSItemGetPropertyDescription = acc::addr::Pick(0x0055f340, 0x00607790);
-
-// CSWSItem::GetKeyedPropertyString — __thiscall(CExoString* out, byte key) ->
-// CExoString*. Formats just the properties on this item whose slot-key byte
-// matches `key` into the "Spezielle Eigenschaften: …" block (same header +
-// sorting as GetSortedPropertyStrings). This is the keyed bonus line the
-// workbench shows for an upgrade slot — the gameplay text crystals lack in
-// GetPropertyDescription. Same heap-leak rule as GetPropertyDescription.
-// Still R() on K2, DELIBERATELY: ReadItemKeyedPropertyString has no callers
-// (the saber peek switched to driving the engine's own OnControlEntered),
-// and the K2 upgrade row handler drops the keyed-bonus concat entirely —
-// there may be no K2 twin to find. Resolve only if a consumer returns.
-const uintptr_t kAddrCSWSItemGetKeyedPropertyString = acc::addr::R(0x0055f510);
 
 // Per-category property-block builders that GetPropertyDescription calls in
 // fixed order (decompile-verified at 0055f340). Each is

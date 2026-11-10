@@ -1,4 +1,4 @@
-# engine_reads_items.cpp (770 lines)
+# engine_reads_items.cpp (766 lines)
 
 Source: `patches/Accessibility/engine_reads_items.cpp`
 
@@ -32,11 +32,11 @@ Declarations stay in engine_reads.h - splitting that header is a separate, defer
 - L398 `void* ItemFromActionId(uint32_t actionId)`
 - L404 `bool IsInventoryItemRow(void* control)`
 - L415 `bool ReadItemPropertyDescription(void* item, char* outBuf, size_t bufSize)`
-- L447 `bool ReadBaseItemFlags(void* item, uint8_t& itemType, uint8_t& weaponType)`: Read item_type / weapon_type via CSWItem::GetBaseItem (the CSWItem subobject is at offset 0 of CSWSItem, so the item pointer is a valid `this`).
-- L479 `void ComputeSectionOffsets(void* item, uint8_t weaponType, size_t& offTags, size_t& offValues, size_t& offProps)`: Append the engine's own per-category builders to ONE accumulator, in the same order and with the same guards GetPropertyDescription uses, recording the visible (strlen) length after each section.
-- L546 `bool ReadItemDescriptionViaTlk(void* item, char* outBuf, size_t bufSize, uint32_t& outStrref)`: Resolve the item's identified-description text through the TLK strref, bypassing the (sometimes corrupt) inline CExoLocString substring that GetPropertyDescription/GetString prefer.
-- L562 `void CopySlice(char* dst, size_t cap, const char* src, size_t start, size_t end)`: Copy src[start..end) into dst (NUL-terminated, bounded by cap).
-- L573 `bool BuildItemDescriptionBlocks(void* item, ItemDescriptionBlocks* out)`
-- L650 `void* GetWorkbenchSlotInstalledItem(void* upgradePanel, void* slotControl)`
-- L672 `WorkbenchPickerInfo GetWorkbenchPickerInfo(void* upgradePanel)`
-- L711 `bool ReadCreatureForcePoints(void* clientCreature, int* outCur, int* outMax)`
+- L443 `bool ReadBaseItemFlags(void* item, uint8_t& itemType, uint8_t& weaponType)`: Read item_type / weapon_type via CSWItem::GetBaseItem (the CSWItem subobject is at offset 0 of CSWSItem, so the item pointer is a valid `this`).
+- L475 `void ComputeSectionOffsets(void* item, uint8_t weaponType, size_t& offTags, size_t& offValues, size_t& offProps)`: Append the engine's own per-category builders to ONE accumulator, in the same order and with the same guards GetPropertyDescription uses, recording the visible (strlen) length after each section.
+- L542 `bool ReadItemDescriptionViaTlk(void* item, char* outBuf, size_t bufSize, uint32_t& outStrref)`: Resolve the item's identified-description text through the TLK strref, bypassing the (sometimes corrupt) inline CExoLocString substring that GetPropertyDescription/GetString prefer.
+- L558 `void CopySlice(char* dst, size_t cap, const char* src, size_t start, size_t end)`: Copy src[start..end) into dst (NUL-terminated, bounded by cap).
+- L569 `bool BuildItemDescriptionBlocks(void* item, ItemDescriptionBlocks* out)`
+- L646 `void* GetWorkbenchSlotInstalledItem(void* upgradePanel, void* slotControl)`
+- L668 `WorkbenchPickerInfo GetWorkbenchPickerInfo(void* upgradePanel)`
+- L707 `bool ReadCreatureForcePoints(void* clientCreature, int* outCur, int* outMax)`

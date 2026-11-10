@@ -45,27 +45,6 @@ SubclassedWindow         g_subclassed[kMaxSubclassedWindows] = {};
 std::atomic<int>         g_subclassedCount{0};
 std::atomic<HANDLE>      g_pollThread{nullptr};
 
-// --- Cold-start foreground guard (Game Bar / overlay focus-theft) ---
-//
-// On a cold launch an overlay (notably the Xbox Game Bar popup) can steal
-// the foreground window for a few seconds right as the main menu comes up.
-// DirectInput's keyboard is acquired at foreground cooperative level, so
-// while a foreign window owns the foreground the engine cannot Acquire it —
-// the menu is keyboard-dead until the user alt-tabs the game back. This
-// guard, armed at MainMenu first-sight, watches for that theft during a
-// bounded window and pulls the game back to the foreground, at which point
-// the engine's activation handler re-Acquires input on its own.
-//
-// kGuardWindowMs: how long after arming we keep watching. The observed
-// Game Bar steal lands within ~6 s of the menu; 10 s gives margin without
-// trapping a user who wants to leave (after this we never reclaim again).
-// kMaxReclaims caps the reclaim attempts so a persistent overlay can't
-// drag us into an endless focus war — once hit, we give up and disarm.
-constexpr DWORD kGuardWindowMs = 10000;
-constexpr int   kMaxReclaims   = 6;
-
-std::atomic<DWORD> g_guardDeadlineTick{0};  // GetTickCount() deadline; 0 = disarmed
-std::atomic<int>   g_guardReclaims{0};
 std::atomic<HWND>  g_liveRenderWindow{nullptr};  // newest visible "Render Window"
 
 const SubclassedWindow* FindSubclassed(HWND hwnd) {
@@ -418,48 +397,6 @@ void ForceForeground(HWND target, HWND fg) {
     }
 }
 
-// Called once per poll iteration. While the guard is armed and within its
-// window, reclaim the foreground if a non-game window has stolen it.
-void MaybeReclaimForeground() {
-    DWORD deadline = g_guardDeadlineTick.load(std::memory_order_acquire);
-    if (deadline == 0) return;  // disarmed
-
-    DWORD now = GetTickCount();
-    if (static_cast<int>(now - deadline) >= 0) {  // wrap-safe elapsed check
-        g_guardDeadlineTick.store(0, std::memory_order_release);
-        acclog::Write("Focus",
-            "StartupForegroundGuard: window elapsed; disarmed (reclaims=%d)",
-            g_guardReclaims.load(std::memory_order_relaxed));
-        return;
-    }
-
-    HWND render = g_liveRenderWindow.load(std::memory_order_acquire);
-    if (!render || !IsWindow(render)) return;
-
-    HWND fg = GetForegroundWindow();
-    if (fg) {
-        DWORD fgPid = 0;
-        GetWindowThreadProcessId(fg, &fgPid);
-        if (fgPid == GetCurrentProcessId()) return;  // we already own foreground
-    }
-
-    int n = g_guardReclaims.load(std::memory_order_relaxed);
-    if (n >= kMaxReclaims) {
-        g_guardDeadlineTick.store(0, std::memory_order_release);
-        acclog::Write("Focus",
-            "StartupForegroundGuard: reclaim cap (%d) reached; giving up",
-            kMaxReclaims);
-        return;
-    }
-    g_guardReclaims.store(n + 1, std::memory_order_relaxed);
-
-    acclog::Write("Focus",
-        "StartupForegroundGuard: foreign window %p holds foreground; "
-        "reclaiming render %p (attempt %d/%d)",
-        fg, render, n + 1, kMaxReclaims);
-    ForceForeground(render, fg);
-}
-
 // --- Movie-end foreground guard (cutscene leaves the game with no foreground) ---
 //
 // The Peragus docking stunt (GOG K2, patch-20260905-075831) ended with the
@@ -678,7 +615,6 @@ DWORD WINAPI PollProc(LPVOID) {
         }
         moviePlayingPrev = moviePlayingNow;
 
-        MaybeReclaimForeground();
         MaybeReclaimAfterMovie();
         MaybeFlagInputBlockedWarning();
         Sleep(100);

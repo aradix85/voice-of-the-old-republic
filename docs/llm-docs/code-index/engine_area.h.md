@@ -1,4 +1,4 @@
-# engine_area.h (866 lines)
+# engine_area.h (859 lines)
 
 Source: `patches/Accessibility/engine_area.h`
 
@@ -54,29 +54,28 @@ game_objects[] is an array of handles, not pointers. Initial code treated entrie
 - L297 `bool IsDoorStatic(void* serverDoor)`: CSWSDoor Static flag +0x3c0 (UTD Static).
 - L305 `bool IsDoorCosmetic(void* serverDoor)`: A door the player can NEVER use — Static, with (on KOTOR 2) no lock evidence to the contrary.
 - L315 `bool MaybeDrivePassiveSelection()`: Root-cause fix (2026-07-19, rev 2): the Endar Spire opening HOLDS the global fade at alpha=1.0 (engine re-asserts it every frame, so it can't be cleared) after the fade animation finishes, while the player keeps world...
-- L321 `enum class DoorMaterial`: Derived from CSWSDoor.generic_type +0x2a1 via a static 65-entry table (genericdoors.2da ⋈ placeableobjsnds.2da on soundapptype).
-- L325 `bool IsMapNoteEnabled(void* waypoint)`: CSWSWaypoint.map_note_enabled +0x22c.
-- L334 `bool EnableMapNote(void* waypoint)`: Replica of the write path in ExecuteCommandSetMapPinEnabled(TRUE) @0x0054b460: guard on has_map_note (+0x228), then set the int at +0x22c on the SERVER waypoint.
-- L339 `void* GetAreaMap()`: AppManager → CServerExoApp → GetModule → CSWSModule.area_map @+0x218.
-- L343 `bool IsWorldPointExplored(void* areaMap, const Vector& pos)`: CSWSAreaMap::IsWorldPointExplored @0x00579210.
-- L352 `bool GetFogCellSizeM(void* areaMap, float& outCellXM, float& outCellYM)`: Fog-of-war grid cell size in world metres.
-- L360 `bool GetMapRotateCCWFromWorldOrientation(void* areaMap, const Vector& orientation, float& outDegCCW)`: CSWSAreaMap::GetMapRotateCCWFromWorldOrientation @0x00578ed0.
-- L367 `void* GetClientArea(void* serverArea)`: Back-pointer at CSWSArea +0x2d0.
-- L369 `int GetMapPinCount(void* clientArea)`
-- L374 `void* GetMapPinAt(void* clientArea, int i)`: Pointer-array semantics (CSWCMapPin**, 4-byte stride, each slot a heap-allocated 0x110-byte pin).
-- L378 `bool GetMapPinPosition(void* mapPin, Vector& out)`: CSWCMapPin embeds CSWCObject at +0; position at +0x24 (standard CGameObject offset).
-- L390 `bool IsMapPinEnabled(void* mapPin)`: CSWCMapPin.enabled +0xfc.
-- L394 `bool GetMapPinNoteText(void* mapPin, char* outBuf, size_t bufSize)`: CSWCMapPin.note_text CExoString @+0x100.
-- L411 `bool CreateMapPin(void* clientArea, const Vector& pos, const char* name, uint32_t referenceNumber, void** outPin = nullptr)`: Replicates the engine pattern from HandleServerToPlayerMapPinReferenceNumber @0x652d60: operator_new(0x110) → CSWCMapPin ctor → field writes (pos +0x24, enabled +0xfc, note_text via CExoString::operator= +0x100, flags...
-- L419 `bool GetWaypointMapNote(void* waypoint, char* outBuf, size_t bufSize)`: CSWSWaypoint.map_note CExoLocString @+0x230 (strref @+0x234).
-- L425 `class AreaObjectIterator`: Snapshots data pointer + size at construction.
-- L441 `void ForEachDoor(void* area, Fn fn)`: Calls fn(door, pos) for every door of `area` whose position reads.
-- L453 `void* NearestDoor(void* area, const Vector& p, float maxM, Accept accept, Vector* outPos = nullptr)`: The door of `area` nearest to `p` in the plane, within `maxM`, for which accept(door) holds; null if none.
-- L768 `bool TrapDetectedByAnyOf(void* gameObject, const uint32_t* ids, int idCount)`: True when `gameObject`'s trap has been detected by any of the given SERVER object ids (pass the current party's ids).
-- L776 `struct WallEdge`: One perimeter walkmesh edge — a triangle side that has no neighbour (`SurfaceMeshAdjacency.indices[e] == -1`) and therefore corresponds to a physical wall in the room.
-- L805 `int BuildAreaWallCache(void* area, WallEdge* outBuf, int maxEdges)`: Walks every room in `area`, then every face in each room's CSWRoomSurfaceMesh, and emits one WallEdge for each triangle side whose adjacency is `-1` (perimeter / wall sentinel).
-- L812 `struct FloorTri`: One walkmesh floor triangle, all three corners in WORLD space (LocalToWorld applied at extraction, same as WallEdge).
-- L823 `int BuildAreaFloorCache(void* area, FloorTri* outBuf, int maxTris)`: Walks every room's surface mesh and emits every face as a FloorTri.
-- L858 `bool SegmentCrossesWalkmesh(const WallEdge* walls, int wallCount, const Vector& a, const Vector& b, Vector& outHitPoint, bool ignoreZ = false)`: Segment-vs-perimeter test in the XY plane, with an optional 3D guard: a wall is only a blocker when its edge sits within kWallCrossZToleranceM of the ray at the crossing point.
+- L319 `bool IsMapNoteEnabled(void* waypoint)`: CSWSWaypoint.map_note_enabled +0x22c.
+- L328 `bool EnableMapNote(void* waypoint)`: Replica of the write path in ExecuteCommandSetMapPinEnabled(TRUE) @0x0054b460: guard on has_map_note (+0x228), then set the int at +0x22c on the SERVER waypoint.
+- L333 `void* GetAreaMap()`: AppManager → CServerExoApp → GetModule → CSWSModule.area_map @+0x218.
+- L337 `bool IsWorldPointExplored(void* areaMap, const Vector& pos)`: CSWSAreaMap::IsWorldPointExplored @0x00579210.
+- L346 `bool GetFogCellSizeM(void* areaMap, float& outCellXM, float& outCellYM)`: Fog-of-war grid cell size in world metres.
+- L354 `bool GetMapRotateCCWFromWorldOrientation(void* areaMap, const Vector& orientation, float& outDegCCW)`: CSWSAreaMap::GetMapRotateCCWFromWorldOrientation @0x00578ed0.
+- L361 `void* GetClientArea(void* serverArea)`: Back-pointer at CSWSArea +0x2d0.
+- L363 `int GetMapPinCount(void* clientArea)`
+- L368 `void* GetMapPinAt(void* clientArea, int i)`: Pointer-array semantics (CSWCMapPin**, 4-byte stride, each slot a heap-allocated 0x110-byte pin).
+- L372 `bool GetMapPinPosition(void* mapPin, Vector& out)`: CSWCMapPin embeds CSWCObject at +0; position at +0x24 (standard CGameObject offset).
+- L384 `bool IsMapPinEnabled(void* mapPin)`: CSWCMapPin.enabled +0xfc.
+- L388 `bool GetMapPinNoteText(void* mapPin, char* outBuf, size_t bufSize)`: CSWCMapPin.note_text CExoString @+0x100.
+- L405 `bool CreateMapPin(void* clientArea, const Vector& pos, const char* name, uint32_t referenceNumber, void** outPin = nullptr)`: Replicates the engine pattern from HandleServerToPlayerMapPinReferenceNumber @0x652d60: operator_new(0x110) → CSWCMapPin ctor → field writes (pos +0x24, enabled +0xfc, note_text via CExoString::operator= +0x100, flags...
+- L413 `bool GetWaypointMapNote(void* waypoint, char* outBuf, size_t bufSize)`: CSWSWaypoint.map_note CExoLocString @+0x230 (strref @+0x234).
+- L419 `class AreaObjectIterator`: Snapshots data pointer + size at construction.
+- L435 `void ForEachDoor(void* area, Fn fn)`: Calls fn(door, pos) for every door of `area` whose position reads.
+- L447 `void* NearestDoor(void* area, const Vector& p, float maxM, Accept accept, Vector* outPos = nullptr)`: The door of `area` nearest to `p` in the plane, within `maxM`, for which accept(door) holds; null if none.
+- L761 `bool TrapDetectedByAnyOf(void* gameObject, const uint32_t* ids, int idCount)`: True when `gameObject`'s trap has been detected by any of the given SERVER object ids (pass the current party's ids).
+- L769 `struct WallEdge`: One perimeter walkmesh edge — a triangle side that has no neighbour (`SurfaceMeshAdjacency.indices[e] == -1`) and therefore corresponds to a physical wall in the room.
+- L798 `int BuildAreaWallCache(void* area, WallEdge* outBuf, int maxEdges)`: Walks every room in `area`, then every face in each room's CSWRoomSurfaceMesh, and emits one WallEdge for each triangle side whose adjacency is `-1` (perimeter / wall sentinel).
+- L805 `struct FloorTri`: One walkmesh floor triangle, all three corners in WORLD space (LocalToWorld applied at extraction, same as WallEdge).
+- L816 `int BuildAreaFloorCache(void* area, FloorTri* outBuf, int maxTris)`: Walks every room's surface mesh and emits every face as a FloorTri.
+- L851 `bool SegmentCrossesWalkmesh(const WallEdge* walls, int wallCount, const Vector& a, const Vector& b, Vector& outHitPoint, bool ignoreZ = false)`: Segment-vs-perimeter test in the XY plane, with an optional 3D guard: a wall is only a blocker when its edge sits within kWallCrossZToleranceM of the ray at the crossing point.
 
-Also 83 constants or variables at namespace scope.
+Also 82 constants or variables at namespace scope.

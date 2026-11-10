@@ -314,12 +314,6 @@ bool IsDoorCosmetic(void* serverDoor);
 // visible fade is left untouched. Returns true when it drove a pass.
 bool MaybeDrivePassiveSelection();
 
-// Derived from CSWSDoor.generic_type +0x2a1 via a static 65-entry table
-// (genericdoors.2da ⋈ placeableobjsnds.2da on soundapptype). Rows 0-12
-// don't set soundapptype; classified by label keyword. Metal is the
-// fallback for unknown indices.
-enum class DoorMaterial { Metal, Wood, Stone };
-
 // CSWSWaypoint.map_note_enabled +0x22c. Engine's fog-of-war gate for
 // map-note text — disabled until the player discovers via map-pin trigger.
 bool IsMapNoteEnabled(void* waypoint);
@@ -605,7 +599,6 @@ const size_t kObjectTagOffset  = acc::off::Same(0x18);  // CExoString fallback i
 // GetFirstName (+0x3ec) — the door body grew, so these took a large per-field
 // shift rather than the shallow +4.
 const size_t kDoorLocNameOffset            = acc::off::Pick(0x39c, 0x3ec);
-const size_t kDoorGenericTypeOffset        = acc::off::Pick(0x2a1, 0x2e1);  // byte → genericdoors.2da row
 const size_t kDoorLockedOffset             = acc::off::Pick(0x2c4, 0x304);  // undefined4 (bool)
 const size_t kDoorOpenStateOffset          = acc::off::Pick(0x2cc, 0x31c);  // byte
 const size_t kDoorDescriptionOffset        = acc::off::Pick(0x3a4, 0x3f4);

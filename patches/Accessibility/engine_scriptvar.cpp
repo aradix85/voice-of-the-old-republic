@@ -30,8 +30,6 @@ namespace {
 // SetInt lookup(1,1), SetString lookup(3,1)).
 const uintptr_t kAddrSetString = acc::addr::Pick(0x0059a8e0, 0x005e6ce0);  // __thiscall(table, name, value)
 const uintptr_t kAddrGetString = acc::addr::Pick(0x0059a590, 0x005e6850);  // __thiscall(table, out, name) -> out
-const uintptr_t kAddrSetInt = acc::addr::Pick(0x0059a6f0, 0x005e6a00);  // __thiscall(table, name, value, journalArg)
-const uintptr_t kAddrGetInt = acc::addr::Pick(0x0059a530, 0x005e67d0);  // __thiscall(table, name) -> int
 const uintptr_t kAddrExoCtorCStr = acc::addr::Pick(0x005e5a90, 0x00733570);  // CExoString::CExoString(char*)
 const uintptr_t kAddrExoDtor = acc::addr::Pick(0x005e5c20, 0x00733780);  // CExoString::~CExoString()
 
@@ -59,8 +57,6 @@ typedef void  (__thiscall* PFN_SetString)(void*, void*, void*);
 // call doesn't return caller-frame garbage (see the persistence doc's
 // calling-convention trap).
 typedef void* (__thiscall* PFN_GetString)(void*, void*, void*);
-typedef void  (__thiscall* PFN_SetInt)(void*, void*, int, int);
-typedef int   (__thiscall* PFN_GetInt)(void*, void*);
 typedef void* (__thiscall* PFN_ExoCtorCStr)(void*, const char*);
 typedef void  (__thiscall* PFN_ExoDtor)(void*);
 

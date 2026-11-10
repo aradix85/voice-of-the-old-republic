@@ -18,14 +18,7 @@ namespace acc::probe_camera_state {
 
 namespace {
 
-const size_t kCSWCModuleCameraYawOffset       = acc::off::Todo(0x98);
 const size_t kCSWPlayerControlCameraOffset    = acc::off::Todo(0x08);  // CAurCamera*
-// Candidate offsets inside the camera object (CSWCameraOnAStick is the
-// gameplay orbital camera; field32_0x90 was referenced in
-// Control_UpdateCameraDesiredOrientation as a yaw offset).
-constexpr size_t kCameraYawOffsetA                = 0x90;
-constexpr size_t kCameraYawOffsetB                = 0x94;
-constexpr size_t kCameraYawOffsetC                = 0x40;
 
 
 void* GetPlayerControlCamera(void* clientInternal) {
