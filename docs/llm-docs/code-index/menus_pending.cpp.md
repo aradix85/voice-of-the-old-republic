@@ -1,4 +1,4 @@
-# menus_pending.cpp (1114 lines)
+# menus_pending.cpp (1146 lines)
 
 Source: `patches/Accessibility/menus_pending.cpp`
 
@@ -31,4 +31,20 @@ Body of `Drain` mirrors the original `TickPendingOps` block in menus.cpp: same d
 - L275 `bool QueueWagerInput(void* panel, int code)`
 - L283 `bool IsPending()`
 - L297 `bool EngineOpsReady(Kind kind)`: Are the engine addresses this op needs actually resolved for the running build?
-- L328 `void Drain(void* gm)`
+- L335 `void* MouseOver(void* gm)`: CSWGuiManager mouseOverControl pointer at +0x8 (per the decompilation in docs/menu-nav-design.md).
+- L339 `void DrainMoveCursor(void* gm, const PendingOp& op)`
+- L365 `void DrainClickAt(void* gm, const PendingOp& op)`: Combined move + click.
+- L419 `void DrainActivate(const PendingOp& op)`: Direct activate via vtable[15].HandleInputEvent(0x27, 1).
+- L664 `void DrainEquipSelect(const PendingOp& op)`: Equip-screen slot activation.
+- L690 `void DrainEquipCommit(const PendingOp& op)`: Equip-row commit.
+- L739 `void DrainEquipPickerCancel(const PendingOp& op)`: Equip-picker cancel — the engine's own "back out of the item zone".
+- L767 `void DrainWorkbenchSlotSelect(const PendingOp& op)`: Workbench slot activation.
+- L892 `void DrainWorkbenchUpgradeCommit(const PendingOp& op)`: Workbench upgrade commit.
+- L932 `void DrainWorkbenchUpgradeInstallK2(const PendingOp& op)`: K2 upgrade install/remove — ONE step.
+- L983 `void DrainWorkbenchPickerCancel(const PendingOp& op)`: Back out of the mod-picker without committing (Esc).
+- L1004 `void DrainSliderInput(const PendingOp& op)`: Slider value adjustment via vtable[15].HandleInputEvent(500/501, 1).
+- L1026 `void DrainStoreItemActivate(const PendingOp& op)`: Store item Enter — dispatch the engine's per-mode click handler with the row as param_1.
+- L1033 `void DrainCraftRowCommit(const PendingOp& op)`: K2 workbench / crafting list-row commit — select the row, then fire the panel's own commit button.
+- L1041 `void DrainGalaxyInput(const PendingOp& op)`: Galaxy-map planet cycle / accept / cancel.
+- L1051 `void DrainWagerInput(const PendingOp& op)`: Pazaak wager less/more step — the popup's BTN_LESS / BTN_MORE speed buttons only respond to their push callback, which re-dispatches to the panel's HandleInputEvent (0x2f decrement / 0x30 increment).
+- L1057 `void Drain(void* gm)`
