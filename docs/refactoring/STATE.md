@@ -260,6 +260,16 @@ audio_footstep_suppress: stuck probe in named steps (0cbc1240), moved to
 audio_stuck_probe (14310482), lean (4ba10f9b: stuck window and the two
 probe triggers engine-free in stuck_detect with tests, DistXYToSegmentSq
 next to Vector shared with floor_puzzle_plates).
+engine_reads: split into primitives, text, controls and objects
+(367b60a0), lean (3f02ffd9: the Try* reads instead of private __try
+blocks, ReadTextOrEmpty for label and button).
+menus_dispatch: OnHandleInputEvent as a gate list of named steps
+(2ae51bc7, 329 lines). Noted, not changed: the chargen feats and powers
+grids return without the press tracker, unlike every other handler.
+engine_picker: Drive in named steps and lean (f1d01f52, 348 lines).
+minigame_swoop_audio_internal.h: layout and tuning constants to
+minigame_swoop_audio_tuning.h (7eaf1d81).
+Nothing above 600 lines is left except the catalog headers.
 
 Careful: never rewrite source files with PowerShell ReadAllText/WriteAllText
 (it decodes UTF-8 and writes '?' for the dashes and umlauts in comments);
@@ -322,9 +332,7 @@ prefix (menus_listbox_picker.cpp).
   possible; for files above 500 lines, judge whether a split into modules of
   things that belong together makes sense, and do it where it does.
 - Next file, by size (2026-11-10 21:15, strings*.cpp excepted):
-  engine_reads 622, menus_dispatch 619,
-  minigame_swoop_audio_internal.h 616 (judge), engine_picker 609; then to
-  judge: combat_query 585, room_topology 578, room_topology_label_kinds
+  to judge: combat_query 585, room_topology 578, room_topology_label_kinds
   576, room_topology_doors 574, log 563, menus_chargen_feats 561,
   input_poll_router 559, engine_player_party 551, spatial_wall_surfaces
   546, combat_diag 543, minigame_turret_peg 536, engine_keymap 536,
