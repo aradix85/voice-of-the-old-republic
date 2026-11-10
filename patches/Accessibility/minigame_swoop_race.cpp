@@ -186,7 +186,6 @@ void HandleExit() {
     acclog::Write("SwoopRace",
                   "EXIT after %llu ms (debounced %d ticks)",
                   dur, kExitDebounceTicks);
-    FlushRaceEndSpeech(/*force=*/true);   // a delayed time must not die with the module
     // Stop every obstacle + accelpad loop — some may still be active
     // if the race ended while objects were in range.
     ResetSpatialAudio();
@@ -202,6 +201,7 @@ void HandleExit() {
     // Fallback: if the terminal-stop detector already spoke the time (the
     // common path), this is a no-op; otherwise speak it now.
     SpeakRaceEndMessage();
+    FlushRaceEndSpeech(/*force=*/true);   // a delayed time must not die with the module
 }
 
 // Run one of the K2 player bike's slot scripts through the engine's own
