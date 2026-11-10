@@ -17,6 +17,8 @@
 
 #pragma once
 
+#include <cstdint>
+
 namespace acc::combat::queue {
 
 // Returns the player's filtered combat-round queue size (excludes the
@@ -105,5 +107,26 @@ void ForceDisarm(const char* reason);
 
 void Tick();
 void PollWin32Hotkey();
+
+// Speaks the idle notice (KOTOR 1): in combat, nothing queued for the
+// controlled character and an enemy near for 2.5 s -> "You are not
+// attacking..." once, until it attacks again or combat ends.
+void TickIdleNotice();
+
+// True when the controlled character's first queued combat action targets
+// `targetId` (client or server id; the high bit is ignored). For R: pressing
+// it again while already attacking that target adds nothing.
+bool LeaderIsAttacking(uint32_t targetId);
+
+// Queue depths for the diagnostics: the combat round's own count (0 also
+// for a round without an action list, -1 when unreadable), the same for a
+// creature's round, and the creature's outer action queue.
+int ReadRoundActionCount(void* combatRound);
+int ReadQueueSize(void* serverCreature);
+int ReadOuterQueueSize(void* serverCreature);
+
+// "PLAYER" when `combatRound` belongs to the user's creature, "other" for
+// the companion and enemy rounds that share the same engine surfaces.
+const char* RoleTag(void* combatRound);
 
 }  // namespace acc::combat::queue

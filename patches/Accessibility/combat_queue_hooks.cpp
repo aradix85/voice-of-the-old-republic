@@ -15,7 +15,6 @@
 // definition's home file moved.
 
 #include "combat_diag.h"
-#include "combat_diag_internal.h"
 
 #include <windows.h>
 #include <cstdint>
@@ -64,7 +63,7 @@ extern "C" void __cdecl OnCombatRoundAddAction(void* this_combatRound,
 
     acclog::Write("Combat.Diag",
         "ADD   [%s] round=%p action=%p type=%u param2=%d",
-        acc::combat_diag::RoleTag(this_combatRound),
+        acc::combat::queue::RoleTag(this_combatRound),
         this_combatRound, action,
         static_cast<unsigned>(action_type), param2);
 

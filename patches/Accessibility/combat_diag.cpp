@@ -1,5 +1,4 @@
 #include "combat_diag.h"
-#include "combat_diag_internal.h"
 
 #include <windows.h>
 #include <cstdint>
@@ -65,146 +64,6 @@ uint8_t ReadCombatModeBit(void* clientLeader) {
     }
 }
 
-// Queued-action count on a CSWSCombatRound directly. 0 means "nothing
-// queued" — including the case where the round has no action list at all,
-// which is the engine's own TEST EAX,EAX / JZ bail condition at the top of
-// RemoveAllActions. -1 means "couldn't tell" (null round, or a faulted read).
-//
-// Callers that need to distinguish "empty" from "unknown" must check for -1;
-// the RemoveAllActions hook relies on exactly that, so do not collapse the
-// two.
-int ReadRoundActionCount(void* combatRound) {
-    if (!combatRound) return -1;
-    __try {
-        void* listPtr = *reinterpret_cast<void**>(
-            reinterpret_cast<unsigned char*>(combatRound) +
-            kCombatRoundActionsOffset);
-        if (!listPtr) return 0;
-        // Fast path — read internal.count directly (engine's own size
-        // field). Avoids the walker entirely. Walk path stays as a
-        // backup for filtered-count semantics.
-        void* internalPtr = *reinterpret_cast<void**>(
-            reinterpret_cast<unsigned char*>(listPtr) +
-            kListInternalOffset);
-        if (!internalPtr) return 0;
-        int rawCount = *reinterpret_cast<int*>(
-            reinterpret_cast<unsigned char*>(internalPtr) +
-            kListInternalCountOffset);
-        if (rawCount < 0 || rawCount > 64) return -1;  // sanity
-        return rawCount;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return -1;
-    }
-}
-
-int ReadQueueSize(void* serverCreature) {
-    if (!serverCreature) return -1;
-    __try {
-        void* combatRound = *reinterpret_cast<void**>(
-            reinterpret_cast<unsigned char*>(serverCreature) +
-            kCreatureCombatRoundOffset);
-        return ReadRoundActionCount(combatRound);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return -1;
-    }
-}
-
-// Read the OUTER game-action queue size at CSWSObject.action_nodes
-// @+0xfc. The list is INLINE on CSWSObject (CExoLinkedList<T>, not a
-// pointer), so the first deref yields the CExoLinkedListInternal*
-// directly; +8 on that gives the engine-authoritative count field.
-//
-// This is the queue the strip UI iterates first (UpdateActionQueue
-// @0x68a010). Returns the raw count (no type filter — outer nodes
-// have action_type at +0 of CSWSObjectActionNode, not the dispatcher
-// placeholder convention the inner queue uses). -1 on read fault.
-int ReadOuterQueueSize(void* serverCreature) {
-    if (!serverCreature) return -1;
-    __try {
-        // The inline CExoLinkedList<T> at kObjectActionNodesOffset (the
-        // resolved per-game constant — a local raw 0xfc literal here
-        // silently read the wrong field on KOTOR 2) starts with the
-        // internal pointer (offset 0 = kListInternalOffset).
-        void* internalPtr = *reinterpret_cast<void**>(
-            reinterpret_cast<unsigned char*>(serverCreature) +
-            kObjectActionNodesOffset);
-        if (!internalPtr) return 0;
-        int rawCount = *reinterpret_cast<int*>(
-            reinterpret_cast<unsigned char*>(internalPtr) +
-            kListInternalCountOffset);
-        if (rawCount < 0 || rawCount > 64) return -1;
-        return rawCount;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return -1;
-    }
-}
-
-// Target (server id) of the first real action queued on the creature's
-// combat round; 0 when nothing is queued or the read faults.
-uint32_t ReadFirstQueuedTarget(void* serverCreature) {
-    if (!serverCreature) return 0;
-    __try {
-        void* combatRound = *reinterpret_cast<void**>(
-            reinterpret_cast<unsigned char*>(serverCreature) +
-            kCreatureCombatRoundOffset);
-        if (!combatRound) return 0;
-        void* listPtr = *reinterpret_cast<void**>(
-            reinterpret_cast<unsigned char*>(combatRound) +
-            kCombatRoundActionsOffset);
-        if (!listPtr) return 0;
-        void* internalPtr = *reinterpret_cast<void**>(
-            reinterpret_cast<unsigned char*>(listPtr) + kListInternalOffset);
-        if (!internalPtr) return 0;
-        void* node = *reinterpret_cast<void**>(
-            reinterpret_cast<unsigned char*>(internalPtr) +
-            kListInternalHeadOffset);
-        for (int walked = 0; node && walked < 64; ++walked) {
-            void* data = *reinterpret_cast<void**>(
-                reinterpret_cast<unsigned char*>(node) + kLinkedListNodeDataOff);
-            if (data) {
-                auto* base = reinterpret_cast<unsigned char*>(data);
-                if (*(base + kCombatRoundActionTypeOffset) != 0xFF) {
-                    return *reinterpret_cast<uint32_t*>(
-                        base + kCombatRoundActionTargetOffset);
-                }
-            }
-            node = *reinterpret_cast<void**>(
-                reinterpret_cast<unsigned char*>(node) + kLinkedListNodeNextOff);
-        }
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return 0;
-    }
-    return 0;
-}
-
-// A living hostile creature within this many metres of the player.
-constexpr float kIdleEnemyRangeM = 25.0f;
-bool HostileNearby() {
-    Vector p;
-    if (!acc::engine::GetPlayerPosition(p)) return false;
-    void* area = acc::engine::GetCurrentArea();
-    if (!area) return false;
-    acc::engine::AreaObjectIterator it(area);
-    while (void* obj = it.Next()) {
-        if (!acc::filter::ObjectMatches(obj, acc::filter::CycleCategory::Npc)) continue;
-        if (!acc::examine_view::IsHostileCreature(obj)) continue;
-        const int hp = acc::engine::ReadCreatureCurrentHitPoints(obj);
-        if (hp == 0 || hp < -1) continue;
-        Vector q;
-        if (!acc::engine::GetObjectPosition(obj, q)) continue;
-        if (DistXYSq(q, p) <= kIdleEnemyRangeM * kIdleEnemyRangeM) return true;
-    }
-    return false;
-}
-
-// Idle notice: in combat, not paused, nothing queued for the controlled
-// character and an enemy still near, for this long -> one spoken line.
-// 2026-11-08: the player pressed R every second because she did not know
-// the attack carries on by itself; this line says when R is actually needed.
-constexpr DWORD kIdleNoticeMs = 2500;
-DWORD g_idleSince  = 0;
-bool  g_idleSpoken = false;
-
 int CallGetAutoPaused(void* exoApp) {
     if (!exoApp) return -1;
     __try {
@@ -265,8 +124,8 @@ void ReadState(State& s) {
     void* exoApp = acc::engine::GetClientApp();
 
     s.cm  = ReadCombatModeBit(client);
-    s.qs  = ReadQueueSize(server);
-    s.oq  = ReadOuterQueueSize(server);
+    s.qs  = acc::combat::queue::ReadQueueSize(server);
+    s.oq  = acc::combat::queue::ReadOuterQueueSize(server);
     s.ap  = CallGetAutoPaused(exoApp);
     s.ps  = CallGetPauseState(exoApp);
     s.tgt = ReadMainInterfaceTarget(exoApp);
@@ -321,41 +180,6 @@ void Tick() {
     }
     g_last = now;
 
-    // Idle notice (KOTOR 1). Cheap checks first; the area walk only runs
-    // once the controlled character has stood with an empty queue for a
-    // while.
-    if (acc::game::IsKotor2()) return;
-    const bool idleNow =
-        now.qs == 0 && now.oq == 0 &&
-        acc::engine::IsAnyPartyMemberInCombat() &&
-        !acc::engine::WorldIsPaused() &&
-        !acc::engine::HasActiveDialogPanel() &&
-        !acc::engine::IsForegroundUiBlocking();
-    if (!idleNow) {
-        g_idleSince = 0;
-        if (now.qs > 0 || now.oq > 0 || !acc::engine::IsAnyPartyMemberInCombat()) {
-            g_idleSpoken = false;
-        }
-        return;
-    }
-    const DWORD tick = GetTickCount();
-    if (g_idleSince == 0) {
-        g_idleSince = tick;
-        return;
-    }
-    if (g_idleSpoken || tick - g_idleSince < kIdleNoticeMs) return;
-    g_idleSpoken = true;
-    if (!HostileNearby()) return;
-    const char* line = acc::strings::Get(acc::strings::Id::CombatIdleNotice);
-    acc::speech::Speak(line, /*interrupt=*/false);
-    acclog::Write("Combat.Diag", "idle notice -> [%s]", line);
-}
-
-bool LeaderIsAttacking(uint32_t targetId) {
-    if (targetId == 0) return false;
-    void* server = acc::engine::GetPlayerServerCreature();
-    const uint32_t queued = ReadFirstQueuedTarget(server);
-    return queued != 0 && (queued & 0x7fffffffu) == (targetId & 0x7fffffffu);
 }
 
 void LogPreFire(const char* label) {
@@ -372,32 +196,6 @@ void LogPostFire(const char* label) {
     acclog::Write("Combat.Diag",
         "POST %s cm=%u qs=%d oq=%d ap=%d ps=%d tgt=0x%08x",
         label ? label : "?", s.cm, s.qs, s.oq, s.ap, s.ps, s.tgt);
-}
-
-namespace {
-
-// Resolve the player's CSWSCombatRound at hook-fire time so we can tag
-// each ADD/CLEAR event with whether it belongs to the user's creature
-// (vs companion / enemy combat rounds, which also use the same engine
-// surfaces). Cheap — the chain is already cached by GetPlayerServerCreature.
-void* GetPlayerCombatRound() {
-    void* server = acc::engine::GetPlayerServerCreature();
-    if (!server) return nullptr;
-    __try {
-        return *reinterpret_cast<void**>(
-            reinterpret_cast<unsigned char*>(server) +
-            kCreatureCombatRoundOffset);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return nullptr;
-    }
-}
-
-}  // namespace
-
-// Declared in combat_diag_internal.h - combat_queue_hooks.cpp tags its log
-// lines with the same role, so this one helper is not file-static.
-const char* RoleTag(void* combatRound) {
-    return combatRound == GetPlayerCombatRound() ? "PLAYER" : "other";
 }
 
 }  // namespace acc::combat_diag
@@ -429,12 +227,12 @@ extern "C" void __cdecl OnCombatRoundRemoveAllActions(void* this_combatRound) {
     //
     // -1 is "couldn't read the count", not "empty" — log those, or a genuine
     // clear disappears whenever the read faults.
-    int actions = acc::combat_diag::ReadRoundActionCount(this_combatRound);
+    int actions = acc::combat::queue::ReadRoundActionCount(this_combatRound);
     if (actions == 0) return;
 
     acclog::Write("Combat.Diag",
         "CLEAR [%s] round=%p actions=%d",
-        acc::combat_diag::RoleTag(this_combatRound),
+        acc::combat::queue::RoleTag(this_combatRound),
         this_combatRound, actions);
 }
 
@@ -449,7 +247,7 @@ extern "C" void __cdecl OnCombatRoundSetCurrentAction(void* this_combatRound,
     } __except (EXCEPTION_EXECUTE_HANDLER) {}
     acclog::Write("Combat.Diag",
         "SETCUR [%s] round=%p byte=%u",
-        acc::combat_diag::RoleTag(this_combatRound),
+        acc::combat::queue::RoleTag(this_combatRound),
         this_combatRound, static_cast<unsigned>(byte_param));
 }
 
@@ -457,7 +255,7 @@ extern "C" void __cdecl OnCombatRoundRemoveLastAction(void* this_combatRound) {
     // Gate cleared for KOTOR 2 in Batch 4 (same chain as RemoveAllActions).
     acclog::Write("Combat.Diag",
         "REMLAST [%s] round=%p",
-        acc::combat_diag::RoleTag(this_combatRound),
+        acc::combat::queue::RoleTag(this_combatRound),
         this_combatRound);
 }
 

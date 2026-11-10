@@ -37,7 +37,6 @@ patches/Accessibility/combat.cpp
 patches/Accessibility/combat.h
 patches/Accessibility/combat_diag.cpp
 patches/Accessibility/combat_diag.h
-patches/Accessibility/combat_diag_internal.h
 patches/Accessibility/combat_log.cpp
 patches/Accessibility/combat_log_attack.cpp
 patches/Accessibility/combat_log_effects.cpp

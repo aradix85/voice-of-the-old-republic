@@ -3,7 +3,15 @@
 
 #include "combat_queue_internal.h"
 
+#include "engine_area.h"       // AreaObjectIterator, positions
+#include "engine_game.h"
+#include "engine_offsets.h"
+#include "engine_panels.h"     // HasActiveDialogPanel, IsForegroundUiBlocking
 #include "engine_player.h"
+#include "engine_reads.h"      // ReadCreatureCurrentHitPoints
+#include "engine_subscreen.h"  // WorldIsPaused
+#include "examine_view.h"      // IsHostileCreature
+#include "filter_objects.h"
 #include "log.h"
 #include "speech.h"
 
@@ -30,6 +38,34 @@ DWORD g_noOpWatchTick = 0;
 constexpr DWORD kNoOpVerdictMs = kUserAddWindowMs + 100;
 
 int g_prePressDepth = -1;
+
+// A living hostile creature within this many metres of the player.
+constexpr float kIdleEnemyRangeM = 25.0f;
+bool HostileNearby() {
+    Vector p;
+    if (!acc::engine::GetPlayerPosition(p)) return false;
+    void* area = acc::engine::GetCurrentArea();
+    if (!area) return false;
+    acc::engine::AreaObjectIterator it(area);
+    while (void* obj = it.Next()) {
+        if (!acc::filter::ObjectMatches(obj, acc::filter::CycleCategory::Npc)) continue;
+        if (!acc::examine_view::IsHostileCreature(obj)) continue;
+        const int hp = acc::engine::ReadCreatureCurrentHitPoints(obj);
+        if (hp == 0 || hp < -1) continue;
+        Vector q;
+        if (!acc::engine::GetObjectPosition(obj, q)) continue;
+        if (DistXYSq(q, p) <= kIdleEnemyRangeM * kIdleEnemyRangeM) return true;
+    }
+    return false;
+}
+
+// Idle notice: in combat, not paused, nothing queued for the controlled
+// character and an enemy still near, for this long -> one spoken line.
+// 2026-11-08: the player pressed R every second because she did not know
+// the attack carries on by itself; this line says when R is actually needed.
+constexpr DWORD kIdleNoticeMs = 2500;
+DWORD g_idleSince  = 0;
+bool  g_idleSpoken = false;
 
 }  // namespace
 
@@ -95,6 +131,43 @@ void OnEngineActionAdded(void* combatRound, void* action) {
     acclog::Write("Combat.Queue",
                   "engine-add slot=%d full=%d label=[%s] -> [%s]",
                   preCount + 1, preCount >= 4 ? 1 : 0, label, msg);
+}
+
+void TickIdleNotice() {
+    Vector unused;
+    if (!acc::engine::GetPlayerPosition(unused)) return;
+    void* server = acc::engine::GetPlayerServerCreature();
+    const int qs = ReadQueueSize(server);
+    const int oq = ReadOuterQueueSize(server);
+
+    // Idle notice (KOTOR 1). Cheap checks first; the area walk only runs
+    // once the controlled character has stood with an empty queue for a
+    // while.
+    if (acc::game::IsKotor2()) return;
+    const bool idleNow =
+        qs == 0 && oq == 0 &&
+        acc::engine::IsAnyPartyMemberInCombat() &&
+        !acc::engine::WorldIsPaused() &&
+        !acc::engine::HasActiveDialogPanel() &&
+        !acc::engine::IsForegroundUiBlocking();
+    if (!idleNow) {
+        g_idleSince = 0;
+        if (qs > 0 || oq > 0 || !acc::engine::IsAnyPartyMemberInCombat()) {
+            g_idleSpoken = false;
+        }
+        return;
+    }
+    const DWORD tick = GetTickCount();
+    if (g_idleSince == 0) {
+        g_idleSince = tick;
+        return;
+    }
+    if (g_idleSpoken || tick - g_idleSince < kIdleNoticeMs) return;
+    g_idleSpoken = true;
+    if (!HostileNearby()) return;
+    const char* line = acc::strings::Get(acc::strings::Id::CombatIdleNotice);
+    acc::speech::Speak(line, /*interrupt=*/false);
+    acclog::Write("Combat.Diag", "idle notice -> [%s]", line);
 }
 
 void ReportPrePressDepth() {

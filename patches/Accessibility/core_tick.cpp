@@ -311,6 +311,7 @@ void Dispatch() {
     PHASE("party_leader.change", acc::party_leader_announce::TickLeaderChange());
     PHASE("combat.queue", acc::combat::queue::Tick());
     PHASE("combat_diag", acc::combat_diag::Tick());
+    PHASE("combat.idle_notice", acc::combat::queue::TickIdleNotice());
     PHASE("examine_view", acc::examine_view::Tick());
 
     // Help overlay lifecycle: self-disarm on world teardown, list state.

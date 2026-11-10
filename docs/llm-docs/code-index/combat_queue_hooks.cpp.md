@@ -1,4 +1,4 @@
-# combat_queue_hooks.cpp (93 lines)
+# combat_queue_hooks.cpp (92 lines)
 
 Source: `patches/Accessibility/combat_queue_hooks.cpp`
 
@@ -12,5 +12,5 @@ Hook wiring (hooks.toml + exports.def) is unchanged - only the definition's home
 
 ## Declarations (in source order)
 
-- L35 `extern "C" void __cdecl OnCombatRoundAddAction(void* this_combatRound, void* esp_action_addr, void* esp_param2_addr)`
-- L86 `void __cdecl OnCombatRoundAddActionK2(void* thisRound, void* ebp)`
+- L34 `extern "C" void __cdecl OnCombatRoundAddAction(void* this_combatRound, void* esp_action_addr, void* esp_param2_addr)`
+- L85 `void __cdecl OnCombatRoundAddActionK2(void* thisRound, void* ebp)`

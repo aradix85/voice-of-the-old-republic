@@ -1,4 +1,4 @@
-# combat_diag.h (81 lines)
+# combat_diag.h (73 lines)
 
 Source: `patches/Accessibility/combat_diag.h`
 
@@ -14,9 +14,8 @@ Wiring points: * Tick()              — per-frame from core_tick. Emits a DELTA
 
 ## Declarations (in source order)
 
-- L34 `void Tick()`: Also speaks the idle notice (KOTOR 1): in combat, nothing queued for the controlled character and an enemy near for 2.5 s -> "You are not attacking..." once, until it attacks again or combat ends.
-- L39 `bool LeaderIsAttacking(uint32_t targetId)`: True when the controlled character's first queued combat action targets `targetId` (client or server id; the high bit is ignored).
-- L43 `void LogPreFire(const char* label)`: `label` is a short tag: "bare-1", "bare-5", "shift+1-enter", "shift+5-enter".
-- L44 `void LogPostFire(const char* label)`
+- L31 `void Tick()`
+- L35 `void LogPreFire(const char* label)`: `label` is a short tag: "bare-1", "bare-5", "shift+1-enter", "shift+5-enter".
+- L36 `void LogPostFire(const char* label)`
 
 Also 1 constants or variables at namespace scope.

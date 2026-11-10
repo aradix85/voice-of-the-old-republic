@@ -28,15 +28,7 @@
 
 namespace acc::combat_diag {
 
-// Also speaks the idle notice (KOTOR 1): in combat, nothing queued for the
-// controlled character and an enemy near for 2.5 s -> "You are not
-// attacking..." once, until it attacks again or combat ends.
 void Tick();
-
-// True when the controlled character's first queued combat action targets
-// `targetId` (client or server id; the high bit is ignored). For R: pressing
-// it again while already attacking that target adds nothing.
-bool LeaderIsAttacking(uint32_t targetId);
 
 // `label` is a short tag: "bare-1", "bare-5", "shift+1-enter", "shift+5-enter".
 // PRE is called before the dispatch; POST after.

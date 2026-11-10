@@ -224,7 +224,7 @@ void AnnounceNativeDefaultAction() {
     // (the engine attacks every round by itself), so say that instead of
     // "Attack X" on every press.
     if (name[0] && acc::engine::IsAnyPartyMemberInCombat() &&
-        acc::combat_diag::LeaderIsAttacking(snap.target_id)) {
+        acc::combat::queue::LeaderIsAttacking(snap.target_id)) {
         std::snprintf(msg, sizeof(msg), Get(Id::FmtAlreadyAttacking), name);
     } else if (name[0]) {
         std::snprintf(msg, sizeof(msg), Get(Id::FmtInteractEngine), snap.label, name);

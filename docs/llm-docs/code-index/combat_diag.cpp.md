@@ -1,4 +1,4 @@
-# combat_diag.cpp (544 lines)
+# combat_diag.cpp (342 lines)
 
 Source: `patches/Accessibility/combat_diag.cpp`
 
@@ -14,26 +14,18 @@ Wiring points: * Tick()              — per-frame from core_tick. Emits a DELTA
 
 ## Declarations (in source order)
 
-- L57 `uint8_t ReadCombatModeBit(void* clientLeader)`
-- L76 `int ReadRoundActionCount(void* combatRound)`: Queued-action count on a CSWSCombatRound directly.
-- L100 `int ReadQueueSize(void* serverCreature)`
-- L121 `int ReadOuterQueueSize(void* serverCreature)`: Read the OUTER game-action queue size at CSWSObject.action_nodes @+0xfc.
-- L144 `uint32_t ReadFirstQueuedTarget(void* serverCreature)`: Target (server id) of the first real action queued on the creature's combat round; 0 when nothing is queued or the read faults.
-- L182 `bool HostileNearby()`
-- L208 `int CallGetAutoPaused(void* exoApp)`
-- L219 `int CallGetPauseState(void* exoApp)`
-- L230 `uint32_t ReadMainInterfaceTarget(void* exoApp)`
-- L254 `void ReadState(State& s)`
-- L280 `void Tick()`
-- L354 `bool LeaderIsAttacking(uint32_t targetId)`
-- L361 `void LogPreFire(const char* label)`
-- L369 `void LogPostFire(const char* label)`
-- L383 `void* GetPlayerCombatRound()`: Resolve the player's CSWSCombatRound at hook-fire time so we can tag each ADD/CLEAR event with whether it belongs to the user's creature (vs companion / enemy combat rounds, which also use the same engine surfaces).
-- L399 `const char* RoleTag(void* combatRound)`: Declared in combat_diag_internal.h - combat_queue_hooks.cpp tags its log lines with the same role, so this one helper is not file-static.
-- L406 `extern "C" void __cdecl OnCombatRoundRemoveAllActions(void* this_combatRound)`
-- L441 `extern "C" void __cdecl OnCombatRoundSetCurrentAction(void* this_combatRound, void* esp_byte_addr)`
-- L456 `extern "C" void __cdecl OnCombatRoundRemoveLastAction(void* this_combatRound)`
-- L475 `void __cdecl OnCombatRoundRemoveAllActionsK2(void* thisRound)`
-- L484 `void __cdecl OnCombatRoundSetCurrentActionK2(void* thisRound, void* ebp)`
-- L493 `void __cdecl OnCombatRoundRemoveLastActionK2(void* thisRound)`
-- L512 `void __cdecl OnUseItemRequestK2(void* thisPtr, void* ebp)`
+- L56 `uint8_t ReadCombatModeBit(void* clientLeader)`
+- L67 `int CallGetAutoPaused(void* exoApp)`
+- L78 `int CallGetPauseState(void* exoApp)`
+- L89 `uint32_t ReadMainInterfaceTarget(void* exoApp)`
+- L113 `void ReadState(State& s)`
+- L139 `void Tick()`
+- L185 `void LogPreFire(const char* label)`
+- L193 `void LogPostFire(const char* label)`
+- L204 `extern "C" void __cdecl OnCombatRoundRemoveAllActions(void* this_combatRound)`
+- L239 `extern "C" void __cdecl OnCombatRoundSetCurrentAction(void* this_combatRound, void* esp_byte_addr)`
+- L254 `extern "C" void __cdecl OnCombatRoundRemoveLastAction(void* this_combatRound)`
+- L273 `void __cdecl OnCombatRoundRemoveAllActionsK2(void* thisRound)`
+- L282 `void __cdecl OnCombatRoundSetCurrentActionK2(void* thisRound, void* ebp)`
+- L291 `void __cdecl OnCombatRoundRemoveLastActionK2(void* thisRound)`
+- L310 `void __cdecl OnUseItemRequestK2(void* thisPtr, void* ebp)`
