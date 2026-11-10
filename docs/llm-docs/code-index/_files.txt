@@ -278,6 +278,12 @@ patches/Accessibility/minigame_aim.cpp
 patches/Accessibility/minigame_aim.h
 patches/Accessibility/minigame_pazaak.cpp
 patches/Accessibility/minigame_pazaak.h
+patches/Accessibility/minigame_pazaak_input.cpp
+patches/Accessibility/minigame_pazaak_internal.h
+patches/Accessibility/minigame_pazaak_model.cpp
+patches/Accessibility/minigame_pazaak_speech.cpp
+patches/Accessibility/minigame_pazaak_state.cpp
+patches/Accessibility/minigame_pazaak_wager.cpp
 patches/Accessibility/minigame_swoop_audio.cpp
 patches/Accessibility/minigame_swoop_audio.h
 patches/Accessibility/minigame_swoop_audio_accelpad.cpp
