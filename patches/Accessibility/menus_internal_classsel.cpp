@@ -1,33 +1,34 @@
 // The chargen class selection: recognising a class icon, and the class name and description cache
 // that makes each icon speakable.
 
-#include "menus_internal_internal.h"
+#include <cstdio>
+#include <cstring>
 
+#include "menus_internal.h"
 #include "strings.h"
 #include "engine_offsets.h"
+#include "engine_panels.h"
 #include "engine_reads.h"
+
+using namespace acc::engine;
 
 namespace acc::menus::detail {
 
 namespace {
 
-// Per-icon class-name cache for CSWGuiClassSelection. See the long
-// comment in ExtractAnnounceableText step 9c for why this exists. Sized
-// to hold all 6 icons of a single panel; key is (panel, icon). Keyed by
-// panel as well as icon so a chargen restart on a new panel instance
-// doesn't surface stale entries from the previous run. First-write
-// wins — once an entry is locked, subsequent updates are ignored so the
-// engine's transient class_label revert can't corrupt a settled value.
-// `text` is the composed announce: the class name off class_label, plus the
-// class blurb off LBL_DESC when the panel had one. Sized for both — the
-// German blurbs run to about 200 characters.
+// Per-icon spoken text for CSWGuiClassSelection: the class name off
+// class_label, plus the class blurb off LBL_DESC when the panel has one.
+// Holds all 6 icons of one panel. Keyed by panel as well as icon so a
+// chargen restart on a new panel instance doesn't surface stale entries.
+// First write wins, so the engine's transient class_label revert can't
+// corrupt a settled value.
 struct ClassLabelCacheEntry {
     void* panel;
     void* icon;
-    char  text[acc::menus::detail::kAnnounceTextMax];
+    char  text[kAnnounceTextMax];
 };
-static constexpr int kClassLabelCacheSize = 8;
-static ClassLabelCacheEntry g_classLabelCache[kClassLabelCacheSize];
+constexpr int kClassLabelCacheSize = 8;
+ClassLabelCacheEntry g_classLabelCache[kClassLabelCacheSize];
 
 // The class-description label's authored text, snapshotted at panel-walk
 // time. classsel.gui ships LBL_DESC with a placeholder — empty on KOTOR 1,
@@ -36,22 +37,19 @@ static ClassLabelCacheEntry g_classLabelCache[kClassLabelCacheSize];
 // against the snapshot is how we tell "the engine has written something" from
 // "this is still the .gui default", without hard-coding either placeholder.
 // One slot: only one class-selection panel exists at a time.
-static void* g_classDescBaselinePanel = nullptr;
-static char  g_classDescBaseline[384] = {0};
+void* g_classDescBaselinePanel = nullptr;
+char  g_classDescBaseline[384] = {0};
 
 }  // namespace
 
-// Positional detector for chargen class-icon buttons. The 6 class icons
-// are CSWGuiClassSelChar[6] starting at panel+0x6c with stride 0x25c, and
-// each CSWGuiClassSelChar embeds a CSWGuiButton at offset 0 — so a focused
-// class-icon control pointer lands exactly on `panel + 0x6c + i * 0x25c`
-// for some 0 ≤ i < 6.
+// The 6 class icons are an embedded CSWGuiClassSelChar array
+// (kClassSelectionsArrayOffset, stride kClassSelCharSize), each starting
+// with its CSWGuiButton, so an icon control lands exactly on an element
+// start.
 bool IsClassSelectionIcon(void* panel, void* control) {
     if (!panel || !control) return false;
-    // Guarded deref: this is the gate for menus_extract's step 9c, so it
-    // runs for every control that reaches that far on EVERY panel, not just
-    // chargen — and its caller's `panel` has only cleared IsPanelInManager,
-    // which proves the pointer is listed, not that the object is alive.
+    // Guarded: this runs for controls on every panel, and the caller's panel
+    // is only known to be listed in the manager, not to be alive.
     if (!acc::engine::HasVtable(panel, kVtableCSWGuiClassSelection)) {
         return false;
     }
@@ -96,30 +94,23 @@ const char* ClassLabelCacheLookup(void* panel, void* icon) {
     return nullptr;
 }
 
-// Compose what the user hears for one class icon: the class name, followed by
-// the blurb the engine renders beneath it, when there is one. Both call sites
-// (the extractor's cache-fill and the outgoing-icon prefill) go through here
-// so the cached string is identical whichever path wins the race.
-//
-// Reading LBL_DESC has to happen at the same instant class_label is read —
-// by the time a chain step announces an icon, both labels already hold the
-// NEXT icon's text.
+// The extractor's cache fill and the outgoing-icon prefill both compose
+// here, so the cached string is identical whichever path wins the race.
 void ComposeClassAnnounce(void* panel, const char* name,
-                                              char* outBuf, size_t bufSize) {
+                          char* outBuf, size_t bufSize) {
     if (!outBuf || bufSize < 2) return;
     outBuf[0] = '\0';
     if (!name || name[0] == '\0') return;
     strncpy_s(outBuf, bufSize, name, _TRUNCATE);
     if (!panel) return;
 
-    void* descLabel = acc::menus::detail::FindControlById(panel,
-                                                          kClassSelDescLabelId);
+    void* descLabel = FindControlById(panel, kClassSelDescLabelId);
     if (!descLabel) return;
-    char desc[acc::menus::detail::kAnnounceTextMax] = {0};
+    char desc[kAnnounceTextMax] = {0};
     if (!acc::engine::ReadLabelText(descLabel, desc, sizeof(desc))) return;
     if (!ClassDescIsEngineWritten(panel, desc)) return;
 
-    char composed[acc::menus::detail::kAnnounceTextMax];
+    char composed[kAnnounceTextMax];
     snprintf(composed, sizeof(composed),
              acc::strings::Get(acc::strings::Id::FmtClassNameWithDescription),
              name, desc);

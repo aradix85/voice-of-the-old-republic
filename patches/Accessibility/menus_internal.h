@@ -1,46 +1,6 @@
-// internal seam between menus.cpp and menus_extract.cpp.
-//
-// This is NOT public API; it's a private contract between the two TUs that
-// were one TU before Step 2B of the refactor. Module names declared here
-// live in `acc::menus::detail::` to signal "internal-but-exposed-across-
-// TUs."
-//
-// What the seam covers, and why each thing is here:
-//
-//   * g_currentPanel — the focused-panel pointer maintained by
-//     OnSetActiveControl (in menus.cpp) and read by ExtractAnnounceableText
-//     (in menus_extract.cpp) for the slider sibling-label / cycle-flanker
-//     gates and the per-kind owner-panel fallback.
-//
-//   * IsChainNavigable — predicate for "can the user focus this control
-//     with arrow keys?" Used by chain code in menus.cpp (RebindChain,
-//     AppendChainEntry, FindCloseButton/CancelButton, FindAdjacentArrow)
-//     AND by the sibling-label fallback in extract.
-//
-//   * IsClassSelectionIcon — positional detector for chargen class-icon
-//     buttons. Used by extract's perkind-classsel branch AND by menus.cpp
-//     chain code (cursor x-offset compensation, RebindChain pitch capture,
-//     OnSetActiveControl prefill, AnnounceControl cache-aware skip).
-//
-//   * ClassLabelCacheLookup / Store — lazily-populated (icon → class_text)
-//     cache for the chargen class-selection panel. The cache state lives
-//     in menus.cpp (file-static); the extract path reads (lookup), the
-//     OnSetActiveControl prefill writes (store). Lookup-then-store happens
-//     inside extract step 9c too, so both directions cross the seam.
-//
-//   * kEquipBtn* / kEquipLb* — control IDs from equip.gui. Used by extract's
-//     perkind-InGameEquip branch (slot-button label resolution) AND by the
-//     OnHandleInputEvent equip-slot detector / equip-picker handler in
-//     menus.cpp.
-//
-// The in-game-menu-icon name table stays private to its owning TU because
-// only one side uses it. `kSaveLoad*` moved to menus_internal.cpp with
-// IsSaveLoadPanel, its only consumer.
-//
-// The declarations in this header are implemented in menus_internal.cpp
-// (they lived in menus.cpp until the Phase-1 structure pass split that
-// file into menus.cpp / menus_internal.cpp / menus_focus.cpp /
-// menus_dispatch.cpp).
+// The menus feature's private seam: helpers and state the menus*.cpp files
+// share, plus the panel-member resolvers peek_description borrows. The
+// public interface is menus.h.
 
 #pragma once
 
@@ -50,17 +10,10 @@
 
 namespace acc::menus::detail {
 
-// Buffer size every announce path allocates for a control's spoken text.
-//
-// It was 256 for years, which was not merely a clipping limit: several
-// per-kind extraction steps used to bail out ("this control has no name")
-// rather than truncate when their text did not fit, so the CALLER'S buffer
-// size decided whether a control was announceable at all. EmitText in
-// menus_extract.cpp now truncates instead, and this constant is sized so
-// nothing the game renders gets clipped in the first place — the longest
-// real string is a chargen class name plus its description, a bit over 250
-// characters in German. Cheap: these are stack buffers on paths that run at
-// most once per keypress, plus one static snapshot in the focus monitor.
+// Buffer size every announce path allocates for a control's spoken text,
+// sized so nothing the game renders is clipped: the longest real string, a
+// chargen class name plus its description, runs a bit over 250 characters in
+// German. EmitText truncates beyond it.
 constexpr size_t kAnnounceTextMax = 1024;
 
 bool IsChainNavigable(void* control);
@@ -68,8 +21,10 @@ bool IsClassSelectionIcon(void* panel, void* control);
 
 // True for a listbox container with more than one row. SetActiveControl on
 // one is the engine's panel-open auto-focus, not the user navigating: rows
-// are reached through the listbox specs and the chain. Defined in menus.cpp.
+// are reached through the listbox specs and the chain.
 bool IsMultiRowListBox(void* control);
+
+// Chargen class selection: the (panel, icon) to spoken text cache.
 const char* ClassLabelCacheLookup(void* panel, void* icon);
 void ClassLabelCacheStore(void* panel, void* icon, const char* text);
 
@@ -88,49 +43,27 @@ void ClassDescBaselineCapture(void* panel, const char* text);
 bool ClassDescIsEngineWritten(void* panel, const char* text);
 
 // Convert a distance measured in .gui authoring units into the units
-// GetControlCenter below actually returns on the running game.
-//
-// The two games differ here and it is easy to miss, because KOTOR 1 needs
-// no conversion at all: it ships one .gui variant per resolution and hands
-// us the authored extents verbatim — mainmenu8x6.gui declares BTN_NEWGAME's
-// centre at 485,292 and that is exactly what the chain logs. KOTOR 2
-// stretches its single 800x600 layout to the window and stores the RESULT
-// in the extents (the same fact menus_focus_k2.cpp records for the cursor
-// warp), so at 2880x1800 every distance is 3.6x the authored one.
-//
-// Consequence: any bare pixel threshold in this codebase is a KOTOR 1
-// assumption. Every one of them was measured off a KOTOR 1 .gui file, and
-// on KOTOR 2 they are wrong by a factor that changes with the player's
-// resolution. That is what leaked all twelve chargen +/- steppers into the
-// chain as "control 12" … "control 34" (patch-20260803-011930.log): they
-// sit 27 authored units from their value button, 97 at that resolution,
-// past SquashCycleFlankers' 80-unit reach.
-//
-// Returns `guiPx` unchanged on KOTOR 1, and on KOTOR 2 whenever the window
-// is unreadable — never shrinking a threshold, so a failed read can only
-// preserve the pre-existing behaviour.
+// GetControlCenter returns on the running game. KOTOR 1 ships one .gui per
+// resolution and hands back the authored extents verbatim; KOTOR 2 stretches
+// its single 800x600 layout to the window and stores the result in the
+// extents, so at 2880x1800 every distance is 3.6x the authored one. Every
+// bare pixel threshold here was measured off a KOTOR 1 .gui file and goes
+// through this. Returns `guiPx` unchanged on KOTOR 1, and on KOTOR 2
+// whenever the window is unreadable, so a failed read never shrinks a
+// threshold.
 int ScaleGuiThresholdPx(int guiPx);
 
-// Screen-center of a control's extent, false on degenerate extents.
-// Used by FindSiblingLabel / IsCycleFlankerArrow in menus_extract.cpp
-// and by FindAdjacentArrow / AppendChain* in menus.cpp.
+// Screen centre of a control's extent; false on a degenerate extent or a
+// freed control.
 bool GetControlCenter(void* control, int& outCx, int& outCy);
 
-// Locate a child control on `panel` by its +0x50 ID field. Stable across
-// localizations and panel.controls reordering.
-// Defined in menus.cpp; used there + in menus_listbox.cpp (Step 4 spec
-// callbacks for Container/SaveLoad/EquipPicker).
+// A child control of `panel` by its .gui id (the +0x50 field).
 void* FindControlById(void* panel, int id);
 
-// Detect the CSWGuiSaveLoad panel by its vtable (kVtableCSWGuiSaveLoad) —
-// the ctor-written identity of this dynamically allocated panel, immune
-// to .gui renumbering. Used by the SaveLoad spec entry's `matches`
-// callback and the K2 selection-sync monitor. SEH-safe on stale pointers.
+// The CSWGuiSaveLoad panel, by its vtable. SEH-safe on stale pointers.
 bool IsSaveLoadPanel(void* panel);
 
-// Read a CExoString-style field on a control by byte offset. Used by the
-// SaveLoad announce callback to pull planet (lastmodule) + area (areaname)
-// from each save-row entry. Returns nullptr on empty field.
+// A CExoString field of a save-row entry, by byte offset; nullptr when empty.
 const char* ReadSaveLoadEntryString(void* entry, size_t fieldOffset);
 
 // Result of a single arrow-key step on a listbox cursor. Filled by
@@ -148,9 +81,7 @@ struct ListBoxNavResult {
 // Direction of cursor motion driven by DriveListBoxSelection.
 //   * StepUp / StepDown: ±1 with boundary clamp (Nav-Up / Nav-Down).
 //   * JumpFirst / JumpLast: absolute jump to minSel / rowCount-1
-//     (Home / End). Caller still gets a `ListBoxNavResult` populated the
-//     same way as a step; oldSel == newSel still indicates "already at
-//     the boundary" so the inline announce-on-clamp branch fires.
+//     (Home / End). oldSel == newSel still means "already at the boundary".
 enum class ListBoxNavOp { StepUp, StepDown, JumpFirst, JumpLast };
 
 // Drive a CSWGuiListBox cursor in response to Nav-Up / Nav-Down / Home / End.
@@ -159,7 +90,7 @@ enum class ListBoxNavOp { StepUp, StepDown, JumpFirst, JumpLast };
 // SetSelectedControl, so the engine's onSelectionChanged callback won't
 // run. minSel = first valid selection (0 normally, 1 for equip-picker
 // LB_ITEMS to skip the protoitem template at row 0). Returns false iff
-// listbox is null or rowCount == 0.
+// listbox is null, unreadable or empty.
 bool DriveListBoxSelection(void* listbox, ListBoxNavOp op, short minSel,
                            ListBoxNavResult& out);
 
@@ -168,11 +99,9 @@ bool DriveListBoxSelection(void* listbox, ListBoxNavOp op, short minSel,
 // SetSelectedControl sets the row's real highlight state, plays the GUI select
 // sound, and scrolls the page natively (OrganizeControls) — so multipage lists
 // work the engine's way and the selection survives the per-frame hover-select
-// that overwrites a raw index write. The target index is computed with the same
-// no-wrap clamp as DriveListBoxSelection. Callers that use this MUST also keep
-// the mouse cursor off the list while armed (see the picker arm path), otherwise
+// that overwrites a raw index write. Callers that use this MUST also keep the
+// mouse cursor off the list while armed (see the picker arm path), otherwise
 // the engine's hover handler re-selects the row under the cursor every frame.
-// Returns false iff listbox is null or rowCount == 0.
 bool DriveListBoxSelectionEngine(void* listbox, ListBoxNavOp op, short minSel,
                                  ListBoxNavResult& out);
 
@@ -184,21 +113,19 @@ bool DriveListBoxSelectionEngine(void* listbox, ListBoxNavOp op, short minSel,
 //
 // MUST be called from a per-tick monitor (Update tick), never from the input
 // hook — MoveMouseToPosition recurses through the hover pipeline. `tag` is the
-// caller's acclog tag. Defined in menus_monitors.cpp, next to the park-position
-// rationale (the corner has to clear the camera edge-turn band).
+// caller's acclog tag. The corner has to clear the camera edge-turn band; see
+// menus_monitors.cpp.
 bool ParkCursorToCorner(const char* tag);
 
-// Queue activation of a control resolved through an engine-member resolver
-// (SaveLoadPanel* / ContainerPanel* / ...). Used by every select-then-confirm
-// panel to commit its Enter/Esc. Returns false on debounce or a null target —
-// the caller still consumes the keypress so the engine's stale activeControl
-// can't take over.
+// Queue activation of a control resolved through a panel-member resolver.
+// Used by every select-then-confirm panel to commit its Enter/Esc. Returns
+// false on debounce or a null target — the caller still consumes the keypress
+// so the engine's stale activeControl can't take over.
 bool QueueControlActivate(void* target, const char* logPrefix);
 
 }  // namespace acc::menus::detail
 
-// File-scope global maintained by OnSetActiveControl in menus.cpp.
-// Read-only from menus_extract.cpp; never assign here.
+// The focused panel, written only by OnSetActiveControl in menus.cpp.
 extern void* g_currentPanel;
 
 // Liveness-filtered view of g_currentPanel — returns it only while it is
@@ -217,10 +144,7 @@ extern void* g_currentPanel;
 // (g_chainPanel != g_currentPanel and friends) may read the raw global.
 void* CurrentPanelIfLive();
 
-// Cross-TU state owned by menus.cpp, touched by the two TUs the Phase-1
-// split carved out of it. These were file-static / anonymous-namespace
-// while everything lived in one TU; the split is the only reason they are
-// declared at all, so treat them as private to the menus module.
+// State owned by menus.cpp and shared with the other menus files:
 //
 //   * g_drilledIntoSubScreen — arrow-nav retarget flag. Set/cleared by the
 //     drill router + Esc gate in menus_dispatch.cpp, published to the rest
@@ -239,61 +163,11 @@ extern void* s_pendingAnnouncePanel;
 extern void* s_pendingAnnounceControl;
 }  // namespace acc::menus
 
-// Equipment screen control IDs from equip.gui / K2 equip_p.gui (extracted
-// via xoreos-tools gff2xml; K2 values mined 2026-08-02 — the install's
-// override copy is id-identical to the gui.bif one). K2 RE-NUMBERS the
-// whole panel: the slot buttons moved from K1's odd 7..23 spread to a
-// 15..25 block (implant parked at 48), LB_ITEMS 5 → 41, BTN_BACK/BTN_EQUIP
-// 36/37 → 39/40, and two K2-only second-weapon-set slots appeared
-// (BTN_INV_WEAP_L2/R2).
-//
-// SINCE 2026-08-18 these ids are NOT how equip controls are resolved or
-// matched any more: a beta install shipped a variant equip_p.gui with the
-// tail ids shifted by one (userlogs/077noequipment), so every consumer
-// moved to the engine's own ctor-bound members — EquipPanelItemsListBox /
-// EquipPanelEquipButton / EquipPanelBackButton and the
-// EquipSlotIndexFrom* pointer arithmetic below. The three ids the member
-// resolvers take stay ONLY as the GuiIdMismatch tripwire input (a variant
-// .gui then shows up as one loud log line instead of a broken picker);
-// the slot-button ids stay as documentation of the mined files.
-const int kEquipBtnHeadId    = acc::game::IsKotor2() ? 15 :  7;  // BTN_INV_HEAD     (TLK 31375)
-const int kEquipBtnImplantId = acc::game::IsKotor2() ? 48 :  9;  // BTN_INV_IMPLANT  (literal — no TLK)
-const int kEquipBtnBodyId    = acc::game::IsKotor2() ? 17 : 11;  // BTN_INV_BODY     (TLK 31380)
-const int kEquipBtnArmLId    = acc::game::IsKotor2() ? 18 : 13;  // BTN_INV_ARM_L    (TLK 31376)
-const int kEquipBtnWeapLId   = acc::game::IsKotor2() ? 19 : 15;  // BTN_INV_WEAP_L   (TLK 31378)
-const int kEquipBtnBeltId    = acc::game::IsKotor2() ? 22 : 17;  // BTN_INV_BELT     (TLK 31382)
-const int kEquipBtnWeapRId   = acc::game::IsKotor2() ? 23 : 19;  // BTN_INV_WEAP_R   (TLK 31379)
-const int kEquipBtnArmRId    = acc::game::IsKotor2() ? 24 : 21;  // BTN_INV_ARM_R    (TLK 31377)
-const int kEquipBtnHandsId   = acc::game::IsKotor2() ? 25 : 23;  // BTN_INV_HANDS    (TLK 31383)
-// KOTOR 2 only: the second weapon-set slot buttons. -1 on K1 (matches no
-// control). Slot indices 9/10 in the engine's arrays; their item-id
-// offsets are kEquipPanelSlotItemIdsOffset + 0x24/0x28.
-const int kEquipBtnWeapL2Id  = acc::game::IsKotor2() ? 20 : -1;  // BTN_INV_WEAP_L2
-const int kEquipBtnWeapR2Id  = acc::game::IsKotor2() ? 21 : -1;  // BTN_INV_WEAP_R2
-const int kEquipLbItemsId    = acc::game::IsKotor2() ? 41 :  5;  // LB_ITEMS
-// upgrade.gui LB_ITEMS — the compatible-crystal list the workbench upgrade
-// picker drives. Same role as the equip picker's LB_ITEMS: excluded from the
-// generic chain flatten so its rows aren't double-exposed as stale buttons.
-// Same id in both games' .gui files.
-constexpr int kWorkbenchUpgradeLbItemsId = 0;  // LB_ITEMS
-// upgrade.gui BTN_BACK — the cursor-park target while the upgrade picker is
-// armed (see ParkPickerCursorOffList in menus_listbox_picker.cpp). Shared
-// here rather than file-local because both the spec callbacks and the picker
-// monitor need it, and they now live in separate TUs. K2 re-numbers it to 13
-// — inside K1's slot-button range, the same collision
-// IsWorkbenchUpgradeSlotButtonId already routes around.
-const int kWorkbenchUpgradeBtnBackId = acc::game::IsKotor2() ? 13 : 28;  // BTN_BACK
-const int kEquipBtnBackId    = acc::game::IsKotor2() ? 39 : 36;  // BTN_BACK         (TLK 1582 = Close)
-const int kEquipBtnEquipId   = acc::game::IsKotor2() ? 40 : 37;  // BTN_EQUIP        (TLK 1580 = OK)
-
 namespace acc::menus::detail {
 
 // Equip-panel slot identity from the engine's embedded control arrays
-// (ctor-mined bases/strides — kEquipPanelSlotButtons/LabelsOffset). Pure
-// pointer arithmetic against the panel, no control deref, so no SEH
-// needed. Replaces the old .gui-id matching (IsEquipSlotButtonId), which
-// broke on installs with a renumbered equip_p.gui (userlogs/
-// 077noequipment — see docs/gui-id-audit.md).
+// (kEquipPanelSlotButtons/LabelsOffset). Pure pointer arithmetic against the
+// panel, no control deref, so no SEH needed.
 //
 // Returns the 0-based slot index shared by BOTH games' engine order:
 //   0 weapL, 1 weapR, 2 head, 3 armL, 4 armR, 5 body, 6 hands,
@@ -307,53 +181,41 @@ int EquipSlotIndexFromControl(void* panel, void* control);  // button OR label
 // Slots in the engine's arrays for the running game (9 on K1, 11 on K2).
 inline int EquipSlotCount() { return acc::game::IsKotor2() ? 11 : 9; }
 
-// Engine-truth resolvers for the equip panel's picker members — the
-// EMBEDDED items_listbox ("LB_ITEMS"), equip button ("BTN_EQUIP") and
-// back button ("BTN_BACK") the constructors bind by tag. Primary path
-// for everything that used to FindControlById those three ids; each
-// resolver keeps the id lookup only as a TRIPWIRE, logging
-// "GuiIdMismatch" once per session when a variant .gui file would have
-// sent the id path to a different control. Defined in menus_internal.cpp.
-void* EquipPanelItemsListBox(void* panel);
-void* EquipPanelEquipButton(void* panel);
-void* EquipPanelBackButton(void* panel);
-
-// Workbench upgrade panel (CSWGuiUpgrade) — same engine-truth resolvers.
-// The historical assemble id (24) doubles as a K2 slot-button id, so its
-// resolver skips the tripwire on K2.
-void* UpgradePanelItemsListBox(void* panel);
-void* UpgradePanelAssembleButton(void* panel);
-void* UpgradePanelBackButton(void* panel);
-
-// Slot-button membership on the upgrade panel via the embedded button
-// run (K1: 7 from +0x64, K2: 9 from +0x7a8). Returns the array index or
-// -1; identity/membership ONLY — slot semantics stay in the button's
-// custom_value (per-bank), which LookupUpgradeSlotType and
-// GetWorkbenchSlotInstalledItem already read. Replaces the id-based
-// IsWorkbenchUpgradeSlotButtonId.
+// Slot-button membership on the workbench upgrade panel via its embedded
+// button run (K1: 7 from +0x64, K2: 9 from +0x7a8). Returns the array index
+// or -1; membership only — the slot's meaning stays in the button's
+// custom_value (per bank), which LookupUpgradeSlotType and
+// GetWorkbenchSlotInstalledItem read.
 int UpgradeSlotIndexFromButton(void* panel, void* control);
-inline int UpgradeSlotButtonCount() { return acc::game::IsKotor2() ? 9 : 7; }
 
-// CSWGuiSaveLoad — same engine-truth resolvers (ctor-bound embedded
-// members, kSaveLoadPanel*Offset; ids only feed the GuiIdMismatch
-// tripwire). Panel identity itself is the CSWGuiSaveLoad vtable — see
-// IsSaveLoadPanel above. Defined in menus_internal.cpp.
+// Panel-member resolvers. Each returns the control the panel's constructor
+// binds to that member (the k<Panel>*Offset fields in
+// engine_offsets_fields.h), so a renumbered .gui file cannot misdirect it.
+// The control's historical .gui id stays as a tripwire: when it resolves to
+// a different control, one "GuiIdMismatch" line per session is logged. A
+// resolver answers nullptr where its offset is unported or poisoned, i.e. on
+// a game without that panel or control. Callers identify the panel first.
+
+// The equipment screen (equip / equip_p).
+void* EquipPanelItemsListBox(void* panel);    // LB_ITEMS
+void* EquipPanelEquipButton(void* panel);     // BTN_EQUIP
+void* EquipPanelBackButton(void* panel);      // BTN_BACK
+
+// CSWGuiUpgrade, the workbench upgrade screen (upgrade / upgrade_p).
+void* UpgradePanelItemsListBox(void* panel);    // LB_ITEMS
+void* UpgradePanelAssembleButton(void* panel);  // BTN_ASSEMBLE
+void* UpgradePanelBackButton(void* panel);      // BTN_BACK
+
+// CSWGuiSaveLoad (saveload / saveload_p).
 void* SaveLoadPanelGamesListBox(void* panel);   // LB_GAMES
 void* SaveLoadPanelActionButton(void* panel);   // BTN_SAVELOAD (Load/Save)
 void* SaveLoadPanelBackButton(void* panel);     // BTN_BACK
 
-// K2 workbench/crafting engine-truth resolvers (ctor-bound embedded
-// members, kUpgradeSelPanel*/kCraftComponent*/kCraftChemical* in
-// engine_offsets_fields.h; the historical .gui ids only feed the
-// GuiIdMismatch tripwire). All return nullptr on KOTOR 1 — the member
-// offsets poison there and no K1 code path consumes these panels.
-//
-// UpgradeSelPanel* address CSWGuiUpgradeSelection (upgradesel_p, the K2
-// workbench top screen with the inline item list). CraftPanel* address
-// the two crafting screens and dispatch on the panel's kind internally —
-// CSWGuiCreateItem (component_p) and CSWGuiCreateMedicalItem (chemical_p)
-// lay the same controls out at different offsets — returning nullptr when
-// `panel` is neither. Defined in menus_internal.cpp.
+// KOTOR 2 workbench and crafting; nullptr on KOTOR 1. UpgradeSelPanel*
+// address CSWGuiUpgradeSelection (upgradesel_p, the workbench top screen
+// with the inline item list). CraftPanel* address CSWGuiCreateItem
+// (component_p) and CSWGuiCreateMedicalItem (chemical_p), which lay the same
+// controls out at different offsets, and answer nullptr for any other panel.
 void* UpgradeSelPanelListBox(void* panel);        // LB_UPGRADELIST
 void* UpgradeSelPanelUpgradeButton(void* panel);  // BTN_UPGRADEITEMS
 void* UpgradeSelPanelTitleLabel(void* panel);     // LBL_TITLE
@@ -363,13 +225,7 @@ void* CraftPanelAcceptButton(void* panel);        // BTN_Accept
 void* CraftPanelExamineButton(void* panel);       // BTN_Examine (view flip)
 void* CraftPanelTitleLabel(void* panel);          // LBL_TITLE
 
-// CSWGuiPowersLevelUp (pwrlvlup / pwrlvlup_p) engine-truth resolvers —
-// ctor-bound embedded members, kPowersPanel*Offset in
-// engine_offsets_fields.h. Both games re-number this .gui's ids and
-// disagree with each other, so the per-game historical ids survive only
-// as the GuiIdMismatch tripwire inside these resolvers. Panel identity
-// is the CSWGuiPowersLevelUp vtable (IsPowersLevelUpStructural); callers
-// vet the panel first. Defined in menus_internal.cpp.
+// CSWGuiPowersLevelUp (pwrlvlup / pwrlvlup_p).
 void* PowersPanelPowersListBox(void* panel);      // LB_POWERS (skill-flow rows)
 void* PowersPanelDescListBox(void* panel);        // LB_DESC
 void* PowersPanelPowerLabel(void* panel);         // LBL_POWER (selected name)
@@ -378,84 +234,49 @@ void* PowersPanelRecommendedButton(void* panel);  // RECOMMENDED_BTN
 void* PowersPanelAcceptButton(void* panel);       // ACCEPT_BTN
 void* PowersPanelBackButton(void* panel);         // BACK_BTN
 
-// CSWGuiContainer (container / container_p) engine-truth resolvers —
-// ctor-bound embedded members, kContainerPanel*Offset in
-// engine_offsets_fields.h. Panel identity is already engine-truth (the
-// gui manager's own panel slot, IdentifyPanel == PanelKind::Container),
-// so these only move control resolution off the .gui ids; both games'
-// files agree on those ids, which survive as the GuiIdMismatch tripwire.
-// Defined in menus_internal.cpp.
+// CSWGuiContainer (container / container_p).
 void* ContainerPanelItemsListBox(void* panel);    // LB_ITEMS (loot rows)
 void* ContainerPanelOkButton(void* panel);        // BTN_OK (take all)
 void* ContainerPanelCancelButton(void* panel);    // BTN_CANCEL
 void* ContainerPanelGiveItemsButton(void* panel); // BTN_GIVEITEMS (give mode)
 
-// CSWGuiFeatsCharGen (ftchrgen / ftchrgen_p) engine-truth resolvers —
-// ctor-bound embedded members, kFeatsCharGen*ButtonOffset in
-// engine_offsets_fields.h. Panel identity is already the
-// CSWGuiFeatsCharGen vtable (IsChargenFeatsPanel); this only moves the
-// three activatable buttons off their .gui ids. The two games renumber
-// ftchrgen and COLLIDE badly — K1's BTN_BACK id 12 is K2's LB_FEATS, a
-// listbox — so the per-game historical ids survive only as the
-// GuiIdMismatch tripwire inside these resolvers. Defined in
-// menus_internal.cpp.
+// CSWGuiFeatsCharGen (ftchrgen / ftchrgen_p).
 void* FeatsPanelAcceptButton(void* panel);       // BTN_ACCEPT ("OK")
 void* FeatsPanelBackButton(void* panel);         // BTN_BACK ("Cancel")
 void* FeatsPanelRecommendedButton(void* panel);  // BTN_RECOMMENDED
 
-// CSWGuiSkillInfoBox (skillinfo / skillinfo_p) engine-truth resolvers —
-// the granted-feats / level-up info popup. Panel identity is already
-// engine-truth (the gui manager's own panel slot, IdentifyPanel ==
-// PanelKind::SkillInfoBox); these move its three live controls off the
-// .gui ids. Defined in menus_internal.cpp.
+// CSWGuiSkillInfoBox (skillinfo / skillinfo_p), the granted-feats /
+// level-up info popup.
 void* SkillInfoBoxPanelSkillsListBox(void* panel);  // LB_SKILLS (rows)
 void* SkillInfoBoxPanelMessageLabel(void* panel);   // LBL_MESSAGE (title)
 void* SkillInfoBoxPanelOkButton(void* panel);       // BTN_OK
 
-// CSWGuiScriptSelect (ScriptSelect.gui) engine-truth resolvers — the
-// character sheet's combat-behaviour picker, KOTOR 1 only. Panel identity
-// is already the CSWGuiScriptSelect vtable (IsScriptSelectStructural).
-// The offsets poison on KOTOR 2, where the class does not exist, so these
-// answer nullptr there. Defined in menus_internal.cpp.
+// CSWGuiScriptSelect (ScriptSelect.gui), the character sheet's
+// combat-behaviour picker; KOTOR 1 only.
 void* ScriptSelectPanelAiStateListBox(void* panel);  // LST_AIState
 void* ScriptSelectPanelAcceptButton(void* panel);    // BTN_Accept ("Choose")
 void* ScriptSelectPanelBackButton(void* panel);      // BTN_Back ("Cancel")
 
-// CSWGuiWagerPopup (pazaakwager / pazaakwager_p) engine-truth resolvers —
-// the pazaak bet popup. Panel identity is already the CSWGuiWagerPopup
-// vtable (IsPazaakWagerStructural); the two games renumber the .gui
-// (BTN_LESS 4 vs 6, BTN_MORE 5 vs 7, LBL_MAXIMUM 3 vs 2), so those ids
-// survive only as the GuiIdMismatch tripwire. Defined in
-// menus_internal.cpp.
+// CSWGuiWagerPopup (pazaakwager / pazaakwager_p), the pazaak bet popup.
 void* WagerPopupPanelLessButton(void* panel);     // BTN_LESS (SpeedButton)
 void* WagerPopupPanelMoreButton(void* panel);     // BTN_MORE (SpeedButton)
 void* WagerPopupPanelMaximumLabel(void* panel);   // LBL_MAXIMUM (max + credits)
 
-// CSWGuiPazaakStart (pazaaksetup / pazaaksetup_p) engine-truth resolvers —
-// the side-deck builder. Panel identity is already the CSWGuiPazaakStart
-// vtable (IsPazaakStartStructural). The clear button is KOTOR 2 only and
-// answers nullptr on KOTOR 1 (poisoned offset). Defined in
-// menus_internal.cpp.
+// CSWGuiPazaakStart (pazaaksetup / pazaaksetup_p), the side-deck builder.
 void* PazaakStartPanelPlayButton(void* panel);    // BTN_ATEXT ("Play")
-void* PazaakStartPanelClearButton(void* panel);   // BTN_CLEARCARDS (K2)
+void* PazaakStartPanelClearButton(void* panel);   // BTN_CLEARCARDS (K2 only)
 
-// CSWGuiInGameOptKeyMappings (OPTKeyMapping / OPTKeyMapping_p) engine-truth
-// resolvers — the Keymapping screen. Panel identity comes from the
-// panel-kind probe; these move the eight controls the navigator drives off
-// their .gui ids. FilterButton takes the engine's own filter index
-// (0 = MOVEMENT, 1 = GAME, 2 = MINIGAME) — the same index KOTOR 2's
-// SetFilter takes — and answers nullptr outside 0..2. Defined in
-// menus_internal.cpp.
+// CSWGuiInGameOptKeyMappings (OPTKeyMapping / OPTKeyMapping_p), the
+// Keymapping screen. FilterButton takes the engine's own filter index
+// (0 = MOVEMENT, 1 = GAME, 2 = MINIGAME), nullptr outside 0..2.
 void* KeyMapPanelEventListBox(void* panel);       // LST_EventList
 void* KeyMapPanelDefaultButton(void* panel);      // BTN_Default ("Standard")
 void* KeyMapPanelAcceptButton(void* panel);       // BTN_Accept ("OK")
 void* KeyMapPanelCancelButton(void* panel);       // BTN_Cancel ("Cancel")
 void* KeyMapPanelFilterButton(void* panel, int filterIndex);
 
-// CSWGuiUpgradeItemSelect (upgradeitems / upgradeitems_p) engine-truth
-// resolvers — the workbench per-category item picker. Panel identity is the
-// CSWGuiUpgradeItemSelect vtable (IsWorkbenchItemsStructural). Defined in
-// menus_internal.cpp.
+// CSWGuiUpgradeItemSelect (upgradeitems / upgradeitems_p), the workbench
+// per-category item picker.
 void* WorkbenchItemsPanelItemsListBox(void* panel);   // LB_ITEMS
 void* WorkbenchItemsPanelUpgradeButton(void* panel);  // BTN_UPGRADEITEM
 void* WorkbenchItemsPanelBackButton(void* panel);     // BTN_BACK

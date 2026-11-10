@@ -1,19 +1,15 @@
-# menus_internal.cpp (204 lines)
+# menus_internal.cpp (134 lines)
 
 Source: `patches/Accessibility/menus_internal.cpp`
 
-Implementations of the acc::menus::detail:: seam declared in menus_internal.h.
-
-These helpers were defined in menus.cpp until the Phase-1 structure pass (refactoring candidate 1). menus_internal.h has always declared them as the "internal-but-exposed-across-TUs" contract shared by menus.cpp, menus_extract.cpp, menus_listbox.cpp and menus_keymap.cpp; this file is the matching .cpp every other seam header in this directory already has (menus_chain, menus_pending, menus_listbox, menus_editbox, menus_monitors).
-
-Nothing here changed behaviourally in the move: the definitions are verbatim, including the saveload.gui control IDs and the chargen class-label cache, both of which are used only by functions in this file.
+Small control helpers the menus files share: GUI threshold scaling, a control's centre and its lookup by id, chain navigability, the save/load panel test and entry read, and queued activation.
 
 ## Declarations (in source order)
 
-- L34 `int ScaleGuiThresholdPx(int guiPx)`: See menus_internal.h for why this exists and when it is a no-op.
-- L58 `bool GetControlCenter(void* control, int& outCx, int& outCy)`: Center pixel of a control's hit area.
-- L93 `bool IsChainNavigable(void* control)`: Screen-absolute center of a CSWGuiListBox row.
-- L109 `void* FindControlById(void* panel, int id)`: Locate a child control on `panel` by its +0x50 ID field.
-- L145 `bool IsSaveLoadPanel(void* panel)`: Detect the CSWGuiSaveLoad panel (the "Load Game" / "Save Game" dialog).
-- L162 `const char* ReadSaveLoadEntryString(void* entry, size_t fieldOffset)`: Read the user-visible text of a CExoString-style field on a control.
-- L187 `bool QueueControlActivate(void* target, const char* logPrefix)`: Queue activation of a control the caller resolved through an engine-member resolver.
+- L27 `int ScaleGuiThresholdPx(int guiPx)`
+- L42 `bool GetControlCenter(void* control, int& outCx, int& outCy)`: A degenerate extent (zero or negative width or height) shows up on hidden panels and templated control prototypes.
+- L63 `bool IsChainNavigable(void* control)`: A button (CSWGuiButton or its subclasses CharButton / ActivatedButton / ButtonToggle) or a slider.
+- L73 `void* FindControlById(void* panel, int id)`: The .gui ids are stable per panel kind, unlike the control's text (which changes with the language) or its index in panel.controls.
+- L98 `bool IsSaveLoadPanel(void* panel)`: The panel is allocated when the user picks Load or Save and has no slot in CGuiInGame, so its ctor-written vtable is its identity.
+- L106 `const char* ReadSaveLoadEntryString(void* entry, size_t fieldOffset)`: The save-row fields (areaname, lastmodule) are plain CExoStrings from the save GFF, valid until the entry is freed.
+- L119 `bool QueueControlActivate(void* target, const char* logPrefix)`: The activate itself runs one tick later in TickPendingOps.

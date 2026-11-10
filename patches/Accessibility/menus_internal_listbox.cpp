@@ -1,190 +1,99 @@
-// Driving a listbox's selection from the keyboard: our own selection write, and the engine's own
-// step for the screens that need it.
+// Driving a listbox's selection from the keyboard, by our own selection
+// write or by the engine's SetSelectedControl.
 
-#include "menus_internal_internal.h"
+#include <windows.h>
 
+#include "menus_internal.h"
 #include "engine_offsets.h"
+#include "engine_panels.h"
+
+using namespace acc::engine;
 
 namespace acc::menus::detail {
 
-// ListBoxNavResult struct + DriveListBoxSelection signature now live in
-// menus_internal.h (Step 4 — listbox-driven panels lifted to
-// menus_listbox.cpp). The function is still defined here because the
-// dialog/container monitors call it too.
-//
-// `minSel` is the lowest selectable row index. Pass 0 for normal listboxes;
-// pass 1 for the equip-picker LB_ITEMS where row 0 is the .gui-time
-// PROTOITEM template (verified empirically — see
-// docs/equip-flow-investigation.md). Existing selection_index < minSel
-// (typically the engine's initial -1) lands on `minSel` regardless of
-// direction, closer to user expectation than wrapping or staying silent.
-//
-// Returns false iff `listbox` is null or has rowCount==0; caller logs +
-// ignores. On true, `out` is fully populated.
-static bool DriveListBoxSelectionBody(void* listbox,
-                                      acc::menus::detail::ListBoxNavOp op,
-                                      short minSel,
-                                      acc::menus::detail::ListBoxNavResult& out);
+namespace {
 
-static bool DriveListBoxSelectionEngineBody(
-    void* listbox, acc::menus::detail::ListBoxNavOp op, short minSel,
-    acc::menus::detail::ListBoxNavResult& out);
-
-bool DriveListBoxSelection(void* listbox, ListBoxNavOp op,
-                                               short minSel,
-                                               ListBoxNavResult& out)
-{
-    out = {};
-    if (!listbox) return false;
-    // Every field access below is an engine read and belongs under SEH like
-    // the rest of this codebase's engine reads. The guard is what turns a
-    // stale or unported-offset listbox pointer into a declined navigation
-    // instead of a process kill — the KOTOR 2 in-world arrow-key crash
-    // (2026-08-01) died on the very first read here. Callers already treat
-    // false as "nothing to navigate".
-    __try {
-        return DriveListBoxSelectionBody(listbox, op, minSel, out);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        out = {};
-        return false;
+// The row a step lands on, clamped without wrapping. A selection below
+// minSel (typically the engine's initial -1) lands on minSel whatever the
+// direction.
+short TargetRow(ListBoxNavOp op, short oldSel, short minSel, int rowCount) {
+    const short last = (short)(rowCount - 1);
+    if (op == ListBoxNavOp::JumpFirst) return minSel;
+    if (op == ListBoxNavOp::JumpLast) return last < minSel ? minSel : last;
+    if (oldSel < minSel) return minSel;
+    if (op == ListBoxNavOp::StepDown) {
+        return oldSel + 1 > last ? last : (short)(oldSel + 1);
     }
+    return oldSel - 1 < minSel ? minSel : (short)(oldSel - 1);
 }
 
-// The body, split out so the SEH wrapper above stays free of anything needing
-// unwinding (MSVC C2712) — see the CLAUDE.md note on __try and objects.
-static bool DriveListBoxSelectionBody(void* listbox,
-                                      acc::menus::detail::ListBoxNavOp op,
-                                      short minSel,
-                                      acc::menus::detail::ListBoxNavResult& out)
-{
-    using acc::menus::detail::ListBoxNavOp;
-    auto* lbBase = reinterpret_cast<unsigned char*>(listbox);
-    auto* lbList = reinterpret_cast<CExoArrayList*>(
-        lbBase + kListBoxControlsOffset);
-    int rowCount = (lbList && lbList->data) ? lbList->size : 0;
-    if (rowCount <= 0) {
-        out.rowCount = 0;
-        return false;
-    }
+// The step itself, outside the SEH frame so that frame holds nothing that
+// needs unwinding (MSVC C2712).
+bool DriveBody(void* listbox, ListBoxNavOp op, short minSel, bool viaEngine,
+               ListBoxNavResult& out) {
+    auto* base = reinterpret_cast<unsigned char*>(listbox);
+    auto* rows = reinterpret_cast<CExoArrayList*>(base + kListBoxControlsOffset);
+    int rowCount = rows->data ? rows->size : 0;
+    if (rowCount <= 0) return false;
 
-    short* selPtr = reinterpret_cast<short*>(
-        lbBase + kListBoxSelectionIndexOffset);
-    short* topPtr = reinterpret_cast<short*>(
-        lbBase + kListBoxTopVisibleIndexOffset);
-    short* ippPtr = reinterpret_cast<short*>(
-        lbBase + kListBoxItemsPerPageOffset);
+    auto* sel = reinterpret_cast<short*>(base + kListBoxSelectionIndexOffset);
+    short oldSel = *sel;
+    short newSel = TargetRow(op, oldSel, minSel, rowCount);
 
-    short oldSel = *selPtr;
-    short newSel;
-    if (op == ListBoxNavOp::JumpFirst) {
-        newSel = minSel;
-    } else if (op == ListBoxNavOp::JumpLast) {
-        newSel = (short)(rowCount - 1);
-        if (newSel < minSel) newSel = minSel;
-    } else if (oldSel < minSel) {
-        // Pre-StepUp/StepDown anchoring: any stale -1 / out-of-range
-        // selection lands on minSel regardless of direction (matches
-        // user expectation better than a wrap or silent no-op).
-        newSel = minSel;
-    } else if (op == ListBoxNavOp::StepDown) {
-        newSel = (short)(oldSel + 1);
-        if (newSel >= rowCount) newSel = (short)(rowCount - 1);
-    } else {  // StepUp
-        newSel = (short)(oldSel - 1);
-        if (newSel < minSel) newSel = minSel;
-    }
-
-    if (newSel != oldSel) {
-        *selPtr = newSel;
-        short ipp = *ippPtr;
-        short top = *topPtr;
-        if (ipp <= 0) ipp = 1;
-        if (newSel < top) {
-            *topPtr = newSel;
-        } else if (newSel >= top + ipp) {
-            *topPtr = (short)(newSel - ipp + 1);
+    if (viaEngine) {
+        // Re-assert even on a boundary clamp so a frame of hover drift is
+        // corrected on the next keypress; the select sound plays only when
+        // the selection moves. SetSelectedControl may clamp on its own, so
+        // its result is read back.
+        auto setSel = reinterpret_cast<PFN_CSWGuiListBoxSetSelectedControl>(
+            kAddrCSWGuiListBoxSetSelectedControl);
+        setSel(listbox, newSel, newSel != oldSel ? 1 : 0);
+        newSel = *sel;
+    } else if (newSel != oldSel) {
+        *sel = newSel;
+        auto* top = reinterpret_cast<short*>(base + kListBoxTopVisibleIndexOffset);
+        short perPage = *reinterpret_cast<short*>(base + kListBoxItemsPerPageOffset);
+        if (perPage <= 0) perPage = 1;
+        if (newSel < *top) {
+            *top = newSel;
+        } else if (newSel >= *top + perPage) {
+            *top = (short)(newSel - perPage + 1);
         }
     }
 
     out.oldSel   = oldSel;
     out.newSel   = newSel;
     out.rowCount = rowCount;
-    out.row      = (newSel >= 0 && newSel < rowCount) ? lbList->data[newSel]
+    out.row      = (newSel >= 0 && newSel < rowCount) ? rows->data[newSel]
                                                        : nullptr;
     return true;
 }
 
-bool DriveListBoxSelectionEngine(void* listbox,
-                                                     ListBoxNavOp op,
-                                                     short minSel,
-                                                     ListBoxNavResult& out)
-{
+// A stale or unported listbox pointer declines the step instead of taking
+// the process down; the engine path would otherwise also hand a wild `this`
+// to SetSelectedControl.
+bool DriveGuarded(void* listbox, ListBoxNavOp op, short minSel, bool viaEngine,
+                  ListBoxNavResult& out) {
     out = {};
     if (!listbox) return false;
-    // SEH for the same reason as its raw-write twin above — this one also
-    // CALLS the engine's SetSelectedControl on the pointer, so a bad listbox
-    // would hand a wild `this` to engine code.
     __try {
-        return DriveListBoxSelectionEngineBody(listbox, op, minSel, out);
+        return DriveBody(listbox, op, minSel, viaEngine, out);
     } __except (EXCEPTION_EXECUTE_HANDLER) {
         out = {};
         return false;
     }
 }
 
-static bool DriveListBoxSelectionEngineBody(
-    void* listbox, acc::menus::detail::ListBoxNavOp op, short minSel,
-    acc::menus::detail::ListBoxNavResult& out)
-{
-    using acc::menus::detail::ListBoxNavOp;
-    auto* lbBase = reinterpret_cast<unsigned char*>(listbox);
-    auto* lbList = reinterpret_cast<CExoArrayList*>(
-        lbBase + kListBoxControlsOffset);
-    int rowCount = (lbList && lbList->data) ? lbList->size : 0;
-    if (rowCount <= 0) {
-        out.rowCount = 0;
-        return false;
-    }
+}  // namespace
 
-    short oldSel = *reinterpret_cast<short*>(
-        lbBase + kListBoxSelectionIndexOffset);
+bool DriveListBoxSelection(void* listbox, ListBoxNavOp op, short minSel,
+                           ListBoxNavResult& out) {
+    return DriveGuarded(listbox, op, minSel, /*viaEngine=*/false, out);
+}
 
-    // Identical no-wrap clamp to DriveListBoxSelection — only the commit path
-    // differs (engine SetSelectedControl vs. raw field write).
-    short newSel;
-    if (op == ListBoxNavOp::JumpFirst) {
-        newSel = minSel;
-    } else if (op == ListBoxNavOp::JumpLast) {
-        newSel = (short)(rowCount - 1);
-        if (newSel < minSel) newSel = minSel;
-    } else if (oldSel < minSel) {
-        newSel = minSel;
-    } else if (op == ListBoxNavOp::StepDown) {
-        newSel = (short)(oldSel + 1);
-        if (newSel >= rowCount) newSel = (short)(rowCount - 1);
-    } else {  // StepUp
-        newSel = (short)(oldSel - 1);
-        if (newSel < minSel) newSel = minSel;
-    }
-
-    // Drive the engine's real selection. Re-assert even on a boundary clamp
-    // (newSel == oldSel) so a frame of hover drift is corrected on the next
-    // keypress; only play the select sound when the selection actually moves.
-    auto setSel = reinterpret_cast<PFN_CSWGuiListBoxSetSelectedControl>(
-        kAddrCSWGuiListBoxSetSelectedControl);
-    setSel(listbox, newSel, newSel != oldSel ? 1 : 0);
-
-    // Read selection_index back — SetSelectedControl is authoritative (it can
-    // clamp internally), so the announce/commit see exactly what the engine set.
-    short engineSel = *reinterpret_cast<short*>(
-        lbBase + kListBoxSelectionIndexOffset);
-    out.oldSel   = oldSel;
-    out.newSel   = engineSel;
-    out.rowCount = rowCount;
-    out.row      = (engineSel >= 0 && engineSel < rowCount)
-                       ? lbList->data[engineSel]
-                       : nullptr;
-    return true;
+bool DriveListBoxSelectionEngine(void* listbox, ListBoxNavOp op, short minSel,
+                                 ListBoxNavResult& out) {
+    return DriveGuarded(listbox, op, minSel, /*viaEngine=*/true, out);
 }
 
 }  // namespace acc::menus::detail

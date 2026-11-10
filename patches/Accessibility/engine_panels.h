@@ -264,11 +264,6 @@ bool HasActiveMapPanel(void** outPanel = nullptr);
 // modals the user can't unwind (see patch-20260530-112606.log).
 bool HasActiveLevelUpPanel();
 
-// (The id-based IsWorkbenchUpgradeSlotButtonId is gone: slot-button
-// identity is now acc::menus::detail::UpgradeSlotIndexFromButton —
-// pointer arithmetic against the panel's embedded button run, immune to
-// variant .gui id renumbering. See docs/gui-id-audit.md.)
-
 // Resolve a workbench slot to its type + display strref out of the engine's
 // slot-type table (kAddrUpgradeSlotTypeTable). Returns false when the pair
 // doesn't index a live entry, in which case the outputs are untouched.

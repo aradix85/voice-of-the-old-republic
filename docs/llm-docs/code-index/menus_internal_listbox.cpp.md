@@ -1,12 +1,13 @@
-# menus_internal_listbox.cpp (191 lines)
+# menus_internal_listbox.cpp (100 lines)
 
 Source: `patches/Accessibility/menus_internal_listbox.cpp`
 
-Driving a listbox's selection from the keyboard: our own selection write, and the engine's own step for the screens that need it.
+Driving a listbox's selection from the keyboard, by our own selection write or by the engine's SetSelectedControl.
 
 ## Declarations (in source order)
 
-- L33 `bool DriveListBoxSelection(void* listbox, ListBoxNavOp op, short minSel, ListBoxNavResult& out)`
-- L55 `static bool DriveListBoxSelectionBody(void* listbox, acc::menus::detail::ListBoxNavOp op, short minSel, acc::menus::detail::ListBoxNavResult& out)`: The body, split out so the SEH wrapper above stays free of anything needing unwinding (MSVC C2712) — see the CLAUDE.md note on __try and objects.
-- L117 `bool DriveListBoxSelectionEngine(void* listbox, ListBoxNavOp op, short minSel, ListBoxNavResult& out)`
-- L135 `static bool DriveListBoxSelectionEngineBody( void* listbox, acc::menus::detail::ListBoxNavOp op, short minSel, acc::menus::detail::ListBoxNavResult& out)`
+- L19 `short TargetRow(ListBoxNavOp op, short oldSel, short minSel, int rowCount)`: The row a step lands on, clamped without wrapping.
+- L32 `bool DriveBody(void* listbox, ListBoxNavOp op, short minSel, bool viaEngine, ListBoxNavResult& out)`: The step itself, outside the SEH frame so that frame holds nothing that needs unwinding (MSVC C2712).
+- L75 `bool DriveGuarded(void* listbox, ListBoxNavOp op, short minSel, bool viaEngine, ListBoxNavResult& out)`: A stale or unported listbox pointer declines the step instead of taking the process down; the engine path would otherwise also hand a wild `this` to SetSelectedControl.
+- L89 `bool DriveListBoxSelection(void* listbox, ListBoxNavOp op, short minSel, ListBoxNavResult& out)`
+- L94 `bool DriveListBoxSelectionEngine(void* listbox, ListBoxNavOp op, short minSel, ListBoxNavResult& out)`
