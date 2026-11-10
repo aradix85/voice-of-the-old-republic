@@ -221,6 +221,16 @@ view_mode: narration and Enter split off (49c3e25e), lean (71ffbbfd).
 filter: one ClassifyObject instead of four copies (189f655c).
 input_pipeline: the in-world hook in named steps (abbba85d), 394 lines, no
 split needed.
+engine_subscreen: lean (3d3b3fb6: shared pause preamble, ReadUiState,
+ReadSlots), 391 lines, no split needed.
+menus: the SetActiveControl hooks to menus_setactive.cpp (b397b2d9), lean
+(ae2c4396); stale menus.cpp references in comments and docs (3f937e2d).
+focus_guard: movie-end guard and Big Picture warning split off (4e1ea2d3),
+lean (ddcd8417: one poll step per job, ProcessExeName shared, the dead
+AttachThreadInput branch gone); one ContainsNoCase in strfmt (f9a3c3f6).
+engine_area_walls: wall records and SegmentCrossesWalkmesh to the
+engine-free walkmesh_geometry (bd28beec), lean (e1c1f082: one mesh reader,
+portal filter and same-room dedup engine-free with tests).
 
 Careful: never rewrite source files with PowerShell ReadAllText/WriteAllText
 (it decodes UTF-8 and writes '?' for the dashes and umlauts in comments);
@@ -283,7 +293,6 @@ prefix (menus_listbox_picker.cpp).
   possible; for files above 500 lines, judge whether a split into modules of
   things that belong together makes sense, and do it where it does.
 - Next file, by size (2026-11-10 19:10, strings*.cpp excepted):
-  engine_subscreen 697, menus 672, focus_guard 669, engine_area_walls 658,
   camera_orient 654, room_topology_shape 651, tutorial_hints 643,
   minigame_swoop_audio_obstacles 636, menus_extract_icons 635,
   menus_crafting 634, menus_editbox 633, camera_spin_guard 633, menus_store
@@ -293,6 +302,8 @@ prefix (menus_listbox_picker.cpp).
   2318, engine_offsets_addresses.h 1060, engine_area.h 861) stay as they are.
 - F13 WriteJmpRel32 (engine_input_mouseguard) and WriteRel32Jmp
   (save_crash_guard) are the same four lines: one shared helper.
+- F14 about 20 raw reads of a control's id (`+ kControlIdOffset`) across
+  the menus and engine files: one ReadControlId in engine_reads.
 - F2b: share the save-variable code of exit_memory with discovery.cpp.
 - F3 menus_chargen_feats / menus_powers_levelup: about 15 same-named
   functions, 22 cloned blocks; one chart-grid module (check K2 plans).
