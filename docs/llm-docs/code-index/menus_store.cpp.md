@@ -1,25 +1,30 @@
-# menus_store.cpp (632 lines)
+# menus_store.cpp (381 lines)
 
 Source: `patches/Accessibility/menus_store.cpp`
 
-store / trading panel (CSWGuiStore). See menus_store.h for the design rationale.
+The store (CSWGuiStore; menus_store.h has the design): buy/sell mode from the visible item list, the price and stock suffix on a chain step, the trade dispatch with its outcome watcher, and the G and Esc keys.
 
 ## Declarations (in source order)
 
-- L32 `uint32_t ReadListBoxControlBitFlags(void* panel, size_t listOffset)`: Read CSWGuiControl.bit_flags @ +0x44 on the listbox at panel + listOffset.
-- L47 `Mode ResolveMode(void* panel)`: Resolve the current Buy/Sell mode from the visibility bit on the two item listboxes.
-- L60 `uint32_t ReadRowObjId(void* row)`: Read the row's obj_id at +0x1c4.
-- L74 `bool IsStoreItemEntry(void* control)`: True iff `control` is a CSWGuiStoreItemEntry (rows of either listbox) rather than one of the action buttons (cancel / examine / accept) the chain also surfaces.
-- L88 `int ReadListBoxSize(void* panel, size_t listOffset)`: Read the listbox controls.size at panel + listOffset.
-- L103 `inline void* ResolveItemFromHandle(uint32_t clientHandle)`: Thin alias to the shared resolver in engine_reads.h.
-- L111 `uint32_t CallGetItemValue(uintptr_t fnAddr, void* storePanel, void* item)`
-- L127 `int ReadItemStock(void* item, bool& outFinite)`: Read CSWSItem.stack_size + check the infinite-stock bit.
-- L182 `uint32_t ReadStorePlayerGold(void* panel)`
-- L194 `bool IsStorePanel(void* panel)`
-- L205 `bool IsHiddenStoreListBox(void* panel, void* listBox)`
-- L220 `void AnnounceChainStepSuffix(void* panel, void* control)`
-- L283 `void TickMonitorMode()`
-- L454 `bool IsStoreItemRow(void* control)`
-- L460 `void DispatchTradeAction(void* panel, void* row)`
-- L583 `bool ToggleModeFromHotkey()`
-- L607 `bool CloseFromEsc()`
+- L35 `const char* ModeName(Mode m)`
+- L37 `size_t ListOffset(Mode m)`
+- L43 `bool ListVisible(void* panel, size_t listOffset)`: The engine sets the visible bit on whichever item list shows (ShowBuyGUI / ShowSellGUI); a failed read counts as hidden.
+- L51 `Mode ResolveMode(void* panel)`: Unknown only in the moment before InitializeStoreType runs.
+- L58 `int ListSize(void* panel, Mode m)`
+- L62 `bool HasVtable(void* object, uintptr_t vtable)`
+- L67 `uint32_t ReadU32Or0(void* base, size_t offset)`
+- L74 `void* RowItem(void* row)`: The item behind a store row (CSWGuiStoreItemEntry).
+- L79 `uint32_t ItemPrice(void* panel, Mode m, void* item)`: GetItemBuyValue / GetItemSellValue on the live panel; 0 on a fault.
+- L93 `int ReadItemStock(void* item, bool& outFinite)`: CSWSItem stack_size, a ushort (the engine reads it as an int; the upper half is padding).
+- L108 `void* ForegroundStore()`
+- L141 `void ResetTracking()`
+- L151 `void OnModeChange(void* fg, Mode current)`: The chain is panel-keyed and the panel stays, so without a rebind the user would walk the hidden list.
+- L163 `void ResolveTradeWatch(void* fg, Mode current, bool sizeChanged, int currentSize)`
+- L199 `bool IsStorePanel(void* panel)`
+- L203 `bool IsStoreItemRow(void* control)`
+- L207 `bool IsHiddenStoreListBox(void* panel, void* listBox)`
+- L217 `void AnnounceChainStepSuffix(void* panel, void* control)`
+- L254 `void TickMonitorMode()`
+- L290 `void DispatchTradeAction(void* panel, void* row)`
+- L352 `bool ToggleModeFromHotkey()`
+- L366 `bool CloseFromEsc()`
