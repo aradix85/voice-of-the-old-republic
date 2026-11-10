@@ -59,7 +59,7 @@
 #include "probe_camera_state.h"
 #include "speech.h"
 #include "engine_input.h"
-#include "spatial_change_detector.h"
+#include "spatial_wall_surfaces.h"
 #include "speech_clipboard.h"
 #include "stealth_watch.h"
 #include "weapon_set_watch.h"
@@ -749,13 +749,13 @@ void Dispatch() {
     PHASE("party_leader_announce", acc::party_leader_announce::Tick());
 
     // ----- ORDER LOAD-BEARING -----
-    // camera_announce → camera_orient → spatial::change_detector →
+    // camera_announce → camera_orient → spatial::wall_surfaces →
     // transitions → view_mode.
     //   camera_announce derives camera yaw from positions.
     //   camera_orient reads it for closed-loop arrival (same frame).
-    //   spatial::change_detector reads camera yaw + rebuilds wall cache.
+    //   spatial::wall_surfaces rebuilds the wall cache on area change.
     //   transitions builds room_topology that depends on the wall cache —
-    //     must run AFTER change_detector or the first tick of an area
+    //     must run AFTER wall_surfaces or the first tick of an area
     //     change uses stale walls from the previous area.
     //   view_mode reads camera yaw + walls + region/landmark caches.
     PHASE("camera_announce", acc::camera_announce::Tick());
@@ -774,7 +774,7 @@ void Dispatch() {
     PHASE("camera_orient", acc::camera_orient::Tick());
     PHASE("camera_spin_diag", acc::camera_spin_guard::Tick());
 
-    PHASE("spatial.change_detector", acc::spatial::change_detector::Tick());
+    PHASE("spatial.wall_surfaces", acc::spatial::wall_surfaces::Tick());
 
     // Swoop race entry/exit cues, gear watch, race clock and the obstacle /
     // accelerator-pad spatial audio. Self-gated on CSWMiniGame.type == 1, so it

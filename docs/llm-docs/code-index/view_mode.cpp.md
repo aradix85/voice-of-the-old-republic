@@ -1,4 +1,4 @@
-# view_mode.cpp (757 lines)
+# view_mode.cpp (756 lines)
 
 Source: `patches/Accessibility/view_mode.cpp`
 
@@ -25,6 +25,6 @@ Hotkey B chosen because V is taken (Solo Mode in stock kotor.ini) and B is unbou
 - L595 `bool TryGetCursorPosition(Vector& out)`
 - L601 `bool GetEffectiveOrientationYawDegrees(float& out)`
 - L621 `bool GetEffectiveReferencePosition(Vector& out)`
-- L631 `bool GetEffectiveViewpoint(Vector& outPos, float& outYawDegrees)`
-- L641 `void PollWin32()`
-- L722 `void Tick()`
+- L630 `bool GetEffectiveViewpoint(Vector& outPos, float& outYawDegrees)`
+- L640 `void PollWin32()`
+- L721 `void Tick()`

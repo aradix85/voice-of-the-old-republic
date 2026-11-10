@@ -99,8 +99,7 @@ bool BuildCategoryListing(acc::filter::CycleCategory category,
     // Reference point for the distance sort and the spoken metres. View
     // mode freezes the creature and gives W/S to the virtual cursor, so a
     // player-anchored listing stops responding to the user's exploration
-    // the moment view mode is on — the same reason spatial_change_detector
-    // swaps in the cursor. AnnounceCurrent measures its clock from this
+    // the moment view mode is on. AnnounceCurrent measures its clock from this
     // same viewpoint, so the two halves of one spoken line always agree.
     Vector refPos{};
     if (!acc::view_mode::GetEffectiveReferencePosition(refPos)) return false;

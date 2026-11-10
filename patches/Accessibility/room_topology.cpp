@@ -15,7 +15,7 @@
 #include "room_topology_internal.h"
 
 #include "log.h"
-#include "spatial_change_detector.h"  // GetCachedWalls — seam-filtered perimeter cache
+#include "spatial_wall_surfaces.h"  // GetCachedWalls — seam-filtered perimeter cache
 
 namespace acc::room_topology {
 
@@ -197,7 +197,7 @@ void BuildForArea(void* area) {
     ComputeChainStraightness(g, n, bp);
 
     // Wall cache for the edge clearness test (shared by Pass 1 and Pass 2).
-    bp.haveGW = acc::spatial::change_detector::GetCachedWalls(
+    bp.haveGW = acc::spatial::wall_surfaces::GetCachedWalls(
                     bp.gw, bp.gwCount) && bp.gw && bp.gwCount > 0;
 
     PassCoreMerge(g, n, bp);
@@ -398,7 +398,7 @@ bool LookupAt(void* area, const Vector& worldPos,
     // picked X but it's behind a wall" for diagnostic tuning.
     const acc::engine::WallEdge* walls = nullptr;
     int wallCount = 0;
-    bool haveWalls = acc::spatial::change_detector::GetCachedWalls(
+    bool haveWalls = acc::spatial::wall_surfaces::GetCachedWalls(
         walls, wallCount);
 
     int   best           = -1;

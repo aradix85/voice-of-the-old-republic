@@ -1,4 +1,4 @@
-# menus_modsettings.h (143 lines)
+# menus_modsettings.h (141 lines)
 
 Source: `patches/Accessibility/menus_modsettings.h`
 
@@ -18,14 +18,14 @@ Design summary:
 
 ## Declarations (in source order)
 
-- L54 `enum class Option`: Per-option identifiers.
-- L76 `void* GetRootAnchor()`: Sentinel pointer used as the `control` field of the virtual chain entry.
-- L82 `bool IsRootAnchor(void* control)`: True iff `control` is the mod-settings root sentinel.
-- L90 `void ForEachRootAnchor(void* panel, bool (*callback)(void* sentinel, int sortCx, int sortCy, void* userData), void* userData)`: Visit the registered virtual chain anchor for `panel`.
-- L98 `bool ExtractRootLabel(char* outBuf, size_t bufSize)`: Format the root entry's speech ("Mod Einstellungen").
-- L102 `void OpenSubMenu(void* parentPanel)`: Open the submenu.
-- L107 `bool IsOpen()`: True while the submenu is interactive.
-- L112 `void Close()`: Close the submenu and rebind the chain on the saved parent panel.
-- L126 `bool HandleInput(int keyCode)`: Input-press handler.
-- L133 `bool GetToggle(Option option)`: Read the current state of a toggle option.
-- L140 `void Tick()`: Per-tick poll.
+- L53 `enum class Option`: Per-option identifiers.
+- L74 `void* GetRootAnchor()`: Sentinel pointer used as the `control` field of the virtual chain entry.
+- L80 `bool IsRootAnchor(void* control)`: True iff `control` is the mod-settings root sentinel.
+- L88 `void ForEachRootAnchor(void* panel, bool (*callback)(void* sentinel, int sortCx, int sortCy, void* userData), void* userData)`: Visit the registered virtual chain anchor for `panel`.
+- L96 `bool ExtractRootLabel(char* outBuf, size_t bufSize)`: Format the root entry's speech ("Mod Einstellungen").
+- L100 `void OpenSubMenu(void* parentPanel)`: Open the submenu.
+- L105 `bool IsOpen()`: True while the submenu is interactive.
+- L110 `void Close()`: Close the submenu and rebind the chain on the saved parent panel.
+- L124 `bool HandleInput(int keyCode)`: Input-press handler.
+- L131 `bool GetToggle(Option option)`: Read the current state of a toggle option.
+- L138 `void Tick()`: Per-tick poll.

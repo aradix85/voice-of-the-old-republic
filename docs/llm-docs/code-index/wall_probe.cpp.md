@@ -1,4 +1,4 @@
-# wall_probe.cpp (263 lines)
+# wall_probe.cpp (262 lines)
 
 Source: `patches/Accessibility/wall_probe.cpp`
 
@@ -10,8 +10,8 @@ Self-contained by construction - the probes read the perimeter-wall cache direct
 
 ## Declarations (in source order)
 
-- L56 `float ResolveProbeZ(const acc::engine::WallEdge* walls, int wallCount, const Vector& pos)`: Probe-height vote (see wall_probe.h).
-- L155 `float ProbeWall(const acc::engine::WallEdge* walls, int wallCount, const Vector& origin, float dx, float dy)`
-- L173 `float ProbeDistance(const Vector& pos, float dx, float dy)`: Distance to first wall along (dx,dy).
-- L206 `bool IsAlcoveAlongAxis(const Vector& pos, float forwardX, float forwardY)`: Dead-end shape gate, a 4-ray probe rotated to align with (forwardX,forwardY) — the direction from the degree-1 node toward its graph parent, i.e.
-- L249 `void ProbeClearance8(const acc::engine::WallEdge* walls, int wallCount, const Vector& pos, float outRays[8])`: 8-ray clearance probe.
+- L55 `float ResolveProbeZ(const acc::engine::WallEdge* walls, int wallCount, const Vector& pos)`: Probe-height vote (see wall_probe.h).
+- L154 `float ProbeWall(const acc::engine::WallEdge* walls, int wallCount, const Vector& origin, float dx, float dy)`
+- L172 `float ProbeDistance(const Vector& pos, float dx, float dy)`: Distance to first wall along (dx,dy).
+- L205 `bool IsAlcoveAlongAxis(const Vector& pos, float forwardX, float forwardY)`: Dead-end shape gate, a 4-ray probe rotated to align with (forwardX,forwardY) — the direction from the degree-1 node toward its graph parent, i.e.
+- L248 `void ProbeClearance8(const acc::engine::WallEdge* walls, int wallCount, const Vector& pos, float outRays[8])`: 8-ray clearance probe.

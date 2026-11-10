@@ -5,7 +5,7 @@
 #include "room_topology_internal.h"
 
 #include "log.h"
-#include "spatial_change_detector.h"  // GetCachedWalls — seam-filtered perimeter cache
+#include "spatial_wall_surfaces.h"  // GetCachedWalls — seam-filtered perimeter cache
 
 namespace acc::room_topology {
 
@@ -104,7 +104,7 @@ void ComputeNodeShapeFeatures(const acc::engine::navgraph::NavGraphSnapshot& g,
     }
     const acc::engine::WallEdge* cw = nullptr;
     int cwCount = 0;
-    if (!acc::spatial::change_detector::GetCachedWalls(cw, cwCount) ||
+    if (!acc::spatial::wall_surfaces::GetCachedWalls(cw, cwCount) ||
         !cw || cwCount <= 0) {
         acclog::Write("WallTopo",
                       "  clearance-dump: no wall cache — open/room coalesce "
@@ -268,7 +268,7 @@ bool ComputeCentroidAxis(const Vector& centroid, float floorZ,
     } else {
         const acc::engine::WallEdge* cw = nullptr;
         int cwCount = 0;
-        if (!acc::spatial::change_detector::GetCachedWalls(cw, cwCount) ||
+        if (!acc::spatial::wall_surfaces::GetCachedWalls(cw, cwCount) ||
             !cw || cwCount <= 0) {
             return false;
         }

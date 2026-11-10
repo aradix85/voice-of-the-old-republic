@@ -1658,7 +1658,6 @@ enum class Id : int {
     ModSettingsClosed,
     ModSettingExtendedCycling,
     ModSettingRoomShapes,
-    ModSettingWallSounds,
     ModSettingHumanSubtitles,
     ModSettingTurretAutoAim,              // toggle label — turret easy-mode auto-aim
     ModSettingSkipIntros,                 // toggle label — "Skip intro movies"
@@ -1718,7 +1717,6 @@ enum class Id : int {
     GlossaryEntrySwoopShiftReady,
     GlossaryEntrySwoopJumpNow,
 
-
     // ---- Panel-title overrides for AnnouncePanelTitle.
     //      Used when the generic first-label-walk picks the wrong label —
     //      e.g. on the title-screen main menu the only label-like child is
@@ -1747,7 +1745,6 @@ enum class Id : int {
     //        activation drain code path.
     LoadingPleaseWait,
     LoadingStuckWorkaround,
-
 
     // Pause-state transition cues. Spoken when the engine's server-side
     // pause bitmask flips 0 ↔ nonzero AND the player is in pure in-world
@@ -1969,7 +1966,6 @@ enum class Id : int {
     HelpContextContainer,
     HelpContextStore,
     HelpContextPazaak,
-
 
     // Spoken when the user presses a key while Steam Big Picture Mode holds
     // the foreground: in windowed mode the keystrokes go to Big Picture, not

@@ -3,6 +3,7 @@
 #include <cmath>
 
 #include "engine_area.h"
+#include "engine_player.h"
 #include "log.h"
 
 namespace acc::spatial::wall_surfaces {
@@ -357,12 +358,34 @@ void BuildSurfaceDescriptors() {
     }
 }
 
-}  // namespace
-
 // Floor-triangle cache, rebuilt alongside the wall cache. Storage for
 // FloorZCandidatesAt (see header).
 acc::engine::FloorTri g_floor_tris[kMaxFloorTris];
 int g_floor_tri_count = 0;
+
+// The area the caches were built for; null until the player is in one.
+void* g_cached_area = nullptr;
+
+}  // namespace
+
+void Tick() {
+    Vector playerPos;
+    if (!acc::engine::GetPlayerPosition(playerPos)) {
+        g_cached_area = nullptr;
+        return;
+    }
+    void* area = acc::engine::GetCurrentArea();
+    if (!area || area == g_cached_area) return;
+    RebuildForArea(area);
+    g_cached_area = area;
+}
+
+bool GetCachedWalls(const acc::engine::WallEdge*& outBuf, int& outCount) {
+    if (g_wall_count <= 0) return false;
+    outBuf   = g_walls;
+    outCount = g_wall_count;
+    return true;
+}
 
 void Clear() {
     g_wall_count      = 0;

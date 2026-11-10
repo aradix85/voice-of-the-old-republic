@@ -1,4 +1,4 @@
-# transitions.cpp (1895 lines)
+# transitions.cpp (1891 lines)
 
 Source: `patches/Accessibility/transitions.cpp`
 
@@ -34,14 +34,14 @@ region labels (nav-graph decomposition)
 - L1283 `void ResetPendingPlatzState()`: Deferred "Platz" announcement.
 - L1288 `void ResetGatedRefireState()`: Post-gate cluster re-announce (combat / blocking UI swallowed a change).
 - L1293 `void Tick()`
-- L1680 `bool IsWorldSpeechGated()`
-- L1684 `void SpeakRegionLabel(const char* text)`
-- L1688 `bool IsModuleLoadPending()`
-- L1692 `void NotifyExternalLoadStarting(const char* reason)`
-- L1712 `bool LooksLikeResref(const char* s)`: A destination module resref is short printable ASCII — "endar_spire", "tar_m02ac", "101PER".
-- L1731 `bool TryReadExoString(void* base, char* out, size_t outSize)`: `base` is a CExoString* { char* c_string; uint32 length }.
-- L1746 `static void AnnouncePreLoadDest(const char* dest, const char* shape)`: Shared tail of both hooks: dedup, then speak + log the destination.
-- L1782 `void AnnouncePreLoadDestination(void* exoStringPtr)`
-- L1817 `void LatchPreLoadDestinationK2(void* exoStringPtr)`
-- L1854 `extern "C" void __cdecl OnSetMoveToModuleString(void* /*serverApp*/, void* arg_addr)`: CServerExoApp::SetMoveToModuleString — entry hook @0x004aecd0.
-- L1880 `void __cdecl OnSetMoveToModuleStringK2(void* ebp)`
+- L1676 `bool IsWorldSpeechGated()`
+- L1680 `void SpeakRegionLabel(const char* text)`
+- L1684 `bool IsModuleLoadPending()`
+- L1688 `void NotifyExternalLoadStarting(const char* reason)`
+- L1708 `bool LooksLikeResref(const char* s)`: A destination module resref is short printable ASCII — "endar_spire", "tar_m02ac", "101PER".
+- L1727 `bool TryReadExoString(void* base, char* out, size_t outSize)`: `base` is a CExoString* { char* c_string; uint32 length }.
+- L1742 `static void AnnouncePreLoadDest(const char* dest, const char* shape)`: Shared tail of both hooks: dedup, then speak + log the destination.
+- L1778 `void AnnouncePreLoadDestination(void* exoStringPtr)`
+- L1813 `void LatchPreLoadDestinationK2(void* exoStringPtr)`
+- L1850 `extern "C" void __cdecl OnSetMoveToModuleString(void* /*serverApp*/, void* arg_addr)`: CServerExoApp::SetMoveToModuleString — entry hook @0x004aecd0.
+- L1876 `void __cdecl OnSetMoveToModuleStringK2(void* ebp)`

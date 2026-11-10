@@ -4,7 +4,7 @@
 #include "room_topology_internal.h"
 
 #include "log.h"
-#include "spatial_change_detector.h"  // GetCachedWalls — seam-filtered perimeter cache
+#include "spatial_wall_surfaces.h"  // GetCachedWalls — seam-filtered perimeter cache
 
 namespace acc::room_topology {
 
@@ -121,7 +121,7 @@ void LogDoorSnapshotDetails(void* area) {
 void LogNavWallCrossings(const acc::engine::navgraph::NavGraphSnapshot& g) {
     const acc::engine::WallEdge* walls = nullptr;
     int wallCount = 0;
-    if (!acc::spatial::change_detector::GetCachedWalls(walls, wallCount) ||
+    if (!acc::spatial::wall_surfaces::GetCachedWalls(walls, wallCount) ||
         !walls || wallCount <= 0) {
         acclog::Write("WallTopo",
                       "  navwall-crosscheck: no wall cache available — skipping");

@@ -13,7 +13,7 @@
 #include "engine_player.h"
 #include "log.h"
 #include "speech.h"
-#include "spatial_change_detector.h"
+#include "spatial_wall_surfaces.h"
 #include "strings.h"
 #include "engine_game.h"
 
@@ -141,7 +141,7 @@ void RunStuckProbe(const Vector& pos) {
     // Walls — borrowed pointer into the change-detector's per-area cache.
     const acc::engine::WallEdge* walls = nullptr;
     int wallCount = 0;
-    if (!acc::spatial::change_detector::GetCachedWalls(walls, wallCount)) {
+    if (!acc::spatial::wall_surfaces::GetCachedWalls(walls, wallCount)) {
         walls = nullptr;
         wallCount = 0;
     }

@@ -7,7 +7,7 @@
 #include "engine_area.h"                // WallEdge, SegmentCrossesWalkmesh
 #include "engine_navgraph.h"            // shared snapshot helpers
 #include "log.h"
-#include "spatial_change_detector.h"    // GetCachedWalls
+#include "spatial_wall_surfaces.h"    // GetCachedWalls
 
 namespace acc::guidance {
 
@@ -173,13 +173,13 @@ bool ComputePath(void* area,
         return true;
     }
 
-    // Wall cache pulled from spatial::change_detector (built once per
-    // area-load by Pillar 1's BuildAreaWallCache). Used for anchor-node
+    // Wall cache from spatial::wall_surfaces (built once per area load).
+    // Used for anchor-node
     // selection and the smoothing pass below; both degrade gracefully if
     // it isn't ready yet.
     const acc::engine::WallEdge* walls = nullptr;
     int wallCount = 0;
-    bool haveWalls = acc::spatial::change_detector::GetCachedWalls(
+    bool haveWalls = acc::spatial::wall_surfaces::GetCachedWalls(
                          walls, wallCount)
                      && walls != nullptr && wallCount > 0;
     if (!haveWalls) { walls = nullptr; wallCount = 0; }

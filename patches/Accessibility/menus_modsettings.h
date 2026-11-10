@@ -45,16 +45,14 @@ namespace acc::menus::modsettings {
 // not its position on screen: the .cpp's display table decides where a row is
 // seen.
 //
-// ExtendedCycling / RoomShapes / WallSounds are boolean toggles (Enter
-// flips, current state spoken as "Name: an/aus"). VoiceSettings and
-// AudioGlossary are submenu pivots (Enter opens a nested view) and have no
+// ExtendedCycling / RoomShapes and the other toggles flip with Enter (state
+// spoken as "Name: on/off"). Keybindings and AudioGlossary are submenu pivots (Enter opens a nested view) and have no
 // toggle state; GetToggle() returns false for them. SupportModder /
 // LatestChanges / OpenReadme are link rows — Enter hands a URL to the default
 // browser; they hold no state either.
 enum class Option {
     ExtendedCycling = 0,
     RoomShapes,
-    WallSounds,
     HumanSubtitles,
     QEAllAround,         // Q/E cycle everything around the player, not only the
                          // camera's view (qe_ring; off by default)

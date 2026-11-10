@@ -1,4 +1,4 @@
-# strings.h (2505 lines)
+# strings.h (2501 lines)
 
 Source: `patches/Accessibility/strings.h`
 
@@ -15,8 +15,8 @@ Format-string IDs use printf-style placeholders. The argument order is stable ac
 ## Declarations (in source order)
 
 - L27 `enum class Id`
-- L2456 `enum class Lang`
-- L2477 `unsigned CodepageFor(Lang l)`: Windows codepage the language's narrow string bytes are written in.
-- L2482 `void SetLanguage(Lang l)`: Set the active language.
-- L2483 `Lang GetLanguage()`
-- L2488 `const char* Get(Id id)`: Resolve a string ID to its language-specific bytes.
+- L2452 `enum class Lang`
+- L2473 `unsigned CodepageFor(Lang l)`: Windows codepage the language's narrow string bytes are written in.
+- L2478 `void SetLanguage(Lang l)`: Set the active language.
+- L2479 `Lang GetLanguage()`
+- L2484 `const char* Get(Id id)`: Resolve a string ID to its language-specific bytes.

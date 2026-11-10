@@ -20,7 +20,7 @@
 #include "narrated_target.h"
 #include "passive_narrate.h"
 #include "speech.h"
-#include "spatial_change_detector.h"  // GetCachedWalls
+#include "spatial_wall_surfaces.h"  // GetCachedWalls
 #include "strings.h"
 
 namespace acc::qe_ring {
@@ -96,7 +96,7 @@ bool HandlePress(int direction) {
     const acc::engine::WallEdge* walls = nullptr;
     int wallCount = 0;
     const bool haveWalls =
-        acc::spatial::change_detector::GetCachedWalls(walls, wallCount) &&
+        acc::spatial::wall_surfaces::GetCachedWalls(walls, wallCount) &&
         walls && wallCount > 0;
 
     std::vector<Candidate> cands;

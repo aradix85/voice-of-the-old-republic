@@ -42,17 +42,13 @@ namespace KotorAccessibilityInstaller
         /// <summary>Fingerprint stamped into the flat full-volume row's FadeTime column.</summary>
         public const ushort SentinelFadeTime = 31337;
 
-        /// <summary>Fingerprint for the near-field "spatial" row (tight falloff band).</summary>
-        public const ushort SpatialSentinelFadeTime = 31338;
-
         // Appended row values by column. "label" is empty (every row's is).
         //
         // Flat full-volume group: clone of vanilla group 0 (priority 0, 4 voices,
         // 10m full-volume radius / 20m floor, no playback variance) but Volume=127
         // (full) and FadeTime=sentinel. Interrupt=1 so a fresh cue preempts an old
         // one when the voice budget is full rather than being dropped. Used by the
-        // on-demand cues (cycling, beacon, combat) that may target distant objects
-        // and just need to stay audible at range.
+        // minigame cues (swoop race, turret).
         private static readonly Dictionary<string, string> FlatRow =
             new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
@@ -66,36 +62,11 @@ namespace KotorAccessibilityInstaller
                 { "playbackvariance", "0" },
             };
 
-        // Near-field "spatial" group: same Volume=127 but a TIGHT falloff band —
-        // full volume only within 1m, ramping to the floor by 8m. This restores a
-        // distance-loudness gradient across the passive proximity cues' ~5m
-        // awareness range (the flat group is full-volume out to 10m, so cues fired
-        // within 5m never varied with distance). Mirrors the engine's own
-        // near-field SFX groups (e.g. vanilla groups 19/20: full to 4m, floor 8m),
-        // compressed tighter to fit our shorter awareness range. Used only by the
-        // passive wall/door/container/NPC/item/transition cues that funnel through
-        // PlayCueAtPosition. One-shot cues take their falloff band from their
-        // priority group (the one-shot engine API has no per-source distance), so
-        // a dedicated group is the only way to give them a band of their own.
-        private static readonly Dictionary<string, string> SpatialRow =
-            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-            {
-                { "priority", "0" },
-                { "volume", "127" },
-                { "maxplaying", "4" },
-                { "interrupt", "1" },
-                { "fadetime", SpatialSentinelFadeTime.ToString() },
-                { "maxvolumedist", "1" },
-                { "minvolumedist", "8" },
-                { "playbackvariance", "0" },
-            };
-
         // Every accessibility row we maintain, paired with its sentinel.
         private static readonly (ushort Sentinel, Dictionary<string, string> Row)[] AccRows =
             new[]
             {
                 (SentinelFadeTime, FlatRow),
-                (SpatialSentinelFadeTime, SpatialRow),
             };
 
         private static readonly byte[] Magic = Encoding.ASCII.GetBytes("2DA V2.b\n");
@@ -264,9 +235,8 @@ namespace KotorAccessibilityInstaller
         /// Returns the 2da bytes with every accessibility row appended that isn't
         /// already present. Idempotent: returns <paramref name="source"/> unchanged
         /// when all our rows are already there (so callers can detect "no change"
-        /// via reference equality). Adds only the missing rows otherwise — an
-        /// install that already has the flat row but not the spatial row gains just
-        /// the spatial one. Throws on a malformed/unrecognised 2da.
+        /// via reference equality). Adds only the missing rows otherwise. Throws on
+        /// a malformed/unrecognised 2da.
         /// </summary>
         public static byte[] AppendAccGroup(byte[] source)
         {

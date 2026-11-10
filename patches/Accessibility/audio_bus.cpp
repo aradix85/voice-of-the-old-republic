@@ -124,12 +124,6 @@ const size_t   kPriorityGroupFadeTimeOff = acc::off::Same(0x14);
 // other mods that also extend the table.
 constexpr uint16_t kCueGroupSentinelFadeTime = 31337;
 
-// Second sentinel: the near-field "spatial" group (tight 1m/8m falloff band)
-// the installer appends alongside the flat group. Passive proximity cues ride
-// it so loudness tracks distance across their ~5m awareness range. See
-// GetSpatialCuePriorityGroup and the installer's SpatialRow.
-constexpr uint16_t kSpatialCueGroupSentinelFadeTime = 31338;
-
 // Fallback when the sentinel row isn't present (prioritygroups.2da edit
 // not yet applied): vanilla group 26 — volume 127, identical 20m/10m
 // falloff to the legacy group 0, not pause-exempt. Index 26 is within the
@@ -234,35 +228,6 @@ uint8_t GetCuePriorityGroup() {
         "cue group sentinel not found; using fallback full group %u",
         (unsigned)kFallbackFullGroup);
     return kFallbackFullGroup;
-}
-
-uint8_t GetSpatialCuePriorityGroup() {
-    // Near-field group for the passive proximity cues. Same resolve/cache shape
-    // as GetCuePriorityGroup but matches the spatial sentinel. When the spatial
-    // row isn't present (e.g. an install predating it), fall back to the flat
-    // full-volume cue group — same loudness, just no near-field gradient — so
-    // the cue still plays at full volume rather than going silent.
-    static int s_resolved = -1;
-    if (s_resolved >= 0) return static_cast<uint8_t>(s_resolved);
-
-    int r = ScanForSentinelGroup(kSpatialCueGroupSentinelFadeTime);
-    if (r >= 0) {
-        s_resolved = r;
-        acclog::Write("AudioBus",
-            "spatial cue group resolved to sentinel group %d", r);
-        return static_cast<uint8_t>(r);
-    }
-    if (r == kScanNotReady) {
-        // Table not ready yet — don't cache; use the flat group for now.
-        return GetCuePriorityGroup();
-    }
-
-    // Spatial row absent — cache the flat cue group as our resolved value.
-    s_resolved = GetCuePriorityGroup();
-    acclog::Write("AudioBus",
-        "spatial cue group sentinel not found; falling back to flat cue group %d",
-        s_resolved);
-    return static_cast<uint8_t>(s_resolved);
 }
 
 bool PlayCue(const char* resref, uint8_t priorityGroup,

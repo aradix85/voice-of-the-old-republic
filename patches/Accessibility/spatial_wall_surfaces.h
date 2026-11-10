@@ -1,13 +1,11 @@
-// Wall cache + surface clustering.
+// Wall cache + surface clustering, rebuilt when the player enters an area.
+// Room shapes, the Q/E wall test, route smoothing and the view-mode cursor
+// all read it.
 //
 // The walkmesh stores wall geometry as many short edges (Endar Spire
-// corridors are ~0.7-1m per edge). For change-detection purposes that
-// produces permanent chatter as the player walks parallel to a wall:
-// each edge's closest-point distance jumps when the player passes its
-// endpoint, even though the physical wall surface hasn't changed
-// distance. We solve this by clustering adjacent collinear edges into
-// "surfaces" at area-load time, so consumers can track distance per
-// surface rather than per edge.
+// corridors are ~0.7-1m per edge). Adjacent collinear edges are clustered
+// into "surfaces" at area-load time, so consumers can reason about one
+// physical wall instead of its fragments.
 //
 // Cluster rule: two edges merge if they share an endpoint (within
 // kEndpointTolMeters) AND their direction vectors agree within
@@ -50,7 +48,17 @@ struct WallSurfaceDesc {
     int    edge_count;
 };
 
-// Rebuild on area change. Calls BuildAreaWallCache, runs the union-find
+// Main thread, once per frame: rebuilds the caches when the player is in a
+// new area. Without a player (menus, chargen, before spawn) the area is
+// forgotten, so the next area load rebuilds.
+void Tick();
+
+// The cached perimeter edges, portal seams filtered. False before the first
+// rebuild or for an area without walls. Borrowed: valid until the next
+// rebuild.
+bool GetCachedWalls(const acc::engine::WallEdge*& outBuf, int& outCount);
+
+// Rebuild for this area. Calls BuildAreaWallCache, runs the union-find
 // clustering pass, builds per-surface descriptors. Logs counts +
 // overflow + descriptor anomalies. Silent on null area (calls Clear()
 // instead).
@@ -82,10 +90,9 @@ int GetSurfaceCount();
 // edge cases flagged with edge_count == 0).
 bool GetSurfaceDesc(int idx, WallSurfaceDesc& outDesc);
 
-// 2D segment-vs-surface intersection. Mirrors the audio wall-cue model:
-// portal-seam phantoms absorbed by clustering are invisible here, so
-// cursors block where the audio would announce, not on absorbed
-// fragments.
+// 2D segment-vs-surface intersection. Portal-seam phantoms absorbed by
+// clustering are invisible here, so a cursor stops at real walls, not on
+// absorbed fragments.
 bool SegmentCrossesSurface(const Vector& a, const Vector& b,
                            Vector& outHitPoint);
 

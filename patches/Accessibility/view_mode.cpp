@@ -23,7 +23,7 @@
 #include "interact_dispatch.h"
 #include "log.h"
 #include "narrated_target.h"
-#include "spatial_change_detector.h"
+#include "spatial_wall_surfaces.h"
 #include "strings.h"
 #include "speech.h"
 #include "transitions.h"
@@ -254,7 +254,7 @@ void StepCursor(float dt) {
     // Surface-level collision: cursor stops only where the audio would
     // announce a wall, not on portal-seam fragments the audio absorbs.
     Vector hit = end;
-    bool collided = acc::spatial::change_detector::SegmentCrossesSurface(
+    bool collided = acc::spatial::wall_surfaces::SegmentCrossesSurface(
         start, end, hit);
 
     if (collided) {
@@ -622,8 +622,7 @@ bool GetEffectiveReferencePosition(Vector& out) {
     // View mode freezes the creature (SetPlayerInputEnabled(false)) and
     // hands W/S to the virtual cursor, so the cursor — not the body — is
     // where the user currently "is" for the purpose of any distance or
-    // bearing we speak. Same reference-frame pick spatial_change_detector
-    // makes for its T1 distance-deltas.
+    // bearing we speak.
     if (TryGetCursorPosition(out)) return true;  // false unless active
     return acc::engine::GetPlayerPosition(out);
 }

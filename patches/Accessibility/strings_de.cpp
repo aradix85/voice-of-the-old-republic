@@ -552,7 +552,6 @@ const char* Get(Id id) {
         case Id::ModSettingsClosed:           return "Mod-Einstellungen geschlossen";
         case Id::ModSettingExtendedCycling:   return "Kartenweite Objektauswahl";
         case Id::ModSettingRoomShapes:        return "Raumform-Beschreibungen";
-        case Id::ModSettingWallSounds:        return "Wandger\xe4usche";
         case Id::ModSettingHumanSubtitles:    return "Untertitel vertonter Sprecher vorlesen";
         case Id::ModSettingTurretAutoAim:     return "Automatisches Zielen";
         case Id::ModSettingSkipIntros:        return "Startvideos \xFC" "berspringen";

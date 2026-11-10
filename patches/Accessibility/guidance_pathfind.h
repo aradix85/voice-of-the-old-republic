@@ -37,7 +37,7 @@ namespace acc::guidance {
 // returned entry is the first turn-point the user actually needs to
 // hear about (doorway, junction, corner), not the nearest node.
 //
-// Smoothing uses spatial::change_detector::GetCachedWalls. If the cache
+// Smoothing uses spatial::wall_surfaces::GetCachedWalls. If the cache
 // isn't ready (only before the change-detector's first post-area tick),
 // raw A* output is returned — degraded but never wrong.
 //

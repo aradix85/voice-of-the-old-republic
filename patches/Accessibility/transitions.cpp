@@ -1388,19 +1388,15 @@ void Tick() {
         // same labels.
         //
         // The wall-edge cache the decomposition depends on is built by
-        // spatial::change_detector, which runs EARLIER in the dispatch
-        // order (core_tick.cpp: change_detector then transitions —
+        // spatial::wall_surfaces, which runs EARLIER in the dispatch
+        // order (core_tick.cpp: wall_surfaces then transitions —
         // deliberately, so we never build a graph from the previous
         // area's walls). It can still come back empty on this exact
         // tick when the engine has not made the area's walkmesh data
         // available yet, and BuildForArea silently leaves the graph
         // empty in that case, so we retry below on every tick until it
-        // builds successfully.
-        //
-        // A previous version of this comment claimed change_detector
-        // ran later; it does not, and the retry is not the reason the
-        // ordering exists. See core_tick.cpp's dispatch-order notes,
-        // which are authoritative.
+        // builds successfully. core_tick.cpp's dispatch-order notes are
+        // authoritative.
         // Re-arm the nav-graph retry before building: this is the only
         // genuine "we entered an area" edge, so an area previously
         // abandoned as unreadable gets a fresh set of attempts here (and

@@ -47,13 +47,11 @@ char s_rootSentinel = 0;
 //     The filter lives in cycle_state::BuildCategoryListing.
 //   - RoomShapes      = ON. Preserves the current corridor / junction /
 //     Platz announce flow on cluster transitions.
-//   - WallSounds      = ON. Preserves the Pillar 1 wall-cue beats.
 //   - AudioGlossary   = unused slot (RowKind::Submenu, not a toggle).
 // Index order MUST match the Option enum.
 bool s_toggles[static_cast<int>(Option::Count)] = {
     /* ExtendedCycling */ false,
     /* RoomShapes      */ true,
-    /* WallSounds      */ true,
     /* HumanSubtitles  */ false,  // default off — humans AND droids have VO,
                                   // so TTS over the same line clashes (humans,
                                   // HK-47) or reads meaningless beep-text (T3).
@@ -208,7 +206,6 @@ struct OptionSpec {
 constexpr OptionSpec k_options[] = {
     { Option::ExtendedCycling, acc::strings::Id::ModSettingExtendedCycling, RowKind::Toggle  },
     { Option::RoomShapes,      acc::strings::Id::ModSettingRoomShapes,      RowKind::Toggle  },
-    { Option::WallSounds,      acc::strings::Id::ModSettingWallSounds,      RowKind::Toggle  },
     { Option::HumanSubtitles,  acc::strings::Id::ModSettingHumanSubtitles,  RowKind::Toggle  },
     { Option::QEAllAround,     acc::strings::Id::ModSettingQEAllAround,     RowKind::Toggle  },
     { Option::TurretAutoAim,   acc::strings::Id::ModSettingTurretAutoAim,   RowKind::Toggle  },
@@ -237,7 +234,6 @@ constexpr Option k_rootRows[] = {
     Option::ExtendedCycling,
     Option::QEAllAround,
     Option::RoomShapes,
-    Option::WallSounds,
     Option::HumanSubtitles,
     Option::TurretAutoAim,
     Option::SkipIntros,
@@ -271,7 +267,6 @@ const char* PersistKey(Option opt) {
     switch (opt) {
         case Option::ExtendedCycling: return "ExtendedCycling";
         case Option::RoomShapes:      return "RoomShapes";
-        case Option::WallSounds:      return "WallSounds";
         case Option::HumanSubtitles:  return "HumanSubtitles";
         case Option::QEAllAround:     return "QEAllAround";
         case Option::TurretAutoAim:   return "TurretAutoAim";

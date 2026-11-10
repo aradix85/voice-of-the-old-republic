@@ -16,7 +16,6 @@
 
 #include "engine_area.h"               // WallEdge, SegmentCrossesWalkmesh
 #include "engine_offsets.h"            // Vector
-#include "spatial_change_detector.h"   // GetCachedWalls — seam-filtered cache
 #include "spatial_wall_surfaces.h"     // FloorZCandidatesAt — floor-tri cache
 
 namespace acc::wall_probe {
@@ -173,7 +172,7 @@ float ProbeWall(const acc::engine::WallEdge* walls, int wallCount,
 float ProbeDistance(const Vector& pos, float dx, float dy) {
     const acc::engine::WallEdge* walls = nullptr;
     int wallCount = 0;
-    if (!acc::spatial::change_detector::GetCachedWalls(walls, wallCount) ||
+    if (!acc::spatial::wall_surfaces::GetCachedWalls(walls, wallCount) ||
         !walls || wallCount <= 0) {
         return -1.0f;
     }
@@ -215,7 +214,7 @@ bool IsAlcoveAlongAxis(const Vector& pos, float forwardX, float forwardY) {
 
     const acc::engine::WallEdge* walls = nullptr;
     int wallCount = 0;
-    if (!acc::spatial::change_detector::GetCachedWalls(walls, wallCount) ||
+    if (!acc::spatial::wall_surfaces::GetCachedWalls(walls, wallCount) ||
         !walls || wallCount <= 0) {
         return true;  // no data — fail open
     }

@@ -1,4 +1,4 @@
-# audio_bus.cpp (474 lines)
+# audio_bus.cpp (439 lines)
 
 Source: `patches/Accessibility/audio_bus.cpp`
 
@@ -12,14 +12,13 @@ CExoSound* lives at *kAddrCExoSoundPtr; can be nullptr early in DLL-attach. All 
 - L60 `void* GetCExoSound()`
 - L77 `void EnsureCueVolumeLoaded()`
 - L89 `uint8_t EffectiveVolumeByte(uint8_t baseVolume)`: baseVolume × slider, rounded, clamped to [0,127].
-- L143 `void* GetSoundInternal()`
-- L154 `void SetGlobalCueVolumePercent(int percent)`
-- L163 `int GetGlobalCueVolumePercent()`
-- L177 `int ScanForSentinelGroup(uint16_t sentinel)`
-- L214 `uint8_t GetCuePriorityGroup()`
-- L239 `uint8_t GetSpatialCuePriorityGroup()`
-- L268 `bool PlayCue(const char* resref, uint8_t priorityGroup, uint8_t baseVolume)`
-- L303 `bool PlayCue3DImpl(const char* resref, const Vector& worldPosition, uint8_t priorityGroup, uint8_t baseVolume, bool characterRelative)`: Shared body of PlayCue3D / PlayCue3DRaw.
-- L359 `bool PlayCue3D(const char* resref, const Vector& worldPosition, uint8_t priorityGroup, uint8_t baseVolume)`
-- L365 `bool PlayCue3DRaw(const char* resref, const Vector& listenerSpacePosition, uint8_t priorityGroup, uint8_t baseVolume)`
-- L404 `extern "C" int __cdecl OnSetListenerPosition(void* exoSound, Vector** posSlot)`
+- L137 `void* GetSoundInternal()`
+- L148 `void SetGlobalCueVolumePercent(int percent)`
+- L157 `int GetGlobalCueVolumePercent()`
+- L171 `int ScanForSentinelGroup(uint16_t sentinel)`
+- L208 `uint8_t GetCuePriorityGroup()`
+- L233 `bool PlayCue(const char* resref, uint8_t priorityGroup, uint8_t baseVolume)`
+- L268 `bool PlayCue3DImpl(const char* resref, const Vector& worldPosition, uint8_t priorityGroup, uint8_t baseVolume, bool characterRelative)`: Shared body of PlayCue3D / PlayCue3DRaw.
+- L324 `bool PlayCue3D(const char* resref, const Vector& worldPosition, uint8_t priorityGroup, uint8_t baseVolume)`
+- L330 `bool PlayCue3DRaw(const char* resref, const Vector& listenerSpacePosition, uint8_t priorityGroup, uint8_t baseVolume)`
+- L369 `extern "C" int __cdecl OnSetListenerPosition(void* exoSound, Vector** posSlot)`

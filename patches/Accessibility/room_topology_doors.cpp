@@ -7,7 +7,7 @@
 
 #include "engine_reads.h"       // ExtractTextOrStrRef — transition-destination loc-string read
 #include "log.h"
-#include "spatial_change_detector.h"  // GetCachedWalls — seam-filtered perimeter cache
+#include "spatial_wall_surfaces.h"  // GetCachedWalls — seam-filtered perimeter cache
 #include "transitions.h"        // IterateLandmarks + MarkLandmarkClaimedByDoor — landmark→door matching pass
 
 namespace acc::room_topology {
@@ -327,7 +327,7 @@ EdgeResult ClassifyEdge(void* areaForDiag,
 
     const acc::engine::WallEdge* walls = nullptr;
     int wallCount = 0;
-    bool haveWalls = acc::spatial::change_detector::GetCachedWalls(
+    bool haveWalls = acc::spatial::wall_surfaces::GetCachedWalls(
         walls, wallCount);
     Vector hit{};
     bool wallHit = haveWalls &&

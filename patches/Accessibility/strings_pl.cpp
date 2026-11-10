@@ -534,7 +534,6 @@ const char* Get(Id id) {
         case Id::ModSettingsClosed:           return "Zamkni\xEAto ustawienia moda";
         case Id::ModSettingExtendedCycling:   return "Wyb\xF3r obiekt\xF3w na ca\xB3""ej mapie";
         case Id::ModSettingRoomShapes:        return "Opisy kszta\xB3tu pomieszcze\xF1";
-        case Id::ModSettingWallSounds:        return "D\x9Fwi\xEAki \x9C""cian";
         case Id::ModSettingHumanSubtitles:    return "Czytaj napisy m\xF3wionych kwestii";
         case Id::ModSettingTurretAutoAim:     return "Automatyczne celowanie";
         case Id::ModSettingSkipIntros:        return "Pomijaj filmy wst\xEApne";

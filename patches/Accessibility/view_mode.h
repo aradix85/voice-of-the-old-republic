@@ -49,7 +49,7 @@ bool GetEffectiveOrientationYawDegrees(float& out);
 // cursor while view mode is active, the player creature otherwise. In view
 // mode the creature is frozen by SetPlayerInputEnabled(false) and W/S drives
 // the cursor instead, so a player-anchored distance stops changing as the
-// user explores. Mirrors spatial_change_detector's referencePos pick.
+// user explores.
 // False when no player position is readable.
 bool GetEffectiveReferencePosition(Vector& out);
 

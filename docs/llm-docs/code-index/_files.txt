@@ -2,8 +2,6 @@ patches/Accessibility/announce_facing.cpp
 patches/Accessibility/announce_facing.h
 patches/Accessibility/audio_bus.cpp
 patches/Accessibility/audio_bus.h
-patches/Accessibility/audio_cue_player.cpp
-patches/Accessibility/audio_cue_player.h
 patches/Accessibility/audio_cues.h
 patches/Accessibility/audio_footstep_suppress.cpp
 patches/Accessibility/audio_footstep_suppress.h
@@ -47,8 +45,6 @@ patches/Accessibility/combat_special_watch.h
 patches/Accessibility/combat_strings.cpp
 patches/Accessibility/combat_strings.h
 patches/Accessibility/core_dllmain.cpp
-patches/Accessibility/core_settings.cpp
-patches/Accessibility/core_settings.h
 patches/Accessibility/core_tick.cpp
 patches/Accessibility/core_tick.h
 patches/Accessibility/cycle_input.cpp
@@ -333,8 +329,6 @@ patches/Accessibility/save_points.cpp
 patches/Accessibility/save_points.h
 patches/Accessibility/shortest_paths.cpp
 patches/Accessibility/shortest_paths.h
-patches/Accessibility/spatial_change_detector.cpp
-patches/Accessibility/spatial_change_detector.h
 patches/Accessibility/spatial_wall_surfaces.cpp
 patches/Accessibility/spatial_wall_surfaces.h
 patches/Accessibility/spectator_scene.cpp

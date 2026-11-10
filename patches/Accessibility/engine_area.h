@@ -865,7 +865,7 @@ constexpr float kWallCrossZToleranceM = 2.0f;
 // False on: null walls, wallCount<=0, a==b. Degenerate edges (a==b)
 // skipped.
 //
-// Pulls from spatial::change_detector::GetCachedWalls; this is the
+// Pulls from spatial::wall_surfaces::GetCachedWalls; this is the
 // consumer surface, not the build path.
 bool SegmentCrossesWalkmesh(const WallEdge* walls,
                             int wallCount,
