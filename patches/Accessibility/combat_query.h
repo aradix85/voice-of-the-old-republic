@@ -1,36 +1,28 @@
-// Combat read-side queries. Read-only over creature_stats @+0xa74; no
-// engine re-entry beyond documented accessors. Each entry self-gates on
-// player loaded.
+// Combat readouts over a creature's condition, effects and weapons.
+// Read-only.
 //
-// Surfaces:
-//   - Cycle/passive-narrate enrichment for Creature-kind targets.
-//   - Bare H self-status (HP + effects + equipped weapons).
+//   - The brief added to a creature's name when it becomes the target.
+//   - H: the leader's own status.
 
 #pragma once
 
 #include <cstddef>
-#include <cstdint>
 
 namespace acc::combat::query {
 
-// Append HP/AC/faction suffix to outBuf. True iff target is a Creature
-// kind and resolved cleanly. targetServerObject is already resolved by
-// caller; not re-resolved here.
-bool BuildTargetCombatBrief(void* targetServerObject,
-                            const char* targetName,
+// Writes "name, condition, distance, effects, weapons" for a creature target
+// into outBuf. False, with outBuf empty, for any other kind of object.
+bool BuildTargetCombatBrief(void* targetServerObject, const char* targetName,
                             char* outBuf, size_t outBufSize);
 
-// Bare H — HP + active effects (deduped, named) + equipped weapons.
-// No name or distance (always self, always zero).
-void SpeakSelfStatus();
-
+// H: speaks the leader's hit points, Force points, effects and weapons.
+// Silent before the player is loaded and while a blocking panel is in front.
 void PollWin32SelfStatusHotkey();
 
-// Resolve the display name of the item equipped in one inventory slot
-// (creature → CSWInventory @+kCreatureInventoryOffset → slot handle →
-// display name; SEH-guarded per hop). slotHandleOffset is one of the
-// kInventory*HandleOffset constants. False on empty slot / any miss.
-// Shared with weapon_set_watch (post-swap weapon naming).
+// Display name of the item in one inventory slot of a server creature.
+// slotHandleOffset is one of the kInventory*HandleOffset constants; slotLabel
+// names the slot in the log. False, with outBuf empty, for an empty slot or
+// a name that does not resolve.
 bool ReadEquippedItemName(void* serverCreature, size_t slotHandleOffset,
                           const char* slotLabel,
                           char* outBuf, size_t outBufSize);

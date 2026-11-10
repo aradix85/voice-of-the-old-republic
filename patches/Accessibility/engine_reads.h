@@ -303,13 +303,32 @@ bool IsInventoryItemRow(void* control);
 // shorts at +0x122/+0x124 (matching CSWGuiInGameCharacter::SetStats, which
 // reads this client struct; the +0x120 "force_points" field is a static base,
 // not the live current).
-// Same struct combat_query reads HP from at +0x4c/+0x4e. SEH-guarded; returns false
+// Same struct as ReadClientCreatureHitPoints. Returns false
 // on null/fault. *outMax == 0 is a VALID result meaning "not a Force
 // user" (non-Jedi classes, droids) — callers gate the FP display on
 // *outMax > 0, NOT on the return value. `clientCreature` is a
 // CSWCCreature* (GetClientLeader(), or the charsheet panel's displayed-
 // creature pointer at +0x59e4).
 bool ReadCreatureForcePoints(void* clientCreature, int* outCur, int* outMax);
+
+// A client creature's live hit points, from the stats block its character
+// sheet renders (CSWCCreatureStats: +0x4c pregame_current_hp, +0x4e
+// max_hit_points; +0x48 hit_points is the base value, not the live one).
+// Right for every party member, where the server accessor
+// CSWSCreature::GetMaxHitPoints(1) gates on is_pc and returns garbage for
+// the others. False on null / fault, outputs untouched.
+bool ReadClientCreatureHitPoints(void* clientCreature, int* outCur, int* outMax);
+
+// Icon ids of a server creature's effect-icon row (CSWSCreature.effect_icons:
+// the icons its portrait shows, priority-sorted, one entry per icon id).
+// Creatures only. Returns the count written to outIds; 0 on fault, and when
+// the row claims more than cap entries.
+int ReadCreatureEffectIconIds(void* serverCreature, int* outIds, int cap);
+
+// EFFECT_TYPES of the first cap effects in CSWSObject.effects, in list order
+// (a type can repeat). Returns the count written; a fault mid-walk keeps
+// what was read.
+int ReadObjectEffectTypes(void* serverObject, int* outTypes, int cap);
 
 // The 0..5 visible wound-state bucket for a server object (0 healthy,
 // 1 light, 2 wounded, 3 badly wounded, 4 dying, 5 dead), -1 when

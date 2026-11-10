@@ -230,37 +230,4 @@ WorkbenchPickerInfo GetWorkbenchPickerInfo(void* upgradePanel) {
     return info;
 }
 
-bool ReadCreatureForcePoints(void* clientCreature, int* outCur, int* outMax) {
-    if (outCur) *outCur = 0;
-    if (outMax) *outMax = 0;
-    if (!clientCreature) return false;
-
-    // CSWCCreature -> CSWCLevelUpStats* (embeds CSWCCreatureStats), the chain
-    // of the HP reads. In it the cached max (live), then the base term (not
-    // the live pool), then two shorts whose sum is the live current pool, as
-    // CSWGuiInGameCharacter::SetStats (K1 0x006afda0, K2 0x0084E6F0) computes
-    // the FP label. The server stats struct sits 2 bytes off this client one.
-    // K2 moved this band by +8 (the HP fields did not move).
-    const size_t kLvlUpStatsOffset = acc::off::Pick(0x2f8, 0x310);
-    const size_t kMaxForceOffset   = acc::off::Pick(0x11e, 0x126);
-    const size_t kCurForceLoOffset = acc::off::Pick(0x122, 0x12a);
-    const size_t kCurForceHiOffset = acc::off::Pick(0x124, 0x12c);
-
-    void* stats = nullptr;
-    uint16_t maxFp = 0, curLo = 0, curHi = 0;
-    if (!TryReadPtr(clientCreature, kLvlUpStatsOffset, &stats) || !stats ||
-        !TryReadU16(stats, kMaxForceOffset, &maxFp) ||
-        !TryReadU16(stats, kCurForceLoOffset, &curLo) ||
-        !TryReadU16(stats, kCurForceHiOffset, &curHi)) {
-        return false;
-    }
-    if (outMax) *outMax = static_cast<int>(static_cast<short>(maxFp));
-    // As the engine: (short)(lo + hi).
-    if (outCur) {
-        *outCur = static_cast<int>(static_cast<short>(
-            static_cast<short>(curLo) + static_cast<short>(curHi)));
-    }
-    return true;
-}
-
 }  // namespace acc::engine

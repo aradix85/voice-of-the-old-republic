@@ -1,4 +1,4 @@
-# engine_offsets_fields.h (2319 lines)
+# engine_offsets_fields.h (2325 lines)
 
 Source: `patches/Accessibility/engine_offsets_fields.h`
 

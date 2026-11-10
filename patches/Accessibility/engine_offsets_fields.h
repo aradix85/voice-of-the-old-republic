@@ -506,7 +506,13 @@ const size_t    kSkillsCharGenSelectedSkillOffset    = acc::off::Pick(0x49bc, 0x
 // the engine's own deref chain under SEH and refuse to drive the panel
 // when it would fault. See chargen_layout::IsBindingReady.
 const size_t    kSkillsCharGenChargenCreatureOffset  = acc::off::Pick(0x64, 0x68);
-const size_t    kChargenCreatureLevelUpStatsOffset   = acc::off::Pick(0x2f8, 0x310);
+// The stats hop is every client creature's: CSWCCreature.lvl_up_stats, a
+// CSWCLevelUpStats* whose inline first member is CSWCCreatureStats, so the
+// pointer is also a CSWCCreatureStats*. engine_reads walks it for hit
+// points and Force points, the radial diagnostics for GetCanUseSkill (K2
+// listing: `ecx = [player_client + 0x310]; push 1; call` at both sites in
+// its GetDefaultActions).
+const size_t    kClientCreatureLevelUpStatsOffset    = acc::off::Pick(0x2f8, 0x310);
 const size_t    kLevelUpStatsClassCountOffset        = acc::off::Same(0x32);
 // Eight chargen skills in both games (both ctors loop i < 8).
 const int       kSkillsCharGenSkillCount             = acc::off::Same(8);

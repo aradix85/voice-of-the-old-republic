@@ -31,7 +31,7 @@ const chargen_layout::PanelDesc kDesc = {
     /*logTag*/              "Menus.ChargenSkill",
     /*selectedFieldName*/   "selected_skill",
     /*creatureOffset*/      kSkillsCharGenChargenCreatureOffset,
-    /*creatureStatsOffset*/ kChargenCreatureLevelUpStatsOffset,
+    /*creatureStatsOffset*/ kClientCreatureLevelUpStatsOffset,
 };
 }  // namespace
 

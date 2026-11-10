@@ -1,14 +1,13 @@
-# combat_query.h (39 lines)
+# combat_query.h (31 lines)
 
 Source: `patches/Accessibility/combat_query.h`
 
-Combat read-side queries. Read-only over creature_stats @+0xa74; no engine re-entry beyond documented accessors. Each entry self-gates on player loaded.
+Combat readouts over a creature's condition, effects and weapons. Read-only.
 
-Surfaces: - Cycle/passive-narrate enrichment for Creature-kind targets. - Bare H self-status (HP + effects + equipped weapons).
+- The brief added to a creature's name when it becomes the target. - H: the leader's own status.
 
 ## Declarations (in source order)
 
-- L19 `bool BuildTargetCombatBrief(void* targetServerObject, const char* targetName, char* outBuf, size_t outBufSize)`: Append HP/AC/faction suffix to outBuf.
-- L25 `void SpeakSelfStatus()`: Bare H — HP + active effects (deduped, named) + equipped weapons.
-- L27 `void PollWin32SelfStatusHotkey()`
-- L34 `bool ReadEquippedItemName(void* serverCreature, size_t slotHandleOffset, const char* slotLabel, char* outBuf, size_t outBufSize)`: Resolve the display name of the item equipped in one inventory slot (creature → CSWInventory @+kCreatureInventoryOffset → slot handle → display name; SEH-guarded per hop).
+- L15 `bool BuildTargetCombatBrief(void* targetServerObject, const char* targetName, char* outBuf, size_t outBufSize)`: Writes "name, condition, distance, effects, weapons" for a creature target into outBuf.
+- L20 `void PollWin32SelfStatusHotkey()`: H: speaks the leader's hit points, Force points, effects and weapons.
+- L26 `bool ReadEquippedItemName(void* serverCreature, size_t slotHandleOffset, const char* slotLabel, char* outBuf, size_t outBufSize)`: Display name of the item in one inventory slot of a server creature.

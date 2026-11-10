@@ -19,14 +19,6 @@ namespace {
 // listing-witnessed separately.
 const uintptr_t kAddrGetCanUseSkill = acc::addr::Pick(0x006477E0, 0x00845730);
 
-// CSWCCreature.lvl_up_stats @ +0x2f8 → CSWCLevelUpStats*. The CSWC-
-// CreatureStats inline-member sits at +0x00 of CSWCLevelUpStats, so this
-// pointer can be reinterpreted directly as CSWCCreatureStats*. Verified:
-// swkotor.exe.h:5984 (lvl_up_stats), :6332 (creature_stats inline at +0).
-// K2 listing-witnessed at both GetCanUseSkill sites in the K2
-// GetDefaultActions: `ecx = [player_client + 0x310]; push 1; call`.
-const size_t kCreatureLvlUpStatsOffset = acc::off::Pick(0x2F8, 0x310);
-
 // CSWSDoor.field_0x2d8 — the second Security gate from CSWCDoor::Get-
 // TargetActions decomp: must be 0 for the Security row to populate.
 // Per the door decomp, the field is read as `*(int *)(server_door + 0x2d8)`
@@ -341,7 +333,7 @@ void LogTargetDiag(uint32_t targetClient, const char* tag) {
             __try {
                 lvlUpStats = *reinterpret_cast<void**>(
                     reinterpret_cast<unsigned char*>(clientLeader) +
-                    kCreatureLvlUpStatsOffset);
+                    kClientCreatureLevelUpStatsOffset);
             } __except (EXCEPTION_EXECUTE_HANDLER) {
                 lvlUpStats = nullptr;
             }

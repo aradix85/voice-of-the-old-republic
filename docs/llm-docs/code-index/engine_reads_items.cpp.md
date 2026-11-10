@@ -1,4 +1,4 @@
-# engine_reads_items.cpp (267 lines)
+# engine_reads_items.cpp (234 lines)
 
 Source: `patches/Accessibility/engine_reads_items.cpp`
 
@@ -22,4 +22,3 @@ Item and creature reads on top of the generic readers of engine_reads.cpp: clien
 - L191 `bool IsInventoryItemRow(void* control)`
 - L196 `void* GetWorkbenchSlotInstalledItem(void* upgradePanel, void* slotControl)`
 - L207 `WorkbenchPickerInfo GetWorkbenchPickerInfo(void* upgradePanel)`
-- L233 `bool ReadCreatureForcePoints(void* clientCreature, int* outCur, int* outMax)`

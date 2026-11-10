@@ -1,19 +1,18 @@
-# combat_query.cpp (513 lines)
+# combat_query.cpp (283 lines)
 
 Source: `patches/Accessibility/combat_query.cpp`
 
-transient (engine LYT loader use-after-free)
+Combat readouts: the brief added to a creature's name when it becomes the target, and the leader's own status on H.
 
 ## Declarations (in source order)
 
-- L61 `int ReadCurrentHpFromClient(void* clientLeader)`
-- L81 `int ReadMaxHpFromClient(void* clientLeader)`
-- L112 `bool ReadEquippedItemName(void* serverCreature, size_t slotHandleOffset, const char* slotLabel, char* outBuf, size_t outBufSize)`: Walk CSWSCreature.inventory @+0xa2c → CSWInventory.
-- L168 `float ComputePlayerDistanceMeters(void* targetObject)`: 2D distance (horizontal plane) from player to target in metres.
-- L186 `void BriefAppend(BriefBuf& b, const char* fmt, ...)`
-- L202 `int BuildEffectIconSummary(void* serverObject, char* outBuf, size_t outBufSize)`: Read the creature's effect-icon row (CSWSCreature.effect_icons — the exact icon list the sighted portrait renders; see engine_offsets.h) and join the localized icon names.
-- L254 `bool BuildEffectsSummary(void* serverObject, char* outBuf, size_t outBufSize)`: Produce a comma-joined effects string for the brief / self status.
-- L303 `acc::strings::Id DamageLevelStringIdFor(int level)`
-- L322 `bool BuildTargetCombatBrief(void* targetServerObject, const char* targetName, char* outBuf, size_t outBufSize)`
-- L411 `void SpeakSelfStatus()`
-- L486 `void PollWin32SelfStatusHotkey()`
+- L24 `bool ReadEquippedItemName(void* serverCreature, size_t slotHandleOffset, const char* slotLabel, char* outBuf, size_t outBufSize)`
+- L69 `float PlayerDistanceMeters(void* target)`: Horizontal distance from the player to the target, -1 when a position is unreadable.
+- L86 `void BriefAppend(BriefBuf& b, const char* fmt, ...)`
+- L98 `bool JoinEffectNames(const int* ids, int count, const char* (*nameOf)(int), char* outBuf, size_t outBufSize)`: Comma-joins the names of up to kMaxEffectsSpoken distinct ids; an id without a name is skipped.
+- L125 `bool BuildEffectsSummary(void* serverCreature, char* outBuf, size_t outBufSize)`: The effects clause.
+- L137 `acc::strings::Id DamageLevelStringId(int level)`: level is 1..5; healthy (0) is never spoken.
+- L154 `void AppendLoadout(BriefBuf& b, void* serverCreature, Loadout& out)`: What both readouts end with: the active effects, then what each hand holds.
+- L171 `void SpeakSelfStatus()`: The leader's hit points, Force points for a Force user, effects and weapons.
+- L219 `bool BuildTargetCombatBrief(void* targetServerObject, const char* targetName, char* outBuf, size_t outBufSize)`
+- L259 `void PollWin32SelfStatusHotkey()`

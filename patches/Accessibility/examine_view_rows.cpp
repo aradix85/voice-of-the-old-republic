@@ -32,27 +32,16 @@ void AddText(int& idx, S text) {
     AddRow(idx, "%s", acc::strings::Get(text));
 }
 
-// One row per effect in CSWSObject.effects (CExoArrayList<CGameEffect*>).
-// A fault mid-walk keeps the rows so far.
+// One row per effect of the object; an unmapped type gets its number.
 void AppendEffectRows(void* serverObject, int& idx) {
-    if (!serverObject) return;
-    __try {
-        auto* lst = reinterpret_cast<CExoArrayList*>(
-            reinterpret_cast<unsigned char*>(serverObject) + kObjectEffectsOffset);
-        if (!lst || !lst->data || lst->size <= 0) return;
-        const int n = lst->size > 64 ? 64 : lst->size;
-        for (int i = 0; i < n && idx < kMaxRows; ++i) {
-            void* eff = lst->data[i];
-            if (!eff) continue;
-            const int type = static_cast<int>(*reinterpret_cast<unsigned short*>(
-                reinterpret_cast<unsigned char*>(eff) + kGameEffectTypeOffset));
-            if (const char* name = EffectName(type)) {
-                AddRow(idx, acc::strings::Get(S::FmtExamineRowEffect), name);
-            } else {
-                AddRow(idx, acc::strings::Get(S::FmtExamineRowEffectUnknown), type);
-            }
+    int types[64];
+    const int n = acc::engine::ReadObjectEffectTypes(serverObject, types, 64);
+    for (int i = 0; i < n; ++i) {
+        if (const char* name = EffectName(types[i])) {
+            AddRow(idx, acc::strings::Get(S::FmtExamineRowEffect), name);
+        } else {
+            AddRow(idx, acc::strings::Get(S::FmtExamineRowEffectUnknown), types[i]);
         }
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
     }
 }
 
