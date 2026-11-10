@@ -32,14 +32,23 @@ foreach ($line in (& cmd /c "`"$vcvars`" >nul 2>&1 && set")) {
 }
 $env:VSLANG = '1033'
 
-$flags = if ($Mode -eq 'w4') { '/Zs', '/W4' } else { '/analyze:only', '/W3' }
+# Off in analyze mode, both by design: C6320 and C6322 object to
+# __except (EXCEPTION_EXECUTE_HANDLER), which is how every read of engine
+# memory is guarded.
+$flags = if ($Mode -eq 'w4') { '/Zs', '/W4' }
+         else { '/analyze:only', '/W3', '/wd6320', '/wd6322' }
 $base  = @('/nologo', '/c', '/EHsc', '/std:c++17', '/MD',
            "/I$src", "/I$common", "/I$lib") + $flags
 
 $sources = if ($Files) { $Files | ForEach-Object { Join-Path $src $_ } }
            else { Get-ChildItem $src -Filter *.cpp | ForEach-Object FullName }
 
+# /analyze drops a .nativecodeanalysis.xml per source into the working
+# directory; keep those out of the repo.
+$scratch = Join-Path $outDir 'msvc_scratch'
+New-Item -ItemType Directory -Force $scratch | Out-Null
 $lines = $sources | ForEach-Object -ThrottleLimit ([Environment]::ProcessorCount) -Parallel {
+    Set-Location $using:scratch
     & cl @using:base $_ 2>&1 | ForEach-Object { "$_" }
 }
 

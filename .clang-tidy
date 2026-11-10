@@ -1,0 +1,43 @@
+# Checks for tools/analysis/clang_tidy.py: bug patterns and the path-sensitive
+# analyzer. Style is left to the compiler (/W4) and cppcheck.
+#
+# Off by design: throwing-static-initialization (every engine offset is a
+# constant picked per game at load), no-int-to-ptr and the multi-level
+# pointer conversions (engine addresses are integers and void pointers),
+# signed-bitwise (masks on engine ints), incorrect-roundings (the rounded
+# values are distances, never negative), unchecked-string-to-number (atoi on
+# game text, where 0 for garbage is the wanted answer), enum-size and padding
+# (layout is not a concern here).
+# Off as style: branch-clone, the switch-default pair and the string
+# micro-optimisations.
+Checks: >
+  -*,
+  bugprone-*,
+  clang-analyzer-*,
+  performance-*,
+  misc-definitions-in-headers,
+  misc-misplaced-const,
+  misc-redundant-expression,
+  misc-unused-parameters,
+  misc-unused-using-decls,
+  -bugprone-branch-clone,
+  -bugprone-easily-swappable-parameters,
+  -bugprone-implicit-widening-of-multiplication-result,
+  -bugprone-incorrect-roundings,
+  -bugprone-multi-level-implicit-pointer-conversion,
+  -bugprone-narrowing-conversions,
+  -bugprone-reserved-identifier,
+  -bugprone-signed-bitwise,
+  -bugprone-switch-missing-default-case,
+  -bugprone-throwing-static-initialization,
+  -bugprone-unchecked-string-to-number-conversion,
+  -bugprone-unhandled-code-paths,
+  -clang-analyzer-optin.performance.Padding,
+  -clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling,
+  -performance-avoid-endl,
+  -performance-enum-size,
+  -performance-faster-string-find,
+  -performance-inefficient-string-concatenation,
+  -performance-no-int-to-ptr,
+  -performance-prefer-single-char-overloads
+HeaderFilterRegex: 'patches[\\/]Accessibility[\\/]'

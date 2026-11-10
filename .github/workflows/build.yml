@@ -60,6 +60,10 @@ jobs:
         shell: pwsh
         run: pwsh -File tools/tests/run_unit_tests.ps1
 
+      - name: Unit tests under AddressSanitizer
+        shell: pwsh
+        run: pwsh -File tools/tests/run_unit_tests.ps1 -Mode asan
+
       - name: Extract accessibility.dll
         shell: pwsh
         run: |

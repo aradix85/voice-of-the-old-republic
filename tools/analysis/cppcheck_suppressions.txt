@@ -1,0 +1,18 @@
+// For tools/analysis/cppcheck.ps1. One id per line, optionally :file.
+
+missingInclude
+missingIncludeSystem
+
+// POD structs that the engine or the caller fills.
+uninitMemberVarNoCtor
+
+// Engine memory is read through byte offsets.
+invalidPointerCast
+
+// The small POD structs are passed by value on purpose.
+passedByValue
+
+// Reviewed false positives.
+containerOutOfBounds:patches/Accessibility/bridge_describe.cpp
+uninitvar:patches/Accessibility/cycle_state.cpp
+uninitvar:patches/Accessibility/menus_listbox_skillinfo.cpp
