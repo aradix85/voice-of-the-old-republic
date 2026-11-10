@@ -312,6 +312,7 @@ patches/Accessibility/menus_pending_internal.h
 patches/Accessibility/menus_pending_workbench.cpp
 patches/Accessibility/menus_powers_levelup.cpp
 patches/Accessibility/menus_powers_levelup.h
+patches/Accessibility/menus_setactive.cpp
 patches/Accessibility/menus_skillflow_nav.cpp
 patches/Accessibility/menus_skillflow_nav.h
 patches/Accessibility/menus_speak.cpp
