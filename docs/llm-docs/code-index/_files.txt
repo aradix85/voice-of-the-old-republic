@@ -212,6 +212,8 @@ patches/Accessibility/menus_chain_build.cpp
 patches/Accessibility/menus_chain_buttons.cpp
 patches/Accessibility/menus_chain_filter.cpp
 patches/Accessibility/menus_chain_input.cpp
+patches/Accessibility/menus_chain_input_enter.cpp
+patches/Accessibility/menus_chain_input_keys.cpp
 patches/Accessibility/menus_chain_internal.h
 patches/Accessibility/menus_chain_state.cpp
 patches/Accessibility/menus_chain_tabs.cpp
