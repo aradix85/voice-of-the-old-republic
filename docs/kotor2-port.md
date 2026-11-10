@@ -3297,6 +3297,13 @@ name**. So for any offset, find a KOTOR 1 virtual that touches the field, look
 its KOTOR 2 twin up in that file, decompile both, and read the offset off the
 matching statement. No searching, no guessing which function is which.
 
+One trap, found 2026-11-11: for classes derived from `CSWGuiPanel` the file
+pairs slot N with slot N, but KOTOR 2's panel base class has one virtual more
+(slot 27, 0x0040FFB0). From slot 27 on, a KOTOR 1 method's twin is therefore
+one slot higher than the file says: `CSWGuiMessageBox::SetMessage(strref)`,
+K1 slot 27, is K2 slot 28 (0x0075BDE0). Check the twin's body and its `ret N`
+(`tools/analysis/call_convention.py`) before using such a row.
+
 What that produced:
 
 - `CSWGuiControl` parent / tooltip strref / tooltip string: **+4** each

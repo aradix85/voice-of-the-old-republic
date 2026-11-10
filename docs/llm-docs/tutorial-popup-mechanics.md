@@ -99,7 +99,10 @@ Engine surface (all Pick()ed in `tutorial_popup.cpp` / `tutorial_hints.cpp`):
   loads the first `Message_PC%i` page via SetNextMessage 0x00899630, installs
   the per-reason OK callback). The engine reads the message_pc columns
   unconditionally on PC.
-- `SetMessage(strref)` = 0x0040FFB0 (established earlier, shared constant).
+- `SetMessage(strref)` = **0x0075BDE0** (GetSimpleString, then the virtual
+  SetMessage(CExoString) at vtable +0x74; `ret 4`). Not 0x0040FFB0, which the
+  slot map pairs with it: KOTOR 2's panel base class has one virtual more, so
+  every class-specific slot from 27 on sits one higher than in KOTOR 1.
 - **Once-shown bitfield base = CGuiInGame+0xf88** (K1 +0xba8); bit test
   0x007cfa10, bit set/clear 0x007cfa70. Same (reason>>3)/(reason&7) scheme.
 - **Direct mount = 0x007cfb10** (the K1-0x0062f4a0 twin): checks the
