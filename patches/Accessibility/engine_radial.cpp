@@ -16,6 +16,8 @@
 #include "engine_rebase.h"
 #include "engine_offsets_select.h"
 
+namespace acc::engine_radial {
+
 namespace {
 
 // CSWGuiTargetActionMenu lives inside CSWGuiMainInterface at +0xBC. Verified
@@ -270,8 +272,6 @@ void* RowActionButtonAddr(void* tam, int row) {
 }
 
 }  // namespace
-
-namespace acc::engine_radial {
 
 void* ResolveTargetActionMenu() {
     void* mainIf = acc::engine::ResolveMainInterface();

@@ -6,11 +6,11 @@ kButtonTextOffset, kLabelGuiStringPtrOffset, kLabelTextOffset, kAurGuiStringCStr
 
 ## Declarations (in source order)
 
-- L194 `bool ReadInt32(void* base, size_t offset, int32_t* out)`
-- L209 `bool ReadGuiStringLocal(void* control, size_t guiStringPtrOffset, char* outBuf, size_t bufSize)`: Local copy of the gui_string read path used by ExtractAnnounceableText — pulled in here so the engine layer doesn't depend on menus.cpp's helpers.
-- L238 `bool ReadCExoStringLocal(void* base, size_t offset, char* outBuf, size_t bufSize)`: Inline CExoString fallback.
-- L260 `void* RowActionAddr(void* tam, int row)`
-- L266 `void* RowActionButtonAddr(void* tam, int row)`
+- L196 `bool ReadInt32(void* base, size_t offset, int32_t* out)`
+- L211 `bool ReadGuiStringLocal(void* control, size_t guiStringPtrOffset, char* outBuf, size_t bufSize)`: Local copy of the gui_string read path used by ExtractAnnounceableText — pulled in here so the engine layer doesn't depend on menus.cpp's helpers.
+- L240 `bool ReadCExoStringLocal(void* base, size_t offset, char* outBuf, size_t bufSize)`: Inline CExoString fallback.
+- L262 `void* RowActionAddr(void* tam, int row)`
+- L268 `void* RowActionButtonAddr(void* tam, int row)`
 - L276 `void* ResolveTargetActionMenu()`
 - L283 `int RowActionCount(void* tam, int row)`
 - L300 `void* FindSelectedActionDescriptor(void* tam, int row)`: Find the CSWGuiInterfaceAction* in action_lists[row].data that matches the engine's currently-selected action_id (field1[target_type*3 + row]).
