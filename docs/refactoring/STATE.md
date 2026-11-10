@@ -200,6 +200,11 @@ as a dispatch, journal address and offset in the engine catalog).
 menus_modsettings: glossary and list input split off (417505e0), lean
 (0fc9fb0c: persist key in the option table, shared ResetState and
 StepListCursor, Enter dispatched by row kind, no state file).
+menus_chain_input: Enter and Left/Right/Esc split off (c9e85ee1), lean
+(3bee77cc: Enter routes as a table of named functions, named steps for
+Up/Down and Esc).
+hotkeys: defaults, user rebinding and names split off (66774adf), lean
+(92909f7e: UsesKey/ModsSatisfy, Index(), kAnyMod, Persist(), no state file).
 
 Careful: never rewrite source files with PowerShell ReadAllText/WriteAllText
 (it decodes UTF-8 and writes '?' for the dashes and umlauts in comments);
@@ -260,9 +265,8 @@ prefix (menus_listbox_picker.cpp).
   defined in many files: one constant with it.
 - Goal (Anouk, 2026-11-10): split every file above 600 lines where that is
   possible; files of 500-600 lines only when a split clearly helps.
-- Next file: menus_chain_input.cpp (824), hotkeys.cpp
-  (821), engine_input.cpp (817), minigame_swoop_audio_accelpad.cpp (816),
-  interact_dispatch.cpp (778); 24 files of 600-800 lines and 17 of
+- Next file: engine_input.cpp (817), minigame_swoop_audio_accelpad.cpp
+  (816), interact_dispatch.cpp (778); 24 files of 600-800 lines and 17 of
   500-600 after that (sizes of 2026-11-10 18:05, strings*.cpp excepted).
 - F2b: share the save-variable code of exit_memory with discovery.cpp.
 - F3 menus_chargen_feats / menus_powers_levelup: about 15 same-named
