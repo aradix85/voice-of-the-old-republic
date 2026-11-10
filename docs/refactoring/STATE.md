@@ -409,10 +409,31 @@ prefix (menus_listbox_picker.cpp).
   - call_convention.py: every engine function-pointer typedef against
     the engine's own `ret N`, from a memory image of the running game
     (build/analysis/engine_image_k1.bin, cut from a dump). KOTOR 1: 159
-    calls fit, 0 mismatches after 4c91ad0d. Run it after adding or
-    changing an engine call. Open: 30 calls whose address goes through
-    a variable or a vtable slot are not checked; KOTOR 2 needs its own
-    image (a dump of a running swkotor2.exe, then --game k2).
+    calls fit, 0 mismatches after 4c91ad0d. KOTOR 2 (image straight from
+    swkotor2.exe with --from-exe): 154 fit after 9b6fcb1b, which fixed
+    the one mismatch (SetMessage(strref), a slot-map error; the trap is
+    described in docs/kotor2-port.md). Run it for both games after
+    adding or changing an engine call. Open: 30 calls whose address goes
+    through a variable or a vtable slot are not checked. A twin with the
+    same argument count but the wrong function passes this check: the
+    slot map's rows for panel classes from slot 27 on are all one off.
+- Decision (Anouk, 2026-11-11): she plays on Steam; GOG support may go.
+  What that is in the code: only KOTOR 2's GOG release is its own build
+  (Kotor2Relink2021). KOTOR 1's GOG release is the same executable as
+  Steam and keeps working. Plan, one commit each, build and tests green:
+  (1) engine_rebase: K2() is the identity; kK2Table, kK2RdataTable and
+  their two .inc files go; Kotor2Relink2021 becomes a build the version
+  gate refuses with a clear log line (read engine_game and the loader
+  first). (2) kotor2-gog.hooks.toml and whatever packs or selects it in
+  kdev and the installer; the installer must not install into a GOG
+  KOTOR 2. (3) tools/re-scripts/k2_gog_*.py and the --k2 mode of kdev
+  sigscan. (4) docs, README, CONTRIBUTING; the Ok() guard and the GOG
+  sentence in tutorial_popup.cpp. Asked, not answered yet: the 2004
+  relink of KOTOR 1 (the Russian 1.72 and Polish editions:
+  engine_rebase_table.inc, engine_rebase_rdata.inc, kXrefTable,
+  relink2004.hooks.toml, kdev sigscan). The scope is English only, so
+  it can go the same way; then engine_rebase is just the choice between
+  the two games.
   Run clang_tidy.py FILE on every file a lean rewrites: it caught an
   index of -1 in the first one it was used on (room_topology_doors).
   A check for docs: every `name.cpp` / `name.h` a .md mentions should
