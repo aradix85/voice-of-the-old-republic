@@ -1,6 +1,7 @@
-// Obstacle cues of the swoop race: which objects are hazards (scenery,
-// mines, bars, posts), their boxes and the gap in a bar, mines passed, and
-// the per-tick obstacle cues.
+// Obstacle cues of the swoop race: each tick sweeps the minigame's objects,
+// classifies the hazards by their collision box (K2: scenery, posts, bars,
+// blocks), hands the bars to minigame_swoop_audio_bars.cpp, and sounds a
+// panned warn loop for the nearest blocks, rocks and mines.
 
 #include "minigame_swoop_audio_internal.h"
 
@@ -15,41 +16,21 @@ namespace acc::swoop_race {
 
 namespace {
 
-// ============================================================================
-// Engine struct offsets used by the spatial walks.
-// ============================================================================
-// CSWMGObstacle (line ~17456 in re/swkotor.exe.h) — AurObject pointer
-// at +0x60, then world position via the AurObject's Gob at +0x78.
-//
-// KOTOR 2: the AurObject pointer is UNMOVED (its ctor twin @0x00838ad0 nulls
-// dword index 0x18 = +0x60 right after the CSWMiniGameObject base, and its
-// GetName twin @0x00838c80 reads [this+0x60] then that object's vtable[+0xc] —
-// the same two hops as KOTOR 1's, so kAurVtableSlotGetName is unchanged too).
-// CSWMiniGameObject itself is byte-identical in both games (size 0x60).
-//
-// The POSITION inside the Gob did move, 0x78 -> 0xa4. Witnessed on both sides
-// through the same door: Gob's vtable slot +0x64 is the position getter, and
-// its body is a bare "copy three floats from this+N". KOTOR 1's (0x00449980)
-// does `add ecx,0x78`; KOTOR 2's (0x00459710) does `add eax,0xa4`. That slot is
-// the one CSWTrackFollower::GetPosition calls on a model in both games, which is
-// what ties the two witnesses to the same field.
+// CSWMGObstacle +0x60 is its AurObject (unmoved in K2: the ctor twin
+// 0x00838ad0 nulls +0x60 right after the 0x60-byte CSWMiniGameObject base,
+// and GetName 0x00838c80 reads it). The position inside the Gob moved, 0x78
+// -> 0xa4: Gob vtable +0x64 is the getter that CSWTrackFollower::GetPosition
+// calls, a bare copy of three floats from this+N (K1 0x00449980 adds 0x78,
+// K2 0x00459710 adds 0xa4).
 const size_t kObstacleAurObjectOffset       = acc::off::Same(0x60);
 const size_t kAurObjectPositionOffset       = acc::off::Pick(0x78, 0xa4);
 
-// Cap on how many obstacle loops may sound at once, nearest first.
-//
-// KOTOR 1 never needed one: its swoop areas carry 22 obstacles over a whole
-// track, so the 300 m window holds a handful. KOTOR 2's carry 151 (211TEL), 62
-// (371NAR) and 65 (510OND) — counted from each area's own Obstacles list — and
-// an uncapped sweep there would start dozens of concurrent loops of the same
-// metallic sample, which is both a wall of noise and more 3D voices than the
-// mixer has. The cap is per-game rather than shared precisely because the
-// justification is a measured content difference; KOTOR 1's sweep stays
-// bit-identical.
-//
-// 6 is the working figure for the first K2 round: enough to hear a cluster as a
-// cluster, few enough to keep them separable. Re-tune from the round's
-// "inRange" counts, which the scan line already logs.
+// How many warn loops may sound at once, nearest first. K1's swoop tracks
+// carry 22 obstacles, so the 300 m window holds a handful; K2's carry 151
+// (211TEL), 62 (371NAR) and 65 (510OND), and an uncapped sweep would start
+// dozens of loops of one sample, a wall of noise and more 3D voices than the
+// mixer has. Six hears a cluster as a cluster and keeps them separable
+// (re-tune from the scan line's inRange counts).
 int ObstacleLoopBudget() {
     return acc::game::IsKotor2() ? 6 : kMgoArraySlotCount;
 }
@@ -92,10 +73,6 @@ void ResolveHazardBox(void* aur, const char* name, HazardInfo& hz) {
     if (IsSceneryObstacleName(name)) { hz.cls = kHazardScenery; return; }
     hz.cls = ((mx.z - mn.z) <= kJumpableHeightU) ? kHazardBar : kHazardBlock;
 }
-
-}  // namespace
-
-namespace {
 
 // Bike state for the K2 bar logic (lane, forward position, speed, the
 // airborne edge for the "jump again" repeat) and the listener; false without

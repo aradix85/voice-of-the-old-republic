@@ -194,6 +194,9 @@ struct HazardInfo {
     uint8_t park_cued;   // bar: the parked "you must jump" beep fired this park
     Vector  mn, mx;      // model-local collision box
 };
+// The sample looped per obstacle: a short metallic grenade bounce with a
+// steady pitch, which looped reads as a clicking the ~0.7 s in-range window
+// cannot miss (a sustained drone's faint attack is lost in it).
 constexpr const char* kObstacleWarnLoopResref =
     acc::audio::GetNavCueResref(acc::audio::NavCue::SwoopObstacleWarn);
 
@@ -539,38 +542,21 @@ inline int SwoopVolumeByte(float dist, float range) {
 // minigame_swoop_audio.cpp
 const char* ReadAurObjectName(void* aurObject);
 
-// ============================================================================
-// Continuous obstacle-proximity cue parameters.
-// ============================================================================
-//
-//   kObstacleCueRangeM     — only obstacles within this 3D distance from
-//                            the listener fire cues. Sized for ~1-1.3 s
-//                            of advance warning at the top observed bike
-//                            speed (~190 units/s in gear 3 on Taris), so
-//                            the user has time to choose a lane before
-//                            the obstacle arrives (30 m gave ~150 ms: too
-//                            late).
-//
-//   kObstacleWarnLoopResref — engine sample looped for each obstacle.
-//                            cb_gr_boncehard2 — a short metallic grenade-bounce
-//                            SFX with steady pitch/volume, so looping it reads as
-//                            a constant metallic clicking that can't be ignored
-//                            in the ~0.7s in-range window (a sustained drone's
-//                            faint attack is lost in that window).
-//
-//   kObstacleForwardMargin — obstacles whose Y (forward axis on the
-//                            tunnel track — the bike moves from low Y to
-//                            high Y, confirmed live) are dropped if they
-//                            sit behind the listener by more than this
-//                            margin. Small negative margin allows
-//                            immediately-adjacent obstacles (mid-pass) to
-//                            keep cueing for one tick so the spatial pan
-//                            completes its sweep.
-constexpr float       kObstacleCueRangeM     = 300.0f;
-constexpr float       kObstacleForwardMargin = 10.0f;
+// ---- The obstacle sweep, shared by minigame_swoop_audio_obstacles.cpp and
+// minigame_swoop_audio_bars.cpp.
+
+// Obstacles within this 3D distance of the listener cue: about 1-1.3 s of
+// warning at the top bike speed (~190 u/s in gear 3 on Taris); 30 m gave
+// about 150 ms, too late to pick a lane.
+constexpr float kObstacleCueRangeM = 300.0f;
+
+// Forward is +Y (the bike runs from low Y to high, confirmed live). An
+// obstacle up to this far behind the listener keeps cueing, so the pan
+// finishes its sweep mid-pass.
+constexpr float kObstacleForwardMargin = 10.0f;
 
 // The bike, the listener and this tick's collections, shared by the steps
-// of TickObstacleCues. POD apart from the initialisers: this file is
+// of TickObstacleCues. POD apart from the initialisers: the swoop files are
 // SEH-heavy by convention (see CLAUDE.md).
 struct ObstacleTick {
     bool   k2           = false;

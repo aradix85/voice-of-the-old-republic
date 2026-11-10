@@ -10,14 +10,10 @@ namespace acc::swoop_race {
 
 namespace {
 
-// ============================================================================
-// KOTOR 2 half-bar free-side strips (kPostContactU block) + the mine-pass log.
-// ============================================================================
-
 // Lateral reach of mine `m` at the bike's ground height: sqrt(R² − dz²) plus
 // slack, R = the measured combined reach (kMineCollisionRadiusU — the live
 // sphere_radius is NOT the collision radius, see there).
-float MineLateralReach(int m, float bikeZ, float /*playerRadius*/) {
+float MineLateralReach(int m, float bikeZ) {
     const float R  = kMineCollisionRadiusU;
     const float dz = g_state.mine_pos[m].z - bikeZ;
     const float sq = R * R - dz * dz;
@@ -26,13 +22,12 @@ float MineLateralReach(int m, float bikeZ, float /*playerRadius*/) {
 
 // One side's strip [lo, hi] minus every mine near the bar. Returns the width
 // of the widest surviving piece (0 = none) and its bounds.
-float WidestStripPiece(float lo, float hi, float barY, float bikeZ, float playerRadius,
-                       float& outLo, float& outHi) {
+float WidestStripPiece(float lo, float hi, float barY, float bikeZ, float& outLo, float& outHi) {
     float pl[8], ph[8]; int n = 0;
     if (lo < hi) { pl[0] = lo; ph[0] = hi; n = 1; }
     for (int m = 0; m < g_state.mine_count && n > 0; ++m) {
         if (std::fabs(g_state.mine_pos[m].y - barY) > kBarMineWindowU) continue;
-        const float reach = MineLateralReach(m, bikeZ, playerRadius);
+        const float reach = MineLateralReach(m, bikeZ);
         const float mlo = g_state.mine_pos[m].x - reach;
         const float mhi = g_state.mine_pos[m].x + reach;
         float nl[8], nh[8]; int k = 0;
@@ -56,12 +51,12 @@ float WidestStripPiece(float lo, float hi, float barY, float bikeZ, float player
 }
 
 // Fills bar.has_gap / gap_x / gap_side (-1 left strip, +1 right strip).
-void ComputeBarGap(SpatialAudioState::BarInfo& bar, float bikeZ, float playerRadius) {
+void ComputeBarGap(SpatialAudioState::BarInfo& bar, float bikeZ) {
     float lLo = 0.0f, lHi = 0.0f, rLo = 0.0f, rHi = 0.0f;
     const float lw = WidestStripPiece(-kPostContactU + kBarStripSlackU, bar.x0 - kBarFreeClearU,
-                                      bar.y0, bikeZ, playerRadius, lLo, lHi);
+                                      bar.y0, bikeZ, lLo, lHi);
     const float rw = WidestStripPiece(bar.x1 + kBarFreeClearU, kPostContactU - kBarStripSlackU,
-                                      bar.y0, bikeZ, playerRadius, rLo, rHi);
+                                      bar.y0, bikeZ, rLo, rHi);
     bar.has_gap = false; bar.gap_x = 0.0f; bar.gap_side = 0;
     const bool lOk = lw >= kBarStripMinU, rOk = rw >= kBarStripMinU;
     if (!lOk && !rOk) return;
@@ -72,47 +67,11 @@ void ComputeBarGap(SpatialAudioState::BarInfo& bar, float bikeZ, float playerRad
     else         bar.gap_x = (rw >= kBarStripWideU) ? rLo : 0.5f * (rLo + rHi);
 }
 
-}  // namespace
-
-// Mine-pass log: per mine, the closest 3-D approach while the mine is within
-// kMinePassWindowU ahead or behind, logged once when it falls behind, with
-// the hp before and after. Hits at a 2-D distance inside R but a 3-D one
-// outside it would say the collision is flat; clean passes the other way
-// round say it is spherical (the model kPostContactU's block assumes).
-void TrackMinePasses(void* player, const Vector& bikePos, float playerRadius) {
-    const int hp = static_cast<int>(SafeReadU32(player, kFollowerHpOffset));
-    for (int m = 0; m < g_state.mine_count; ++m) {
-        const int slot = g_state.mine_slot[m];
-        if (slot < 0 || slot >= kMgoArraySlotCount) continue;
-        const Vector& mp = g_state.mine_pos[m];
-        const float dx = mp.x - bikePos.x, dy = mp.y - bikePos.y, dz = mp.z - bikePos.z;
-        if (dy > kMinePassWindowU) continue;                     // still far ahead
-        if (dy < -kMinePassWindowU) {
-            if (!g_state.mine_pass_open[slot]) continue;
-            g_state.mine_pass_open[slot] = false;
-            const float pdx = g_state.mine_pass_dx[slot], pdy = g_state.mine_pass_dy[slot],
-                        pdz = g_state.mine_pass_dz[slot];
-            const int hp0 = g_state.mine_pass_hp0[slot];
-            acclog::Write("SwoopRace",
-                          "mine pass: slot=%d mine=(%.1f,%.1f,%.1f) r=%.2f bikeR=%.2f bikeZ=%.2f "
-                          "minD3=%.2f at dx=%.2f dy=%.2f dz=%.2f d2=%.2f hp %d->%d hit=%d",
-                          slot, mp.x, mp.y, mp.z, g_state.mine_radius[m], playerRadius,
-                          bikePos.z, g_state.mine_pass_min_d3[slot], pdx, pdy, pdz,
-                          std::sqrt(pdx * pdx + pdy * pdy), hp0, hp,
-                          (hp0 > 0 && hp < hp0) ? 1 : 0);
-            continue;
-        }
-        const float d3 = std::sqrt(dx * dx + dy * dy + dz * dz);
-        if (!g_state.mine_pass_open[slot]) {
-            g_state.mine_pass_open[slot]   = true;
-            g_state.mine_pass_min_d3[slot] = d3;
-            g_state.mine_pass_dx[slot] = dx; g_state.mine_pass_dy[slot] = dy; g_state.mine_pass_dz[slot] = dz;
-            g_state.mine_pass_hp0[slot]    = hp;
-        } else if (d3 < g_state.mine_pass_min_d3[slot]) {
-            g_state.mine_pass_min_d3[slot] = d3;
-            g_state.mine_pass_dx[slot] = dx; g_state.mine_pass_dy[slot] = dy; g_state.mine_pass_dz[slot] = dz;
-        }
-    }
+void RecordClosest(int slot, float d3, float dx, float dy, float dz) {
+    g_state.mine_pass_min_d3[slot] = d3;
+    g_state.mine_pass_dx[slot] = dx;
+    g_state.mine_pass_dy[slot] = dy;
+    g_state.mine_pass_dz[slot] = dz;
 }
 
 // Parked right in front of this bar, inside its span: classify the escape
@@ -211,12 +170,14 @@ void MaybeJumpCue(int i, const ObstacleView& v, HazardInfo& hz,
                   side == 0 ? 0.0f : cur.gap_x - bikeX);
 }
 
+}  // namespace
+
 // A low bar (K2): the jump-now cue, never the warn loop.
 void HandleBar(int i, const ObstacleView& v, HazardInfo& hz, ObstacleTick& t) {
     ++t.barsSeen;
     SpatialAudioState::BarInfo cur;
     cur.slot = i; cur.x0 = v.x0; cur.x1 = v.x1; cur.y0 = v.y0; cur.y1 = v.y1;
-    ComputeBarGap(cur, g_state.ground_z, t.playerRadius);
+    ComputeBarGap(cur, g_state.ground_z);
     if (t.newBarCount < kMgoArraySlotCount) t.newBars[t.newBarCount++] = cur;
     if (!g_state.bar_gap_diag_emitted && g_state.mine_count > 0) {
         acclog::Write("SwoopRace",
@@ -242,6 +203,45 @@ void HandleBar(int i, const ObstacleView& v, HazardInfo& hz, ObstacleTick& t) {
     hz.park_cued = 0;
     if (!inSpan || t.bikeSpeed <= 1.0f || gap <= 0.0f) return;
     MaybeJumpCue(i, v, hz, cur, gap, bikeX, t);
+}
+
+// Mine-pass log: per mine, the closest 3-D approach while the mine is within
+// kMinePassWindowU ahead or behind, logged once when it falls behind, with
+// the hp before and after. Hits at a 2-D distance inside R but a 3-D one
+// outside it would say the collision is flat; clean passes the other way
+// round say it is spherical (the model kPostContactU's block assumes).
+void TrackMinePasses(void* player, const Vector& bikePos, float playerRadius) {
+    const int hp = static_cast<int>(SafeReadU32(player, kFollowerHpOffset));
+    for (int m = 0; m < g_state.mine_count; ++m) {
+        const int slot = g_state.mine_slot[m];
+        if (slot < 0 || slot >= kMgoArraySlotCount) continue;
+        const Vector& mp = g_state.mine_pos[m];
+        const float dx = mp.x - bikePos.x, dy = mp.y - bikePos.y, dz = mp.z - bikePos.z;
+        if (dy > kMinePassWindowU) continue;                     // still far ahead
+        if (dy < -kMinePassWindowU) {
+            if (!g_state.mine_pass_open[slot]) continue;
+            g_state.mine_pass_open[slot] = false;
+            const float pdx = g_state.mine_pass_dx[slot], pdy = g_state.mine_pass_dy[slot],
+                        pdz = g_state.mine_pass_dz[slot];
+            const int hp0 = g_state.mine_pass_hp0[slot];
+            acclog::Write("SwoopRace",
+                          "mine pass: slot=%d mine=(%.1f,%.1f,%.1f) r=%.2f bikeR=%.2f bikeZ=%.2f "
+                          "minD3=%.2f at dx=%.2f dy=%.2f dz=%.2f d2=%.2f hp %d->%d hit=%d",
+                          slot, mp.x, mp.y, mp.z, g_state.mine_radius[m], playerRadius,
+                          bikePos.z, g_state.mine_pass_min_d3[slot], pdx, pdy, pdz,
+                          std::sqrt(pdx * pdx + pdy * pdy), hp0, hp,
+                          (hp0 > 0 && hp < hp0) ? 1 : 0);
+            continue;
+        }
+        const float d3 = std::sqrt(dx * dx + dy * dy + dz * dz);
+        if (!g_state.mine_pass_open[slot]) {
+            g_state.mine_pass_open[slot] = true;
+            g_state.mine_pass_hp0[slot]  = hp;
+            RecordClosest(slot, d3, dx, dy, dz);
+        } else if (d3 < g_state.mine_pass_min_d3[slot]) {
+            RecordClosest(slot, d3, dx, dy, dz);
+        }
+    }
 }
 
 }  // namespace acc::swoop_race
