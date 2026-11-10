@@ -743,7 +743,7 @@ const char* VkLabel(int vk) {
     case VK_OEM_PERIOD: return ".";
     case VK_OEM_MINUS:  return "-";
     case VK_OEM_2:      return "/";
-    case VK_OEM_3:      return "\xD6";  // Ö on the German layout
+    case VK_OEM_3:      return "`";
     case VK_RMENU:      return "AltGr";
     case VK_LMENU:      return "LAlt";
     case VK_MENU:       return "Alt";

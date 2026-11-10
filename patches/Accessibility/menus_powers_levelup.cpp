@@ -318,7 +318,7 @@ void AnnounceFocused(void* panel) {
 
     char name[128];
     if (!ReadPowerName(panel, name, sizeof(name)) || name[0] == '\0') {
-        snprintf(name, sizeof(name), "Macht %u", (unsigned)powerId);
+        snprintf(name, sizeof(name), "Power %u", (unsigned)powerId);
     }
     unsigned char st = ReadCellStatus(s_curRow, s_curCol);
     const char* sw   = StatusWord(st);

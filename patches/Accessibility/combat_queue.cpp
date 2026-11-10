@@ -170,7 +170,7 @@ void* GetQueueAction(void* combatRound, int index) {
 //                                                    Power Attack /
 //                                                    Flurry / etc.)
 //
-// QueueVerbUseTalent serves as our "Use Feat" word since the existing
+// QueueVerbUseFeat serves as our "Use Feat" word since the existing
 // table already groups feat activations under that ID and the word
 // reads correctly for both feats and force-power adjacent feats.
 acc::strings::Id VerbForActionType(unsigned char actionType) {
@@ -180,7 +180,7 @@ acc::strings::Id VerbForActionType(unsigned char actionType) {
         case 7:  return acc::strings::Id::QueueVerbUnequip;
         case 9:  return acc::strings::Id::QueueVerbCastForce;
         case 10: return acc::strings::Id::QueueVerbItemCast;
-        case 11: return acc::strings::Id::QueueVerbUseTalent;
+        case 11: return acc::strings::Id::QueueVerbUseFeat;
         default: return acc::strings::Id::QueueVerbUnknown;
     }
 }

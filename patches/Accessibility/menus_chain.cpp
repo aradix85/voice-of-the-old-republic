@@ -396,8 +396,8 @@ void* FindAdjacentArrow(void* panel, void* focused, bool toRight) {
 namespace {
 
 // Does `text` OPEN WITH the whole word `word`? A plain prefix test is not
-// enough: the German difficulty cycler on Spieleinstellungen reads "Normal",
-// which starts with the English cancel keyword "No", so Esc on that screen
+// enough: the difficulty cycler on the gameplay settings reads "Normal",
+// which starts with the cancel keyword "No", so Esc on that screen
 // activated the difficulty cycler instead of closing — and since Esc was
 // consumed, the screen became unleavable by keyboard (K1 round 2026-08-20,
 // log patch-20260820-120136: 22x "Menus.Esc: cancel ... kind=GameSettings
@@ -407,8 +407,8 @@ namespace {
 // simply a trap that waits for the right caption.
 //
 // Requiring the next character to be a non-letter/non-digit keeps the
-// keyword list a word list rather than a prefix list. Trailing punctuation
-// still matches, which is what the engine's own truncated "Schliess." needs.
+// keyword list a word list rather than a prefix list; trailing punctuation
+// still matches.
 bool LabelOpensWithWord(const char* text, const char* word) {
     const size_t n = strlen(word);
     if (strncmp(text, word, n) != 0) return false;
@@ -441,19 +441,13 @@ void* FindButtonByWords(void* panel, const char* const* words, int wordCount) {
 }  // namespace
 
 void* FindCloseButton(void* panel) {
-    // "Close" as well as the engine's truncated "Schliess." — the word
-    // rule would reject the longer form as a different word.
-    static const char* const kWords[] = {
-        "Schliess.", "Schliessen", "Close", "OK", "Weiter", "Continue",
-    };
+    static const char* const kWords[] = {"Close", "OK", "Continue"};
     return FindButtonByWords(panel, kWords,
                              sizeof(kWords) / sizeof(kWords[0]));
 }
 
 void* FindCancelButton(void* panel) {
-    static const char* const kWords[] = {
-        "Abbrechen", "Cancel", "Nein", "No",
-    };
+    static const char* const kWords[] = {"Cancel", "No"};
     return FindButtonByWords(panel, kWords,
                              sizeof(kWords) / sizeof(kWords[0]));
 }

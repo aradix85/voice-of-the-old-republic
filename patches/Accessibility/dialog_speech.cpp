@@ -298,47 +298,26 @@ bool IsSuppressibleSpeaker(const SpeakerInfo& info) {
 // ---- Skill-check outcome marker ------------------------------------------
 //
 // Persuade / Computer-Use / Repair etc. results are authored as ordinary NPC
-// entry nodes whose subtitle text *begins* with a localized bracketed marker:
-//   DE [Erfolg] / [Fehlschlag] / [GESCHEITERT]   EN [Success] / [Failure]
-//   FR [Succ\xE8s] / [R\xE9ussite] / [\xC9chec]   IT [Successo] / [Fallimento]
-//   ES [\xC9xito] / [Fracaso] / [Fallo]
-// plus UPPERCASE terminal variants, trailing "!" / leading "\xA1", and
-// compound forms like [\xDCberreden: Fehlschlag!] / [COMPUTER SKILL: Success!]
-// / [Failure: Insufficient Spikes]. (All five forms verified against each
-// locale's dialog.tlk, 2026-06-09.)
+// entry nodes whose subtitle text *begins* with a bracketed marker:
+// [Success] / [Failure], uppercase variants, a trailing "!", and compound
+// forms like [COMPUTER SKILL: Success!] / [Failure: Insufficient Spikes].
 //
 // When such a line is VO-suppressed the whole subtitle — marker included —
 // goes silent, so the player never learns whether the check passed. We detect
 // the leading bracket token and, if it denotes a check outcome, speak just
-// that token (never the suppressed speech that follows the "]").
-//
-// Locale-robust by construction: the token is accent-folded to lowercase
-// ASCII and substring-matched against a flat multilingual set of outcome
-// roots, so the same code fires on every official locale (EFIGS) — and on the
-// occasional cross-locale stray (an English "[Failure]" is baked into the
-// German TLK) — with no language detection. Anything that isn't an outcome
-// marker (skill-only tags like [\xDCberreden], stage directions like [lacht])
-// contains no root and stays silent, so a suppressed line is never partially
-// leaked.
+// that token (never the suppressed speech that follows the "]"). A token
+// without an outcome word (a skill-only tag like [Persuade], a stage
+// direction like [laughs]) stays silent, so a suppressed line is never
+// partially leaked.
 
-// Fold one CP1252 byte (CExoString encoding) to lowercase ASCII for matching.
-// Only e-acute/grave/circ/diaeresis are mapped, the only accents that occur in
-// the outcome roots; every other byte passes through, which is fine for a
-// substring search.
+// Lowercase ASCII for matching; other bytes pass through.
 char FoldByte(unsigned char c) {
-    if (c >= 'A' && c <= 'Z') return static_cast<char>(c + 32);
-    switch (c) {
-        case 0xC8: case 0xC9: case 0xCA: case 0xCB:   // \xC8\xC9\xCA\xCB
-        case 0xE8: case 0xE9: case 0xEA: case 0xEB:   // \xE8\xE9\xEA\xEB
-            return 'e';
-        default:
-            return static_cast<char>(c);
-    }
+    return (c >= 'A' && c <= 'Z') ? static_cast<char>(c + 32) : static_cast<char>(c);
 }
 
 // If `line` opens with a bracketed skill-check outcome marker, copy the
-// marker's inner text (verbatim, brackets removed, leading "\xA1" and trailing
-// whitespace trimmed) into `out` and return true. Otherwise return false.
+// marker's inner text (verbatim, brackets removed, trailing whitespace
+// trimmed) into `out` and return true. Otherwise return false.
 bool ExtractSkillCheckMarker(const char* line, char* out, size_t outSize) {
     if (!line || !out || outSize < 2) return false;
     const unsigned char* p = reinterpret_cast<const unsigned char*>(line);
@@ -358,15 +337,8 @@ bool ExtractSkillCheckMarker(const char* line, char* out, size_t outSize) {
     inner[n]  = '\0';
     folded[n] = '\0';
 
-    // "succe" covers success/Succ\xE8s/Successo/truncated SUCC\xC8; "gescheiter"
-    // covers the uppercase German terminal "GESCHEITERT"; "falliment" covers
-    // Fallimento + UPPERCASE. A flat union — direction (success vs failure) is
-    // irrelevant: any match means "speak this marker".
-    static const char* kOutcomeRoots[] = {
-        "erfolg", "succe", "reussit", "exito",            // success
-        "fehlschlag", "gescheiter", "failure", "echec",   // failure
-        "falliment", "fracaso", "fallo",
-    };
+    // Any match means "speak this marker"; the direction does not matter.
+    static const char* kOutcomeRoots[] = {"succe", "failure"};
     bool isMarker = false;
     for (const char* r : kOutcomeRoots) {
         if (std::strstr(folded, r)) { isMarker = true; break; }
@@ -374,7 +346,6 @@ bool ExtractSkillCheckMarker(const char* line, char* out, size_t outSize) {
     if (!isMarker) return false;
 
     char* s = inner;
-    if (static_cast<unsigned char>(s[0]) == 0xA1) ++s;  // drop leading "\xA1"
     size_t len = std::strlen(s);
     while (len && (s[len - 1] == ' ' || s[len - 1] == '\t')) s[--len] = '\0';
     std::strncpy(out, s, outSize - 1);

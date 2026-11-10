@@ -397,19 +397,19 @@ const char* TryInGameMenuIcon(void* control, void* owner,
         };
         static const InGameMenuName k_inGameMenuNames[8] = {
             // K2 has a standalone equipment strref where KOTOR 1 has none.
-            { 0, 0xFFFFFFFFu, 48620u, "Ausr\xfcstung" },     // equipment
-            { 1, 48220u,      48621u, "Inventar"      },     // inventory
-            { 2, 48225u,      48622u, "Charakterblatt" },    // character_sheet
-            { 3, 48224u,      48623u, "F\xe4higkeiten" },    // abilities
+            { 0, 0xFFFFFFFFu, 48620u, "Equipment" },
+            { 1, 48220u,      48621u, "Inventory" },
+            { 2, 48225u,      48622u, "Character" },
+            { 3, 48224u,      48623u, "Abilities" },
             // Slot 4 is messages on KOTOR 1 but the party screen on KOTOR 2:
             // its SwitchToSWInGameGui (0x007CA550) maps id 4 to the
             // PartySelection slot, and 48625 is K2's caption for it (48624 is
             // empty). The literal is the
             // KOTOR 1 lookup-failure fallback.
-            { 4, 48223u,      48625u, "Nachrichten"   },     // messages / party
-            { 5, 48218u,      48627u, "Auftr\xe4ge"   },     // journal
-            { 6, 48221u,      48626u, "Karte"         },     // map
-            { 7, 48222u,      48628u, "Optionen"      },     // options
+            { 4, 48223u,      48625u, "Messages"  },     // messages / party
+            { 5, 48218u,      48627u, "Journal" },
+            { 6, 48221u,      48626u, "Map" },
+            { 7, 48222u,      48628u, "Options" },
         };
 
         // Read the control's own .gui ID. Labels carry 0..7, their buttons

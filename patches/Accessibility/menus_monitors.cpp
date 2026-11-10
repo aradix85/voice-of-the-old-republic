@@ -382,17 +382,17 @@ struct InGameSubScreenSpec {
 };
 
 const InGameSubScreenSpec k_inGameSubScreens[] = {
-    { PanelKind::InGameEquip,     0, 0xFFFFFFFFu, 48620u, "Ausr\xfcstung" },
-    { PanelKind::InGameInventory, 1, 48220u,      48621u, "Inventar" },
-    { PanelKind::InGameCharacter, 2, 48225u,      48622u, "Charakterblatt" },
-    { PanelKind::InGameMap,       6, 48221u,      48626u, "Karte" },
-    { PanelKind::InGameAbilities, 3, 48224u,      48623u, "F\xe4higkeiten" },
-    { PanelKind::InGameJournal,   5, 48218u,      48627u, "Auftr\xe4ge" },
-    { PanelKind::InGameOptions,   7, 48222u,      48628u, "Optionen" },
+    { PanelKind::InGameEquip,     0, 0xFFFFFFFFu, 48620u, "Equipment" },
+    { PanelKind::InGameInventory, 1, 48220u,      48621u, "Inventory" },
+    { PanelKind::InGameCharacter, 2, 48225u,      48622u, "Character" },
+    { PanelKind::InGameMap,       6, 48221u,      48626u, "Map" },
+    { PanelKind::InGameAbilities, 3, 48224u,      48623u, "Abilities" },
+    { PanelKind::InGameJournal,   5, 48218u,      48627u, "Journal" },
+    { PanelKind::InGameOptions,   7, 48222u,      48628u, "Options" },
     // K2's own messages entry (48624) is empty in its TLK; 1563 carries the
     // caption there. guiId 4 is KOTOR 1's: KOTOR 2 opens the message log
     // from the journal's Message Log button instead (no strip icon).
-    { PanelKind::InGameMessages,  4, 48223u,      1563u,  "Nachrichten" },
+    { PanelKind::InGameMessages,  4, 48223u,      1563u,  "Messages" },
     // KOTOR 2 files the party screen in the strip's fifth slot. Its
     // SwitchToSWInGameGui (0x007CA550) opens the panel at [gui+0xc+id*4], and
     // id 4 lands on [gui+0x1c], the CSWGuiPartySelection slot
@@ -401,7 +401,7 @@ const InGameSubScreenSpec k_inGameSubScreens[] = {
     // Without this row they stayed on the strip (field log 2026-10-29,
     // patch-20261029-192616.log). 48625 is K2's caption for that slot. On
     // KOTOR 1 the party screen is a standalone panel and must not drill.
-    { PanelKind::PartySelection,  4, 0xFFFFFFFFu, 48625u, "Gruppenauswahl",
+    { PanelKind::PartySelection,  4, 0xFFFFFFFFu, 48625u, "Party Selection",
       /*kotor2Only=*/true },
     // Quest-items modal pushed by the journal's "Quest Items" button.
     // Not a strip sub-screen (no icon → guiId -1); its title is read live from

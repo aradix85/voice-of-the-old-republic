@@ -1105,7 +1105,7 @@ enum class Id : int {
     QueueVerbItemCast,
     QueueVerbEquip,
     QueueVerbUnequip,
-    QueueVerbUseTalent,
+    QueueVerbUseFeat,
     QueueVerbUnknown,
 
     // ---- Combat system, Phase 4A — per-attack resolved callout.
@@ -1234,7 +1234,7 @@ enum class Id : int {
     // merged big junctions all speak as one neutral noun ("Area" /
     // "area") — we never commit to room-vs-place-vs-open. Geometry is the
     // long axis only when the space is clearly elongated (no size). Then
-    // the exits. The kind (KindPlatz vs KindRoom) decides delayed vs
+    // the exits. The kind (KindPlaza vs KindRoom) decides delayed vs
     // immediate announce but is never spoken.
     AreaNoun,            // "Area" / "area"
     AreaNounLarge,       // "Large area" / "large area" — noun swapped in

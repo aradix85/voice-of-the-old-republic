@@ -235,7 +235,7 @@ const char* Get(Id id) {
         case Id::FmtChargenSkillInfoSuffix:  return "Cost %s";
         case Id::FmtChargenSkillValueChange: return "%s, remaining points %s";
 
-        case Id::ChargenFeatGrantedTitle:    return "You receive these Talents";
+        case Id::ChargenFeatGrantedTitle:    return "You receive these feats";
         case Id::FmtChargenFeatGrantedRow:   return "%s, %d of %d";
 
         case Id::FmtChargenFeatChartCell:    return "%s, %s";
@@ -321,7 +321,7 @@ const char* Get(Id id) {
         case Id::QueueVerbItemCast:          return "Use item";
         case Id::QueueVerbEquip:             return "Equip";
         case Id::QueueVerbUnequip:           return "Unequip";
-        case Id::QueueVerbUseTalent:         return "Use talent";
+        case Id::QueueVerbUseFeat:         return "Use feat";
         case Id::QueueVerbUnknown:           return "Action";
 
         // Skeleton: max-HP is not yet read safely (suspected engine
