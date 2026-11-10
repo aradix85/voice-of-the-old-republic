@@ -76,28 +76,6 @@ struct ArmedState {
 
 ArmedState s_state = {nullptr, nullptr, nullptr, false, {0}, 0};
 
-// The editbox's text. Its length comes from strnlen: the engine does not
-// keep the CExoString length in sync on Backspace, but it terminates the
-// buffer on every change.
-bool ReadEditboxText(void* editbox, char* out, size_t cap, uint32_t& outLen) {
-    out[0] = '\0';
-    outLen = 0;
-    void* cstr = nullptr;
-    if (!TryReadPtr(editbox, kEditboxStringCStrOffset, &cstr)) return false;
-    if (!cstr) return true;
-    __try {
-        const size_t n = strnlen(static_cast<const char*>(cstr), cap - 1);
-        memcpy(out, cstr, n);
-        out[n] = '\0';
-        outLen = static_cast<uint32_t>(n);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        out[0] = '\0';
-        outLen = 0;
-        return false;
-    }
-    return true;
-}
-
 void Snapshot(ArmedState& s) {
     ReadEditboxText(s.editbox, s.text, sizeof(s.text), s.textLen);
 }

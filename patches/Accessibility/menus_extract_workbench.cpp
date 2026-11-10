@@ -209,14 +209,7 @@ const char* TryWorkbenchCreateItemsButton(void* control, void* owner,
     const char* source = nullptr;
     if (owner && acc::game::IsKotor2() &&
         IdentifyPanel(owner) == PanelKind::WorkbenchSelect) {
-        int cid = -1;
-        __try {
-            cid = *reinterpret_cast<int*>(
-                reinterpret_cast<unsigned char*>(control) + kControlIdOffset);
-        } __except (EXCEPTION_EXECUTE_HANDLER) {
-            cid = -1;
-        }
-        if (cid == 7) {
+        if (ReadControlId(control) == 7) {
             constexpr uint32_t kCreateItemsTitleStrRef = 111574;
             if (acc::engine::LookupTlk(kCreateItemsTitleStrRef, outBuf,
                                        bufSize) &&

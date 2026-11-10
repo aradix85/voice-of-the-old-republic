@@ -452,8 +452,7 @@ void acc::menus::focus::AnnounceNewFocusedControl(int n, void* panel, void* newC
         return;
     }
 
-    int id = *reinterpret_cast<int*>(
-        reinterpret_cast<unsigned char*>(newControl) + kControlIdOffset);
+    int id = ReadControlId(newControl);
 
     char text[256];
     const char* source = acc::menus::extract::FromControl(

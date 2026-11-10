@@ -1,4 +1,4 @@
-# menus_listbox_others.cpp (211 lines)
+# menus_listbox_others.cpp (210 lines)
 
 Source: `patches/Accessibility/menus_listbox_others.cpp`
 
@@ -13,5 +13,5 @@ Two small list screens: the examine view and the party AI script selection.
 - L91 `void* ScriptSelectFindLb(void* p)`
 - L99 `void ScriptSelectAnnounce(void* /*lb*/, const ListBoxNavResult& r)`: Speak the behaviour name + position, dropping the toggle's ", on"/", off" state suffix.
 - L129 `void ScriptSelectEnrichRow(void* panel, const ListBoxNavResult& r)`: Per-row enrichment: speak the behaviour's description.
-- L162 `bool ScriptSelectOnEnter(void* panel)`: Enter → Choose: applies the selected ai_state and closes.
-- L168 `bool ScriptSelectOnEsc(void* panel)`
+- L161 `bool ScriptSelectOnEnter(void* panel)`: Enter → Choose: applies the selected ai_state and closes.
+- L167 `bool ScriptSelectOnEsc(void* panel)`

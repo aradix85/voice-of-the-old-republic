@@ -60,9 +60,7 @@ int UpgradeItemListRows(void* panel) {
     for (int i = 0; i < controls->size; ++i) {
         void* c = controls->data[i];
         if (!c) continue;
-        int cid = *reinterpret_cast<int*>(
-            reinterpret_cast<unsigned char*>(c) + kControlIdOffset);
-        if (cid != 0) continue;
+        if (acc::engine::ReadControlId(c) != 0) continue;
         auto* rows = reinterpret_cast<CExoArrayList*>(
             reinterpret_cast<unsigned char*>(c) + kListBoxControlsOffset);
         return rows->data ? rows->size : 0;

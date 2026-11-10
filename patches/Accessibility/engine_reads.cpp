@@ -120,9 +120,9 @@ bool ReadControlNameFields(void* control, const char*& outTip,
     // null, which a null check cannot catch.
     __try {
         auto* base = reinterpret_cast<unsigned char*>(control);
-        outTip    = *reinterpret_cast<const char**>(base + 0x28);
-        outTipLen = *reinterpret_cast<uint32_t*>   (base + 0x2c);
-        outId     = *reinterpret_cast<int*>        (base + kControlIdOffset);
+        outTip    = *reinterpret_cast<const char**>(base + kControlTooltipStringOffset);
+        outTipLen = *reinterpret_cast<uint32_t*>(base + kControlTooltipStringOffset + 4);
+        outId     = *reinterpret_cast<int*>(base + kControlIdOffset);
     } __except (EXCEPTION_EXECUTE_HANDLER) {
         outTip    = nullptr;
         outTipLen = 0;
@@ -130,6 +130,35 @@ bool ReadControlNameFields(void* control, const char*& outTip,
         return false;
     }
     return outTip && outTipLen > 0;
+}
+
+int ReadControlId(void* control) {
+    if (!control) return -1;
+    __try {
+        return *reinterpret_cast<int*>(
+            reinterpret_cast<unsigned char*>(control) + kControlIdOffset);
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return -1;
+    }
+}
+
+bool ReadEditboxText(void* editbox, char* out, size_t cap, uint32_t& outLen) {
+    out[0] = '\0';
+    outLen = 0;
+    void* cstr = nullptr;
+    if (!TryReadPtr(editbox, kEditboxStringCStrOffset, &cstr)) return false;
+    if (!cstr) return true;
+    __try {
+        const size_t n = strnlen(static_cast<const char*>(cstr), cap - 1);
+        memcpy(out, cstr, n);
+        out[n] = '\0';
+        outLen = static_cast<uint32_t>(n);
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        out[0] = '\0';
+        outLen = 0;
+        return false;
+    }
+    return true;
 }
 
 typedef void* (__thiscall* PFN_Downcast)(void* this_);

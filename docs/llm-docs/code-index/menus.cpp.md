@@ -1,4 +1,4 @@
-# menus.cpp (232 lines)
+# menus.cpp (231 lines)
 
 Source: `patches/Accessibility/menus.cpp`
 
@@ -19,6 +19,6 @@ The menu side's own state and per-tick glue: the speech dedup channels, the focu
 - L157 `void TickPendingOps()`: After all monitors, which keeps deep engine re-entry off the input hook's stack.
 - L168 `bool IsChainSiblingEcho(void* panel, void* control)`: After a chain step the engine can echo a SetActive on a sibling chain control (the InGameOptions hit-test miss: the chain steps to Gameplay, the engine activates Load Game).
 - L185 `void DrainPendingAnnounce()`
-- L223 `void ClearPendingAnnounce()`
-- L228 `bool IsDrilledIntoSubScreen()`
-- L229 `void SetDrilledIntoSubScreen(bool drilled)`
+- L222 `void ClearPendingAnnounce()`
+- L227 `bool IsDrilledIntoSubScreen()`
+- L228 `void SetDrilledIntoSubScreen(bool drilled)`

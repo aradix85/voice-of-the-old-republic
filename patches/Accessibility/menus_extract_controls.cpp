@@ -225,9 +225,7 @@ bool IsSoundOptionsMovieSlider(void* panel, void* control) {
     if (!panel || !control) return false;
     if (!IsSlider(control)) return false;
 
-    int controlId = *reinterpret_cast<int*>(
-        reinterpret_cast<unsigned char*>(control) + kControlIdOffset);
-    if (controlId != 8) return false;
+    if (ReadControlId(control) != 8) return false;
 
     auto* list = reinterpret_cast<CExoArrayList*>(
         reinterpret_cast<unsigned char*>(panel) + kPanelControlsOffset);
@@ -238,9 +236,7 @@ bool IsSoundOptionsMovieSlider(void* panel, void* control) {
     for (int i = 0; i < n; ++i) {
         void* c = list->data[i];
         if (!c || !IsSlider(c)) continue;
-        int cid = *reinterpret_cast<int*>(
-            reinterpret_cast<unsigned char*>(c) + kControlIdOffset);
-        switch (cid) {
+        switch (ReadControlId(c)) {
             case 1: has1 = true; break;
             case 4: has4 = true; break;
             case 7: has7 = true; break;

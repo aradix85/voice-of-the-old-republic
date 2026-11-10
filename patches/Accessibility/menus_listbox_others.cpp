@@ -129,8 +129,7 @@ void ScriptSelectAnnounce(void* /*lb*/, const ListBoxNavResult& r) {
 void ScriptSelectEnrichRow(void* panel, const ListBoxNavResult& r) {
     if (!panel || !r.row) return;
     __try {
-        int id = *reinterpret_cast<int*>(
-            reinterpret_cast<unsigned char*>(r.row) + kControlIdOffset);
+        const int id = acc::engine::ReadControlId(r.row);
         if (id < 0) return;
         void* table = *reinterpret_cast<void**>(
             reinterpret_cast<unsigned char*>(panel) +

@@ -58,10 +58,6 @@ const char* BurstSuppression() {
     return nullptr;
 }
 
-int ControlId(void* control) {
-    return *reinterpret_cast<int*>(static_cast<unsigned char*>(control) + kControlIdOffset);
-}
-
 // The main menu's first SetActive is the engine's auto-focus on New Game; a
 // second one comes from the engine's own mouse or keyboard focus path and so
 // proves the input pump is live. Keyboard-only players get the same handoff
@@ -154,7 +150,7 @@ extern "C" void __cdecl OnSetActiveControl(void* panel, void* newControl) {
     if (kind == PanelKind::InGameMenu) {
         acclog::Write("Menus.SetActive", "#%d panel=%p new=%p id=%d (InGameMenu strip — "
                       "speech suppressed)", n, panel, newControl,
-                      newControl ? ControlId(newControl) : -1);
+                      ReadControlId(newControl));
         return;
     }
 
@@ -196,7 +192,7 @@ extern "C" void __cdecl OnListBoxSetActiveControl(void* listBox, void* newRow, i
         return;
     }
 
-    const int id = ControlId(newRow);
+    const int id = ReadControlId(newRow);
     char text[256];
     const char* source = acc::menus::extract::FromControl(newRow, text, sizeof(text));
     if (!source) {

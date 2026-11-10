@@ -156,8 +156,7 @@ void WalkChildren(const char* label, void* parent, size_t offset,
             block.Key("  [%d]=NULL", i);
             continue;
         }
-        int id = *reinterpret_cast<int*>(
-            reinterpret_cast<unsigned char*>(child) + kControlIdOffset);
+        int id = acc::engine::ReadControlId(child);
         char text[256];
         // `parent` lets the per-kind fallback name InGameMenu's icon controls,
         // which carry no text of their own.

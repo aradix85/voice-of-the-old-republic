@@ -212,16 +212,10 @@ void LogUnknownPanelDiagnostics(void* panel) {
             acclog::Write("PanelProbe", "  [%d] (null)", i);
             continue;
         }
-        uintptr_t cvt = 0;
-        int       cid = -1;
-        __try {
-            cvt = reinterpret_cast<uintptr_t>(*reinterpret_cast<void**>(c));
-            cid = *reinterpret_cast<int*>(
-                reinterpret_cast<unsigned char*>(c) + kControlIdOffset);
-        } __except (EXCEPTION_EXECUTE_HANDLER) {
-            cvt = 0;
-            cid = -1;
-        }
+        void* vt = nullptr;
+        TryReadPtr(c, 0, &vt);
+        const uintptr_t cvt = reinterpret_cast<uintptr_t>(vt);
+        const int       cid = ReadControlId(c);
         char text[96];
         text[0] = '\0';
         if (!ReadGuiString(c, kButtonGuiStringPtrOffset,

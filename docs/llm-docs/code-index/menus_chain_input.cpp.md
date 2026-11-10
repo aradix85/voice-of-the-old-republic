@@ -1,4 +1,4 @@
-# menus_chain_input.cpp (218 lines)
+# menus_chain_input.cpp (217 lines)
 
 Source: `patches/Accessibility/menus_chain_input.cpp`
 
@@ -11,4 +11,4 @@ Input against an already-built chain (menus_chain.cpp builds it): the Up/Down/Ho
 - L71 `void AnnounceStep(const ChainEntry& e)`: Speak the newly focused entry, then the per-panel extras.
 - L103 `void WarpCursor(const ChainEntry& e, bool safeToDrive, int* x, int* y)`: Warp the cursor onto the entry so the engine's hover handler follows the focus.
 - L125 `void WalkChildren(const char* label, void* parent, size_t offset, const char* kindName)`
-- L179 `void HandleNavStep(void* activePanel, int code, int val, bool& consumed)`
+- L178 `void HandleNavStep(void* activePanel, int code, int val, bool& consumed)`

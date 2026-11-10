@@ -1,4 +1,4 @@
-# menus_extract_workbench.cpp (236 lines)
+# menus_extract_workbench.cpp (229 lines)
 
 Source: `patches/Accessibility/menus_extract_workbench.cpp`
 

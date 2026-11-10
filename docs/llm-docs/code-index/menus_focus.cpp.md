@@ -1,4 +1,4 @@
-# menus_focus.cpp (512 lines)
+# menus_focus.cpp (511 lines)
 
 Source: `patches/Accessibility/menus_focus.cpp`
 

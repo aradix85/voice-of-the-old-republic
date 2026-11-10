@@ -312,10 +312,7 @@ void AnnounceControl(void* control) {
     // Guarded: the control can be freed between capture and this read (the
     // GetControlCenter crash class). A dead control still announces — the
     // fallback is never silenced — just with an unknowable id.
-    uint32_t id = 0;
-    if (!acc::engine::TryReadU32(control, kControlIdOffset, &id)) {
-        id = static_cast<uint32_t>(-1);
-    }
+    const uint32_t id = static_cast<uint32_t>(acc::engine::ReadControlId(control));
     char placeholder[64];
     snprintf(placeholder, sizeof(placeholder), "control %d", static_cast<int>(id));
     acc::speech::Speak(placeholder, /*interrupt=*/false);

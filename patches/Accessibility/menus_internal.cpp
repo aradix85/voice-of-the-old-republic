@@ -82,9 +82,7 @@ void* FindControlById(void* panel, int id) {
         for (int i = 0; i < n; ++i) {
             void* c = list->data[i];
             if (!c) continue;
-            int cid = *reinterpret_cast<int*>(
-                reinterpret_cast<unsigned char*>(c) + kControlIdOffset);
-            if (cid == id) return c;
+            if (ReadControlId(c) == id) return c;
         }
     } __except (EXCEPTION_EXECUTE_HANDLER) {
     }

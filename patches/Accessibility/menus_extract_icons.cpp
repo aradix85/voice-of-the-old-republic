@@ -113,8 +113,8 @@ const char* TryPartyPortrait(void* control, char* outBuf, size_t bufSize,
 // the table by .gui id.
 const char* TryInGameMenuIcon(void* control, void* owner, char* outBuf, size_t bufSize) {
     if (!owner || !IsPanelKindInGameMenu(owner)) return nullptr;
-    uint32_t cid = 0;
-    if (!TryReadU32(control, kControlIdOffset, &cid) || cid > 15) return nullptr;
+    const int cid = ReadControlId(control);
+    if (cid < 0 || cid > 15) return nullptr;
     const InGameMenuName& spec = kInGameMenuNames[cid % 8];
     const uint32_t strref = acc::game::IsKotor2() ? spec.strrefK2 : spec.strrefK1;
     char tlkText[256];

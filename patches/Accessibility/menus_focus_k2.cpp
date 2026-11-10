@@ -237,7 +237,7 @@ struct FocusProbe {
 bool ReadFocusProbe(void* panel, void* control, FocusProbe* p) {
     __try {
         p->vtable = acc::engine::ReadU32(control, 0);
-        p->id = acc::engine::ReadU32(control, kControlIdOffset);
+        p->id = static_cast<uint32_t>(acc::engine::ReadControlId(control));
 
         // The panel's CURRENT active control, read before the engine changes
         // it — the hook sits ahead of SetActiveControl's own
@@ -246,8 +246,8 @@ bool ReadFocusProbe(void* panel, void* control, FocusProbe* p) {
             p->prevActive = reinterpret_cast<void*>(
                 acc::engine::ReadU32(panel, kPanelActiveControlOffset));
             if (p->prevActive) {
-                p->prevId =
-                    acc::engine::ReadU32(p->prevActive, kControlIdOffset);
+                p->prevId = static_cast<uint32_t>(
+                    acc::engine::ReadControlId(p->prevActive));
             }
         }
 
@@ -269,8 +269,8 @@ bool ReadFocusProbe(void* panel, void* control, FocusProbe* p) {
                 p->hovered =
                     reinterpret_cast<void*>(acc::engine::ReadU32(mgr, 8));
                 if (p->hovered) {
-                    p->hoveredId =
-                        acc::engine::ReadU32(p->hovered, kControlIdOffset);
+                    p->hoveredId = static_cast<uint32_t>(
+                        acc::engine::ReadControlId(p->hovered));
                 }
                 p->curX = static_cast<int>(acc::engine::ReadU32(mgr, 0));
                 p->curY = static_cast<int>(acc::engine::ReadU32(mgr, 4));

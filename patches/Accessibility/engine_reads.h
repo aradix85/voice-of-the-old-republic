@@ -11,10 +11,14 @@
 
 namespace acc::engine {
 
-// True iff the control had non-empty tooltip text.
-// +0x28 tooltip_string (CExoString), +0x50 id.
+// True iff the control had non-empty tooltip text. Hands back the raw
+// (unterminated) tooltip_string pointer and length plus the id, for logging.
 bool ReadControlNameFields(void* control, const char*& outTip,
                            uint32_t& outTipLen, int& outId);
+
+// CSWGuiControl.id, the .gui "ID" property. -1 on fault, which is also the
+// engine's default for a control without one.
+int ReadControlId(void* control);
 
 // vtable[index](control) as __thiscall.
 //
@@ -128,6 +132,12 @@ bool IsControlVisible(void* control);
 // Row count of a CSWGuiListBox (its controls array size), -1 on fault or an
 // implausible size. Reads no row pointers.
 int ReadListBoxRowCount(void* listBox);
+
+// A CSWGuiEditbox's text. The length comes from strnlen: the engine does
+// not keep the CExoString length in sync on Backspace, but it terminates
+// the buffer on every change. True with "" for a null buffer; false on
+// fault.
+bool ReadEditboxText(void* editbox, char* out, size_t cap, uint32_t& outLen);
 
 // CSWGuiButtonToggle.field2_0x1c8 bit 0 — HandleInputEvent XORs on
 // activate, Draw branches on (& 1) for which border to render.

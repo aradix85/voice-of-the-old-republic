@@ -54,8 +54,7 @@ bool ClosesChargenSubScreen(void* target, PanelKind kindAtDispatch) {
         // Still by id: 11/12 = Accept/Cancel by the InGameLevelUp sub-screen
         // convention. Row arrows can share those ids (Demolitions' right
         // arrow has id 11); Accept/Cancel are the ones with a label.
-        int btnId = *reinterpret_cast<int*>(
-            reinterpret_cast<unsigned char*>(target) + kControlIdOffset);
+        const int btnId = acc::engine::ReadControlId(target);
         if (btnId != 11 && btnId != 12) return false;
         char text[32];
         return acc::engine::ReadButtonText(target, text, sizeof(text)) && text[0] != '\0';

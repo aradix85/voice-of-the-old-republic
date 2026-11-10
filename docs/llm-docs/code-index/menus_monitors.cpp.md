@@ -1,4 +1,4 @@
-# menus_monitors.cpp (350 lines)
+# menus_monitors.cpp (347 lines)
 
 Source: `patches/Accessibility/menus_monitors.cpp`
 
@@ -9,4 +9,4 @@ The general per-tick menu monitors: TickGeneralMonitors, the focus monitor and A
 - L61 `bool ParkCursorToCorner(const char* tag)`
 - L87 `void MonitorFocusedControl()`
 - L241 `void AnnounceControl(void* control)`
-- L324 `void TickGeneralMonitors()`
+- L321 `void TickGeneralMonitors()`

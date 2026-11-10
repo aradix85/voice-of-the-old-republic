@@ -213,8 +213,7 @@ void DrainPendingAnnounce() {
 
     // No text at all: a placeholder past the dedup, as a repeated
     // "control 11" beats a silent focus change.
-    const int id = *reinterpret_cast<int*>(static_cast<unsigned char*>(control) +
-                                           kControlIdOffset);
+    const int id = ReadControlId(control);
     char placeholder[64];
     snprintf(placeholder, sizeof(placeholder), "control %d", id);
     acc::speech::Speak(placeholder, /*interrupt=*/false);
