@@ -194,6 +194,9 @@ guidance_approach: stall rescue split off (93ae4706), lean (cbe3dcae:
 shared release and stall-restart helpers, thresholds in their files, no
 state file). F12 note: SpeakWayBlocked writes out the yaw-to-compass
 chain too.
+peek_description: item descriptions split off (371fb862), lean (60556349:
+one block cursor step, item-block cache in the item file, HandleShiftArrow
+as a dispatch, journal address and offset in the engine catalog).
 
 Careful: never rewrite source files with PowerShell ReadAllText/WriteAllText
 (it decodes UTF-8 and writes '?' for the dashes and umlauts in comments);
@@ -252,8 +255,7 @@ prefix (menus_listbox_picker.cpp).
   EngineYawToCompass/CompassToSector/SectorString. One helper in
   engine_compass (bearing of a vector, and its compass word). kRadToDeg is
   defined in many files: one constant with it.
-- Next file: peek_description.cpp (839),
-  menus_modsettings.cpp (828), menus_chain_input.cpp (824), hotkeys.cpp
+- Next file: menus_modsettings.cpp (828), menus_chain_input.cpp (824), hotkeys.cpp
   (821), engine_input.cpp (817), minigame_swoop_audio_accelpad.cpp (816),
   interact_dispatch.cpp (778); 24 files of 600-800 lines and 17 of
   500-600 after that (sizes of 2026-11-10 18:05, strings*.cpp excepted).
