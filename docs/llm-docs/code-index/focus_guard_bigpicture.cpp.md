@@ -1,13 +1,13 @@
-# focus_guard_bigpicture.cpp (140 lines)
+# focus_guard_bigpicture.cpp (96 lines)
 
 Source: `patches/Accessibility/focus_guard_bigpicture.cpp`
 
-The input-blocked warning: keys pressed while Steam Big Picture holds the foreground never reach the game, so the poll thread notices the keypress and the main tick speaks a warning.
+The input-blocked warning. When the game runs windowed and Steam Big Picture holds the foreground, keystrokes go to Big Picture and never reach the engine, so menus look dead. The poll thread samples the physical keys and flags a warning that the main tick speaks. The foreground is never reclaimed here: that would trap a player who wants Big Picture.
 
 ## Declarations (in source order)
 
-- L42 `bool ContainsNoCase(const char* hay, const char* needle)`: Case-insensitive substring test (ASCII).
-- L58 `bool AnyInteractionKeyDown()`: True while any "the user is trying to interact" key is physically down: arrows / Enter / Space / Esc / Tab / Backspace / digits / letters / F-keys.
-- L82 `bool ForegroundIsBigPicture()`: Is the current foreground window Steam Big Picture?
-- L112 `void MaybeFlagInputBlockedWarning()`: Poll-thread step: if the user pressed an interaction key while Steam Big Picture holds the foreground, queue a spoken warning for the main tick to drain.
-- L131 `void DrainInputBlockedWarning()`
+- L29 `bool ContainsNoCase(const char* hay, const char* needle)`
+- L43 `bool AnyInteractionKeyDown()`: Any key that means "trying to interact" is physically down (modifiers alone do not count).
+- L56 `bool ForegroundIsBigPicture()`: steamwebhelper.exe also backs the normal Steam client, so the title must name Big Picture too.
+- L72 `void MaybeFlagInputBlockedWarning()`
+- L88 `void DrainInputBlockedWarning()`: On the main tick, where speech is COM-safe.

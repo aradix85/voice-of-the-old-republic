@@ -1,11 +1,15 @@
-// The movie-end foreground guard: after a cutscene movie the foreground can
-// end up owned by no window at all, which leaves the engine paused for good;
-// the guard reclaims the render window then, and only then.
+// The movie-end foreground guard. A cutscene's movie handoff can leave no
+// window at all owning the foreground (the K2 Peragus docking stunt); the
+// engine auto-pauses on the focus loss and never wakes, which to a blind
+// player is "Paused" and then silence. For a short time after each movie end
+// the guard reclaims the render window, but only while the foreground is
+// orphaned: a foreign owner is a deliberate alt-tab, our own owner means
+// nothing is wrong, and a new movie segment must keep its focus (forcing it
+// away mid-playback can abort the movie queue and close the game).
 
 #include "focus_guard_internal.h"
 
 #include <windows.h>
-#include <atomic>
 
 #include "bringup_announce.h"
 #include "log.h"
@@ -14,102 +18,52 @@ namespace acc::focus_guard {
 
 namespace {
 
-// Pull `target` to the foreground from a thread that doesn't own it. The
-// AttachThreadInput dance is the standard way around the Win32 foreground
-// lock without injecting a synthetic ALT keypress (which a screen-reader
-// user would not want). SEH-guarded — every call here is a Win32 boundary.
-void ForceForeground(HWND target, HWND fg) {
-    __try {
-        DWORD myTid = GetCurrentThreadId();
-        DWORD fgTid = fg ? GetWindowThreadProcessId(fg, nullptr) : 0;
-        BOOL attached = FALSE;
-        if (fgTid && fgTid != myTid) {
-            attached = AttachThreadInput(myTid, fgTid, TRUE);
-        }
-        BringWindowToTop(target);
-        SetForegroundWindow(target);
-        if (attached) {
-            AttachThreadInput(myTid, fgTid, FALSE);
-        }
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        // Reclaim is best-effort; swallow any Win32-boundary fault.
-    }
+// Each movie end (every segment of a multi-segment cutscene) re-arms the
+// window; the attempt cap keeps a persistently orphaned foreground from
+// turning into a focus war.
+constexpr DWORD kMovieReclaimWindowMs = 2000;
+constexpr int   kMovieReclaimMax      = 3;
+
+// Poll thread only.
+DWORD g_deadline = 0;   // GetTickCount() deadline; 0 = disarmed
+int   g_reclaims = 0;
+bool  g_moviePlayingPrev = false;
+
+void Disarm(const char* why) {
+    g_deadline = 0;
+    acclog::Write("Focus", "MovieEndForegroundGuard: %s; disarmed (reclaims=%d)", why, g_reclaims);
 }
 
 }  // namespace
 
-// --- Movie-end foreground guard (cutscene leaves the game with no foreground) ---
-//
-// The Peragus docking stunt (GOG K2, patch-20260905-075831) ended with the
-// engine's movie player handing focus back, and then GetForegroundWindow()
-// returning NULL — no window in the system owned the foreground. The engine
-// auto-paused on the focus loss and never woke: from a blind player's chair the
-// game said "Paused." and then answered nothing, indistinguishable from a
-// crash. The vanilla GOG build is fragile to foreground loss generally; here
-// the trigger was its own movie handoff.
-//
-// This guard arms for a short window each time a movie window disappears, and
-// reclaims the render window ONLY when the foreground is genuinely orphaned
-// (GetForegroundWindow() == NULL). That is the precise stuck state and nothing
-// else:
-//   * a foreign app holding the foreground means the user alt-tabbed away on
-//     purpose — never trap them back (this was the original reason the startup
-//     guard is bounded);
-//   * our own window holding it (render live, or a movie segment still
-//     transitioning) means nothing is wrong;
-//   * a NEW movie segment starting inside the window means the cutscene resumed
-//     — we skip, because forcing focus mid-playback can abort the engine's
-//     movie queue and close the game (see bringup_announce IsMoviePlaying).
-//
-// Bounded hard: kMovieReclaimWindowMs total (a second or two, per the design
-// ask) and kMovieReclaimMax attempts, so a persistently orphaned foreground
-// cannot drag us into a focus war.
-namespace {
-constexpr int   kMovieReclaimMax      = 3;
-}  // namespace
+void TickMovieEndGuard(HWND liveRender) {
+    const bool playing = acc::bringup_announce::IsMoviePlaying();
+    if (g_moviePlayingPrev && !playing) {
+        g_reclaims = 0;
+        g_deadline = GetTickCount() + kMovieReclaimWindowMs;
+        if (g_deadline == 0) g_deadline = 1;
+        acclog::Write("Focus", "MovieEndForegroundGuard: armed for %lu ms after movie end",
+                      kMovieReclaimWindowMs);
+    }
+    g_moviePlayingPrev = playing;
 
-std::atomic<DWORD> g_movieReclaimDeadline{0};  // GetTickCount() deadline; 0 = disarmed
-std::atomic<int>   g_movieReclaims{0};
-
-void MaybeReclaimAfterMovie() {
-    DWORD deadline = g_movieReclaimDeadline.load(std::memory_order_acquire);
-    if (deadline == 0) return;  // disarmed
-
-    DWORD now = GetTickCount();
-    if (static_cast<int>(now - deadline) >= 0) {  // wrap-safe elapsed check
-        g_movieReclaimDeadline.store(0, std::memory_order_release);
-        acclog::Write("Focus",
-            "MovieEndForegroundGuard: window elapsed; disarmed (reclaims=%d)",
-            g_movieReclaims.load(std::memory_order_relaxed));
+    if (g_deadline == 0 || playing) return;
+    if (static_cast<int>(GetTickCount() - g_deadline) >= 0) {
+        Disarm("window elapsed");
         return;
     }
-
-    // A new movie segment resumed — let the movie player keep focus; forcing it
-    // away mid-playback can abort the queue.
-    if (acc::bringup_announce::IsMoviePlaying()) return;
-
-    HWND render = g_liveRenderWindow.load(std::memory_order_acquire);
-    if (!render || !IsWindow(render)) return;
-
-    // Only act on a genuinely orphaned foreground. A foreign owner is a
-    // deliberate alt-tab; our own owner means nothing is wrong.
-    HWND fg = GetForegroundWindow();
-    if (fg != nullptr) return;
-
-    int n = g_movieReclaims.load(std::memory_order_relaxed);
-    if (n >= kMovieReclaimMax) {
-        g_movieReclaimDeadline.store(0, std::memory_order_release);
-        acclog::Write("Focus",
-            "MovieEndForegroundGuard: reclaim cap (%d) reached; giving up",
-            kMovieReclaimMax);
+    if (!liveRender || !IsWindow(liveRender) || GetForegroundWindow() != nullptr) return;
+    if (g_reclaims >= kMovieReclaimMax) {
+        Disarm("reclaim cap reached");
         return;
     }
-    g_movieReclaims.store(n + 1, std::memory_order_relaxed);
-
-    acclog::Write("Focus",
-        "MovieEndForegroundGuard: foreground orphaned (NULL) after movie; "
-        "reclaiming render %p (attempt %d/%d)", render, n + 1, kMovieReclaimMax);
-    ForceForeground(render, nullptr);
+    ++g_reclaims;
+    acclog::Write("Focus", "MovieEndForegroundGuard: foreground orphaned (NULL) after movie; "
+                  "reclaiming render %p (attempt %d/%d)", liveRender, g_reclaims,
+                  kMovieReclaimMax);
+    // With no foreground owner there is no foreground lock to work around.
+    BringWindowToTop(liveRender);
+    SetForegroundWindow(liveRender);
 }
 
 }  // namespace acc::focus_guard

@@ -1,22 +1,23 @@
-// Shared between the focus_guard files: the render window the poll thread
-// tracks, the movie-end guard's arm state, and the two per-poll steps.
+// Shared between the focus_guard files: the two steps the poll thread in
+// focus_guard.cpp runs every 100 ms, and the process-name lookup.
 
 #pragma once
 
 #include <windows.h>
-#include <atomic>
 
 #include "focus_guard.h"
 
 namespace acc::focus_guard {
 
-extern std::atomic<HWND> g_liveRenderWindow;  // newest visible "Render Window"
+// The movie-end guard (focus_guard_movie.cpp). `liveRender` is the newest
+// visible "Render Window", or null.
+void TickMovieEndGuard(HWND liveRender);
 
-constexpr DWORD kMovieReclaimWindowMs = 2000;
-extern std::atomic<DWORD> g_movieReclaimDeadline;  // GetTickCount() deadline; 0 = disarmed
-extern std::atomic<int>   g_movieReclaims;
-
-void MaybeReclaimAfterMovie();
+// The Big Picture warning (focus_guard_bigpicture.cpp).
 void MaybeFlagInputBlockedWarning();
+
+// The bare exe name of process `pid` (written into `buf`), or nullptr when it
+// cannot be read.
+const char* ProcessExeName(DWORD pid, char* buf, DWORD bufSize);
 
 }  // namespace acc::focus_guard
