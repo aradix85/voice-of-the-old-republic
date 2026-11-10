@@ -235,6 +235,10 @@ patches/Accessibility/menus_galaxymap.cpp
 patches/Accessibility/menus_galaxymap.h
 patches/Accessibility/menus_internal.cpp
 patches/Accessibility/menus_internal.h
+patches/Accessibility/menus_internal_classsel.cpp
+patches/Accessibility/menus_internal_internal.h
+patches/Accessibility/menus_internal_listbox.cpp
+patches/Accessibility/menus_internal_members.cpp
 patches/Accessibility/menus_inventory.cpp
 patches/Accessibility/menus_inventory.h
 patches/Accessibility/menus_journal.cpp
