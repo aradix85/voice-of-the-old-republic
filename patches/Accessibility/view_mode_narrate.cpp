@@ -1,4 +1,5 @@
-// What view mode says about the cursor: the region it enters and the nearest object under it.
+// What view mode says about the cursor: the region it enters and the nearest
+// object under it.
 
 #include "view_mode_internal.h"
 
@@ -11,6 +12,9 @@
 #include "speech.h"
 #include "transitions.h"
 #include "room_topology.h"
+
+#include <cmath>
+#include <cstdio>
 
 namespace acc::view_mode {
 

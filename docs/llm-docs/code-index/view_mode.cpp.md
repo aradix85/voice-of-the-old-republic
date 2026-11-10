@@ -1,24 +1,21 @@
-# view_mode.cpp (395 lines)
+# view_mode.cpp (274 lines)
 
 Source: `patches/Accessibility/view_mode.cpp`
 
-(From view_mode.h.) View mode — freeze the character, keep the camera live.
-
-Pressing B locks the player in place; A/D keep panning the camera natively (KOTOR's A/D rotates camera only — the character only snaps to camera direction when W/S commits forward motion). W/S then drive a virtual cursor instead of the character, the 3D listener is rerouted to the cursor, and Enter / Shift+Enter act on whatever the cursor is hovering over.
-
-Hotkey B chosen because V is taken (Solo Mode in stock kotor.ini) and B is unbound by KOTOR's stock keymap.
+View mode (B): a virtual cursor walked with W/A/S/D while the character is frozen, which names the regions and objects it passes and takes Enter for the object under it. The listener follows the cursor through the CExoSound::SetListenerPosition detour (hooks.toml), which runs after the engine's own write; the camera keys keep panning natively.
 
 ## Declarations (in source order)
 
-- L33 `void EnterViewMode()`
-- L74 `void ExitViewMode()`
-- L83 `void ToggleViewMode()`
-- L90 `void DumpCameraStateProbe()`: Shift+B diagnostic: snapshot CClientOptions to the log.
-- L140 `void StepCursor(float dt)`
-- L232 `bool IsActive()`
-- L234 `bool TryGetCursorPosition(Vector& out)`
-- L240 `bool GetEffectiveOrientationYawDegrees(float& out)`
-- L260 `bool GetEffectiveReferencePosition(Vector& out)`
-- L269 `bool GetEffectiveViewpoint(Vector& outPos, float& outYawDegrees)`
-- L279 `void PollWin32()`
-- L360 `void Tick()`
+- L36 `void EnterViewMode()`
+- L64 `void ExitViewMode()`
+- L72 `void DumpCameraStateProbe()`: Shift+B diagnostic: a snapshot of CClientOptions in the log.
+- L100 `bool KeyDown(int vk)`
+- L106 `void StepCursor(float dt)`: Move the cursor along the camera's heading (W/S) and its right (D/A), at walking pace, stopping short of real walls (surfaces, not portal seams).
+- L158 `const char* ToggleBlockReason()`: Why the B toggle must wait, or nullptr.
+- L190 `bool IsActive()`
+- L192 `bool TryGetCursorPosition(Vector& out)`
+- L201 `bool GetEffectiveOrientationYawDegrees(float& out)`: The camera's facing in normal play and in view mode alike: the camera is what the user sweeps while the character stands still.
+- L212 `bool GetEffectiveReferencePosition(Vector& out)`: In view mode the cursor, not the frozen body, is where the user "is" for every distance and bearing spoken.
+- L217 `bool GetEffectiveViewpoint(Vector& outPos, float& outYawDegrees)`
+- L227 `void PollWin32()`
+- L251 `void Tick()`
