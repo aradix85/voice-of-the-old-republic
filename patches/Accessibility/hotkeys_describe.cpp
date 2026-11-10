@@ -2,14 +2,16 @@
 
 #include "hotkeys_internal.h"
 
+#include <windows.h>
+
+#include <cstdio>
+
 namespace acc::hotkeys {
 
 namespace {
 
-// Per-Action name strings for logs / future rebind UI. One slot per Action;
-// must be kept in sync with the enum. Lined up vertically so a missing row
-// is visually obvious.
-const char* const kActionNames[static_cast<int>(Action::COUNT)] = {
+// Indexed by Action; the names are also the keys of the saved rebinds.
+const char* const kActionNames[] = {
     "InteractTarget",
     "InteractForceRadial",
     "InteractForceRadialSecondary",
@@ -94,18 +96,18 @@ const char* const kActionNames[static_cast<int>(Action::COUNT)] = {
     "DialogRepeatLine",
     "CopyLastSpoken",
 };
+static_assert(sizeof(kActionNames) / sizeof(kActionNames[0]) ==
+                  static_cast<size_t>(Action::COUNT),
+              "kActionNames needs one name per Action");
 
-// Rotating buffer pool so several Describe() calls in one log line can
-// coexist. 4 slots × 32 chars covers "Shift+Ctrl+AltGr+OEM_MINUS" easily.
-char  g_describeBufs[4][32];
-int   g_describeNext = 0;
+// A small rotating pool, so several Describe() results can share a log line.
+char g_describeBufs[4][32];
+int  g_describeNext = 0;
 
 }  // namespace
 
-// ----- Names + descriptions -------------------------------------------------
-
 const char* Name(Action a) {
-    int idx = static_cast<int>(a);
+    const int idx = static_cast<int>(a);
     if (idx < 0 || idx >= static_cast<int>(Action::COUNT)) return "?";
     return kActionNames[idx];
 }
@@ -137,58 +139,36 @@ const char* VkLabel(int vk) {
     case VK_LSHIFT:     return "LShift";
     case VK_RSHIFT:     return "RShift";
     case VK_SHIFT:      return "Shift";
-    case VK_F1:         return "F1";
-    case VK_F2:         return "F2";
-    case VK_F3:         return "F3";
-    case VK_F4:         return "F4";
-    case VK_F5:         return "F5";
-    case VK_F6:         return "F6";
-    case VK_F7:         return "F7";
-    case VK_F8:         return "F8";
-    case VK_F9:         return "F9";
-    case VK_F10:        return "F10";
-    case VK_F11:        return "F11";
-    case VK_F12:        return "F12";
     default: break;
     }
-    // Printable ASCII range that VK codes match directly (A-Z, 0-9).
-    if (vk >= '0' && vk <= '9') {
-        static thread_local char digit[2] = {0, 0};
-        digit[0] = static_cast<char>(vk);
-        return digit;
+    // Digits and letters are their own VK codes. The buffer holds until the
+    // next call.
+    static thread_local char buf[4];
+    if ((vk >= '0' && vk <= '9') || (vk >= 'A' && vk <= 'Z')) {
+        buf[0] = static_cast<char>(vk);
+        buf[1] = '\0';
+        return buf;
     }
-    if (vk >= 'A' && vk <= 'Z') {
-        static thread_local char letter[2] = {0, 0};
-        letter[0] = static_cast<char>(vk);
-        return letter;
+    if (vk >= VK_F1 && vk <= VK_F12) {
+        snprintf(buf, sizeof(buf), "F%d", vk - VK_F1 + 1);
+        return buf;
     }
     return "?";
 }
 
 const char* Describe(Action a) {
-    Binding b = Get(a);
+    const Binding b = Get(a);
     char* out = g_describeBufs[g_describeNext];
     g_describeNext = (g_describeNext + 1) % 4;
-    out[0] = '\0';
+    const size_t cap = sizeof(g_describeBufs[0]);
 
-    auto appendStr = [&](const char* s) {
-        size_t cur = std::strlen(out);
-        size_t rem = sizeof(g_describeBufs[0]) - cur;
-        if (rem <= 1) return;
-        std::strncat(out, s, rem - 1);
-    };
-
-    // AltGr is a special modifier name — emit it instead of "Alt" when set.
-    // When both kModAlt and kModAltGr are required (rare), prefer AltGr.
-    if (b.modsRequired & kModCtrl)  appendStr("Ctrl+");
-    if (b.modsRequired & kModAltGr) appendStr("AltGr+");
-    else if (b.modsRequired & kModAlt) appendStr("Alt+");
-    if (b.modsRequired & kModShift) appendStr("Shift+");
-
-    appendStr(VkLabel(b.vk));
-    if (b.altVk != 0) {
-        appendStr(" / ");
-        appendStr(VkLabel(b.altVk));
+    // AltGr is named instead of Alt when both are required.
+    const uint32_t req = b.modsRequired;
+    const char* alt = (req & kModAltGr) ? "AltGr+" : (req & kModAlt) ? "Alt+" : "";
+    int n = snprintf(out, cap, "%s%s%s%s", (req & kModCtrl) ? "Ctrl+" : "", alt,
+                     (req & kModShift) ? "Shift+" : "", VkLabel(b.vk));
+    if (b.altVk != 0 && n > 0 && static_cast<size_t>(n) < cap) {
+        snprintf(out + n, cap - n, " / %s", VkLabel(b.altVk));
     }
     return out;
 }

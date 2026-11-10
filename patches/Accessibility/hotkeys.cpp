@@ -1,107 +1,85 @@
-// central hotkey registry implementation.
-// See hotkeys.h for the design rationale + API contract.
+// The hotkey registry: the live bindings and the per-tick edge detection.
+// See hotkeys.h for the API contract.
 
 #include "hotkeys_internal.h"
 
+#include <windows.h>
+
+#pragma comment(lib, "user32.lib")
+
 namespace acc::hotkeys {
+
+Binding g_bindings[static_cast<int>(Action::COUNT)] = {};
+Binding g_defaults[static_cast<int>(Action::COUNT)] = {};
 
 namespace {
 
-// Per-Action edge-detection state. Stored in arrays parallel to `g_bindings`
-// so an Action's index lookup is a single subscript. `now` is sampled in
-// BeginTick; `last` is shifted from `now` in EndTick. `Pressed` returns
-// `now && !last` (plus foreground gate).
-//
-// `claimed` is a one-shot guard set by ClaimRisingEdge from sites that
-// fire between EndTick and BeginTick (the engine's input-dispatch window),
-// where Consume() can't suppress the upcoming rising edge because
-// BeginTick hasn't run yet. EndTick clears the guard so the next genuine
-// rising edge fires normally.
+// Per action, parallel to g_bindings. `now` is sampled in BeginTick and moves
+// to `last` in EndTick; a press is `now && !last`.
 struct EdgeState {
     bool now;
     bool last;
-    // Raw physical key state, modifier-blind, for the same binding. Needed
-    // because two Actions can share one key and differ only in modifiers
-    // (Alt+R copies the last spoken text, bare R repeats the dialog line).
-    // Releasing the modifier while the key is still held used to hand the
-    // bare Action a rising edge it never earned: its `now` was false while the
-    // modifier was down, so the moment the modifier lifted it read as a fresh
-    // press. Requiring the KEY to have been up last tick kills that whole
-    // class of leak — a rising edge now means "this key just went down", and
-    // the modifier mask only decides which Action owns that press.
+    // The binding's key alone, whatever the modifiers. Two actions can share a
+    // key and differ only in modifiers (Ctrl+R copies, bare R repeats);
+    // releasing the modifier while the key is still down must not hand the
+    // bare action a press, so a press also needs the key up last tick.
     bool keyNow;
     bool keyLast;
+    // Set by ClaimRisingEdge between EndTick and BeginTick (the engine's input
+    // dispatch), where Consume cannot reach the coming edge; cleared in EndTick.
     bool claimed;
 };
 EdgeState g_edge[static_cast<int>(Action::COUNT)] = {};
 
 bool IsDownVk(int vk) {
-    if (vk == 0) return false;
-    return (GetAsyncKeyState(vk) & 0x8000) != 0;
+    return vk != 0 && (GetAsyncKeyState(vk) & 0x8000) != 0;
 }
 
-// Compute the current modifier mask from OS state. Reads VK_SHIFT (either
-// shift), VK_CONTROL (either ctrl), VK_MENU (either alt), and VK_RMENU
-// (right Alt = AltGr on QWERTZ) independently so `kModAltGr` can be set
-// alongside `kModAlt` when AltGr is held (engine treats them as one Alt;
-// we keep them split because announce_facing needs to distinguish).
+bool AnyDown(int a, int b, int c) {
+    return IsDownVk(a) || IsDownVk(b) || IsDownVk(c);
+}
+
+// AltGr (right Alt) counts as Alt too, but has its own bit for the bindings
+// that tell the two apart.
 uint32_t ReadModifiers() {
     uint32_t m = 0;
-    if (IsDownVk(VK_SHIFT) || IsDownVk(VK_LSHIFT) || IsDownVk(VK_RSHIFT)) {
-        m |= kModShift;
-    }
-    if (IsDownVk(VK_CONTROL) || IsDownVk(VK_LCONTROL) || IsDownVk(VK_RCONTROL)) {
-        m |= kModCtrl;
-    }
-    if (IsDownVk(VK_MENU) || IsDownVk(VK_LMENU) || IsDownVk(VK_RMENU)) {
-        m |= kModAlt;
-    }
-    if (IsDownVk(VK_RMENU)) {
-        m |= kModAltGr;
-    }
+    if (ShiftHeld()) m |= kModShift;
+    if (CtrlHeld()) m |= kModCtrl;
+    if (AnyDown(VK_MENU, VK_LMENU, VK_RMENU)) m |= kModAlt;
+    if (IsDownVk(VK_RMENU)) m |= kModAltGr;
     return m;
 }
 
-// Match a binding against the current keyboard state. VK pressed (primary
-// or alt) AND every required mod held AND no forbidden mod held.
-// Modifier-blind half of BindingMatches — is the binding's physical key down?
 bool BindingKeyDown(const Binding& b) {
-    if (b.vk == 0 && b.altVk == 0) return false;
-    return IsDownVk(b.vk) || (b.altVk != 0 && IsDownVk(b.altVk));
+    return IsDownVk(b.vk) || IsDownVk(b.altVk);
 }
 
-bool BindingMatches(const Binding& b, uint32_t mods) {
-    if (b.vk == 0 && b.altVk == 0) return false;
-    bool keyDown = IsDownVk(b.vk) || (b.altVk != 0 && IsDownVk(b.altVk));
-    if (!keyDown) return false;
-    if ((mods & b.modsRequired)  != b.modsRequired)  return false;
-    if ((mods & b.modsForbidden) != 0)               return false;
-    return true;
+// The index of `a` once the defaults exist, or -1 when out of range.
+int Index(Action a) {
+    InitDefaults();
+    const int idx = static_cast<int>(a);
+    return (idx >= 0 && idx < static_cast<int>(Action::COUNT)) ? idx : -1;
 }
 
 }  // namespace
 
-// ----- Lifecycle ------------------------------------------------------------
-
 void BeginTick() {
     InitDefaults();
     EnsureOverridesLoaded();
-    uint32_t mods = ReadModifiers();
+    const uint32_t mods = ReadModifiers();
     for (int i = 0; i < static_cast<int>(Action::COUNT); ++i) {
-        g_edge[i].now    = BindingMatches(g_bindings[i], mods);
         g_edge[i].keyNow = BindingKeyDown(g_bindings[i]);
+        g_edge[i].now    = g_edge[i].keyNow && ModsSatisfy(g_bindings[i], mods);
     }
 }
 
 void EndTick() {
-    for (int i = 0; i < static_cast<int>(Action::COUNT); ++i) {
-        g_edge[i].last    = g_edge[i].now;
-        g_edge[i].keyLast = g_edge[i].keyNow;
-        g_edge[i].claimed = false;
+    for (EdgeState& e : g_edge) {
+        e.last    = e.now;
+        e.keyLast = e.keyNow;
+        e.claimed = false;
     }
 }
-
-// ----- Queries --------------------------------------------------------------
 
 bool IsForegroundGame() {
     HWND fg = GetForegroundWindow();
@@ -112,45 +90,35 @@ bool IsForegroundGame() {
 }
 
 bool Pressed(Action a) {
-    InitDefaults();
-    int idx = static_cast<int>(a);
-    if (idx < 0 || idx >= static_cast<int>(Action::COUNT)) return false;
-    if (g_edge[idx].claimed) return false;
-    if (!g_edge[idx].now || g_edge[idx].last) return false;
-    // The key itself must have been up last tick — see EdgeState::keyLast.
-    if (g_edge[idx].keyLast) return false;
+    const int i = Index(a);
+    if (i < 0) return false;
+    const EdgeState& e = g_edge[i];
+    if (e.claimed || !e.now || e.last || e.keyLast) return false;
     return IsForegroundGame();
 }
 
 bool Held(Action a) {
-    InitDefaults();
-    int idx = static_cast<int>(a);
-    if (idx < 0 || idx >= static_cast<int>(Action::COUNT)) return false;
-    return g_edge[idx].now;
+    const int i = Index(a);
+    return i >= 0 && g_edge[i].now;
 }
 
+// Pressed() stays false for the rest of this tick.
 void Consume(Action a) {
-    InitDefaults();
-    int idx = static_cast<int>(a);
-    if (idx < 0 || idx >= static_cast<int>(Action::COUNT)) return;
-    // Force `last == now` so Pressed() returns false for the rest of this
-    // tick. EndTick will re-run `last = now`, which is idempotent here.
-    g_edge[idx].last = g_edge[idx].now;
+    const int i = Index(a);
+    if (i >= 0) g_edge[i].last = g_edge[i].now;
 }
 
 void ClaimRisingEdge(Action a) {
-    InitDefaults();
-    int idx = static_cast<int>(a);
-    if (idx < 0 || idx >= static_cast<int>(Action::COUNT)) return;
-    g_edge[idx].claimed = true;
+    const int i = Index(a);
+    if (i >= 0) g_edge[i].claimed = true;
 }
 
 bool ShiftHeld() {
-    return IsDownVk(VK_SHIFT) || IsDownVk(VK_LSHIFT) || IsDownVk(VK_RSHIFT);
+    return AnyDown(VK_SHIFT, VK_LSHIFT, VK_RSHIFT);
 }
 
 bool CtrlHeld() {
-    return IsDownVk(VK_CONTROL) || IsDownVk(VK_LCONTROL) || IsDownVk(VK_RCONTROL);
+    return AnyDown(VK_CONTROL, VK_LCONTROL, VK_RCONTROL);
 }
 
 uint32_t CurrentModifiers() {
@@ -160,48 +128,30 @@ uint32_t CurrentModifiers() {
 bool ModifiedComboOwns(int vk) {
     if (vk == 0) return false;
     InitDefaults();
-    uint32_t mods = ReadModifiers();
-    // No modifier held → nothing to route away from the engine. (Bare keys are
-    // the engine's to handle; we only intercept genuine modifier combos.)
-    if ((mods & (kModShift | kModCtrl | kModAlt | kModAltGr)) == 0) return false;
-    for (int i = 0; i < static_cast<int>(Action::COUNT); ++i) {
-        const Binding& b = g_bindings[i];
-        if (b.modsRequired == 0) continue;                 // bare binding — skip
-        if (b.vk != vk && b.altVk != vk) continue;         // different key
-        // NOTE: we deliberately do NOT require IsDownVk(vk) here. This is called
-        // from the engine input hooks, where the engine event ITSELF is proof
-        // the key was just pressed — re-checking GetAsyncKeyState races a quick
-        // tap (a buffered engine command can reach us after the key already
-        // lifted, e.g. Shift+L: L releases before the journal-open command
-        // arrives). Shift/Ctrl/Alt are typically still held, so matching on the
-        // modifier requirement alone is both sufficient and reliable.
-        if ((mods & b.modsRequired)  == b.modsRequired &&
-            (mods & b.modsForbidden) == 0) {
-            return true;
-        }
+    const uint32_t mods = ReadModifiers();
+    if ((mods & kAnyMod) == 0) return false;  // bare keys are the engine's
+    // No check that `vk` is still down: the engine event is the proof of the
+    // press, and a quick tap can be up again before a buffered engine command
+    // arrives (Shift+L), while the modifier is still held.
+    for (const Binding& b : g_bindings) {
+        if (b.modsRequired != 0 && UsesKey(b, vk) && ModsSatisfy(b, mods)) return true;
     }
     return false;
 }
 
-// ----- Rebinding ------------------------------------------------------------
-
 Binding Get(Action a) {
-    InitDefaults();
-    int idx = static_cast<int>(a);
-    if (idx < 0 || idx >= static_cast<int>(Action::COUNT)) return {};
-    return g_bindings[idx];
+    const int i = Index(a);
+    return i >= 0 ? g_bindings[i] : Binding{};
 }
 
 void Set(Action a, Binding b) {
-    InitDefaults();
-    int idx = static_cast<int>(a);
-    if (idx < 0 || idx >= static_cast<int>(Action::COUNT)) return;
-    g_bindings[idx] = b;
-    // Reset edge state — a brand-new binding shouldn't fire on the keys
-    // the user happens to be holding at the moment of the rebind.
-    g_edge[idx].now     = false;
-    g_edge[idx].last    = false;
-    g_edge[idx].claimed = false;
+    const int i = Index(a);
+    if (i < 0) return;
+    g_bindings[i] = b;
+    // A new binding must not fire on keys held at the moment of the rebind.
+    g_edge[i].now     = false;
+    g_edge[i].last    = false;
+    g_edge[i].claimed = false;
 }
 
 }  // namespace acc::hotkeys

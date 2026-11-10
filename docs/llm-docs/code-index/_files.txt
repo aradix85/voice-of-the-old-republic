@@ -178,7 +178,6 @@ patches/Accessibility/hotkeys.h
 patches/Accessibility/hotkeys_defaults.cpp
 patches/Accessibility/hotkeys_describe.cpp
 patches/Accessibility/hotkeys_internal.h
-patches/Accessibility/hotkeys_state.cpp
 patches/Accessibility/hotkeys_user.cpp
 patches/Accessibility/input_pipeline.cpp
 patches/Accessibility/input_pipeline.h

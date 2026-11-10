@@ -1,7 +1,7 @@
 // Centralised hotkey registry. Single source of truth for every mod-added
 // binding. Per-tick pollers query Pressed(Action) for rising edge +
-// modifier match + KOTOR foreground. Bindings are runtime-mutable via
-// Set() for a future rebind UI.
+// modifier match + KOTOR foreground. The keybind configurator
+// (menus_keybinds) rebinds through SetUserBinding.
 //
 // We don't piggyback on the engine's [Keymapping] because it's bare
 // DIK→Action with no modifier combos and no AltGr semantics.
