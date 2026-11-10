@@ -1,16 +1,14 @@
-# menus_chain_input.cpp (286 lines)
+# menus_chain_input.cpp (218 lines)
 
 Source: `patches/Accessibility/menus_chain_input.cpp`
 
-chain-navigation input handlers.
-
-Split out of menus_chain.cpp by the Phase-1 structure pass (refactoring candidate 2). menus_chain.cpp builds and maintains the chain (RebindChain and its validation/helper cluster); this file consumes input against an already-built chain. All five entry points were already declared individually in menus_chain.h, so the move is verbatim - no header change, no call-site change.
-
-HandleEnterActivation  Enter / Shift+Enter on the chain cursor WalkChildren           child-list walker (also the empty-chain probe) HandleNavStep          Up / Down chain step + cursor warp HandleLeftRight        Left / Right (cycle widgets, sliders, tabs) HandleEsc              Esc back-out / modal close
-
-Handler ORDER is decided by the caller in menus_dispatch.cpp, not here.
+Input against an already-built chain (menus_chain.cpp builds it): the Up/Down/Home/End step with its announcement and cursor warp, and the child walker. Enter is in menus_chain_input_enter.cpp, Left/Right and Esc in menus_chain_input_keys.cpp; menus_dispatch.cpp decides the handler order.
 
 ## Declarations (in source order)
 
-- L40 `void WalkChildren(const char* label, void* parent, size_t offset, const char* kindName)`
-- L100 `void HandleNavStep(void* activePanel, int code, int val, bool& consumed)`
+- L34 `void OnEmptyChain(void* panel, bool& consumed)`: A panel with nothing to navigate is left to the engine, but walked into the log once so its structure can be studied (the engine never focuses these, so the usual panel walk does not fire).
+- L63 `void SpeakCountSuffix(acc::strings::Id fmt, int n)`
+- L71 `void AnnounceStep(const ChainEntry& e)`: Speak the newly focused entry, then the per-panel extras.
+- L103 `void WarpCursor(const ChainEntry& e, bool safeToDrive, int* x, int* y)`: Warp the cursor onto the entry so the engine's hover handler follows the focus.
+- L125 `void WalkChildren(const char* label, void* parent, size_t offset, const char* kindName)`
+- L179 `void HandleNavStep(void* activePanel, int code, int val, bool& consumed)`
