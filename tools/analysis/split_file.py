@@ -12,6 +12,9 @@ and the functions it gets:
 
 File key "" is <module>.cpp (desc null keeps the original top comment); any
 other key k is <module>_k.cpp. Every free function must be listed once.
+Code after the module namespace (extern "C" hooks) is moved whole to the
+file named by "tail" (default ""), after its namespace; its functions are
+not listed.
 
 What goes where, decided from who uses what:
 - A function used only in its own file stays local to it (anonymous
@@ -420,6 +423,12 @@ def main() -> None:
     top_comment = [L(k) for k in pre[:first_inc]]
     while top_comment and not top_comment[-1].strip():
         top_comment.pop()
+    tail = [L(k) for k in preamble if k > head_end]
+    while tail and not tail[0].strip():
+        tail.pop(0)
+    while tail and not tail[-1].strip():
+        tail.pop()
+    tail_key = cfg.get("tail", "")
 
     def fmt_desc(desc: str) -> list[str]:
         return ["// " + x if x else "//" for x in desc.split("\n")]
@@ -457,6 +466,8 @@ def main() -> None:
                         key=lambda g: funcs[g]["start"]):
             body += fn_lines(f) + [""]
         body += [f"}}  // namespace {ns}", ""]
+        if key == tail_key and tail:
+            body += tail + [""]
         written[name] = body
 
     hdr = [f"// Internal to the {module} module ({module}*.cpp); no other file includes",

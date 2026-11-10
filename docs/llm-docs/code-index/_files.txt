@@ -346,6 +346,12 @@ patches/Accessibility/strings.cpp
 patches/Accessibility/strings.h
 patches/Accessibility/transitions.cpp
 patches/Accessibility/transitions.h
+patches/Accessibility/transitions_centre.cpp
+patches/Accessibility/transitions_internal.h
+patches/Accessibility/transitions_landmarks.cpp
+patches/Accessibility/transitions_preload.cpp
+patches/Accessibility/transitions_room_speech.cpp
+patches/Accessibility/transitions_state.cpp
 patches/Accessibility/trap_watch.cpp
 patches/Accessibility/trap_watch.h
 patches/Accessibility/tutorial_hints.cpp
