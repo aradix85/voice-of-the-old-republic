@@ -357,6 +357,7 @@ patches/Accessibility/minigame_swoop_audio_bars.cpp
 patches/Accessibility/minigame_swoop_audio_internal.h
 patches/Accessibility/minigame_swoop_audio_obstacles.cpp
 patches/Accessibility/minigame_swoop_audio_state.cpp
+patches/Accessibility/minigame_swoop_audio_tuning.h
 patches/Accessibility/minigame_swoop_race.cpp
 patches/Accessibility/minigame_swoop_race.h
 patches/Accessibility/minigame_swoop_race_cues.cpp
