@@ -16,6 +16,12 @@ patches/Accessibility/binding_hints.cpp
 patches/Accessibility/binding_hints.h
 patches/Accessibility/bridge.cpp
 patches/Accessibility/bridge.h
+patches/Accessibility/bridge_actions.cpp
+patches/Accessibility/bridge_area.cpp
+patches/Accessibility/bridge_describe.cpp
+patches/Accessibility/bridge_http.cpp
+patches/Accessibility/bridge_internal.h
+patches/Accessibility/bridge_state.cpp
 patches/Accessibility/bringup_announce.cpp
 patches/Accessibility/bringup_announce.h
 patches/Accessibility/camera_announce.cpp
