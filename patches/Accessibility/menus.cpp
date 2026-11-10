@@ -91,10 +91,6 @@ using acc::menus::focus::WalkAndCaptureOnFirstSight;
 using acc::menus::focus::SpeakPanelTitleOnFirstSight;
 using acc::menus::focus::AnnounceNewFocusedControl;
 
-// Forward decl from core_dllmain.cpp. The first hook to fire calls this so
-// Speech is loaded the moment any focus / input event reaches us.
-void EnsureSpeechInitialized();
-
 // Defined in menus_dispatch.cpp (Phase-1 split). PollHomeEndKeys below
 // re-enters the GUI input pipeline through it to deliver the Home/End
 // edges the engine keymap drops.

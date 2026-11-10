@@ -1,4 +1,4 @@
-# menus_focus_k2.cpp (531 lines)
+# menus_focus_k2.cpp (521 lines)
 
 Source: `patches/Accessibility/menus_focus_k2.cpp`
 
@@ -18,11 +18,11 @@ The vtable is logged on purpose: it tells us which control classes actually reac
 
 ## Declarations (in source order)
 
-- L99 `bool CallerIsFocusChange(void* caller)`: Did this SetActiveControl originate inside HandleFocusChange?
-- L164 `void WarpCursorToControl(void* control)`
-- L247 `bool ReadFocusProbe(void* panel, void* control, FocusProbe* p)`: Returns false when any read faulted.
-- L304 `void AnnounceFocus(void* panel, void* control, void* caller)`
-- L416 `extern "C" void __cdecl OnSetActiveControlK2(void* ebp)`: CSWGuiPanel::SetActiveControl @0x0040EC00, hooked at 0x0040EC09 — after the prologue has stored `this`, so both arguments are already in the frame.
-- L462 `extern "C" int __cdecl OnHandleInputEventK2(void* ebp)`: CSWGuiManager::HandleInputEvent @0x00410AA0, hooked at 0x00410AC8 — after the SEH prologue has stored `this` at [EBP-0x68].
-- L495 `extern "C" void __cdecl OnHandleFocusChangeK2(void* thisCtrl, void* ebp)`: CSWGuiControl::HandleFocusChange @0x00418FE0, hooked at 0x00418FE6 — before `this` is stored, so the hook passes ECX (this) and EBP (frame) separately.
-- L516 `extern "C" void __cdecl OnListBoxSetActiveControlK2(void* listBox, void* ebp)`: CSWGuiListBox::SetActiveControl implementation @0x0041E9A0 (vtable slot 0x0041FEE0 is a forwarder that calls it, so hooking the body catches both routes), hooked at 0x0041E9A4 — before `this` is stored.
+- L89 `bool CallerIsFocusChange(void* caller)`: Did this SetActiveControl originate inside HandleFocusChange?
+- L154 `void WarpCursorToControl(void* control)`
+- L237 `bool ReadFocusProbe(void* panel, void* control, FocusProbe* p)`: Returns false when any read faulted.
+- L294 `void AnnounceFocus(void* panel, void* control, void* caller)`
+- L406 `extern "C" void __cdecl OnSetActiveControlK2(void* ebp)`: CSWGuiPanel::SetActiveControl @0x0040EC00, hooked at 0x0040EC09 — after the prologue has stored `this`, so both arguments are already in the frame.
+- L452 `extern "C" int __cdecl OnHandleInputEventK2(void* ebp)`: CSWGuiManager::HandleInputEvent @0x00410AA0, hooked at 0x00410AC8 — after the SEH prologue has stored `this` at [EBP-0x68].
+- L485 `extern "C" void __cdecl OnHandleFocusChangeK2(void* thisCtrl, void* ebp)`: CSWGuiControl::HandleFocusChange @0x00418FE0, hooked at 0x00418FE6 — before `this` is stored, so the hook passes ECX (this) and EBP (frame) separately.
+- L506 `extern "C" void __cdecl OnListBoxSetActiveControlK2(void* listBox, void* ebp)`: CSWGuiListBox::SetActiveControl implementation @0x0041E9A0 (vtable slot 0x0041FEE0 is a forwarder that calls it, so hooking the body catches both routes), hooked at 0x0041E9A4 — before `this` is stored.

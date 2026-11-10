@@ -52,16 +52,6 @@
 #include "menus_focus_k2.h"
 #include "speech.h"
 
-// Defined in core_dllmain.cpp, and forward-declared per TU the same way
-// menus.cpp / menus_dispatch.cpp / transitions.cpp do it.
-//
-// Speech is loaded LAZILY — DllMain cannot do it (loader lock), so the first
-// hook to fire is what initialises the screen reader bridge. Every KOTOR 1
-// handler calls this before speaking. The first KOTOR 2 run proved why it
-// matters: the focus hook read every caption correctly and spoke none of them,
-// because this call was missing and acc::speech::Speak had nothing to speak through.
-void EnsureSpeechInitialized();
-
 // The shared handlers, defined in menus.cpp / menus_dispatch.cpp and hooked
 // directly on KOTOR 1. KOTOR 2 reaches them through this file instead, because
 // its hooks have to do frame arithmetic first (and, for focus, the cursor warp)

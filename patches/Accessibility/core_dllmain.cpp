@@ -28,8 +28,6 @@ char g_versionSha[128] = "(unset)";
 
 }  // namespace
 
-// First hook to fire runs it; subsequent calls are no-ops. Speaks a
-// "loaded, version X" greeting so the user knows the patch is active.
 void EnsureSpeechInitialized() {
     static bool done = false;
     if (done) return;

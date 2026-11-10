@@ -11,10 +11,6 @@
 #include "strings.h"
 #include "speech.h"
 
-// From core_dllmain.cpp: the KOTOR 1 hook loads speech in case a transition
-// fires before any menu or focus event has.
-void EnsureSpeechInitialized();
-
 namespace acc::transitions {
 
 namespace {

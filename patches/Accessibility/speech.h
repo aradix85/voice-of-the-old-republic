@@ -6,6 +6,11 @@
 
 #pragma once
 
+// Loads speech on the first hook that fires (DllMain cannot, see above) and
+// greets with the mod version; later calls do nothing. Every hook entry
+// point calls it before speaking. Defined in core_dllmain.cpp.
+void EnsureSpeechInitialized();
+
 namespace acc::speech {
 
 // Codepage of every narrow string on the way to NVDA: the English game's

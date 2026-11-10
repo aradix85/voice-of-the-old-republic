@@ -1,4 +1,4 @@
-# menus.cpp (1023 lines)
+# menus.cpp (1019 lines)
 
 Source: `patches/Accessibility/menus.cpp`
 
@@ -10,18 +10,18 @@ Phase 0 of the long-term nav plan extracted the foundation (core_dllmain + engin
 
 ## Declarations (in source order)
 
-- L149 `bool InMovieBurstWindow()`: True while the engine-GUI SetActive rebuild burst must stay silent because a cutscene movie is on screen — or was, within the last kMovieBurstTailMs.
-- L166 `void MarkSpoken(int channel, const char* text)`
-- L172 `void SpeakIfChanged(int channel, const char* text, unsigned repeatAfterMs)`
-- L186 `bool AlreadySpokenOnAnyChannel(const char* text)`
-- L245 `void* CurrentPanelIfLive()`: See menus_internal.h for why every deref of g_currentPanel has to come through here.
-- L447 `extern "C" void __cdecl OnSetActiveControl(void* panel, void* newControl)`: GATE CLEARED for KOTOR 2 on 2026-07-31 — the first handler to run on both games.
-- L575 `extern "C" void __cdecl OnListBoxSetActiveControl(void* listBox, void* newRow, int param2)`: CSWGuiListBox::SetActiveControl — hooked mid-function at 0x0041c16b.
-- L815 `void ValidatePanels()`
-- L834 `void TickMonitors()`
-- L859 `void PollHomeEndKeys()`
-- L895 `void TickPendingOps()`: Drain the menu-side pending-op queue.
-- L919 `void DrainPendingAnnounce()`: Drain the pending-announce slot.
-- L1008 `void ClearPendingAnnounce()`
-- L1013 `bool IsDrilledIntoSubScreen()`
-- L1014 `void SetDrilledIntoSubScreen(bool drilled)`
+- L145 `bool InMovieBurstWindow()`: True while the engine-GUI SetActive rebuild burst must stay silent because a cutscene movie is on screen — or was, within the last kMovieBurstTailMs.
+- L162 `void MarkSpoken(int channel, const char* text)`
+- L168 `void SpeakIfChanged(int channel, const char* text, unsigned repeatAfterMs)`
+- L182 `bool AlreadySpokenOnAnyChannel(const char* text)`
+- L241 `void* CurrentPanelIfLive()`: See menus_internal.h for why every deref of g_currentPanel has to come through here.
+- L443 `extern "C" void __cdecl OnSetActiveControl(void* panel, void* newControl)`: GATE CLEARED for KOTOR 2 on 2026-07-31 — the first handler to run on both games.
+- L571 `extern "C" void __cdecl OnListBoxSetActiveControl(void* listBox, void* newRow, int param2)`: CSWGuiListBox::SetActiveControl — hooked mid-function at 0x0041c16b.
+- L811 `void ValidatePanels()`
+- L830 `void TickMonitors()`
+- L855 `void PollHomeEndKeys()`
+- L891 `void TickPendingOps()`: Drain the menu-side pending-op queue.
+- L915 `void DrainPendingAnnounce()`: Drain the pending-announce slot.
+- L1004 `void ClearPendingAnnounce()`
+- L1009 `bool IsDrilledIntoSubScreen()`
+- L1010 `void SetDrilledIntoSubScreen(bool drilled)`

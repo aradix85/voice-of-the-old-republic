@@ -61,10 +61,6 @@ using acc::menus::chain::g_chainPanel;
 using acc::menus::chain::g_chainIndex;
 using acc::menus::chain::g_chainCount;
 
-// Forward decl from core_dllmain.cpp - both hooks below are entry points
-// that may fire before anything else has initialised speech.
-void EnsureSpeechInitialized();
-
 // CSWGuiControl::HandleFocusChange — hooked mid-function at 0x41896b.
 // Demoted to log-only. The panel-level SetActiveControl hook above is the
 // real announcement signal; HandleFocusChange fires twice per navigation
