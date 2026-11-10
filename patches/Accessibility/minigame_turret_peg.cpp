@@ -334,13 +334,12 @@ void DriveSelectedPeg(const int occSlot[], const float occDist[],
 
     // ---- Combat fields of the selected target (census snapshot). ----------
     int   hp = -1, maxHp = -1;
-    float radius = 0.0f, invuln = 0.0f, engineSpeed = 0.0f;
+    float radius = 0.0f, engineSpeed = 0.0f;
     if (trackingExisting) {
         const TargetInfo& ti = occInfo[idx];
         hp          = ti.hp;
         maxHp       = ti.max_hp;
         radius      = ti.radius;
-        invuln      = ti.invuln;
         engineSpeed = ti.engine_speed;
     }
 

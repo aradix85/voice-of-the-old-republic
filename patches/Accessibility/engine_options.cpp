@@ -50,23 +50,4 @@ bool GetActionMenuAutoPause(bool& out) {
     }
 }
 
-namespace {
-
-bool WriteMouseLook(void* options, bool enabled) {
-    __try {
-        auto* slot = reinterpret_cast<unsigned int*>(
-            reinterpret_cast<unsigned char*>(options) +
-            kClientOptionsBitFieldOffset);
-        unsigned int bits = *slot;
-        if (enabled) bits |=  kClientOptionsMouseLookMask;
-        else         bits &= ~kClientOptionsMouseLookMask;
-        *slot = bits;
-        return true;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return false;
-    }
-}
-
-}  // namespace
-
 }  // namespace acc::engine

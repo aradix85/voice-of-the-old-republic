@@ -104,7 +104,6 @@ bool          g_haveLast   = false;
 // Per-tick worst-phase accumulator (reset each Dispatch).
 const char* g_worstName = nullptr;
 double      g_worstMs   = 0.0;
-double      g_totalMs   = 0.0;
 
 // Timestamp of the tick currently being dispatched, in ms (see NowMs).
 DWORD g_tickNowMs = 0;
@@ -134,7 +133,6 @@ inline double QpcMs(const LARGE_INTEGER& a, const LARGE_INTEGER& b) {
 }
 
 inline void PhaseMark(const char* name, double ms) {
-    g_totalMs += ms;
     if (ms > g_worstMs) { g_worstMs = ms; g_worstName = name; }
 }
 
@@ -152,7 +150,6 @@ LARGE_INTEGER WatchdogBeginTick() {
     if (g_qpcFreq.QuadPart == 0) QueryPerformanceFrequency(&g_qpcFreq);
     g_worstName = nullptr;
     g_worstMs   = 0.0;
-    g_totalMs   = 0.0;
 
     LARGE_INTEGER now = QpcNow();
     // Publish this tick's timestamp before anything in the fan-out runs, so

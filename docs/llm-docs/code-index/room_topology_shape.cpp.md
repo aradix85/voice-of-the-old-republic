@@ -1,4 +1,4 @@
-# room_topology_shape.cpp (654 lines)
+# room_topology_shape.cpp (652 lines)
 
 Source: `patches/Accessibility/room_topology_shape.cpp`
 

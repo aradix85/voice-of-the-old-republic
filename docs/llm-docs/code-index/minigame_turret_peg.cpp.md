@@ -1,4 +1,4 @@
-# minigame_turret_peg.cpp (862 lines)
+# minigame_turret_peg.cpp (861 lines)
 
 Source: `patches/Accessibility/minigame_turret_peg.cpp`
 

@@ -408,9 +408,6 @@ const InGameSubScreenSpec k_inGameSubScreens[] = {
     // LBL_TITLE in the announce path, so strref/literal are unused sentinels.
     { PanelKind::InGameQuestItems, -1, 0xFFFFFFFFu, 0xFFFFFFFFu, nullptr },
 };
-constexpr int k_inGameSubScreenCount =
-    sizeof(k_inGameSubScreens) / sizeof(k_inGameSubScreens[0]);
-
 // Per-game strref for a spec row. 0xFFFFFFFF means "no TLK entry" and the
 // caller falls back to the literal / localised string table.
 uint32_t SpecStrref(const InGameSubScreenSpec* s) {

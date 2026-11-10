@@ -1,4 +1,4 @@
-# engine_area_walls.cpp (661 lines)
+# engine_area_walls.cpp (659 lines)
 
 Source: `patches/Accessibility/engine_area_walls.cpp`
 
@@ -17,5 +17,5 @@ Declarations stay in engine_area.h - splitting that header is a separate, deferr
 - L190 `int ScanRoomFloorTris(void* surfaceMesh, FloorTri* outBuf, int maxTris, int alreadyWritten)`: Walk every face of one room's surface mesh, emit each as a FloorTri with world-space corners.
 - L268 `static int ScanRoomAllTriangleEdges(void* surfaceMesh, int roomId, int alreadyWritten)`: Mirror of ScanRoomWallEdges but emits every triangle edge regardless of adjacency value.
 - L326 `int BuildAreaWallCache(void* area, WallEdge* outBuf, int maxEdges)`
-- L559 `int BuildAreaFloorCache(void* area, FloorTri* outBuf, int maxTris)`
-- L585 `bool SegmentCrossesWalkmesh(const WallEdge* walls, int wallCount, const Vector& a, const Vector& b, Vector& outHitPoint, bool ignoreZ)`
+- L557 `int BuildAreaFloorCache(void* area, FloorTri* outBuf, int maxTris)`
+- L583 `bool SegmentCrossesWalkmesh(const WallEdge* walls, int wallCount, const Vector& a, const Vector& b, Vector& outHitPoint, bool ignoreZ)`

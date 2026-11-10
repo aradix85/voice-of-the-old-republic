@@ -418,7 +418,6 @@ int BuildAreaWallCache(void* area, WallEdge* outBuf, int maxEdges) {
     int flagN = (written < kMaxPortalFlags) ? written : kMaxPortalFlags;
     for (int i = 0; i < flagN; ++i) s_isPortal[i] = false;
 
-    int portalMatches = 0;
     for (int i = 0; i < flagN; ++i) {
         const WallEdge& e = outBuf[i];
         for (int g = 0; g < globalCount; ++g) {
@@ -430,7 +429,6 @@ int BuildAreaWallCache(void* area, WallEdge* outBuf, int maxEdges) {
                  coincident(e.b, s_globalEdgeA[g]));
             if (match) {
                 s_isPortal[i] = true;
-                ++portalMatches;
                 break;  // one match suffices to classify as portal
             }
         }

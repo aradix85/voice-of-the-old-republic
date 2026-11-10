@@ -279,7 +279,6 @@ struct TargetInfo {
     int   hp          = -1;
     int   max_hp      = -1;
     float radius      = 0.0f;
-    float invuln      = 0.0f;
     float engine_speed = 0.0f;   // 0 = not known (area targets)
 };
 

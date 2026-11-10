@@ -434,7 +434,6 @@ void PassClassifyClusters(void* area,
         int externalSrcs[kMaxExternal];   // cluster member that owns this edge
         int externalDoorIdx[kMaxExternal];
         int externalCount = 0;
-        int blockedExternal = 0;
         for (int m = 0; m < n; ++m) {
             if (UFFind(m) != root) continue;
             int lo = 0, hi = 0;
@@ -447,7 +446,6 @@ void PassClassifyClusters(void* area,
                                              g.nodes[m].pos, g.nodes[nb].pos,
                                              "ext-edge");
                 if (er.kind == kEdgeBlocked) {
-                    ++blockedExternal;
                     acclog::Write(
                         "WallTopo",
                         "  external BLOCKED: cluster=%d member[%d] (%.1f,%.1f) "

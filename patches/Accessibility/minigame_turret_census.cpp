@@ -92,7 +92,6 @@ void CensusFighters(Census& c, const Vector& listener) {
         info.hp           = static_cast<int>(SafeReadU32(enemy, kFollowerHpOffset));
         info.max_hp       = static_cast<int>(SafeReadU32(enemy, kFollowerMaxHpOffset));
         info.radius       = SafeReadFloat(enemy, kFollowerSphereRadiusOffset);
-        info.invuln       = SafeReadFloat(enemy, kFollowerInvulnOffset);
         info.engine_speed = SafeReadFloat(enemy, kFollowerSpeedOffset);
         TrackSlotHp(i, info.hp, info.max_hp);
         if (i == g_state.selected_slot) c.selected_alive = true;
