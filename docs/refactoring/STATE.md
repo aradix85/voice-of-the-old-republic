@@ -212,6 +212,15 @@ assist split off (cd5dc356), lean (f026304e).
 interact_dispatch: DispatchInteract in named steps (1f96b5ed), bare keys to
 interact_bare_keys.cpp (4a37be23), one PreRollFor shared with
 cycle_input_focus (2adbd326, the GuidancePreRollFor clone).
+examine_view: reads and rows split off (bba86317), lean (c8af177b: the
+equipment reader of combat_query, engine_reads for the memory reads).
+engine_reads_items: descriptions and actions split off (f571fd25), lean
+(edf9a39e: TryRead*, GetFeatRow/GetSpellRow/ReadRowStrRefText shared with
+examine_view).
+view_mode: narration and Enter split off (49c3e25e), lean (71ffbbfd).
+filter: one ClassifyObject instead of four copies (189f655c).
+input_pipeline: the in-world hook in named steps (abbba85d), 394 lines, no
+split needed.
 
 Careful: never rewrite source files with PowerShell ReadAllText/WriteAllText
 (it decodes UTF-8 and writes '?' for the dashes and umlauts in comments);
@@ -273,8 +282,7 @@ prefix (menus_listbox_picker.cpp).
 - Goal (Anouk, 2026-11-10): split every file above 600 lines where that is
   possible; for files above 500 lines, judge whether a split into modules of
   things that belong together makes sense, and do it where it does.
-- Next file, by size (2026-11-10 19:10, strings*.cpp excepted): examine_view
-  772, engine_reads_items 765, view_mode 752, input_pipeline 702,
+- Next file, by size (2026-11-10 19:10, strings*.cpp excepted):
   engine_subscreen 697, menus 672, focus_guard 669, engine_area_walls 658,
   camera_orient 654, room_topology_shape 651, tutorial_hints 643,
   minigame_swoop_audio_obstacles 636, menus_extract_icons 635,
