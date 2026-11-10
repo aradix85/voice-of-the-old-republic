@@ -1,3 +1,11 @@
+// The camera spin guard. After a load the cursor can park frozen at the
+// screen edge, inside UpdateCamera's edge-turn band, and the camera spins
+// for good; injected motion is ignored then (SetCursorPos and SendInput both
+// failed), so the guard writes the engine's cursor to the viewport centre
+// while the camera rotates with the cursor in the band. Two log-only
+// diagnostics ride along: a cause-agnostic watch for uncommanded rotation
+// and a tripwire for the camera yaw read that the guard relies on.
+
 #include "camera_spin_guard.h"
 
 #include <windows.h>
@@ -5,24 +13,19 @@
 #include <cstdint>
 #include <cstdio>
 
-#include "camera_orient.h"   // IsActive — our own snap-turn drives the camera
-#include "engine_app.h"      // GetClientAppInternal — K2 viewport-object chain
-#include "engine_input.h"    // PollTurnAxis / ReadNativeStickAxes — the two
-                             // sources UpdateCamera feeds to AcclTurnCamera
-#include "engine_keymap.h"   // AnyMovementKeyHeld — the bound move/turn keys
+#include "camera_orient.h"   // IsActive: our own snap-turn drives the camera
+#include "core_tick.h"       // NowMs: rates divide by an inter-tick interval
+#include "engine_app.h"      // GetClientAppInternal, GetClientModule
+#include "engine_input.h"    // PollTurnAxis, ReadNativeStickAxes
+#include "engine_keymap.h"   // AnyMovementKeyHeld
 #include "engine_manager.h"  // kAddrGuiManagerPtr
-#include "engine_options.h"  // GetMouseLook
-#include "engine_panels.h"   // IsForegroundUiBlocking — cinematic / screen gate
-#include "engine_player.h"   // GetCameraYawRadians / GetCameraPosition /
-                             // GetPlayerPosition + chain constants
-#include "core_tick.h"       // NowMs — the rate below divides by an inter-tick
-                             // interval, which GetTickCount cannot resolve
-#include "hotkeys.h"         // IsForegroundGame — guard only when focused
-#include "log.h"
 #include "engine_offsets_select.h"
+#include "engine_options.h"  // GetMouseLook
+#include "engine_panels.h"   // IsForegroundUiBlocking
+#include "engine_player.h"   // camera yaw and position, player position and facing
 #include "engine_rebase.h"
-
-#pragma comment(lib, "user32.lib")
+#include "hotkeys.h"         // IsForegroundGame
+#include "log.h"
 
 namespace acc::camera_spin_guard {
 
@@ -30,88 +33,47 @@ namespace {
 
 constexpr float kRadToDeg = 57.29577951308232f;
 
-// Engine globals (decompiled, see UpdateCamera @0x5f5e10).
-// K2 witnessed 2026-08-02 in the K2 edge-band code at 0x0078C520-0x0078C6A0
-// (found via the 0.001f-initialised .data global): screenFramePercentage
-// twin = 0x00A10910 (both FMULs), mouse_x read as [[GuiManager global]+0]
-// (mouse_y +4), viewport width as int16 [+0x6c] on the object at
-// [client internal + 0x274] — K2 splits the width off the GuiManager.
-const uintptr_t kAddrScreenFramePercent   = acc::addr::PickGlobal(0x007A2444, 0x00A10910);  // float
-// rightClickHeld: LOG-ONLY (episode START diagnostic). No K2 witness yet —
-// SafeRead declines to 0 there. Not part of the guard's firing logic.
-// K2 value witnessed 2026-09-14 in the UpdateCamera twin @0x0078c350: read into
-// the edge-turn gate, XORed with the mouse_look option bit exactly as K1 does.
-const uintptr_t kAddrRightClickHeld       = acc::addr::PickGlobal(0x008338F0, 0x00A7FCBC);  // int
-const size_t    kGuiMouseXOffset          = acc::off::Same(0x00);        // ulong
-const size_t    kGuiMouseYOffset          = acc::off::Same(0x04);        // ulong
-// K2 only (AcclTurnCamera twin @0x007f4220, follow-cam branch): the module
-// mirrors the follow behaviour's turn accumulator to +0x98 and raises +0x100
-// whenever it applies a non-zero turn. Both are witnesses that the camera's
-// OWN turn path ran; a spin that leaves them untouched came from elsewhere
-// (the player creature rotating under the chase camera, most likely). On K1
-// +0x98 is not the accumulator (camera-and-swoop.md), so these stay K2-only.
-const size_t    kK2ModuleAcclMirrorOffset = 0x98;   // float
-const size_t    kK2ModuleTurnedFlagOffset = 0x100;  // int
-const size_t    kGuiViewportWidthOffset   = acc::off::Same(0x6C);        // int16
-// K2 only: the viewport object holding width/height (+0x6c/+0x6e) hangs off
-// the client internal at +0x274 (witnessed via the getter 0x0073FEA0). On
-// K1 the width lives on the GuiManager itself, so this is unused there.
+// UpdateCamera (K1 0x5f5e10; K2's edge-band code 0x0078C520-0x0078C6A0):
+// screenFramePercentage, the cursor at [[GuiManager]+0] / +4, the viewport
+// width int16 at +0x6c on the GuiManager (K1) or on the object at [client
+// internal + 0x274] (K2, getter 0x0073FEA0).
+const uintptr_t kAddrScreenFramePercent      = acc::addr::PickGlobal(0x007A2444, 0x00A10910);
+const size_t    kGuiMouseXOffset             = acc::off::Same(0x00);
+const size_t    kGuiMouseYOffset             = acc::off::Same(0x04);
+const size_t    kGuiViewportWidthOffset      = acc::off::Same(0x6C);
 const size_t    kK2InternalViewportObjOffset = 0x274;
+// rightClickHeld, logged only (K2: the UpdateCamera twin 0x0078c350 XORs it
+// with the mouse-look bit like K1).
+const uintptr_t kAddrRightClickHeld = acc::addr::PickGlobal(0x008338F0, 0x00A7FCBC);
+// K2 only (the AcclTurnCamera twin 0x007f4220): the module mirrors the
+// follow camera's turn accumulator to +0x98 and raises +0x100 when it turns,
+// witnesses that the camera's own turn path ran. On K1 +0x98 is something
+// else.
+const size_t kK2ModuleAcclMirrorOffset = 0x98;   // float
+const size_t kK2ModuleTurnedFlagOffset = 0x100;  // int
 
-// Cursor-edge guard (Option A): after a load the cursor parks frozen at the
-// screen border (mouse_x=0) and the post-load input pipeline ignores
-// injected motion (SetCursorPos and SendInput both failed to move it — see
-// logs 124537/131734). Since nothing is actively re-setting mouse_x, we
-// write the engine cursor position directly to viewport centre, which
-// bypasses the broken input path and takes the cursor out of the edge band.
-// If the engine turns out to re-derive mouse_x each frame, the diagnostic
-// will show it bouncing back to 0 and we move the clamp into a UpdateCamera
-// detour instead.
-
-// Guard fires once the camera is actually rotating, so it stays quiet when
-// the camera is genuinely static (e.g. a paused menu with the cursor parked
-// at an edge). 3 deg/s catches the onset before AcclTurnCamera ramps up.
+// The guard needs the camera actually rotating (a paused menu with the
+// cursor at an edge is static); 3 deg/s catches the onset.
 constexpr float kGuardRateThresh = 3.0f;
 
-// Logging is episode-based, not per-frame: one START line when an edge-guard
-// episode begins, one END summary when the cursor has stayed clear of the
-// band this long. Collapses a multi-second bounce (hundreds of frames) to
-// two lines.
+// The guard logs per episode: START, and END once the cursor has stayed out
+// of the band this long.
 constexpr DWORD kEpisodeQuietMs = 500;
 
-// Sanity tripwire for the camera-yaw read (fix #1). quat- and position-
-// derived yaw agreed to 0.0 in bench testing, so a divergence CAN mean
-// GetCameraYawRadians regressed — but only under the gates at the call site.
-// posYaw is the camera->player BEARING, which equals the camera's facing only
-// while the camera sits in its normal follow pose. Ungated, this fired on
-// every cinematic shot, every camera lag during a turn and every combat orbit:
-// 319 lines across 25 K1 dev sessions at a 136 deg median, and 235 in one
-// field session — noise that reads like a regression and is not one.
-constexpr float kReadAnomalyDeg = 2.0f;
-
-// A regression is PERSISTENT; legitimate divergence is transient. Require the
-// divergence to hold continuously for this long, with every gate satisfied,
-// before saying anything.
+// The yaw tripwire: the quaternion yaw against the camera->player bearing,
+// which is the camera's facing only in the follow pose (ungated it fired on
+// every cinematic shot, turn lag and combat orbit). It reports a divergence
+// past kReadAnomalyDeg that holds kAnomalyPersistMs, at a follow distance.
+constexpr float kReadAnomalyDeg   = 2.0f;
 constexpr DWORD kAnomalyPersistMs = 3000;
 constexpr DWORD kAnomalyRepeatMs  = 10000;
+constexpr float kFollowDistMinM   = 1.0f;
+constexpr float kFollowDistMaxM   = 15.0f;
 
-// Plausible chase-cam distance to the player, metres. Outside this the camera
-// is not in its follow pose (scripted shot, mid-transition) and the bearing
-// cross-check means nothing. Deliberately generous — the band exists to
-// exclude far cinematic framing, not to tune out real divergence — and the
-// measured distance is logged so field data can narrow it.
-constexpr float kFollowDistMinM = 1.0f;
-constexpr float kFollowDistMaxM = 15.0f;
-
-// ---- Uncommanded-rotation watch -------------------------------------------
-// Rotation slower than this is settle/drift, not a spin.
+// The spin watch: slower is settle or drift; one report per full turn, up to
+// kSpinMaxReports per episode.
 constexpr float kSpinRateThresh = 20.0f;   // deg/s
-// Report every full turn the camera makes with no input behind it. One turn is
-// unambiguous: no legitimate engine behaviour rotates a player-controlled
-// camera 360 degrees while the player commands nothing.
 constexpr float kSpinReportDeg  = 360.0f;
-// Stop logging after this many turns in one episode — a runaway is established
-// by then and the log has the state it needs.
 constexpr int   kSpinMaxReports = 5;
 
 template <typename T>
@@ -127,8 +89,7 @@ template <typename T>
 T SafeReadOff(void* base, size_t off, T fallback) {
     if (!base) return fallback;
     __try {
-        return *reinterpret_cast<T*>(
-            reinterpret_cast<unsigned char*>(base) + off);
+        return *reinterpret_cast<T*>(static_cast<unsigned char*>(base) + off);
     } __except (EXCEPTION_EXECUTE_HANDLER) {
         return fallback;
     }
@@ -138,8 +99,7 @@ template <typename T>
 bool SafeWriteOff(void* base, size_t off, T value) {
     if (!base) return false;
     __try {
-        *reinterpret_cast<T*>(
-            reinterpret_cast<unsigned char*>(base) + off) = value;
+        *reinterpret_cast<T*>(static_cast<unsigned char*>(base) + off) = value;
         return true;
     } __except (EXCEPTION_EXECUTE_HANDLER) {
         return false;
@@ -158,20 +118,18 @@ float AngularDelta(float a, float b) {
 }
 
 struct State {
-    bool  have       = false;
-    float prevYaw    = 0.0f;   // quaternion-derived, deg
-    DWORD prevMs     = 0;
-    bool  havePos    = false;
-    float prevPosYaw = 0.0f;   // camera->player bearing, deg
-    DWORD prevPosMs  = 0;
-    bool  havePlayer = false;
-    float prevPlayerYaw = 0.0f;  // player creature facing, deg
+    bool  have          = false;
+    float prevYaw       = 0.0f;  // quaternion yaw, deg
+    DWORD prevMs        = 0;
+    bool  havePos       = false;
+    float prevPosYaw    = 0.0f;  // camera->player bearing, deg
+    DWORD prevPosMs     = 0;
+    bool  havePlayer    = false;
+    float prevPlayerYaw = 0.0f;  // the player creature's facing, deg
     DWORD prevPlayerMs  = 0;
 };
 State g_state;
 
-// One edge-guard "episode" = a contiguous bout of edge contact (with brief
-// corrected gaps). Logged as START + END-summary instead of per frame.
 struct Episode {
     bool  active      = false;
     DWORD startMs     = 0;
@@ -183,55 +141,35 @@ struct Episode {
 };
 Episode g_ep;
 
-// ---- Read-anomaly tripwire state (see the gate note at the call site) ------
-DWORD g_anomalySinceMs = 0;   // when the CURRENT divergence run began; 0 = none
-DWORD g_lastAnomalyMs  = 0;   // last line emitted, for the repeat throttle
+DWORD g_anomalySinceMs = 0;  // when the current divergence began; 0 = none
+DWORD g_lastAnomalyMs  = 0;
 bool  g_anomalyOpen    = false;
 
-// ---- Uncommanded-rotation watch state -------------------------------------
-// Cause-agnostic: accumulates camera rotation while the player is commanding
-// none. The edge-guard above only knows ONE cause (cursor in the edge band);
-// this notices the symptom whatever produced it.
 struct SpinWatch {
     bool  active      = false;
     DWORD startMs     = 0;
-    float accumQuat   = 0.0f;  // signed, deg — from the orientation quaternion
-    float accumPos    = 0.0f;  // signed, deg — from the camera->player bearing
-    float accumPlayer = 0.0f;  // signed, deg — the player creature's own facing
+    float accumQuat   = 0.0f;  // signed, deg
+    float accumPos    = 0.0f;
+    float accumPlayer = 0.0f;
     float maxRate     = 0.0f;
     int   frames      = 0;
-    int   reports     = 0;     // full turns already reported this episode
+    int   reports     = 0;     // full turns reported this episode
 };
 SpinWatch g_spin;
 
-void ResetSpinWatch() {
-    g_spin.active    = false;
-    g_spin.accumQuat = 0.0f;
-    g_spin.accumPos  = 0.0f;
-    g_spin.accumPlayer = 0.0f;
-    g_spin.maxRate   = 0.0f;
-    g_spin.frames    = 0;
-    g_spin.reports   = 0;
-}
-
-// Close the watch, summarising only episodes worth a line.
-//
-// Releasing a turn key ends "commanded" a moment before the chase-cam finishes
-// catching up, so a short uncommanded rotation is NORMAL and must stay silent —
-// otherwise every turn the player makes ends in a log line. A reported episode
-// always summarises; an unreported one only if it ran long AND swept far enough
-// that settle cannot explain it.
+// A turn key's release ends "commanded" a moment before the chase cam
+// catches up, so a short uncommanded rotation is normal: an unreported
+// episode is summarised only if it ran long and swept far.
 constexpr DWORD kSpinSummaryMs  = 2000;
 constexpr float kSpinSummaryDeg = 90.0f;
 
 void EndSpinWatch(DWORD now, const char* why) {
     if (g_spin.active) {
-        DWORD dur = now - g_spin.startMs;
-        float swept = std::fabs(g_spin.accumQuat) > std::fabs(g_spin.accumPos)
-                          ? std::fabs(g_spin.accumQuat)
-                          : std::fabs(g_spin.accumPos);
-        if (g_spin.reports > 0 ||
-            (dur >= kSpinSummaryMs && swept >= kSpinSummaryDeg)) {
+        const DWORD dur = now - g_spin.startMs;
+        const float swept = std::fabs(g_spin.accumQuat) > std::fabs(g_spin.accumPos)
+                                ? std::fabs(g_spin.accumQuat)
+                                : std::fabs(g_spin.accumPos);
+        if (g_spin.reports > 0 || (dur >= kSpinSummaryMs && swept >= kSpinSummaryDeg)) {
             acclog::Write("CameraSpinDiag",
                 "uncommanded-rotation END: duration=%ums frames=%d "
                 "quatTurn=%.0f deg posTurn=%.0f deg playerTurn=%.0f deg "
@@ -240,7 +178,7 @@ void EndSpinWatch(DWORD now, const char* why) {
                 g_spin.accumPlayer, g_spin.maxRate, why);
         }
     }
-    ResetSpinWatch();
+    g_spin = SpinWatch{};
 }
 
 void EndEpisode(DWORD now, float endYaw) {
@@ -252,16 +190,11 @@ void EndEpisode(DWORD now, float endYaw) {
     g_ep.active = false;
 }
 
-// True while something other than the player is entitled to move the camera:
-// an engine cinematic / dialog shot, a blocking screen, or our own N-hotkey
-// snap-turn. Both the tripwire and the spin watch are meaningless then — the
-// camera is legitimately somewhere the player did not put it.
-//
-// IsForegroundUiBlocking already tests HasActiveDialogPanel first (it is the
-// predicate's own rule 1), so the cinematic case needs no separate scan.
+// Something other than the player may move the camera: a cinematic or
+// dialog shot or a blocking screen (IsForegroundUiBlocking tests the dialog
+// first), or our own N snap-turn.
 bool CameraDrivenByNonPlayer() {
-    return acc::engine::IsForegroundUiBlocking() ||
-           acc::camera_orient::IsActive();
+    return acc::engine::IsForegroundUiBlocking() || acc::camera_orient::IsActive();
 }
 
 // One tick's readings: the three yaw witnesses and the cursor against the
