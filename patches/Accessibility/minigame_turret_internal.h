@@ -456,5 +456,20 @@ void HandleTargetCycle(const int occSlot[], const float occDist[], const Vector 
 
 // minigame_turret_peg.cpp
 void DriveSelectedPeg(const int occSlot[], const float occDist[], const Vector occPos[], const TargetInfo occInfo[], int occCount, const Vector& aimDir, bool haveAim, const Vector& listener, bool selectedAliveInPool);
+float Wrap180(float d);
+
+// minigame_turret_assist.cpp
+struct LeadSolution {
+    Vector aimRel;     // listener-relative point the cue aims at
+    Vector aimRelLin;  // linear-only baseline (LeadCheck diagnostic)
+    float  t;
+    float  dist;
+    float  frac;
+};
+void UpdateMotionEstimate(const Vector& P, ULONGLONG now);
+LeadSolution SolveLead(const Vector& P, const Vector& v, float vmag, float radius, const Arena& arena);
+void CalibrateOffsetSigns(float offAz, float offEl, float aimAz, float aimEl);
+bool SteerGun(bool steer, float offAz, float offEl, float angle, float errAz, float errEl, bool fullAuto, float& gain);
+void AutoaimRetarget(bool justLandedHit, bool makeable, float leadT, float crossingSpeed, float sd, const int occSlot[], const float occDist[], const Vector occPos[], const TargetInfo occInfo[], int occCount, const Vector& listener);
 
 }  // namespace acc::turret_game

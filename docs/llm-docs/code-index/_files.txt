@@ -323,6 +323,7 @@ patches/Accessibility/minigame_swoop_race_timer.cpp
 patches/Accessibility/minigame_turret.cpp
 patches/Accessibility/minigame_turret.h
 patches/Accessibility/minigame_turret_arena.cpp
+patches/Accessibility/minigame_turret_assist.cpp
 patches/Accessibility/minigame_turret_census.cpp
 patches/Accessibility/minigame_turret_internal.h
 patches/Accessibility/minigame_turret_peg.cpp

@@ -1,4 +1,4 @@
-# minigame_turret_internal.h (461 lines)
+# minigame_turret_internal.h (476 lines)
 
 Source: `patches/Accessibility/minigame_turret_internal.h`
 
@@ -28,5 +28,12 @@ Internal to the minigame_turret module (minigame_turret*.cpp); no other file inc
 - L454 `void AnnounceSelectedTarget(int idx, const int occSlot[], const float occDist[], const Vector occPos[], const TargetInfo occInfo[], int occCount, const Vector& listener, bool speak = true)`
 - L455 `void HandleTargetCycle(const int occSlot[], const float occDist[], const Vector occPos[], const TargetInfo occInfo[], int occCount, const Vector& listener)`
 - L458 `void DriveSelectedPeg(const int occSlot[], const float occDist[], const Vector occPos[], const TargetInfo occInfo[], int occCount, const Vector& aimDir, bool haveAim, const Vector& listener, bool selectedAliveInPool)`: minigame_turret_peg.cpp
+- L459 `float Wrap180(float d)`
+- L462 `struct LeadSolution`: minigame_turret_assist.cpp
+- L469 `void UpdateMotionEstimate(const Vector& P, ULONGLONG now)`
+- L470 `LeadSolution SolveLead(const Vector& P, const Vector& v, float vmag, float radius, const Arena& arena)`
+- L471 `void CalibrateOffsetSigns(float offAz, float offEl, float aimAz, float aimEl)`
+- L472 `bool SteerGun(bool steer, float offAz, float offEl, float angle, float errAz, float errEl, bool fullAuto, float& gain)`
+- L473 `void AutoaimRetarget(bool justLandedHit, bool makeable, float leadT, float crossingSpeed, float sd, const int occSlot[], const float occDist[], const Vector occPos[], const TargetInfo occInfo[], int occCount, const Vector& listener)`
 
 Also 49 constants or variables at namespace scope.
