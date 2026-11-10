@@ -14,7 +14,7 @@
 //   * CSWGuiCreateMedicalItem (chemical_p.gui) — the lab-station twin
 //     (chemicals + Treat Injury instead of components + Repair).
 //
-// Decompile evidence (2026-08-12 session, kotor2 Ghidra project):
+// Decompile evidence (K2):
 //   * BTN_UPGRADEITEMS handler 0x008c7f60 acts on the LIST'S SELECTED ROW
 //     (GetSelectedRow when invoked via the button; row's obj id at +0x1d0).
 //   * BTN_Accept handler 0x008d2150 (component) dispatches create
@@ -49,8 +49,7 @@ bool ResolveRowCommit(void* panel, void* control, void** outListBox);
 // still sits in the listbox, write the listbox selection to its index,
 // then FireActivate (vtable[15], event 0x27) the panel's own commit
 // button (BTN_UPGRADEITEMS on WorkbenchSelect, BTN_Accept on the crafting
-// screens), resolved from the ctor-bound member. SEH-guarded throughout;
-// logs the outcome.
+// screens), resolved from the ctor-bound member. Logs the outcome.
 void DispatchRowCommit(void* panel, void* listBox, void* row);
 
 // Per-row price quote, spoken after the row's name on each chain step —
@@ -111,8 +110,8 @@ bool IsHiddenCraftingListBox(void* panel, void* listBox);
 // whole workbench family (Select / Items / Upgrade / CreateItem /
 // CreateMedical). AnnouncePanelTitle early-outs on these so the
 // construction-time first-sight stays silent — the K2 workbench dialog
-// reply pushes Select+Items+Upgrade STACKED in one tick (live log
-// 2026-08-12 13:13:19: four titles + a slot-state line spoke in a row),
+// reply pushes Select+Items+Upgrade STACKED in one tick (four titles and a
+// slot-state line spoke in a row),
 // and the panels are pre-built and REUSED across re-entries, so
 // pointer-keyed first-sight also never fires again on re-entry. Tick's
 // foreground-edge announcer replaces both paths on K2; KOTOR 1 keeps
