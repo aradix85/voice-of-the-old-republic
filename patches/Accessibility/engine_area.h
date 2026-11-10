@@ -765,28 +765,18 @@ namespace acc::engine {
 bool TrapDetectedByAnyOf(void* gameObject,
                          const uint32_t* ids, int idCount);
 
-// Walks every room in `area`, then every face in each room's
-// CSWRoomSurfaceMesh, and emits one WallEdge for each triangle side whose
-// adjacency is `-1` (perimeter / wall sentinel). Endpoints are transformed
-// into world space via CSWCollisionMesh::LocalToWorld so callers can compute
-// distances against the player's world position directly.
+// Walks every room in `area` and every face of its CSWRoomSurfaceMesh and
+// collects each side with adjacency -1, in world space, then drops the
+// portals and same-room duplicates (DropPortalEdges, DropSameRoomDuplicates
+// in walkmesh_geometry.h).
 //
-// Seam filtering: when called with a buffer (outBuf != nullptr), the
-// raw per-room scan is followed by a pairwise pass that drops "edges"
-// where two different rooms emit the same world-space endpoints. K1
-// joins rooms through portals/AABB rather than via triangle adjacency,
-// so room-boundary triangles in both rooms carry adjacency=-1 and would
-// otherwise appear as walls — even though the engine considers them
-// walkable. This pass eliminates those phantom walls. Endpoint match
-// uses ~1cm tolerance for LocalToWorld float variance.
+// outBuf non-null and maxEdges > 0: writes up to maxEdges edges and returns
+//   the count of real walls after the filters.
+// outBuf null or maxEdges <= 0: returns the raw discovered count, for
+//   sizing the buffer.
 //
-// outBuf non-null + maxEdges > 0: writes up to min(emitted, maxEdges)
-//   post-filter edges; returns post-filter count (REAL walls).
-// outBuf null OR maxEdges <= 0: returns pre-filter DISCOVERED count
-//   for buffer-sizing telemetry. filtered ≤ discovered.
-//
-// SEH-guarded per room; faults skip that room. Walkmesh is immutable
-// per area-load (doors are separate collision meshes), so cache once.
+// A fault skips the room or face. The walkmesh is fixed per area load
+// (doors are separate collision meshes), so build once per area.
 int BuildAreaWallCache(void* area, WallEdge* outBuf, int maxEdges);
 
 // Walks every room's surface mesh and emits every face as a FloorTri.

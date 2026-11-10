@@ -1,5 +1,6 @@
 // Engine-free geometry over the walkmesh wall cache: the wall edge and
-// floor triangle records engine_area_walls.cpp extracts, and the
+// floor triangle records engine_area_walls.cpp extracts, the two filters
+// that turn its raw perimeter edges into real walls, and the
 // segment-vs-wall test the guidance, topology and cursor code use.
 
 #pragma once
@@ -8,62 +9,58 @@
 
 namespace acc::engine {
 
-// One perimeter walkmesh edge — a triangle side that has no neighbour
-// (`SurfaceMeshAdjacency.indices[e] == -1`) and therefore corresponds to a
-// physical wall in the room. Endpoints are in WORLD space (LocalToWorld
-// already applied at extraction time, so consumers do not need the room's
-// CSWCollisionMesh anymore — the edge is self-contained).
+// One perimeter walkmesh edge: a triangle side with no neighbour
+// (SurfaceMeshAdjacency index -1), in world space.
 struct WallEdge {
     Vector a;
     Vector b;
-    int    room_id;       // CSWSArea-local room index (0..room_count-1)
-    int    material_id;   // surfacemat.2da row id for the face this edge bounds
+    int    room_id;       // CSWSArea-local room index
+    int    material_id;   // surfacemat.2da row of the face this edge bounds
 };
 
-// One walkmesh floor triangle, all three corners in WORLD space
-// (LocalToWorld applied at extraction, same as WallEdge). The .wok mesh
-// is a 2.5D floor surface — no ceilings — so the triangle under an
-// (x,y) point IS the floor there; a plane interpolation over the three
-// corners gives the exact height even on ramps.
+// One walkmesh floor triangle in world space. The .wok mesh is a 2.5D floor
+// with no ceilings, so the triangle under a point is the floor there and a
+// plane through its corners gives the height, ramps included.
 struct FloorTri {
     Vector a;
     Vector b;
     Vector c;
 };
 
-// Same-floor z tolerance for the segment-vs-wall test below (world units
-// = metres). A wall edge whose z at the crossing point differs from the
-// ray's z by more than this is on another floor and is not a blocker —
-// see the 3D guard in SegmentCrossesWalkmesh. 2m clears step/slope edge
-// authoring (~2.25m faces dedup elsewhere) while excluding genuine
-// inter-deck stacks. Confirmed against the engine nav graph: a 3D-aware
-// crosscheck found zero nav-edge/wall crossings across 6 diverse areas
-// (wall cache is phantom-free), and every runtime over-block occurred at
-// elevated z against ground-floor walls — i.e. pure 2D-projection noise
-// this tolerance removes. Shared with room_topology::LogNavWallCrossings.
+// Any triangle side of a room, for the portal filter.
+struct TriEdge {
+    Vector a;
+    Vector b;
+    int    room_id;
+};
+
+// Drops each wall edge that coincides (about 1 cm, either direction) with a
+// triangle side of ANOTHER room. K1 joins rooms through portals, not
+// triangle adjacency: a boundary side carries adjacency -1 even where the
+// walkmesh continues into the next room, and that room's matching side may
+// not. A wall is real only where no room has a triangle beyond it. Keeps the
+// order; returns the kept count.
+int DropPortalEdges(WallEdge* walls, int count, const TriEdge* sides, int sideCount);
+
+// Drops the second of each same-room pair whose floor-plan footprints match
+// and that share at least one 3D endpoint: one edge on two non-manifold
+// faces, or a step's flat foot edge plus its slanted face edge (they share
+// the foot). Walls of two floors at the same XY share no endpoint and both
+// stay. Swap-removes, so the order changes; returns the kept count.
+int DropSameRoomDuplicates(WallEdge* walls, int count);
+
+// How far (metres) a wall's z at the crossing may sit from the ray's z and
+// still block. 2 m clears step and slope authoring and excludes real
+// stacked decks: every over-block a nav-graph crosscheck found was an
+// elevated ray against a ground-floor wall. Shared with
+// room_topology::LogNavWallCrossings.
 constexpr float kWallCrossZToleranceM = 2.0f;
 
-// Segment-vs-perimeter test in the XY plane, with an optional 3D guard: a
-// wall is only a blocker when its edge sits within kWallCrossZToleranceM of
-// the ray at the crossing point. Without the guard, a wall on a different
-// floor whose 2D projection happens to lie on a→b would falsely block
-// (the engine's nav graph proves these are not real obstacles). Returns
-// closest qualifying hit along a→b (smallest t in [0,1]).
-//
-// ignoreZ: when true, the z guard is skipped and the test is pure 2D.
-// Callers whose endpoints carry no trustworthy z must set this — notably
-// the waypoint smoother, which feeds 2D nav-graph nodes (no height field;
-// see PathPoint layout in guidance_pathfind.h). A 2D test there fails safe:
-// it can only over-block (keep a redundant waypoint), never miss a real
-// wall and route through it. The default (false) keeps the guard for the
-// room-shape/cursor consumers, where a phantom cross-floor wall would
-// instead corrupt a spoken description.
-//
-// False on: null walls, wallCount<=0, a==b. Degenerate edges (a==b)
-// skipped.
-//
-// Pulls from spatial::wall_surfaces::GetCachedWalls; this is the
-// consumer surface, not the build path.
+// The closest wall that a→b crosses in the floor plan (smallest t in
+// [0,1]), whose z at the crossing is within kWallCrossZToleranceM of the
+// ray's. ignoreZ drops that guard for callers without trustworthy z (the
+// waypoint smoother's 2D nav nodes): a pure 2D test can only over-block,
+// never route through a real wall. False for no walls or a == b.
 bool SegmentCrossesWalkmesh(const WallEdge* walls,
                             int wallCount,
                             const Vector& a,

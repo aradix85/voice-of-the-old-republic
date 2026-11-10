@@ -17,7 +17,8 @@ $underTest = @(
     'engine_compass.cpp',
     'minigame_turret_lead.cpp',
     'save_points.cpp',
-    'shortest_paths.cpp'
+    'shortest_paths.cpp',
+    'walkmesh_geometry.cpp'
 )
 
 $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'

@@ -4,6 +4,59 @@
 
 namespace acc::engine {
 
+namespace {
+
+// About 1 cm, squared: LocalToWorld's matrix math leaves "identical" edges
+// of two rooms slightly apart.
+constexpr float kSeamEpsSq = 1e-4f;
+
+bool Same3D(const Vector& p, const Vector& q) { return DistXYZSq(p, q) < kSeamEpsSq; }
+bool SameXY(const Vector& p, const Vector& q) { return DistXYSq(p, q) < kSeamEpsSq; }
+
+// The same edge in either direction, under `same`.
+template <typename Same>
+bool SameEdge(const Vector& a1, const Vector& b1, const Vector& a2, const Vector& b2, Same same) {
+    return (same(a1, a2) && same(b1, b2)) || (same(a1, b2) && same(b1, a2));
+}
+
+bool SharesEndpoint3D(const WallEdge& p, const WallEdge& q) {
+    return Same3D(p.a, q.a) || Same3D(p.a, q.b) || Same3D(p.b, q.a) || Same3D(p.b, q.b);
+}
+
+}  // namespace
+
+int DropPortalEdges(WallEdge* walls, int count, const TriEdge* sides, int sideCount) {
+    int kept = 0;
+    for (int i = 0; i < count; ++i) {
+        const WallEdge& w = walls[i];
+        bool portal = false;
+        for (int s = 0; s < sideCount && !portal; ++s) {
+            portal = sides[s].room_id != w.room_id &&
+                     SameEdge(w.a, w.b, sides[s].a, sides[s].b, Same3D);
+        }
+        if (!portal) walls[kept++] = w;
+    }
+    return kept;
+}
+
+int DropSameRoomDuplicates(WallEdge* walls, int count) {
+    for (int i = 0; i < count; ++i) {
+        for (int j = i + 1; j < count;) {
+            const WallEdge& p = walls[i];
+            const WallEdge& q = walls[j];
+            const bool duplicate = p.room_id == q.room_id &&
+                                   SameEdge(p.a, p.b, q.a, q.b, SameXY) &&
+                                   SharesEndpoint3D(p, q);
+            if (duplicate) {
+                walls[j] = walls[--count];
+            } else {
+                ++j;
+            }
+        }
+    }
+    return count;
+}
+
 bool SegmentCrossesWalkmesh(const WallEdge* walls,
                             int wallCount,
                             const Vector& a,
@@ -11,71 +64,41 @@ bool SegmentCrossesWalkmesh(const WallEdge* walls,
                             Vector& outHitPoint,
                             bool ignoreZ) {
     if (!walls || wallCount <= 0) return false;
+    const float abx = b.x - a.x;
+    const float aby = b.y - a.y;
+    if (abx * abx + aby * aby < 1e-10f) return false;  // not moving
 
-    // Movement direction in 2D. abx/aby form the player segment; if both
-    // are ~0 the cursor isn't actually moving and there's nothing to
-    // test (avoids the divide-by-zero in the parametric formula below).
-    float abx = b.x - a.x;
-    float aby = b.y - a.y;
-    if (abx * abx + aby * aby < 1e-10f) return false;
-
-    bool   anyHit       = false;
-    float  bestT        = 1e30f;
-    Vector bestHit      = a;
-
+    bool  anyHit = false;
+    float bestT  = 1e30f;
     for (int i = 0; i < wallCount; ++i) {
         const WallEdge& w = walls[i];
-        float cdx = w.b.x - w.a.x;
-        float cdy = w.b.y - w.a.y;
-
-        // Standard 2D segment-segment intersection in the XY plane.
-        // Solve for parametric t (along a→b) and u (along w.a→w.b):
-        //   a + t * (b - a) == w.a + u * (w.b - w.a)
-        // → denom = abx*cdy - aby*cdx (≈ 0 means the segments are
-        //   parallel; treat as no hit — sliding-along is fine for our
-        //   cursor scale).
-        float denom = abx * cdy - aby * cdx;
+        const float cdx = w.b.x - w.a.x;
+        const float cdy = w.b.y - w.a.y;
+        // a + t(b - a) == w.a + u(w.b - w.a); a zero denominator means
+        // parallel, which counts as no hit (sliding along is fine).
+        const float denom = abx * cdy - aby * cdx;
         if (denom > -1e-8f && denom < 1e-8f) continue;
+        const float dx = w.a.x - a.x;
+        const float dy = w.a.y - a.y;
+        const float t  = (dx * cdy - dy * cdx) / denom;
+        const float u  = (dx * aby - dy * abx) / denom;
+        if (t < 0.0f || t > 1.0f || u < 0.0f || u > 1.0f) continue;
 
-        float dx = w.a.x - a.x;
-        float dy = w.a.y - a.y;
-        float t  = (dx * cdy - dy * cdx) / denom;
-        float u  = (dx * aby - dy * abx) / denom;
-
-        if (t < 0.0f || t > 1.0f) continue;
-        if (u < 0.0f || u > 1.0f) continue;
-
-        // 3D guard: the XY test alone treats a wall on another floor as a
-        // blocker whenever its 2D projection lands on a→b. Wall edges are
-        // walkmesh floor-boundary edges, so their z tracks the floor they
-        // bound; reject the hit when the wall edge sits more than a
-        // same-floor tolerance from the ray at the crossing point. This is
-        // the entire remaining over-block population (validated via the
-        // nav-graph crosscheck) — every runtime false-block occurred at
-        // elevated z against a ground-floor wall.
-        //
-        // Skipped when ignoreZ: callers with untrustworthy endpoint z (the
-        // waypoint smoother feeds 2D nav nodes) must run pure 2D, or the
-        // guard silently drops real same-floor walls when the ray's z is
-        // bogus and routes the path straight through them.
+        // Wall edges bound a floor, so their z follows it: a crossing more
+        // than the tolerance above or below the ray is another floor's wall.
         if (!ignoreZ) {
-            float rayZ  = a.z   + t * (b.z   - a.z);
-            float wallZ = w.a.z + u * (w.b.z - w.a.z);
-            float dz = rayZ - wallZ;
+            float dz = (a.z + t * (b.z - a.z)) - (w.a.z + u * (w.b.z - w.a.z));
             if (dz < 0.0f) dz = -dz;
             if (dz > kWallCrossZToleranceM) continue;
         }
-
         if (t < bestT) {
-            bestT      = t;
-            bestHit.x  = a.x + t * abx;
-            bestHit.y  = a.y + t * aby;
-            bestHit.z  = a.z + t * (b.z - a.z);
-            anyHit     = true;
+            bestT  = t;
+            anyHit = true;
         }
     }
-
-    if (anyHit) outHitPoint = bestHit;
+    if (anyHit) {
+        outHitPoint = Vector{a.x + bestT * abx, a.y + bestT * aby, a.z + bestT * (b.z - a.z)};
+    }
     return anyHit;
 }
 
