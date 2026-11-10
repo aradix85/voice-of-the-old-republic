@@ -62,7 +62,7 @@ struct EditboxPanelSpec {
     // string substitutes that string for the generic title-walk speech
     // (which picks the first announceable label child by panel-controls
     // index — wrong for CSWGuiNameChargen, where the first label is the
-    // stale "CHARAKTERAUSWAHL" header BioWare reuses across all chargen
+    // stale chargen header BioWare reuses across all chargen
     // sub-panels). Returning nullptr falls back to the generic walk.
     //
     // Callbacks return a pointer to caller-stable storage (file-static
@@ -86,7 +86,7 @@ void* ChargenNameFindEditbox(void* panel) {
 
 // Substitute the chargen Name panel's title speech: read subtitle_label
 // ("Name") instead of letting the generic walk land on main_title_label
-// ("CHARAKTERAUSWAHL"). Reading the live label rather than hardcoding a
+// (the stale chargen header). Reading the live label rather than hardcoding a
 // literal preserves localisation — subtitle_label is filled from the
 // panel's .gui resource which is localised per install.
 const char* ChargenNameTitleOverride(void* panel) {

@@ -158,7 +158,7 @@ std::string RenderDoorDirection(int doorIdx, const char* dirWord) {
     const char* noun =
         (locName && locName[0]) ? locName
                                 : acc::strings::Get(Id::MapCursorDoorNoun);
-    if (!noun || !noun[0]) noun = "Tür";  // last-ditch fallback if strings table missing
+    if (!noun || !noun[0]) noun = "Door";  // last-ditch fallback if strings table missing
 
     // Designer-authored doors often duplicate the landmark string into
     // CSWSDoor.loc_name (e.g. Taris Hideout NW exit: loc_name and the

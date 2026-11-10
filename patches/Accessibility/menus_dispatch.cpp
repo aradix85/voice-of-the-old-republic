@@ -349,8 +349,8 @@ extern "C" int __cdecl OnHandleInputEvent(void* thisPtr, int param_1, int param_
     // but UNRELIABLE for routing, because flows that pre-instantiate multiple
     // panels in one frame (character creation: modal + 2 wizards) leave
     // g_currentPanel pointing at the last-walked panel, which is NOT the
-    // visible foreground. Verified from patch-20260502-164320.log: in that
-    // flow modal_stack.size goes 0→4 with the user-visible Standardcharakter
+    // visible foreground. In that
+    // flow modal_stack.size goes 0→4 with the user-visible default-character
     // modal correctly at modal[top], while g_currentPanel had latched onto
     // a backgrounded wizard. See ManagerStack diagnostic and report.
     //

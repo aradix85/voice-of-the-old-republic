@@ -160,7 +160,7 @@ void ClassifyAsArea(const acc::engine::navgraph::NavGraphSnapshot& g, int n,
     const char* noun  = acc::strings::Get(isLargeArea ? Id::AreaNounLarge
                                                       : Id::AreaNoun);
     const char* axisW = elong ? acc::strings::Get(axisId) : nullptr;
-    if (!noun[0]) noun = "Bereich";
+    if (!noun[0]) noun = "Area";
 
     // Drop the exit list when it exactly repeats the elongation axis:
     // an elongated area whose only exits are the two ends of that axis
@@ -250,7 +250,7 @@ void ClassifyAsDeadEnd(const acc::engine::navgraph::NavGraphSnapshot& g, int n,
             "WallTopo",
             "ClassifyCluster: degree-1 at (%.1f,%.1f) carries %d "
             "transition trigger%s — rendered as passage \"%s\" instead "
-            "of Sackgasse",
+            "of dead end",
             centroid.x, centroid.y, trigCount,
             trigCount == 1 ? "" : "s", outLabel.c_str());
         return;
@@ -280,7 +280,7 @@ void ClassifyAsDeadEnd(const acc::engine::navgraph::NavGraphSnapshot& g, int n,
             "WallTopo",
             "ClassifyCluster: degree-1 at (%.1f,%.1f,%.1f) FAILED "
             "walkmesh-shape gate (parent=%d at %.1f,%.1f) — labelling "
-            "as filtered Sackgasse (LookupAt rescue only)",
+            "as filtered dead end (LookupAt rescue only)",
             centroid.x, centroid.y, centroid.z,
             nb, g.nodes[nb].pos.x, g.nodes[nb].pos.y);
     }
@@ -440,7 +440,7 @@ void ClassifyDemotedToDeadEnd(const Vector& centroid,
         acclog::Write(
             "WallTopo",
             "ClassifyCluster: junction at (%.1f,%.1f) carries transition "
-            "trigger — rendered as passage \"%s\" instead of Sackgasse",
+            "trigger — rendered as passage \"%s\" instead of dead end",
             centroid.x, centroid.y, outLabel.c_str());
         return;
     }
@@ -461,7 +461,7 @@ void ClassifyDemotedToDeadEnd(const Vector& centroid,
     outSig  = (kKindDeadEnd & 0xff) | ((bit & 0xff) << 8);
     acclog::Write(
         "WallTopo",
-        "ClassifyCluster: junction at (%.1f,%.1f) DEMOTED to Sackgasse "
+        "ClassifyCluster: junction at (%.1f,%.1f) DEMOTED to dead end "
         "(real-exits=1) → \"%s\"",
         centroid.x, centroid.y, outLabel.c_str());
     return;

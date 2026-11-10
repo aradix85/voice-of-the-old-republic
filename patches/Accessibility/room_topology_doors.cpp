@@ -203,7 +203,7 @@ void SnapshotTransitionTriggers(void* area) {
         // GIT XPosition/YPosition the Geometry list is authored against),
         // not where the player crosses it. Transition polygons are long
         // strips across a corridor mouth, so the origin can sit many
-        // metres from the crossing (Wohnmodul 082 East: origin
+        // metres from the crossing (Citadel Station's residential module 082 East: origin
         // 8m east of the actual crossing, voiced as "transition East" for a
         // south-west exit). The polygon centroid is what the bearing and
         // the nearest-node attach must use; origin only as fallback.

@@ -507,7 +507,7 @@ bool LookupAt(void* area, const Vector& worldPos,
             "WallTopo",
             "LookupAt ALL-BLOCKED at (%.1f,%.1f,%.1f): every labelled "
             "node (%d candidates) was wall-filtered. Falling back to "
-            "neutral Bereich. Possible overfire — check wall cache vs "
+            "neutral Area. Possible overfire — check wall cache vs "
             "player position.",
             worldPos.x, worldPos.y, worldPos.z, blockedSeen);
     }

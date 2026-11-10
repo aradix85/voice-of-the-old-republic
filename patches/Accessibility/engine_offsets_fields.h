@@ -248,7 +248,7 @@ const size_t    kEditboxStringLengthOffset = acc::off::Pick(0x15c, 0x164);
 const size_t    kNameChargenEditboxOffset  = acc::off::Pick(0x230, 0x240);
 const size_t    kNameChargenEndButtonOffset = acc::off::Pick(0x6c, 0x70);
 
-// CSWGuiNameChargen carries a `main_title_label` ("CHARAKTERAUSWAHL") and a
+// CSWGuiNameChargen carries a `main_title_label` (the chargen header) and a
 // `subtitle_label` ("Name") at distinct fixed offsets. The first one is the
 // stale parent-flow header that BioWare reuses across all chargen sub-
 // panels; the second is the screen-specific title. Our title-walk picks

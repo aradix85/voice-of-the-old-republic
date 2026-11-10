@@ -99,7 +99,7 @@ static void AnnouncePanelTitle(void* panel) {
 
     // Same hook for editbox-owning panels — CSWGuiNameChargen substitutes
     // subtitle_label ("Name") for the stale main_title_label
-    // ("CHARAKTERAUSWAHL") that the generic walk would otherwise pick.
+    // (the stale chargen header) that the generic walk would otherwise pick.
     if (const char* override =
             acc::menus::editbox::GetTitleOverride(panel)) {
         acclog::Write("Menus.PanelWalk",
@@ -110,8 +110,8 @@ static void AnnouncePanelTitle(void* panel) {
     }
 
     // CSWGuiPowersLevelUp shares the pwrlvlup.gui placeholder
-    // ("CHARAKTERAUSWAHL" at id 0) — same problem chargen Name had.
-    // Substitute the sub_title_label ("Kr�fte" at id 1).
+    // (the chargen header at id 0) — same problem chargen Name had.
+    // Substitute the sub_title_label (the powers title at id 1).
     if (const char* override =
             acc::menus::powers_levelup::GetTitleOverride(panel)) {
         acclog::Write("Menus.PanelWalk",

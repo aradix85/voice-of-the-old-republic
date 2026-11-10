@@ -37,8 +37,8 @@ namespace acc::menus::powers_levelup {
 bool IsPowersLevelUpPanel(void* panel);
 
 // Title-override hook for AnnouncePanelTitle. Returns the panel's
-// sub_title_label (.gui id 1, "Kr�fte") instead of the misleading
-// main_title_label (id 0, "CHARAKTERAUSWAHL") baked into pwrlvlup.gui.
+// sub_title_label (.gui id 1, the powers title) instead of the misleading
+// main_title_label (id 0, the chargen header) baked into pwrlvlup.gui.
 // nullptr when `panel` isn't a PowersLevelUp screen. Buffer is
 // thread-local; caller copies / speaks before re-invoking.
 const char* GetTitleOverride(void* panel);

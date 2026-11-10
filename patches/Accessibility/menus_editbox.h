@@ -64,7 +64,7 @@ void TickEditboxMonitors();
 
 // Title-speech override lookup. If `panel` matches an editbox spec that
 // supplies its own title text (e.g. CSWGuiNameChargen carries a stale
-// "CHARAKTERAUSWAHL" main_title_label that the chargen flow doesn't
+// chargen-header main_title_label that the chargen flow doesn't
 // overwrite — the screen-specific title lives on subtitle_label), returns
 // the localised replacement string. Returns nullptr if no spec matches or
 // the matched spec has no override.

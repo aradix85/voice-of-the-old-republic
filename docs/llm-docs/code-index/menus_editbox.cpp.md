@@ -12,7 +12,7 @@ Single armed editbox at a time — vanilla KOTOR has exactly one editbox in the 
 
 - L76 `bool ChargenNameMatches(void* panel)`
 - L82 `void* ChargenNameFindEditbox(void* panel)`
-- L92 `const char* ChargenNameTitleOverride(void* panel)`: Substitute the chargen Name panel's title speech: read subtitle_label ("Name") instead of letting the generic walk land on main_title_label ("CHARAKTERAUSWAHL").
+- L92 `const char* ChargenNameTitleOverride(void* panel)`: Substitute the chargen Name panel's title speech: read subtitle_label ("Name") instead of letting the generic walk land on main_title_label (the stale chargen header).
 - L114 `bool SaveNameMatches(void* panel)`
 - L120 `void* SaveNameFindEditbox(void* panel)`
 - L128 `const char* SaveNameTitleOverride(void* panel)`: Substitute the save-name popup's title speech with its own title_label.
