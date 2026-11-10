@@ -225,6 +225,9 @@ combat_query: the leader-change poll moved to party_leader_announce
 (c90e8703); lean, 585 to 282 lines, the HP, effect-icon and effect-type
 reads in engine_reads and shared with the examine view (bef48dc3).
 strfmt: FixedText, the one bounded printf-append (c421d637).
+room_topology_doors: lean, 565 to 409 lines, no split (8afeed90).
+Leftovers: the audio probe's two hotkey actions, comments that named
+interact_hotkey.cpp (7c216e29); docs name the current files (f1b0c7c3).
 view_mode: narration and Enter split off (49c3e25e), lean (71ffbbfd);
 removed with its listener hook and the wall-surface clustering
 (82c9a9bf). viewpoint.h keeps what the rest asked it for: the camera
@@ -353,7 +356,7 @@ prefix (menus_listbox_picker.cpp).
   possible; for files above 500 lines, judge whether a split into modules of
   things that belong together makes sense, and do it where it does.
 - Next file, by size (2026-11-10 21:15, strings*.cpp excepted):
-  to judge: room_topology_doors 574, log 563, menus_chargen_feats 561,
+  to judge: log 563, menus_chargen_feats 561,
   combat_diag 543, minigame_turret_peg 536,
   menus_listbox_picker 524, menus_focus_k2 520, help 520, menus_focus 510,
   menus_powers_levelup 510. The catalog headers (engine_offsets_fields.h
@@ -402,6 +405,10 @@ prefix (menus_listbox_picker.cpp).
     and engine_keymap_codes (49%).
   - clang-cl -fsyntax-only -Wno-everything -Wunused-* per file, for
     unused code.
+  Run clang_tidy.py FILE on every file a lean rewrites: it caught an
+  index of -1 in the first one it was used on (room_topology_doors).
+  A check for docs: every `name.cpp` / `name.h` a .md mentions should
+  exist in patches/Accessibility (history sections excepted).
   cppcheck is not in CI: the packages a runner can install are old
   versions and would not give our results.
 - F15 GetTickCount is called directly 105 times beside acc::tick::NowMs:
