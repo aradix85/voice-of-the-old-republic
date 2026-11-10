@@ -50,11 +50,11 @@ namespace KotorAccessibilityInstaller
         private const string EmbeddedResourceName = "sources.json";
 
         /// <summary>
-        /// The live copy, on the default branch of our own repository. Must stay
+        /// The live copy, on branch bridge of this fork. Must stay
         /// a host we control — see the trust note in the class docs.
         /// </summary>
         private const string RemoteUrl =
-            "https://raw.githubusercontent.com/JeanStiletto/voice-of-the-old-republic/main/" +
+            "https://raw.githubusercontent.com/aradix85/voice-of-the-old-republic/bridge/" +
             "installer/KotorAccessibilityInstaller/Resources/sources.json";
 
         /// <summary>How long to wait on the remote copy before giving up on it.</summary>

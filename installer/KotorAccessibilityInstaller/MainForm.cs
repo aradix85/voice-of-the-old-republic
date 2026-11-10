@@ -290,8 +290,7 @@ namespace KotorAccessibilityInstaller
                 {
                     try
                     {
-                        latestVersion = await githubClient.GetLatestModVersionAsync(Config.ModRepositoryUrl);
-                        Logger.Info($"Latest mod version for registry: {latestVersion ?? "unknown"}");
+                        latestVersion = await githubClient.GetModBuildAsync(Config.ModRepositoryUrl, Config.ReleaseTag);
                     }
                     catch (Exception ex)
                     {
@@ -300,8 +299,9 @@ namespace KotorAccessibilityInstaller
 
                     try
                     {
-                        downloadedKpatch = await githubClient.DownloadKPatchAsync(
+                        downloadedKpatch = await githubClient.DownloadReleaseAssetByTagAsync(
                             Config.ModRepositoryUrl,
+                            Config.ReleaseTag,
                             Config.KPatchAssetName,
                             p => UpdateProgress(5 + (p * 35 / 100)));
                     }
@@ -481,16 +481,10 @@ namespace KotorAccessibilityInstaller
 
                 UpdateStatus(InstallerLocale.Get("Main_StatusRegistering"));
                 UpdateProgress(95);
-                // The lower of the mod release and this installer. The .kpatch
-                // always comes from the newest release, but the bundled runtime
-                // files come out of this EXE — registering the release number
-                // from an older installer told every later run (including a
-                // current installer) that the install was up to date, so the
-                // stale bundled files were never replaced.
-                string installerVersion = InstallerVersion.Number();
-                string registeredVersion = latestVersion == null || Program.IsNewerVersion(latestVersion, installerVersion)
-                    ? installerVersion
-                    : latestVersion;
+                // The build id of the release the .kpatch came from, so the next
+                // run can tell whether a newer build is out; the installer's own
+                // version when GitHub could not be reached.
+                string registeredVersion = latestVersion ?? InstallerVersion.Number();
                 RegistryManager.Register(_target, _gamePath, registeredVersion, uninstallerPath);
 
                 UpdateProgress(100);

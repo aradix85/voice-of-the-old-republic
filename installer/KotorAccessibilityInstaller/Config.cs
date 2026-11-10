@@ -7,10 +7,16 @@ namespace KotorAccessibilityInstaller
     public static class Config
     {
         /// <summary>
-        /// GitHub repository URL for the Voice of the Old Republic mod.
-        /// Format: "https://github.com/username/repo"
+        /// This fork's GitHub repository; the mod is downloaded from its
+        /// <see cref="ReleaseTag"/> release.
         /// </summary>
-        public const string ModRepositoryUrl = "https://github.com/JeanStiletto/voice-of-the-old-republic";
+        public const string ModRepositoryUrl = "https://github.com/aradix85/voice-of-the-old-republic";
+
+        /// <summary>
+        /// The rolling pre-release that .github/workflows/build.yml re-creates
+        /// on every push to branch bridge.
+        /// </summary>
+        public const string ReleaseTag = "bridge-latest";
 
         /// <summary>
         /// The README of this fork (branch bridge), opened from the end screen.

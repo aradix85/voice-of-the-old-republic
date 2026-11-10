@@ -1,5 +1,6 @@
-# Builds accessibility.dll for the "bridge" branch on GitHub's Windows runners
-# and publishes it as the rolling pre-release "bridge-latest".
+# Builds accessibility.dll and the installer for the "bridge" branch on
+# GitHub's Windows runners and publishes them as the rolling pre-release
+# "bridge-latest", which the installer downloads the mod from.
 #
 # kdev's config check wants a game folder with swkotor.exe and a Kotor Patch
 # Manager release with bin/KotorPatcher.dll. The build itself reads neither, so
@@ -71,6 +72,20 @@ jobs:
             [IO.Compression.ZipFileExtensions]::ExtractToFile($entry, (Join-Path (Resolve-Path out) 'accessibility.dll'), $true)
           } finally { $zip.Dispose() }
           Copy-Item build/Accessibility.kpatch out/
+
+      - name: Publish the installer
+        shell: pwsh
+        run: |
+          dotnet publish installer/KotorAccessibilityInstaller/KotorAccessibilityInstaller.csproj `
+            -c Release -r win-x64 --self-contained true --nologo `
+            -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true `
+            -p:EnableCompressionInSingleFile=true
+          if ($LASTEXITCODE -ne 0) { throw "installer publish failed ($LASTEXITCODE)" }
+          $exe = Get-ChildItem installer/KotorAccessibilityInstaller/bin/Release -Recurse `
+            -Filter VoiceOfTheOldRepublicInstaller.exe | Where-Object FullName -match '\\publish\\' |
+            Select-Object -First 1
+          if (-not $exe) { throw 'VoiceOfTheOldRepublicInstaller.exe not found after publish' }
+          Copy-Item $exe.FullName out/
           Get-ChildItem out | Format-Table Name, Length
 
       - uses: actions/upload-artifact@v4
@@ -88,9 +103,10 @@ jobs:
           $notes = @"
           Build of branch bridge at commit $short.
 
-          Install: close the game, then copy accessibility.dll to the game folder as patches\accessibility.dll (for example C:\Program Files (x86)\Steam\steamapps\common\swkotor\patches\accessibility.dll). Requires Voice of the Old Republic 0.9.1 to be installed first.
+          New install: run VoiceOfTheOldRepublicInstaller.exe as administrator; it downloads Accessibility.kpatch from this release. Update by hand: close the game, then copy accessibility.dll to the game folder as patches\accessibility.dll.
           "@
           gh release delete bridge-latest --cleanup-tag --yes 2>$null
           gh release create bridge-latest out/accessibility.dll out/Accessibility.kpatch `
+            out/VoiceOfTheOldRepublicInstaller.exe `
             --target '${{ github.sha }}' --prerelease `
             --title "Bridge build $short" --notes $notes

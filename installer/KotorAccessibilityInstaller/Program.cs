@@ -189,8 +189,7 @@ namespace KotorAccessibilityInstaller
             {
                 using (var client = new GitHubClient())
                 {
-                    latestVersion = client.GetLatestModVersionAsync(Config.ModRepositoryUrl).GetAwaiter().GetResult();
-                    Logger.Info($"Latest version: {latestVersion}");
+                    latestVersion = client.GetModBuildAsync(Config.ModRepositoryUrl, Config.ReleaseTag).GetAwaiter().GetResult();
                 }
             }
             catch (Exception ex)
@@ -218,7 +217,8 @@ namespace KotorAccessibilityInstaller
                 // An unknown installed version stays out of the stale set:
                 // there is nothing to compare against, and offering an update
                 // on a guess would re-run the whole apply for no stated reason.
-                if (game.Version != null && latestVersion != null && IsNewerVersion(latestVersion, game.Version))
+                if (game.Version != null && latestVersion != null &&
+                    !string.Equals(game.Version, latestVersion, StringComparison.OrdinalIgnoreCase))
                     staleGames.Add(game);
             }
             Logger.Info($"Update available for: {(staleGames.Count > 0 ? JoinGameNames(staleGames) : "(none)")}");
@@ -460,46 +460,6 @@ namespace KotorAccessibilityInstaller
                 sb.Append(game.Target.DisplayName);
             }
             return sb.ToString();
-        }
-
-        /// <summary>
-        /// Welcome → Base-components info → Optional-mods checkboxes → Main install.
-        /// Each form can cancel the chain.
-        /// </summary>
-        internal static bool IsNewerVersion(string latestVersion, string installedVersion)
-        {
-            try
-            {
-                var latest = NormalizeVersion(latestVersion);
-                var installed = NormalizeVersion(installedVersion);
-                Logger.Info($"Version comparison: latest={latest}, installed={installed}");
-                return latest > installed;
-            }
-            catch (Exception ex)
-            {
-                Logger.Warning($"Version comparison failed: {ex.Message}");
-                return !string.Equals(latestVersion, installedVersion, StringComparison.OrdinalIgnoreCase);
-            }
-        }
-
-        internal static Version NormalizeVersion(string version)
-        {
-            if (string.IsNullOrEmpty(version)) return new Version(0, 0, 0, 0);
-            version = version.TrimStart('v', 'V');
-
-            int dashIndex = version.IndexOf('-');
-            if (dashIndex > 0) version = version.Substring(0, dashIndex);
-
-            int spaceIndex = version.IndexOf(' ');
-            if (spaceIndex > 0) version = version.Substring(0, spaceIndex);
-
-            string[] parts = version.Trim().Split('.');
-            int major = parts.Length > 0 && int.TryParse(parts[0], out int m) ? m : 0;
-            int minor = parts.Length > 1 && int.TryParse(parts[1], out int n) ? n : 0;
-            int build = parts.Length > 2 && int.TryParse(parts[2], out int b) ? b : 0;
-            int revision = parts.Length > 3 && int.TryParse(parts[3], out int r) ? r : 0;
-
-            return new Version(major, minor, build, revision);
         }
     }
 }

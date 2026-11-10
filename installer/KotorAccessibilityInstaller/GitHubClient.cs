@@ -4,22 +4,18 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace KotorAccessibilityInstaller
 {
     /// <summary>
-    /// Handles downloading the .kpatch from the mod's GitHub releases.
+    /// Downloads from GitHub releases: the mod's .kpatch from this fork's
+    /// bridge-latest release, and pinned third-party assets.
     /// </summary>
     public class GitHubClient : IDisposable
     {
         private readonly HttpClient _httpClient;
-
-        // repoUrl -> latest release tag, resolved once per client instance
-        // (see ResolveLatestTagAsync).
-        private readonly Dictionary<string, string> _latestTagCache = new Dictionary<string, string>();
 
         public GitHubClient()
         {
@@ -28,56 +24,43 @@ namespace KotorAccessibilityInstaller
             _httpClient.Timeout = TimeSpan.FromMinutes(5);
         }
 
-        public async Task<string> GetLatestModVersionAsync(string repoUrl)
+        /// <summary>
+        /// Build id of the mod on a release tag: "bridge-" and the first seven
+        /// characters of the commit the release was built from. Null when GitHub
+        /// cannot be reached. Only ever compared for equality.
+        /// </summary>
+        public async Task<string> GetModBuildAsync(string repoUrl, string tag)
         {
             try
             {
-                string tag = await ResolveLatestTagAsync(repoUrl);
-                if (string.IsNullOrEmpty(tag))
+                string apiUrl = repoUrl.Replace("github.com", "api.github.com/repos")
+                                + "/releases/tags/" + Uri.EscapeDataString(tag);
+                using var req = new HttpRequestMessage(HttpMethod.Get, apiUrl);
+                req.Headers.Add("Accept", "application/vnd.github.v3+json");
+                using var resp = await _httpClient.SendAsync(req);
+                resp.EnsureSuccessStatusCode();
+                using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
+                string sha = doc.RootElement.TryGetProperty("target_commitish", out var t) ? t.GetString() : null;
+                if (sha == null || sha.Length < 7)
                 {
-                    Logger.Warning("Could not determine latest release tag");
+                    Logger.Warning($"Release {tag} names no commit");
                     return null;
                 }
-                string version = tag.TrimStart('v', 'V');
-                Logger.Info($"Latest mod version: {version}");
-                return version;
+                string build = "bridge-" + sha.Substring(0, 7);
+                Logger.Info($"Latest mod build: {build}");
+                return build;
             }
             catch (Exception ex)
             {
-                Logger.Error("Failed to get mod version", ex);
+                Logger.Error("Failed to get the mod build", ex);
                 return null;
-            }
-        }
-
-        public async Task<string> DownloadKPatchAsync(string repoUrl, string assetName, Action<int> progress = null)
-            => await DownloadReleaseAssetAsync(repoUrl, assetName, progress);
-
-        /// <summary>
-        /// Download a named release asset from the latest release of a GitHub
-        /// repo. Returns the path of the downloaded file in the system temp dir.
-        /// Used for our .kpatch (which tracks the latest release).
-        /// For pinned tags, use <see cref="DownloadReleaseAssetByTagAsync"/>.
-        /// </summary>
-        public async Task<string> DownloadReleaseAssetAsync(string repoUrl, string assetName, Action<int> progress = null)
-        {
-            try
-            {
-                string tag = await ResolveLatestTagAsync(repoUrl);
-                if (string.IsNullOrEmpty(tag))
-                    throw new Exception($"Could not determine the latest release tag at {repoUrl}.");
-                return await DownloadTaggedAssetAsync(repoUrl, tag, assetName, progress);
-            }
-            catch (Exception ex)
-            {
-                Logger.Error($"Failed to download release asset '{assetName}'", ex);
-                throw;
             }
         }
 
         /// <summary>
         /// Download a named release asset from a specific tagged release.
-        /// Used for HoloPatcher (NickHugi/PyKotor's "latest" release is the
-        /// Toolset, not HoloPatcher — we have to pin to the patcher tag).
+        /// Used for the mod's .kpatch and for HoloPatcher (NickHugi/PyKotor's
+        /// "latest" release is the Toolset, so the patcher tag is pinned).
         /// </summary>
         public async Task<string> DownloadReleaseAssetByTagAsync(string repoUrl, string tag, string assetName, Action<int> progress = null)
         {
@@ -94,7 +77,7 @@ namespace KotorAccessibilityInstaller
 
         // ----- Download path (rate-limit-free primary, API fallback) ------------
         //
-        // Both download entry points funnel here. The PRIMARY path hits the
+        // Release downloads funnel here. The PRIMARY path hits the
         // github.com release-download redirect (.../releases/download/<tag>/<asset>),
         // which is NOT the api.github.com REST API and therefore does NOT count
         // against GitHub's 60-request/hour unauthenticated rate limit. That limit
@@ -172,81 +155,6 @@ namespace KotorAccessibilityInstaller
             var dlReq = new HttpRequestMessage(HttpMethod.Get, apiAssetUrl);
             dlReq.Headers.Add("Accept", "application/octet-stream");
             await DownloadFileAsync(dlReq, destPath, progress);
-        }
-
-        // ----- Tag resolution (redirect-first, API fallback) --------------------
-
-        /// <summary>
-        /// Resolve a repo's latest release tag. The PRIMARY path reads the
-        /// redirect target of github.com/.../releases/latest (which 302s to
-        /// .../releases/tag/&lt;tag&gt;) — no api.github.com call, no rate-limit
-        /// hit. Retries the redirect with backoff (intermittent github.com
-        /// outages often clear within a second or two) and falls back to the
-        /// rate-limited API only when every attempt fails.
-        ///
-        /// The result is cached per client instance: one install run resolves
-        /// "latest" for the version check AND the download, and both must see
-        /// the same tag anyway — a release published mid-install should not
-        /// switch the asset out from under the recorded version.
-        /// </summary>
-        private async Task<string> ResolveLatestTagAsync(string repoUrl)
-        {
-            if (_latestTagCache.TryGetValue(repoUrl, out string cached))
-                return cached;
-
-            const int maxAttempts = 3;
-            for (int attempt = 1; attempt <= maxAttempts; attempt++)
-            {
-                try
-                {
-                    string tag = await ResolveLatestTagViaRedirectAsync(repoUrl);
-                    if (!string.IsNullOrEmpty(tag))
-                    {
-                        _latestTagCache[repoUrl] = tag;
-                        return tag;
-                    }
-                    Logger.Warning("Could not parse tag from /releases/latest redirect; falling back to API");
-                    break; // a parseable-but-wrong redirect won't improve on retry
-                }
-                catch (Exception ex)
-                {
-                    Logger.Warning($"/releases/latest redirect attempt {attempt}/{maxAttempts} failed: {ex.Message}");
-                    if (attempt < maxAttempts)
-                    {
-                        await Task.Delay(BackoffDelay(attempt));
-                    }
-                }
-            }
-
-            string apiTag = await ResolveLatestTagViaApiAsync(repoUrl);
-            if (!string.IsNullOrEmpty(apiTag))
-                _latestTagCache[repoUrl] = apiTag;
-            return apiTag;
-        }
-
-        private async Task<string> ResolveLatestTagViaRedirectAsync(string repoUrl)
-        {
-            string latestUrl = $"{repoUrl}/releases/latest";
-            // HttpClient auto-follows redirects; after the hop the final request
-            // URI is .../releases/tag/<tag>. ResponseHeadersRead avoids pulling
-            // the HTML release page body.
-            using var resp = await _httpClient.GetAsync(latestUrl, HttpCompletionOption.ResponseHeadersRead);
-            resp.EnsureSuccessStatusCode();
-            string finalPath = resp.RequestMessage?.RequestUri?.AbsolutePath ?? string.Empty;
-            var m = Regex.Match(finalPath, @"/releases/tag/([^/]+)/?$");
-            return m.Success ? Uri.UnescapeDataString(m.Groups[1].Value) : null;
-        }
-
-        private async Task<string> ResolveLatestTagViaApiAsync(string repoUrl)
-        {
-            string apiUrl = repoUrl.Replace("github.com", "api.github.com/repos") + "/releases/latest";
-            using var req = new HttpRequestMessage(HttpMethod.Get, apiUrl);
-            req.Headers.Add("Accept", "application/vnd.github.v3+json");
-            using var resp = await _httpClient.SendAsync(req);
-            resp.EnsureSuccessStatusCode();
-            string json = await resp.Content.ReadAsStringAsync();
-            using var doc = JsonDocument.Parse(json);
-            return doc.RootElement.TryGetProperty("tag_name", out var t) ? t.GetString() : null;
         }
 
         /// <summary>

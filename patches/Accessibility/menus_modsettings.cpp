@@ -142,12 +142,11 @@ enum class RowKind {
     Link,      // Enter opens a URL in the browser; speech reads "Name" only
 };
 
-// Link-row targets. The Ko-fi page is the one in README.md's support
-// section; the releases/latest redirect serves the page a browser can read
-// (not the API JSON).
+// Link-row targets: the original author's Ko-fi page (README.md's support
+// section) and this fork's changelog.
 constexpr const char* kSupportModderUrl = "https://ko-fi.com/jeanstiletto";
 constexpr const char* kLatestChangesUrl =
-    "https://github.com/JeanStiletto/voice-of-the-old-republic/releases/latest";
+    "https://github.com/aradix85/voice-of-the-old-republic/blob/bridge/docs/CHANGELOG.md";
 
 // The README of this fork (branch bridge). Same as Config.ReadmeUrl in the
 // installer.

@@ -1,4 +1,4 @@
-# Program.cs (506 lines)
+# Program.cs (466 lines)
 
 Source: `installer/KotorAccessibilityInstaller/Program.cs`
 
@@ -16,5 +16,3 @@ Source: `installer/KotorAccessibilityInstaller/Program.cs`
 - L419 `private static List<InstalledGame> FindInstalledGames(GameTarget only, string pathOverride)`: Every game that currently has the mod, KOTOR 1 first.
 - L441 `private static string InstalledPathOf(List<InstalledGame> games, GameTarget target)`: That game's folder among , or null.
 - L454 `private static string JoinGameNames(List<InstalledGame> games)`: "KOTOR 1" or "KOTOR 1, KOTOR 2" — for the headings and log lines that have to name a set rather than one game.
-- L469 `internal static bool IsNewerVersion(string latestVersion, string installedVersion)`: Welcome → Base-components info → Optional-mods checkboxes → Main install.
-- L485 `internal static Version NormalizeVersion(string version)`
