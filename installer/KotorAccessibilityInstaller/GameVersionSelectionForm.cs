@@ -46,7 +46,6 @@ namespace KotorAccessibilityInstaller
         {
             InitializeComponents();
             ApplyLocale();
-            InstallerLocale.OnLanguageChanged += ApplyLocale;
             FormClosing += (s, e) =>
             {
                 if (!ProceedWithInstall && !CancelConfirm.ConfirmCancel(this))
@@ -54,7 +53,6 @@ namespace KotorAccessibilityInstaller
                     e.Cancel = true;
                     return;
                 }
-                InstallerLocale.OnLanguageChanged -= ApplyLocale;
                 if (!ProceedWithInstall) Logger.Info("User closed game-version selection dialog without proceeding");
             };
         }

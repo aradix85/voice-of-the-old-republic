@@ -1,4 +1,4 @@
-# Config.cs (254 lines)
+# Config.cs (253 lines)
 
 Source: `installer/KotorAccessibilityInstaller/Config.cs`
 

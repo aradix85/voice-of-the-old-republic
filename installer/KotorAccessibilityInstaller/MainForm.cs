@@ -17,7 +17,6 @@ namespace KotorAccessibilityInstaller
         private readonly GameTarget _target;
         private readonly bool _updateOnly;
         private readonly bool _headless;
-        private readonly string _language;
         private readonly ModSelection _modSelection;
         private readonly string _localKpatchPath;
         private bool _installFinished;
@@ -35,19 +34,18 @@ namespace KotorAccessibilityInstaller
         private CheckBox _launchCheckBox;
         private CheckBox _readmeCheckBox;
 
-        public MainForm(GameTarget target, string detectedGamePath, bool updateOnly = false, string language = null, ModSelection modSelection = null, string localKpatchPath = null, bool headless = false)
+        public MainForm(GameTarget target, string detectedGamePath, bool updateOnly = false, ModSelection modSelection = null, string localKpatchPath = null, bool headless = false)
         {
             _target = target;
             _gamePath = detectedGamePath;
             _updateOnly = updateOnly;
             _headless = headless;
-            _language = language;
             // Null modSelection happens on the update-only path (we don't re-prompt for
             // optional mods on a kpatch update). Treat as "skip optional installs".
             _modSelection = modSelection;
             _localKpatchPath = localKpatchPath;
             InitializeComponents();
-            Logger.Info($"MainForm initialized (game: {target.Id}, updateOnly: {updateOnly}, headless: {headless}, language: {language ?? "none"}, modSelection: {modSelection?.ToString() ?? "none"}, localKpatch: {localKpatchPath ?? "none"})");
+            Logger.Info($"MainForm initialized (game: {target.Id}, updateOnly: {updateOnly}, headless: {headless}, modSelection: {modSelection?.ToString() ?? "none"}, localKpatch: {localKpatchPath ?? "none"})");
         }
 
         // In headless mode (--auto-update from the in-game updater), auto-trigger
@@ -677,7 +675,7 @@ namespace KotorAccessibilityInstaller
         {
             try
             {
-                string url = Config.ModSiteUrl;
+                string url = Config.ReadmeUrl;
                 Logger.Info($"Opening README: {url}");
                 Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
             }

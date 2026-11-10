@@ -8,43 +8,29 @@ using System.Text.Json;
 namespace KotorAccessibilityInstaller
 {
     /// <summary>
-    /// Static localization class. Loads flat JSON files from embedded resources.
-    /// Fallback chain: active language -> English -> key name.
+    /// The installer's texts: the flat JSON file Locales/en.json, embedded as a
+    /// resource. A missing key reads as the key name.
     /// </summary>
     public static class InstallerLocale
     {
-        private static Dictionary<string, string> _activeStrings = new Dictionary<string, string>();
-        private static Dictionary<string, string> _fallbackStrings = new Dictionary<string, string>();
-        private static string _activeLanguage = "en";
+        private static Dictionary<string, string> _strings = new Dictionary<string, string>();
 
-        public static event Action OnLanguageChanged;
-
-        public static void Initialize(string languageCode) => LoadLanguage(languageCode);
-
-        public static void SetLanguage(string code)
+        public static void Initialize()
         {
-            if (code == _activeLanguage) return;
-            LoadLanguage(code);
-            OnLanguageChanged?.Invoke();
+            _strings = LoadEmbedded("locale.en.json");
+            Logger.Info($"[InstallerLocale] Loaded {_strings.Count} strings");
         }
 
-        public static string Get(string key)
-        {
-            if (_activeStrings.TryGetValue(key, out string val)) return val;
-            if (_fallbackStrings.TryGetValue(key, out string fallback)) return fallback;
-            return key;
-        }
+        public static string Get(string key) =>
+            _strings.TryGetValue(key, out string val) ? val : key;
 
         /// <summary>
-        /// Convert the locale files' <c>\n</c> line breaks to <c>\r\n</c>.
+        /// Convert the texts' <c>\n</c> line breaks to <c>\r\n</c>.
         ///
         /// <para>Required for any multiline <see cref="System.Windows.Forms.TextBox"/>:
         /// it only breaks lines on <c>\r\n</c> and renders a lone <c>\n</c> as
-        /// nothing, so an entire bulleted list of actions collapses onto one
-        /// line. MessageBox and Label both handle <c>\n</c> fine, which is why
-        /// the locale files use it and why the problem only appears when a
-        /// Label is upgraded to a focusable TextBox — which is exactly how it
-        /// got introduced.</para>
+        /// nothing, so a bulleted list collapses onto one line. MessageBox and
+        /// Label both handle <c>\n</c> fine.</para>
         ///
         /// <para>Idempotent: an existing <c>\r\n</c> is not doubled.</para>
         /// </summary>
@@ -58,53 +44,25 @@ namespace KotorAccessibilityInstaller
             catch (FormatException) { return template; }
         }
 
-        private static void LoadLanguage(string code)
+        private static Dictionary<string, string> LoadEmbedded(string resourceName)
         {
-            _activeLanguage = code;
-            _fallbackStrings = LoadEmbeddedLocale("en");
-            _activeStrings = code == "en" ? _fallbackStrings : LoadEmbeddedLocale(code);
-            Logger.Info($"[InstallerLocale] Loaded language: {code} ({_activeStrings.Count} active, {_fallbackStrings.Count} fallback strings)");
-        }
-
-        private static Dictionary<string, string> LoadEmbeddedLocale(string code)
-        {
-            var dict = new Dictionary<string, string>();
             try
             {
-                var assembly = Assembly.GetExecutingAssembly();
-                string resourceName = $"locale.{code}.json";
-
-                using (var stream = assembly.GetManifestResourceStream(resourceName))
+                using var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream(resourceName);
+                if (stream == null)
                 {
-                    if (stream == null)
-                    {
-                        Logger.Warning($"[InstallerLocale] Locale resource not found: {resourceName}");
-                        return dict;
-                    }
-                    using (var reader = new StreamReader(stream, Encoding.UTF8))
-                    {
-                        string json = reader.ReadToEnd();
-                        // Locale files are flat {"key": "value"} objects.
-                        // This replaced ~65 lines of hand-rolled scanning
-                        // (Phase-3 B6); System.Text.Json was already a
-                        // dependency via GitHubClient. Verified equivalent
-                        // over all 1146 keys in the six shipped locales
-                        // before the swap.
-                        var parsed = JsonSerializer
-                            .Deserialize<Dictionary<string, string>>(json);
-                        if (parsed != null)
-                        {
-                            foreach (var kv in parsed) dict[kv.Key] = kv.Value;
-                        }
-                    }
+                    Logger.Warning($"[InstallerLocale] Resource not found: {resourceName}");
+                    return new Dictionary<string, string>();
                 }
+                using var reader = new StreamReader(stream, Encoding.UTF8);
+                return JsonSerializer.Deserialize<Dictionary<string, string>>(reader.ReadToEnd())
+                       ?? new Dictionary<string, string>();
             }
             catch (Exception ex)
             {
-                Logger.Warning($"[InstallerLocale] Error loading locale '{code}': {ex.Message}");
+                Logger.Warning($"[InstallerLocale] Error loading {resourceName}: {ex.Message}");
+                return new Dictionary<string, string>();
             }
-            return dict;
         }
-
     }
 }

@@ -69,7 +69,6 @@ namespace KotorAccessibilityInstaller
             _statusLine = statusLine ?? string.Empty;
             InitializeComponents();
             ApplyLocale();
-            InstallerLocale.OnLanguageChanged += ApplyLocale;
             FormClosing += (s, e) =>
             {
                 if (!ProceedWithInstall && !CancelConfirm.ConfirmCancel(this))
@@ -77,7 +76,6 @@ namespace KotorAccessibilityInstaller
                     e.Cancel = true;
                     return;
                 }
-                InstallerLocale.OnLanguageChanged -= ApplyLocale;
                 if (!ProceedWithInstall) Logger.Info("User closed KOTOR 2 mod-selection dialog without proceeding");
             };
         }

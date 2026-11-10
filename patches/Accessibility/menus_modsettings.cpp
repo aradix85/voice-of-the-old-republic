@@ -149,10 +149,10 @@ constexpr const char* kSupportModderUrl = "https://ko-fi.com/jeanstiletto";
 constexpr const char* kLatestChangesUrl =
     "https://github.com/JeanStiletto/voice-of-the-old-republic/releases/latest";
 
-// The readme (GitHub Pages build of README.md). Mirrors Config.ModSiteUrl in
-// the installer.
-constexpr const char* kModSiteUrl =
-    "https://jeanstiletto.github.io/voice-of-the-old-republic/";
+// The README of this fork (branch bridge). Same as Config.ReadmeUrl in the
+// installer.
+constexpr const char* kReadmeUrl =
+    "https://github.com/aradix85/voice-of-the-old-republic/blob/bridge/README.md";
 
 // Cue-volume slider step (percent per Left/Right press) and the cue used
 // for the audible preview. The preview rides priority group 0xb so it
@@ -557,7 +557,7 @@ void ActivateLinkRow(Option opt) {
     if (opt == Option::SupportModder) {
         url = kSupportModderUrl;
     } else if (opt == Option::OpenReadme) {
-        url = kModSiteUrl;
+        url = kReadmeUrl;
     }
     const bool ok = OpenExternalUrl(url);
     acc::speech::Speak(

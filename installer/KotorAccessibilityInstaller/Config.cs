@@ -13,10 +13,9 @@ namespace KotorAccessibilityInstaller
         public const string ModRepositoryUrl = "https://github.com/JeanStiletto/voice-of-the-old-republic";
 
         /// <summary>
-        /// GitHub Pages site URL. Used for opening the README without the
-        /// surrounding GitHub repo chrome. Must end with a trailing slash.
+        /// The README of this fork (branch bridge), opened from the end screen.
         /// </summary>
-        public const string ModSiteUrl = "https://jeanstiletto.github.io/voice-of-the-old-republic/";
+        public const string ReadmeUrl = "https://github.com/aradix85/voice-of-the-old-republic/blob/bridge/README.md";
 
         /// <summary>
         /// Filename of the .kpatch artifact uploaded to GitHub releases.

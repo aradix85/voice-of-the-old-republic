@@ -403,7 +403,6 @@ installer/KotorAccessibilityInstaller/InstallerVersion.cs
 installer/KotorAccessibilityInstaller/IntroMovieDisabler.cs
 installer/KotorAccessibilityInstaller/Kotor2ModSelectionForm.cs
 installer/KotorAccessibilityInstaller/Kotor2ModsInstallForm.cs
-installer/KotorAccessibilityInstaller/LanguageDetector.cs
 installer/KotorAccessibilityInstaller/LogCollector.cs
 installer/KotorAccessibilityInstaller/Logger.cs
 installer/KotorAccessibilityInstaller/MainForm.cs

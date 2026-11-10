@@ -136,7 +136,7 @@
 
   <!-- Locale files embedded as resources -->
   <ItemGroup>
-    <EmbeddedResource Include="Locales\*.json" LogicalName="locale.%(Filename)%(Extension)" />
+    <EmbeddedResource Include="Locales\en.json" LogicalName="locale.en.json" />
   </ItemGroup>
 
   <!-- KPatchCore does the heavy lifting for kpatch install -->

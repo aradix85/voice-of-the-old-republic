@@ -7,13 +7,9 @@ namespace KotorAccessibilityInstaller
 {
     public class WelcomeForm : Form
     {
-        // KOTOR 1 store pages; both work regardless of regional locale.
-
-        private ComboBox _languageComboBox;
         private Label _titleLabel;
         private Label _descriptionLabel;
         private Label _versionLabel;
-        private Label _languageLabel;
         private Button _nextButton;
 
         private Label _gameTitleLabel;
@@ -25,15 +21,12 @@ namespace KotorAccessibilityInstaller
         private Panel _page2;
 
         public bool ProceedWithInstall { get; private set; } = false;
-        public string SelectedLanguage { get; private set; }
         public string LatestModVersion { get; set; }
 
         public WelcomeForm()
         {
-            SelectedLanguage = LanguageDetector.DetectLanguage();
             InitializeComponents();
             ApplyLocale();
-            InstallerLocale.OnLanguageChanged += ApplyLocale;
         }
 
         private void InitializeComponents()
@@ -69,39 +62,12 @@ namespace KotorAccessibilityInstaller
                 Font = new Font(Font.FontFamily, 9, FontStyle.Bold)
             };
 
-            _languageLabel = new Label { Location = new Point(20, 195), Size = new Size(150, 20) };
-
-            _languageComboBox = new ComboBox
-            {
-                DropDownStyle = ComboBoxStyle.DropDownList,
-                Location = new Point(175, 192),
-                Size = new Size(315, 25)
-            };
-
-            foreach (var code in LanguageDetector.SupportedLanguages)
-            {
-                _languageComboBox.Items.Add(
-                    LanguageDetector.DisplayNames.TryGetValue(code, out var name) ? name : code);
-            }
-            int defaultIndex = Array.IndexOf(LanguageDetector.SupportedLanguages, SelectedLanguage);
-            _languageComboBox.SelectedIndex = defaultIndex >= 0 ? defaultIndex : 0;
-            _languageComboBox.SelectedIndexChanged += (s, e) =>
-            {
-                int idx = _languageComboBox.SelectedIndex;
-                if (idx >= 0 && idx < LanguageDetector.SupportedLanguages.Length)
-                {
-                    SelectedLanguage = LanguageDetector.SupportedLanguages[idx];
-                    Logger.Info($"User selected language: {SelectedLanguage}");
-                    InstallerLocale.SetLanguage(SelectedLanguage);
-                }
-            };
-
             _nextButton = new Button { Location = new Point(350, 245), Size = new Size(140, 35) };
             _nextButton.Click += (s, e) => ShowPage2();
 
             _page1.Controls.AddRange(new Control[]
             {
-                _titleLabel, _descriptionLabel, _versionLabel, _languageLabel, _languageComboBox, _nextButton
+                _titleLabel, _descriptionLabel, _versionLabel, _nextButton
             });
 
             // Page 2
@@ -151,7 +117,6 @@ namespace KotorAccessibilityInstaller
                     e.Cancel = true;
                     return;
                 }
-                InstallerLocale.OnLanguageChanged -= ApplyLocale;
                 if (!ProceedWithInstall) Logger.Info("User closed welcome dialog without proceeding");
             };
         }
@@ -196,7 +161,6 @@ namespace KotorAccessibilityInstaller
         {
             _titleLabel.Text = InstallerLocale.Get("Welcome_Title");
             _descriptionLabel.Text = InstallerLocale.Get("Welcome_Description");
-            _languageLabel.Text = InstallerLocale.Get("Welcome_LanguageLabel");
             _nextButton.Text = InstallerLocale.Get("Welcome_NextButton");
             _versionLabel.Text = !string.IsNullOrEmpty(LatestModVersion)
                 ? InstallerLocale.Format("Welcome_VersionInfo_Format", LatestModVersion)

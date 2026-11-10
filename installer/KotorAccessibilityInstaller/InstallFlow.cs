@@ -93,7 +93,7 @@ namespace KotorAccessibilityInstaller
                 // just expressed differently: they run inside MainForm, but
                 // still after nothing of ours is at risk — they are
                 // HoloPatcher payloads that only touch game data.
-                RunKotor2ModFlow(k2Path, welcomeForm.SelectedLanguage);
+                RunKotor2ModFlow(k2Path);
             }
 
             string resolvedK1Path = null;
@@ -119,7 +119,6 @@ namespace KotorAccessibilityInstaller
                 // the Russian notes can ride that screen's footnote instead of
                 // adding a step. Content-based for Russian — see GameLocaleDetector.
                 GameLocale gameLocale = GameLocaleDetector.Detect(resolvedK1Path);
-                WarnIfGameTranslationMissing(welcomeForm.SelectedLanguage, gameLocale);
 
                 // Optional mods: K1CP / cut content / companion + swoop. All default on.
                 var selectionForm = new ModSelectionForm(gameLocale);
@@ -146,7 +145,7 @@ namespace KotorAccessibilityInstaller
             if (resolvedK1Path != null)
             {
                 Application.Run(new MainForm(GameTarget.Kotor1, resolvedK1Path,
-                    language: welcomeForm.SelectedLanguage, modSelection: k1Mods,
+                    modSelection: k1Mods,
                     localKpatchPath: localKpatchPath));
             }
 
@@ -165,7 +164,6 @@ namespace KotorAccessibilityInstaller
                 else
                 {
                     Application.Run(new MainForm(GameTarget.Kotor2, k2Path,
-                        language: welcomeForm.SelectedLanguage,
                         localKpatchPath: localKpatchPath));
                 }
             }
@@ -240,14 +238,7 @@ namespace KotorAccessibilityInstaller
         /// transaction of their own would change the executable hash that the
         /// accessibility patch's own version gate then reads.
         /// </summary>
-        /// <param name="installerLanguage">
-        /// The language the user picked for the installer itself. Decides which
-        /// localized TSLRCM edition is offered. Deliberately not the game's own
-        /// dialog.tlk: once an earlier English TSLRCM has replaced it, the file
-        /// reports English no matter what the player reads, and Russian players
-        /// have no localized table to be detected from in the first place.
-        /// </param>
-        internal static void RunKotor2ModFlow(string k2Path, string installerLanguage)
+        internal static void RunKotor2ModFlow(string k2Path)
         {
             string statusLine = k2Path != null
                 ? InstallerLocale.Format("K2Prep_Detected_Format", k2Path)
@@ -264,7 +255,7 @@ namespace KotorAccessibilityInstaller
             // Subscribed Workshop items override everything we are about to
             // install. Ask before, not after — except for the localized TSLRCM
             // item this run may be about to use, which is resolved just below.
-            var preflightLocale = GameLocaleDetector.FromInstallerLanguage(installerLanguage);
+            var preflightLocale = GameLocale.English;
             WorkshopTslrcmForm.TryGetWorkshopItem(preflightLocale, out string preflightItemId);
             if (k2Path != null && !ConfirmNoWorkshopContent(k2Path, preflightItemId)) return;
 
@@ -292,7 +283,7 @@ namespace KotorAccessibilityInstaller
             // strings in the content files and leave the player's own table
             // alone, and Russian — which has no vanilla localized table at all
             // — brings its own. See WorkshopTslrcmForm.
-            var tslrcmLocale = GameLocaleDetector.FromInstallerLanguage(installerLanguage);
+            var tslrcmLocale = GameLocale.English;
             bool wantsLocalizedTslrcm =
                 k2Path != null &&
                 tslrcmLocale != GameLocale.English && tslrcmLocale != GameLocale.Unknown &&
@@ -1007,42 +998,6 @@ namespace KotorAccessibilityInstaller
             byte[] hashA = SHA256.HashData(streamA);
             byte[] hashB = SHA256.HashData(streamB);
             return !hashA.AsSpan().SequenceEqual(hashB);
-        }
-
-        /// <summary>
-        /// The user picked a language for the installer whose game translation
-        /// KOTOR never shipped on Steam or GoG, but this install is not
-        /// translated to it. Point them at the translation's own source and stop
-        /// there — we cannot bundle or mirror either one. Russian's community
-        /// translation carries no redistribution licence and no stable download
-        /// location; the Polish one is first-party LucasArts content extracted
-        /// from the 2004 retail release, which is not ours to hand out at all.
-        ///
-        /// The mod still speaks the chosen language either way, so this is
-        /// guidance, not an error, and it must not block the install.
-        /// </summary>
-        private static readonly (string Lang, GameLocale Locale, string Key)[] TranslationGuidance =
-        {
-            ("ru", GameLocale.Russian, "Russian"),
-            ("pl", GameLocale.Polish,  "Polish"),
-        };
-
-        private static void WarnIfGameTranslationMissing(string installerLanguage, GameLocale gameLocale)
-        {
-            foreach (var (lang, locale, key) in TranslationGuidance)
-            {
-                if (!string.Equals(installerLanguage, lang, StringComparison.OrdinalIgnoreCase)) continue;
-                if (gameLocale == locale) return;
-
-                Logger.Info($"Installer language is {key} but game locale is {gameLocale}; " +
-                            "showing translation guidance.");
-                MessageBox.Show(
-                    InstallerLocale.Get($"{key}_NotFound_Body"),
-                    InstallerLocale.Get($"{key}_NotFound_Heading"),
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Information);
-                return;
-            }
         }
 
         /// <summary>

@@ -49,7 +49,7 @@ namespace KotorAccessibilityInstaller
             Logger.Info($"Is Admin: {GamePathDetector.IsRunningAsAdmin()}");
             Logger.Info($"Arguments: {string.Join(" ", args)}");
 
-            InstallerLocale.Initialize(LanguageDetector.DetectLanguage());
+            InstallerLocale.Initialize();
 
             // Third-party mod pins: embedded copy, then the repo's live copy if
             // it is reachable. Deliberately before any dialog — a stale pin
@@ -355,7 +355,6 @@ namespace KotorAccessibilityInstaller
                         {
                             Logger.Info($"Updating {game.Target.DisplayName} at {game.GamePath}");
                             Application.Run(new MainForm(game.Target, game.GamePath, updateOnly: true,
-                                language: LanguageDetector.DetectLanguage(),
                                 localKpatchPath: localKpatchPath));
                         }
                         break;
