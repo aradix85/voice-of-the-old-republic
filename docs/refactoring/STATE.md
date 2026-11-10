@@ -142,28 +142,15 @@ prefix (menus_listbox_picker.cpp).
      from this fork's bridge-latest, builds are named "bridge-<sha7>" and
      compared for equality, build.yml publishes the installer EXE too
      (0679714; check that CI run).
-  E. Docs pass. Done: README rewritten (2ea042a), CHANGELOG (bce53e6),
-     CLAUDE.md, CONTRIBUTING.md, ARCHITECTURE.md (eabc45c). Next: the
-     rest of the list below, upstream-prs.md kept (it records the KPM
-     defects many comments cite; drop its prism PR-7 and PR-10).
-     Original list: every current doc that still names Prism, Tolk,
-     SAPI, the urgent or compass voice, positional/3D speech, the Windows
-     voices option, the in-game updater, the removed exploration sounds or
-     the old bridge behaviour (snapshot every 250 ms, no creatures in
-     /objects), the beacon (Ctrl+- is now the route), the Wall sounds
-     option, the glossary's exploration entries, the combat heartbeat. README.md: rewrite it whole for this fork
-     (Anouk 2026-11-10: it is her fork, no pull request; 4d07cdd only
-     patched it). Also ARCHITECTURE.md, CLAUDE.md,
-     CONTRIBUTING.md, ACCESSIBILITY_MODDING_GUIDE.md, docs/installer.md,
-     controls-and-input, known-issues, tools.md, upstream-prs.md (stale:
-     no upstream PRs any more), CONTRIBUTING_TRANSLATIONS,
-     translation-additions, kotor1-controller-port, kotor2-port,
-     kotor2-controller-plan, llm-docs (audio-internals, game-flow,
-     action-menu-and-combat, ingame-screens-reference, accessibility-map,
-     gui-and-input-internals, walk-nav-and-walkmesh, llm-docs/CLAUDE.md).
-     archiev/ and the CHANGELOG's old entries stay as history; the
-     CHANGELOG's v0.9.1+bridge section gets the speech, installer and
-     bridge changes. The code index regenerates itself. Then brief.md.
+  E. Docs pass, done: README rewritten for the fork (2ea042a), CHANGELOG
+     (bce53e6), CLAUDE.md, CONTRIBUTING.md, ARCHITECTURE.md (eabc45c),
+     docs/installer.md new (old design notes to archiev/), known issues,
+     controls, tools, kdev, controller port, upstream-prs.md reframed as
+     "Framework defects and local fixes" (a6a6f9a), llm-docs (0df4e67),
+     audio internals, K2 controller plan, a fork note on kotor2-port.md
+     (its locale/Prism/beacon entries stay as history), issue and PR
+     templates gone since the fork has issues off (089111d). archiev/ and
+     the CHANGELOG's old entries stay as history.
   Note for Anouk at the end: with NVDA only, NVDA's "speech interrupt for
   typed characters" (Keyboard settings) cuts lines while a key is held
   (map cursor, turret fire key); the SAPI voices used to dodge that.
