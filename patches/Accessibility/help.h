@@ -28,7 +28,7 @@
 namespace acc::help {
 
 // True while the F1 list overlay is interactive. Menu input hooks
-// (menus.cpp manager hook, in-world Esc consume in input_pipeline) gate on
+// (menus_dispatch.cpp manager hook, in-world Esc consume in input_pipeline) gate on
 // this so the underlying panel / world doesn't also act on the nav keys the
 // overlay owns.
 bool IsMenuOpen();

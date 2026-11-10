@@ -20,9 +20,10 @@
 // onEnter / onEsc callbacks, keeping the dispatcher generic.
 //
 // EquipPicker state (armed flag + bound panel) lives in this TU because
-// the picker's input handler is the primary owner. Two outside touch sites
-// in menus.cpp (the slot-Enter arming site + MonitorEquipPickerSelection's
-// "panel gone, disarm" cleanup) call the accessors below.
+// the picker's input handler is the primary owner. The slot-Enter arming
+// site (menus_chain_input_enter.cpp) and MonitorEquipPickerSelection's
+// "panel gone, disarm" cleanup (menus_listbox_picker.cpp) call the
+// accessors below.
 
 #pragma once
 
@@ -52,7 +53,7 @@ bool TryHandleInput(int n, void* thisPtr, void* activePanel,
 // `ChargenFeatGrantedTitle`), returns the localised replacement string.
 // Returns nullptr if no spec matches or the matched spec has no override.
 //
-// Called from menus.cpp's AnnouncePanelTitle before the generic
+// Called from menus_focus.cpp's AnnouncePanelTitle before the generic
 // label-walk so any spec that knows its title is broken-by-default can
 // substitute correct speech. Lifting this hook into the spec table
 // keeps panel-specific knowledge in one place per panel, instead of

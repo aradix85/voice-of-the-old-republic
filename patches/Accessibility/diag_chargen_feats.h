@@ -15,7 +15,7 @@
 
 namespace acc::diag::chargen_feats {
 
-// Called from menus.cpp::AnnouncePanelTitle on every panel-title announce.
+// Called from menus_focus.cpp's AnnouncePanelTitle on every panel-title announce.
 // Vtable-gates on kVtableCSWGuiFeatsCharGen; dedups per panel pointer.
 void DumpStructureIfNeeded(void* panel);
 

@@ -43,7 +43,7 @@ void* ContainerFindLb(void* p) {
 }
 
 // Inline announce only on a no-op clamp (boundary). Normal moves are
-// caught by MonitorContainerSelection on the next tick — see menus.cpp.
+// caught by MonitorContainerSelection on the next tick.
 void ContainerAnnounce(void* /*lb*/, const ListBoxNavResult& r) {
     if (r.newSel != r.oldSel) return;
     if (!r.row) return;

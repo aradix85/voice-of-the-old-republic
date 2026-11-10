@@ -25,7 +25,7 @@ namespace acc::bringup_announce {
 // after speech is initialised so the announce path is ready.
 void Start();
 
-// Called from menus.cpp the moment we detect the user's first arrow-key
+// Called from menus_dispatch.cpp the moment we detect the user's first arrow-key
 // nav on the MainMenu panel (= engine input pump is live). Transitions
 // the phase to Responsive and stops the announce nag from firing again.
 void NotifyInputPumpLive();

@@ -125,7 +125,7 @@ bool QueueControlActivate(void* target, const char* logPrefix);
 
 }  // namespace acc::menus::detail
 
-// The focused panel, written only by OnSetActiveControl in menus.cpp.
+// The focused panel, written only by UpdateFocusedPanelState (menus_focus.cpp).
 extern void* g_currentPanel;
 
 // Liveness-filtered view of g_currentPanel — returns it only while it is

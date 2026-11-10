@@ -19,7 +19,7 @@
 // ListBoxPanelSpec struct into a shared header and left the dispatcher's
 // probe table pointing at entries in another file. The spec callbacks reach
 // this state through the accessors in menus_listbox.h instead, which is what
-// menus.cpp already did from the outside.
+// the chain input files do from the outside.
 //
 // The armed flag is the ENGINE's, not ours
 // ----------------------------------------

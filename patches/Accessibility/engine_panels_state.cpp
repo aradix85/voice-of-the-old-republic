@@ -349,7 +349,7 @@ bool IsForegroundUiBlocking(UiBlockState* outState) {
     // (3) Foreground kind blacklist. InGameMenu strip stays foreground while
     // any sub-screen (Inventory / Map / Equip / …) is drilled — covers them
     // transitively. Strip itself routes Enter to its chain handler in
-    // menus.cpp; in-world hotkeys never make sense while a menu is open.
+    // menus_chain_input_enter.cpp; in-world hotkeys never make sense while a menu is open.
     switch (fgKind) {
     case PanelKind::Container:
     case PanelKind::Store:

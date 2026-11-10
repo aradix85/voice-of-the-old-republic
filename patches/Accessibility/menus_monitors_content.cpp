@@ -247,7 +247,7 @@ void MonitorPanelContents() {
         // (no mouse wording) fall through to the vanilla rendered text. The
         // engine-focus mouse announce (AnnounceNewFocusedControl) and the
         // arrow-nav chain entry are separately gated off for these rows in
-        // menus.cpp / menus_chain.cpp so this is the sole speaker.
+        // menus_focus.cpp / menus_chain.cpp so this is the sole speaker.
         if (k == PanelKind::TutorialBox) {
             // Synthetic Trask-line popup: speak its keyboard hint regardless of
             // the (repurposed) row. Otherwise fall back to the row-keyed hint.
@@ -257,7 +257,7 @@ void MonitorPanelContents() {
                                          acc::tutorial_hints::ReadTutorialRow(p));
             // Row-keyed lookup misses on KOTOR 2 (every mapped popup there
             // spoke its mouse wording in the field logs), so fall back to the
-            // strref-keyed one — the same lookup the row hook in menus.cpp
+            // strref-keyed one — the same lookup the row hook in menus_setactive.cpp
             // uses. Both paths must resolve the SAME string: the row hook is
             // the primary speaker for these popups and this monitor only
             // repeats what it said, which the announce dedup then collapses.

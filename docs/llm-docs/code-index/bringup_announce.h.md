@@ -11,7 +11,7 @@ Detection is fully derived from the game's window state + the input-pump-live si
 ## Declarations (in source order)
 
 - L26 `void Start()`: Spin up the polling thread.
-- L31 `void NotifyInputPumpLive()`: Called from menus.cpp the moment we detect the user's first arrow-key nav on the MainMenu panel (= engine input pump is live).
+- L31 `void NotifyInputPumpLive()`: Called from menus_dispatch.cpp the moment we detect the user's first arrow-key nav on the MainMenu panel (= engine input pump is live).
 - L42 `bool IsInputPumpLive()`: True once NotifyInputPumpLive has fired — i.e.
 - L62 `bool IsMoviePlaying()`: True iff an engine movie is on screen — i.e.
 - L72 `bool MovieRecentlyPlaying(unsigned int windowMs)`: True while a movie is on screen, and for `windowMs` after the most recent one disappears.

@@ -1,7 +1,6 @@
-// First-sight / focus-capture seam, lifted out of menus.cpp by the Phase-1
-// structure pass (refactoring candidate 1).
+// First-sight / focus-capture seam.
 //
-// Everything here is driven by OnSetActiveControl in menus.cpp, which fires
+// Everything here is driven by OnSetActiveControl (menus_setactive.cpp), which fires
 // on every real focus change. The functions split that hook's work into the
 // four things it does on a focus event:
 //
@@ -20,10 +19,6 @@
 //
 // AnnouncePanelTitle stays file-static in menus_focus.cpp: its only caller
 // is SpeakPanelTitleOnFirstSight, which moved with it.
-//
-// Same seam convention as menus_chain.h / menus_monitors.h — menus.cpp
-// brings these names back into unqualified scope with using-declarations
-// so the call sites in OnSetActiveControl read as they did before.
 
 #pragma once
 

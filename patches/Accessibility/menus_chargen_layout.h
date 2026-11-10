@@ -10,7 +10,7 @@
 // by a PanelDesc the panel supplies once. The per-panel namespaces keep
 // their public names (IsChargenAttributesPanel, AbilityIndexFromButton,
 // SyncSelectedAbilityFromChainFocus, …) as thin wrappers, because they
-// have callers across menus.cpp, menus_chain*, menus_focus,
+// have callers across menus_setactive.cpp, menus_chain*, menus_focus,
 // menus_monitors and menus_pending.
 //
 // What deliberately does NOT live here is the genuine domain variation:
@@ -83,7 +83,7 @@ void CaptureLabels(const PanelDesc& d, void* panel);
 // row and paint the wrong description (label overlap makes Y compensation
 // insufficient here). The call fires SetActive on the description listbox,
 // which trips our listbox hook — IsDescriptionListbox below is what lets
-// menus.cpp silence that engine-side echo so this stays the only speaker.
+// menus_setactive.cpp silence that engine-side echo so this stays the only speaker.
 bool AnnounceDescription(const PanelDesc& d, void* panel, void* control);
 
 // True iff `listBox` is this panel's description listbox. Dual of

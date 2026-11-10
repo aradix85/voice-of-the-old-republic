@@ -31,7 +31,7 @@ namespace {
 // per-tab routing (Skills is keyboard-driven by us via OnEnterSkill; Feats and
 // Powers are engine-native charts). It has a dedicated handler in
 // menus_abilities.cpp (acc::menus::abilities::HandleInput), invoked from
-// menus.cpp before this dispatcher.
+// menus_dispatch.cpp before this dispatcher.
 // Spec table. Probe order matters: SaveLoad's structural matcher
 // (FindControlById signature check) is a superset that could in principle
 // match other panels with the same control IDs — Container and EquipPicker
@@ -59,8 +59,7 @@ constexpr const ListBoxPanelSpec* kSpecs[] = {
 constexpr int kNumSpecs = static_cast<int>(sizeof(kSpecs) / sizeof(kSpecs[0]));
 
 // ============================================================================
-// Dispatcher — generic over the spec table. Mirrors the structure of the
-// original three inline blocks in menus.cpp's OnHandleInputEvent.
+// Dispatcher — generic over the spec table.
 // ============================================================================
 // How long a nav refusal stays deduped. Long enough that holding the key down
 // (auto-repeat is far faster) yields one line rather than a machine-gun, short

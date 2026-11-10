@@ -1,14 +1,7 @@
-// First-sight / focus-capture logic for the panel focus hook.
-//
-// Split out of menus.cpp by the Phase-1 structure pass (refactoring
-// candidate 1). OnSetActiveControl stays in menus.cpp and calls into these
-// five functions; see menus_focus.h for what each one owns.
-//
-// The definitions are verbatim from menus.cpp apart from being lifted out
-// of file-static scope into acc::menus::focus so the hook can still reach
-// them. g_lastTitledPanel moved with SpeakPanelTitleOnFirstSight (its only
-// user); the pending-announce slot stays owned by menus.cpp and is written
-// here through the externs declared in menus_internal.h.
+// First-sight / focus-capture logic for the panel focus hook:
+// OnSetActiveControl (menus_setactive.cpp) calls these five functions; see
+// menus_focus.h for what each one owns. The pending-announce slot is
+// menus.cpp's, written here through the externs in menus_internal.h.
 
 #include <windows.h>
 #include <cstdint>

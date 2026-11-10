@@ -7,11 +7,6 @@
 // What lives here: the chain array + cursor, tab-cluster detection,
 // click-offset compensations (tab-y / equip-slot-y / class-icon-x),
 // the geometry helpers that build + walk it.
-//
-// What stays in menus.cpp: speech utilities (AnnounceControl,
-// AnnouncePanelTitle), IsModalPopupPanel, focus/monitor state. Those
-// either don't depend on chain state or are written from
-// OnSetActiveControl which stays.
 
 #pragma once
 
@@ -211,12 +206,12 @@ void* FindCancelButton(void* panel);
 int FindChainEntry(void* control);
 
 // Read panel.activeControl. Defined here because RebindChain anchors on
-// it; menus.cpp's OnSetActiveControl uses its own focus-tracking instead.
+// it; OnSetActiveControl (menus_setactive.cpp) tracks focus on its own.
 void* ReadPanelActiveControl(void* panel);
 
 // Diagnostic dump of a parent's CExoArrayList<Control*> children. Logs each
 // child's id + best-effort label via extract::FromControl, with a vtable
-// dump on fallback. Used both as a panel-walk on first focus (menus.cpp) and
+// dump on fallback. Used both as a panel-walk on first focus (menus_focus.cpp) and
 // as the empty-chain probe inside HandleNavStep — same primitive, different
 // callers. Emits the whole walk as one BlockLog block, keyed on semantic
 // content (ids + text + vtable) with heap pointers excluded — so identical

@@ -25,14 +25,14 @@ namespace {
 //
 // Spec is armed only after the user activates one of the seven slot
 // buttons (BTN_UPGRADE3X/4X at .gui IDs 12..18) — the click-sim wired in
-// menus.cpp's chain Enter handler runs the engine's slot-select via
+// menus_chain_input_enter.cpp's chain Enter handler runs the engine's slot-select via
 // MoveMouseToPosition + LMouseDown/Up, which populates LB_ITEMS with the
 // inventory mods compatible with that slot. While not armed, the spec
 // falls through (armed() returns false) so arrow keys flow into chain
 // nav and the user can move between slot buttons / BTN_ASSEMBLE / BTN_BACK.
 //
 // Esc-to-close (BTN_BACK at ID 28) when the picker is not armed is
-// handled by an explicit workbench branch in menus.cpp's Esc handler —
+// handled by an explicit workbench branch in menus_chain_input_keys.cpp's Esc handler —
 // FindCancelButton resolves to "Cancel" reliably for this panel.
 // ============================================================================
 // LB_ITEMS / BTN_BACK / BTN_ASSEMBLE resolve through the UpgradePanel*
@@ -266,7 +266,7 @@ bool WorkbenchUpgradeOnEnter(void* panel) {
 // Esc (armed): disarm only. Chain focus is unchanged so the next arrow
 // press resumes slot-button navigation. Esc when NOT armed (i.e. user
 // is on a slot button or BTN_ASSEMBLE/BTN_BACK) is handled by the
-// workbench-specific block in menus.cpp's Esc handler.
+// workbench-specific block in menus_chain_input_keys.cpp's Esc handler.
 bool WorkbenchUpgradeOnEsc(void* panel) {
     // Back out of the picker the way commit does: close the item zone so the
     // engine re-enables the sibling slot buttons (OnSlotSelected disabled them

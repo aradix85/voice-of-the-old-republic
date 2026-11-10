@@ -42,7 +42,7 @@ int HeldEngineBoundKey() {
 }
 
 // On a fresh launch the engine can reach the main menu with its keyboard
-// unacquired, so menu input is dead until the user alt-tabs. menus.cpp fires
+// unacquired, so menu input is dead until the user alt-tabs. menus_focus.cpp fires
 // one ForceReacquireInput at MainMenu first sight, but the engine can
 // recreate its render window moments later and drop that acquire. So the
 // edge is re-driven every kReacquireRetryMs until the input pump has

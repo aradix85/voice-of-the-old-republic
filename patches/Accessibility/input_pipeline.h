@@ -21,7 +21,7 @@
 namespace acc::input {
 
 // Monotonic counter shared across the upstream input-stream log and the
-// manager hook (see menus.cpp::OnHandleInputEvent). Bumped on every
+// manager hook (OnHandleInputEvent, menus_dispatch.cpp). Bumped on every
 // upstream / manager call so the log streams interleave with comparable
 // seq values across surfaces.
 unsigned int NextSeq();

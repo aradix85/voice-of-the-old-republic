@@ -6,7 +6,7 @@ Layout + behaviour shared by menus_chargen_attr + menus_chargen_skills.
 
 Both panels are the same screen with different data: an N-button + N-label + N-plus + N-minus grid (N = 6 abilities, 8 skills), a "points remaining" label, and a description listbox the engine repopulates from whichever points button it thinks is hovered. Only the offsets, the count and the log tag differ.
 
-Everything that follows from that sameness lives here, parameterised by a PanelDesc the panel supplies once. The per-panel namespaces keep their public names (IsChargenAttributesPanel, AbilityIndexFromButton, SyncSelectedAbilityFromChainFocus, …) as thin wrappers, because they have callers across menus.cpp, menus_chain*, menus_focus, menus_monitors and menus_pending.
+Everything that follows from that sameness lives here, parameterised by a PanelDesc the panel supplies once. The per-panel namespaces keep their public names (IsChargenAttributesPanel, AbilityIndexFromButton, SyncSelectedAbilityFromChainFocus, …) as thin wrappers, because they have callers across menus_setactive.cpp, menus_chain*, menus_focus, menus_monitors and menus_pending.
 
 What deliberately does NOT live here is the genuine domain variation: the attributes panel computes a D&D modifier and a point-buy cost and tracks breakpoint crossings across four message variants; the skills panel has no modifier and a flat class/cross-class cost. Those stay in their own files — see the "not recommended for merging" note in archiev/refactoring/reports/phase-3-menus-chain-chargen.md.
 

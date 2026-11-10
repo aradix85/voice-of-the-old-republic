@@ -27,7 +27,7 @@ namespace {
 // FromControl can prepend the category in announce output.
 //
 // Populated externally via the public CaptureCycleCategory setter
-// (called from OnSetActiveControl in menus.cpp on first focus into a
+// (called from the panel walk in menus_focus.cpp on first focus into a
 // panel). Cleared on the same path via ResetCycleCategoryCache.
 // Invalidated implicitly on every RebindChain because the panel-walk
 // path always resets-then-recaptures.

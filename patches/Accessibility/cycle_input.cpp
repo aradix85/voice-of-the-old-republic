@@ -117,7 +117,7 @@ bool TryHandleEvent(int param_1, int param_2) {
         // the user hears each press dispatched twice. ClaimRisingEdge
         // (not Consume) is required because the manager input fires
         // between EndTick and BeginTick — see the InteractTarget claim
-        // in menus.cpp::OnHandleInputEvent for the same pattern.
+        // in menus_dispatch.cpp's OnHandleInputEvent for the same pattern.
         if (ctrl) {
             acc::hotkeys::ClaimRisingEdge(
                 prev ? acc::hotkeys::Action::CycleItemFirst

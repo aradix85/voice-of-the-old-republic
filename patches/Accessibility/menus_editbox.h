@@ -49,7 +49,7 @@ namespace acc::menus::editbox {
 // Backspace, Left/Right — those need to flow to the engine's editbox
 // handler).
 //
-// Called from menus.cpp's OnHandleInputEvent after the listbox dispatcher
+// Called from menus_dispatch.cpp's OnHandleInputEvent after the listbox dispatcher
 // and before chain navigation, so an in-edit-mode Up/Down re-read fires
 // before chain nav would otherwise consume the same key to step focus.
 bool TryHandleInput(int n, void* thisPtr, void* activePanel,
@@ -69,7 +69,7 @@ void TickEditboxMonitors();
 // the localised replacement string. Returns nullptr if no spec matches or
 // the matched spec has no override.
 //
-// Called from menus.cpp's AnnouncePanelTitle alongside the listbox
+// Called from menus_focus.cpp's AnnouncePanelTitle alongside the listbox
 // equivalent. Lifting the hook into the spec table keeps panel-specific
 // title knowledge co-located with the rest of the panel's spec.
 const char* GetTitleOverride(void* panel);

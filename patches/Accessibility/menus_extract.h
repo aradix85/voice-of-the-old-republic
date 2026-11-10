@@ -1,21 +1,17 @@
-// control text extraction (the announce ladder).
-//
-// of menus.cpp into its own TU as `acc::menus::extract::FromControl`.
-// Function body is unchanged; the rename matches the namespace context
-// (`acc::menus::extract::FromControl(ctrl, buf, n, owner)` reads as a
-// typed call site rather than the bare verb-and-noun original name).
+// Control text extraction (the announce ladder): FromControl.
 //
 // The cycle-category cache (used by the cycle-button announce path to
 // recover the category prefix that the engine overwrites with the value
 // on each activation) lives in this TU but is populated by
-// OnSetActiveControl in menus.cpp on panel-walk. Hence the public
+// the panel walk in menus_focus.cpp. Hence the public
 // setter pair below — read happens internally in FromControl,
 // write crosses the seam.
 //
 // Helpers used only by FromControl (FindSiblingLabel, IsCycleFlankerArrow,
-// LookupCycleCategory) move with it as file-statics in menus_extract.cpp.
-// Helpers shared with chain navigation (IsChainNavigable, IsClassSelection-
-// Icon, ClassLabelCache*) stay in menus.cpp and cross via menus_internal.h.
+// LookupCycleCategory) are file-statics in menus_extract.cpp. Helpers
+// shared with chain navigation (IsChainNavigable, IsClassSelectionIcon,
+// ClassLabelCache*) live in menus_internal*.cpp and cross via
+// menus_internal.h.
 
 #pragma once
 

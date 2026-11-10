@@ -20,9 +20,10 @@
 //      STR. We sync chain focus → selected_ability on every chain
 //      rebind and Up/Down step so +/- targets the row the user is on.
 //
-// Engine offsets in engine_offsets.h. Caller-side wiring in menus.cpp
-// (CaptureLabelsIfApplicable from WalkAndCaptureOnFirstSight, sync
-// from chain step) and menus_chain.cpp (sync from end of RebindChain).
+// Engine offsets in engine_offsets.h. Caller-side wiring in menus_focus.cpp
+// (CaptureLabelsIfApplicable from WalkAndCaptureOnFirstSight),
+// menus_chain_input.cpp (sync from the chain step) and menus_chain.cpp
+// (sync from end of RebindChain).
 
 #pragma once
 
@@ -52,7 +53,7 @@ int RowPitchForCursorWarp(void* panel, void* control);
 // chain focus isn't on a value button.
 //
 // Called from two sites:
-//   * Chain rebind / Up-Down step in menus_chain.cpp / menus.cpp —
+//   * Chain rebind / Up-Down step in menus_chain.cpp / menus_chain_input.cpp —
 //     immediate sync at the input event so the next FireActivate
 //     queued by Left/Right sees the right value if no other write
 //     intervenes.
@@ -104,7 +105,7 @@ void AnnounceChainStepSuffix(void* panel, void* control);
 // class of bug by removing the coordinate dependency.
 bool AnnounceChainStepDescription(void* panel, void* control);
 
-// True iff `listBox` is this panel's description_listbox. Used by menus.cpp
+// True iff `listBox` is this panel's description_listbox. Used by menus_setactive.cpp
 // to silence the engine's hover-driven description echo (we speak it
 // ourselves from the chain step). Dual of AnnounceChainStepDescription.
 bool IsChargenAttributesDescriptionListbox(void* listBox);

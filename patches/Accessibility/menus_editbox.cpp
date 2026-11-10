@@ -57,7 +57,7 @@ struct EditboxPanelSpec {
     // it at the documented offset).
     void* (*findEditbox)(void* panel);
 
-    // Optional title-speech override. Called from menus.cpp's
+    // Optional title-speech override. Called from menus_focus.cpp's
     // AnnouncePanelTitle when this panel matches; returning a non-null
     // string substitutes that string for the generic title-walk speech
     // (which picks the first announceable label child by panel-controls

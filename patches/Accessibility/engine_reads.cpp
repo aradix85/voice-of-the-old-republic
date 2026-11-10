@@ -386,7 +386,7 @@ bool ReadControlTooltip(void* control, char* outBuf, size_t bufSize) {
 //
 // Whitespace controls are deliberately NOT in the set. '\n' in particular
 // carries meaning downstream — the Options settings blob is identified by
-// interior newlines (menus.cpp SetActive) — so only the non-whitespace C0
+// interior newlines (menus_setactive.cpp) — so only the non-whitespace C0
 // codes are treated as markers.
 bool IsGlyphMarkerByte(unsigned char ch) {
     return ch < 0x20 && ch != '\t' && ch != '\n' && ch != '\r';

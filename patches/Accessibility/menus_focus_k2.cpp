@@ -52,7 +52,7 @@
 #include "menus_focus_k2.h"
 #include "speech.h"
 
-// The shared handlers, defined in menus.cpp / menus_dispatch.cpp and hooked
+// The shared handlers, defined in menus_setactive.cpp / menus_dispatch.cpp and hooked
 // directly on KOTOR 1. KOTOR 2 reaches them through this file instead, because
 // its hooks have to do frame arithmetic first (and, for focus, the cursor warp)
 // — see the *K2 wrappers at the bottom. Forward-declared per TU the same way

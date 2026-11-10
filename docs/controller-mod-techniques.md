@@ -26,7 +26,7 @@ There are **two** places you can take input, and you need both:
 This is the central GUI input dispatcher. Hook it and you see every key the
 engine considers "bound" plus the four logical nav codes. This is where ALL
 menu/overlay navigation should be intercepted. Our hook is `OnHandleInputEvent`
-in `menus.cpp`; the wiring/dispatch order is the bottom third of that file.
+in `menus_dispatch.cpp`, which holds the dispatch order.
 
 Key facts:
 - Codes arriving here are engine InputIndices, NOT Win32 VKs and NOT
@@ -68,7 +68,7 @@ This is the reusable abstraction for "arrow through whatever panel is on screen.
 It is **generic** — it works on any foreground GUI panel without per-screen code,
 because it reads the panel's real control list.
 
-Files: `menus_chain.{h,cpp}` (the chain), `menus.cpp` (focus tracking + speech).
+Files: `menus_chain.{h,cpp}` (the chain), `menus.cpp`, `menus_setactive.cpp` and `menus_focus.cpp` (focus tracking + speech).
 
 The model:
 - A panel is a `CSWGuiPanel` with a `CExoArrayList<CSWGuiControl*>` of children.
@@ -120,7 +120,7 @@ The canonical focus signal is `CSWGuiPanel::SetActiveControl @ 0x40a630` — fir
 exactly once per real focus change, covers every panel including the main menu.
 Hook mid-function at `0x40a638` (EDI = panel, ESI = new control). Do NOT use
 HandleFocusChange (fires twice, reports the wrong control). Our hook is
-`OnSetActiveControl` in `menus.cpp`.
+`OnSetActiveControl` in `menus_setactive.cpp`.
 
 ---
 
@@ -145,7 +145,7 @@ coordinate**:
   `cy = top + height/2`.
 
 Defer the actual click to the next `Update` tick rather than firing it inside
-the input hook (re-entrancy). Our queue is `g_pendingActivate*` drained in
+the input hook (re-entrancy). Our queue is in `menus_pending*.cpp`, drained in
 `TickPendingOps` (`menus.cpp`).
 
 **Hit-test shift gotcha:** on tabbed panels `MoveMouseToPosition`'s internal
@@ -423,8 +423,9 @@ Source repo: **https://github.com/JeanStiletto/voice-of-the-old-republic** —
 all paths below are under `patches/Accessibility/`; the RE reference is under
 `docs/llm-docs/`.
 
-- `menus.cpp` — `OnHandleInputEvent` (manager input hook + dispatch order),
-  `OnSetActiveControl` (focus signal), pending-op queue.
+- `menus_dispatch.cpp` — `OnHandleInputEvent` (manager input hook + dispatch order);
+  `menus_setactive.cpp` — `OnSetActiveControl` (focus signal); `menus_pending*.cpp` —
+  pending-op queue.
 - `menus_chain.{h,cpp}` — the navigation chain: RebindChain + the four Handle*
   dispatchers + tab-cluster detection (Strategy A) + hit-test compensation.
 - `menus_abilities.{h,cpp}` — dedicated two-level tab navigator (Strategy B).

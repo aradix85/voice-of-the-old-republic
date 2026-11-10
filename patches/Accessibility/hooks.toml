@@ -51,7 +51,7 @@ type = "pointer"
 # ============================================================================
 # GUI focus and input dispatch
 #
-# The panel focus signal, the central GUI input dispatcher and the focus-change logger. Handlers in menus.cpp / menus_dispatch.cpp.
+# The panel focus signal, the central GUI input dispatcher and the focus-change logger. Handlers in menus_setactive.cpp / menus_dispatch.cpp.
 # ============================================================================
 # CSWGuiControl::HandleFocusChange — hooked mid-function at 0x41896b, after
 # the engine has loaded param_1 into EAX and 'this' into EDI. We deliberately
@@ -666,7 +666,7 @@ type = "int"
 # Lesson: entry-point hooks on CSWGuiListBox are unsafe. Any re-enable must
 # redesign as a mid-function hook with a register source per
 # feedback_hook_design_register_sources.md. The handlers + DumpListBoxState
-# helper were removed from menus.cpp in this audit; resurrecting them means
+# helper are gone; resurrecting them means
 # writing fresh handlers around the redesigned cut, not restoring the old
 # entry-point shape.
 

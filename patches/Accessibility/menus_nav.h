@@ -1,8 +1,8 @@
 // Cursor stepping shared by the standalone screen navigators.
 //
 // Header-only: one integer function with no engine access, so it needs no
-// TU of its own. Lives here rather than in menus_internal.h, which declares
-// itself a private contract between menus.cpp and menus_extract.cpp.
+// TU of its own. Lives here rather than in menus_internal.h, the menus
+// files' private contract.
 
 #pragma once
 

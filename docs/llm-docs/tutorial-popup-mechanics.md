@@ -64,9 +64,9 @@ A single popup's text is reachable by five independent speakers with no shared
 the mouse text leaks:
 1. **Content-fingerprint monitor** (`menus_monitors::MonitorPanelContents`) —
    first-sight body speech. Override → hint.
-2. **Single-row listbox monitor** (`menus.cpp::OnListBoxSetActiveControl`) —
+2. **Single-row listbox monitor** (`menus_setactive.cpp::OnListBoxSetActiveControl`) —
    suppress (Surface-1 by mouse-strref text match / Surface-2 by `SyntheticActive`).
-3. **Engine focus-announce** (`menus.cpp::AnnounceNewFocusedControl`) — suppress
+3. **Engine focus-announce** (`menus_focus.cpp::AnnounceNewFocusedControl`) — suppress
    for the managed TutorialBox (stops a stray "Abbrechen" on open).
 4. **Arrow-nav chain** (`menus_monitors::AnnounceControl`) — substitute the hint
    for the **message listbox** (identity, not text); buttons read their labels.

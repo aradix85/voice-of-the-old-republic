@@ -130,7 +130,7 @@ void InitDefaults() {
     // ----- Help -----
     // F1 lists all keys, Ctrl+F1 the current screen's. Both are polled, so they
     // work everywhere. The engine also uses F1's input index as its GUI
-    // activate code, so menus.cpp keeps a raw F1 from reaching a panel.
+    // activate code, so menus_dispatch.cpp keeps a raw F1 from reaching a panel.
     bind(Action::HelpMenuOpen,         VK_F1, 0, 0,        kAnyMod);
     bind(Action::HelpContext,          VK_F1, 0, kModCtrl, kModShift | kModAlt | kModAltGr);
 

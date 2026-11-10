@@ -10,7 +10,7 @@ The ProcessInput hook is a frame-boundary seq tick only (the per-frame "Diag.Pro
 
 ## Declarations (in source order)
 
-- L27 `unsigned int NextSeq()`: Monotonic counter shared across the upstream input-stream log and the manager hook (see menus.cpp::OnHandleInputEvent).
+- L27 `unsigned int NextSeq()`: Monotonic counter shared across the upstream input-stream log and the manager hook (OnHandleInputEvent, menus_dispatch.cpp).
 - L44 `void NoteOverlayEscClosed()`: Overlay-Esc consume latch — defeats a poll-vs-event race on the Escape key.
 - L45 `bool ConsumeOverlayEscLatch()`
 - L66 `void NoteEditboxSubmitClosed()`: Editbox-submit consume latch — stops the Enter that confirms a save-name editbox from also firing an in-world interact.

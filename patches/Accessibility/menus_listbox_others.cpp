@@ -53,7 +53,7 @@ constexpr size_t kScriptSelectOptionDescOffset  = 0;
 // and the row text via FromControl returns empty because the row IS a
 // CSWGuiSkillFlow with no rendered label. Handled in menus_powers_levelup.cpp
 // with the chargen_feats-style 2D dispatcher; title override moved to the
-// AnnouncePanelTitle path in menus.cpp.
+// AnnouncePanelTitle path in menus_focus.cpp.
 
 // ============================================================================
 // Examine — CSWGuiExamine panel opened by ExamineOpen. Listbox is the embedded

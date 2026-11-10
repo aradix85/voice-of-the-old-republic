@@ -29,7 +29,7 @@ using acc::engine::PanelKind;
 // True when `target` is the Accept or Cancel button of a chargen sub-screen
 // of InGameLevelUp, i.e. the activation closes that sub-screen. Decided
 // before the dispatch, which may free the sub-screen. Closing one needs the
-// same chain reset as the InGameOptions sub-screen Esc close in menus.cpp:
+// same chain reset as the InGameOptions sub-screen Esc close in menus_chain_input_keys.cpp:
 // without it, the parent InGameLevelUp panel's updated entries ("Attribute,
 // unavailable" etc.) can stay silent on restore, because channel-0 dedup
 // and the monitor's last-text cache still hold the pre-close text.

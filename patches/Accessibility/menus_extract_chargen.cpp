@@ -219,7 +219,7 @@ const char* TryClassSelectionIcon(void* control, void* owner,
 //
 //     The RIGHT arrow is intentionally returned without text — that's
 //     what FindAdjacentArrow keys on (it skips controls that have
-//     announceable text), so Left/Right routing in menus.cpp can find
+//     announceable text), so Left/Right routing in menus_chain_input_keys.cpp can find
 //     the right_arrow as the cycle neighbour.
 //
 //     Live cycle state lives on the chargen creature: UpdatePortrait-

@@ -102,7 +102,7 @@ struct ListBoxPanelSpec {
     bool (*onEnter)(void* panel);
     // Handle Esc. Returns true if consumed. nullptr = don't handle Esc.
     bool (*onEsc)(void* panel);
-    // Optional title-speech override. Called from menus.cpp's
+    // Optional title-speech override. Called from menus_focus.cpp's
     // AnnouncePanelTitle when a panel that this spec matches gets focus
     // for the first time. Returning a non-null string substitutes that
     // string for the generic title-walk speech; returning nullptr falls

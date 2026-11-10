@@ -368,7 +368,7 @@ callbacks now (was three): the original `announce`, plus two added
   * **titleOverride(panel) → const char*** — replacement title speech
     for panels whose .gui-baked title is broken-by-default. Looked up
     via the public `acc::menus::listbox::GetTitleOverride(panel)`,
-    called from `menus.cpp::AnnouncePanelTitle` before the generic
+    called from `AnnouncePanelTitle` (menus_focus.cpp) before the generic
     label-walk. Returns nullptr to fall through to the generic walk
     (the common case — most spec entries leave it null). First user:
     SkillInfoBox spec, gated on `FindFeatsCharGenPanel()` so future
@@ -388,7 +388,7 @@ some specs have "speak the row" + "speak supplementary aux state"
 shape, while others are pure "speak the row". Splitting them keeps
 each callback's job small. Same reasoning makes title overrides
 naturally a per-spec concern rather than scattered `if (kind == X)`
-checks in menus.cpp.
+checks across the menus files.
 
 **How to apply:** When adding a new listbox-shaped panel,
   * if its .gui title is wrong, set `titleOverride`;
@@ -402,18 +402,17 @@ checks in menus.cpp.
 ## select_then_confirm_listbox_helpers
 _DriveListBoxSelection + QueueButtonByIdActivate dedup the Container/Equip-picker/SaveLoad pattern; reuse for any new panel of the same shape_
 
-`patches/Accessibility/menus.cpp` has two file-static helpers that cover the
-"arrow-keys mutate listbox.selection_index; Enter/Esc → confirm/cancel
-button by .gui-time id" pattern:
+Two pieces cover the "arrow-keys mutate listbox.selection_index; Enter/Esc →
+confirm/cancel button by .gui-time id" pattern:
 
-- `DriveListBoxSelection(lb, navDown, minSel, &out)` — pure cursor mutation.
+- `DriveListBoxSelection(lb, op, minSel, &out)` (menus_internal_listbox.cpp) —
+  pure cursor mutation.
   Writes selection_index, scrolls top_visible_index, fills `ListBoxNavResult`
   with old/new indices, rowCount, and the row pointer at newSel. Pass
   `minSel=1` for listboxes whose row 0 is a .gui-time PROTOITEM template
   (equip-picker LB_ITEMS); 0 elsewhere.
-- `QueueButtonByIdActivate(panel, buttonId, logPrefix)` — Enter/Esc handler:
-  debounces against `g_pending*`, sets `g_pendingActivate +
-  g_pendingActivateTarget + g_navSpeechSuppressBudget`, logs, returns bool.
+- The pending-op queue (`menus_pending.h`) — Enter/Esc queue the button's
+  activation for the next tick instead of firing it from the input hook.
 
 **Why:** before extraction, the same ~30-line block (read selPtr/topPtr/ippPtr,
 clamp, scroll-window) appeared three times (Container, Equip-picker,
@@ -430,11 +429,11 @@ cursor + button-queue logic.
 The select-AND-act-on-row pattern (Options sub-dialog setting buttons,
 dialog reply listbox with engine-bound arrow keys, read-only description
 listboxes) deliberately does NOT go through these helpers — different
-semantics. See the `IsSaveLoadPanel` block comment in menus.cpp for the
+semantics. See the `IsSaveLoadPanel` block comment in menus_internal.cpp for the
 full risk catalogue.
 
-Equip-picker Enter intentionally bypasses `QueueButtonByIdActivate` — it
-uses `g_pendingEquipCommit` to direct-call `OnItemSelected` because the
+Equip-picker Enter intentionally bypasses the button queue — its own
+pending op direct-calls `OnItemSelected` because the
 click pipeline can't reach the row buttons through the listbox extent
 (see docs/equip-flow-investigation.md).
 
@@ -556,7 +555,7 @@ from sites that run inside `Dispatch()` between `BeginTick` and
 `EndTick` (most of our per-tick tickers).
 
 Implementation: hotkeys.cpp `EdgeState::claimed` + `ClaimRisingEdge`,
-declared in hotkeys.h, called from menus.cpp::OnHandleInputEvent for
+declared in hotkeys.h, called from OnHandleInputEvent (menus_dispatch.cpp) for
 the InteractTarget/InteractForceRadial pair on Enter press. Landed
 in commit 8da823e.
 
@@ -583,7 +582,7 @@ _The generic menu chain processes ANY foreground GUI panel (even custom game pan
 
 The generic menu chain (RebindChain + HandleNavStep/HandleEnterActivation/HandleLeftRight in menus_chain.cpp, driven from `OnHandleInputEvent`) builds and navigates a control list for **any** foreground GUI panel — including custom game panels like the Pazaak board (`CSWGuiPazaakGame`), even though it's identified structurally rather than as a `PanelKind`. Confirmed in patch-20260601-082845.log: the board got a 28-entry chain, so pressing Enter fired BOTH our card-play AND the chain activating button "Runde beenden" (the "strange things" the user hit).
 
-**Implication:** a custom navigator for a GUI panel must intercept input at the manager hook (`menus.cpp OnHandleInputEvent`) via a `TryHandleInput(activePanel, param_1, param_2, rv)` that returns consumed (`return trackPress(rv)`) BEFORE the generic chain handlers run — exactly how the listbox/editbox dispatchers and now `acc::pazaak::TryHandleInput` / `acc::menus::pazaakdeck::TryHandleInput` work. Win32-polling alone (GetAsyncKeyState) is NOT enough for keys the engine delivers to GUI panels (arrows, Enter): the engine + chain still act on them. Win32 poll is only safe for scancodes the engine drops before the manager hook (letters, `,`/`.`/`-` — see [[project_inworld_input_pipeline]]).
+**Implication:** a custom navigator for a GUI panel must intercept input at the manager hook (`OnHandleInputEvent` in menus_dispatch.cpp) via a `TryHandleInput(activePanel, param_1, param_2, rv)` that returns consumed (`return trackPress(rv)`) BEFORE the generic chain handlers run — exactly how the listbox/editbox dispatchers and now `acc::pazaak::TryHandleInput` / `acc::menus::pazaakdeck::TryHandleInput` work. Win32-polling alone (GetAsyncKeyState) is NOT enough for keys the engine delivers to GUI panels (arrows, Enter): the engine + chain still act on them. Win32 poll is only safe for scancodes the engine drops before the manager hook (letters, `,`/`.`/`-` — see [[project_inworld_input_pipeline]]).
 
 Related: [[project_hotkeys_claim_vs_consume]], [[feedback_pazaak_arrow_zone_nav]].
 

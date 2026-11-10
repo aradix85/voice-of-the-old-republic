@@ -10,4 +10,4 @@ No state outside the per-pointer dedup. Silently no-ops on any panel whose vtabl
 
 ## Declarations (in source order)
 
-- L20 `void DumpStructureIfNeeded(void* panel)`: Called from menus.cpp::AnnouncePanelTitle on every panel-title announce.
+- L20 `void DumpStructureIfNeeded(void* panel)`: Called from menus_focus.cpp's AnnouncePanelTitle on every panel-title announce.

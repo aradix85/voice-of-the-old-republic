@@ -364,7 +364,7 @@ void RebindChain(void* panel) {
     // selected_ability so a Left/Right press immediately after the panel
     // opens (without first stepping with Up/Down) modifies the right
     // ability. No-op on every other panel. The chain-step handler in
-    // menus.cpp keeps the field in sync as the user navigates.
+    // menus_chain_input.cpp keeps the field in sync as the user navigates.
     acc::menus::chargen_attr::SyncSelectedAbilityFromChainFocus();
     // Same on the Skills panel.
     acc::menus::chargen_skills::SyncSelectedSkillFromChainFocus();

@@ -1,18 +1,13 @@
-// GUI input dispatch + focus-change hook handlers.
-//
-// Split out of menus.cpp by the Phase-1 structure pass (refactoring
-// candidate 1). Two engine hooks live here:
+// GUI input dispatch + focus-change hook handlers. Two engine hooks:
 //
 //   * OnHandleFocusChange (CSWGuiControl::HandleFocusChange) - log only.
 //   * OnHandleInputEvent (CSWGuiManager::HandleInputEvent) - the ordered
-//     gate list every GUI keypress runs through. This is the single
-//     largest function in the mod and the reason the file exists: it was
-//     ~40% of menus.cpp and has no state of its own beyond the two
-//     menus.cpp-owned flags it reads through menus_internal.h.
+//     gate list every GUI keypress runs through. It reads two menus.cpp
+//     flags through menus_internal.h.
 //
-// The definitions are verbatim from menus.cpp. Gate ORDER is behaviour -
-// each subsystem gets first refusal in a specific sequence - so nothing in
-// this file may be reordered without an in-game input pass.
+// Gate ORDER is behaviour - each subsystem gets first refusal in a specific
+// sequence - so nothing in this file may be reordered without an in-game
+// input pass.
 
 #include <windows.h>
 #include <cstdint>
@@ -53,9 +48,7 @@
 using namespace acc::engine;
 
 // Chain cursor state lives in menus_chain.cpp; the dispatch gates read it
-// directly (and advance g_chainIndex on a chain step). Same
-// using-declaration pattern menus.cpp uses so the dense reads below stay
-// as they were.
+// directly (and advance g_chainIndex on a chain step).
 using acc::menus::chain::g_chain;
 using acc::menus::chain::g_chainPanel;
 using acc::menus::chain::g_chainIndex;

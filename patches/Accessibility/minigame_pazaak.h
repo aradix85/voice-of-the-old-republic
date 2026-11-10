@@ -47,7 +47,7 @@ bool IsSignChoiceCard(int index);
 bool IsBoardForeground();
 
 // Manager-hook input handler for the board's arrow-zone navigator. Returns
-// true (and sets rv) when it consumes the key. Called from menus.cpp's
+// true (and sets rv) when it consumes the key. Called from menus_dispatch.cpp's
 // CSWGuiManager::HandleInputEvent hook ahead of the generic chain.
 bool TryHandleInput(void* activePanel, int param_1, int param_2, int& rv);
 
