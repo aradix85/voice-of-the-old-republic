@@ -35,8 +35,9 @@ kdev logs --follow
 
 Other commands:
 
-- `kdev build` — compile only. It must end with 0 warnings.
-- `pwsh -File tools/tests/run_unit_tests.ps1` — the unit tests.
+- `kdev build` — compile only. Our sources build at warning level 4 and a warning fails the build.
+- `pwsh -File tools/analysis/cppcheck.ps1` — cppcheck; exit code 0 means nothing outside the suppressions file.
+- `pwsh -File tools/tests/run_unit_tests.ps1` — the unit tests. `-Mode asan` runs them under AddressSanitizer, `-Mode coverage` reports line coverage.
 - `python tools/analysis/code_index.py` — regenerate `docs/llm-docs/code-index/` after changing code.
 - `kdev apply` — install the most recent build into the game (game closed).
 - `kdev launch` — start the game with the current install. Skip `--monitor`; it has a crash-after-inject bug. Read the patch log directly.
@@ -98,7 +99,7 @@ Every push to `bridge` is built by `.github/workflows/build.yml`, which runs the
 ## Commits
 
 1. Work on `bridge`. One family of change per commit; a split is first a move-only commit, then a lean commit with the same behaviour.
-2. `kdev build` with 0 warnings and green unit tests before every commit.
+2. `kdev build`, green unit tests and `tools/analysis/cppcheck.ps1` with exit code 0 before every commit.
 3. Commit messages: a short subject (what and why), and a body when the diff does not carry the context.
 4. If the change touches an engine offset, vtable index or hook address, name the source you verified it against (decompile, SARIF query, log line).
 5. Add the change to the top section of `docs/CHANGELOG.md`.

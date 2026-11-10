@@ -35,12 +35,11 @@ carry meaning — trust them when deciding whether code is safe to remove.
 - **`probe_*`** — throwaway reverse-engineering tooling. One-shot or
   hotkey-triggered dumps that log engine state and change nothing. Safe to
   treat as disposable once the question they answered is settled.
-  **Caveat:** the file name is not the namespace. `probe_priority_groups.cpp`
-  lives in `acc::probe::priority_groups`, so a grep for
-  `probe_priority_groups::` finds nothing even though `core_tick.cpp`
-  calls it every tick. Always grep the *namespace* before concluding a
-  probe is dead — a Phase-1 candidate to delete this file was approved on
-  exactly that false negative and had to be reverted.
+  **Caveat:** a file name is not always the namespace. `minigame_turret.cpp`
+  lives in `acc::turret_game`, so a grep for `minigame_turret::` finds
+  nothing even though `core_tick.cpp` calls it every tick. Always grep the
+  *namespace* before concluding a file is dead — a probe was once approved
+  for deletion on exactly that false negative and had to be restored.
 - **`diag_*`** — diagnostic-only, no shipped behaviour. Currently
   `diag_settings` (startup environment dump for support logs) and
   `diag_chargen_feats` (on-demand panel dump).

@@ -25,7 +25,7 @@ Gate: edge-turn fires when `uVar8==0`. `uVar8 = rightClickHeld`, inverted if `Cl
 
 **SHIPPED 2026-06-12 (v0.4.5, committed, "hopefully fixed"):**
 - Fix #1 (commit 5e264c5): `acc::engine::GetCameraYawRadians` (engine_player) — correct w,x,y,z read, `fwd.x=2(xy-zw)`, `fwd.y=1-2(xx+zz)`, `atan2(fwd.y,fwd.x)`, East=0, == position-derived. camera_orient fallback + probe_camera_state use it; deleted bogus 2*atan2(qz,qw). NOT the spin cause, just a latent read bug.
-- Guard = `camera_spin_diag.cpp` (commits b479bbf + c103614). The fix: when edge-turn detected (cursor in band + camera rotating ≥3°/s + foreground), **write GuiManager->mouse_x directly to viewport centre** (vpW/2). Catches the contact before AcclTurnCamera ramps → no runaway.
+- Guard = `camera_spin_guard.cpp` (commits b479bbf + c103614). The fix: when edge-turn detected (cursor in band + camera rotating ≥3°/s + foreground), **write GuiManager->mouse_x directly to viewport centre** (vpW/2). Catches the contact before AcclTurnCamera ramps → no runaway.
 - **KEY LESSON — injected motion does NOT move mouse_x after load.** Both `SetCursorPos` AND `SendInput` MOUSEEVENTF_MOVE left mouse_x stuck at 0 (post-load input pipeline dead; same family as [[project_bigpicture_focus_theft_dead_menus]]). Real touchpad works, synthetic doesn't. Direct field write is the only thing that moved it. (probe_mouselook's SendInput feeds GetMouseDelta=turn, NOT mouse_x=position.)
 - Diagnostic now **episode-based** (not per-frame): `edge-guard START` / `edge-guard END` summary (corrections/edgeFrames/duration/maxRate/netYaw) per spin episode + rate-limited `READ ANOMALY` tripwire (quat vs pos yaw divergence = fix#1 regression). Kept in to catch recurrence.
 
@@ -103,7 +103,7 @@ KOTOR's camera-on-a-stick behaves like a "soft" decoupled rig in stock play:
 ## mouselook_engine_behaviour
 _CClientOptions.mouse_look is the runtime gate; SendInput reaches engine; cursor not captured. Three load-bearing facts for a look-around feature._
 
-Three findings from Phase 4 lay-off 2 probe (`patches/Accessibility/probe_mouselook.{h,cpp}`, `engine_options.{h,cpp}`). Verified in-game 2026-05-06 — strong-positive user report of audible spatial-audio pan during synthetic mouse sweep.
+Three findings from Phase 4 lay-off 2 probe (since removed; the option read is in `engine_options.{h,cpp}`). Verified in-game 2026-05-06 — strong-positive user report of audible spatial-audio pan during synthetic mouse sweep.
 
 **1. `CClientOptions.mouse_look` IS the runtime gate.** Bitfield `int @+0x8`, mask `0x2`. Flipping from our DLL takes effect immediately without menu interaction. Long-term plan's hint at "near +0xb0" was a misread — that offset is `CSWCameraOnAStick.mouseCameraRotateToggle` (a runtime camera struct, not the user-facing setting). Direct memory write is sufficient — no engine handshake needed.
 
@@ -150,8 +150,8 @@ animation.
 
 **Why:** User asked whether boost pads were (a) different objects we don't
 read, (b) mis-classified obstacles, or (c) terrain zones. Answer is (a):
-they're a separate engine type entirely. We routed-by-name in
-`swoop_race.cpp::CueResrefForObstacle` looking for "acc"/"boost" substrings
+they're a separate engine type entirely. We routed by name (an earlier
+`CueResrefForObstacle`), looking for "acc"/"boost" substrings
 in obstacle names — but no obstacle ever carries that name, because
 accelpads aren't obstacles. Names like `m03mg_MGO01..MGO22` are sequential
 rock IDs.

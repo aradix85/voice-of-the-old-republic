@@ -541,7 +541,7 @@ workbench-related headers).
   `accessibility-map.md`; scripting hooks are not yet used by this mod).
 - Save-file binary layout.
 - Walkmesh internals and wall topology algorithm — see `engine_area.h`
-  comments, `wall_topology.h`, and the archived investigation docs under
+  comments, `room_topology.h`, and the archived investigation docs under
   `archiev/archived docs 27.05.2026/`.
 - SARIF / DB query recipes — see `docs/llm-docs/sarif-cookbook.md` and
   `accessibility-map.md::How to grow this map`.

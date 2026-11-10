@@ -45,7 +45,7 @@ Key facts:
 **B. Win32 polling — `GetAsyncKeyState` from the per-frame tick.**
 For keys the engine drops (anything not in `[Keymapping]`), poll the OS directly
 each frame and edge-detect with a static `prev`. Reference impl:
-`cycle_input.cpp::PollWin32` and `interact_hotkey.cpp`. Self-gate on
+`cycle_input.cpp::PollWin32` and `input_poll_router.cpp`. Self-gate on
 `GetForegroundWindow()` == our PID so you don't fire while the user is in
 another window.
 
@@ -289,7 +289,7 @@ so the engine walks-to-target" rule documented in the header.
 
 The closest analog to "build my own overlay menu with its own nav + activation"
 is the **unified action menu** — our in-world radial replacement. Files:
-`unified_action_menu.{h,cpp}`, driven from `interact_hotkey.cpp`.
+`unified_action_menu.{h,cpp}`, driven from `input_poll_router.cpp`.
 
 It's instructive because it does NOT go through the manager hook or the chain at
 all. It:
@@ -435,7 +435,7 @@ all paths below are under `patches/Accessibility/`; the RE reference is under
 - `engine_picker.{h,cpp}` — in-world context-action / radial picker (§6b).
 - `menus_extract.cpp` — control-text extraction.
 - `engine_input.{h,cpp}` — input-code constants + DirectInput acquisition fixes.
-- `cycle_input.cpp`, `interact_hotkey.cpp` — Win32 GetAsyncKeyState polling
+- `cycle_input.cpp`, `input_poll_router.cpp` — Win32 GetAsyncKeyState polling
   reference for engine-dropped keys.
 - `unified_action_menu.{h,cpp}` — fully custom keyboard-driven overlay example.
 - `input_pipeline.{h,cpp}` — upstream client-app input hooks + overlay-Esc latch.

@@ -47,7 +47,7 @@ From the extracted area GFFs (all three swoop modules agree on structure):
 Engine spawn types: pads are `CSWMiniEnemy` (extends `CSWTrackFollower`),
 reachable via the MGO-array downcast `vtable[0x1c] = AsEnemy`. Rocks are a
 *separate* pool (`CSWMGObstacle`, `vtable[0x20] = AsObstacle`). See
-`swoop_spatial_audio.cpp` for the two-pass sweep we already run.
+`minigame_swoop_audio_accelpad.cpp` for the two-pass sweep we already run.
 
 ## Combined hit radius (the only "size" number that matters)
 
@@ -184,7 +184,7 @@ Player lateral agility: area `LateralAccel = 300`, `MovementPerSec = 100`
 **Accessibility implication:** the cue the player needs is *"the next pad is N
 units to your left/right"* with enough lead to steer there before the Y crossing
 — precisely the decoupled lateral-pan + real-distance-loudness cue in
-`swoop_spatial_audio.cpp::TickAccelpadCues`. The ±6 (or ±5) catch band is the
+`minigame_swoop_audio_accelpad.cpp::TickAccelpadCues`. The ±6 (or ±5) catch band is the
 tolerance budget the pan has to land inside. There is no benefit to any
 timing/press cue — the hit is positional and swept.
 
@@ -227,7 +227,7 @@ accounted for — there is no "stationary target" assumption anywhere.
 - `swoop_accelpads_are_enemies` (in `camera-and-swoop.md`) was correct: pads are
   the Enemies pool, not obstacles. This doc supersedes its open question about
   the position field — it's the model's `Gob::GetPosition` (vtable+0x64), exactly
-  as `swoop_spatial_audio.cpp::ReadTrackFollowerPosition` already reads.
+  as the swoop audio code already reads.
 - No engine hook is needed to *detect* a hit for cueing purposes; if we ever
   want a "you hit a pad!" confirmation, hook `OnHitFollower` dispatch or watch
   the player speed step up, rather than re-implementing the sphere test.

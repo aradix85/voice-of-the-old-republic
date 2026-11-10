@@ -264,7 +264,7 @@ RE'd by decompiling CSWSObject::ClearAllActions @0x004CCD80 (iterates `action_no
 
 CORRECTION (tested 2026-06-06): combat DOES populate this queue — depth observed swinging 0..5 during a fight (move-into-range + attack actions), NOT purely CSWSCombatRound as first assumed. Harmless for the input-restore use because combat never arms our freeze (every combat delta logged freezeActive=0), so the restore tick never reads the queue during combat — they never overlap. Talk also enqueues a walk action (depth 0→2 on a 30m walk-to-talk), confirming the leader DOES auto-walk to a talk target via the picker path.
 
-`count == 0` is the authoritative "AI action finished" signal — the principled replacement for the 3s `armAutoRestore` timer in engine_player.cpp (see [[project_distant_npc_dialogue_stuck]]). Watcher must latch "saw count>0 since dispatch" (or a ~200ms grace) before restoring, to dodge the post-dispatch enqueue race, and keep a long timeout ceiling as a never-drains backstop.
+`count == 0` is the authoritative "AI action finished" signal — the principled replacement for the 3s auto-restore timer in engine_player_inputlock.cpp (see [[project_distant_npc_dialogue_stuck]]). Watcher must latch "saw count>0 since dispatch" (or a ~200ms grace) before restoring, to dodge the post-dispatch enqueue race, and keep a long timeout ceiling as a never-drains backstop.
 
 CSWPlayerControl::SetEnabled @0x006792E0: writes `enabled` (+0xc) then GetCreatureByGameObjectID(player_id) → SwitchMode(1=player / 0=AI). Trivial; restore = SetPlayerInputEnabled(true). See [[project_player_control_toggle]].
 

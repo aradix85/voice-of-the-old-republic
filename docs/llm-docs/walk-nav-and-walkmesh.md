@@ -118,9 +118,8 @@ two axes at once:
 
 Consequence: crate-walls are **indistinguishable from architecture by
 source** (both are room-walkmesh boundary edges). The principled fix is
-"room shape ignores furniture": detect small interior closed-loop surfaces
-(the surface clustering in spatial_wall_surfaces already groups edges into
-surfaces) and exclude them from the openness/room-shape probe, so a cluttered
+"room shape ignores furniture": detect small interior closed loops of wall
+edges and exclude them from the openness/room-shape probe, so a cluttered
 bay reads as one open Bereich and the crates stay as object narration. Meaty
 — affects every furnished area. Cheaper partial relief = anti-bounce on
 cluster re-entry (transitions.cpp) which cuts the back-and-forth repetition
@@ -133,7 +132,7 @@ and [[project_wok_rooms_not_visual_rooms]].
 _WallTopo clustering = 2 passes (core-merge + straggler-absorb, bridge-junctions kept separate); heap-backed std::string labels; later +/-35deg curved-corridor merge (7ff9bfe) built on top_
 
 
-WallTopo (wall_topology.cpp `BuildForArea`) was rewritten (2026-06-10) from six
+WallTopo (room_topology.cpp `BuildForArea`) was rewritten (2026-06-10) from six
 merge passes to **two**, superseding the older per-pass / successor-path design
 sketches (archived):
 
@@ -159,7 +158,7 @@ end (new `strfmt.h` = printf→std::string) — announcements never truncate
 is now `std::string&`.
 
 A later refinement shipped a **degree-2 curved-corridor merge** (commit 7ff9bfe,
-wall_topology.cpp ~L187-207): adjacent deg-2 corridor nodes merge when their
+now in room_topology_merge.cpp): adjacent deg-2 corridor nodes merge when their
 connecting direction agrees within ±35°; sharp bends stay split.
 
 Known remaining gaps to judge (Oberstadt / Slums plaza, the heaviest

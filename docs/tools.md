@@ -235,6 +235,17 @@ These are upstream — fetch via `gh repo clone <name>` if/when needed.
 - **Visual Studio 2022 Community** with "Desktop development with C++" + ".NET desktop development" workloads. Required to build the Patch Manager from source (or to build a `.kpatch`). Not required for the MessageInjector MVP if we use `dotnet` SDK + a CLI workflow instead. Decide before phase 2.
 - **NVDA** screen reader. The mod speaks and brailles through NVDA's controller client, vendored in `third_party/nvda/`.
 
+## Analysis and test tools (fork aradix85)
+
+On Anouk's machine; the scripts find them at these default paths.
+
+- **Cppcheck 2.22** in `C:\Program Files\Cppcheck\`. `pwsh -File tools/analysis/cppcheck.ps1` runs it with `tools/analysis/cppcheck_suppressions.txt`; `-Style` adds style findings and unused functions as a report.
+- **LLVM 23** in `C:\Program Files\LLVM\` (clang-cl, clang-tidy, llvm-cov). `python tools/analysis/clang_tidy.py` runs clang-tidy with the checks in `.clang-tidy`; `run_unit_tests.ps1 -Mode coverage` builds the unit tests with clang-cl and reports line coverage.
+- **The Microsoft compiler** itself: `pwsh -File tools/analysis/msvc_check.ps1 -Mode w4` (warning level 4 without a build) and `-Mode analyze` (the `/analyze` checker); `run_unit_tests.ps1 -Mode asan` for AddressSanitizer.
+- **Python 3.12** with lizard, radon, ruff, mypy, pytest and coverage, for `tools/analysis/*.py`.
+
+Reports land in `build/analysis/`. The current baselines are in `docs/refactoring/STATE.md` while the refactoring runs.
+
 ## Conventions
 
 - All third-party source clones live under `C:\Users\fabia\Dev\kotor\third_party\<repo-name>\`.

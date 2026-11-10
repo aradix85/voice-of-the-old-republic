@@ -45,12 +45,10 @@ The loader only ever sets `type` to **1 or 2** (`if (Type==1 || Type==2) this->t
   100). Reads `Camera` + `CameraRotate`; `UpdateAxis` swaps x↔z; `KeepInTunnel`
   wraps the aim 0–360°. This is the gunner minigame.
 
-WARNING — struct offset bug in our code: Lane's layout puts `type` at
-`CSWMiniGame +0x80` and `axis_x` at `+0x84`. **Our `turret_game.cpp` reads `+0x84`
-as "type"** (so it sees `axis_x`, not `type`) and treats turret as `==3`,
-swoop as `==0`. It works only by coincidence (the two areas happen to differ at
-`+0x84`). The real values are turret `type==2`, swoop `type==1`. Fix the offset
-to `+0x80` and the constant to 2 when next touching that file.
+Lane's layout puts `type` at `CSWMiniGame +0x80` and `axis_x` at `+0x84`. Our
+code reads `+0x80` (`kMiniGameTypeOffset`): turret `type==2`, swoop `type==1`.
+An early version read `+0x84` and only worked because the two areas happened
+to differ there.
 
 ## The aim chain (input → where bolts go)
 
