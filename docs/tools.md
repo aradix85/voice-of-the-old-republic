@@ -233,7 +233,7 @@ These are upstream — fetch via `gh repo clone <name>` if/when needed.
 
 - *(Lane's KOTOR 1 Ghidra bundle — downloaded 2026-04-29; see "Reverse-engineering reference data" above.)*
 - **Visual Studio 2022 Community** with "Desktop development with C++" + ".NET desktop development" workloads. Required to build the Patch Manager from source (or to build a `.kpatch`). Not required for the MessageInjector MVP if we use `dotnet` SDK + a CLI workflow instead. Decide before phase 2.
-- **NVDA** screen reader + **Tolk** library (`https://github.com/dkager/tolk`). Required for the MVP to actually speak to a screen reader. Tolk wraps NVDA / JAWS / SAPI / Narrator behind one C API and has C# bindings.
+- **NVDA** screen reader. The mod speaks and brailles through NVDA's controller client, vendored in `third_party/nvda/`.
 
 ## Conventions
 

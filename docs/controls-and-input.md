@@ -137,7 +137,7 @@ Status legend: `[ ]` not started, `[~]` partially solved, `[x]` solved.
 ### Mid priority — minigames
 
 - `[x]` **Pazaak** — done (v0.2.0). Board game + wager popup + side-deck builder are keyboard/screen-reader playable; see "Pazaak minigame" under Mod hotkeys below.
-- `[x]` **Turret minigame** — keyboard aiming + firing work **natively** (this entry previously claimed "mouse-only reticle" — that was wrong, live-disproven 2026-06-01). The turret aim is rotational: **A/D swing horizontally (azimuth), W/S raise/lower (elevation), Space/Enter fire.** Reticle lives in `CSWMiniPlayer.offset` (+0x1c4): z=azimuth, x=elevation, y unused. The only accessibility gap was that the player couldn't *know* the keys work, so our `turret_game.cpp` announces "Aim with W A S D. Space to fire." on entry. It also fixes the prior bug where the turret game (CSWMiniGame.type==3) was mis-announced as a swoop race (type==0). No on-target audio cue yet (deliberately, to avoid spam); revisit if a tester wants it.
+- `[x]` **Turret minigame** — keyboard aiming + firing work **natively** (this entry previously claimed "mouse-only reticle" — that was wrong, live-disproven 2026-06-01). The turret aim is rotational: **A/D swing horizontally (azimuth), W/S raise/lower (elevation), Space/Enter fire.** Reticle lives in `CSWMiniPlayer.offset` (+0x1c4): z=azimuth, x=elevation, y unused. The only accessibility gap was that the player couldn't *know* the keys work, so `minigame_turret.cpp` announces "Aim with W A S D. Space to fire." on entry. It also fixes the prior bug where the turret game (CSWMiniGame.type==3) was mis-announced as a swoop race (type==0). No on-target audio cue yet (deliberately, to avoid spam); revisit if a tester wants it.
 
 ### Lower priority — spatial / world interaction
 
@@ -169,7 +169,7 @@ Items 1–6 are 2D listbox/button widgets — likely solvable in the same way we
 
 ## Mod hotkeys (Accessibility patch)
 
-Bindings introduced by the Accessibility mod itself. All polled via Win32 `GetAsyncKeyState` (the engine's keymap drops unbound scancodes before our manager hook can see them — see `project_inworld_input_pipeline`). Single source of truth at runtime lives in `patches/Accessibility/hotkeys.h` (the `Action` enum) and `hotkeys.cpp` (the default `Binding` table). Every per-tick poll in the mod queries the registry — there is no longer a place where bindings are hardcoded outside `hotkeys.cpp`.
+Bindings introduced by the Accessibility mod itself. All polled via Win32 `GetAsyncKeyState` (the engine's keymap drops unbound scancodes before our manager hook can see them). Single source of truth at runtime lives in `patches/Accessibility/hotkeys.h` (the `Action` enum) and `hotkeys.cpp` (the default `Binding` table). Every per-tick poll in the mod queries the registry — there is no longer a place where bindings are hardcoded outside `hotkeys.cpp`.
 
 When this document and `hotkeys.cpp` disagree, `hotkeys.cpp` wins. Update both together.
 
@@ -184,7 +184,7 @@ When this document and `hotkeys.cpp` disagree, `hotkeys.cpp` wins. Update both t
 - F1 — Toggle the global keybind list (`help.cpp`). A synthetic in-DLL overlay (no engine panel) that works in EVERY context — in-world, any menu, dialog, map. Lists every important binding grouped under section headers; Up/Down read, Home/End jump, Enter re-reads, Esc or F1 close. Forbids every modifier. In-world the overlay pauses the world (BeginOverlayPause), matching the examine view; in a menu the panel already holds the world. **Note:** the engine reuses InputIndex `0x27` (KEYBOARD_F1) as its GUI "activate" code, so the manager hook (`menus.cpp`) suppresses a raw F1 reaching a panel to stop F1 doubling as Enter in menus.
 - Ctrl+F1 — Speak the keys relevant to the current screen (`help.cpp` SpeakContext). Detects context (in-world / menu / map / action menu / dialog / container / store) and reads the catalog entries tagged for it, ending with "press F1 for the full list". Generalises the per-screen open announcement the Pazaak board already does. Minigames are intentionally left as-is (no minigame context).
 
-Both surfaces share one tagged catalog in `help.cpp` (`kEntries`): `grp` chooses the F1 section a line lists under (F1 is exhaustive), `ctx` is a curated bitmask of the screens that speak it on Ctrl+F1 (kept short). Localised strings: `HelpGroup*` / `HelpKey*` / `HelpContext*` in `strings.h` (all five languages).
+Both surfaces share one tagged catalog in `help.cpp` (`kEntries`): `grp` chooses the F1 section a line lists under (F1 is exhaustive), `ctx` is a curated bitmask of the screens that speak it on Ctrl+F1 (kept short). Strings: `HelpGroup*` / `HelpKey*` / `HelpContext*` in `strings.h` / `strings.cpp`.
 
 ### World interaction
 
@@ -212,17 +212,17 @@ Both surfaces share one tagged catalog in `help.cpp` (`kEntries`): `grp` chooses
 - `-` (QWERTZ) / `/` (QWERTY) — Announce the currently-focused cycle target. Same physical key right of `.` on both layouts; we listen for both VKs so the binding stays consistent.
 - Shift+`-` / Shift+`/` — Autowalk to focus via UseObject (engine click-pipeline).
 - Alt+`-` / Alt+`/` — ForceWalkTo (queue-bypass) — diagnostic / future companion-NPC nudge entry point.
-- Ctrl+`-` / Ctrl+`/` — Arm audio beacon to current focus. Excludes AltGr (which Windows synthesises as Ctrl+RAlt on QWERTZ); plain LCtrl required.
+- Ctrl+`-` / Ctrl+`/` — Describe the route to the current focus, step by step. Excludes AltGr (which Windows synthesises as Ctrl+RAlt on QWERTZ); plain LCtrl required.
 
 ### Orientation & party
 
-- AltGr (right Alt alone, no Shift) — Speak the camera facing as a compass direction word on the compass voice, then the area the player stands in on the screen reader once that voice has finished (`announce_facing`). On the map screen: the facing in map-frame degrees plus the direction word, then the room.
+- AltGr (right Alt alone, no Shift) — Speak the camera facing as a compass direction word, then the area the player stands in (`announce_facing`). On the map screen: the facing in map-frame degrees plus the direction word, then the room.
 - Tab — Speak the party-leader name (after the engine has processed Tab's leader-cycle). Fires in-world and inside panels — the engine cycles control to the next living party member in both contexts; strip panels re-bind to the new leader, so the announce is wanted everywhere. (In-game panel switching is handled natively by the engine via Q/E.)
-- N — Camera orient. If an audio beacon is armed (Ctrl+`-`), point the camera at the beacon's next waypoint and speak "Beacon, <direction>". Otherwise face an exit of the current region (room_topology's exit points, real bearing from the player): the one nearest the camera heading, then clockwise on each further press while the player stays in the region and still faces the exit N last turned to; no region/exits → the next cardinal direction (N → E → S → W → N). Silent itself; camera_announce speaks the new direction word only when the sector changed. Bare N has no engine binding (the engine ignores it in-world); Shift+N is reserved for SaveMarkerAtCursor on the map, so the binding forbids Shift. Engine surface: the free-roam camera's one-shot `desiredOrientation` request (instant snap, see `llm-docs/camera-and-swoop.md` "camera_snap_and_turn_speed"); key-hold of the bound turn key (`AcclTurnCamera`) is the fallback for the combat camera.
+- N — Camera orient. Face an exit of the current region (room_topology's exit points, real bearing from the player): the one nearest the camera heading, then clockwise on each further press while the player stays in the region and still faces the exit N last turned to; no region/exits → the next cardinal direction (N → E → S → W → N). Silent itself; camera_announce speaks the new direction word only when the sector changed. Bare N has no engine binding (the engine ignores it in-world); Shift+N is reserved for SaveMarkerAtCursor on the map, so the binding forbids Shift. Engine surface: the free-roam camera's one-shot `desiredOrientation` request (instant snap, see `llm-docs/camera-and-swoop.md` "camera_snap_and_turn_speed"); key-hold of the bound turn key (`AcclTurnCamera`) is the fallback for the combat camera.
 
 ### Clipboard
 
-- Ctrl+R — Copy the last spoken string to the Windows clipboard (`speech_clipboard.cpp`), then speak a short confirmation. Not gated on game state: it behaves identically in dialog, in the journal, in any menu and in the world, which is the whole point of the key. "Last spoken" is literal — the capture sits in `prism.cpp` at the three points where text reaches a backend (`Speak(wchar_t*)`, `Speak(char*)`, `SpeakUrgentImpl`), so a cue that fired after the line you wanted is what gets copied. The confirmation is excluded from the capture via `prism::SuppressNextCapture()`, so repeated presses re-copy the same text rather than "Copied to clipboard". Published as `CF_UNICODETEXT` (widened with `prism::GetSpeechCodepage()`) so umlauts and Cyrillic survive the paste; Windows synthesises `CF_TEXT` for ANSI consumers. The clipboard call runs on a short-lived worker thread and hands its result back to the next tick, which speaks the confirmation — the engine's main thread is an STA carrying the message loop and DirectInput dispatch, and `SetClipboardData` there wakes every clipboard listener on the system (NVDA, Windows 11 clipboard history). Same reasoning the `update_checker` note in `core_dllmain.cpp` gives for keeping WinHTTP off that thread. Same key family as bare R (re-speak the dialog line) and Shift+R (secondary radial). Alt and AltGr are both forbidden: AltGr on QWERTZ raises Alt plus a phantom Ctrl, which would otherwise make AltGr+R copy. Originally bound to Alt+R — see the Alt warning above for why it moved.
+- Ctrl+R — Copy the last spoken string to the Windows clipboard (`speech_clipboard.cpp`), then speak a short confirmation. Not gated on game state: it behaves identically in dialog, in the journal, in any menu and in the world, which is the whole point of the key. "Last spoken" is literal — the capture sits in `speech.cpp` at the two points where text reaches NVDA (`Speak(wchar_t*)`, `Speak(char*)`), so a line that fired after the one you wanted is what gets copied. The confirmation is excluded from the capture via `acc::speech::SuppressNextCapture()`, so repeated presses re-copy the same text rather than "Copied to clipboard". Published as `CF_UNICODETEXT` (widened with `acc::speech::kGameCodepage`) so accented letters survive the paste; Windows synthesises `CF_TEXT` for ANSI consumers. The clipboard call runs on a short-lived worker thread and hands its result back to the next tick, which speaks the confirmation — the engine's main thread is an STA carrying the message loop and DirectInput dispatch, and `SetClipboardData` there wakes every clipboard listener on the system (NVDA, Windows 11 clipboard history). Same key family as bare R (re-speak the dialog line) and Shift+R (secondary radial). Alt and AltGr are both forbidden: AltGr on QWERTZ raises Alt plus a phantom Ctrl, which would otherwise make AltGr+R copy. Originally bound to Alt+R — see the Alt warning above for why it moved.
 
 ### View mode (look-around without moving)
 
@@ -232,7 +232,7 @@ Both surfaces share one tagged catalog in `help.cpp` (`kEntries`): `grp` chooses
 
 ### Map UI (only active when InGameMap panel is foreground)
 
-- Shift+N — Drop a saved marker at the map cursor's current world position. Auto-named "{room or landmark} - Marke N" (DE) / "Marker N" (EN) using the same room-resolution chain transitions::Tick uses. The new pin enters the existing MapPin cycle (`,`/`.`) immediately and Ctrl+`-` beacons to it. N was picked because it has zero engine-vanilla binding — the semantically obvious Shift+M ruled out because the engine swallows M (its map-toggle key) regardless of Shift state, which closed the very panel the marker was meant to drop on. Provisional chord — moves once the parked Phase 5 lay-off 5 hotkey-registry rework lands. **Not yet persistent across save/reload** — engine pins live in `CSWCArea.map_pins[]` only; first slice ships per-session markers, ScriptVarTable write path (`NW_MAP_PIN_*_{N}`) is a follow-up sub-lay-off.
+- Shift+N — Drop a saved marker at the map cursor's current world position. Auto-named "{room or landmark} - Marker N" using the same room-resolution chain transitions::Tick uses. The new pin enters the existing MapPin cycle (`,`/`.`) immediately and Ctrl+`-` describes the route to it. N was picked because it has zero engine-vanilla binding — the semantically obvious Shift+M ruled out because the engine swallows M (its map-toggle key) regardless of Shift state, which closed the very panel the marker was meant to drop on. Provisional chord — moves once the parked Phase 5 lay-off 5 hotkey-registry rework lands. **Not yet persistent across save/reload** — engine pins live in `CSWCArea.map_pins[]` only; first slice ships per-session markers, ScriptVarTable write path (`NW_MAP_PIN_*_{N}`) is a follow-up sub-lay-off.
 
 ### Submenu navigation (active only when a mod submenu is up)
 
@@ -284,17 +284,15 @@ Pre-game screens (generic chain + per-kind labelling, not a dedicated navigator)
 These are intentionally outside the rebindable set and stay on direct Win32 polling. They emit log lines, not speech / gameplay effects:
 
 - F9 — Pathfind probe (dump path_points / path_connections region across a tick cascade).
-- F10 — Audio-frame probe: cycle next compass sector for spatial-audio direction-name test.
-- F11 — Audio-frame probe: fire the 3D cue at the current sector.
 - F12 — Camera-state dump (engine yaw vs character yaw vs dead-reckoned compass).
 - Shift+AltGr — Toggle the engine's `CClientOptions.mouse_look` bit (mouse-look ON probe + synthetic mouse-sweep state machine).
 
 ### Layout notes (QWERTZ vs QWERTY)
 
 - `,` and `.` are at the same VK on both layouts (`VK_OEM_COMMA` / `VK_OEM_PERIOD`).
-- Ctrl+`,` / Ctrl+`.` (jump to first/last item) reuse those same VKs with the Ctrl modifier. They forbid Shift/Alt/AltGr, so on QWERTZ the phantom Ctrl that Windows synthesises alongside AltGr can't trigger them — same guard the Ctrl+`-` beacon binding uses.
+- Ctrl+`,` / Ctrl+`.` (jump to first/last item) reuse those same VKs with the Ctrl modifier. They forbid Shift/Alt/AltGr, so on QWERTZ the phantom Ctrl that Windows synthesises alongside AltGr can't trigger them — same guard the Ctrl+`-` route binding uses.
 - The "announce focus" key is the physical key right of `.`: `VK_OEM_2` on US QWERTY (`/`), `VK_OEM_MINUS` on German QWERTZ (`-`). The mod binds both so the same physical position works on either layout.
-- AltGr is `VK_RMENU` only. Windows synthesises a phantom `VK_LCONTROL` alongside `VK_RMENU` when AltGr is pressed on QWERTZ; the Ctrl-modifier binding (Ctrl+`-` → beacon) explicitly excludes the case where `VK_RMENU` is also held, so AltGr+`-` doesn't double-fire as beacon.
+- AltGr is `VK_RMENU` only. Windows synthesises a phantom `VK_LCONTROL` alongside `VK_RMENU` when AltGr is pressed on QWERTZ; the Ctrl-modifier binding (Ctrl+`-` → route) explicitly excludes the case where `VK_RMENU` is also held, so AltGr+`-` doesn't double-fire as the route.
 
 ### Foreground gating
 

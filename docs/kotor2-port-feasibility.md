@@ -79,4 +79,3 @@ Useful detail for later: the KOTOR 2 executable is **not** SteamStub-encrypted
 ## Sources
 
 - Tool and its measured boundary: `docs/kdev-design.md`, `kdev sigscan` entry.
-- KOTOR 1 multi-exe results: `docs/translation-additions.md`.

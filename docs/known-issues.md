@@ -1,6 +1,6 @@
 # Known Issues
 
-Status tracker for accessibility-mod work, in five buckets:
+Status tracker for this fork, in five buckets. Most entries come from the original mod's testers and were carried over.
 
 - **Bugs** — regressions or broken behaviour to fix.
 - **Unreproduced** — reported issues we can't reliably reproduce yet; need a repro before fixing.
@@ -221,17 +221,13 @@ or no such line at all (in which case the teardown comes from somewhere else and
 
 ## Planned
 
-### Beacon-active navigation announcements (remaining-route reading)
-
-While a beacon (or autowalk) is active, the route announcements should describe the *remaining* way to the active waypoint — leading with the range and direction of the current target — rather than the full original route. The hard part is disambiguating intents: if the player selects another object just to hear where it is, the announcement must not balloon into the long, confusing full-route description for the beacon target. Design questions to resolve: how to keep "where is this thing I just selected" reads short while a beacon is running, and whether the separate Shift+Enter autowalk / Shift+`-` gestures are still needed at all, or whether they can be folded into / replaced by the plain selection + beacon flow. See `project_narrated_target_unified.md` and `project_map_cycle_architecture.md`.
-
 ### Nameable personal map pins
 
-Let players give their own map pins a name when they drop one, and read that name back when cycling to the pin. Personal pins currently announce only a generic label plus position, so a player who marks several spots can't tell them apart. Needs a text-entry path that works from the keyboard with a screen reader (the editbox handling shipped for chargen + save naming — `menus_editbox.cpp` — is the closest existing mechanism, though map pins aren't an engine editbox so the entry surface differs), storage of the label alongside the pin in the save, and the cycle/focus announcements updated to speak it. See `project_narrated_target_unified.md` / `map_user_markers.cpp`.
+Let players give their own map pins a name when they drop one, and read that name back when cycling to the pin. Personal pins currently announce only a generic label plus position, so a player who marks several spots can't tell them apart. Needs a text-entry path that works from the keyboard with a screen reader (the editbox handling shipped for chargen + save naming — `menus_editbox.cpp` — is the closest existing mechanism, though map pins aren't an engine editbox so the entry surface differs), storage of the label alongside the pin in the save, and the cycle/focus announcements updated to speak it. See `map_user_markers.cpp`.
 
 ### Bundle the resolution / widescreen patch — once we are out of beta
 
-Offer the community resolution / widescreen + HR-menus patches as an installer option, and make our own code robust to the layout changes they introduce. Deliberately deferred until the mod leaves beta: it widens the support surface (several of our paths still assume a particular screen geometry — screen-pixel coordinates, the OS cursor, hardcoded hit-test offset compensations), and a beta is the wrong time to add a second variable to every bug report. Prerequisite when we do take it on: audit every place we depend on screen geometry and read it live from the engine instead of assuming. See `docs/installer.md` (Widescreen / HR-menus bundling) and the `project_radial_cursor_coupling` memory.
+Offer the community resolution / widescreen + HR-menus patches as an installer option, and make our own code robust to the layout changes they introduce. Deliberately deferred until the mod leaves beta: it widens the support surface (several of our paths still assume a particular screen geometry — screen-pixel coordinates, the OS cursor, hardcoded hit-test offset compensations), and a beta is the wrong time to add a second variable to every bug report. Prerequisite when we do take it on: audit every place we depend on screen geometry and read it live from the engine instead of assuming. See `archiev/installer-design-original.md` (Widescreen / HR-menus bundling).
 
 ## Monitor
 
@@ -302,13 +298,10 @@ Two side findings from the same report:
   speaker returns null and the result is called through. No mod frame is on the
   stack. The session's K2 patch log was not attached, so a mod contribution is
   neither shown nor excluded. Ask for it if the crash recurs.
-- **The tester's log bundle held only KOTOR 1 logs because their installer is
+- **The tester's log bundle held only KOTOR 1 logs because their installer was
   older than v0.7.2.** Its system-info.txt has the pre-v0.7.2 one-game format
-  ("Game: KOTOR 1", the `swkotor*.dmp` pattern that also caught K2 dumps). Two-game
-  collection shipped in v0.7.2 and the installer self-updater in v0.8.0, so an
-  older EXE keeps updating the mod but never replaces itself. The current
-  collector is correct. Such a tester has to download the current installer
-  once by hand.
+  ("Game: KOTOR 1", the `swkotor*.dmp` pattern that also caught K2 dumps).
+  Two-game collection shipped in v0.7.2; the current collector is correct.
 
 ### Lost key releases (stuck turn / walk) — engine-level fix built 2026-09-14, KOTOR 2 confirmed the same day, KOTOR 1 untested
 
@@ -406,10 +399,10 @@ hotkey that can reach an engine dispatch. Three surfaces remain gated on
   `RemoveLastAction` on the live combat round. Worst case is mutating a round
   from inside a screen; it cannot injure a module load. One-line fix if wanted:
   `ForegroundPanelBlocks()` at the opener, same call the action menu uses.
-- **Camera orient (turn-to-cardinal / turn-to-beacon)** — synthesises the
+- **Camera orient (N, turn to exits or a cardinal)** — synthesises the
   player's bound turn key via `SendInput`, so with a screen up those scancodes
-  land in the screen. Injects no action; see the
-  `lesson_mod_injected_input_feeds_own_detectors` memory for the related trap.
+  land in the screen. Injects no action, but the mod's own input detectors see
+  the injected keys too.
 - **Shift+L level-up** — opens the engine's level-up wizard over whatever is
   foreground. Has its own already-open and can-level-up guards, so it stacks a
   panel at worst.
@@ -473,14 +466,10 @@ Code: `engine_actionbar.cpp` (`VariantRefusal`, `SendUseItemRequestK2`, the alwa
 
 ## Polish
 
-### Starting an autowalk/beacon while one is active should switch, not cancel
+### Starting an autowalk while one is active should switch, not cancel
 
-If an autowalk or beacon is already running and the player triggers a new autowalk or beacon on a different target, the current behaviour just cancels the existing one. Instead it should immediately start the new action on the new target — switching the route in one gesture rather than requiring cancel-then-start.
+If an autowalk is already running and the player starts a new one on a different target, the current behaviour just cancels the existing one. Instead it should immediately start the new walk — switching the route in one gesture rather than requiring cancel-then-start.
 
 ### Mod-settings sliders only save after pressing Enter
 
-The sliders under Mod-Einstellungen (e.g. hint-sound volume) only persist their new value to `acc_settings.ini` once the user presses Enter on the row. Adjusting a slider with Left / Right changes it for the session and previews the new level, but the change isn't written until an explicit Enter — so a player who tweaks a slider and leaves the menu without pressing Enter loses the change on next launch. Slider adjustments should persist on each Left / Right step (the same way the value already updates live), without needing a confirming keypress.
-
-### Fold in human translation contributions as they arrive
-
-Most of the mod's non-German, non-English text is machine-drafted — the in-game strings for French, Italian, Spanish, Russian and Polish, and the installer's `Locales/{fr,it,es}.json`. They are correct in structure (key parity verified) but the phrasing, formal-vs-informal address, and modding terminology may read awkwardly to a native ear. German is human-authored by the maintainer and is the quality bar. As native speakers contribute corrections, merge them; PRs against the individual string files are a well-scoped contribution to point people at.
+The sliders under Mod settings (e.g. hint-sound volume) only persist their new value to `acc_settings.ini` once the user presses Enter on the row. Adjusting a slider with Left / Right changes it for the session and previews the new level, but the change isn't written until an explicit Enter — so a player who tweaks a slider and leaves the menu without pressing Enter loses the change on next launch. Slider adjustments should persist on each Left / Right step (the same way the value already updates live), without needing a confirming keypress.

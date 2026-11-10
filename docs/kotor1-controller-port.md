@@ -114,7 +114,7 @@ In the world:
   the selected entry (the menu is an overlay and claims the press first)
 - B — with the action menu open, close it; otherwise the engine's own cancel
 - RT alone — announce the facing in degrees
-- LT + LB — audio beacon to the focused object
+- LT + LB — describe the route to the focused object
 - RT + RB — walk to the focused object
 - LT + RT — the current screen's keys
 - LT + X — own status (the keyboard's H); RT + X — the action queue (Shift+H).
@@ -296,7 +296,7 @@ thing on KOTOR 2 as on KOTOR 1.
 - `help.cpp` — the Controller section was already gated on pad presence rather
   than on the title, so it needed only two new lines (X and Start).
 - `core_tick.cpp` — three new phases.
-- `strings*` — ten new ids across seven languages.
+- `strings*` — ten new ids.
 
 ## Combined test round
 
@@ -343,12 +343,12 @@ crossed.
    out of combat.
 9. Pull LT and let go again: the menu closes. Repeat with B instead of LT — same
    close. After either, the D-Pad steps objects again and A interacts again.
-10. **The collision test.** Hold LT, press LB, release LT — the beacon only, and
+10. **The collision test.** Hold LT, press LB, release LT — the route only, and
     NO action menu. Then RT + RB (autowalk). Then RT alone (degrees), then
     LT + RT (this screen's keys).
 
 **World — the remaining buttons.** X switches party leader. Back opens options.
-Start pauses. L3 flourishes. R3 turns the camera to the beacon's next waypoint.
+Start pauses. L3 flourishes. R3 turns the camera to the nearest exit.
 
 **Action queue.** In combat, hold RT and press X: the queue opens and speaks its
 depth. D-Pad up / down then walk the entries, A removes the one you are on (only the last of that character's
