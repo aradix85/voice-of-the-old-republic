@@ -56,7 +56,8 @@ namespace KotorAccessibilityInstaller
                     key.SetValue("EstimatedSize", 8000, RegistryValueKind.DWord);
 
                     key.SetValue("URLInfoAbout", Config.ModRepositoryUrl);
-                    key.SetValue("HelpLink", Config.ModRepositoryUrl + "/issues");
+                    // The fork has no issue tracker; the README is the help.
+                    key.SetValue("HelpLink", Config.ReadmeUrl);
 
                     Logger.Info($"Successfully registered {target.DisplayName} in Add/Remove Programs");
                 }
