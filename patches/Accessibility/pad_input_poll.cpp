@@ -108,9 +108,7 @@ void PollButtons() {
     }
 
     // A face button under a trigger is the chord grid's, dispatched from
-    // PollXInputButtons. Its bare job must not also run. LT + A is the
-    // exception DispatchA already handles: it claims the queue's clear-all
-    // first and falls back to the ordinary interact when the queue is closed.
+    // PollXInputButtons. Its bare job must not also run.
     const bool triggerHeld = g_ltHeld || g_rtHeld;
 
     // A swoop race owns the face buttons, with the bindings KOTOR 2's own
@@ -135,7 +133,7 @@ void PollButtons() {
         return;
     }
 
-    if (rising(kBtnA) && !g_rtHeld) DispatchA();
+    if (rising(kBtnA) && !triggerHeld) DispatchA();
     if (rising(kBtnB) && !triggerHeld) DispatchB();
     if (rising(kBtnShoulderL)) DispatchShoulder(/*right=*/false);
     if (rising(kBtnShoulderR)) DispatchShoulder(/*right=*/true);
