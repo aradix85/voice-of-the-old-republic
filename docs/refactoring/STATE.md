@@ -116,17 +116,19 @@ prefix (menus_listbox_picker.cpp).
   workarounds are gone (2439893); installer, kdev apply and release.ps1
   ship nvdaControllerClient32.dll with its license and remove prism.dll
   and Tolk.dll on upgrade; the Windows voices option is gone (56062f2).
-  Still to do:
-  D. Exploration sounds out where text covers them (audio_cues NavCue door/
-     wall/item/beacon/collision, audio_cue_player, guidance_beacon, the
-     WallSounds toggle, view_mode/cycle_input/map_ui_cursor/passive_narrate
-     cues): check each for a text equivalent first. Minigame audio
-     (audio_bus, audio_loop, swoop, turret) stays.
-  E. Docs pass after D: every current doc that still names Prism, Tolk,
+  D done: proximity cues, wall cache tick moved to wall_surfaces
+  (f4c6019); beacon (Ctrl+- now speaks the route), cycling and Q/E cues,
+  combat heartbeat (Anouk: not needed) and the audio-frame probe out, map
+  edge and view-mode wall spoken (4d2371a). Left on purpose: minigame
+  audio, footstep suppression when stuck (a silenced game sound, plus the
+  spoken stuck directions), the installer's optional dsoal spatial-audio
+  toggle (game audio). Still to do:
+  E. Docs pass: every current doc that still names Prism, Tolk,
      SAPI, the urgent or compass voice, positional/3D speech, the Windows
      voices option, the in-game updater, the removed exploration sounds or
      the old bridge behaviour (snapshot every 250 ms, no creatures in
-     /objects). Found 2026-11-10: README.md and docs/README.*.md (settings
+     /objects), the beacon (Ctrl+- is now the route), the Wall sounds
+     option, the glossary's exploration entries, the combat heartbeat. Found 2026-11-10: README.md and docs/README.*.md (settings
      rows, voices, 3D speech, sounds, updater), ARCHITECTURE.md, CLAUDE.md,
      CONTRIBUTING.md, ACCESSIBILITY_MODDING_GUIDE.md, docs/installer.md,
      controls-and-input, known-issues, tools.md, upstream-prs.md (stale:
@@ -172,7 +174,7 @@ prefix (menus_listbox_picker.cpp).
   but /health, /spoken, /state, /menu, say and key are KOTOR 1 only);
   live check of /objects with creatures and kotor.py kaart --personen
   (needs the game running with the new DLL).
-- Static analysis pass; clean-build warning baseline (`kdev build --clean`).
+- Static analysis pass. (Clean build after D: 0 warnings.)
 - End: in-game checks (main menu without the updater, F5 does nothing; the
   untested features in brief.md), end report against the baseline, delete
   this file, short changelog note.
