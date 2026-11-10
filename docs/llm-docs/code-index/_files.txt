@@ -9,6 +9,8 @@ patches/Accessibility/audio_loop.cpp
 patches/Accessibility/audio_loop.h
 patches/Accessibility/audio_pitch.cpp
 patches/Accessibility/audio_pitch.h
+patches/Accessibility/audio_stuck_probe.cpp
+patches/Accessibility/audio_stuck_probe.h
 patches/Accessibility/baseitem_guard.cpp
 patches/Accessibility/bridge.cpp
 patches/Accessibility/bridge.h
