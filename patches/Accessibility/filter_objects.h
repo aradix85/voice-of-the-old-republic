@@ -34,6 +34,10 @@ acc::strings::Id CategoryNameId(CycleCategory c);
 // SEH-guarded via engine_area::GetObjectKind.
 bool ObjectMatches(void* gameObject, CycleCategory category);
 
+// The first category the object matches, in enum order; Count_ for none
+// (a combat or dialog target, say).
+CycleCategory ClassifyObject(void* gameObject);
+
 CycleCategory NextCategory(CycleCategory c);
 CycleCategory PrevCategory(CycleCategory c);
 

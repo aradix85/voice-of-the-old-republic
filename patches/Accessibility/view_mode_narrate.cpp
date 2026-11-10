@@ -147,18 +147,8 @@ void NarrateNearestObject(void* area, const Vector& cursor) {
     acc::engine::AreaObjectIterator iter(area);
     void* obj = nullptr;
     while ((obj = iter.Next()) != nullptr) {
-        acc::filter::CycleCategory cat =
-            acc::filter::CycleCategory::Count_;
-        bool matched = false;
-        for (int c = 0; c < int(acc::filter::CycleCategory::Count_); ++c) {
-            auto cc = static_cast<acc::filter::CycleCategory>(c);
-            if (acc::filter::ObjectMatches(obj, cc)) {
-                cat = cc;
-                matched = true;
-                break;
-            }
-        }
-        if (!matched) continue;
+        const acc::filter::CycleCategory cat = acc::filter::ClassifyObject(obj);
+        if (cat == acc::filter::CycleCategory::Count_) continue;
 
         Vector pos;
         if (!acc::engine::GetObjectPosition(obj, pos)) continue;

@@ -42,20 +42,6 @@ struct NarratedActivation {
     bool     isMapPin = false;
 };
 
-// Classify a stamped object the same way cycle keys do. Returns Count_
-// when the object falls outside the six locked nav categories — callers
-// fall back to a generic vocabulary (default-open verb) since
-// passive_narrate would already have filtered any non-nav classification
-// before stamping, so we shouldn't see Count_ in practice.
-acc::filter::CycleCategory ClassifyForCycle(void* obj) {
-    using C = acc::filter::CycleCategory;
-    for (int i = 0; i < static_cast<int>(C::Count_); ++i) {
-        auto c = static_cast<C>(i);
-        if (acc::filter::ObjectMatches(obj, c)) return c;
-    }
-    return C::Count_;
-}
-
 bool ResolveNarratedActivation(NarratedActivation& out) {
     out = {};
     acc::narrated_target::Slot slot;
@@ -91,7 +77,7 @@ bool ResolveNarratedActivation(NarratedActivation& out) {
 
     out.obj      = slot.obj;
     out.handle   = slot.handle;
-    out.category = ClassifyForCycle(slot.obj);
+    out.category = acc::filter::ClassifyObject(slot.obj);
     out.isMapPin = false;
     if (!acc::engine::GetObjectName(slot.obj, out.name, sizeof(out.name)) ||
         out.name[0] == '\0') {

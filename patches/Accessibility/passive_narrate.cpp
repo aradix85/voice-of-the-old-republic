@@ -83,16 +83,6 @@ constexpr DWORD kAutoRenarrateQuietMs = 10000;
 uint32_t s_last_auto_handle = 0u;
 DWORD    s_last_auto_tick   = 0u;
 
-// Returns Count_ for non-nav consumers (combat / dialog target).
-acc::filter::CycleCategory ClassifyForNarration(void* obj) {
-    using C = acc::filter::CycleCategory;
-    for (int i = 0; i < static_cast<int>(C::Count_); ++i) {
-        auto c = static_cast<C>(i);
-        if (acc::filter::ObjectMatches(obj, c)) return c;
-    }
-    return C::Count_;
-}
-
 // True when obj is one of the active party followers. GetPartyMembers
 // returns resolved object handles (NPC slot indices → live creatures), so
 // compare against the object's server handle (GetObjectHandle re-derives it
@@ -134,7 +124,7 @@ bool NarrateHandle(uint32_t handle, const char* reason, bool explicitRequest) {
         return false;
     }
 
-    acc::filter::CycleCategory cat = ClassifyForNarration(obj);
+    acc::filter::CycleCategory cat = acc::filter::ClassifyObject(obj);
     if (cat == acc::filter::CycleCategory::Count_) {
         int kind = acc::engine::GetObjectKind(obj);
         acclog::Write("PassiveNarrate",

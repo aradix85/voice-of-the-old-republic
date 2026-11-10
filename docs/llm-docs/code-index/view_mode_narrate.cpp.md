@@ -1,4 +1,4 @@
-# view_mode_narrate.cpp (214 lines)
+# view_mode_narrate.cpp (204 lines)
 
 Source: `patches/Accessibility/view_mode_narrate.cpp`
 

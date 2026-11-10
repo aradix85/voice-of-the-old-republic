@@ -56,17 +56,6 @@ void ArmInteractApproach(const char* name, void* target, bool inputDisabled,
     acc::guidance::ArmApproach(arm);
 }
 
-// First matching category, like passive_narrate; Count_ when none matches
-// (the interact still runs, without a localised pre-roll).
-acc::filter::CycleCategory ClassifyForInteract(void* obj) {
-    using C = acc::filter::CycleCategory;
-    for (int i = 0; i < static_cast<int>(C::Count_); ++i) {
-        auto c = static_cast<C>(i);
-        if (acc::filter::ObjectMatches(obj, c)) return c;
-    }
-    return C::Count_;
-}
-
 void SpeakNoFocus(const char* why) {
     const char* msg = acc::strings::Get(acc::strings::Id::GuidanceNoFocus);
     acc::speech::Speak(msg, /*interrupt=*/true);
@@ -331,7 +320,7 @@ void DispatchInteract(void* target, uint32_t handle, bool forceRadial) {
         std::snprintf(name, sizeof(name), "%s",
                       acc::strings::Get(acc::strings::Id::CategoryItem));
     }
-    const C cat = ClassifyForInteract(target);
+    const C cat = acc::filter::ClassifyObject(target);
     LogDispatchCreature();
 
     // The one creature-keyed refusal: Trask as leader trying his own door.

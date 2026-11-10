@@ -1,4 +1,4 @@
-# filter_objects.cpp (105 lines)
+# filter_objects.cpp (113 lines)
 
 Source: `patches/Accessibility/filter_objects.cpp`
 
@@ -10,7 +10,8 @@ Pure predicate over engine_area's GameObjectKind + sub-state. Sub-state filters:
 
 - L8 `const char* CategoryName(CycleCategory c)`
 - L21 `acc::strings::Id CategoryNameId(CycleCategory c)`
-- L35 `bool ObjectMatches(void* gameObject, CycleCategory category)`
-- L80 `CycleCategory NextCategory(CycleCategory c)`
-- L85 `CycleCategory PrevCategory(CycleCategory c)`
-- L91 `bool IsMapCycleable(CycleCategory c)`
+- L35 `CycleCategory ClassifyObject(void* gameObject)`
+- L43 `bool ObjectMatches(void* gameObject, CycleCategory category)`
+- L88 `CycleCategory NextCategory(CycleCategory c)`
+- L93 `CycleCategory PrevCategory(CycleCategory c)`
+- L99 `bool IsMapCycleable(CycleCategory c)`

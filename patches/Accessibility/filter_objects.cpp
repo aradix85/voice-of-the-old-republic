@@ -32,6 +32,14 @@ acc::strings::Id CategoryNameId(CycleCategory c) {
     return S::CategoryItem;
 }
 
+CycleCategory ClassifyObject(void* gameObject) {
+    for (int i = 0; i < static_cast<int>(CycleCategory::Count_); ++i) {
+        const auto c = static_cast<CycleCategory>(i);
+        if (ObjectMatches(gameObject, c)) return c;
+    }
+    return CycleCategory::Count_;
+}
+
 bool ObjectMatches(void* gameObject, CycleCategory category) {
     // Player creature is in the area object list and classifies as a
     // Creature (so it would otherwise pass Npc) — but it's at the
