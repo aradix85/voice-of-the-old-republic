@@ -8,31 +8,16 @@
 
 namespace acc::room_topology {
 
-// ===== Pass 3: per-cluster classification =====
-
 namespace {
 
-// Zone-scale hub threshold: a merged junction web (3+ external exits,
-// no open/room member) whose member-node bounding box exceeds this
-// renders through the area path ("Area. exits: ...") instead of
-// "junction". The word "junction" promises a decision point a few steps
-// wide; the Lehon Southern Strand rock-web cluster spans 46m and its
-// re-announcement on every re-entry from a fringe channel read as
-// discovering a new crossing each time — four phantom crossings in 80s.
-// Step-scale merged hubs (double junctions, ~5m) stay
-// junction. Sized between the biggest legitimate crossing (<10m) and
-// the smallest observed zone-web (46m); node-bbox under-reads true
-// footprint, so 15m of node spread is already a place, not a point.
+// Zone scale: a node spread past this is a place, not a point. Between the
+// biggest real crossing (under 10 m) and the smallest zone-web seen (46 m);
+// the node box under-reads the true footprint.
 constexpr float kJunctionZoneExtentMeters = 15.0f;
 
-// Width half of the zone-scale rule (Ebon-Hawk hull). For
-// clusters with fewer than three exits, zone-scale LENGTH alone isn't
-// enough to call a space a place — a corridor is long by nature. The
-// min-side test is the discriminator: vanilla hallways run 2.5-3m wide,
-// so anything sprawling past this in its SHORT dimension is a field,
-// not a run. Sized well above corridor width and below the observed
-// fields (hull port deck 10.6m, comb 7.1m) so both read as places
-// while hallways keep their corridor voice.
+// For one or two exits, zone-scale length alone is a corridor: a place must
+// be this wide too. Vanilla hallways run 2.5-3 m; the Ebon Hawk's hull
+// fields are 7.1 and 10.6 m.
 constexpr float kZoneMinWidthM = 6.0f;
 
 // A cluster's members measured together: centroid, shape flags, mean
@@ -201,7 +186,7 @@ int AreaHint(const ClusterGeom& c, int externalCount, int root) {
         acclog::Write("WallTopo",
                       "  zone-scale: cluster=%d size=%d extent=%.1fm "
                       "minside=%.1fm exits=%d (>= %.1fm, and 3+ exits "
-                      "or >= %.1fm wide) — rendered as Bereich",
+                      "or >= %.1fm wide) — rendered as an area",
                       root, c.size, c.extent, c.minSide,
                       externalCount, kJunctionZoneExtentMeters,
                       kZoneMinWidthM);
