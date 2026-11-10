@@ -1,19 +1,19 @@
-// Stepping through the cycle and announcing the focused entry: its name, payload and position, and the category when it changes.
+// Stepping through the cycle and announcing the focused entry: its name,
+// payload and position, and the category when it changes.
 
 #include "cycle_input_internal.h"
 
 #include "cycle_state.h"
 #include "engine_area.h"
-#include "exit_memory.h"     // TargetWayInfo — where a door leads, the way there
+#include "exit_memory.h"
 #include "log.h"
-#include "map_shipped_hints.h"  // shipped curated hints in the Map cycle
+#include "map_shipped_hints.h"
 #include "map_ui_cursor.h"
 #include "narrated_target.h"
 #include "same_name_suffix.h"
-#include "strings.h"
-#include "view_mode.h"      // GetEffectiveViewpoint — the frame the
-                            // clock + metres are measured from
 #include "speech.h"
+#include "strings.h"
+#include "view_mode.h"
 
 namespace acc::cycle_input {
 
@@ -114,12 +114,12 @@ void AppendPositionOrdinal(const acc::cycle::CategoryListing& listing,
     }
 }
 
-// Speak the locked Pillar 4 payload for whatever the cycle state
-// currently focuses. `categoryPrefix` non-null wraps the item with
-// "{category}. {item}" via the FmtCategoryItem template; null speaks
-// just the item. Distance rounds to whole metres; sub-1m floors to 1
-// (avoids "0 metres"). When player yaw is unavailable (degenerate
-// facing during spawn / mid-load), the clock segment is dropped.
+// Speak the payload for whatever the cycle state currently focuses.
+// `categoryPrefix` non-null wraps the item with "{category}. {item}" via
+// the FmtCategoryItem template; null speaks just the item. Distance rounds
+// to whole metres; sub-1m floors to 1 (avoids "0 metres"). When player yaw
+// is unavailable (degenerate facing during spawn / mid-load), the clock
+// segment is dropped.
 void AnnounceCurrent(const acc::cycle::CategoryListing& listing,
                      const char* categoryPrefix,
                      acc::filter::CycleContext ctx) {
@@ -220,8 +220,7 @@ void AnnounceCurrent(const acc::cycle::CategoryListing& listing,
         // (", locked", ", To Bridge"), placeable state tag
         // (", trapped"), and the looted-container note (", empty"). Shared
         // verbatim with the Q/E path's GetSpokenName so an object speaks the
-        // same string on both surfaces; this used to be three inlined calls
-        // that left the empty-container note off the cycle only.
+        // same string on both surfaces.
         acc::narration::AppendObjectQualifiers(s.focusedObj, s.category, name,
                                                sizeof(name));
     }

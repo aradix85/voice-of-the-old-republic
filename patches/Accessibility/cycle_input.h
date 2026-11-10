@@ -1,4 +1,4 @@
-// Pillar 4 cycle input — keypress dispatch into cycle_state.
+// Cycle input — keypress dispatch into cycle_state.
 //
 // Two ingestion paths share per-action handlers, so cycle behaviour is
 // identical regardless of how the keystroke arrived:

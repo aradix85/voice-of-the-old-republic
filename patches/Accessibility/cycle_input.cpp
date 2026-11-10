@@ -1,3 +1,6 @@
+// Cycle input: the two ingestion paths (the engine key hook and the Win32
+// poll) and the category table both the announce and the focus handlers
+// use.
 
 #include "cycle_input_internal.h"
 
@@ -5,7 +8,6 @@
 #include "engine_panels.h"
 #include "engine_player.h"
 #include "hotkeys.h"
-#include "map_shipped_hints.h"  // shipped curated hints in the Map cycle
 #include "peek_description.h"
 #include "strings.h"
 
@@ -54,11 +56,6 @@ CategoryBindings BindingsFor(
 }
 
 bool TryHandleEvent(int param_1, int param_2) {
-    // Batch 3c: live on BOTH games. The Batch 1 decline is cleared — the
-    // player/area/discovery chain this reads is fully resolved for KOTOR 2
-    // (world offsets in Batch 3, script-var table in the discovery port,
-    // interaction constants in Batch 3c).
-
     // Shift state tracking — fires on both press and release, never consumed.
     // Notify peek_description on the release edge so its block cursor resets
     // (so the next Shift+arrow starts at block 0 again).

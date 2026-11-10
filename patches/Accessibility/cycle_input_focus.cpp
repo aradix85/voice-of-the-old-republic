@@ -1,23 +1,22 @@
-// Acting on the narrated target: re-announcing it, and walking, routing or pathfinding to it.
+// Acting on the narrated target: re-announcing it, and walking, routing or
+// pathfinding to it.
 
 #include "cycle_input_internal.h"
 
 #include "engine_area.h"
 #include "engine_panels.h"
 #include "engine_player.h"
-#include "exit_memory.h"     // TargetWayInfo — where a door leads, the way there
-#include "guidance_approach.h"  // ArmApproach / IsApproachInFlight — unified
-                                // walk-to-act tracker (way-blocked + cancel)
+#include "exit_memory.h"
+#include "guidance_approach.h"
 #include "guidance_autowalk.h"
 #include "guidance_description.h"
 #include "guidance_pathfind.h"
 #include "log.h"
-#include "map_shipped_hints.h"  // shipped curated hints in the Map cycle
+#include "map_shipped_hints.h"
 #include "narrated_target.h"
-#include "strings.h"
-#include "view_mode.h"      // GetEffectiveViewpoint — the frame the
-                            // clock + metres are measured from
 #include "speech.h"
+#include "strings.h"
+#include "view_mode.h"
 
 namespace acc::cycle_input {
 
@@ -178,11 +177,9 @@ void OnAnnounceFocus() {
 
     // Position and yaw are read separately because they gate different
     // halves of the line: metres needs only the viewpoint position, the
-    // clock needs the facing too. The distance used to be computed outside
-    // any success check, from a Vector left uninitialised when the position
-    // read failed — a stack-garbage metre count, spoken as fact. It is now
-    // inside the guard, and a viewpoint we cannot read drops the spatial
-    // tail entirely rather than emitting the "1 metre" the format clamps to.
+    // clock needs the facing too. A viewpoint we cannot read drops the
+    // spatial tail entirely rather than speak the "1 metre" the format
+    // clamps to.
     Vector viewPos{};
     float yaw = 0.0f;
     bool havePos = acc::view_mode::GetEffectiveReferencePosition(viewPos);
@@ -234,13 +231,9 @@ void OnAnnounceFocus() {
 //     handle (a non-interactable target), or an object whose USE the engine
 //     refuses → `acc::guidance::WalkTo` straight to the world coordinate.
 //
-// The WalkTo coordinate path is new (2026-06-13). It used to be the only
-// path (pre-2026-05-11) and was abandoned because AddMoveToPointAction
-// "no-opped for the leader" — which we now know was a misdiagnosis: the move
-// only needs the player's server AI enabled (and player input NOT disabled),
-// which WalkTo now does. So the two cases that Shift+- previously refused —
-// map pins (redirected to Ctrl+-) and non-interactable targets (spoke a
-// failure) — now autowalk to the target's position like everything else.
+// A move to a point needs the player's server AI enabled (and player input
+// NOT disabled), which WalkTo arranges; so map pins and non-interactable
+// targets autowalk to the target's position like everything else.
 //
 // Empty-state: when no item is focused, speaks GuidanceNoFocus and bails.
 //
