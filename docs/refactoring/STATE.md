@@ -160,7 +160,9 @@ zones, helpers for the repeated speech lines). menus_pending: Drain's
 split into four (204aab3) and lean (e5775cb: one Queue(), DrainActivate
 as named steps). Left for an F-family: menus_crafting.cpp keeps its own
 vtable[15] HandleInputEvent typedef next to menus_pending's
-HandleInputEventOf.
+HandleInputEventOf. cycle_input split into three (81155d2) and made lean
+(414bf1f, comments; F7 note: GuidancePreRollFor still mirrors
+interact_hotkey's PreRollFor).
 
 Careful: never rewrite source files with PowerShell ReadAllText/WriteAllText
 (it decodes UTF-8 and writes '?' for the dashes and umlauts in comments);
@@ -219,8 +221,12 @@ prefix (menus_listbox_picker.cpp).
   EngineYawToCompass/CompassToSector/SectorString. One helper in
   engine_compass (bearing of a vector, and its compass word). kRadToDeg is
   defined in many files: one constant with it.
-- Next file: cycle_input.cpp, then menus.cpp, menus_internal.cpp,
-  core_tick.cpp (sizes of 2026-11-10, strings*.cpp excepted).
+- Next file: menus.cpp (1018), then menus_internal.cpp (979),
+  core_tick.cpp (931), dialog_speech.cpp (894), engine_radial.cpp (894),
+  engine_panels.cpp (887), combat_queue.cpp (871), minigame_turret_peg.cpp
+  (860), guidance_approach.cpp (840), peek_description.cpp (839),
+  menus_modsettings.cpp (828), menus_chain_input.cpp (824) (sizes of
+  2026-11-10 17:20, strings*.cpp excepted).
 - F2b: share the save-variable code of exit_memory with discovery.cpp.
 - F3 menus_chargen_feats / menus_powers_levelup: about 15 same-named
   functions, 22 cloned blocks; one chart-grid module (check K2 plans).
