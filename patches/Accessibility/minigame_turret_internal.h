@@ -29,7 +29,7 @@ using acc::minigame::CallAsCast;
 using acc::minigame::ReadFollowerPosition;
 
 // ============================================================================
-// Engine struct offsets (shared with swoop_race.cpp — see that file and
+// Engine struct offsets (shared with minigame_swoop_race.cpp — see that file and
 // docs/llm-docs/re/swkotor.exe.h for the full CSWMiniGame walk). The KOTOR 2
 // witnesses for the CSWCArea / CSWMiniGame / CSWTrackFollower values are at
 // the matching declarations in minigame_swoop_race.cpp (same struct, same
@@ -45,7 +45,7 @@ const size_t kMiniGameTypeOffset       = acc::off::Same(0x80);   // 1=swoop, 2=t
 
 // ----- Approach-cue: MGO enemy-pool walk -----
 //
-// Same chain swoop_spatial_audio.cpp walks:
+// Same chain minigame_swoop_audio*.cpp walks:
 //   AppManager(*kAddrAppManagerPtr) +0x4 -> CClientExoApp +0x4 ->
 //   CClientExoAppInternal +0x0 -> CSWMiniGameObjectArray
 //   (+0x00 index, +0x04 objects[255]). vtable[0x1c] = AsEnemy.

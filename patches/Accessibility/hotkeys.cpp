@@ -430,7 +430,7 @@ void InitDefaults() {
 
     // ----- Turret minigame -----
     // Q/E cycle the locked fighter; polled only while the gunner minigame is
-    // active (turret_game.cpp). Forbid every modifier like the Pazaak letters.
+    // active (minigame_turret.cpp). Forbid every modifier like the Pazaak letters.
     bind(Action::TurretCyclePrev,   'Q',       0, 0,         kModShift | kModCtrl | kModAlt | kModAltGr);
     bind(Action::TurretCycleNext,   'E',       0, 0,         kModShift | kModCtrl | kModAlt | kModAltGr);
 

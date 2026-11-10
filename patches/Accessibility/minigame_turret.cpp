@@ -1,5 +1,5 @@
 // Turret (space-combat gunner) minigame accessibility — see
-// turret_game.h for design.
+// minigame_turret.h for design.
 //
 // Shares CSWMiniGame with swoop racing; distinguished by type==2 (swoop==1),
 // read at CSWMiniGame +0x80. The aim is CSWMiniPlayer.offset (+0x1c4):
@@ -65,11 +65,11 @@ namespace {
 // The field address + the read/write primitives live in minigame_aim.h
 // (acc::minigame::kMiniPlayerOffsetVectorOffset); here offset.x = elevation,
 // offset.z = azimuth.
-// The turret minigame type discriminator. swoop is type 1 (swoop_race.cpp);
+// The turret minigame type discriminator. swoop is type 1 (minigame_swoop_race.cpp);
 // anything else on this struct is not ours.
 constexpr uint32_t kMiniGameTypeTurret     = 2;
 
-// Exit-debounce: same rationale as swoop_race.cpp — the entry/exit
+// Exit-debounce: same rationale as minigame_swoop_race.cpp — the entry/exit
 // transition flips the area chain for a few ticks, so only announce EXIT
 // once the latched struct has been gone for this many consecutive ticks.
 constexpr int       kExitDebounceTicks     = 60;
@@ -112,7 +112,7 @@ constexpr size_t kVtableSlotGetVictimFollower = 0x14; // OnHitBullet's vtable[0x
 
 // Read CSWCArea.mini_game via the player-area chain. Source of truth at
 // the moment of detection; latched thereafter (the chain churns during
-// the entry transition — see swoop_race.cpp).
+// the entry transition — see minigame_swoop_race.cpp).
 void* ReadMiniGameViaArea() {
     void* serverArea = acc::engine::GetCurrentArea();
     if (!serverArea) return nullptr;
@@ -132,7 +132,7 @@ bool LatchedStillValid() {
 }
 
 // ============================================================================
-// MGO-walk helpers (mirrors swoop_spatial_audio.cpp — kept local so that
+// MGO-walk helpers (mirrors minigame_swoop_audio*.cpp — kept local so that
 // swoop TU isn't entangled with turret-specific cueing).
 // ============================================================================
 
@@ -348,14 +348,14 @@ void Tick() {
 
     if (!g_state.active) {
         // Idle. Fire ENTER only for the turret minigame (type==2); swoop
-        // (type==1) is handled by swoop_race.cpp.
+        // (type==1) is handled by minigame_swoop_race.cpp.
         if (IsTurretMiniGame(mgArea)) HandleEnter(mgArea);
         return;
     }
 
     // Active. Verify the latch is still alive (two truth sources — area
     // chain and latched vtable; EXIT only when both say gone for
-    // kExitDebounceTicks). Mirrors swoop_race.cpp.
+    // kExitDebounceTicks). Mirrors minigame_swoop_race.cpp.
     if (mgArea && mgArea != g_state.latched_mini_game) {
         // Different struct mid-game (engine swap / fresh game). Only
         // re-latch if it's still a turret; otherwise let the debounce

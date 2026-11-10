@@ -7,7 +7,7 @@
 // classifies each slot via the AsObstacle / AsEnemy vtable downcasts,
 // drives one LoopSource per in-range obstacle (multi-source warn pulse)
 // and one nearest-only LoopSource for accelerator pads (clean booster
-// channel). See swoop_race.cpp for the race lifecycle, gear watch, and
+// channel). See minigame_swoop_race.cpp for the race lifecycle, gear watch, and
 // wall-collision detection that drives this module via Tick().
 
 namespace acc::swoop_race {

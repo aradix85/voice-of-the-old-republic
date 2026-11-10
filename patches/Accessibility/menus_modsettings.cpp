@@ -71,7 +71,7 @@ bool s_toggles[static_cast<int>(Option::Count)] = {
                                   // who want no challenge or have stronger
                                   // hearing impairments. The DEFAULT (toggle
                                   // off) is the always-on slight aim-magnetism
-                                  // in turret_game.cpp, which keeps the minigame
+                                  // in minigame_turret.cpp, which keeps the minigame
                                   // skill-based but playable by ear.
     /* SkipIntros      */ false,  // unused — state lives in filesystem
                                   // (biologo.bik vs biologo.bik.disabled);

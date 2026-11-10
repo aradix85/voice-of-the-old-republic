@@ -1,4 +1,4 @@
-// Swoop race minigame accessibility — see swoop_race.h for design.
+// Swoop race minigame accessibility — see minigame_swoop_race.h for design.
 //
 // Phase 1 lay-off (current): entry/exit announce + keybind cheat sheet,
 // best-effort gear-shift announce derived from CSWTrackFollower.speed
@@ -178,23 +178,14 @@ typedef void (__thiscall* PFN_RunFollowerSlotScript)(void* follower, int flag);
 constexpr int kK1MGShootActionId = 217;
 constexpr int kDikSpace          = 0x39;
 
-// CSWMGObstacle / CSWMiniEnemy position-resolution offsets, vtable
-// downcast slots, and the global CSWMiniGameObjectArray layout were
-// split into swoop_spatial_audio.cpp on 2026-05-27 because they're
-// used only by the per-tick obstacle / accelpad spatial-audio sweeps.
-// See swoop_spatial_audio.cpp for the layout commentary, vtable
-// downcast pattern, and pool-split rationale (obstacles vs enemies).
-
-// ----- (removed) Acceleration progress "speedometer" tick -----
+// The obstacle / enemy position offsets, the vtable downcasts and the
+// CSWMiniGameObjectArray layout live with the per-tick audio sweeps in
+// minigame_swoop_audio*.cpp.
 //
-// A re-fired tick whose cadence scaled with (speed-min)/(max-min) used to
-// model a filling throttle bar. Removed 2026-06-20: the decompile of
-// CSWMiniPlayer::Control + the onfire.ncs gear script proved there is NO
-// analog held-throttle in swoop. The bike auto-accelerates to max_speed on
-// its own (engine, always-on), and each accelerate press is a DISCRETE shift
-// event (onfire raises max_speed one notch: 35→60→100→150→210 and plays the
-// native Shift1/2/3 + Engine0N sounds). So a "bar filling" cue modelled a
-// mechanic that doesn't exist. See the session report / camera-and-swoop.md.
+// There is no analog throttle in swoop (CSWMiniPlayer::Control, onfire.ncs):
+// the bike accelerates to max_speed on its own, and each accelerate press is
+// a discrete shift (onfire raises max_speed one notch, 35→60→100→150→210,
+// with the native Shift1/2/3 + Engine0N sounds).
 
 // ============================================================================
 // Tunable behaviour parameters.
@@ -294,20 +285,6 @@ constexpr ULONGLONG kRaceEndSpeakDelayMs  = 1200;
 // while still capturing the speed curve.
 constexpr ULONGLONG kDiagLogIntervalMs    = 1000;
 
-// Continuous obstacle + accelpad proximity cue parameters now live in
-// swoop_spatial_audio.cpp alongside the per-tick MGO walk.
-
-// ----- Side-wall collision detection -----
-//
-// MOVED to swoop_spatial_audio.cpp (2026-06-22). The reactive stall-based
-// detector that used to live here (EMA of lateral dx → "was moving, now
-// stalled at the edge" → fire) was replaced by a *predictive* overshoot cue in
-// the co-pilot: it fires the same wall-impact sound ~0.1s BEFORE the bike pins,
-// and only on a genuine overshoot (moving away from the target pad toward the
-// wall). That cue lives next to the co-pilot because the overshoot guard needs
-// the target-pad direction, and folding it in let us delete this module's
-// duplicate lateral-velocity tracker. See TickAccelpadCues.
-
 // ============================================================================
 // Module state. Single-threaded under the engine OnUpdate tick.
 // ============================================================================
@@ -387,8 +364,6 @@ struct State {
     bool          race_end_pending        = false;
     ULONGLONG     race_end_due_ms         = 0;
     char          race_end_msg[160]       = {};
-    // (Side-wall collision state moved to swoop_spatial_audio.cpp — see the
-    // note where the old detector used to live.)
 
     // ---- Real race-timer state (see TickRaceTimer). ----
     // race_start_ms is the engine world-clock ms-of-day stamped at the "Go!"
@@ -1032,14 +1007,10 @@ void TickShiftReady(void* miniGame) {
                   gear, speed, gate, maxSpeed);
 }
 
-// Side-wall collision cue moved to swoop_spatial_audio.cpp (predictive overshoot
-// cue in TickAccelpadCues — see the note above where the old detector lived).
-
-// Continuous obstacle + accelpad proximity cues moved to
-// swoop_spatial_audio.cpp on 2026-05-27 (large-file-handling split).
-// That TU owns the per-tick MGO array walk, the AsObstacle / AsEnemy
-// downcasts, and the LoopSource lifecycles. Race lifecycle below
-// just calls TickSpatialAudio() / ResetSpatialAudio().
+// The obstacle, accelpad and side-wall cues (the per-tick MGO walk, the
+// AsObstacle / AsEnemy downcasts, the LoopSource lifecycles) live in
+// minigame_swoop_audio*.cpp; the race lifecycle below calls
+// TickSpatialAudio() / ResetSpatialAudio().
 
 
 // ============================================================================
@@ -1258,7 +1229,7 @@ void Tick() {
         // Idle state. Fire ENTER only for an actual swoop race
         // (CSWMiniGame.type==1). The turret / space-combat gunner
         // minigame shares this exact struct (same vtable) but reports
-        // type==2 and is handled by turret_game.cpp — entering here
+        // type==2 and is handled by minigame_turret.cpp — entering here
         // would mis-announce it as a swoop race (and run the gear /
         // accel / wall heuristics, which are meaningless for a turret).
         // type is populated by the time the area chain exposes mini_game.

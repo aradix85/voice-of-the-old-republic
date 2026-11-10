@@ -15,7 +15,7 @@
 // CSWMiniGame: +0x24 player, +0x28 area, +0x30 enemy_count,
 //   +0x48 obstacle_count, +0x80 type (1=swoop, 2=turret — engine-
 //   confirmed from CSWMiniGame::Load, which only ever sets type to 1
-//   or 2; the turret/gunner game is handled by turret_game.cpp),
+//   or 2; the turret/gunner game is handled by minigame_turret.cpp),
 //   +0xbc lateral_acceleration.
 // CSWMiniPlayer (extends CSWTrackFollower → CSWMiniGameObject):
 //   +0x1c4 Vector offset (lateral/vertical in tunnel frame),

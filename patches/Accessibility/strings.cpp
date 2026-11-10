@@ -56,7 +56,7 @@ const char* Get(Id id) {
         case Id::FmtInteractWayBlockedTarget: return "Movement cancelled, way blocked. %s, %d metres, %s";
         case Id::SpectatorBattleDoomed: return "The Republic soldiers are lost. You cannot help them. The way is blocked. Hurry on to the bridge!";
 
-        // Beacon (Ctrl+-).
+        // Route (Ctrl+-).
         case Id::FmtRouteTo:            return "Route to %s";
         case Id::FmtRouteNoPath:      return "No path from here to %s. It may be reachable from another side.";
         case Id::FmtRouteMapUnreadable: return "No path to %s: the area map could not be read.";
@@ -464,7 +464,7 @@ const char* Get(Id id) {
 
         case Id::SwoopRaceStarted:
             // Terse opener ? concatenated with SwoopRaceControls below
-            // into one utterance by swoop_race.cpp::AnnounceEntry.
+            // into one utterance by minigame_swoop_race.cpp::AnnounceEntry.
             return "Swoop race.";
         case Id::SwoopRaceControls:
             // Short cheat sheet. Full keymap (Enter/Mouse 1 also work,
@@ -502,7 +502,7 @@ const char* Get(Id id) {
 
         case Id::TurretGameStarted:
             // Terse opener ? concatenated with TurretGameControls below
-            // into one utterance by turret_game.cpp::AnnounceEntry.
+            // into one utterance by minigame_turret.cpp::AnnounceEntry.
             return "Turret.";
         case Id::TurretGameControls:
             // Aiming AND firing are both native keyboard actions (W/S

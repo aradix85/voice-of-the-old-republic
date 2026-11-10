@@ -1490,7 +1490,7 @@ enum class Id : int {
 
     // ---- Swoop racing minigame (tar_m03mg, manm26mg, tat_m17mg).
     //      Continuous spatial cues handle proximity (obstacle loop
-    //      + nearest-accelpad loop, see swoop_race.cpp); the spoken
+    //      + nearest-accelpad loop, see minigame_swoop_race.cpp); the spoken
     //      strings here are intentionally terse — full keymap lives
     //      in the manual, the spoken intro must not bleed into the
     //      start countdown.
@@ -1558,20 +1558,20 @@ enum class Id : int {
     // hears "Gang 2 / 3 / 4 / 5" through NVDA's typed-character cancel.
     // One %d (1..5). Reset to 1 on race entry and on suspected reset
     // events (collision speed drop). The exact gear field inside
-    // CSWMiniPlayer is unconfirmed at this lay-off — see swoop_race.cpp
+    // CSWMiniPlayer is unconfirmed at this lay-off — see minigame_swoop_race.cpp
     // DiagnosticDump for the candidate-pointer-bytes capture.
     FmtSwoopRaceGear,
     // Final race time appended to the exit cue. Two ints: whole seconds
     // and centiseconds (00..99). Read from the engine world clock minus
     // the NWScript start-stamp globals (MIN_TIME_*), frozen at the
-    // finish-line crossing — see swoop_race.cpp TickRaceTimer.
+    // finish-line crossing — see minigame_swoop_race.cpp TickRaceTimer.
     FmtSwoopRaceTime,
 
     // ---- Turret (space-combat gunner) minigame (CSWMiniGame.type==3).
     //      Shares the CSWMiniGame struct with swoop racing (same vtable)
     //      but is a distinct game: the player swings a 2D reticle
     //      (CSWMiniPlayer.offset +0x1c4 — X horizontal, Y vertical) and
-    //      fires at incoming fighters. See turret_game.cpp.
+    //      fires at incoming fighters. See minigame_turret.cpp.
     //
     //      TurretGameStarted  — entry opener, no args. Concatenated with
     //                           TurretGameControls into one urgent

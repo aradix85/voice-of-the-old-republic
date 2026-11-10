@@ -5,7 +5,7 @@
 // are distinguished by CSWMiniGame.type (+0x80): swoop is type 1, the
 // turret/gunner game is type 2 (engine-confirmed — CSWMiniGame::Load only
 // ever sets type to 1 or 2). This module owns the type==2 case;
-// swoop_race.cpp gates itself to type==1 so the two never both fire on the
+// minigame_swoop_race.cpp gates itself to type==1 so the two never both fire on the
 // same minigame.
 //
 // Behaviour: entry/exit announce (the native control hint — WASD aims,
@@ -16,9 +16,9 @@
 // bullethook0 node world direction (the literal bolt fire line); aim-assist
 // (magnetism by default, full lock-on under the Autoaiming toggle) steers by
 // WRITING offset, which the engine re-integrates so the write sticks. See
-// turret_game.cpp.
+// minigame_turret.cpp.
 //
-// Detection latch mirrors swoop_race.cpp: the area chain stops resolving
+// Detection latch mirrors minigame_swoop_race.cpp: the area chain stops resolving
 // the minigame mid-game during the entry transition, so the CSWMiniGame
 // pointer is latched on first detect and validated per-tick by vtable.
 //
