@@ -1,4 +1,4 @@
-// On-demand facing readout (AltGr / Right Alt; the pad's right trigger).
+// On-demand facing readout (AltGr / Right Alt).
 //
 // In the world: the camera's facing as a compass direction word ("Facing
 // north"), then the area the player stands in. On the map screen: the facing

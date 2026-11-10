@@ -542,8 +542,7 @@ void PlayAndAnnounce(void* panel, void* player, int slot) {
 }
 
 // The opponent's remaining hand cards, count only — the same public information
-// a sighted player reads off the face-down cards, never the values. Shared by
-// the keyboard's Shift+C and the pad's left-stick press.
+// a sighted player reads off the face-down cards, never the values (Shift+C).
 void SpeakOppHandCount(void* model) {
     using namespace acc::strings;
     void* e = EnemyOf(model);
@@ -556,9 +555,9 @@ void SpeakOppHandCount(void* model) {
     Say(msg, true);
 }
 
-// The board's two turn actions, with their one turn gate. Three surfaces reach
-// them — the S / E shortcuts, Enter in the actions zone, and the pad's Y / X —
-// and the gate has to answer the same way on all three, including the spoken
+// The board's two turn actions, with their one turn gate. Two surfaces reach
+// them — the S / E shortcuts and Enter in the actions zone — and the gate
+// has to answer the same way on both, including the spoken
 // refusal: a press that lands out of turn must say so, not go quiet.
 void ActStand(void* panel, int state) {
     using namespace acc::strings;
@@ -685,7 +684,7 @@ void PollShortcuts(void* panel) {
     if (Pressed(Action::PazaakOppHand)) SpeakOppHandCount(model);
 
     // s / e quick shortcuts for Stand / End turn (also reachable in the
-    // actions zone via arrows + Enter, and on the pad's Y / X).
+    // actions zone via arrows + Enter).
     if (Pressed(Action::PazaakStand))   ActStand(panel, state);
     if (Pressed(Action::PazaakEndTurn)) ActEndTurn(panel, state);
 }

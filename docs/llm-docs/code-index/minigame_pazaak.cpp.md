@@ -1,4 +1,4 @@
-# minigame_pazaak.cpp (1122 lines)
+# minigame_pazaak.cpp (1121 lines)
 
 Source: `patches/Accessibility/minigame_pazaak.cpp`
 
@@ -36,26 +36,26 @@ Design (no engine detour hook): * Identify the live board panel structurally —
 - L519 `void DoStand(void* panel)`
 - L523 `void DoEndTurn(void* panel)`
 - L532 `void PlayAndAnnounce(void* panel, void* player, int slot)`: Play the focused hand card and speak the confirmation.
-- L547 `void SpeakOppHandCount(void* model)`: The opponent's remaining hand cards, count only — the same public information a sighted player reads off the face-down cards, never the values.
-- L563 `void ActStand(void* panel, int state)`: The board's two turn actions, with their one turn gate.
-- L572 `void ActEndTurn(void* panel, int state)`
-- L583 `int ZoneLen(void* model, int zone)`: ---- Arrow-zone navigation helpers ---------------------------------------
-- L593 `bool HandSlotFilled(void* player, int slot)`: Hand slots can be empty (index < 0) when a card has been played or the hand holds fewer than four cards.
-- L597 `int FirstHandCol(void* player)`
-- L603 `int NextHandCol(void* player, int from, int dir)`: Next filled slot in `dir` (+1 right / -1 left); returns `from` if none (no wrap).
-- L610 `void SpeakBoardSide(void* model, bool playerSide)`: Announce one board side as a whole ("Your board: ..., total N").
-- L622 `void AnnounceZoneEntry(void* model, int zone)`: Up/Down entered a zone — read its summary so the user gets oriented.
-- L631 `void AnnounceZoneElement(void* model, int zone, int col)`: Left/Right moved within a zone — read the single focused element.
-- L655 `void ConsumeConflicts()`: Suppress the in-world / menu actions that share our physical keys so their pollers (which run later in Dispatch) don't act on the same press.
-- L672 `void PollShortcuts(void* panel)`: Win32-polled shortcuts — letter scancodes the engine drops before the manager hook, so we read them directly (mirrors the in-world cycle keys).
-- L694 `void HandleEnter(void* panel, void* model, int state)`: Enter on the focused zone element (driven from TryHandleInput).
-- L748 `void StepWager(void* fg, int dir)`
-- L754 `void ServiceWagerPopup(void* fg)`: Run every tick while the wager popup may be foreground (from Tick).
-- L822 `void ResetState()`
-- L838 `bool IsSignChoiceCard(int index)`
-- L844 `void FormatFlipFaces(int mag, int flip, CardContext ctx, char* out, size_t n)`: Render one of the six classic ±N flip faces into `out`.
-- L877 `void FormatCardLabel(int index, int flip, CardContext ctx, char* out, size_t n, int value)`: Shared card-label synthesizer — see pazaak.h.
-- L937 `bool TryHandleInput(void* /*activePanel*/, int param_1, int param_2, int& rv)`: Arrow + Enter navigator, driven from the manager input hook so the generic chain can't also act on the board's controls.
-- L1037 `bool IsBoardForeground()`
-- L1039 `void DispatchWagerInput(void* panel, int code)`
-- L1052 `void Tick()`
+- L546 `void SpeakOppHandCount(void* model)`: The opponent's remaining hand cards, count only — the same public information a sighted player reads off the face-down cards, never the values (Shift+C).
+- L562 `void ActStand(void* panel, int state)`: The board's two turn actions, with their one turn gate.
+- L571 `void ActEndTurn(void* panel, int state)`
+- L582 `int ZoneLen(void* model, int zone)`: ---- Arrow-zone navigation helpers ---------------------------------------
+- L592 `bool HandSlotFilled(void* player, int slot)`: Hand slots can be empty (index < 0) when a card has been played or the hand holds fewer than four cards.
+- L596 `int FirstHandCol(void* player)`
+- L602 `int NextHandCol(void* player, int from, int dir)`: Next filled slot in `dir` (+1 right / -1 left); returns `from` if none (no wrap).
+- L609 `void SpeakBoardSide(void* model, bool playerSide)`: Announce one board side as a whole ("Your board: ..., total N").
+- L621 `void AnnounceZoneEntry(void* model, int zone)`: Up/Down entered a zone — read its summary so the user gets oriented.
+- L630 `void AnnounceZoneElement(void* model, int zone, int col)`: Left/Right moved within a zone — read the single focused element.
+- L654 `void ConsumeConflicts()`: Suppress the in-world / menu actions that share our physical keys so their pollers (which run later in Dispatch) don't act on the same press.
+- L671 `void PollShortcuts(void* panel)`: Win32-polled shortcuts — letter scancodes the engine drops before the manager hook, so we read them directly (mirrors the in-world cycle keys).
+- L693 `void HandleEnter(void* panel, void* model, int state)`: Enter on the focused zone element (driven from TryHandleInput).
+- L747 `void StepWager(void* fg, int dir)`
+- L753 `void ServiceWagerPopup(void* fg)`: Run every tick while the wager popup may be foreground (from Tick).
+- L821 `void ResetState()`
+- L837 `bool IsSignChoiceCard(int index)`
+- L843 `void FormatFlipFaces(int mag, int flip, CardContext ctx, char* out, size_t n)`: Render one of the six classic ±N flip faces into `out`.
+- L876 `void FormatCardLabel(int index, int flip, CardContext ctx, char* out, size_t n, int value)`: Shared card-label synthesizer — see pazaak.h.
+- L936 `bool TryHandleInput(void* /*activePanel*/, int param_1, int param_2, int& rv)`: Arrow + Enter navigator, driven from the manager input hook so the generic chain can't also act on the board's controls.
+- L1036 `bool IsBoardForeground()`
+- L1038 `void DispatchWagerInput(void* panel, int code)`
+- L1051 `void Tick()`

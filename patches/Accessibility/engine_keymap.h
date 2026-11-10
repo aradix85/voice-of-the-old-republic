@@ -64,9 +64,8 @@ void ReloadGameConfig();
 int GameActionVk(int actionId);
 
 // The same bind as a DIK scancode, for a caller that has to SYNTHESISE the key
-// rather than test it — the KOTOR 1 pad's quick menu drives Solo Mode, Stealth,
-// Quick Save and the rest this way (the engine reads DirectInput, which sees
-// scancodes only). 0 when the ini has no such line OR when the bound key is one
+// rather than test it (the swoop race presses KOTOR 1's MGshoot bind this way;
+// the engine reads DirectInput, which sees scancodes only). 0 when the ini has no such line OR when the bound key is one
 // this mod refuses to inject (Caps Lock — see InputIndexToScancode). A caller
 // that gets 0 must fall back to its own default or decline the entry.
 int GameActionScancode(int actionId);

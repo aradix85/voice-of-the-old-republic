@@ -2,7 +2,7 @@
 
 Source: `patches/Accessibility/announce_facing.cpp`
 
-(From announce_facing.h.) On-demand facing readout (AltGr / Right Alt; the pad's right trigger).
+(From announce_facing.h.) On-demand facing readout (AltGr / Right Alt).
 
 In the world: the camera's facing as a compass direction word ("Facing north"), then the area the player stands in. On the map screen: the facing in map-frame degrees plus the direction word, then the room on a line of its own, so the heading never runs into the area description.
 

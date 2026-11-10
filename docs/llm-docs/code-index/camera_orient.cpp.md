@@ -1,4 +1,4 @@
-# camera_orient.cpp (657 lines)
+# camera_orient.cpp (655 lines)
 
 Source: `patches/Accessibility/camera_orient.cpp`
 
@@ -18,17 +18,17 @@ camera_announce stays muted while IsActive() is true and announces the final dir
 - L142 `bool ReadDesiredOrientationPending(bool& pending)`: False on no address / fault.
 - L160 `bool ReadCurrentEngineYawRad(float& out)`: Prefer camera_announce's position-derived yaw — atan2(player - camera) is single-valued, the quaternion path returns antipodal readings 360° apart and breaks the arrival check.
 - L176 `void SendKey(WORD scan, bool down)`
-- L185 `float NormaliseRad(float r)`
-- L191 `float CompassDegToEngineRad(float compassDeg)`
-- L224 `bool CollectExitBearings(const Vector& playerPos, void*& outArea, int& outClusterId, std::vector<ExitBearing>& out)`
-- L260 `int NextExitClockwise(const std::vector<ExitBearing>& exits, int fromIdx)`: Next exit clockwise from `fromYawRad` (engine frame is CCW+, so clockwise = decreasing yaw).
-- L282 `int ChooseExit(const std::vector<ExitBearing>& exits, void* area, int clusterId, float curYawRad, const char*& outWhy)`: Pick the exit to turn to: - still in the region of the last N turn and still facing that exit → the next one clockwise (the cycle); - otherwise the exit nearest the camera heading, however small the offset — N lines t...
-- L314 `float NextCardinalCompassDeg(float currentCompassDeg)`: Next cardinal in CW order (N → E → S → W → N).
-- L326 `void ReleaseAndDisarm(const char* reason, float curYawRad)`
-- L354 `void LogLanding()`: One line per turn once the coast has finished: where the camera actually stopped against the target.
-- L368 `bool ArmKeyTurn(float targetEngineYawRad, float curYawRad, const char* mode)`: Start a key-hold turn toward the target.
-- L413 `void TickKeyTurn(void* camera)`: In-flight key-hold turn: the predictive-release state machine.
-- L486 `bool StartSnap(float targetEngineYawRad, float curYawRad, const char* mode)`: Issue the snap.
-- L508 `void TickSnap(void* camera)`: In-flight snap: wait for the camera to take the request, then for the heading to show it.
-- L572 `bool IsActive()`: Covers the window g_rot.active alone misses: the rising-edge tick itself, since camera_announce::Tick runs before us in core_tick and would otherwise speak the pre-rotation sector on the frame N is pressed.
-- L577 `void Tick()`
+- L183 `float NormaliseRad(float r)`
+- L189 `float CompassDegToEngineRad(float compassDeg)`
+- L222 `bool CollectExitBearings(const Vector& playerPos, void*& outArea, int& outClusterId, std::vector<ExitBearing>& out)`
+- L258 `int NextExitClockwise(const std::vector<ExitBearing>& exits, int fromIdx)`: Next exit clockwise from `fromYawRad` (engine frame is CCW+, so clockwise = decreasing yaw).
+- L280 `int ChooseExit(const std::vector<ExitBearing>& exits, void* area, int clusterId, float curYawRad, const char*& outWhy)`: Pick the exit to turn to: - still in the region of the last N turn and still facing that exit → the next one clockwise (the cycle); - otherwise the exit nearest the camera heading, however small the offset — N lines t...
+- L312 `float NextCardinalCompassDeg(float currentCompassDeg)`: Next cardinal in CW order (N → E → S → W → N).
+- L324 `void ReleaseAndDisarm(const char* reason, float curYawRad)`
+- L352 `void LogLanding()`: One line per turn once the coast has finished: where the camera actually stopped against the target.
+- L366 `bool ArmKeyTurn(float targetEngineYawRad, float curYawRad, const char* mode)`: Start a key-hold turn toward the target.
+- L411 `void TickKeyTurn(void* camera)`: In-flight key-hold turn: the predictive-release state machine.
+- L484 `bool StartSnap(float targetEngineYawRad, float curYawRad, const char* mode)`: Issue the snap.
+- L506 `void TickSnap(void* camera)`: In-flight snap: wait for the camera to take the request, then for the heading to show it.
+- L570 `bool IsActive()`: Covers the window g_rot.active alone misses: the rising-edge tick itself, since camera_announce::Tick runs before us in core_tick and would otherwise speak the pre-rotation sector on the frame N is pressed.
+- L575 `void Tick()`

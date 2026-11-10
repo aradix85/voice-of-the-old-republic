@@ -1,4 +1,4 @@
-# unified_action_menu.cpp (1548 lines)
+# unified_action_menu.cpp (1539 lines)
 
 Source: `patches/Accessibility/unified_action_menu.cpp`
 
@@ -27,31 +27,30 @@ kInputHome/End, kInputCatFirst/Last
 - L392 `uint32_t ResolveNarratedServerHandle()`: Server-side handle of the currently narrated target, or 0 if none / map pin / stale.
 - L409 `bool ActionMenuAutoPauseEnabled()`: Vanilla parity: the radial / personal action menus auto-pause the world only when the "Action Menu" auto-pause option is on (CClientOptions bit 0x8000) — off by default.
 - L414 `void Arm()`
-- L437 `int PersonalSelection(int col)`
-- L442 `int TargetSelection(int row)`
-- L447 `bool IsActive()`
-- L448 `bool IsSuspended()`
-- L456 `void ReannounceCurrent()`: Re-speak the current category against the live menus.
-- L485 `void SetForegroundBlocked(bool blocked)`: Panel-stack suspend / resume.
-- L530 `void ForceDisarm(const char* reason)`
-- L551 `bool ArmFromRadial(const char* name, uint32_t targetHandle)`
-- L591 `bool OpenTarget(int row)`
-- L664 `bool OpenPersonalImpl(int col, bool requested)`: `requested` distinguishes the two intents that share this body.
-- L773 `bool OpenPersonal(int col)`
-- L789 `void CloseFromEsc()`: Esc — close.
-- L828 `bool ReanchorToNewTarget(void* tam, uint32_t narrated, bool rowCarried[kRowCount])`: FOLLOW-CYCLING re-anchor: when the narrated target changed while the menu sat open (`,`/`.`/Q/E/passive all stamp the same slot), rebuild the target rows against the NEW target so the menu always shows that target's r...
-- L873 `bool UnfoldTargetBlock(void* tam, uint32_t narrated, bool rowCarried[kRowCount])`: UNFOLD: the menu is personal-only (opened without a target, or its target was lost) and the user cycled onto something.
-- L916 `void MaybeRestoreDrainedRows(void*& tam, bool targetChanged)`: LAZY re-anchor: re-anchoring on EVERY keypress broke target-menu navigation (the engine's per-press re-derivation churned the rows so arrows produced nothing).
-- L933 `void DescribeSelectedEntry(void* tam, void* mi, const Cat& cur, int sel)`: Shift + any arrow — describe the selected entry, no movement.
-- L961 `void RestampTargetRowForDispatch(void* tam, const Cat& cur)`: DoTargetAction dispatches at the creature_id baked into the matched list descriptor at PopulateMenus time — and while the menu sits open the engine re-bakes the lists against its own current target (combat reassert / ...
-- L991 `uint32_t PendingRefusalStrRef(void* mi, const Cat& cur, int sel, bool* outRefused)`: Force the engine's APPEND path.
-- L1007 `void SpeakRefusal(uint32_t strref)`: interrupt=false throughout: the bare-key path speaks the entry's label immediately before firing, and "Medikit" followed by the reason is the whole sentence the user needs — cutting the label off to deliver the reason...
-- L1027 `bool DispatchWithQueueAppend(void* tam, void* mi, const Cat& cur)`
-- L1071 `void ApplyPostFireClosePolicy()`: What happens to the menu after a successful fire.
-- L1114 `void SpeakMedPickerRow(bool withTitle)`
-- L1131 `bool FireMedicalDirect(void* mi, const Cat& c, int sel, void* targetCre, const char* how)`: Fire a Medicine-row entry at a specific CLIENT creature via the direct use-item request (DoPersonalAction is a dead end for K2 medical items — see SendUseItemRequestK2).
-- L1156 `bool OpenMedPicker(void* mi, const Cat& c, int sel, const char* itemLabel)`: Returns true when the picker opened (the press is consumed).
-- L1222 `bool HandleMedPickerInput(int code)`
-- L1284 `bool HandleEnter(void* tam, void* mi, const Cat& cur, int sel, bool targetChanged, bool selectionCarried)`: Follow-cycling contract: Enter right after cycling fires immediately when the user's selected action exists on the new target (selection carried by action_id above).
-- L1364 `bool FirePersonal(int col)`: Fire a personal column's selected entry outright, with no menu.
-- L1415 `bool HandleInputEvent(int code, int value)`
+- L434 `int PersonalSelection(int col)`
+- L439 `int TargetSelection(int row)`
+- L444 `bool IsActive()`
+- L445 `bool IsSuspended()`
+- L453 `void ReannounceCurrent()`: Re-speak the current category against the live menus.
+- L482 `void SetForegroundBlocked(bool blocked)`: Panel-stack suspend / resume.
+- L527 `void ForceDisarm(const char* reason)`
+- L548 `bool ArmFromRadial(const char* name, uint32_t targetHandle)`
+- L588 `bool OpenTarget(int row)`
+- L657 `bool OpenPersonal(int col)`
+- L780 `void CloseFromEsc()`: Esc — close.
+- L819 `bool ReanchorToNewTarget(void* tam, uint32_t narrated, bool rowCarried[kRowCount])`: FOLLOW-CYCLING re-anchor: when the narrated target changed while the menu sat open (`,`/`.`/Q/E/passive all stamp the same slot), rebuild the target rows against the NEW target so the menu always shows that target's r...
+- L864 `bool UnfoldTargetBlock(void* tam, uint32_t narrated, bool rowCarried[kRowCount])`: UNFOLD: the menu is personal-only (opened without a target, or its target was lost) and the user cycled onto something.
+- L907 `void MaybeRestoreDrainedRows(void*& tam, bool targetChanged)`: LAZY re-anchor: re-anchoring on EVERY keypress broke target-menu navigation (the engine's per-press re-derivation churned the rows so arrows produced nothing).
+- L924 `void DescribeSelectedEntry(void* tam, void* mi, const Cat& cur, int sel)`: Shift + any arrow — describe the selected entry, no movement.
+- L952 `void RestampTargetRowForDispatch(void* tam, const Cat& cur)`: DoTargetAction dispatches at the creature_id baked into the matched list descriptor at PopulateMenus time — and while the menu sits open the engine re-bakes the lists against its own current target (combat reassert / ...
+- L982 `uint32_t PendingRefusalStrRef(void* mi, const Cat& cur, int sel, bool* outRefused)`: Force the engine's APPEND path.
+- L998 `void SpeakRefusal(uint32_t strref)`: interrupt=false throughout: the bare-key path speaks the entry's label immediately before firing, and "Medikit" followed by the reason is the whole sentence the user needs — cutting the label off to deliver the reason...
+- L1018 `bool DispatchWithQueueAppend(void* tam, void* mi, const Cat& cur)`
+- L1062 `void ApplyPostFireClosePolicy()`: What happens to the menu after a successful fire.
+- L1105 `void SpeakMedPickerRow(bool withTitle)`
+- L1122 `bool FireMedicalDirect(void* mi, const Cat& c, int sel, void* targetCre, const char* how)`: Fire a Medicine-row entry at a specific CLIENT creature via the direct use-item request (DoPersonalAction is a dead end for K2 medical items — see SendUseItemRequestK2).
+- L1147 `bool OpenMedPicker(void* mi, const Cat& c, int sel, const char* itemLabel)`: Returns true when the picker opened (the press is consumed).
+- L1213 `bool HandleMedPickerInput(int code)`
+- L1275 `bool HandleEnter(void* tam, void* mi, const Cat& cur, int sel, bool targetChanged, bool selectionCarried)`: Follow-cycling contract: Enter right after cycling fires immediately when the user's selected action exists on the new target (selection carried by action_id above).
+- L1355 `bool FirePersonal(int col)`: Fire a personal column's selected entry outright, with no menu.
+- L1406 `bool HandleInputEvent(int code, int value)`

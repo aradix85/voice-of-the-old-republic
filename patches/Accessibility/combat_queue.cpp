@@ -732,9 +732,7 @@ bool Open() {
 
 void ClearAllAndClose() {
     if (!g_state.active) return;
-    // Re-read first: the engine drains the queue as the combat round advances,
-    // and the pad's chord arrives from the poll slot rather than from inside
-    // HandleInputEvent's own refresh.
+    // Re-read first: the engine drains the queue as the combat round advances.
     if (BuildRows() <= 0) {
         acc::speech::Speak(acc::strings::Get(acc::strings::Id::QueueEmpty),
                      /*interrupt=*/true);

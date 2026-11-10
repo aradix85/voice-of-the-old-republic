@@ -1,4 +1,4 @@
-# engine_keymap.h (145 lines)
+# engine_keymap.h (144 lines)
 
 Source: `patches/Accessibility/engine_keymap.h`
 
@@ -16,13 +16,13 @@ Namespace note -------------- The codes here are the engine's internal "quick ac
 - L53 `bool IsKeyUsedByGame(int vk)`: True iff `vk` is bound to ANY game action — a hardcoded quick key (CodeForVk) OR a player-configurable bind read from swkotor.ini [Keymapping].
 - L58 `void ReloadGameConfig()`: (Re)read the configurable [Keymapping] binds from swkotor.ini.
 - L64 `int GameActionVk(int actionId)`: The VK currently bound to a slotless [Keymapping] game action ("Action =" lines, e.g.
-- L72 `int GameActionScancode(int actionId)`: The same bind as a DIK scancode, for a caller that has to SYNTHESISE the key rather than test it — the KOTOR 1 pad's quick menu drives Solo Mode, Stealth, Quick Save and the rest this way (the engine reads DirectInput...
-- L76 `int ScancodeToVk(int scancode)`: Resolve a DirectInput scancode to a Win32 VK against the active layout.
-- L82 `int InputIndexToVk(int inputIndex)`: Resolve an engine InputIndices value (KEYBOARD_MOUSE_* — what the keymap row's key_code and swkotor.ini [Keymapping] actually store) to a Win32 VK.
-- L90 `enum class MoveAxis`: ---- Movement / turn axis queries ------------------------------------------ The player's bound movement + turn keys, so the mod can react to "the player is moving / turning" and steer the map cursor by the same keys ...
-- L95 `int MoveAxisVks(MoveAxis axis, int* out, int cap)`: Fill `out` with up to `cap` distinct VKs bound to the given movement/turn direction (default key + any [Keymapping] binds on that direction's slots).
-- L116 `int MoveAxisPrimaryVk(MoveAxis axis)`: The single VK a consumer should treat as "the" key for this direction, when reacting to every bound key would be wrong.
-- L124 `int TurnScancode(bool left)`: DIK scancode to synthesise (via SendInput KEYEVENTF_SCANCODE) to drive the engine's camera-turn axis in the given direction — resolved from the player's configured primary turn bind (Action283/284), so it follows a re...
-- L129 `bool AnyMovementKeyHeld()`: True iff any bound movement/turn key is currently held down.
-- L135 `int FirstMovementKeyHeld()`: Same scan, but returns the VK that answered (0 when none).
-- L142 `bool ForwardBackwardKeyHeld()`: True iff a bound forward/backward key is currently held (the walk axes, including the arrow alternates) — deliberately EXCLUDING the turn/strafe buckets.
+- L71 `int GameActionScancode(int actionId)`: The same bind as a DIK scancode, for a caller that has to SYNTHESISE the key rather than test it (the swoop race presses KOTOR 1's MGshoot bind this way; the engine reads DirectInput, which sees scancodes only).
+- L75 `int ScancodeToVk(int scancode)`: Resolve a DirectInput scancode to a Win32 VK against the active layout.
+- L81 `int InputIndexToVk(int inputIndex)`: Resolve an engine InputIndices value (KEYBOARD_MOUSE_* — what the keymap row's key_code and swkotor.ini [Keymapping] actually store) to a Win32 VK.
+- L89 `enum class MoveAxis`: ---- Movement / turn axis queries ------------------------------------------ The player's bound movement + turn keys, so the mod can react to "the player is moving / turning" and steer the map cursor by the same keys ...
+- L94 `int MoveAxisVks(MoveAxis axis, int* out, int cap)`: Fill `out` with up to `cap` distinct VKs bound to the given movement/turn direction (default key + any [Keymapping] binds on that direction's slots).
+- L115 `int MoveAxisPrimaryVk(MoveAxis axis)`: The single VK a consumer should treat as "the" key for this direction, when reacting to every bound key would be wrong.
+- L123 `int TurnScancode(bool left)`: DIK scancode to synthesise (via SendInput KEYEVENTF_SCANCODE) to drive the engine's camera-turn axis in the given direction — resolved from the player's configured primary turn bind (Action283/284), so it follows a re...
+- L128 `bool AnyMovementKeyHeld()`: True iff any bound movement/turn key is currently held down.
+- L134 `int FirstMovementKeyHeld()`: Same scan, but returns the VK that answered (0 when none).
+- L141 `bool ForwardBackwardKeyHeld()`: True iff a bound forward/backward key is currently held (the walk axes, including the arrow alternates) — deliberately EXCLUDING the turn/strafe buckets.

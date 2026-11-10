@@ -70,14 +70,6 @@ bool ArmFromRadial(const char* name, uint32_t targetHandle);
 
 bool IsActive();
 
-// The pad opens this menu through the same entry points the keyboard uses —
-// the left trigger is Shift+Enter, B and the left trigger are Esc — so there
-// is no pad-specific mode here. There was one ("live": never pause, never
-// close on fire, the D-pad permanently parked on the menu); it was removed
-// because a menu that behaves differently depending on which device opened it
-// is two menus to reason about, and because the always-open surface cost the
-// pad its A button in the world.
-
 // Re-speak the current category against the live menus, re-locating the cursor
 // on the same slot. Called when a stacked overlay (the combat queue, opened via
 // Shift+H from within this menu) closes back onto it: the world stayed paused

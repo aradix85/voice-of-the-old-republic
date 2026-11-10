@@ -495,8 +495,8 @@ void Tick() {
     // Both queries below scan (panel stack / key state), so resolve once per
     // tick — the tripwire further down wants the same two answers.
     //
-    // Caveat worth knowing when reading a report: "commanding" covers keys and
-    // the pad, not a right-drag camera rotation, which holds no key. A mouse
+    // Caveat worth knowing when reading a report: "commanding" covers keys,
+    // not a right-drag camera rotation, which holds no key. A mouse
     // user could therefore turn the camera and have it read as uncommanded —
     // hence the cursor position and right-click state in the report line. Not
     // gated on here because the only mouse state we can read reliably across

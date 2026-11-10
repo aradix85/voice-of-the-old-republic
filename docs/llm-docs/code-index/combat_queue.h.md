@@ -1,4 +1,4 @@
-# combat_queue.h (117 lines)
+# combat_queue.h (110 lines)
 
 Source: `patches/Accessibility/combat_queue.h`
 
@@ -22,8 +22,7 @@ Skeleton: positional remove is unresolved (RemoveLastAction only removes the tai
 - L92 `void OnEngineActionAdded(void* combatRound, void* action)`: Announce a queued action the engine just accepted (or rejected at the cap) — the authoritative "X, Platz N" / "Warteschlange voll" cue.
 - L96 `bool Open()`: True iff armed (queue had >= 1 entry — empty queue speaks "leer" and returns false).
 - L98 `bool IsActive()`
-- L105 `void ClearAllAndClose()`: Clear every queued action and close: what Shift+Enter does in the submenu.
-- L108 `bool HandleInputEvent(int code, int value)`: Press-edge only.
-- L111 `void ForceDisarm(const char* reason)`: Engine owns the queue — no engine-side cleanup needed.
-- L113 `void Tick()`
-- L114 `void PollWin32Hotkey()`
+- L101 `bool HandleInputEvent(int code, int value)`: Press-edge only.
+- L104 `void ForceDisarm(const char* reason)`: Engine owns the queue — no engine-side cleanup needed.
+- L106 `void Tick()`
+- L107 `void PollWin32Hotkey()`

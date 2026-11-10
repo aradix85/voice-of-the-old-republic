@@ -79,8 +79,7 @@ constexpr int kAxisDefaultVk[kMoveAxisCount] = {'W', 'S', 'A', 'D'};
 // The scancode is captured alongside the VK because the two answer different
 // questions: "is the player holding this key" wants the VK (GetAsyncKeyState),
 // while "make the engine act as if this key were pressed" wants the physical
-// scancode, which is all DirectInput sees. The KOTOR 1 pad layer asks the
-// second question of half a dozen game actions (see GameActionScancode).
+// scancode, which is all DirectInput sees (see GameActionScancode).
 constexpr int kMaxActionVks = 160;  // stock ini ships ~120 Action lines
 struct ActionVk { int actionId; int vk; int scan; };
 ActionVk s_actionVks[kMaxActionVks];
@@ -141,7 +140,6 @@ int InputIndexToScancode(int ii) {
     if (ii == 0x57)               return 0x39;                   // Space
     // The non-letter keys KOTOR's own default binds land on: Tab (ChangeChar),
     // Escape (GUI) and the function row (Quicksave = F4, Quickload = F5).
-    // Added for the KOTOR 1 pad's quick menu, which has to synthesise these.
     if (ii == 0x1e)               return 0x0F;                   // Tab
     if (ii == 0x1f)               return 0x01;                   // Escape
     if (ii >= 0x27 && ii <= 0x30) return 0x3B + (ii - 0x27);     // F1..F10

@@ -174,11 +174,9 @@ bool ReadCurrentEngineYawRad(float& out) {
 }
 
 void SendKey(WORD scan, bool down) {
-    // The injection itself lives in key_inject — the KOTOR 1 pad layer drives
-    // the engine the same way (walking, camera, menu navigation), and two
-    // copies of the SendInput call would be the same knowledge written twice.
-    // The predictive-release policy above stays here; key_inject is
-    // deliberately policy-free.
+    // The injection itself lives in key_inject (shared with the swoop race and
+    // the bridge). The predictive-release policy above stays here; key_inject
+    // is deliberately policy-free.
     acc::key_inject::Send(scan, down);
 }
 

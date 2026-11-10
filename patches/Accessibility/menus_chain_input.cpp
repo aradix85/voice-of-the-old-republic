@@ -477,9 +477,9 @@ void HandleNavStep(void* activePanel, int code, int val, bool& consumed) {
         // (party selection, return to base) are hidden in most areas, which
         // empties the chain — and the engine's own map panel answers an
         // unconsumed Up / Down by stepping its map-note list, the very
-        // stepper IsDecorativeControl drops from the chain. On KOTOR 2 that
-        // turned the D-Pad into a second, unwanted hint reader. Nothing is
-        // there to navigate, so the press is spent here.
+        // stepper IsDecorativeControl drops from the chain, a second,
+        // unwanted hint reader. Nothing is there to navigate, so the press is
+        // spent here.
         if (emptyKind == acc::engine::PanelKind::InGameMap) {
             consumed = true;
             acclog::Trace("Menus.Chain", "empty map panel — nav key consumed so "

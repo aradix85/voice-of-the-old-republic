@@ -1,4 +1,4 @@
-# combat_queue.cpp (875 lines)
+# combat_queue.cpp (873 lines)
 
 Source: `patches/Accessibility/combat_queue.cpp`
 
@@ -34,6 +34,6 @@ GetObjectDisplayNameByHandle
 - L699 `void ForceDisarm(const char* reason)`
 - L709 `bool Open()`
 - L733 `void ClearAllAndClose()`
-- L752 `bool HandleInputEvent(int code, int value)`
-- L850 `void Tick()`
-- L864 `void PollWin32Hotkey()`
+- L750 `bool HandleInputEvent(int code, int value)`
+- L848 `void Tick()`
+- L862 `void PollWin32Hotkey()`

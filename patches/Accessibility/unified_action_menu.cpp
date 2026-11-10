@@ -415,12 +415,9 @@ void Arm() {
     g.suspended = false;
     if (!g.active) {
         g.active = true;
-        // One rule for every opener, keyboard and pad alike: the player's
-        // "Action Menu" auto-pause option decides. The pad used to open a
-        // never-pausing "live" variant; it was removed because the menu then
-        // behaved differently depending on which device opened it, and because
-        // pausing is what lets the user stack several actions into one round
-        // (ApplyPostFireClosePolicy's stack mode).
+        // One rule for every opener: the player's "Action Menu" auto-pause
+        // option decides. Pausing is what lets the user stack several actions
+        // into one round (ApplyPostFireClosePolicy's stack mode).
         g.pausedOnOpen = ActionMenuAutoPauseEnabled();
         if (g.pausedOnOpen) {
             acc::engine::BeginOverlayPause(
@@ -657,11 +654,7 @@ bool OpenTarget(int row) {
     return true;
 }
 
-// `requested` distinguishes the two intents that share this body. Shift+4..7
-// REQUESTS a column: the user named it, so an empty one is worth saying aloud.
-// The pad's left trigger does not — it is opening "the action menu", not "Force
-// Powers", so a notice about a column nobody asked for would be noise.
-bool OpenPersonalImpl(int col, bool requested) {
+bool OpenPersonal(int col) {
     if (col < 0 || col >= kColumnCount) return false;
     if (ForegroundPanelBlocks()) {
         acclog::Write("UnifiedMenu", "OpenPersonal col=%d — foreground panel; not arming",
@@ -711,7 +704,7 @@ bool OpenPersonalImpl(int col, bool requested) {
     // otherwise cancel it — the user hears "<column>: empty. <where you
     // landed>" as one line.
     char emptyNotice[160] = "";
-    if (requested && acc::engine_actionbar::VariantCount(mi, g.reqSlot) <= 0) {
+    if (acc::engine_actionbar::VariantCount(mi, g.reqSlot) <= 0) {
         Cat reqCat{CatKind::Personal, g.reqSlot};
         const char* name = CategoryName(reqCat);
         if (name && name[0]) {
@@ -769,8 +762,6 @@ bool OpenPersonalImpl(int col, bool requested) {
     SpeakCategory(tam, mi, emptyNotice[0] ? emptyNotice : nullptr);
     return true;
 }
-
-bool OpenPersonal(int col) { return OpenPersonalImpl(col, /*requested=*/true); }
 
 // Steps of HandleInputEvent below. They are file-local because every one of
 // them writes `g` and is only meaningful inside a single input dispatch —
