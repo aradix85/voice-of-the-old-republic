@@ -39,6 +39,9 @@ rejections are advice only, Anouk decides.
   languages (strings_*.cpp, language detection), the installer's
   translations and the translated READMEs go. The readme links (mod
   settings, installer) point to README.md of this fork, branch bridge.
+- Input (Anouk, 2026-11-10 13:33): keyboard only. Everything about the
+  mod's gamepad support goes, code and docs; KOTOR 2's own controller
+  support (the game's) stays untouched.
 
 ## Rules
 
@@ -102,11 +105,16 @@ tags in /objects; kotor-tools 98ad341 matches by tag and shows where
 people are now. The two cooperate correctly: same frame (+X east, +Y
 north), doors and placeables match on position, room kinds as kotor_kaart
 expects. No resref: the engine has no template-resref reader and the tag
-is enough. pad_input split into five files (9aaf284; split_file.py now
-keeps a comment that stood before a dropped forward declaration, 4d4c75c)
-and made lean (981529f): one ClaimA for both games' A, one shoulder mode
-toggle, one stick sampler. Fix 2eb952e: with the mod driving the pad, LT +
-A also interacted (check in game with a controller).
+is enough. transitions split into five files (a820cec, which also holds
+split_file.py's "tail" option for extern "C" hooks after the namespace)
+and made lean (876e2a0): each file owns its state, one ResetAreaState,
+dead spoken-position state out. Controller support out (keyboard only):
+5a50c54 (pad modules, binding_hints, 116 strings, the pad-only helpers,
+the K2 gamepad Quick Menu panel kind), cbeca56 (scancode lookups,
+InteractNarratedTarget; this commit also carries the deletion of the
+three controller docs), 660dd26 (docs), 0b2ca8d (comments, OpenPersonal,
+ClearAllAndClose). The pad_input split and lean done just before
+(9aaf284, 981529f, 2eb952e) went with it.
 
 Careful: never rewrite source files with PowerShell ReadAllText/WriteAllText
 (it decodes UTF-8 and writes '?' for the dashes and umlauts in comments);
@@ -170,11 +178,26 @@ prefix (menus_listbox_picker.cpp).
   defined in many files: one constant with it.
 - Stale file names in comments (swoop_race.cpp, swoop_spatial_audio.h,
   turret_game.cpp and others from before the minigame_ prefix): one pass.
-- Next file: transitions.cpp, then engine_area.cpp.
+- Next file: engine_area.cpp, then unified_action_menu.cpp, combat_log.cpp
+  and down the size list.
+- Header functions without a caller (dead_decls.py in the temp scripts,
+  2026-11-10): bridge RecordSpoken, engine_area GetDoorMaterial /
+  GetRoomRepresentativeWorld, engine_input EnsureInputAcquired /
+  MouseDeviceUnavailable, engine_keymap MoveAxisVks, engine_options
+  Set/ToggleMouseLook, engine_panels CallHideSWInGameGui, engine_radial
+  GetRowActionButton / Select*ActionInRow, engine_actionbar
+  GetColumnActionButton, engine_reads ReadItemKeyedPropertyString,
+  engine_rebase IsRebased, engine_scriptvar Get/SetPlayerVarInt,
+  focus_guard ArmStartupForegroundGuard, hotkeys AltGrHeld / AltHeld /
+  GetDefault, log FlushAll / FmtPtr / RegisterPtr, menus_chargen_layout
+  IsBindingReady, menus_listbox EquipPickerPanel, menus_modsettings
+  GetRootAnchor, mod_settings_store GetBool, spatial_wall_surfaces
+  Get*Buffer / Get*Count / GetSurfaceDesc. Check each (some may be kept
+  for the bridge or tests) in the static analysis pass.
 - F2b: share the save-variable code of exit_memory with discovery.cpp.
 - F3 menus_chargen_feats / menus_powers_levelup: about 15 same-named
   functions, 22 cloned blocks; one chart-grid module (check K2 plans).
-- F4 small list overlays (help, pad_quickmenu, combat_queue, examine_view,
+- F4 small list overlays (help, combat_queue, examine_view,
   unified_action_menu): Open, BuildRows, SpeakRow, HandleInputEvent.
 - F5 memory readers outside engine_reads (SafeRead in 4 files,
   ReadListBoxRowCount in 3, ReadCExoStringLocal, ReadButtonText).
