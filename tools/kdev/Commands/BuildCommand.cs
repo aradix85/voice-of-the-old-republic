@@ -175,7 +175,11 @@ public static class BuildCommand
         var dll = Path.Combine(objCache, "windows_x86.dll");
         if (File.Exists(dll)) File.Delete(dll);
         Console.WriteLine("Linking windows_x86.dll...");
-        var objList = string.Join(" ", units.Select(u => $"\"{u.Obj}\""));
+        // The objects go through a response file: on the command line they
+        // outgrew Windows' 32767-character limit for starting a process.
+        // UTF-16 with a BOM, the response-file encoding cl reads for any path.
+        var objRsp = Path.Combine(objCache, "objects.rsp");
+        File.WriteAllLines(objRsp, units.Select(u => $"\"{u.Obj}\""), Encoding.Unicode);
         // Named accessibility.pdb, not windows_x86.pdb: the DLL is installed as
         // patches/accessibility.dll, and a debugger looks for symbols under the
         // loaded module's name. The path is recorded inside the DLL, so the
@@ -187,7 +191,7 @@ public static class BuildCommand
         // went from ~2.6 MB to ~3.5 MB purely as a side effect. Restating them
         // puts the release-style link back; symbols are unaffected.
         var linkArgs =
-            $"{LinkFlags} {objList} /Fe\"{dll}\" /link /DEF:\"{exportsDef}\" /LIBPATH:\"{libDir}\" sqlite3.lib " +
+            $"{LinkFlags} @\"{objRsp}\" /Fe\"{dll}\" /link /DEF:\"{exportsDef}\" /LIBPATH:\"{libDir}\" sqlite3.lib " +
             $"/DEBUG /PDB:\"{pdb}\" /OPT:REF /OPT:ICF";
         var (linkExit, linkOut, linkErr) = RunCl(clExe, env, linkArgs, objCache);
         if (linkExit != 0 || !File.Exists(dll))
