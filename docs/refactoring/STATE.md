@@ -226,6 +226,8 @@ combat_query: the leader-change poll moved to party_leader_announce
 reads in engine_reads and shared with the examine view (bef48dc3).
 strfmt: FixedText, the one bounded printf-append (c421d637).
 room_topology_doors: lean, 565 to 409 lines, no split (8afeed90).
+log: first a unit test of what reaches the file (b278cadd), then lean,
+563 to 464 lines, no split; 91% of its lines run in the test.
 Leftovers: the audio probe's two hotkey actions, comments that named
 interact_hotkey.cpp (7c216e29); docs name the current files (f1b0c7c3).
 view_mode: narration and Enter split off (49c3e25e), lean (71ffbbfd);
@@ -356,7 +358,7 @@ prefix (menus_listbox_picker.cpp).
   possible; for files above 500 lines, judge whether a split into modules of
   things that belong together makes sense, and do it where it does.
 - Next file, by size (2026-11-10 21:15, strings*.cpp excepted):
-  to judge: log 563, menus_chargen_feats 561,
+  to judge: menus_chargen_feats 561,
   combat_diag 543, minigame_turret_peg 536,
   menus_listbox_picker 524, menus_focus_k2 520, help 520, menus_focus 510,
   menus_powers_levelup 510. The catalog headers (engine_offsets_fields.h
