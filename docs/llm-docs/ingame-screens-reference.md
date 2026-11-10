@@ -130,13 +130,13 @@ Pillar 4 cycle has two state singletons: `acc::cycle::GetState(World)` and `acc:
 **Activation handlers** branch on `slot.isMapPin`:
 - Enter / Shift+Enter → speak `MapPinInteractHint`, no DispatchInteract (pins aren't interactable).
 - Shift+- (autowalk) → speak `MapPinShiftDashHint` + landmark cue, no UseObject.
-- Ctrl+- (beacon) → works directly from frozen `slot.pos`.
+- Ctrl+- (route) → works directly from frozen `slot.pos`.
 - Alt+- (force walk) → speak `MapPinAltDashUnsupported`.
 - `-` (repeat) → re-speak pin name + clock + distance from frozen pos.
 
 Cycle's `AnnounceCurrent` in map context calls `acc::map_ui_cursor::PanToWorld(world, suppressWaypoint)` so the cursor follows cycle focus. SuppressWaypoint is the focused obj iff `!isPin && category==Landmark` — pins don't latch the cursor's waypoint-suppress (would mis-target an unrelated waypoint pointer).
 
-**Why**: cycle infrastructure was already polished (sort by distance, clock-frame, narrated_target stamping, Shift+- autowalk, Ctrl+- beacon). Folding pins into the same listing via a parallel `isPin[]` array is vastly cheaper than a separate cycle category. User-pin discoverability (Shift+N drops + cycle hears) is preserved while engine quest pins are filtered out of every surface (cycle, cursor, narrated_target).
+**Why**: cycle infrastructure was already polished (sort by distance, clock-frame, narrated_target stamping, Shift+- autowalk, Ctrl+- route). Folding pins into the same listing via a parallel `isPin[]` array is vastly cheaper than a separate cycle category. User-pin discoverability (Shift+N drops + cycle hears) is preserved while engine quest pins are filtered out of every surface (cycle, cursor, narrated_target).
 
 **How to apply**: when adding new map-rendered surfaces, reuse the same shape — add to `IsMapCycleable`, add a `BuildCategoryListing` branch if iteration source differs. Heterogeneous entries (non-CSWSObject shapes) ride `isPin` discriminator + `narrated_target::StampMapPin`-style frozen-pos slot. Don't fork into a parallel map_ui_cycle TU.
 

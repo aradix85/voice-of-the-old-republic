@@ -117,7 +117,7 @@ Two cross-cutting categories below: **player-facing surface area** (what we expo
 
 - open: accessibility command keybindings — likely needs its own input layer parallel to the game's
 - open: verbosity setting (terse / standard / verbose)
-- open: screen-reader output backend — NVDA via Tolk planned per `docs/tools.md`
+- known: screen-reader output — NVDA through its controller client (`speech.cpp`)
 - open: persistence — save with player profile, or in our own ini next to the install
 
 ## How to grow this map

@@ -72,7 +72,7 @@ KOTOR's per-area nav graph (the data Bioware's pathfinder reads, e.g. `CSWSModul
 
 **Sample sizes:** Endar Spire start area = 51 path_points / 104 connections. Other observed area = 104 / 104. Small enough that linear-scan nearest-point + A* is trivial.
 
-**Why:** Phase 5 (Pillar 3) needs a path solution for the beacon, but the engine's `AddMoveToPointAction` refuses to plot for the leader (separate memory). We run A* over this graph ourselves; data IS the engine's authoritative nav data, we just supply the search.
+**Why:** Phase 5 (Pillar 3) needs a path solution for routes, but the engine's `AddMoveToPointAction` refuses to plot for the leader (separate memory). We run A* over this graph ourselves; data IS the engine's authoritative nav data, we just supply the search.
 
 **How to apply:** When building `guidance_pathfind` in Phase 5 lay-off 2 — read these offsets directly from the area pointer (`acc::engine::GetCurrentArea()`). No engine call needed; pure data access. SEH-guard the reads per project convention. Cache the parsed graph once per area-change (rebuilds on `transitions::OnAreaChange`).
 
@@ -188,8 +188,7 @@ But areas are stitched together from multiple rooms via **portals / AABB structu
 **How to apply:**
 - `engine_area::BuildAreaWallCache` does post-scan **seam filtering**: for every pair of emitted edges in different rooms with coincident world-space endpoints (≤1cm), drop both. Real outer walls (emitted by ONE room only) survive; double-emitted boundary seams are dropped.
 - Observed seam rate on Endar Spire start area: 30/494 ≈ 6%. Larger hub areas (Taris, Dantooine) likely higher — they're stitched from more rooms. O(N²) filter cost stays fine at observed N.
-- Three consumers depend on this filtering being correct:
-  - **Pillar 1** wall-narration cues (`spatial_change_detector`)
+- Two consumers depend on this filtering being correct:
   - **Pillar 2** view-mode virtual-cursor collision (`view_mode::SegmentCrossesWalkmesh`)
   - **Pillar 3** path-smoothing in `guidance_pathfind::ComputePath`
 - Symptom of regression / breakage: smoother's `Smooth: BLOCK` log entries where the blocking edge has `material_id` for a *floor* material (e.g. 10=Metal) and is emitted from a single room but lines up suspiciously with a known walkable seam → either seam filter wasn't called or epsilon needs tuning.
@@ -244,11 +243,11 @@ distinguish them.
 
 **How to apply:** in walltopo / cell decomposition, expect surfaces whose
 endpoints span >0.5m of Z range. Treat them as legit multi-elevation features,
-not bugs. The `surface-descriptor anomalies` diagnostic in
-spatial_change_detector tags these as `multi-elev` separate from `broken`.
+not bugs. The former `surface-descriptor anomalies` diagnostic tagged these as
+`multi-elev`, separate from `broken`.
 
-**API for clean wall consumption:** `acc::spatial::change_detector::Get-
-WallSurfaceCount() / GetWallSurfaceDesc(idx, &desc)` returns clustered wall
+**API for clean wall consumption:** `acc::spatial::wall_surfaces::
+GetSurfaceCount() / GetSurfaceDesc(idx, desc)` returns clustered wall
 surfaces reduced to straight segments (a, b endpoints + unit direction +
 length). Use these instead of rebuilding merge logic per consumer.
 

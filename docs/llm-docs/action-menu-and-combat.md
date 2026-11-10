@@ -356,27 +356,3 @@ and verbosity-gated; no TLK lookup needed. For follow-on surfaces:
 
 ---
 
-## combat_strings_extract_tool
-_Tool that extracts MsgStrings engine anchors from any locale's dialog.tlk; cached locale TLKs live under data/dialog-tlk/; useful for any per-locale string parsing, not just combat_
-
-`kdev combat-strings-extract [--tlk <path> | --lang <code>] [--output <file>]` emits a complete C++ `kXX` MsgStrings table for the locale of the supplied (or default) `dialog.tlk`. Source: `tools/kdev/Commands/CombatStringsExtractCommand.cs`.
-
-**`--lang` shorthand:** resolves to `<projectRoot>/data/dialog-tlk/dialog_<code>.tlk`. The `data/dialog-tlk/` directory is a gitignored cache of per-locale `dialog.tlk` files captured via Steam language swaps — so we don't have to round-trip Steam every time we want to look at a non-DE locale's strings. Manifest at `data/dialog-tlk/MANIFEST.txt` records what's cached + each file's SHA-256. As of 2026-05-28: `dialog_en.tlk` cached; DE lives in the install root and doesn't need caching unless we expect future Steam-language-swap detours.
-
-Engine-side anchors (21 fields) are reconstructed from strrefs in the 1xxx + 42xxx range — the mapping is in `StrrefMap` inside the command. Speech-side fields (`verb_hit` … `short_bonus`) cannot be auto-extracted and are emitted as kDe placeholders with `TODO(<lang>): translate` markers.
-
-**Why:** The Steam `swkotor.exe` is locale-shared (verified 2026-05-28 via SteamDB depot inspection: one Windows base depot 32371 contains the exe, language depots only ship `dialog.tlk` + audio). So every combat-log string lives at a fixed strref across locales — extracting is mechanical once the DE-derived strref map exists. Same property makes the tool useful for ANY future per-locale string parsing — radial menus, UI labels, dialog text — just add new fields to `EngineAnchors` with their strrefs.
-
-**How to apply (new locale):**
-1. Steam → KOTOR → Properties → Language → switch to target → wait for `dialog.tlk` to download.
-2. Copy `<game install>/dialog.tlk` → `data/dialog-tlk/dialog_<code>.tlk` and record SHA-256 in MANIFEST.txt.
-3. Switch Steam language back to your own so the game's playable.
-4. `kdev combat-strings-extract --lang <code> --output kXX.txt`.
-5. Paste into `combat_strings.cpp` as a new `kXX` block; hand-translate the 15 speech-side fields.
-6. Wire `Lang::Xx` in `strings.h`, add `lang_xx::Get` in `strings_xx.cpp`, add switch cases in `combat_strings.cpp::Get()` and `strings.cpp::Get()`.
-7. Verify in-locale: trigger one combat scene, `grep 'MsgBuf: raw:' <install>/logs/patch-*.log`, confirm extracted anchors match.
-
-EN done 2026-05-28: validated byte-for-byte DE round-trip + EN engine anchors extracted from cached `dialog_en.tlk`. EN speech labels hand-translated; one rough spot (BuildCompact emits "<actor> hits critical <target>" — German word order) flagged for post-tester polish.
-
----
-

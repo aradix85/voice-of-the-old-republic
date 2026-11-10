@@ -22,12 +22,12 @@ any in-world phase.
 - All global engine pointers are already live (`kAddrAppManagerPtr`,
   `kAddrGuiManagerPtr`, etc.) — the Steam launcher waits for the real PE
   to decrypt before injecting.
-- Tolk init is deferred to first hook fire (COM + driver DLLs are unsafe
-  under the loader lock).
+- Speech init (loading the NVDA controller client) is deferred to the first
+  hook fire (LoadLibrary is unsafe under the loader lock).
 - Active panel: none (engine constructs its own GUI before our first hook
   fires, but the main menu may not have painted yet).
-- Status: known — DLL attach + Tolk lazy-init is the established pattern
-  (`Accessibility.cpp::DllMain`).
+- Status: known — DLL attach + speech lazy-init is the established pattern
+  (`core_dllmain.cpp`).
 
 ---
 
@@ -109,10 +109,9 @@ Boundary sequence (same for both):
   - `engine_area::GetAreaDisplayName`.
   - `transitions::IsModuleLoadPending` — short-circuit gate for all callers
     that reach into player/leader/area structs.
-- Walkmesh rebuild: `spatial_change_detector::Tick` detects area-pointer
-  delta and calls `engine_area::BuildAreaWallCache` for the new area.
-  `wall_topology` recomputes perceptual-region clusters from the wall
-  cache.
+- Walkmesh rebuild: `spatial::wall_surfaces::Tick` detects the area change
+  and calls `engine_area::BuildAreaWallCache` for the new area.
+  `room_topology` recomputes the regions.
 - Landmark cache: `transitions::FindLandmarkNear` rebuilds per area change
   by scanning `CSWSWaypoint` objects with `map_note_enabled`.
 - Status: known (area-change announce verified live); suspected
@@ -131,9 +130,9 @@ The main gameplay loop. The per-tick hook is the spine of the entire mod.
   2. `menus::ValidatePanels` / `TickMonitors` / `PollHomeEndKeys`.
   3. `cycle_input::PollWin32` / `announce_facing::PollWin32` — engine
      drops unbound scancodes; we poll Win32 directly.
-  4. Probe subsystems (mouselook, pathfind, audio frame, camera state,
+  4. Probe subsystems (mouselook, pathfind, camera state,
      view mode, etc.).
-  5. Autowalk watchdog + beacon driver.
+  5. Autowalk watchdog.
   6. `engine::TickPlayerInputRestore` — auto-restore `SetPlayerInputEnabled`
      after guidance disables.
   7. `passive_narrate::Tick` — drain deferred Q/E re-announce.
@@ -250,9 +249,6 @@ each tick in `combat::TickCombatMode`. Stability-debounce pattern (same as
   `type=0xFF` placeholder. Action-type byte enum mapping disabled
   (inferred values were wrong); all entries render as "Aktion" until
   probed.
-
-**Specials heartbeat**
-- `combat_special_watch.h`. Monitors special-move state fields.
 
 **Victory / defeat**
 - open: no hook candidate identified yet for game-over / area-respawn
@@ -464,20 +460,18 @@ workbench-related headers).
 
 ### Speech routing
 
-- `prism.h`: primary channel. Two backends — NVDA via Tolk (direct
-  screen-reader path), and SAPI backend (`SpeakUrgent(text, voiceId)`)
-  for urgent cues that bypass NVDA's typed-char cancellation.
-  Voice 1 reserved for compass/turn cues. Degrades silently if export
-  missing.
-- `audio_bus.h`, `audio_cue_player.h`: engine-side 3D one-shot audio
-  (`Play3DOneShotSound`). Volume scalar > 1.0 amplifies cleanly. Silent
+- `speech.h`: the one channel. `Speak(text, interrupt)` sends a line to
+  NVDA through its controller client, spoken and on the braille display;
+  silent when NVDA is not running.
+- `audio_bus.h`: engine-side 3D one-shot audio (`Play3DOneShotSound`)
+  for the minigame cues. Volume scalar > 1.0 amplifies cleanly. Silent
   no-op on missing resref — verify resref via
   `build/sounds-extracted-full/`.
-- `strings.h`: `Get(Id)` — all user-facing strings localised here.
-  Logs stay English; speech uses localised text. Never hardcode speech
-  literals in handlers.
-- `msg_router.h`: routes speech between Prism / audio / TTS depending on
-  priority and context.
+- `strings.h`: `Get(Id)` — every spoken string (English) lives here.
+  Logs stay out of it. Never hardcode speech literals in handlers.
+- `msg_router.h`: dispatches each engine message-buffer line (combat
+  log, feedback) through registered rules; an unclaimed line is spoken
+  raw.
 
 ### Object handle namespaces
 
@@ -498,10 +492,10 @@ workbench-related headers).
 ## Known / suspected / open — summary
 
 ### Known (verified live)
-- DLL inject, Tolk lazy-init, per-tick hook.
+- DLL inject, speech lazy-init, per-tick hook.
 - Main menu focus extraction (SetActiveControl + vtable downcasts).
 - Options tabs in both main menu and in-game options.
-- Area-change announce, room-transition via wall_topology clusters.
+- Area-change announce, room transitions via room_topology regions.
 - PreLoadDestination announce via OnSetMoveToModuleString.
 - In-world per-tick: Q/E cycle, passive_narrate, camera announce,
   spatial change detector, transitions, view mode.

@@ -58,9 +58,9 @@ carry meaning — trust them when deciding whether code is safe to remove.
 - **`menus_*`** — everything menu-side, including `menus_speak`.
 - **`wall_probe` vs `room_topology`** — two systems that used to share the
   name `wall_topology`. `wall_probe` answers "is there a wall, how far"
-  (ray casts against the perimeter-wall cache, feeds wall sounds).
+  (ray casts against the perimeter-wall cache).
   `room_topology` builds the nav-graph clusters and produces the
-  perceptual-region vocabulary (Korridor / Kreuzung / Bereich).
+  perceptual-region vocabulary (corridor / junction / area).
 
 ## KOTOR 2 portability — what will and will not carry over
 
