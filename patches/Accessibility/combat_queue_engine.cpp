@@ -1,40 +1,42 @@
-// Reading the engine's combat rounds: the queued actions, their kind and target, and the label a
-// queued action is spoken by.
+// Reading the engine's combat rounds: the queued actions, their kind and
+// target, and the label a queued action is spoken by.
 
 #include "combat_queue_internal.h"
 
-#include "engine_area.h"      // ResolveServerObjectHandle, GetObjectName,
-                              // GetObjectDisplayNameByHandle
+#include "engine_area.h"
 #include "engine_offsets.h"
-#include "engine_player.h"    // GetPlayerServerCreature, GetPartyMembers,
-#include "examine_view.h"     // ResolveFeatName — decode type=11 entries to
-                              // their specific feat name (e.g. "Power
-                              // Attack") instead of the generic
-                              // "Use talent" verb
+#include "engine_player.h"
+#include "engine_reads.h"
+#include "examine_view.h"
 
 namespace acc::combat::queue {
 
 namespace {
 
-// CSWSCombatRound.actions is a CExoLinkedList<CSWSCombatRoundAction>*
-// at +0x9b0. The list is a node-chain via `next` pointers; each node
-// carries a CSWSCombatRoundAction* in its data slot. Walk to a fixed
-// cap (we never expect more than ~16 queued actions in practice).
-//
-// Filter (validated 2026-05-10): the engine consistently has a leading
-// node with action_type=255 (0xFF) and target=0 — appears in every
-// queue dump regardless of creature. Likely the "current dispatching
-// action" placeholder slot the engine maintains. Skipping these in
-// both Count and GetQueueAction surfaces only the real queued entries
-// to the user (matches what the sighted in-game UI shows).
+// CSWSCombatRound.actions is a CExoLinkedList<CSWSCombatRoundAction>*: list
+// -> internal -> head node, then node.next; each node's data slot holds the
+// action. Every queue carries a leading placeholder node of type 0xFF and
+// target 0, which the in-game UI does not show either, so the walk skips it.
+// Capped well above the handful ever queued.
 constexpr int kMaxQueueWalk = 64;
+constexpr unsigned char kPlaceholderType = 0xFF;
 
+void* NodeAction(void* node) {
+    return *reinterpret_cast<void**>(
+        reinterpret_cast<unsigned char*>(node) + kLinkedListNodeDataOff);
+}
+
+void* NodeNext(void* node) {
+    return *reinterpret_cast<void**>(
+        reinterpret_cast<unsigned char*>(node) + kLinkedListNodeNextOff);
+}
+
+// The node's action type, under its own SEH so one bad node is skipped
+// rather than ending the walk.
 bool ReadNodeActionType(void* node, unsigned char& outType) {
     if (!node) return false;
     __try {
-        void* data = *reinterpret_cast<void**>(
-            reinterpret_cast<unsigned char*>(node) +
-            kLinkedListNodeDataOff);
+        void* data = NodeAction(node);
         if (!data) return false;
         outType = *(reinterpret_cast<unsigned char*>(data) +
                     kCombatRoundActionTypeOffset);
@@ -44,155 +46,90 @@ bool ReadNodeActionType(void* node, unsigned char& outType) {
     }
 }
 
-// Read the feat_id stored on a type=11 (Use Feat) action node.
-// CSWSCombatRoundAction.field25_0x5c is a ushort that CSWGuiMainInterface::
-// GetActionIcon @0x686fb0 feeds straight into CSWRules::GetFeat for the
-// strip-icon lookup. 0xFFFF sentinel on read fault / non-feat slot.
+// The list's internal block, or nullptr. Raw reads; the caller holds the SEH
+// frame.
+void* ListInternal(void* combatRound) {
+    void* listPtr = *reinterpret_cast<void**>(
+        reinterpret_cast<unsigned char*>(combatRound) + kCombatRoundActionsOffset);
+    if (!listPtr) return nullptr;
+    return *reinterpret_cast<void**>(
+        reinterpret_cast<unsigned char*>(listPtr) + kListInternalOffset);
+}
+
+// Walks the real (non-placeholder) entries. Returns the action of entry
+// `index` (none when index < 0); *outCount, if given, gets the number of
+// real entries, or 0 on a fault.
+void* WalkQueue(void* combatRound, int index, int* outCount) {
+    if (outCount) *outCount = 0;
+    if (!combatRound) return nullptr;
+    int count = 0;
+    __try {
+        void* internalPtr = ListInternal(combatRound);
+        if (!internalPtr) return nullptr;
+        void* node = *reinterpret_cast<void**>(
+            reinterpret_cast<unsigned char*>(internalPtr) + kListInternalHeadOffset);
+        for (int walked = 0; node && walked < kMaxQueueWalk; ++walked) {
+            unsigned char type = 0;
+            if (ReadNodeActionType(node, type) && type != kPlaceholderType) {
+                if (count == index) return NodeAction(node);
+                ++count;
+            }
+            node = NodeNext(node);
+        }
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return nullptr;
+    }
+    if (outCount) *outCount = count;
+    return nullptr;
+}
+
+// The ushort feat id of a type-11 (Use Feat) action, which
+// CSWGuiMainInterface::GetActionIcon feeds to CSWRules::GetFeat; 0xFFFF on
+// a fault.
 unsigned short ReadActionFeatId(void* action) {
-    if (!action) return 0xffff;
-    __try {
-        return *reinterpret_cast<unsigned short*>(
-            reinterpret_cast<unsigned char*>(action) +
-            kCombatRoundActionFeatIdOffset);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return 0xffff;
-    }
+    uint16_t v = 0;
+    return acc::engine::TryReadU16(action, kCombatRoundActionFeatIdOffset, &v) ? v
+                                                                            : 0xffff;
 }
 
-// Read the spell_id stored on a type=9 (Cast Force Power) action node.
-// CSWSCombatRoundAction.field13_0x24 is an int that GetActionIcon feeds
-// into CSWSpellArray::GetSpell. -1 sentinel on read fault / non-spell slot.
+// The spell id of a type-9 (Cast Force Power) action, which GetActionIcon
+// feeds to CSWSpellArray::GetSpell; -1 on a fault.
 int ReadActionSpellId(void* action) {
-    if (!action) return -1;
-    __try {
-        return *reinterpret_cast<int*>(
-            reinterpret_cast<unsigned char*>(action) +
-            kCombatRoundActionSpellIdOffset);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return -1;
-    }
+    uint32_t v = 0;
+    return acc::engine::TryReadU32(action, kCombatRoundActionSpellIdOffset, &v)
+               ? static_cast<int>(v) : -1;
 }
 
-// Read the item handle stored on a type=10 (Use Item) action node.
-// CSWSCombatRoundAction.field27_0x64 is a ulong handle (server-side).
-// 0x7F000000 sentinel on read fault / non-item slot.
+// The server item handle of a type-10 (Use Item) action.
 uint32_t ReadActionItemHandle(void* action) {
-    if (!action) return 0x7F000000u;
-    __try {
-        return *reinterpret_cast<uint32_t*>(
-            reinterpret_cast<unsigned char*>(action) +
-            kCombatRoundActionItemHandleOff);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return 0x7F000000u;
-    }
+    uint32_t v = 0;
+    return acc::engine::TryReadU32(action, kCombatRoundActionItemHandleOff, &v)
+               ? v : kInvalidObjectId;
 }
 
 }  // namespace
 
-// Read CSWSCreature.combat_round @+0x9c8.
 void* ReadCombatRound(void* serverCreature) {
-    if (!serverCreature) return nullptr;
-    __try {
-        return *reinterpret_cast<void**>(
-            reinterpret_cast<unsigned char*>(serverCreature) +
-            kCreatureCombatRoundOffset);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return nullptr;
-    }
+    void* round = nullptr;
+    return acc::engine::TryReadPtr(serverCreature, kCreatureCombatRoundOffset, &round)
+               ? round : nullptr;
 }
 
 int CountQueueEntries(void* combatRound) {
-    if (!combatRound) return 0;
     int count = 0;
-    __try {
-        void* listPtr = *reinterpret_cast<void**>(
-            reinterpret_cast<unsigned char*>(combatRound) +
-            kCombatRoundActionsOffset);
-        if (!listPtr) return 0;
-        // listPtr is CExoLinkedList<T>*. Three derefs to reach the head
-        // node: list -> internal -> head. Then walk via Node.next at +4.
-        void* internalPtr = *reinterpret_cast<void**>(
-            reinterpret_cast<unsigned char*>(listPtr) +
-            kListInternalOffset);
-        if (!internalPtr) return 0;
-        void* node = *reinterpret_cast<void**>(
-            reinterpret_cast<unsigned char*>(internalPtr) +
-            kListInternalHeadOffset);
-        int walked = 0;
-        while (node && walked < kMaxQueueWalk) {
-            ++walked;
-            unsigned char t = 0;
-            if (ReadNodeActionType(node, t) && t != 0xFF) {
-                ++count;
-            }
-            node = *reinterpret_cast<void**>(
-                reinterpret_cast<unsigned char*>(node) +
-                kLinkedListNodeNextOff);
-        }
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return 0;
-    }
+    WalkQueue(combatRound, -1, &count);
     return count;
 }
 
-// Get the action node at zero-based `index` (skipping placeholder
-// type=0xFF entries), or nullptr if out of range.
 void* GetQueueAction(void* combatRound, int index) {
-    if (!combatRound || index < 0) return nullptr;
-    __try {
-        void* listPtr = *reinterpret_cast<void**>(
-            reinterpret_cast<unsigned char*>(combatRound) +
-            kCombatRoundActionsOffset);
-        if (!listPtr) return nullptr;
-        void* internalPtr = *reinterpret_cast<void**>(
-            reinterpret_cast<unsigned char*>(listPtr) +
-            kListInternalOffset);
-        if (!internalPtr) return nullptr;
-        void* node = *reinterpret_cast<void**>(
-            reinterpret_cast<unsigned char*>(internalPtr) +
-            kListInternalHeadOffset);
-        int matched = 0, walked = 0;
-        while (node && walked < kMaxQueueWalk) {
-            ++walked;
-            unsigned char t = 0;
-            if (ReadNodeActionType(node, t) && t != 0xFF) {
-                if (matched == index) {
-                    return *reinterpret_cast<void**>(
-                        reinterpret_cast<unsigned char*>(node) +
-                        kLinkedListNodeDataOff);
-                }
-                ++matched;
-            }
-            node = *reinterpret_cast<void**>(
-                reinterpret_cast<unsigned char*>(node) +
-                kLinkedListNodeNextOff);
-        }
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return nullptr;
-    }
-    return nullptr;
+    if (index < 0) return nullptr;
+    return WalkQueue(combatRound, index, nullptr);
 }
 
-// Map an action_type byte to a localised verb.
-//
-// Enum confirmed 2026-05-14 by decompiling CSWGuiMainInterface::GetActionIcon
-// @0x686fb0 — the engine's own per-slot icon resolver. The switch in
-// case 0xc (the standard combat-round path the strip uses) decodes:
-//
-//   action_type=1   → i_attack  / i_attackm   ("Bash door" is just an
-//                                              attack with a door target)
-//   action_type=6   → i_equip   / i_equipm
-//   action_type=7   → i_unequip / i_equipm
-//   action_type=9   → SpellArray lookup / i_powerm  (Cast Force Power)
-//   action_type=10  → ItemArray lookup / i_useitemm (Use Item)
-//   action_type=11  → FeatArray lookup / i_featm    (Use Feat — includes
-//                                                    the player's
-//                                                    Power Attack /
-//                                                    Flurry / etc.)
-//
-// QueueVerbUseFeat serves as our "Use Feat" word since the existing
-// table already groups feat activations under that ID and the word
-// reads correctly for both feats and force-power adjacent feats.
+// The action types decoded by CSWGuiMainInterface::GetActionIcon (0x686fb0),
+// the engine's own per-slot icon resolver: 1 attack (a door bash is an
+// attack on a door), 6 equip, 7 unequip, 9 cast Force power, 10 use item,
+// 11 use feat.
 acc::strings::Id VerbForActionType(unsigned char actionType) {
     switch (actionType) {
         case 1:  return acc::strings::Id::QueueVerbAttack;
@@ -205,7 +142,6 @@ acc::strings::Id VerbForActionType(unsigned char actionType) {
     }
 }
 
-// Read action_type byte + target handle from a CSWSCombatRoundAction.
 bool ReadActionFields(void* action, unsigned char& outType,
                       uint32_t& outTarget) {
     outType = 0xff;
@@ -224,14 +160,8 @@ bool ReadActionFields(void* action, unsigned char& outType,
     }
 }
 
-// Build the spoken label for a queued action node: the SPECIFIC ability name
-// for force powers / items / feats (type 9/10/11), else the generic verb
-// ("Attack" / "Use Feat" / ...). Shared by SpeakRow (Shift+H review)
-// and OnEngineActionAdded (the live queue announce) so both name a queued
-// entry identically.
-//   type=9  (Force power) — spell_id @+0x24 → CSWSpell::GetSpellNameText
-//   type=10 (Item use)    — handle   @+0x64 → engine display-name accessor
-//   type=11 (Use feat)    — feat_id  @+0x5c → CSWFeat::GetNameText
+// The specific Force power, item or feat name for types 9, 10 and 11, else
+// the generic verb.
 void BuildActionLabel(void* action, char* out, size_t n) {
     if (!out || n == 0) return;
     out[0] = '\0';
@@ -259,7 +189,7 @@ void BuildActionLabel(void* action, char* out, size_t n) {
         }
     } else if (type == 10) {
         uint32_t itemHandle = ReadActionItemHandle(action);
-        if (itemHandle != 0u && itemHandle != 0x7F000000u &&
+        if (itemHandle != 0u && itemHandle != kInvalidObjectId &&
             acc::engine::GetObjectDisplayNameByHandle(
                 itemHandle, abilityName, sizeof(abilityName)) &&
             abilityName[0] != '\0') {
@@ -270,20 +200,14 @@ void BuildActionLabel(void* action, char* out, size_t n) {
     out[n - 1] = '\0';
 }
 
-// Read the raw queue count from a combat round (engine's own
-// actions->internal->count — the value AddAction's `if (3 < count)` cap
-// inspects). -1 on read fault. Same field CountPlayerEntries reads, but on
-// an arbitrary round (the one the AddAction detour hands us).
 int RawRoundCount(void* combatRound) {
     if (!combatRound) return -1;
     __try {
         void* listPtr = *reinterpret_cast<void**>(
-            reinterpret_cast<unsigned char*>(combatRound) +
-            kCombatRoundActionsOffset);
+            reinterpret_cast<unsigned char*>(combatRound) + kCombatRoundActionsOffset);
         if (!listPtr) return -1;
         void* internalPtr = *reinterpret_cast<void**>(
-            reinterpret_cast<unsigned char*>(listPtr) +
-            kListInternalOffset);
+            reinterpret_cast<unsigned char*>(listPtr) + kListInternalOffset);
         if (!internalPtr) return 0;
         int n = *reinterpret_cast<int*>(
             reinterpret_cast<unsigned char*>(internalPtr) +
@@ -295,42 +219,15 @@ int RawRoundCount(void* combatRound) {
     }
 }
 
+// The engine's own count, placeholder included: the value AddAction's cap
+// check (`if (3 < count)`) inspects, so "position N" and "queue full" match
+// the engine's slots. Filtering the placeholder made the first press of a
+// fresh combat read one short.
 int CountPlayerEntries() {
-    // Read the engine's authoritative count field at
-    // CSWSCombatRound.actions->internal->count. This matches the value
-    // CSWSCombatRound::AddAction's cap check inspects (`if (3 < count)`)
-    // so "position N" lines up 1:1 with what the engine considers slot N
-    // and "queue full" fires the same press the engine would
-    // free the node.
-    //
-    // We deliberately bypass the 0xFF-placeholder filter that
-    // CountQueueEntries (used by the Shift+H row walk) applies. The
-    // placeholder slot is part of the engine's queue from the cap-
-    // mechanic's point of view; filtering it produces off-by-one
-    // announcements where the first press in a fresh combat reads as
-    // "used" (filtered count still 0 while the engine already
-    // sees count 1).
     void* server = acc::engine::GetPlayerServerCreature();
     if (!server) return 0;
-    void* round = ReadCombatRound(server);
-    if (!round) return 0;
-    __try {
-        void* listPtr = *reinterpret_cast<void**>(
-            reinterpret_cast<unsigned char*>(round) +
-            kCombatRoundActionsOffset);
-        if (!listPtr) return 0;
-        void* internalPtr = *reinterpret_cast<void**>(
-            reinterpret_cast<unsigned char*>(listPtr) +
-            kListInternalOffset);
-        if (!internalPtr) return 0;
-        int n = *reinterpret_cast<int*>(
-            reinterpret_cast<unsigned char*>(internalPtr) +
-            kListInternalCountOffset);
-        if (n < 0 || n > 64) return 0;
-        return n;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return 0;
-    }
+    int n = RawRoundCount(ReadCombatRound(server));
+    return n < 0 ? 0 : n;
 }
 
 }  // namespace acc::combat::queue

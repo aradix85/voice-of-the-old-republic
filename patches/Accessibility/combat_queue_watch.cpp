@@ -1,9 +1,9 @@
-// The live queue announce: attributing an engine-added action to the user's press, and saying when
-// a press queued nothing.
+// The live queue announce: attributing an engine-added action to the user's
+// press, and saying when a press queued nothing.
 
 #include "combat_queue_internal.h"
 
-#include "engine_player.h"    // GetPlayerServerCreature, GetPartyMembers,
+#include "engine_player.h"
 #include "log.h"
 #include "speech.h"
 
@@ -11,11 +11,10 @@ namespace acc::combat::queue {
 
 namespace {
 
-// User-attribution latch (see ArmUserQueueAdd). 0 = not armed; otherwise the
-// GetTickCount() at the most recent user press. The engine auto-queues the
-// controlled leader's default attack through the same AddAction on the same
-// round, so the round-identity check alone can't tell a user press from an
-// auto-attack — only this freshness window can.
+// The GetTickCount() of the last user press, 0 when not armed. The engine
+// auto-queues the leader's default attack through the same AddAction on the
+// same round, so only this freshness window tells a press from an
+// auto-attack.
 DWORD g_userAddArmTick = 0;
 // Window from press to the resulting AddAction. The dispatch is same-frame or
 // next-tick (tens of ms); the leader's auto-attacks fire on the round cadence
@@ -54,21 +53,14 @@ void TickNoOpWatch() {
 void OnEngineActionAdded(void* combatRound, void* action) {
     if (!combatRound) return;
 
-    // Only the controlled creature's queue is the user's. The AddAction detour
-    // fires for every creature's round (companions, enemies); bail silently
-    // (no log) on those to avoid spamming a line per combat action in the
-    // area. GetPlayerServerCreature follows Tab control, so this tracks
-    // whichever party member the user is currently queueing onto.
+    // Only the controlled creature's queue is the user's (it follows Tab).
+    // The detour fires for every creature's round; the others are skipped
+    // without a log line.
     void* leader = acc::engine::GetPlayerServerCreature();
     if (!leader) return;
     void* leaderRound = ReadCombatRound(leader);
     if (!leaderRound || combatRound != leaderRound) return;
 
-    // Attribution gate: the engine auto-queues the controlled leader's default
-    // attack through this same path on this same round, so round identity
-    // alone can't tell a user press from an auto-attack. Only adds within the
-    // freshness window of a user press are the user's; auto-attacks (no
-    // preceding press) fall outside and stay silent.
     DWORD armed = g_userAddArmTick;
     if (armed == 0 || (GetTickCount() - armed) > kUserAddWindowMs) {
         acclog::Write("Combat.Queue",
@@ -77,10 +69,7 @@ void OnEngineActionAdded(void* combatRound, void* action) {
         return;
     }
 
-    // An add landed and is the user's: whatever this press did, it did
-    // something, and the cue below is the announcement. Nothing for the no-op
-    // watch to report.
-    g_noOpWatchTick = 0;
+    g_noOpWatchTick = 0;  // the press did something; the cue below says what
 
     // Pre-add count (detour fires at function entry, before the node is
     // inserted). Engine cap is `if (3 < count)`: 0..3 accept → slot count+1,

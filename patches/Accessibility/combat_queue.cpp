@@ -1,33 +1,53 @@
+// The Shift+H combat queue overlay: every party member's queued actions as
+// one list, with Enter to remove the focused one and Shift+Enter to clear
+// all.
 
 #include "combat_queue_internal.h"
 
-#include "engine_area.h"      // ResolveServerObjectHandle, GetObjectName,
-                              // GetObjectDisplayNameByHandle
+#include "engine_area.h"
 #include "engine_input.h"
-#include "engine_player.h"    // GetPlayerServerCreature, GetPartyMembers,
-#include "engine_subscreen.h" // Begin/EndOverlayPause — freeze the world while open
-                              // GetPlayerCharacterName
+#include "engine_player.h"
+#include "engine_subscreen.h"
 #include "hotkeys.h"
 #include "log.h"
-#include "same_name_suffix.h" // AppendSuffix for same-LocName disambiguator
+#include "same_name_suffix.h"
 #include "speech.h"
-#include "transitions.h"      // IsModuleLoadPending — gate during cutscene-load
-                              // transient (engine LYT loader use-after-free)
-#include "unified_action_menu.h"  // IsActive / ReannounceCurrent — return to the
+#include "transitions.h"
+#include "unified_action_menu.h"
 #include "engine_rebase.h"
-                                  // menu underneath the queue without unpausing
 
 namespace acc::combat::queue {
 
 namespace {
 
-// Engine surface — combat round + linked-list walker.
+// CSWSCombatRound::RemoveLastAction: a single tail remove and free, 1 on
+// success and 0 on an empty queue in both games. The engine's only per-round
+// remove, so a row can only go when it is its creature's last.
 typedef int  (__thiscall* PFN_RemoveLastAction)(void* combatRound);
-
 const uintptr_t kAddrCombatRoundRemoveLastAction =
-    // K2 twin 0x005904C0: single tail-remove + free, returns 1 on success,
-    // 0 when the queue is empty — K1's exact contract.
-    acc::addr::Pick(0x004d37b0, 0x005904C0);  // CSWSCombatRound::RemoveLastAction
+    acc::addr::Pick(0x004d37b0, 0x005904C0);
+
+bool RemoveLastAction(void* combatRound) {
+    __try {
+        reinterpret_cast<PFN_RemoveLastAction>(kAddrCombatRoundRemoveLastAction)(
+            combatRound);
+        return true;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+}
+
+// One row per queued action across the party, rebuilt on every open,
+// keypress and tick: the engine drains queues as the combat round advances.
+struct Row {
+    void* creature;          // CSWSCreature*, the action's owner
+    void* combatRound;       // CSWSCombatRound*
+    int   perCreatureIdx;    // the row's place in its owner's queue
+    int   perCreatureCount;  // its owner's queue length
+    char  charName[64];
+};
+
+constexpr int kMaxRows = 32;  // 3 members x up to ~10 actions, with headroom
 
 struct State {
     bool active   = false;
@@ -38,12 +58,7 @@ struct State {
 
 State g_state;
 
-// Resolve the display name for a companion party member by handle.
-// GetObjectDisplayNameByHandle returns the engine's universal localized
-// name (Trask, Carth, ...). The controlled creature (PC) is named
-// separately in BuildRows via GetActiveLeaderName, so this path only
-// sees companions; the chargen-name fallback is kept purely as a guard
-// for the rare empty-display-name read.
+// A companion's name; the chargen name only guards an empty read.
 void ResolveMemberName(uint32_t handle, char* outBuf, size_t bufSize) {
     if (!outBuf || bufSize == 0) return;
     outBuf[0] = '\0';
@@ -54,56 +69,46 @@ void ResolveMemberName(uint32_t handle, char* outBuf, size_t bufSize) {
     acc::engine::GetPlayerCharacterName(outBuf, bufSize);
 }
 
-// Rebuild g_state.rows from live engine state. Returns the row count.
-// Preserves the focus if possible (clamped to the new size).
+void AddRows(void* creature, void* round, int local, const char* name) {
+    for (int i = 0; i < local && g_state.count < kMaxRows; ++i) {
+        Row& r = g_state.rows[g_state.count++];
+        r.creature = creature;
+        r.combatRound = round;
+        r.perCreatureIdx = i;
+        r.perCreatureCount = local;
+        std::strncpy(r.charName, name, sizeof(r.charName) - 1);
+        r.charName[sizeof(r.charName) - 1] = '\0';
+    }
+}
+
+// Rebuild g_state.rows from the engine. Returns the row count.
 int BuildRows() {
     g_state.count = 0;
 
-    // The controlled creature's queue comes FIRST, via GetPlayerServer
-    // creature — the same accessor CountPlayerEntries (the "position N"
-    // announce) uses. This is the only path that reliably reaches the
-    // player's own combat round: the party-table walk below resolves NPC
-    // *roster* slots (companions), and the PC is not a roster NPC, so it
-    // never appears there. Sourcing it from the party walk produced an
-    // empty queue while the player had actions queued (fixed 2026-06-07).
+    // The controlled creature first: the party table holds NPC roster slots
+    // (companions), and the PC is no roster NPC.
     void* leader = acc::engine::GetPlayerServerCreature();
-    if (leader) {
-        void* round = ReadCombatRound(leader);
-        if (round) {
-            int local = CountQueueEntries(round);
-            for (int i = 0; i < local && g_state.count < kMaxRows; ++i) {
-                Row& r = g_state.rows[g_state.count++];
-                r.creature = leader;
-                r.combatRound = round;
-                r.perCreatureIdx = i;
-                r.perCreatureCount = local;
-                r.charName[0] = '\0';
-                acc::engine::GetActiveLeaderName(r.charName,
-                                                 sizeof(r.charName));
-            }
-        }
+    if (void* round = ReadCombatRound(leader)) {
+        char name[64] = "";
+        acc::engine::GetActiveLeaderName(name, sizeof(name));
+        AddRows(leader, round, CountQueueEntries(round), name);
     }
 
-    // Append every other party member's queue. GetPartyMembers resolves
-    // pt_member_ids (NPC roster slots) to live companion handles. Skip any
-    // companion that resolves to the controlled creature — Tab can hand
-    // control to a companion, in which case it would appear both here and
-    // as `leader` above.
+    // Then the companions, skipping the controlled one (Tab can hand control
+    // to a companion).
     uint32_t handles[kPartyTableMaxMembers] = {};
     int      n = acc::engine::GetPartyMembers(
         handles, kPartyTableMaxMembers);
 
     for (int m = 0; m < n; ++m) {
         uint32_t handle = handles[m];
-        if (handle == 0u || handle == 0xFFFFFFFFu ||
-            handle == 0x7F000000u) {
+        if (handle == 0u || handle == 0xFFFFFFFFu || handle == kInvalidObjectId) {
             continue;
         }
         void* creature = acc::engine::ResolveServerObjectHandle(handle);
         if (!creature) {
-            // Some handles come from the engine in the client-side
-            // namespace — fold through the client resolver, which
-            // returns the server CSWSObject* directly.
+            // Some handles come in the client namespace; the client
+            // resolver returns the server object directly.
             creature = acc::engine::ResolveClientObjectHandle(handle);
         }
         if (!creature || creature == leader) continue;
@@ -114,16 +119,7 @@ int BuildRows() {
 
         char name[64] = "";
         ResolveMemberName(handle, name, sizeof(name));
-
-        for (int i = 0; i < local && g_state.count < kMaxRows; ++i) {
-            Row& r = g_state.rows[g_state.count++];
-            r.creature = creature;
-            r.combatRound = round;
-            r.perCreatureIdx = i;
-            r.perCreatureCount = local;
-            std::strncpy(r.charName, name, sizeof(r.charName) - 1);
-            r.charName[sizeof(r.charName) - 1] = '\0';
-        }
+        AddRows(creature, round, local, name);
     }
     return g_state.count;
 }
@@ -138,29 +134,21 @@ void SpeakRow(int idx) {
     uint32_t target = 0;
     ReadActionFields(action, type, target);
 
-    // Default: localized verb keyed off action_type, with the SPECIFIC
-    // ability name swapped in for type=9/10/11 (see BuildActionLabel).
-    // type=1 (Attack), 6/7 (Equip/Unequip) keep the generic verb — there
-    // isn't a single specific-ability name per entry there.
     char verbBuf[96] = "";
     BuildActionLabel(action, verbBuf, sizeof(verbBuf));
     const char* verb = verbBuf;
 
     char tgtName[64] = "";
-    if (target != 0u && target != 0x7F000000u) {
-        if (!acc::engine::GetObjectDisplayNameByHandle(
-                target, tgtName, sizeof(tgtName)) ||
-            tgtName[0] == '\0') {
-            void* tgtObj = acc::engine::ResolveServerObjectHandle(target);
-            if (tgtObj) {
-                acc::engine::GetObjectName(tgtObj, tgtName, sizeof(tgtName));
-            }
+    if (target != 0u && target != kInvalidObjectId) {
+        void* tgtObj = acc::engine::ResolveServerObjectHandle(target);
+        if ((!acc::engine::GetObjectDisplayNameByHandle(
+                 target, tgtName, sizeof(tgtName)) ||
+             tgtName[0] == '\0') &&
+            tgtObj) {
+            acc::engine::GetObjectName(tgtObj, tgtName, sizeof(tgtName));
         }
-        if (tgtName[0] != '\0') {
-            void* tgtObj = acc::engine::ResolveServerObjectHandle(target);
-            if (tgtObj) {
-                acc::narration::AppendSuffix(tgtObj, tgtName, sizeof(tgtName));
-            }
+        if (tgtName[0] != '\0' && tgtObj) {
+            acc::narration::AppendSuffix(tgtObj, tgtName, sizeof(tgtName));
         }
     }
 
@@ -176,16 +164,10 @@ void SpeakRow(int idx) {
                   target, verb, tgtName);
 }
 
-// Try to remove the action at row `idx`. Tail-only — the engine's
-// only public per-round primitive is RemoveLastAction. Returns true
-// on dispatch success.
+// Removes row `idx` if it is the last of its creature's queue.
 bool RemoveRow(int idx) {
     if (idx < 0 || idx >= g_state.count) return false;
     const Row& row = g_state.rows[idx];
-    // Tail-only — see docs/combat-system.md Phase 3 "Clear one" item.
-    // We compare against the per-creature index so that the user's
-    // current row maps to the tail of *that creature's* queue (not
-    // the flat-list tail).
     if (row.perCreatureIdx != row.perCreatureCount - 1) {
         acclog::Write("Combat.Queue",
                       "remove flat=%d char=[%s] local=%d/%d -> non-tail "
@@ -194,32 +176,16 @@ bool RemoveRow(int idx) {
                       row.perCreatureCount);
         return false;
     }
-    __try {
-        auto fn = reinterpret_cast<PFN_RemoveLastAction>(
-            kAddrCombatRoundRemoveLastAction);
-        fn(row.combatRound);
-        return true;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return false;
-    }
+    return RemoveLastAction(row.combatRound);
 }
 
-// Clear every party member's queue via repeated RemoveLastAction calls
-// against each row's combat round.
+// Back to front, so every remove takes its creature's last action.
 bool ClearAllRows() {
     int total = g_state.count;
     int removed = 0;
-    // Iterate rows back-to-front so each per-creature tail-remove
-    // matches the engine's only primitive.
     for (int i = total - 1; i >= 0; --i) {
-        __try {
-            auto fn = reinterpret_cast<PFN_RemoveLastAction>(
-                kAddrCombatRoundRemoveLastAction);
-            fn(g_state.rows[i].combatRound);
-            ++removed;
-        } __except (EXCEPTION_EXECUTE_HANDLER) {
-            break;
-        }
+        if (!RemoveLastAction(g_state.rows[i].combatRound)) break;
+        ++removed;
     }
     acclog::Write("Combat.Queue", "ClearAllRows removed=%d/%d",
                   removed, total);
@@ -354,13 +320,9 @@ bool HandleInputEvent(int code, int value) {
         }
         case kInputEsc1:
         case kInputEsc2: {
-            // Disarm first so EndOverlayPause clears OUR pause-owner bit. If the
-            // unified action menu is still open underneath (the common Shift+H-
-            // from-the-menu flow), it keeps holding the world pause, so the world
-            // stays frozen — closing the queue returns the user to the menu
-            // seamlessly rather than resuming the world. Re-announce where they
-            // land instead of speaking "closed" (which would imply the whole
-            // queueing session ended).
+            // Disarm first so EndOverlayPause clears our pause-owner bit. An
+            // action menu still open underneath keeps holding the world
+            // pause, so the user lands back in it, re-announced.
             ForceDisarm("esc");
             if (acc::unified_menu::IsActive()) {
                 acclog::Write("Combat.Queue",
@@ -381,8 +343,7 @@ bool HandleInputEvent(int code, int value) {
 
 void Tick() {
     if (!g_state.active) return;
-    // Module-load latch — BuildRows iterates party server creatures via
-    // engine accessors; can't trust those handles mid-handoff.
+    // The party's server creatures can't be trusted during a module load.
     if (acc::transitions::IsModuleLoadPending()) return;
     int count = BuildRows();
     if (count <= 0) {
@@ -394,13 +355,12 @@ void Tick() {
 }
 
 void PollWin32Hotkey() {
-    // Default open hotkey: Shift+H (Action::CombatQueueOpen).
     if (!acc::hotkeys::Pressed(acc::hotkeys::Action::CombatQueueOpen)) return;
 
     Vector unused;
     if (!acc::engine::GetPlayerPosition(unused)) return;
 
-    if (!Open()) return;
+    Open();
 }
 
 }  // namespace acc::combat::queue
