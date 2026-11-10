@@ -122,10 +122,22 @@ prefix (menus_listbox_picker.cpp).
      WallSounds toggle, view_mode/cycle_input/map_ui_cursor/passive_narrate
      cues): check each for a text equivalent first. Minigame audio
      (audio_bus, audio_loop, swoop, turret) stays.
-  E. Docs pass after D: README.md and docs/README.*.md (settings rows,
-     voices, 3D speech, sounds), controls-and-input, installer.md, tools.md,
-     known-issues, llm-docs (audio-internals, action-menu-and-combat,
-     game-flow).
+  E. Docs pass after D: every current doc that still names Prism, Tolk,
+     SAPI, the urgent or compass voice, positional/3D speech, the Windows
+     voices option, the in-game updater, the removed exploration sounds or
+     the old bridge behaviour (snapshot every 250 ms, no creatures in
+     /objects). Found 2026-11-10: README.md and docs/README.*.md (settings
+     rows, voices, 3D speech, sounds, updater), ARCHITECTURE.md, CLAUDE.md,
+     CONTRIBUTING.md, ACCESSIBILITY_MODDING_GUIDE.md, docs/installer.md,
+     controls-and-input, known-issues, tools.md, upstream-prs.md (stale:
+     no upstream PRs any more), CONTRIBUTING_TRANSLATIONS,
+     translation-additions, kotor1-controller-port, kotor2-port,
+     kotor2-controller-plan, llm-docs (audio-internals, game-flow,
+     action-menu-and-combat, ingame-screens-reference, accessibility-map,
+     gui-and-input-internals, walk-nav-and-walkmesh, llm-docs/CLAUDE.md).
+     archiev/ and the CHANGELOG's old entries stay as history; the
+     CHANGELOG's v0.9.1+bridge section gets the speech, installer and
+     bridge changes. The code index regenerates itself. Then brief.md.
   Note for Anouk at the end: with NVDA only, NVDA's "speech interrupt for
   typed characters" (Keyboard settings) cuts lines while a key is held
   (map cursor, turret fire key); the SAPI voices used to dodge that.
