@@ -6,7 +6,7 @@ See diag_chargen_feats.h for purpose + removal note.
 
 ## Declarations (in source order)
 
-- L22 `int FeatNameStrref(unsigned short featId)`: Read a CSWFeat.name_strref for `featId` from the rules table.
-- L40 `void DumpUshortListSEH(unsigned char* base, size_t dataOff, size_t sizeOff, const char* tag)`
-- L76 `void DumpChartCells(void* fcp)`
+- L23 `int FeatNameStrref(unsigned short featId)`: Read a CSWFeat.name_strref for `featId` from the rules table.
+- L41 `void DumpUshortListSEH(unsigned char* base, size_t dataOff, size_t sizeOff, const char* tag)`
+- L77 `void DumpChartCells(void* fcp)`
 - L143 `void DumpStructureIfNeeded(void* panel)`

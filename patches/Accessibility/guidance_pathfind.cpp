@@ -17,8 +17,6 @@ namespace {
 // sizes that match what SnapshotNavGraph can hand us.
 constexpr int kMaxNodes = acc::engine::navgraph::kMaxNodes;
 
-using acc::engine::navgraph::PathPointSnapshot;
-
 // Path costs and the A* heuristic use DistXY: KOTOR areas are flat enough
 // that height does not change a path's cost, and the walkmesh edges in
 // engine_area work in XY too.

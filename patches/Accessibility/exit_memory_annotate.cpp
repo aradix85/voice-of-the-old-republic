@@ -4,6 +4,8 @@
 
 #include "exit_memory_internal.h"
 
+#include <utility>
+
 #include "discovery.h"         // loot heard in the overview joins the , / . cycle
 #include "engine_area.h"
 #include "engine_player.h"     // position, yaw, party, player creature
@@ -164,7 +166,7 @@ std::string RegionLabelAt(void* area, const Vector& player) {
                                          /*zTrusted=*/false, &ownerExits) &&
             !ownerLabel.empty()) {
             label = ownerLabel;
-            exits = ownerExits;
+            exits = std::move(ownerExits);
             cid   = ownerCid;
         }
     }

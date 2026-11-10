@@ -79,7 +79,6 @@
 
 using namespace acc::engine;  // PanelKind, FindPanelByKind, kAddr*/kMgr*
 
-using acc::menus::detail::FindControlById;
 using acc::menus::detail::GetControlCenter;
 
 namespace acc::menus::listbox {

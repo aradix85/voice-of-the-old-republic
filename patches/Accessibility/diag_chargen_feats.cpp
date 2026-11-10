@@ -9,6 +9,7 @@
 #include "engine_game.h"
 #include "engine_offsets.h"
 #include "log.h"
+#include "strfmt.h"
 
 namespace acc::diag::chargen_feats {
 
@@ -122,16 +123,15 @@ void DumpChartCells(void* fcp) {
             continue;
         }
         char line[512];
-        int n = snprintf(line, sizeof(line), "  row[%d] %p:", r, row);
+        acc::strfmt::FixedText text{line, sizeof(line)};
+        text.Append("  row[%d] %p:", r, row);
         for (int c = 0; c < kSkillFlowColumnsPerRow; ++c) {
             if (featId[c] == kFlowSkillStructEmptyFeatId) {
-                n += snprintf(line + n, sizeof(line) - n,
-                              " col%d=empty", c);
+                text.Append(" col%d=empty", c);
             } else {
-                n += snprintf(line + n, sizeof(line) - n,
-                              " col%d={featId=%u status=%u strref=%d}",
-                              c, featId[c], status[c],
-                              FeatNameStrref((unsigned short)featId[c]));
+                text.Append(" col%d={featId=%u status=%u strref=%d}",
+                            c, featId[c], status[c],
+                            FeatNameStrref((unsigned short)featId[c]));
             }
         }
         acclog::Write("FeatsCharGen.Dump", "%s", line);

@@ -1,4 +1,4 @@
-// strfmt: heap-backed printf and the ASCII case folds.
+// strfmt: heap-backed printf, the bounded append and the ASCII case folds.
 
 #include <string>
 
@@ -7,6 +7,7 @@
 
 using acc::strfmt::AsciiLower;
 using acc::strfmt::ContainsNoCase;
+using acc::strfmt::FixedText;
 using acc::strfmt::Format;
 using acc::strfmt::ToLowerAscii;
 using acc::strfmt::ToUpperAscii;
@@ -17,6 +18,20 @@ TEST_CASE("Format fills a string of exactly the right length") {
     CHECK(Format("").empty());
     const std::string longName(1000, 'a');
     CHECK(Format("To %s", longName.c_str()).size() == 1003);  // never cut off
+}
+
+TEST_CASE("FixedText appends until the buffer is full and stays terminated") {
+    char buf[8];
+    FixedText t{buf, sizeof(buf)};
+    t.Append("%s", "ab");
+    t.Append("%d", 12);
+    CHECK(std::string(buf) == "ab12");
+    CHECK(t.len == 4);
+    t.Append("%s", "cdefgh");  // only three more fit
+    CHECK(std::string(buf) == "ab12cde");
+    CHECK(t.len == 7);
+    t.Append("%s", "x");       // full: dropped
+    CHECK(std::string(buf) == "ab12cde");
 }
 
 TEST_CASE("The case folds change ASCII letters only") {

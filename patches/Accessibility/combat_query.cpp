@@ -4,7 +4,6 @@
 #include "combat_query.h"
 
 #include <algorithm>
-#include <cstdarg>
 #include <cstdint>
 #include <cstdio>
 
@@ -17,6 +16,7 @@
 #include "hotkeys.h"
 #include "log.h"
 #include "speech.h"
+#include "strfmt.h"
 #include "strings.h"
 
 namespace acc::combat::query {
@@ -74,23 +74,6 @@ float PlayerDistanceMeters(void* target) {
         return -1.0f;
     }
     return DistXY(tgt, pc);
-}
-
-// Appends formatted clauses to a fixed buffer; a full buffer drops the rest.
-struct BriefBuf {
-    char*  buf;
-    size_t cap;
-    size_t off;
-};
-
-void BriefAppend(BriefBuf& b, const char* fmt, ...) {
-    if (b.off >= b.cap) return;
-    va_list args;
-    va_start(args, fmt);
-    int n = std::vsnprintf(b.buf + b.off, b.cap - b.off, fmt, args);
-    va_end(args);
-    if (n > 0) b.off += static_cast<size_t>(n);
-    if (b.off > b.cap) b.off = b.cap;
 }
 
 // Comma-joins the names of up to kMaxEffectsSpoken distinct ids; an id
@@ -151,18 +134,18 @@ struct Loadout {
 
 // What both readouts end with: the active effects, then what each hand
 // holds. An empty hand is skipped rather than announced.
-void AppendLoadout(BriefBuf& b, void* serverCreature, Loadout& out) {
+void AppendLoadout(acc::strfmt::FixedText& b, void* serverCreature, Loadout& out) {
     using S = acc::strings::Id;
     if (BuildEffectsSummary(serverCreature, out.effects, sizeof(out.effects))) {
-        BriefAppend(b, acc::strings::Get(S::FmtBriefEffects), out.effects);
+        b.Append(acc::strings::Get(S::FmtBriefEffects), out.effects);
     }
     if (ReadEquippedItemName(serverCreature, kInventoryRightWeaponHandleOffset,
                              "main-hand", out.mainWpn, sizeof(out.mainWpn))) {
-        BriefAppend(b, acc::strings::Get(S::FmtBriefWielding), out.mainWpn);
+        b.Append(acc::strings::Get(S::FmtBriefWielding), out.mainWpn);
     }
     if (ReadEquippedItemName(serverCreature, kInventoryLeftWeaponHandleOffset,
                              "off-hand", out.offWpn, sizeof(out.offWpn))) {
-        BriefAppend(b, acc::strings::Get(S::FmtBriefOffHand), out.offWpn);
+        b.Append(acc::strings::Get(S::FmtBriefOffHand), out.offWpn);
     }
 }
 
@@ -185,14 +168,14 @@ void SpeakSelfStatus() {
     hpMax = (std::max)(hpMax, 0);
 
     char msg[384];
-    BriefBuf b{msg, sizeof(msg), 0};
+    acc::strfmt::FixedText b{msg, sizeof(msg)};
 
     // Some creature shapes (driving and minigame slots) leave the max at 0:
     // then the current value alone, rather than "X of 0".
     if (hpMax > 0 && hpCur <= hpMax + 32) {
-        BriefAppend(b, acc::strings::Get(S::FmtSelfStatusHpOf), hpCur, hpMax);
+        b.Append(acc::strings::Get(S::FmtSelfStatusHpOf), hpCur, hpMax);
     } else {
-        BriefAppend(b, acc::strings::Get(S::FmtSelfStatusHp), hpCur);
+        b.Append(acc::strings::Get(S::FmtSelfStatusHp), hpCur);
     }
 
     // Force pool, only for Force users: the max is 0 for the other classes
@@ -201,7 +184,7 @@ void SpeakSelfStatus() {
     if (acc::engine::ReadCreatureForcePoints(clientLeader, &fpCur, &fpMax) &&
         fpMax > 0) {
         if (fpCur < 0) fpCur = 0;
-        BriefAppend(b, acc::strings::Get(S::FmtSelfStatusFpOf), fpCur, fpMax);
+        b.Append(acc::strings::Get(S::FmtSelfStatusFpOf), fpCur, fpMax);
     }
 
     Loadout loadout;
@@ -227,14 +210,14 @@ bool BuildTargetCombatBrief(void* targetServerObject, const char* targetName,
     }
 
     using S = acc::strings::Id;
-    BriefBuf b{outBuf, outBufSize, 0};
-    BriefAppend(b, acc::strings::Get(S::FmtTargetCombatBrief), targetName);
+    acc::strfmt::FixedText b{outBuf, outBufSize};
+    b.Append(acc::strings::Get(S::FmtTargetCombatBrief), targetName);
 
     // Condition: the damage-level bucket a sighted player reads from the
     // colour of the HP bar. Healthy is not said.
     const int dl = acc::engine::ReadObjectDamageLevel(targetServerObject);
     if (dl > 0) {
-        BriefAppend(b, acc::strings::Get(S::FmtBriefCondition),
+        b.Append(acc::strings::Get(S::FmtBriefCondition),
                     acc::strings::Get(DamageLevelStringId(dl)));
     }
 
@@ -242,7 +225,7 @@ bool BuildTargetCombatBrief(void* targetServerObject, const char* targetName,
     // target reticle.
     const float distM = PlayerDistanceMeters(targetServerObject);
     if (distM >= 0.0f) {
-        BriefAppend(b, acc::strings::Get(S::FmtBriefDistanceMeters),
+        b.Append(acc::strings::Get(S::FmtBriefDistanceMeters),
                     static_cast<int>(distM + 0.5f));
     }
 

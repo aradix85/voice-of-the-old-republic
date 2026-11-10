@@ -113,7 +113,7 @@ void AnnounceSubScreen(void* p, PanelKind k, const InGameSubScreenSpec& spec) {
 }  // namespace
 
 void AnnounceNewSubScreens(void** panels, int count) {
-    void* nowVisible[16];
+    void* nowVisible[16] = {};
     int   nowCount = 0;
     bool  newSubScreenDetected = false;
     for (int i = 0; i < count && nowCount < 16; ++i) {

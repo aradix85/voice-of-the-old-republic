@@ -152,19 +152,19 @@ void* SaveLoadPanelBackButton(void* panel) {
 
 void* UpgradeSelPanelListBox(void* panel) {
     return PanelMemberWithTripwire(panel, kUpgradeSelPanelListBoxOffset,
-                                   /*LB_UPGRADELIST=*/9,
+                                   9,
                                    "UpgradeSel.LB_UPGRADELIST");
 }
 
 void* UpgradeSelPanelUpgradeButton(void* panel) {
     return PanelMemberWithTripwire(panel, kUpgradeSelPanelUpgradeButtonOffset,
-                                   /*BTN_UPGRADEITEMS=*/5,
+                                   5,
                                    "UpgradeSel.BTN_UPGRADEITEMS");
 }
 
 void* UpgradeSelPanelTitleLabel(void* panel) {
     return PanelMemberWithTripwire(panel, kUpgradeSelPanelTitleLabelOffset,
-                                   /*LBL_TITLE=*/4, "UpgradeSel.LBL_TITLE");
+                                   4, "UpgradeSel.LBL_TITLE");
 }
 
 // component_p and chemical_p agree on the listbox and accept ids but not on
@@ -172,19 +172,19 @@ void* UpgradeSelPanelTitleLabel(void* panel) {
 void* CraftPanelShopListBox(void* panel) {
     return CraftMemberWithTripwire(panel, kCraftComponentShopListBoxOffset,
                                    kCraftChemicalShopListBoxOffset,
-                                   /*LB_SHOPITEMS=*/4, "Craft.LB_SHOPITEMS");
+                                   4, "Craft.LB_SHOPITEMS");
 }
 
 void* CraftPanelInvListBox(void* panel) {
     return CraftMemberWithTripwire(panel, kCraftComponentInvListBoxOffset,
                                    kCraftChemicalInvListBoxOffset,
-                                   /*LB_INVITEMS=*/5, "Craft.LB_INVITEMS");
+                                   5, "Craft.LB_INVITEMS");
 }
 
 void* CraftPanelAcceptButton(void* panel) {
     return CraftMemberWithTripwire(panel, kCraftComponentAcceptButtonOffset,
                                    kCraftChemicalAcceptButtonOffset,
-                                   /*BTN_Accept=*/12, "Craft.BTN_Accept");
+                                   12, "Craft.BTN_Accept");
 }
 
 void* CraftPanelExamineButton(void* panel) {
@@ -247,22 +247,22 @@ void* PowersPanelBackButton(void* panel) {
 
 void* ContainerPanelItemsListBox(void* panel) {
     return PanelMemberWithTripwire(panel, kContainerPanelItemsListBoxOffset,
-                                   /*LB_ITEMS=*/2, "Container.LB_ITEMS");
+                                   2, "Container.LB_ITEMS");
 }
 
 void* ContainerPanelOkButton(void* panel) {
     return PanelMemberWithTripwire(panel, kContainerPanelOkButtonOffset,
-                                   /*BTN_OK=*/3, "Container.BTN_OK");
+                                   3, "Container.BTN_OK");
 }
 
 void* ContainerPanelCancelButton(void* panel) {
     return PanelMemberWithTripwire(panel, kContainerPanelCancelButtonOffset,
-                                   /*BTN_CANCEL=*/5, "Container.BTN_CANCEL");
+                                   5, "Container.BTN_CANCEL");
 }
 
 void* ContainerPanelGiveItemsButton(void* panel) {
     return PanelMemberWithTripwire(panel, kContainerPanelGiveItemsButtonOffset,
-                                   /*BTN_GIVEITEMS=*/4,
+                                   4,
                                    "Container.BTN_GIVEITEMS");
 }
 

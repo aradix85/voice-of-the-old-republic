@@ -8,11 +8,13 @@
 // rather than being hidden by a clean cut, which is what we want.
 //
 // Header-only; no TU. Two-pass vsnprintf: measure, then fill. Also the
-// ASCII case folds the code base shares.
+// bounded append for the fixed buffers that remain, and the ASCII case
+// folds the code base shares.
 
 #pragma once
 
 #include <cstdarg>
+#include <cstddef>
 #include <cstdio>
 #include <string>
 
@@ -42,6 +44,25 @@ inline std::string Format(const char* fmt, ...) {
     va_end(ap);
     return out;
 }
+
+// printf-style appends to a caller's fixed buffer. A full buffer drops the
+// rest; the text is always terminated. No destructor, so it is usable in a
+// function with __try.
+struct FixedText {
+    char*  buf;
+    size_t cap;
+    size_t len = 0;
+
+    void Append(const char* fmt, ...) {
+        if (len + 1 >= cap) return;
+        va_list ap;
+        va_start(ap, fmt);
+        const int n = std::vsnprintf(buf + len, cap - len, fmt, ap);
+        va_end(ap);
+        if (n > 0) len += static_cast<size_t>(n);
+        if (len > cap - 1) len = cap - 1;
+    }
+};
 
 // ASCII-only case folding. <cctype>'s is locale-sensitive and takes an int;
 // resrefs, module names and HTTP header names are ASCII, and the game mixes

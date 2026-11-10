@@ -111,23 +111,23 @@ bool TryHandleInput(void* activePanel, int param_1, int param_2, int& rv) {
 
     if (isUp) {
         acc::menus::pending::QueueGalaxyInput(activePanel, kEnginePrev,
-                                              /*announce=*/true);
+                                              /*announcePlanet=*/true);
         acclog::Write("GalaxyMap", "prev planet (panel=%p)", activePanel);
     } else if (isDown) {
         acc::menus::pending::QueueGalaxyInput(activePanel, kEngineNext,
-                                              /*announce=*/true);
+                                              /*announcePlanet=*/true);
         acclog::Write("GalaxyMap", "next planet (panel=%p)", activePanel);
     } else if (isEnter) {
         // Travel — clear our first-sight latch now so reopening the map (after
         // arriving / aborting) re-announces.
         s_announcedPanel = nullptr;
         acc::menus::pending::QueueGalaxyInput(activePanel, kEngineAccept,
-                                              /*announce=*/false);
+                                              /*announcePlanet=*/false);
         acclog::Write("GalaxyMap", "accept/travel (panel=%p)", activePanel);
     } else if (isEsc) {
         s_announcedPanel = nullptr;
         acc::menus::pending::QueueGalaxyInput(activePanel, kEngineCancel,
-                                              /*announce=*/false);
+                                              /*announcePlanet=*/false);
         acclog::Write("GalaxyMap", "cancel/back (panel=%p)", activePanel);
     } else {
         // Left/Right/Home/End: consumed as no-ops (Up/Down is the planet

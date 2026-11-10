@@ -1,4 +1,4 @@
-# guidance_pathfind.cpp (423 lines)
+# guidance_pathfind.cpp (421 lines)
 
 Source: `patches/Accessibility/guidance_pathfind.cpp`
 
@@ -14,6 +14,6 @@ First-cut scope: - Single area only — cross-area routing is deferred; the user
 
 ## Declarations (in source order)
 
-- L40 `int FindAnchorNode(const acc::engine::navgraph::NavGraphSnapshot& graph, const acc::engine::WallEdge* walls, int wallCount, const Vector& target, const char* role)`: Pick the path_point a route should start / end on for `target`.
-- L101 `int FindBlockingEdge(const acc::engine::WallEdge* walls, int wallCount, const Vector& a, const Vector& b, float& outT)`: Diagnostic: find the closest (smallest-t along a→b) walkmesh edge that blocks the segment a→b.
-- L133 `bool ComputePath(void* area, const Vector& start, const Vector& goal, std::vector<Vector>& outWaypoints, PathFailure* failure)`
+- L38 `int FindAnchorNode(const acc::engine::navgraph::NavGraphSnapshot& graph, const acc::engine::WallEdge* walls, int wallCount, const Vector& target, const char* role)`: Pick the path_point a route should start / end on for `target`.
+- L99 `int FindBlockingEdge(const acc::engine::WallEdge* walls, int wallCount, const Vector& a, const Vector& b, float& outT)`: Diagnostic: find the closest (smallest-t along a→b) walkmesh edge that blocks the segment a→b.
+- L131 `bool ComputePath(void* area, const Vector& start, const Vector& goal, std::vector<Vector>& outWaypoints, PathFailure* failure)`
