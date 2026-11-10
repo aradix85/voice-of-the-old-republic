@@ -183,6 +183,8 @@ engine_panels: split into three (4da4778e; the existing internal header
 was merged by hand, and includes_split.py also touched the old
 engine_panels_state.cpp, reverted), lean (bc631a99: one vtable table
 instead of seventeen detectors; CharGen got its PanelKindName row).
+combat_queue: split into three (272ada84), lean (eeed8dd2: one queue
+walker, engine_reads for the field reads, one guarded RemoveLastAction).
 
 Careful: never rewrite source files with PowerShell ReadAllText/WriteAllText
 (it decodes UTF-8 and writes '?' for the dashes and umlauts in comments);
@@ -242,7 +244,7 @@ prefix (menus_listbox_picker.cpp).
   engine_compass (bearing of a vector, and its compass word). kRadToDeg is
   defined in many files: one constant with it.
 - Next file:
-  combat_queue.cpp (871), minigame_turret_peg.cpp
+  minigame_turret_peg.cpp
   (860), guidance_approach.cpp (840), peek_description.cpp (839),
   menus_modsettings.cpp (828), menus_chain_input.cpp (824) (sizes of
   2026-11-10 17:20, strings*.cpp excepted).
