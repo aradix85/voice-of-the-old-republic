@@ -135,6 +135,12 @@ fields, combat_log rules, KindPlatz -> KindPlaza). English-only code
 leftovers (5df2a82: German close/cancel words, multilingual skill-check
 roots, German fallback captions, VK_OEM_3 named "Ö", "Talents" for
 feats); "metres" in every string (the commit after).
+engine_area split into six files (3841ae9) and made lean (6b0094f: one
+GetGameObject lookup, one SEH layer around ReadCExoString, TryReadTag
+was GetObjectTag). unified_action_menu split into six (1ed055a; split_file.py
+fix 4c33467: a comment above a namespace line carried the line along) and
+made lean (b75ade7). combat_log split into five (07754ad) and made lean
+(0f244a4: BuildCompact from parts, English rule names).
 
 Careful: never rewrite source files with PowerShell ReadAllText/WriteAllText
 (it decodes UTF-8 and writes '?' for the dashes and umlauts in comments);
@@ -193,8 +199,10 @@ prefix (menus_listbox_picker.cpp).
   EngineYawToCompass/CompassToSector/SectorString. One helper in
   engine_compass (bearing of a vector, and its compass word). kRadToDeg is
   defined in many files: one constant with it.
-- Next file: engine_area.cpp, then unified_action_menu.cpp, combat_log.cpp
-  and down the size list.
+- Next file: menus_chain.cpp (1460 lines), then minigame_swoop_race.cpp,
+  map_ui_cursor.cpp, menus_monitors.cpp, minigame_pazaak.cpp,
+  menus_pending.cpp, cycle_input.cpp, menus.cpp, menus_internal.cpp,
+  core_tick.cpp (sizes of 2026-11-10, strings*.cpp excepted).
 - F2b: share the save-variable code of exit_memory with discovery.cpp.
 - F3 menus_chargen_feats / menus_powers_levelup: about 15 same-named
   functions, 22 cloned blocks; one chart-grid module (check K2 plans).
@@ -230,7 +238,10 @@ prefix (menus_listbox_picker.cpp).
 `python tools/analysis/split_file.py CONFIG.json` (format in its docstring;
 the configs are not kept). After it, the project includes of the internal
 header go to the files that use them (a small script did this for
-room_topology; the compiler catches a miss).
+room_topology; the compiler catches a miss, and it misses some: engine_app.h,
+engine_reads.h, msg_router.h, party_cache.h). When the module's public
+header is not <module>.h (combat_log: combat.h), fix the include in the
+internal header by hand.
 
 ## Rejected
 
