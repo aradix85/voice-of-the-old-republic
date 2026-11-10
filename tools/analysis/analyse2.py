@@ -42,7 +42,7 @@ def norm(line):
 win = collections.defaultdict(list)
 for dp, _, fs in os.walk(src):
     for fn in fs:
-        if not fn.endswith(".cpp") or fn.startswith("strings_") or "effect_names" in fn:
+        if not fn.endswith(".cpp") or fn == "strings.cpp" or "effect_names" in fn:
             continue
         p = os.path.join(dp, fn)
         lines = open(p, encoding="latin-1").read().splitlines()

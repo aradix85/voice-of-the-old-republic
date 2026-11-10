@@ -127,14 +127,18 @@ prefix (menus_listbox_picker.cpp).
   audio, footstep suppression when stuck (a silenced game sound, plus the
   spoken stuck directions), the installer's optional dsoal spatial-audio
   toggle (game audio). Still to do:
-  T. English only (decision above): translated READMEs out (4d07cdd);
-     mod: strings_en.cpp is strings.cpp, no language detection, one
-     codepage (speech::kGameCodepage), English combat anchors and effect
-     names only (the commit after 4d07cdd). Still: the installer's
-     locales, the readme links to the fork, the translation docs and
-     kdev's translation tools. Before E goes on. Later, with the comment
-     pass: strings.h, combat_log.cpp and combat_strings field names still
-     carry German examples and words.
+  T. English only, done: translated READMEs (4d07cdd); mod (6a7a263:
+     strings.cpp is the English table, no language detection, one
+     codepage speech::kGameCodepage); installer texts and readme links
+     to the fork (ed2d156); installer assumes the English game, no
+     localized TSLRCM or K1CP overlays (8c2dc36); translation docs and
+     kdev combat-strings-extract out (the commit after). Later, with the
+     comment pass: strings.h, combat_log.cpp and the combat_strings field
+     names still carry German examples and words. Docs that still point
+     at translations (ACCESSIBILITY_MODDING_GUIDE, kotor2-port-
+     feasibility, kdev-design, llm-docs/action-menu-and-combat) go in E.
+     Open question for the docs/installer: Config.cs downloads the
+     release from the original mod's GitHub, not from this fork.
   E. Docs pass: every current doc that still names Prism, Tolk,
      SAPI, the urgent or compass voice, positional/3D speech, the Windows
      voices option, the in-game updater, the removed exploration sounds or

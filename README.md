@@ -334,7 +334,6 @@ Contributions are welcome — especially fixes for languages, system configurati
 - Contribution guide: [CONTRIBUTING.md](CONTRIBUTING.md)
 - Architecture overview: [ARCHITECTURE.md](ARCHITECTURE.md)
 - Accessibility modding guide (general craft + native-binary specifics): [ACCESSIBILITY_MODDING_GUIDE.md](ACCESSIBILITY_MODDING_GUIDE.md)
-- Translating the mod's spoken cues: [docs/CONTRIBUTING_TRANSLATIONS.md](docs/CONTRIBUTING_TRANSLATIONS.md)
 
 <h2>Credits</h2>
 

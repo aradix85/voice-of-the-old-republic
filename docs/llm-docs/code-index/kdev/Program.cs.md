@@ -1,4 +1,4 @@
-# Program.cs (49 lines)
+# Program.cs (43 lines)
 
 Source: `tools/kdev/Program.cs`
 

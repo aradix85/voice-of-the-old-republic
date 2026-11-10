@@ -1,6 +1,5 @@
 // The combat-log text of the English game: the engine phrases the combat
-// rules parse, extracted from dialog.tlk with `kdev combat-strings-extract`
-// (strref map in CombatStringsExtractCommand.cs), and the shorter labels
+// rules parse (from dialog.tlk, each with its strref) and the shorter labels
 // they speak. KOTOR 2's combat block is byte-identical to KOTOR 1's, so one
 // table serves both games.
 //

@@ -16,11 +16,6 @@ internal static class Program
         CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
         Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
 
-        // Register CP-1252 etc. — modern .NET only ships UTF-8/16/32 + ASCII
-        // by default. combat-strings-extract needs CP-1252 to decode TLK
-        // bytes for German/English/French/Italian/Spanish KOTOR locales.
-        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-
         var root = new RootCommand("Dev CLI for the Voice of the Old Republic accessibility patch.")
         {
             StatusCommand.Build(),
@@ -36,7 +31,6 @@ internal static class Program
             WalkmeshStatsCommand.Build(),
             WalkmeshFaceTypesCommand.Build(),
             WalkmeshGeometryAuditCommand.Build(),
-            CombatStringsExtractCommand.Build(),
             SoundScoreCommand.Build(),
             ReCommand.Build(),
             DumpTextCommand.Build(),

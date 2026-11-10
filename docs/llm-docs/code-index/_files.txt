@@ -358,7 +358,6 @@ tools/kdev/Commands/AnalyzeDumpCommand.cs
 tools/kdev/Commands/ApplyCommand.cs
 tools/kdev/Commands/BuildCommand.cs
 tools/kdev/Commands/CleanCommand.cs
-tools/kdev/Commands/CombatStringsExtractCommand.cs
 tools/kdev/Commands/DevCommand.cs
 tools/kdev/Commands/DumpTextCommand.cs
 tools/kdev/Commands/KillCommand.cs
@@ -379,7 +378,6 @@ tools/kdev/Core/GameProcess.cs
 tools/kdev/Core/PeInfo.cs
 tools/kdev/Core/Signatures.cs
 tools/kdev/Core/SoundScore.cs
-tools/kdev/Core/TlkFile.cs
 tools/kdev/Core/WalkmeshGeometryAnalysis.cs
 tools/kdev/Core/WavAnalysis.cs
 tools/kdev/Models/FunctionTable.cs
