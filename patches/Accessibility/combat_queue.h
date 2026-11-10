@@ -21,10 +21,9 @@
 
 namespace acc::combat::queue {
 
-// Returns the player's filtered combat-round queue size (excludes the
-// engine's 0xFF "currently dispatching" placeholder). Used by the
-// action-bar / target-action announce path to report "position N" after
-// firing. 0 on no-player / no-combat-round / read fault.
+// The engine's own count of the controlled character's combat round, its
+// leading placeholder included: the number AddAction's cap check looks at.
+// 0 without a player or a round, or on a read fault.
 int CountPlayerEntries();
 
 // Snapshot the queue depth RIGHT BEFORE the engine dispatches a press.

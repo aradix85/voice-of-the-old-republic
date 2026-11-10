@@ -24,9 +24,6 @@ void* ReadCombatRound(void* serverCreature);
 int CountQueueEntries(void* combatRound);
 void* GetQueueAction(void* combatRound, int index);
 
-// The round's raw count, placeholder included; -1 on a fault.
-int RawRoundCount(void* combatRound);
-
 acc::strings::Id VerbForActionType(unsigned char actionType);
 bool ReadActionFields(void* action, unsigned char& outType, uint32_t& outTarget);
 

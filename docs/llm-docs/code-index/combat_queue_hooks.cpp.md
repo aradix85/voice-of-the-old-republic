@@ -1,16 +1,10 @@
-# combat_queue_hooks.cpp (92 lines)
+# combat_queue_hooks.cpp (57 lines)
 
 Source: `patches/Accessibility/combat_queue_hooks.cpp`
 
-CSWSCombatRound::AddAction detour - the combat-queue announce trigger.
-
-Split out of combat_diag.cpp by the Phase-1 structure pass (refactoring candidate 14). This hook is NOT a diagnostic despite having lived in a file named diag: it is the mechanism behind the shipped queue announce ("X, position N" / "X, queue full"), forwarding every genuine engine action-add to acc::combat::queue::OnEngineActionAdded. It sits next to combat_queue.cpp so that relationship is visible from the filename.
-
-The three CSWSCombatRound hooks that really are log-only (RemoveAllActions / SetCurrentAction / RemoveLastAction) stayed in combat_diag.cpp.
-
-Hook wiring (hooks.toml + exports.def) is unchanged - only the definition's home file moved.
+CSWSCombatRound::AddAction detour: the trigger of the combat-queue announce ("X, position N" / "X, queue full"). Every genuine engine action-add is forwarded to acc::combat::queue::OnEngineActionAdded. The log-only CSWSCombatRound hooks are in combat_diag.cpp.
 
 ## Declarations (in source order)
 
-- L34 `extern "C" void __cdecl OnCombatRoundAddAction(void* this_combatRound, void* esp_action_addr, void* esp_param2_addr)`
-- L85 `void __cdecl OnCombatRoundAddActionK2(void* thisRound, void* ebp)`
+- L16 `extern "C" void __cdecl OnCombatRoundAddAction(void* this_combatRound, void* esp_action_addr, void* esp_param2_addr)`
+- L50 `void __cdecl OnCombatRoundAddActionK2(void* thisRound, void* ebp)`

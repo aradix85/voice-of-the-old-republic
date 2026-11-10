@@ -2,27 +2,16 @@
 
 #include <windows.h>
 #include <cstdint>
-#include <cstdio>
 
-#include <cmath>
-
-#include "combat_queue.h"    // OnEngineActionAdded — authoritative queue announce
+#include "combat_queue.h"    // queue depths, RoleTag, CancelNoOpWatch
 #include "engine_app.h"      // GetClientApp
-#include "engine_area.h"     // AreaObjectIterator (idle notice: enemy nearby)
+#include "engine_game.h"
 #include "engine_offsets.h"
+#include "engine_offsets_select.h"
 #include "engine_panels.h"   // ResolveMainInterface
 #include "engine_player.h"   // GetPlayerServerCreature, GetClientLeader
-#include "engine_reads.h"    // ReadCreatureCurrentHitPoints
-#include "engine_subscreen.h"  // WorldIsPaused
-#include "examine_view.h"    // IsHostileCreature
-#include "filter_objects.h"
+#include "engine_reads.h"
 #include "log.h"
-#include "narrated_target.h"
-#include "speech.h"
-#include "strings.h"
-#include "engine_rebase.h"
-#include "engine_offsets_select.h"
-#include "engine_game.h"
 
 namespace acc::combat_diag {
 
@@ -45,23 +34,17 @@ const uintptr_t kAddrCClientExoAppGetAutoPaused = acc::addr::Pick(0x005edef0, 0x
 const uintptr_t kAddrCClientExoAppGetPauseState = acc::addr::Pick(0x005ed640, 0x0073F680);
 
 // main_interface.field1_0x64 — the engine target handle SetTarget stamps.
-// Resolved through engine_panels' ResolveMainInterface so we can compare
-// per-press. K2 0x68 — witnessed by Batch 3c's CSWGuiMainInterface::
-// SetTarget twin 0x0074CFB0, which stamps [this+0x68].
+// K2 0x68 — witnessed by the CSWGuiMainInterface::SetTarget twin 0x0074CFB0,
+// which stamps [this+0x68].
 const size_t kMainInterfaceTargetHandleOff = acc::off::Pick(0x64, 0x68);
 
 typedef unsigned long (__thiscall* PFN_GetAutoPaused)(void* this_);
 typedef unsigned long (__thiscall* PFN_GetPauseState)(void* this_, uint8_t which);
 
 uint8_t ReadCombatModeBit(void* clientLeader) {
-    if (!clientLeader) return 0xff;
-    __try {
-        uint8_t v = *(reinterpret_cast<uint8_t*>(clientLeader) +
-                      kCSWCCreatureCombatModeOffset);
-        return static_cast<uint8_t>(v & 1);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return 0xff;
-    }
+    uint16_t v = 0;
+    return acc::engine::TryReadU16(clientLeader, kCSWCCreatureCombatModeOffset, &v)
+               ? static_cast<uint8_t>(v & 1) : 0xff;
 }
 
 int CallGetAutoPaused(void* exoApp) {
@@ -86,148 +69,91 @@ int CallGetPauseState(void* exoApp) {
     }
 }
 
-uint32_t ReadMainInterfaceTarget(void* exoApp) {
-    if (!exoApp) return 0;
-    void* mi = acc::engine::ResolveMainInterface();
-    if (!mi) return 0;
-    __try {
-        return *reinterpret_cast<uint32_t*>(
-            reinterpret_cast<unsigned char*>(mi) +
-            kMainInterfaceTargetHandleOff);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return 0;
+struct State {
+    int      cm  = 0xff;  // combat-mode bit (0/1, 0xff when unreadable)
+    int      qs  = -1;    // inner queue size (combat_round.actions)
+    int      oq  = -1;    // outer queue size (object.action_nodes): where
+                          // chained presses stack, and what the strip UI shows
+    int      ap  = -1;    // auto-paused
+    int      ps  = -1;    // pause-state(0)
+    uint32_t tgt = 0;     // main_interface target handle
+};
+
+State ReadState() {
+    State s;
+    void* server = acc::engine::GetPlayerServerCreature();
+    void* exoApp = acc::engine::GetClientApp();
+    s.cm = ReadCombatModeBit(acc::engine::GetClientLeader());
+    s.qs = acc::combat::queue::ReadQueueSize(server);
+    s.oq = acc::combat::queue::ReadOuterQueueSize(server);
+    s.ap = CallGetAutoPaused(exoApp);
+    s.ps = CallGetPauseState(exoApp);
+    if (exoApp) {
+        acc::engine::TryReadU32(acc::engine::ResolveMainInterface(),
+                                kMainInterfaceTargetHandleOff, &s.tgt);
+    }
+    return s;
+}
+
+void LogState(const char* phase, const char* label, const State& s) {
+    acclog::Write("Combat.Diag", "%s%s cm=%u qs=%d oq=%d ap=%d ps=%d tgt=0x%08x",
+                  phase, label, s.cm, s.qs, s.oq, s.ap, s.ps, s.tgt);
+}
+
+void LogDelta(const char* what, int before, int after) {
+    if (before != after) {
+        acclog::Write("Combat.Diag", "DELTA %s %d -> %d", what, before, after);
     }
 }
 
-struct State {
-    uint8_t  cm;          // combat-mode bit (0/1, 0xff on fault)
-    int      qs;          // INNER queue size (combat_round.actions)
-    int      oq;          // OUTER queue size (object.action_nodes) —
-                          // where chained presses actually stack and
-                          // what the sighted strip UI reflects
-    int      ap;          // auto-paused
-    int      ps;          // pause-state(0)
-    uint32_t tgt;         // main_interface target handle
-};
-
-void ReadState(State& s) {
-    s = {};
-    s.cm = 0xff;
-    s.qs = -1;
-    s.oq = -1;
-    s.ap = -1;
-    s.ps = -1;
-    s.tgt = 0;
-
-    void* server = acc::engine::GetPlayerServerCreature();
-    void* client = acc::engine::GetClientLeader();
-    void* exoApp = acc::engine::GetClientApp();
-
-    s.cm  = ReadCombatModeBit(client);
-    s.qs  = acc::combat::queue::ReadQueueSize(server);
-    s.oq  = acc::combat::queue::ReadOuterQueueSize(server);
-    s.ap  = CallGetAutoPaused(exoApp);
-    s.ps  = CallGetPauseState(exoApp);
-    s.tgt = ReadMainInterfaceTarget(exoApp);
-}
-
-State g_last  = {0xff, -1, -1, -1, -1, 0};
+State g_last;
 bool  g_armed = false;
 
 }  // namespace
 
 void Tick() {
-    // Player-loaded gate. Same pattern combat.cpp uses — no point reading
-    // engine state mid-load.
+    // Not while loading: there is no player to read.
     Vector unused;
     if (!acc::engine::GetPlayerPosition(unused)) return;
 
-    State now;
-    ReadState(now);
-
+    const State now = ReadState();
     if (!g_armed) {
         g_last  = now;
         g_armed = true;
-        acclog::Write("Combat.Diag",
-            "INIT cm=%u qs=%d oq=%d ap=%d ps=%d tgt=0x%08x",
-            now.cm, now.qs, now.oq, now.ap, now.ps, now.tgt);
+        LogState("INIT", "", now);
         return;
     }
 
-    if (now.cm != g_last.cm) {
-        acclog::Write("Combat.Diag", "DELTA combat_mode %u -> %u",
-                      g_last.cm, now.cm);
-    }
-    if (now.qs != g_last.qs) {
-        acclog::Write("Combat.Diag", "DELTA queue_size %d -> %d",
-                      g_last.qs, now.qs);
-    }
-    if (now.oq != g_last.oq) {
-        acclog::Write("Combat.Diag", "DELTA outer_queue %d -> %d",
-                      g_last.oq, now.oq);
-    }
-    if (now.ap != g_last.ap) {
-        acclog::Write("Combat.Diag", "DELTA autopause %d -> %d",
-                      g_last.ap, now.ap);
-    }
-    if (now.ps != g_last.ps) {
-        acclog::Write("Combat.Diag", "DELTA pause_state %d -> %d",
-                      g_last.ps, now.ps);
-    }
+    LogDelta("combat_mode", g_last.cm, now.cm);
+    LogDelta("queue_size", g_last.qs, now.qs);
+    LogDelta("outer_queue", g_last.oq, now.oq);
+    LogDelta("autopause", g_last.ap, now.ap);
+    LogDelta("pause_state", g_last.ps, now.ps);
     if (now.tgt != g_last.tgt) {
         acclog::Write("Combat.Diag", "DELTA target 0x%08x -> 0x%08x",
                       g_last.tgt, now.tgt);
     }
     g_last = now;
-
 }
 
-void LogPreFire(const char* label) {
-    State s;
-    ReadState(s);
-    acclog::Write("Combat.Diag",
-        "PRE  %s cm=%u qs=%d oq=%d ap=%d ps=%d tgt=0x%08x",
-        label ? label : "?", s.cm, s.qs, s.oq, s.ap, s.ps, s.tgt);
-}
-
-void LogPostFire(const char* label) {
-    State s;
-    ReadState(s);
-    acclog::Write("Combat.Diag",
-        "POST %s cm=%u qs=%d oq=%d ap=%d ps=%d tgt=0x%08x",
-        label ? label : "?", s.cm, s.qs, s.oq, s.ap, s.ps, s.tgt);
-}
+void LogPreFire(const char* label)  { LogState("PRE  ", label, ReadState()); }
+void LogPostFire(const char* label) { LogState("POST ", label, ReadState()); }
 
 }  // namespace acc::combat_diag
 
-
 extern "C" void __cdecl OnCombatRoundRemoveAllActions(void* this_combatRound) {
-    // Gate cleared for KOTOR 2 in Batch 4 — the whole read chain
-    // (kCombatRoundActionsOffset, the list internals, RoleTag's
-    // kCreatureCombatRoundOffset) is Pick'd there.
-    // Skip no-op clears. The engine's very next instruction after our cut is
-    // TEST EAX,EAX / JZ — a clear against a round with no queued actions
-    // removes nothing and returns immediately. This hook exists to answer
-    // "did the engine silently cull queued entries?", and a clear that culled
-    // nothing never answers it.
+    // A clear of an empty round is not logged. The engine's next instruction
+    // after the cut is TEST EAX,EAX / JZ: such a clear removes nothing, and
+    // this hook exists to show the engine culling queued entries. It matters
+    // because the engine re-clears every live combat round once per frame
+    // while combat is torn down for a cutscene handover: on the run-up to the
+    // turret sequence that was six rounds a frame for seven seconds, about
+    // 360 log lines a second, each a formatted write and a flush under a lock
+    // on the game thread.
     //
-    // The one thing this does give up: a clear dispatched against an already-
-    // empty queue is no longer visible, so "the engine took the overwrite
-    // path from an empty queue" now looks the same as "it chained". That
-    // distinction has no observable effect (there was nothing to overwrite)
-    // and the following ADD line still records the outcome.
-    //
-    // It matters because the engine re-clears every live combat round once
-    // per frame while combat is being torn down for a cutscene handover. On
-    // the run-up to the turret sequence that was six rounds a frame for seven
-    // seconds — 2542 log lines at ~360/s, each one a formatted write plus an
-    // fflush under a lock on the game thread (patch-20260729-085456.log,
-    // 08:58:00-08:58:07). Everywhere else in that two-hour session the same
-    // line fired 1-3 times a second.
-    //
-    // -1 is "couldn't read the count", not "empty" — log those, or a genuine
-    // clear disappears whenever the read faults.
-    int actions = acc::combat::queue::ReadRoundActionCount(this_combatRound);
+    // -1 is "could not read the count", not "empty": those are logged, or a
+    // genuine clear would vanish whenever the read faults.
+    const int actions = acc::combat::queue::ReadRoundActionCount(this_combatRound);
     if (actions == 0) return;
 
     acclog::Write("Combat.Diag",
@@ -238,21 +164,16 @@ extern "C" void __cdecl OnCombatRoundRemoveAllActions(void* this_combatRound) {
 
 extern "C" void __cdecl OnCombatRoundSetCurrentAction(void* this_combatRound,
                                                      void* esp_byte_addr) {
-    // Gate cleared for KOTOR 2 in Batch 4 (same chain as RemoveAllActions).
-    uint8_t byte_param = 0xff;
-    __try {
-        if (esp_byte_addr) {
-            byte_param = *reinterpret_cast<uint8_t*>(esp_byte_addr);
-        }
-    } __except (EXCEPTION_EXECUTE_HANDLER) {}
+    uint16_t slot = 0;
+    const unsigned action = acc::engine::TryReadU16(esp_byte_addr, 0, &slot)
+                                ? (slot & 0xffu) : 0xffu;
     acclog::Write("Combat.Diag",
         "SETCUR [%s] round=%p byte=%u",
         acc::combat::queue::RoleTag(this_combatRound),
-        this_combatRound, static_cast<unsigned>(byte_param));
+        this_combatRound, action);
 }
 
 extern "C" void __cdecl OnCombatRoundRemoveLastAction(void* this_combatRound) {
-    // Gate cleared for KOTOR 2 in Batch 4 (same chain as RemoveAllActions).
     acclog::Write("Combat.Diag",
         "REMLAST [%s] round=%p",
         acc::combat::queue::RoleTag(this_combatRound),
@@ -260,11 +181,11 @@ extern "C" void __cdecl OnCombatRoundRemoveLastAction(void* this_combatRound) {
 }
 
 // ============================================================================
-// KOTOR 2 wrappers — Batch 4. The K2 combat-round methods are unoptimised
-// EBP-frame functions; every cut fires right after the prologue with `this`
-// still live in ECX and the params at [EBP+8]. The shared KOTOR 1 handlers
-// take stack-SLOT ADDRESSES (the esp+N LEA contract), so the wrappers hand
-// the frame slots' addresses through unchanged.
+// KOTOR 2 wrappers. The K2 combat-round methods are unoptimised EBP-frame
+// functions; every cut fires right after the prologue with `this` still live
+// in ECX and the params at [EBP+8]. The shared KOTOR 1 handlers take
+// stack-SLOT ADDRESSES (the esp+N LEA contract), so the wrappers hand the
+// frame slots' addresses through unchanged.
 // ============================================================================
 
 // CSWSCombatRound::RemoveAllActions @0x00590430 (tail-remove loop until
@@ -301,11 +222,11 @@ void __cdecl OnCombatRoundRemoveLastActionK2(void* thisRound) {
 // args at [EBP+8]=item id, +0xC/+0x10 mode bytes, +0x14=user id,
 // +0x18=target vector ptr.
 //
-// Log-only, for the dead-medical-column investigation (docs/known-issues.md):
-// a personal press that produces this line but no AddAction died SERVER-side
-// (the request was sent and dropped); a press with no line died CLIENT-side
-// in DoPersonalAction's silent gates. Pairs with ActionBar.Fire's entry dump
-// on the same press.
+// The log line serves the dead-medical-column investigation
+// (docs/known-issues.md): a personal press that produces this line but no
+// AddAction died SERVER-side (the request was sent and dropped); a press with
+// no line died CLIENT-side in DoPersonalAction's silent gates. Pairs with
+// ActionBar.Fire's entry dump on the same press.
 extern "C" __declspec(dllexport)
 void __cdecl OnUseItemRequestK2(void* thisPtr, void* ebp) {
     if (!acc::game::IsKotor2()) return;
@@ -332,10 +253,10 @@ void __cdecl OnUseItemRequestK2(void* thisPtr, void* ebp) {
                   "SEND this=%p item=0x%08x mode=0x%x sub=0x%x user=0x%08x "
                   "target=%d (%.2f,%.2f,%.2f)",
                   thisPtr, itemId, mode, sub, userId, haveTarget, x, y, z);
-    // A sent request is proof the press dispatched — the engine acted even
-    // when the action never lands in the combat round (mines plant without
-    // an AddAction and were reading as "Not possible." while visibly
-    // working, 2026-08-12 test round). A genuinely refused press never
-    // reaches this writer, so the no-op watch still speaks for those.
+    // Not only a log line: a sent request proves the press dispatched, even
+    // when the action never lands in the combat round (a mine plants without
+    // an AddAction and read as "Not possible." while visibly working). A
+    // refused press never reaches this writer, so the no-op watch still
+    // speaks for those.
     acc::combat::queue::CancelNoOpWatch();
 }

@@ -60,9 +60,8 @@ bool HostileNearby() {
 }
 
 // Idle notice: in combat, not paused, nothing queued for the controlled
-// character and an enemy still near, for this long -> one spoken line.
-// 2026-11-08: the player pressed R every second because she did not know
-// the attack carries on by itself; this line says when R is actually needed.
+// character and an enemy still near, for this long -> one spoken line. An
+// attack carries on by itself; this line says when R is actually needed.
 constexpr DWORD kIdleNoticeMs = 2500;
 DWORD g_idleSince  = 0;
 bool  g_idleSpoken = false;
@@ -110,7 +109,7 @@ void OnEngineActionAdded(void* combatRound, void* action) {
     // Pre-add count (detour fires at function entry, before the node is
     // inserted). Engine cap is `if (3 < count)`: 0..3 accept → slot count+1,
     // >=4 reject → "queue full".
-    int preCount = RawRoundCount(combatRound);
+    int preCount = ReadRoundActionCount(combatRound);
     if (preCount < 0) return;
 
     char label[96] = "";
@@ -134,16 +133,15 @@ void OnEngineActionAdded(void* combatRound, void* action) {
 }
 
 void TickIdleNotice() {
+    if (acc::game::IsKotor2()) return;
     Vector unused;
     if (!acc::engine::GetPlayerPosition(unused)) return;
     void* server = acc::engine::GetPlayerServerCreature();
     const int qs = ReadQueueSize(server);
     const int oq = ReadOuterQueueSize(server);
 
-    // Idle notice (KOTOR 1). Cheap checks first; the area walk only runs
-    // once the controlled character has stood with an empty queue for a
-    // while.
-    if (acc::game::IsKotor2()) return;
+    // Cheap checks first; the area walk only runs once the controlled
+    // character has stood with an empty queue for a while.
     const bool idleNow =
         qs == 0 && oq == 0 &&
         acc::engine::IsAnyPartyMemberInCombat() &&
