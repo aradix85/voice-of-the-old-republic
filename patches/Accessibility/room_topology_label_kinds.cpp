@@ -48,6 +48,121 @@ bool CorridorEndIsDead(const acc::engine::navgraph::NavGraphSnapshot& g,
 
 }  // namespace
 
+namespace {
+
+// The exits of an area, bucketed by compass octant.
+struct AreaOctants {
+    bool   has[8]  = {};
+    int    door[8] = {-1, -1, -1, -1, -1, -1, -1, -1};
+    Vector pos[8]  = {};
+    // An octant is announced as a ramp only when EVERY real exit in it
+    // crosses the level change: one same-floor exit and the plain direction
+    // wins, since "ramp" would claim a climb the player can avoid.
+    bool   anyRamp[8]  = {};
+    bool   anyLevel[8] = {};
+};
+
+AreaOctants CollectAreaExits(const acc::engine::navgraph::NavGraphSnapshot& g, int n,
+                             const Vector& centroid, float centroidFloorZ,
+                             const int* externalNbs, const int* externalSrcs,
+                             const int* externalDoorIdx, int externalCount,
+                             const bool* nodeDeadEnd) {
+    AreaOctants oct;
+    for (int k = 0; k < externalCount; ++k) {
+        int nb = externalNbs[k];
+        if (nb < 0 || nb >= n) continue;
+        int bit = OctantBit(OctantFromVector(g.nodes[nb].pos.x - centroid.x,
+                                             g.nodes[nb].pos.y - centroid.y));
+        if (bit < 0) continue;
+        // The anchor of an exit is the IN-ZONE end of its edge (the member
+        // the player must reach to leave), not the outside neighbour:
+        // boundary edges run long diagonals, and a neighbour can sit
+        // mid-zone while its member is in a far corner. Without a member
+        // the centroid stands in, which keeps the far qualifier silent.
+        int src = externalSrcs ? externalSrcs[k] : -1;
+        Vector edgeStart = (src >= 0 && src < n) ? g.nodes[src].pos : centroid;
+        int door = externalDoorIdx ? externalDoorIdx[k] : -1;
+        if (door >= 0) {
+            if (oct.door[bit] < 0) oct.door[bit] = door;
+            if (!oct.has[bit]) oct.pos[bit] = edgeStart;
+            oct.has[bit] = true;
+            continue;
+        }
+        // A degree-1 neighbour is a wall-curve artefact unless the walkmesh
+        // confirms a dead end there.
+        int deg = Degree(g, nb);
+        bool realExit = (deg >= 2) || (deg == 1 && nodeDeadEnd[nb]);
+        if (realExit) {
+            if (!oct.has[bit]) oct.pos[bit] = edgeStart;
+            oct.has[bit] = true;
+            if (ExitIsRamp(nb, centroidFloorZ)) oct.anyRamp[bit]  = true;
+            else                                oct.anyLevel[bit] = true;
+        }
+    }
+    return oct;
+}
+
+struct AreaExitList {
+    std::string text;
+    int  mask = 0;         // octants with an exit
+    bool anyFar = false;   // some entry carries a far-end qualifier
+    bool anyRamp = false;  // some entry is announced as a ramp
+};
+
+// The exit list, clockwise from north, and the exit points for the N key.
+AreaExitList RenderAreaExits(const AreaOctants& oct, const float* bboxXY) {
+    using acc::strings::Id;
+    AreaExitList out;
+    for (int idx = 0; idx < 8; ++idx) {
+        int bit = kOctantEmitOrder[idx];
+        if (!oct.has[bit]) continue;
+        out.mask |= (1 << bit);
+        Id dirId = BitToOctant(bit);
+        const char* dirWord = acc::strings::Get(dirId);
+        std::string entry;
+        if (oct.door[bit] >= 0 && dirWord[0]) {
+            entry = RenderDoorDirection(oct.door[bit], dirWord);
+        } else {
+            bool markRamp = oct.anyRamp[bit] && !oct.anyLevel[bit];
+            entry = DirEntry(dirId, /*markDeadEnd=*/false, markRamp);
+            if (markRamp) {
+                out.anyRamp = true;
+                acclog::Write("WallTopo",
+                              "ClassifyAsArea: octant=%d exit crosses floor-level "
+                              "change - rendered as \"%s\"", bit, entry.c_str());
+            }
+        }
+        // Joined with a space, never a comma: a comma inside an entry would
+        // read as one more exit in the list.
+        const char* farSfx = FarEndSuffix(bit, oct.pos[bit], bboxXY);
+        if (farSfx && !entry.empty()) {
+            entry += ' ';
+            entry += farSfx;
+            out.anyFar = true;
+        }
+        AppendListEntry(out.text, entry);
+        NoteExit(entry, ExitPoint(oct.door[bit], oct.pos[bit]));
+    }
+    return out;
+}
+
+// True when the exits are exactly the two plain ends of the elongation
+// axis: "Area East-West" then says it all. A door exit is always kept (its
+// destination is information the axis word does not carry), and so is a
+// far-end qualifier or a ramp.
+bool AxisCoversExits(acc::strings::Id axisId, const AreaExitList& exits,
+                     const AreaOctants& oct) {
+    if (exits.anyFar || exits.anyRamp) return false;
+    const int axisMask = AxisOctantMask(axisId);
+    if (axisMask == 0 || exits.mask != axisMask) return false;
+    for (int bit = 0; bit < 8; ++bit) {
+        if ((axisMask & (1 << bit)) && oct.door[bit] >= 0) return false;
+    }
+    return true;
+}
+
+}  // namespace
+
 // Area path: probe-owned merged spaces (open / room / merged big
 // junction). One neutral "Area" label, long-axis cue only when
 // elongated, then the exit list — door rewrites kept (the navigational
@@ -63,128 +178,24 @@ void ClassifyAsArea(const acc::engine::navgraph::NavGraphSnapshot& g, int n,
                     std::string& outLabel, int& outKind, int& outSig) {
     using acc::strings::Id;
     const size_t marksAtEntry = g_exit_sink ? g_exit_sink->size() : 0;
-    bool   octHas[8]  = {false, false, false, false, false, false, false, false};
-    int    octDoor[8] = {-1, -1, -1, -1, -1, -1, -1, -1};
-    Vector octPos[8]  = {};
-    // Ramp aggregation mirrors the dead-end marker's conservatism: the
-    // octant is annotated only when EVERY contributing real exit crosses
-    // the level change — one same-floor exit in the bucket and the plain
-    // direction wins (annotating would claim a climb the player can
-    // avoid).
-    bool octAnyRamp [8] = {false, false, false, false,
-                           false, false, false, false};
-    bool octAnyLevel[8] = {false, false, false, false,
-                           false, false, false, false};
-    for (int k = 0; k < externalCount; ++k) {
-        int nb = externalNbs[k];
-        if (nb < 0 || nb >= n) continue;
-        int bit = OctantBit(OctantFromVector(g.nodes[nb].pos.x - centroid.x,
-                                             g.nodes[nb].pos.y - centroid.y));
-        if (bit < 0) continue;
-        // Far-qualifier anchor: the IN-ZONE end of the exit edge (the
-        // member you must reach to leave), not the outside neighbour.
-        // Boundary edges run long diagonals; the Strand west exit's
-        // neighbour sits vertically mid-zone while its member anchor is
-        // the far north-west corner — the anchor is what the player
-        // has to find.
-        // Centroid fallback keeps both consumers conservative: the
-        // alcove gate gets a real probe axis, and a centroid anchor
-        // sits mid-zone so the qualifier stays silent.
-        int src = externalSrcs ? externalSrcs[k] : -1;
-        Vector edgeStart = (src >= 0 && src < n) ? g.nodes[src].pos
-                                                 : centroid;
-        int door = externalDoorIdx ? externalDoorIdx[k] : -1;
-        if (door >= 0) {
-            if (octDoor[bit] < 0) octDoor[bit] = door;
-            if (!octHas[bit]) octPos[bit] = edgeStart;
-            octHas[bit] = true;
-            continue;
-        }
-        int deg = Degree(g, nb);
-        bool realExit = (deg >= 2) || (deg == 1 && nodeDeadEnd[nb]);
-        if (realExit) {
-            if (!octHas[bit]) octPos[bit] = edgeStart;
-            octHas[bit] = true;
-            if (ExitIsRamp(nb, centroidFloorZ)) octAnyRamp[bit]  = true;
-            else                                octAnyLevel[bit] = true;
-        }
-    }
-
-    std::string dirList;
-    int mask = 0;
-    bool anyFar = false;
-    bool anyRamp = false;
-    for (int idx = 0; idx < 8; ++idx) {
-        int bit = kOctantEmitOrder[idx];
-        if (!octHas[bit]) continue;
-        mask |= (1 << bit);
-        Id dirId = BitToOctant(bit);
-        const char* dirWord = acc::strings::Get(dirId);
-        std::string entry;
-        if (octDoor[bit] >= 0 && dirWord[0]) {
-            entry = RenderDoorDirection(octDoor[bit], dirWord);
-        } else {
-            bool markRamp = octAnyRamp[bit] && !octAnyLevel[bit];
-            entry = DirEntry(dirId, /*markDeadEnd=*/false, markRamp);
-            if (markRamp) {
-                anyRamp = true;
-                acclog::Write("WallTopo",
-                              "ClassifyAsArea: octant=%d exit crosses "
-                              "floor-level change — rendered as \"%s\"",
-                              bit, entry.c_str());
-            }
-        }
-        // Space-joined, never comma — a comma inside an entry would read
-        // as an extra exit in the comma-separated list.
-        const char* farSfx = FarEndSuffix(bit, octPos[bit], bboxXY);
-        if (farSfx && !entry.empty()) {
-            entry += ' ';
-            entry += farSfx;
-            anyFar = true;
-        }
-        AppendListEntry(dirList, entry);
-        NoteExit(entry, ExitPoint(octDoor[bit], octPos[bit]));
-    }
-
+    const AreaOctants oct = CollectAreaExits(g, n, centroid, centroidFloorZ, externalNbs,
+                                             externalSrcs, externalDoorIdx,
+                                             externalCount, nodeDeadEnd);
+    const AreaExitList exits = RenderAreaExits(oct, bboxXY);
     // Attached transition triggers are exits like any other — appended
     // last so the compass entries keep their canonical clockwise order.
+    std::string dirList = exits.text;
     AppendListEntry(dirList, trigEntries);
 
     Id axisId = Id::AxisEastWest;
-    bool elong = ComputeCentroidAxis(centroid, centroidFloorZ, axisExt,
-                                     axisId);
-    // Large-footprint clusters swap the neutral "Area" noun for
-    // "Large area" — expectation-setting only; axis/exits/kind
-    // are identical. Large areas only take the areaHint != 0 path
-    // anyway (they're merged spaces), so the swap lives here.
-    const char* noun  = acc::strings::Get(isLargeArea ? Id::AreaNounLarge
-                                                      : Id::AreaNoun);
-    const char* axisW = elong ? acc::strings::Get(axisId) : nullptr;
-    if (!noun[0]) noun = "Area";
+    const bool elong = ComputeCentroidAxis(centroid, centroidFloorZ, axisExt, axisId);
+    // "Large area" sets expectations only; axis, exits and kind are the same.
+    const char* noun  = acc::strings::Get(isLargeArea ? Id::AreaNounLarge : Id::AreaNoun);
+    const char* axisW = elong ? acc::strings::Get(axisId) : "";
 
-    // Drop the exit list when it exactly repeats the elongation axis:
-    // an elongated area whose only exits are the two ends of that axis
-    // (both plain directions — a named door exit is always kept, its
-    // destination is information the axis word doesn't carry) reads as
-    // "Area East-West", not "Area East-West. exits: East, West".
-    // Narrow by construction — only fires when the exit mask is exactly
-    // the axis pair, so the common case (exits differ from elongation)
-    // is untouched.
-    bool axisCoversExits = false;
-    if (elong && trigEntries.empty() && !anyFar && !anyRamp) {
-        // anyFar / anyRamp: a far-end qualifier or ramp annotation is
-        // information the axis word can't carry, so a qualified exit
-        // list is never collapsed away.
-        int axisMask = AxisOctantMask(axisId);
-        if (axisMask != 0 && mask == axisMask) {
-            bool anyDoor = false;
-            for (int bit = 0; bit < 8; ++bit)
-                if ((axisMask & (1 << bit)) && octDoor[bit] >= 0)
-                    anyDoor = true;
-            axisCoversExits = !anyDoor;
-        }
-    }
-    bool haveExits = !dirList.empty() && !axisCoversExits;
+    const bool axisCoversExits =
+        elong && trigEntries.empty() && AxisCoversExits(axisId, exits, oct);
+    const bool haveExits = !dirList.empty() && !axisCoversExits;
     // No exit list in the label: the axis word alone is spoken, centred,
     // and the exits it covers stay as unspoken points for the N key.
     if (axisCoversExits && g_exit_sink) {
@@ -193,23 +204,20 @@ void ClassifyAsArea(const acc::engine::navgraph::NavGraphSnapshot& g, int n,
         }
     }
 
-    if (elong && axisW && axisW[0] && haveExits) {
-        const char* fmt = acc::strings::Get(Id::FmtAreaAxisExits);
-        if (fmt[0]) outLabel = acc::strfmt::Format(fmt, noun, axisW,
-                                                          dirList.c_str());
+    if (axisW[0] && haveExits) {
+        outLabel = acc::strfmt::Format(acc::strings::Get(Id::FmtAreaAxisExits), noun,
+                                       axisW, dirList.c_str());
     } else if (haveExits) {
-        const char* fmt = acc::strings::Get(Id::FmtAreaExits);
-        if (fmt[0]) outLabel = acc::strfmt::Format(fmt, noun,
-                                                          dirList.c_str());
-    } else if (elong && axisW && axisW[0]) {
-        const char* fmt = acc::strings::Get(Id::FmtAreaAxisOnly);
-        if (fmt[0]) outLabel = acc::strfmt::Format(fmt, noun, axisW);
+        outLabel = acc::strfmt::Format(acc::strings::Get(Id::FmtAreaExits), noun,
+                                       dirList.c_str());
+    } else if (axisW[0]) {
+        outLabel = acc::strfmt::Format(acc::strings::Get(Id::FmtAreaAxisOnly), noun,
+                                       axisW);
     } else {
         outLabel = noun;
     }
     outKind = (areaHint == 1) ? kKindRoom : kKindPlaza;
-    outSig  = (outKind & 0xff) | ((mask & 0xff) << 8);
-    return;
+    outSig  = (outKind & 0xff) | ((exits.mask & 0xff) << 8);
 }
 
 // Exactly one external edge — a dead end. Names what is at the end of
@@ -518,38 +526,38 @@ void EmitJunctionLabel(const bool octantHasExit[8],
                        const std::string& trigEntries,
                        std::string& outLabel, int& outKind, int& outSig) {
     using acc::strings::Id;
-std::string dirList;
-int mask = 0;
-int deadEndMask = 0;
-for (int idx = 0; idx < 8; ++idx) {
-    int bit = kOctantEmitOrder[idx];
-    if (!octantHasExit[bit]) continue;
-    mask |= (1 << bit);
-    Id dirId = BitToOctant(bit);
+    std::string dirList;
+    int mask = 0;
+    int deadEndMask = 0;
+    for (int idx = 0; idx < 8; ++idx) {
+        int bit = kOctantEmitOrder[idx];
+        if (!octantHasExit[bit]) continue;
+        mask |= (1 << bit);
+        Id dirId = BitToOctant(bit);
 
-    // Door wins over dead end: when an octant carries a door, the
-    // (dead end) annotation is suppressed and the direction word
-    // is replaced with the "Door DIR" form. The door is the player-
-    // actionable information; dead end is metadata about geometry
-    // beyond the door that doesn't matter once we've named the
-    // gateway.
-    if (octantDoorIdx[bit] >= 0) {
-        const char* dirWord = acc::strings::Get(dirId);
-        if (dirWord[0]) {
-            std::string entry = RenderDoorDirection(octantDoorIdx[bit], dirWord);
-            AppendListEntry(dirList, entry);
-            NoteExit(entry, ExitPoint(octantDoorIdx[bit], octantPos[bit]));
+        // Door wins over dead end: when an octant carries a door, the
+        // (dead end) annotation is suppressed and the direction word
+        // is replaced with the "Door DIR" form. The door is the player-
+        // actionable information; dead end is metadata about geometry
+        // beyond the door that doesn't matter once we've named the
+        // gateway.
+        if (octantDoorIdx[bit] >= 0) {
+            const char* dirWord = acc::strings::Get(dirId);
+            if (dirWord[0]) {
+                std::string entry = RenderDoorDirection(octantDoorIdx[bit], dirWord);
+                AppendListEntry(dirList, entry);
+                NoteExit(entry, ExitPoint(octantDoorIdx[bit], octantPos[bit]));
+            }
+            continue;
         }
-        continue;
-    }
 
-    bool markDeadEnd = octantAllDeadEnd[bit];
-    if (markDeadEnd) deadEndMask |= (1 << bit);
-    // Priority per annotation: door > dead-end > ramp > plain.
-    std::string entry = DirEntry(dirId, markDeadEnd,
-                                 !markDeadEnd && octantAllRamp[bit]);
-    AppendListEntry(dirList, entry);
-    NoteExit(entry, octantPos[bit]);
+        bool markDeadEnd = octantAllDeadEnd[bit];
+        if (markDeadEnd) deadEndMask |= (1 << bit);
+        // Priority per annotation: door > dead-end > ramp > plain.
+        std::string entry = DirEntry(dirId, markDeadEnd,
+                                     !markDeadEnd && octantAllRamp[bit]);
+        AppendListEntry(dirList, entry);
+        NoteExit(entry, octantPos[bit]);
 }
 
 // Attached transition triggers appended last, same as the area path.
