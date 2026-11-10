@@ -35,6 +35,10 @@ rejections are advice only, Anouk decides.
   compass). NVDA not running = silent. Out as well: positional speech and
   the exploration sounds (doors, walls, objects, beacons, collisions) where
   text already covers them. The minigame audio (swoop race, turret) stays.
+- Language (Anouk, 2026-11-10): English only. The mod's six other
+  languages (strings_*.cpp, language detection), the installer's
+  translations and the translated READMEs go. The readme links (mod
+  settings, installer) point to README.md of this fork, branch bridge.
 
 ## Rules
 
@@ -123,13 +127,22 @@ prefix (menus_listbox_picker.cpp).
   audio, footstep suppression when stuck (a silenced game sound, plus the
   spoken stuck directions), the installer's optional dsoal spatial-audio
   toggle (game audio). Still to do:
+  T. English only (decision above): translated READMEs out (4d07cdd);
+     mod: strings_en.cpp is strings.cpp, no language detection, one
+     codepage (speech::kGameCodepage), English combat anchors and effect
+     names only (the commit after 4d07cdd). Still: the installer's
+     locales, the readme links to the fork, the translation docs and
+     kdev's translation tools. Before E goes on. Later, with the comment
+     pass: strings.h, combat_log.cpp and combat_strings field names still
+     carry German examples and words.
   E. Docs pass: every current doc that still names Prism, Tolk,
      SAPI, the urgent or compass voice, positional/3D speech, the Windows
      voices option, the in-game updater, the removed exploration sounds or
      the old bridge behaviour (snapshot every 250 ms, no creatures in
      /objects), the beacon (Ctrl+- is now the route), the Wall sounds
-     option, the glossary's exploration entries, the combat heartbeat. Found 2026-11-10: README.md (done; the six
-     translated READMEs are gone, Anouk 2026-11-10), ARCHITECTURE.md, CLAUDE.md,
+     option, the glossary's exploration entries, the combat heartbeat. README.md: rewrite it whole for this fork
+     (Anouk 2026-11-10: it is her fork, no pull request; 4d07cdd only
+     patched it). Also ARCHITECTURE.md, CLAUDE.md,
      CONTRIBUTING.md, ACCESSIBILITY_MODDING_GUIDE.md, docs/installer.md,
      controls-and-input, known-issues, tools.md, upstream-prs.md (stale:
      no upstream PRs any more), CONTRIBUTING_TRANSLATIONS,

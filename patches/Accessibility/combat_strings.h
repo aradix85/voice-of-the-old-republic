@@ -1,164 +1,96 @@
-// Combat-message localization table.
-//
-// Holds locale-dependent tokens the combat msg-bus rules use: engine-
-// side parse anchors (substrings the engine emits that we scan for) and
-// our shortened output labels (what we speak). Kept separate from
-// strings.h so the speech-only Id enum stays focused on what the user
-// hears, not what the engine says.
-//
-// Language follows acc::strings::Lang.
-//
-// All five locales (DE/EN/FR/IT/ES) carry a full anchor set. DE is engine-
-// verified against a real combat log; EN/FR/IT/ES anchors were extracted
-// mechanically from each locale's dialog.tlk (see
-// CombatStringsExtractCommand.cs StrrefMap) and the same rules reproduce
-// the DE reference byte-for-byte, but the non-DE sets still want one in-
-// locale combat capture to confirm (grep `MsgBuf: raw:` vs `emit-*`).
-// Any anchor that doesn't match falls through to raw speech — no regression.
+// Combat-log text: the engine phrases the combat rules parse (anchors) and
+// the shorter labels they speak. The values, with their dialog.tlk strrefs,
+// are in combat_strings.cpp; an anchor that does not match leaves the line on
+// the raw-speech fallback. The field names are the German words the table
+// was first written for.
 
 #pragma once
 
 namespace acc::combat::loc {
 
 struct MsgStrings {
-    // ---- Engine-side parse anchors. Each must match the engine's
-    //      emitted text exactly (case + spaces + trailing punctuation).
-    const char* phrase_hit;          // " ist erfolgreich mit Angriff auf "
-    const char* phrase_miss;         // " scheitert mit Angriff auf "
-    const char* phrase_mit;          // "  mit "   (2 leading spaces ONLY when the
-                                     //   locale's 42133/42134 hit/miss tags are empty;
-                                     //   filled tags render single-spaced — see kEn note)
-    const char* word_verteidigung;   // "Verteidigung "
-    const char* word_schaden_colon;  // "Schaden: "
-    const char* feat_marker;         // " verwendet."
-    const char* prefix_angriff;      // "Angriffsstatistik: "
-    const char* prefix_abwehr;       // "Abwehrstatistik: "
-    const char* prefix_schaden;      // "Schadensstatistik: "
-    const char* prefix_bedrohung;    // "Bedrohungsstatistik:"
-    const char* tag_krit_summary;    // "Kritischer Treffer!"
-    const char* tag_auto_hit;        // "Automatischer Treffer!"
-    const char* tag_auto_fail;       // "Automatischer Fehlschlag!"
-    const char* token_wuerfel;       // "Würfelergebnis "
-    const char* token_gesch_mod;     // "Geschicklichkeit-Mod. "
-    const char* token_entfernung;    // "Entfernungsbonus "
-    const char* token_effekt;        // "Effektbonus "
-    const char* krit_x_prefix;       // "Kritischer Treffer x"
-    const char* phrase_fuer;         // " für "   (5 bytes, leading+trailing space)
-    const char* token_bonusschaden;  // "Bonusschaden"
-    const char* hand_main;           // "Haupthand" — default hand label, suppressed from output
+    // ---- Engine-side parse anchors. Each must match the engine's text
+    //      exactly (case, spaces, trailing punctuation).
+    const char* phrase_hit;
+    const char* phrase_miss;
+    const char* phrase_mit;
+    const char* word_verteidigung;
+    const char* word_schaden_colon;
+    const char* feat_marker;
+    const char* prefix_angriff;
+    const char* prefix_abwehr;
+    const char* prefix_schaden;
+    const char* prefix_bedrohung;
+    const char* tag_krit_summary;
+    const char* tag_auto_hit;
+    const char* tag_auto_fail;
+    const char* token_wuerfel;
+    const char* token_gesch_mod;
+    const char* token_entfernung;
+    const char* token_effekt;
+    const char* krit_x_prefix;
+    const char* phrase_fuer;
+    const char* token_bonusschaden;
+    const char* hand_main;           // default hand label, left out of the output
 
     // ---- Output-side labels (what we speak).
-    const char* verb_hit;            // "trifft"
-    const char* verb_miss;           // "verfehlt"
-    const char* word_critical;       // "kritisch"
-    const char* word_angriff;        // "Angriff"
-    const char* word_vert;           // "Vert."
-    const char* word_gg;             // "gg."   (separator "vs.")
-    const char* word_schaden;        // "Schaden"
-    const char* word_von;            // "von"
-    const char* word_auto_hit;       // "Auto-Treffer."
-    const char* word_auto_fail;      // "Auto-Fehlschlag."
+    const char* verb_hit;
+    const char* verb_miss;
+    const char* word_critical;
+    const char* word_angriff;
+    const char* word_vert;
+    const char* word_gg;             // separator "vs."
+    const char* word_schaden;
+    const char* word_von;
+    const char* word_auto_hit;
+    const char* word_auto_fail;
 
-    // Shortened replacements for verbose engine labels in the breakdown.
-    // Length-paired with the source token above; the parser uses these
-    // to compress lines like "Würfelergebnis 14+ Basis 1+ ..." to
-    // "W14+Basis 1+...".
-    const char* short_wuerfel;       // "W"           (no trailing space — value follows immediately)
-    const char* short_gesch;         // "Gesch "      (with trailing space)
-    const char* short_reichweite;    // "Reichweite "
-    const char* short_effekt;        // "Effekt "
-    const char* short_bonus;         // "Bonus"       (no trailing space — value follows " 5")
+    // Shorter replacements for the verbose breakdown labels above, so
+    // "roll 14+ ..." is spoken "R14+ ...".
+    const char* short_wuerfel;       // no trailing space: the value follows
+    const char* short_gesch;
+    const char* short_reichweite;
+    const char* short_effekt;
+    const char* short_bonus;         // no trailing space: " 5" follows
 
-    // ---- Short results-only line labels (Phase 2 spoken form).
-    const char* word_failed;         // "fehlgeschlagen" — miss line: "<actor>, fehlgeschlagen, <feat>"
+    // ---- Results-only line labels.
+    const char* word_failed;         // miss line: "<actor>, failed, <feat>"
 
-    // Engine's trailing duplicate of an applied status ("Auswirkungsstatistik:
-    // <target> ist <status>"). We already fold status into the merged attack
-    // line from the summary tail, so this line is claimed + suppressed.
-    // Non-DE locales: anchor not yet verified — a non-matching sentinel there
-    // leaves the line on the raw-speech fallback (no regression).
-    const char* prefix_auswirkung;   // "Auswirkungsstatistik:"
+    // The engine repeats an applied status ("Effect Application Breakdown:
+    // <target> is <status>"). The status is already on the attack line, so
+    // this line is claimed and suppressed.
+    const char* prefix_auswirkung;
 
-    // Damage-absorption lines ("<name> absorbiert N Punkte Schaden", and the
-    // resistance variant "<name> : Schadensresistenz absorbiert N Punkte
-    // Schaden : M Punkte verbleiben"). The engine fires one per blocked hit,
-    // so a sustained shield spams dozens of lines. We coalesce a burst into a
-    // single debounced total. anchor = the verb common to both forms; same
-    // non-matching-sentinel rule for unverified locales.
-    const char* absorb_anchor;       // "absorbiert"
+    // Damage absorption ("<name> absorbs N damage"): one line per blocked
+    // hit, so a burst is coalesced into one debounced total.
+    const char* absorb_anchor;
 
-    // ---- Ability / grenade / force-power effect sequence (Phase 3).
-    // These power events arrive as separate lines we merge per target:
-    //   use:    "<actor> benutzt <action>."  [+ " Investierte Machtpunkte: ..."]
-    //   save:   "<saver> <SaveType>-Rettungswurf. Erfolg!|Misserfolg! ..."
-    //   damage: "<actor> verletzt <target>: N Schaden (Type: N)"
-    //   status: "Auswirkungsstatistik:<target> ist <status>"  (prefix_auswirkung)
-    // Same non-matching-sentinel rule for unverified locales (anchors only —
-    // output words are never reached when the anchors don't fire).
-    const char* ability_use_marker;  // " benutzt "
-    const char* save_marker;         // "-Rettungswurf."
-    const char* save_success;        // "Erfolg!"
-    const char* save_fail;           // "Misserfolg!"
-    const char* damage_marker;       // " verletzt "
-    const char* word_resists;        // "widersteht" — save-success verb
-    const char* word_save_failed;    // "misslungen" — save-failure tag
+    // ---- Ability, grenade and Force power events, merged per target:
+    //   use:    "<actor> uses <action>."
+    //   save:   "<saver> <SaveType> Save. success!|failure! ..."
+    //   damage: "<actor> damages <target>: N damage (Type: N)"
+    //   status: "Effect Application Breakdown:<target> is <status>"
+    const char* ability_use_marker;
+    const char* save_marker;
+    const char* save_success;
+    const char* save_fail;
+    const char* damage_marker;
+    const char* word_resists;        // save-success verb
+    const char* word_save_failed;    // save-failure tag
 
-    // Defeat/kill line ("<actor> neutralisiert <target>: N EPs"). Spoken
-    // interrupting, so a kill cuts through queued speech.
-    const char* kill_marker;         // "neutralisiert"
+    // Kill line ("<actor> killed <target>"), spoken interrupting.
+    const char* kill_marker;
 
-    // Status-echo copula in "<target> ist <status>" (DE) — the "to be" verb
-    // the engine glues between a creature and its applied status. Used to
-    // lift the status word onto the attack/effect line and to split the
-    // Auswirkungsstatistik echo. Hand-specified per locale (no single TLK
-    // template yields it cleanly — FR phrases immunity without a copula).
-    // Best-effort: if a locale's status line uses a different construction,
-    // the status word is simply omitted (line still suppressed/shortened —
-    // no regression).
-    const char* status_ist_marker;   // " ist " (leading + trailing space)
+    // The copula in "<target> is <status>": lifts the status word onto the
+    // attack or effect line and splits the status echo.
+    const char* status_ist_marker;
 
-    // ---- Blaster-deflection breakdown (strref 42417: "Reflexionsstatistik:
-    // <CUSTOM0> reflektiert Projektil mit <CUSTOM1> = <CUSTOM2> gegen Angriff
-    // <CUSTOM3>"). The engine fires one full breakdown per deflected pellet —
-    // a Jedi tanking turret fire spams hundreds of raw lines. We claim the
-    // line, extract the deflector (between prefix and mid marker), and burst-
-    // coalesce into "<actor> reflektiert N Schüsse" (party members only).
-    // Anchors extracted from all five locale TLKs 2026-07-17.
-    const char* prefix_reflexion;    // "Reflexionsstatistik: "
-    const char* reflect_mid_marker;  // " reflektiert Projektil mit "
-    const char* fmt_deflect_one;     // "%s reflektiert 1 Schuss"
-    const char* fmt_deflect_many;    // "%s reflektiert %d Schüsse"
-
-    // ---- Attack-summary layout.
-    //
-    // DE/EN/FR/IT/ES/RU all render strref 42042 as
-    // "<actor><phrase_hit|phrase_miss><target>", so the phrase does double duty:
-    // it separates actor from target AND carries the hit/miss distinction.
-    // Polish renders it "Atakujacy: <actor> Cel: <target> Atak: <verb>" — the
-    // actor sits behind a label instead of opening the line, the target comes
-    // before the verb, and the verb (the only hit/miss signal) is last. No
-    // choice of separator expresses that, so such locales describe their layout
-    // with the three markers below; phrase_hit / phrase_miss then hold the bare
-    // verbs, matched at the verb position rather than searched line-wide.
-    //
-    // nullptr on every classic locale, which selects the original parse path.
-    // All three belong together — set all or none.
-    const char* summary_actor_prefix;   // "Atakujacy: "
-    const char* summary_target_marker;  // " Cel: "
-    const char* summary_verb_marker;    // " Atak: "
-
-    // Feat clause direction. Classic locales trail the feat name with a marker
-    // ("<name> verwendet."); Polish leads with a label ("Uzyto atutu: <name>").
-    // When true, feat_marker is that leading label and the name runs to the
-    // next '.'. Only consulted on the labelled path.
-    bool feat_marker_leads;
-
-    // Direct-damage line (strref 1403) separator. Classic locales render it
-    // "<actor><damage_marker><target>: N ...", so a ':' closes the target.
-    // Polish renders "<actor> trafia. <target> otrzymuje N pkt obrazen" with no
-    // colon at all, so the target closes at this marker and the number follows
-    // it. nullptr keeps the ':' rule.
-    const char* damage_amount_marker;   // " otrzymuje "
+    // ---- Blaster deflection (strref 42417): one breakdown per deflected
+    // shot, coalesced into "<actor> deflects N shots" (party members only).
+    const char* prefix_reflexion;
+    const char* reflect_mid_marker;
+    const char* fmt_deflect_one;
+    const char* fmt_deflect_many;
 };
 
 const MsgStrings& Get();

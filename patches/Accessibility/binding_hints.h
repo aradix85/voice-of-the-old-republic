@@ -26,7 +26,7 @@
 //
 // Adding a controller wording to an existing hint is two steps and no logic:
 //   1. add a `<Name>Pad` id next to the keyboard id in strings.h, and its text
-//      to each strings_<lang>.cpp;
+//      to strings.cpp;
 //   2. add the pair to kTwins in binding_hints.cpp.
 // Call sites keep calling Text() and never change.
 

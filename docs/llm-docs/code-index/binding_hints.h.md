@@ -12,7 +12,7 @@ The convention every console-era game follows is presence: a controller that is 
 
 Why it lives in its own TU rather than being `if (pad::Connected())` at each call site: there are ~60 hint strings across four surfaces (the F1 list, the Ctrl+F1 context summary, the silent tutorial.2da popups, and the Endar Spire dialogue hints). Sixty copies of the predicate is sixty chances for two surfaces to disagree about which device the player is on — the F1 list naming the D-Pad while the tutorial popup two seconds later names comma and period. One predicate, asked from one place, cannot do that.
 
-Adding a controller wording to an existing hint is two steps and no logic: 1. add a `<Name>Pad` id next to the keyboard id in strings.h, and its text to each strings_<lang>.cpp; 2. add the pair to kTwins in binding_hints.cpp. Call sites keep calling Text() and never change.
+Adding a controller wording to an existing hint is two steps and no logic: 1. add a `<Name>Pad` id next to the keyboard id in strings.h, and its text to strings.cpp; 2. add the pair to kTwins in binding_hints.cpp. Call sites keep calling Text() and never change.
 
 ## Declarations (in source order)
 

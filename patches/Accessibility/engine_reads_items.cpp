@@ -23,7 +23,6 @@
 #include "engine_app.h"     // GetServerApp
 #include "engine_area.h"    // GetObjectDisplayNameByHandle
 #include "log.h"
-#include "strings.h"        // GetLanguage — the game-language substring id
 #include "engine_offsets_select.h"
 
 namespace acc::engine {
@@ -307,21 +306,9 @@ int ReadItemRowCharges(void* rowControl) {
 
 namespace {
 
-// The dialog.tlk LanguageID the game runs in — the `language` half of a
-// CExoLocString substring id. Russian (Allard) declares the English slot.
-uint32_t GameLanguageId() {
-    using L = acc::strings::Lang;
-    switch (acc::strings::GetLanguage()) {
-        case L::Fr: return 1;
-        case L::De: return 2;
-        case L::It: return 3;
-        case L::Es: return 4;
-        case L::Pl: return 5;
-        case L::En:
-        case L::Ru:
-        default:    return 0;
-    }
-}
+// The English dialog.tlk LanguageID: the `language` half of a CExoLocString
+// substring id.
+constexpr uint32_t kEnglish = 0;
 
 }  // namespace
 
@@ -329,13 +316,11 @@ bool ReadLocStringOtherLanguage(void* base, size_t locStringOffset,
                                 char* outBuf, size_t bufSize) {
     if (!base || !outBuf || bufSize < 2) return false;
     outBuf[0] = '\0';
-    const uint32_t gameLang = GameLanguageId();
     const uint32_t kNoId = 0xFFFFFFFF;
 
     // Entries, not text: the choice needs the whole list seen first (a
-    // game-language substring anywhere means the engine's own text stands).
-    void* english = nullptr;
-    void* first   = nullptr;
+    // English substring anywhere means the engine's own text stands).
+    void* first = nullptr;
     __try {
         void* internal = *reinterpret_cast<void**>(
             reinterpret_cast<unsigned char*>(base) + locStringOffset +
@@ -355,8 +340,7 @@ bool ReadLocStringOtherLanguage(void* base, size_t locStringOffset,
                 const uint32_t id = *reinterpret_cast<uint32_t*>(
                     reinterpret_cast<unsigned char*>(entry) +
                     kExoLocStringEntryIdOffset);
-                if (id != kNoId && (id >> 1) == gameLang) return false;
-                if (!english && id != kNoId && (id >> 1) == 0) english = entry;
+                if (id != kNoId && (id >> 1) == kEnglish) return false;
                 if (!first) first = entry;
             }
             node = *reinterpret_cast<void**>(
@@ -366,14 +350,8 @@ bool ReadLocStringOtherLanguage(void* base, size_t locStringOffset,
         return false;
     }
 
-    // ReadCExoString is SEH-guarded itself and false on empty text, so an
-    // empty English entry still falls back to the first one.
-    if (english && ReadCExoString(english, kExoLocStringEntryTextOffset,
-                                  outBuf, bufSize)) {
-        return true;
-    }
-    outBuf[0] = '\0';
-    if (first && first != english &&
+    // ReadCExoString is SEH-guarded itself and false on empty text.
+    if (first &&
         ReadCExoString(first, kExoLocStringEntryTextOffset, outBuf, bufSize)) {
         return true;
     }
@@ -665,7 +643,7 @@ bool BuildItemDescriptionBlocks(void* item, ItemDescriptionBlocks* out) {
     bool descViaTlk = ReadItemDescriptionViaTlk(item, out->description,
                                                 sizeof(out->description),
                                                 descStrref);
-    // No strref and no substring in the game's language: the engine's tail is
+    // No strref and no English substring: the engine's tail is
     // only its "no description" placeholder, so take the text the item does
     // carry in another language (English-only mod items).
     bool descOtherLang = false;

@@ -1,49 +1,1207 @@
+// The mod's spoken text: the English string for every strings.h Id.
+// Plain ASCII.
+
 #include "strings.h"
 
 namespace acc::strings {
 
-namespace {
-// German default per user direction at Phase 2 lay-off 4 wiring. Phase 7
-// (user options UI, deferred) will surface a runtime toggle; for now,
-// SetLanguage is the only switch.
-Lang g_lang = Lang::De;
-}  // namespace
-
-void SetLanguage(Lang l) { g_lang = l; }
-Lang GetLanguage()       { return g_lang; }
-
 const char* Get(Id id) {
-    switch (g_lang) {
-        case Lang::En: return lang_en::Get(id);
-        case Lang::De: return lang_de::Get(id);
-        case Lang::Fr: return lang_fr::Get(id);
-        case Lang::It: return lang_it::Get(id);
-        case Lang::Es: return lang_es::Get(id);
-        case Lang::Ru: return lang_ru::Get(id);
-        case Lang::Pl: return lang_pl::Get(id);
+    switch (id) {
+        case Id::CategoryDoor:        return "Door";
+        case Id::CategoryNpc:         return "NPC";
+        case Id::CategoryContainer:   return "Container";
+        case Id::CategoryItem:        return "Item";
+        case Id::CategoryLandmark:    return "Landmark";
+        case Id::CategoryTransition:  return "Transition";
+        case Id::CategoryMapHint:     return "Map hint";
+
+        case Id::EmptyDoors:          return "No doors in range";
+        case Id::EmptyNpcs:           return "No NPCs in range";
+        case Id::EmptyContainers:     return "No containers in range";
+        case Id::EmptyItems:          return "No items in range";
+        case Id::EmptyLandmarks:      return "No landmarks in range";
+        case Id::EmptyTransitions:    return "No transitions in range";
+        case Id::EmptyMapHints:       return "No map hints on this map";
+        case Id::EmptyAll:            return "No objects in range";
+        case Id::CycleNoTarget:       return "No target";
+
+        case Id::MapPinNoText:        return "Marker";
+        case Id::MapPinAltDashUnsupported: return "Marker: Alt+Dash not supported";
+        case Id::MapPinInteractHint:       return "Marker. Press Ctrl+Dash for the route.";
+
+        case Id::FmtSavedMarkerAutoNumber:   return "Marker %d";
+        case Id::FmtSavedMarkerAutoWithRoom: return "%s - Marker %d";
+        case Id::FmtSavedMarkerPlaced:       return "Marker saved: %s";
+        case Id::SavedMarkerFailed:          return "Could not save marker";
+
+        case Id::HintBackEntrance:    return "Back entrance";
+        case Id::HintRebelCorpse:     return "Dead rebel";
+        case Id::HintBanthaHerd:      return "Bantha herd";
+        case Id::MapNoteFrontExit:    return "Front exit";
+        case Id::MapNoteBackExit:     return "Back exit";
+
+        case Id::FmtAnnounceWithClock: return "%s, %d o'clock, %d metres";
+        case Id::FmtAnnounceNoClock:   return "%s, %d metres";
+        case Id::FmtCategoryItem:      return "%s. %s";
+        case Id::FmtTrapDetected:      return "Trap detected: %s";
+        case Id::MineNoun:             return "Mine";
+
+        case Id::FmtGuidingTo:         return "Guiding to %s";
+        case Id::FmtGuidingFailed:     return "Guidance to %s failed";
+        case Id::GuidanceNoFocus:      return "No object focused";
+        case Id::GuidingToPoint:       return "Walking to point";
+
+        case Id::MovementCancelled:    return "Movement cancelled";
+        case Id::InteractWayBlocked:   return "Movement cancelled, way blocked";
+        case Id::FmtInteractWayBlockedTarget: return "Movement cancelled, way blocked. %s, %d metres, %s";
+        case Id::SpectatorBattleDoomed: return "The Republic soldiers are lost. You cannot help them. The way is blocked. Hurry on to the bridge!";
+
+        // Beacon (Ctrl+-).
+        case Id::FmtRouteTo:            return "Route to %s";
+        case Id::FmtRouteNoPath:      return "No path from here to %s. It may be reachable from another side.";
+        case Id::FmtRouteMapUnreadable: return "No path to %s: the area map could not be read.";
+        case Id::RouteAlreadyAtDest:  return "Already at destination";
+        // Route description.
+        // Example: "Route to Door (25 metres): 5 metres North,
+        //           4 metres Northeast, 6 metres East. No transition."
+        case Id::FmtRouteHeader:       return "Route to %s (%d metres): %s. %s.";
+        case Id::FmtRouteSegment:      return "%d metres %s";
+        case Id::RouteJoinSeparator:   return ", ";
+        case Id::RouteOneTransition:   return "One transition";
+        case Id::RouteNoTransition:    return "No transition";
+
+        case Id::FmtInteractTalk:      return "Talk to %s";
+        case Id::FmtInteractOpen:      return "Use %s";
+        case Id::FmtInteractTake:      return "Pick up %s";
+        case Id::FmtInteractFailed:    return "Interact with %s failed";
+        case Id::FmtInteractEngine:    return "%s %s";
+        case Id::FmtInteractRadial:    return "Action menu, %s";
+        case Id::FmtMedPickerApplyTo:  return "Apply to: %s";
+        case Id::FmtInteractNoActionsRedirect: return "No actions available for %s. Press Enter to activate.";
+        case Id::FmtInteractNoActions: return "No actions available for %s.";
+        case Id::DoorSealedNoOpen: return "Sealed. It will not open.";
+        case Id::EndarDoorBattleHint: return "This door stays sealed until the battle in this area is over.";
+        case Id::EndarStuckReloadHint: return "If there are no enemies left nearby, the tutorial may be stuck. Load an earlier save from before this room.";
+
+        case Id::FmtActionBarColumnEmpty: return "Column %d is empty";
+        case Id::FmtFireAtPosition:       return "%s, position %d";
+        case Id::FmtFireQueueFull:        return "%s, queue full";
+        case Id::ActionMenuClosed:        return "Action menu closed.";
+        case Id::ActionRefused:           return "Not possible.";
+
+        case Id::MenuCatAttacks:       return "Attacks";
+        case Id::MenuCatForcePowers:   return "Force Powers";
+        case Id::MenuCatItems:         return "Items";
+        case Id::MenuCatSelfPowers:    return "Self Powers";
+        case Id::MenuCatMedical:       return "Medical";
+        case Id::MenuCatMisc:          return "Miscellaneous";
+        case Id::MenuCatExplosives:    return "Explosives";
+        case Id::MenuCatCombatBehaviour: return "Combat Behaviour";
+        case Id::MenuCatForms:           return "Forms";
+        case Id::FmtMenuCatMulti:      return "%s: %s, %d options";
+        case Id::FmtMenuCatSingle:     return "%s: %s";
+        case Id::FmtMenuPlainMulti:    return "%s, %d options";
+        case Id::FmtMenuCategoryEmpty: return "%s: empty";
+
+        case Id::NoTooltipAvailable:   return "No description available";
+
+        case Id::ContainerEmpty:       return "Empty";
+        case Id::ContainerOneItem:     return "1 item";
+        case Id::FmtContainerItems:    return "%d items";
+        case Id::FmtContainerItemAt:   return "%s, %d of %d";
+        case Id::ContainerEmptySuffix: return "empty";
+        case Id::PlaceableStateCaptive:     return "captive";
+        case Id::PlaceableStateFreed:       return "freed";
+        case Id::PlaceableStateActive:      return "active";
+        case Id::PlaceableStateDeactivated: return "deactivated";
+        case Id::FmtItemStackSuffix:   return "%d in stack";
+        case Id::FmtItemChargeSuffix:  return "%d charges";
+
+        case Id::EquipSlotHead:        return "Head";
+        case Id::EquipSlotImplant:     return "Implant";
+        case Id::EquipSlotBody:        return "Body";
+        case Id::EquipSlotArmL:        return "Left arm";
+        case Id::EquipSlotArmR:        return "Right arm";
+        case Id::EquipSlotWeapL:       return "Left weapon";
+        case Id::EquipSlotWeapR:       return "Right weapon";
+        case Id::EquipSlotBelt:        return "Belt";
+        case Id::EquipSlotHands:       return "Hands";
+
+        case Id::FmtEquipSlotItem:     return "%s, %s";
+        case Id::FmtEquipSlotEmpty:    return "%s, empty";
+        case Id::EquipUnequipped:      return "Equipment removed";
+        case Id::FmtEquipStillEquipped: return "Item still equipped: %s";
+        case Id::FmtWeaponSwitchedOne: return "Weapons switched: %s";
+        case Id::FmtWeaponSwitchedTwo: return "Weapons switched: %s and %s";
+        case Id::WeaponSwitchedBare:   return "Weapons switched";
+        case Id::EquipSetActive:       return "active";
+        case Id::EquipSetSecondary:    return "secondary";
+        case Id::FmtEquipVitality:     return "Vitality %s";
+        case Id::FmtEquipDefense:      return "Defense %s";
+        case Id::FmtEquipAttack:       return "Attack %s";
+        case Id::FmtEquipAttackDual:   return "Attack left %s, right %s";
+        case Id::FmtEquipDamage:       return "Damage %s";
+        case Id::FmtEquipDamageDual:   return "Damage left %s, right %s";
+
+        case Id::FmtTransitionArea:    return "Area: %s";
+        case Id::FmtTransitionRoomIndex: return "Room %d";
+        case Id::FmtTransitionLoading: return "Loading: %s";
+
+        case Id::DoorOpen:             return "open";
+        case Id::DoorLocked:           return "locked";
+        case Id::DoorUnlocked:         return "unlocked";
+        case Id::DoorCosmetic:         return "cosmetic";
+
+        case Id::DirNorth:             return "North";
+        case Id::DirNortheast:         return "Northeast";
+        case Id::DirEast:              return "East";
+        case Id::DirSoutheast:         return "Southeast";
+        case Id::DirSouth:             return "South";
+        case Id::DirSouthwest:         return "Southwest";
+        case Id::DirWest:              return "West";
+        case Id::DirNorthwest:         return "Northwest";
+
+        case Id::StuckFreeDirsPrefix:  return "Clear";
+        case Id::StuckAllBlocked:      return "All blocked";
+
+
+        case Id::FmtFacingMap:           return "Facing %d degrees on the map, %s.";
+
+        case Id::FmtFacingWorld:              return "Facing %s.";
+
+        case Id::MouseLookOn:          return "Mouse Look on";
+        case Id::MouseLookOff:         return "Mouse Look off";
+
+        case Id::ViewModeOn:           return "View mode on";
+        case Id::ViewModeOff:          return "View mode off";
+        case Id::ViewModeWall:         return "Wall";
+
+        case Id::FmtSaveLoadRow:       return "%s, %s, %s, %d of %d";
+        case Id::FmtSaveLoadRowNoLoc:  return "%s, %d of %d";
+        case Id::FmtSaveLoadCharacter: return "%s, saves: %d";
+
+        case Id::LevelUpOpen:          return "Level Up";
+        case Id::LevelUpFailed:        return "Level Up failed";
+        case Id::LevelUpAlreadyOpen:   return "Level Up already open";
+        case Id::LevelUpNotReady:      return "Not enough experience to level up yet";
+        case Id::LevelUpScreenHint:    return "Use the arrow keys to choose a category and press Enter to open it. Spend your points there, then choose Accept to finish.";
+        case Id::LevelUpGrantedPopupHint: return "Press Enter to confirm.";
+
+        case Id::PortraitLabel:        return "Portrait";
+        case Id::FmtPortraitArrow:     return "%s: %s";
+        case Id::FmtPortraitArrowId:   return "%s %d";
+        case Id::PortraitGenderFemale: return "female";
+        case Id::PortraitGenderMale:   return "male";
+        case Id::PortraitRaceAsian:    return "Asian";
+        case Id::PortraitRaceDark:     return "dark-skinned";
+        case Id::PortraitRaceLight:    return "light-skinned";
+        case Id::PortraitRaceTypeH:    return "type H";
+        case Id::FmtPortraitDescription: return "%s %s %d";
+        case Id::FmtClassNameWithDescription: return "%s. %s";
+
+        case Id::FmtPartyPortraitInTeam:    return "%s, in party";
+        case Id::FmtPartyPortraitAvailable: return "%s, available";
+        case Id::FmtPartyPortraitInTeamLocked: return "%s, in party, locked";
+        case Id::FmtPartyPortraitUnavailable:  return "%s, unavailable";
+        case Id::PartyPortraitEmpty:           return "Empty slot";
+        case Id::PartySelectionFull:        return "Party full";
+
+        case Id::DisabledSuffix:       return ", unavailable";
+        case Id::ToggleOn:             return ", on";
+        case Id::ToggleOff:            return ", off";
+        case Id::FmtSliderValueLabeled: return "%s %u of %u";
+        case Id::FmtSliderValue:       return "%u of %u";
+        case Id::EquipMenuName:        return "Equipment";
+        case Id::FmtLevelUpDoStepFirst: return "Finish %s first.";
+        case Id::LevelUpStepLocked:    return "Not your turn yet.";
+
+        case Id::FmtCharSheetClass:    return "%s. ";
+        case Id::FmtCharSheetLevel:    return "Level %s. ";
+        case Id::FmtCharSheetXp:       return "Experience %s of %s. ";
+        case Id::FmtCharSheetHp:       return "Hit points %s. ";
+        case Id::FmtCharSheetFp:       return "Force points %s. ";
+        case Id::FmtCharSheetStr:      return "Strength %s%s%s. ";
+        case Id::FmtCharSheetDex:      return "Dexterity %s%s%s. ";
+        case Id::FmtCharSheetCon:      return "Constitution %s%s%s. ";
+        case Id::FmtCharSheetInt:      return "Intelligence %s%s%s. ";
+        case Id::FmtCharSheetWis:      return "Wisdom %s%s%s. ";
+        case Id::FmtCharSheetCha:      return "Charisma %s%s%s. ";
+        case Id::FmtCharSheetAlignment: return "Alignment %u of %u.";
+
+        case Id::FmtChargenAttrInfoSuffix:               return "Modifier %s, Cost %s";
+        case Id::FmtChargenAttrValueChangeBare:          return "%s, remaining points %s";
+        case Id::FmtChargenAttrValueChangeWithMod:       return "%s, Modifier %s, remaining points %s";
+        case Id::FmtChargenAttrValueChangeWithCost:      return "%s, remaining points %s, Cost %s";
+        case Id::FmtChargenAttrValueChangeWithModAndCost: return "%s, Modifier %s, remaining points %s, Cost %s";
+
+        case Id::FmtChargenSkillInfoSuffix:  return "Cost %s";
+        case Id::FmtChargenSkillValueChange: return "%s, remaining points %s";
+
+        case Id::ChargenFeatGrantedTitle:    return "You receive these Talents";
+        case Id::FmtChargenFeatGrantedRow:   return "%s, %d of %d";
+
+        case Id::FmtChargenFeatChartCell:    return "%s, %s";
+        case Id::ChargenFeatStatusAvailable: return "available";
+        case Id::ChargenFeatStatusExisting:  return "already learned";
+        case Id::ChargenFeatStatusGranted:   return "automatically granted";
+        case Id::ChargenFeatStatusLocked:    return "prerequisite missing";
+        case Id::ChargenFeatStatusChosen:    return "chosen";
+
+        case Id::EditboxRole:                return "edit field";
+        case Id::EditboxEmpty:               return "empty";
+        case Id::FmtKeyBinding:              return "%s: %s";
+        case Id::KeyBindingFixed:            return " (not remappable)";
+        case Id::FmtKeyBindCapture:          return "Press the new key for %s";
+        case Id::KeyBindNotChangeable:       return "This binding cannot be changed";
+
+        case Id::CombatBegins:               return "Combat begins";
+        case Id::CombatEnds:                 return "Combat ends";
+        case Id::CombatLeaderAtPeace:        return "Not in combat";
+
+        case Id::PcStatNoCharacter:          return "No character status available.";
+
+        // Brief is composed in BuildTargetCombatBrief: name, then optional
+        // condition / distance / effects / weapons clauses each with a
+        // leading space and trailing period.
+        case Id::FmtTargetCombatBrief:       return "%s.";
+        case Id::FactionHostile:             return "hostile";
+        case Id::FactionFriendly:            return "friendly";
+        case Id::FactionNeutral:             return "neutral";
+
+        case Id::FmtBriefCondition:          return " %s.";
+        case Id::FmtBriefDistanceMeters:     return " %d meters.";
+        case Id::FmtBriefEffects:            return " %s.";
+        case Id::FmtBriefWielding:           return " %s.";
+        case Id::FmtBriefOffHand:            return " off-hand %s.";
+        case Id::FmtSelfStatusHp:            return "%d hit points.";
+        case Id::FmtSelfStatusHpOf:          return "%d of %d hit points.";
+        case Id::FmtSelfStatusFpOf:          return "%d of %d Force points.";
+
+        case Id::ExamineNoTarget:            return "No target to examine.";
+        case Id::ExamineFailed:              return "Examine failed.";
+
+        case Id::FmtExamineOpened:           return "Examine: %s. %d entries.";
+        case Id::FmtExamineRowOf:            return "%s. %d of %d.";
+        case Id::ExamineViewClosed:          return "Examine closed.";
+        case Id::FmtExamineRowName:          return "Name: %s";
+        case Id::FmtExamineRowFaction:       return "Disposition: %s";
+        case Id::FmtExamineRowHp:            return "Hit points: %d";
+        case Id::FmtExamineRowDistance:      return "Distance: %d meters";
+        case Id::FmtExamineRowWeapon:        return "Main hand: %s";
+        case Id::ExamineRowWeaponNone:       return "Main hand: none";
+        case Id::FmtExamineRowEffect:        return "Effect: %s";
+        case Id::FmtExamineRowFeat:          return "Feat: %s";
+        case Id::FmtExamineRowEffectUnknown: return "Effect #%d";
+        case Id::FmtExamineRowFeatUnknown:   return "Feat #%d";
+        case Id::ExamineRowNoEffects:        return "No active effects";
+        case Id::ExamineRowNoFeats:          return "No feats";
+
+        case Id::FmtExamineRowHpFull:        return "Hit points: %d of %d";
+        case Id::FmtExamineRowLevel:         return "Level: %d";
+        case Id::FmtExamineRowCondition:     return "Condition: %s";
+        case Id::DamageLevel0Healthy:        return "uninjured";
+        case Id::DamageLevel1Light:          return "lightly wounded";
+        case Id::DamageLevel2Wounded:        return "wounded";
+        case Id::DamageLevel3Badly:          return "badly wounded";
+        case Id::DamageLevel4Dying:          return "dying";
+        case Id::DamageLevel5Dead:           return "dead";
+        case Id::FmtExamineRowOffHand:       return "Off hand: %s";
+        case Id::FmtExamineRowHead:          return "Head: %s";
+        case Id::FmtExamineRowTorso:         return "Armor: %s";
+        case Id::FmtExamineRowHands:         return "Hands: %s";
+        case Id::ExamineRowStatusBlind:      return "Blind";
+
+        case Id::FmtQueueOpen:               return "Action queue, %d actions.";
+        case Id::QueueEmpty:                 return "Action queue is empty.";
+        case Id::FmtQueueRow:                return "%s: %s %s, %d of %d.";
+        case Id::FmtQueueRemoved:            return "Removed: %s.";
+        case Id::QueueCleared:               return "Queue cleared.";
+        case Id::QueueClosed:                return "Queue closed.";
+        case Id::QueueRemoveFailed:          return "Cannot remove this action.";
+        case Id::QueueVerbAttack:            return "Attack";
+        case Id::QueueVerbCastForce:         return "Cast Force power";
+        case Id::QueueVerbItemCast:          return "Use item";
+        case Id::QueueVerbEquip:             return "Equip";
+        case Id::QueueVerbUnequip:           return "Unequip";
+        case Id::QueueVerbUseTalent:         return "Use talent";
+        case Id::QueueVerbUnknown:           return "Action";
+
+        // Skeleton: max-HP is not yet read safely (suspected engine
+        // accessor), so the hit / crit messages omit the "X of Y hp"
+        // tail. Args reduced to (attacker, target, damage).
+
+
+
+        case Id::DialogNoReplyOptions:          return "No reply options";
+        case Id::MessagesTitleCombatLog:     return "Combat log.";
+        case Id::FmtMessagesView:            return "%s, %d entries";
+        case Id::FmtMessagesViewEmpty:       return "%s, empty";
+
+        case Id::MapPrevNote:                return "Previous map note";
+        case Id::MapNextNote:                return "Next map note";
+
+        case Id::MapCursorUnexplored:        return "Unexplored";
+        case Id::MapCursorEdge:              return "Edge of the map";
+        case Id::MapCursorWaypointPOI:       return "Point of interest";
+        case Id::MapCursorJunction:          return "Junction";
+        case Id::FmtMapCursorDeadEnd:        return "Dead end, %s";
+        case Id::FmtMapCursorJunctionDirs:   return "Junction, %s";
+        case Id::FmtMapCursorCorridorDir:    return "%s";
+        case Id::MapCursorDoorNoun:          return "Door";
+        case Id::FmtMapCursorDoor:           return "%s %s";
+        case Id::FmtMapCursorDoorTransition: return "%s %s to %s";
+        case Id::FmtMapCursorDoorLandmark:   return "%s %s, %s";
+        case Id::FmtMapCursorJunctionDeadEndExit: return "dead end %s";
+        case Id::FmtRampExit:                return "ramp %s";
+        case Id::AxisNorthSouth:             return "north-south";
+        case Id::AxisEastWest:               return "east-west";
+        case Id::AreaNoun:                   return "Area";
+        case Id::AreaNounLarge:              return "Large area";
+        case Id::FmtAreaAxisExits:           return "%s %s. Exits: %s";
+        case Id::FmtAreaExits:               return "%s. Exits: %s";
+        case Id::FmtAreaAxisOnly:            return "%s %s";
+        case Id::FarAtNorth:                 return "far to the north";
+        case Id::FarAtSouth:                 return "far to the south";
+        case Id::FarAtEast:                  return "far to the east";
+        case Id::FarAtWest:                  return "far to the west";
+
+        case Id::FmtStorePriceBuyFinite:    return "Price %d credits, stock %d";
+        case Id::FmtStorePriceBuyUnlimited: return "Price %d credits, unlimited stock";
+        case Id::FmtStorePriceSell:         return "Price %d credits, you own %d";
+        case Id::StoreModeBuy:              return "Buy mode";
+        case Id::StoreModeSell:             return "Sell mode";
+        case Id::FmtCraftCost:              return "Costs %d";
+        case Id::FmtCraftYield:             return "Returns %d";
+        case Id::StoreCannotSell:           return "Cannot be sold";
+        case Id::StoreCannotBuy:            return "Cannot be bought";
+        case Id::FmtStoreSoldFor:           return "Sold for %d credits";
+        case Id::FmtStoreBoughtFor:         return "Bought for %d credits";
+
+        // ----- Pazaak -----
+        case Id::PazaakStart:            return "Pazaak. Press C to read your hand, T for the table.";
+        case Id::PazaakEmpty:            return "empty";
+        case Id::PazaakFaceDown:         return "face down";
+        case Id::PazaakBoardEmpty:       return "empty";
+        case Id::PazaakFmtPlus:          return "plus %d";
+        case Id::PazaakFmtMinus:         return "minus %d";
+        case Id::PazaakFmtPlain:         return "%d";
+        case Id::PazaakFmtFlipBoth:      return "plus or minus %d";
+        case Id::PazaakFmtFlipCurrently: return "%s, currently %s";
+        case Id::PazaakFmtCardTiebreaker: return "%s, tiebreaker";
+        case Id::PazaakCardDouble:       return "double card";
+        case Id::PazaakCardTwoFour:      return "2 or 4";
+        case Id::PazaakCardThreeSix:     return "3 or 6";
+        case Id::PazaakCardValue:        return "value card";
+        case Id::PazaakFmtYouDrew:       return "You drew %s. Your total %d.";
+        case Id::PazaakOverTwenty:       return "Over twenty.";
+        case Id::PazaakFmtYouPlayed:     return "Played %s. Your total %d.";
+        case Id::PazaakYourTurn:         return "Your turn.";
+        case Id::PazaakTurnEnded:        return "Turn ended.";
+        case Id::PazaakFmtOppDrew:       return "Opponent drew %s. Total %d.";
+        case Id::PazaakFmtOppPlayed:     return "Opponent played %s. Total %d.";
+        case Id::PazaakFmtOppStands:     return "Opponent stands at %d.";
+        case Id::PazaakFmtYouStand:      return "You stand at %d.";
+        case Id::PazaakFmtWinSet:        return "You win the set. %d to %d.";
+        case Id::PazaakFmtLoseSet:       return "You lose the set. %d to %d.";
+        case Id::PazaakWinMatch:         return "You win the match!";
+        case Id::PazaakLoseMatch:        return "You lose the match.";
+        case Id::PazaakTieReplay:        return "Tie. Replaying set.";
+        case Id::PazaakFmtHand:          return "Hand: %s";
+        case Id::PazaakHandEmpty:        return "Hand empty.";
+        case Id::PazaakFmtYourBoard:     return "Your board: %s, total %d.";
+        case Id::PazaakFmtOppBoard:      return "Opponent board: %s, total %d.";
+        case Id::PazaakNoPlayable:       return "No cards to play.";
+        case Id::PazaakNotYourTurn:      return "Not your turn.";
+        case Id::PazaakChooseSign:       return "Choose sign. Left or right to change, Enter to play.";
+        case Id::PazaakChooseSignAndValue:
+            return "Choose sign and value. Left or right for the sign, up or down for the value, Enter to play.";
+        case Id::PazaakCancelled:        return "Cancelled.";
+        case Id::PazaakDeckAvailable:    return "%s, %d available";
+        case Id::PazaakDeckNoneLeft:     return "%s, none left";
+        case Id::PazaakDeckSlotFilled:   return "Deck slot %d: %s";
+        case Id::PazaakDeckSlotEmpty:    return "Deck slot %d: empty";
+        case Id::PazaakDeckPlay:         return "Play, %d of 10 in deck";
+        case Id::PazaakDeckCleared:      return "Deck cleared.";
+        case Id::PazaakDeckAdded:        return "Added %s. %d of 10.";
+        case Id::PazaakDeckRemoved:      return "Removed %s.";
+        case Id::PazaakDeckFull:         return "Deck full.";
+        case Id::PazaakFmtOppHand:       return "Opponent has %d hand cards.";
+        case Id::PazaakStandLabel:       return "Stand";
+        case Id::PazaakEndTurnLabel:     return "End turn";
+        case Id::PazaakWagerLess:        return "Decrease wager";
+        case Id::PazaakWagerMore:        return "Increase wager";
+        case Id::PazaakFmtWager:         return "Wager %d of %d maximum.";
+        case Id::PazaakFmtWagerRow:      return "Wager %d. %s";
+        case Id::FmtStoreNotEnoughCredits:  return "Not enough credits, need %d, have %d";
+        case Id::JournalQuestItemsButton:   return "Quest items";
+
+        case Id::FmtCredits:                return "Credits: %s";
+
+        case Id::WorkbenchSlotWeapon1:       return "Upgrade slot 1";
+        case Id::WorkbenchSlotWeapon2:       return "Upgrade slot 2";
+        case Id::WorkbenchSlotWeapon3:       return "Upgrade slot 3";
+        case Id::WorkbenchSlotSaberCrystal1: return "Crystal slot 1";
+        case Id::WorkbenchSlotSaberCrystal2: return "Crystal slot 2";
+        case Id::WorkbenchSlotSaberCrystal3: return "Crystal slot 3";
+        case Id::WorkbenchSlotSaberCrystal4: return "Crystal slot 4";
+        case Id::WorkbenchSlotSaberCrystal5: return "Crystal slot 5";
+        case Id::WorkbenchSlotSaberCrystal6: return "Crystal slot 6";
+        case Id::WorkbenchItemsEmpty:        return "No upgradable items in this category";
+        case Id::WorkbenchUpgradesEmpty:     return "No compatible upgrades in inventory";
+        case Id::WorkbenchSlotInstalled:     return "Upgrade installed";
+        case Id::WorkbenchSlotRemoved:       return "Upgrade removed";
+        case Id::WorkbenchSlotNoMatch:       return "No matching upgrade in inventory";
+        case Id::WorkbenchSlotFilled:        return "occupied";
+        case Id::WorkbenchSlotPeekEmpty:     return "Empty slot, no upgrade installed";
+        case Id::WorkbenchFmtSlotItem:       return "%s, holds %s";
+        case Id::WorkbenchPickerInstalled:   return "installed";
+        case Id::WorkbenchPickerNone:        return "No item";
+        case Id::WorkbenchPickerUnnamed:     return "Upgrade";
+        case Id::WorkbenchUpgradeFailed:     return "Upgrade not possible";
+        case Id::WorkbenchModeCreate:        return "Create mode";
+        case Id::WorkbenchModeBreakdown:     return "Breakdown mode";
+        case Id::FmtWorkbenchUpgradeTitle:   return "Upgrade: %s";
+
+        case Id::SoundOptionsMovieVolume:    return "Movie volume";
+
+        case Id::SwoopRaceStarted:
+            // Terse opener ? concatenated with SwoopRaceControls below
+            // into one utterance by swoop_race.cpp::AnnounceEntry.
+            return "Swoop race.";
+        case Id::SwoopRaceControls:
+            // Short cheat sheet. Full keymap (Enter/Mouse 1 also work,
+            // Pause pauses the race, etc.) is in the manual ? verbose
+            // spoken intro got in the way of the start countdown.
+            return "Press W or space to shift up on the audio cue. Steer with A and D. Avoid the obstacles and hit the accelerator pads to beat the time.";
+        case Id::SwoopRaceControlsK2:
+            // KOTOR 2: Space jumps (the engine's own binding); the shift, which
+            // the engine only has on the left mouse button, gets W — see strings.h.
+            return "Press W to shift up on the audio cue and space to jump over an obstacle. Steer with A and D. Avoid the obstacles and hit the accelerator pads to beat the time.";
+        case Id::SwoopRaceStuckHint:
+            return "Steer aside, then W and Space.";
+        case Id::SwoopRaceStuckHintLeft:
+            return "Steer left, then W.";
+        case Id::SwoopRaceStuckHintRight:
+            return "Steer right, then W.";
+        case Id::SwoopRaceStuckBarWallLeft:
+            return "Steer left, then Space, then W.";
+        case Id::SwoopRaceStuckBarWallRight:
+            return "Steer right, then Space, then W.";
+        case Id::SwoopRaceStuckBarStrip:
+            return "Follow the tone, then W.";
+        case Id::SwoopRaceStuckBarJump:
+            return "Space, then W.";
+        case Id::SwoopRaceWrecked:
+            return "Swoop wrecked. Race over.";
+        case Id::SwoopRaceEnded:
+            return "Swoop race ended.";
+        case Id::FmtSwoopRaceGear:
+            return "Gear %d";
+        case Id::FmtSwoopRaceTime:
+            // Time-FIRST: the post-race auto-movement fires other speech that
+            // interrupts this cue, so the number must lead to survive a cut.
+            return "Time: %d.%02d seconds.";
+
+        case Id::TurretGameStarted:
+            // Terse opener ? concatenated with TurretGameControls below
+            // into one utterance by turret_game.cpp::AnnounceEntry.
+            return "Turret.";
+        case Id::TurretGameControls:
+            // Aiming AND firing are both native keyboard actions (W/S
+            // raise-lower, A/D swing, Space/Enter fire) ? live-confirmed
+            // via the reticle diagnostic. The opener's whole job is to
+            // tell the player those keys exist; kept terse so it doesn't
+            // bleed into the start of combat.
+            return "Aim with W, A, S and D. Space to fire. Q and E pick targets.";
+        case Id::TurretGameEnded:
+            return "Turret ended.";
+        case Id::FmtTurretTarget:
+            return "Fighter %d, %d meters";
+        case Id::FmtTurretDestroyed:
+            return "Fighter %d destroyed.";
+        case Id::TurretNoTargets:
+            return "No targets.";
+        case Id::FmtTurretTargetNamed:
+            return "%s %d, %d meters";
+        case Id::FmtTurretDestroyedNamed:
+            return "Target destroyed: %s %d.";
+        case Id::FmtTurretEscapedNamed:
+            return "Escaped: %s %d.";
+        case Id::TurretUnitTarget:
+            return "Target";
+
+        case Id::ModSettingsRootLabel:        return "Mod settings";
+        case Id::ModSettingsOpened:           return "Mod settings opened";
+        case Id::ModSettingsClosed:           return "Mod settings closed";
+        case Id::ModSettingExtendedCycling:   return "Map-wide object selection";
+        case Id::ModSettingRoomShapes:        return "Room shape descriptions";
+        case Id::ModSettingHumanSubtitles:    return "Read voiced-speaker subtitles";
+        case Id::ModSettingTurretAutoAim:     return "Autoaiming";
+        case Id::ModSettingSkipIntros:        return "Skip launch intro movies";
+        case Id::ModSettingSkipIntrosOnNextLaunch: return "Intros will be skipped on next launch.";
+        case Id::ModSettingPlayIntrosOnNextLaunch: return "Intros will play on next launch.";
+        case Id::ModSettingSkipIntrosToggleFailed: return "Could not toggle intro movies. Files may have been removed.";
+        case Id::ModSettingStateOn:           return "on";
+        case Id::ModSettingStateOff:          return "off";
+        case Id::FmtModSettingOption:         return "%s: %s";
+        case Id::ModSettingCueVolume:         return "Hint sound volume";
+        case Id::FmtModSettingSlider:         return "%s: %d percent";
+        case Id::ModSettingSupportModder:           return "Support the modder";
+        case Id::ModSettingLatestChanges:           return "Latest changes";
+        case Id::ModSettingOpenReadme:              return "Open the guide";
+        case Id::ModSettingLinkOpened:              return "Opening in your browser.";
+        case Id::ModSettingLinkFailed:              return "Could not open the link.";
+
+        case Id::ModSettingAudioGlossary:           return "Audio glossary";
+        case Id::ModSettingsAudioGlossaryOpened:    return "Audio glossary opened";
+        case Id::GlossaryEntrySwoopAccelpadBoost:   return "Swoop accelerator pad";
+        case Id::GlossaryEntrySwoopObstacleWarn:    return "Swoop obstacle warning";
+        case Id::GlossaryEntrySwoopWallImpact:      return "Swoop wall impact";
+        case Id::GlossaryEntrySwoopAligned:         return "Swoop on track";
+        case Id::GlossaryEntrySwoopShiftReady:      return "Swoop shift ready";
+        case Id::GlossaryEntrySwoopJumpNow:         return "Swoop jump now";
+
+
+        case Id::PanelTitleMainMenu:    return "Main menu";
+        case Id::LoadingPleaseWait:     return "Game is still loading, please wait.";
+        case Id::LoadingStuckWorkaround: return "Menu still unresponsive. Press Alt F4 and cancel the quit dialog to wake it.";
+
+        case Id::GamePaused:            return "Paused.";
+        case Id::GameResumed:           return "Unpaused.";
+
+        case Id::GalaxyMapTitle:        return "Galaxy map";
+
+        // ---- Help system ----
+        case Id::HelpGroupGeneral:      return "Navigation";
+        case Id::HelpGroupMovement:     return "Movement and camera";
+        case Id::HelpGroupInteraction:  return "Targeting and interaction";
+        case Id::HelpGroupCombat:       return "Combat and actions";
+        case Id::HelpGroupExploration:  return "Exploration and orientation";
+        case Id::HelpGroupScreens:      return "Screens";
+        case Id::HelpGroupMap:          return "Map";
+        case Id::HelpGroupPazaak:              return "Pazaak";
+        case Id::HelpGroupMod:          return "Mod features";
+        case Id::HelpGroupController:    return "Controller";
+
+        case Id::HelpKeyUpDown:          return "Up and down arrow: move through lists and menu entries";
+        case Id::HelpKeyLeftRight:       return "Left and right arrow: switch category or change a value";
+        case Id::HelpKeyHomeEnd:         return "Home and End: jump to the first or last entry";
+        case Id::HelpKeyEnter:           return "Enter: activate the focused entry";
+        case Id::HelpKeyEsc:             return "Escape: close the screen or go back";
+        case Id::HelpKeyReadDescription: return "Shift plus an arrow: read the full description without moving";
+        case Id::HelpKeySwitchWindows:   return "Q and E: switch windows or tabs, in-game menu screens, and modes in stores and containers";
+        case Id::HelpKeyF1:              return "F1: open or close this key list";
+        case Id::HelpKeyCtrlF1:          return "Control plus F1: read the keys for the current screen";
+
+        case Id::HelpKeyWalk:           return "W and S: walk forward and back";
+        case Id::HelpKeyCameraRotate:   return "Z and C: rotate the camera left and right";
+        case Id::HelpKeyStrafe:         return "A and D: step left and right";
+        case Id::HelpKeyPause:          return "Space: pause and unpause the game";
+        case Id::HelpKeyViewMode:       return "B: look-around mode, hold position while you turn the camera";
+        case Id::HelpKeySwitchLeader:   return "Tab: switch the party member you control";
+
+        case Id::HelpKeyCycleTargets:   return "Q and E: cycle objects currently in view, or everything within 30 metres if that is turned on in Mod settings";
+        case Id::HelpKeyInteract:       return "Enter: interact with or attack the focused target";
+        case Id::HelpKeyOpenActionMenu: return "Shift plus Enter: open the action menu for the focused target";
+        case Id::HelpKeySelfStatus:     return "H: announce your own health, effects and weapon";
+        case Id::HelpKeyAnnounceFocus:  return "Minus: announce the focused object";
+        case Id::HelpKeyWalkToFocus:    return "Shift plus minus: walk to the focused object";
+        case Id::HelpKeyRoute:          return "Control plus minus: describe the route to the focused object, step by step";
+        case Id::HelpKeyDialogRepeat:   return "R: repeat the current spoken line";
+
+        case Id::HelpKeyCycleObjects:   return "Comma and period: cycle objects you have already discovered and can still reach, in the current category. Empty containers and decorative doors are left out";
+        case Id::HelpKeyCycleCategory:  return "Shift plus comma or period: previous or next category";
+        case Id::HelpKeyCycleEnds:      return "Control plus comma or period: jump to the nearest or farthest object";
+        case Id::HelpKeyHeading:        return "Right Alt: announce your facing direction and the area you are in";
+        case Id::HelpKeyCameraOrient:   return "N: turn the camera to the nearest exit, then clockwise to the next one";
+        case Id::HelpKeyDropMarker:     return "Shift plus N: drop a map marker at your position";
+
+        case Id::FmtHelpNumberActions:   return "1 to 7: use a category's most recent action. 1 %s, 2 %s, 3 %s, 4 %s, 5 %s, 6 %s, 7 %s";
+        case Id::HelpKeyOpenCategory:    return "Shift plus 1 to 7: open that category to choose an action";
+        case Id::FmtHelpNumberActions8:  return "8: use the current %s. Shift plus 8 opens it to choose another";
+        case Id::FmtHelpNumberActions9:  return "9: activate the current form. Shift plus 9 opens %s to choose another";
+        case Id::HelpKeyActionQueue:     return "Shift plus H: open the action queue";
+        case Id::HelpKeyLevelUp:         return "Shift plus L: open the level-up screen";
+        case Id::HelpKeyCancelCombat:    return "F: cancel combat";
+
+        case Id::HelpKeyScreenMap:       return "M: open the map";
+        case Id::HelpKeyScreenMessages:  return "J: messages and feedback";
+        case Id::HelpKeyScreenQuests:    return "L: quests";
+        case Id::HelpKeyScreenAbilities: return "K: skills, feats and force powers";
+        case Id::HelpKeyScreenCharacter: return "P: character sheet";
+        case Id::HelpKeyScreenInventory: return "I: party inventory";
+        case Id::HelpKeyScreenEquip:     return "U: equip character";
+        case Id::HelpKeyScreenOptions:   return "O: options";
+
+        case Id::HelpKeyMapCursor:       return "W, A, S and D: move the map cursor to read terrain and markers";
+        case Id::HelpKeyMapPosition:     return "Right Alt: announce your position and facing on the map";
+        case Id::HelpKeyPazaakNav:             return "Arrow keys: move between your hand, the two boards and the actions. Enter plays the card you are on";
+        case Id::HelpKeyPazaakSign:            return "On a plus-minus card: left or right chooses the sign, Enter plays it, Escape cancels";
+        case Id::HelpKeyPazaakReview:          return "C: your hand. T: both boards. Shift plus C: how many cards the opponent still holds";
+        case Id::HelpKeyPazaakTurn:            return "S: stand. E: end turn";
+
+
+        case Id::HelpKeyModSettings:     return "Mod settings are in Options, at the bottom of the list";
+        case Id::HelpKeyCopyLastSpoken:  return "Control plus R: copy the last spoken text to the clipboard";
+        case Id::HelpKeyPadMenuNav:          return "In menus: D-pad or left stick move, A confirms, B goes back";
+        case Id::HelpKeyPadTooltip:          return "Hold Y and press the D-pad up or down: read the full description without moving";
+        case Id::HelpKeyPadInteract:          return "A: default action on the focused target (attack, open, talk, pick up)";
+        case Id::HelpKeyPadCycleObjects:     return "D-pad left and right: previous and next object";
+        case Id::HelpKeyPadCycleCategory:    return "D-pad up and down: previous and next category";
+        case Id::HelpKeyPadMapHints:         return "Map screen, D-pad left and right: previous and next map hint";
+        case Id::HelpKeyPadActionMenuToggle: return "Left trigger: open the action menu; press it again to close";
+        case Id::HelpKeyPadActionMenuNav:    return "Action menu, D-pad: left and right change the category, up and down the entry, A fires, B or the left trigger closes";
+        case Id::HelpKeyPadSelfStatus:       return "Left trigger with X: your own status";
+        case Id::HelpKeyPadActionQueue:      return "Left trigger with B: the action queue. D-pad up and down step through the entries, A removes the last one queued, Y clears the whole queue, B closes";
+        case Id::HelpKeyPadWalkToFocus:      return "Right trigger with right shoulder button: walk to the focused object";
+        case Id::HelpKeyPadRoute:            return "Left trigger with left shoulder button: describe the route to the focused object";
+        case Id::HelpKeyPadDegrees:          return "Right trigger: announce your facing direction and the area you are in";
+        case Id::HelpKeyPadCameraOrient:
+            return "Press the right stick: turn the camera to the nearest exit, then clockwise to the next one";
+        case Id::HelpKeyPadHelp:             return "Both triggers: keys for this screen. The quick menu's Help entry opens this list";
+        case Id::HelpKeyPadQuickMenu:        return "Y: quick menu";
+        case Id::HelpKeyPadCycleTargets:     return "Left and right shoulder buttons: cycle targets";
+        case Id::HelpKeyPadTradeMode:        return "Container and store, shoulder buttons: switch the mode";
+        case Id::HelpKeyPadOptions:          return "Back button: options menu";
+        case Id::HelpKeyPadPause:            return "Start: pause";
+        case Id::HelpKeyPadSwitchLeader:     return "X: switch party leader";
+
+        // Controller rows added with the Pazaak board bindings, the D-Pad's
+        // hold-to-jump gesture and the map's marker press.
+        case Id::HelpKeyPadCycleEnds:
+            return "Hold the D-pad left or right: jump to the nearest or farthest object";
+        case Id::HelpKeyPadListEnds:
+            return "Hold the D-pad up or down: jump to the first or last entry of a list";
+        case Id::HelpKeyPadDropMarker:
+            return "Map screen, press the right stick: drop a map marker at the cursor";
+        case Id::HelpKeyPadDialogRepeat:
+            return "In a dialogue, both triggers: repeat the current spoken line";
+        case Id::HelpKeyPadPazaakNav:
+            return "Pazaak board, D-pad: up and down move between your hand, the two boards and the actions; left and right move within one. A plays the card you are on, B cancels a sign choice";
+        case Id::HelpKeyPadPazaakSign:
+            return "Pazaak board, on a plus-minus card: left and right choose the sign, A plays it, B cancels";
+        case Id::HelpKeyPadPazaakTurn:
+            return "Pazaak board, Y: stand. X: end turn";
+
+        // Controller rows that close the last of the keyboard-only gaps: the
+        // stick pair, the two routes into the game's screens, and the face-button
+        // chord grid.
+        case Id::HelpKeyPadMove:
+            return "Left stick: walk, and step sideways. Right stick: turn the camera and, with it, your walking direction";
+        case Id::HelpKeyPadTabs:
+            return "Left and right shoulder buttons: switch tabs, and step between the in-game menu screens";
+        case Id::HelpKeyPadScreens:
+            return "Y, entry Menus: open the game screens. The shoulder buttons then step between map, messages, quests, abilities, character, inventory and equip";
+        case Id::HelpKeyPadMapCursor:
+            return "Map screen, left stick: move the map cursor to read terrain and markers";
+        case Id::HelpKeyPadAnnounceFocus:
+            return "Left trigger with A: announce the focused object";
+        case Id::HelpKeyPadViewMode:
+            return "Right trigger with A: look-around mode, hold position while you turn the camera";
+        case Id::HelpKeyPadLevelUp:
+            return "Right trigger with Y: open the level-up screen";
+        case Id::HelpKeyPadCancelCombat:
+            return "Left trigger with Y: cancel combat";
+        case Id::HelpKeyPadCopyLastSpoken:
+            return "Right trigger with B: copy the last spoken text to the clipboard";
+        case Id::HelpKeyPadPazaakReview:
+            return "Pazaak board, left shoulder button: your hand. Right shoulder button: both boards. Press the left stick: how many cards the opponent still holds";
+
+        case Id::PadQuickMenuOpened:
+            return "Quick menu. Up and down to choose, A confirms, B closes.";
+        case Id::PadQuickMenuClosed:         return "Quick menu closed.";
+        case Id::PadQuickMenus:              return "Menus";
+        case Id::PadQuickPartyLeader:        return "Party leader";
+        case Id::PadQuickSoloMode:           return "Solo mode";
+        case Id::PadQuickStealth:            return "Stealth";
+        case Id::PadQuickSave:               return "Quick save";
+        case Id::PadQuickHelp:               return "Help";
+
+        case Id::HelpMenuOpened:    return "Key help. Up and down to read, Escape to close.";
+        case Id::HelpMenuClosed:    return "Key help closed.";
+        case Id::FmtHelpRowOf:      return "%s. %d of %d";
+        case Id::FmtHelpGroupHeader: return "Section: %s";
+
+        case Id::HelpContextNothing: return "No special keys for this screen.";
+        case Id::FmtHelpContextLine: return "%s %s.";
+        case Id::HelpContextWorld:       return "In the world.";
+        case Id::HelpContextMenu:        return "Menu.";
+        case Id::HelpContextMap:         return "Map.";
+        case Id::HelpContextActionMenu:  return "Action menu.";
+        case Id::HelpContextDialog:      return "Conversation.";
+        case Id::HelpContextContainer:   return "Container.";
+        case Id::HelpContextStore:       return "Store.";
+        case Id::HelpContextPazaak:            return "Pazaak.";
+
+        case Id::InputBlockedBigPicture:
+            return "The game can't receive your key presses because Steam "
+                   "Big Picture Mode is in front.";
+
+        case Id::InputKeyboardLost:
+            return "The game has lost its keyboard. Please restart the game.";
+
+        // ---- Tastenbelegung (mod keybind configurator) ----
+        case Id::KeybindsRootLabel:       return "Key bindings";
+        case Id::KeybindsOpened:          return "Key bindings opened";
+        case Id::KeybindCatWorld:         return "World and actions";
+        case Id::KeybindCatExploration:   return "Exploration and camera";
+        case Id::KeybindCatMenus:         return "Menus and input";
+        case Id::KeybindCatMinigames:     return "Minigames";
+        case Id::KeybindCatGeneral:       return "General";
+        case Id::KeybindResetAll:         return "Restore defaults";
+        case Id::KeybindResetDone:        return "Key bindings reset to defaults";
+        case Id::FmtKeybindCapturePrompt: return "Press the new key for %s. Escape cancels.";
+        case Id::FmtKeybindRebound:       return "%s rebound to %s";
+        case Id::FmtKeybindConflictMod:   return "Already bound to %s. Press another key.";
+        case Id::KeybindConflictEngine:   return "Bound by the game. Press another key.";
+        case Id::KeybindCaptureCancelled: return "Cancelled";
+        case Id::FmtKeymapModConflict:    return "Warning: the mod uses this key for %s";
+        // World & actions
+        case Id::KbNameInteractTarget:      return "Interact";
+        case Id::KbNameInteractForceRadial: return "Force radial menu";
+        case Id::KbNameInteractForceRadialSecondary: return "Force radial menu (secondary)";
+        case Id::KbNameTargetKey1:          return "Target key 1";
+        case Id::KbNameTargetKey2:          return "Target key 2";
+        case Id::KbNameTargetKey3:          return "Target key 3";
+        case Id::KbNamePersonalKey1:        return "Personal action 1";
+        case Id::KbNamePersonalKey2:        return "Personal action 2";
+        case Id::KbNamePersonalKey3:        return "Personal action 3";
+        case Id::KbNamePersonalKey4:        return "Personal action 4";
+        case Id::KbNamePersonalKey5:        return "Personal action 5";
+        case Id::KbNamePersonalKey6:        return "Personal action 6";
+        case Id::KbNameActionBarOpen1:      return "Open action bar 1";
+        case Id::KbNameActionBarOpen2:      return "Open action bar 2";
+        case Id::KbNameActionBarOpen3:      return "Open action bar 3";
+        case Id::KbNameActionBarOpen4:      return "Open action bar 4";
+        case Id::KbNameActionBarOpen5:      return "Open action bar 5";
+        case Id::KbNameActionBarOpen6:      return "Open action bar 6";
+        case Id::KbNameTargetActionOpen1:   return "Open target action 1";
+        case Id::KbNameTargetActionOpen2:   return "Open target action 2";
+        case Id::KbNameTargetActionOpen3:   return "Open target action 3";
+        case Id::KbNameLevelUpOpen:         return "Level up";
+        case Id::KbNameExamineOpen:         return "Examine";
+        case Id::KbNameCombatQueueOpen:     return "Action queue";
+        case Id::KbNameSelfStatusAnnounce:  return "Self status";
+        // Exploration & camera
+        case Id::KbNameCycleItemPrev:       return "Previous object";
+        case Id::KbNameCycleCategoryPrev:   return "Previous category";
+        case Id::KbNameCycleItemNext:       return "Next object";
+        case Id::KbNameCycleCategoryNext:   return "Next category";
+        case Id::KbNameCycleItemFirst:      return "First object";
+        case Id::KbNameCycleItemLast:       return "Last object";
+        case Id::KbNameAnnounceFocus:       return "Announce focus";
+        case Id::KbNamePathfindFocus:       return "Walk to focus";
+        case Id::KbNamePathfindFocusForce:  return "Walk to focus, force";
+        case Id::KbNameRouteFocus:          return "Route to focus";
+        case Id::KbNameAnnounceDegrees:     return "Facing direction";
+        case Id::KbNamePartyLeaderAnnounce: return "Announce party leader";
+        case Id::KbNameCameraOrient:        return "Orient camera";
+        case Id::KbNameSaveMarkerAtCursor:  return "Drop marker";
+        case Id::KbNameViewModeToggle:      return "View mode";
+        // Menus & input
+        case Id::KbNameNavUp:               return "Menu up";
+        case Id::KbNameNavDown:             return "Menu down";
+        case Id::KbNameNavLeft:             return "Menu left";
+        case Id::KbNameNavRight:            return "Menu right";
+        case Id::KbNameNavHome:             return "To start";
+        case Id::KbNameNavEnd:              return "To end";
+        case Id::KbNameSubmenuEsc:          return "Close menu";
+        case Id::KbNameQueueClearAll:       return "Clear queue";
+        case Id::KbNameContainerGiveMode:   return "Container give mode";
+        case Id::KbNameStoreModeToggle:     return "Store buy or sell";
+        case Id::KbNameCraftViewToggle:     return "Workbench create or break down";
+        case Id::KbNameEditboxReReadUp:     return "Edit field re-read up";
+        case Id::KbNameEditboxReReadDown:   return "Edit field re-read down";
+        case Id::KbNameEditboxSubmit:       return "Submit input";
+        case Id::KbNameEditboxCancel:       return "Cancel input";
+        // Minigames
+        case Id::KbNamePazaakStand:         return "Pazaak: Stand";
+        case Id::KbNamePazaakEndTurn:       return "Pazaak: End turn";
+        case Id::KbNamePazaakReviewHand:    return "Pazaak: Review hand";
+        case Id::KbNamePazaakReviewTable:   return "Pazaak: Review table";
+        case Id::KbNamePazaakNextCard:      return "Pazaak: Next card";
+        case Id::KbNamePazaakPrevCard:      return "Pazaak: Previous card";
+        case Id::KbNamePazaakPlay:          return "Pazaak: Play card";
+        case Id::KbNamePazaakOptLeft:       return "Pazaak: Option left";
+        case Id::KbNamePazaakOptRight:      return "Pazaak: Option right";
+        case Id::KbNamePazaakCancel:        return "Pazaak: Cancel";
+        case Id::KbNamePazaakOppHand:       return "Pazaak: Opponent hand";
+        case Id::KbNameTurretCyclePrev:     return "Turret: Previous target";
+        case Id::KbNameTurretCycleNext:     return "Turret: Next target";
+        case Id::KbNameSwoopShift:           "Swoop: Shift up";
+        // General
+        case Id::KbNameHelpMenuOpen:        return "Key help";
+        case Id::KbNameHelpContext:         return "Context help";
+        case Id::KbNameDialogRepeatLine:    return "Repeat dialog line";
+        case Id::KbNameCopyLastSpoken:      return "Copy last spoken text";
+
+        // ---- Clipboard ----
+        case Id::ClipboardCopied:        return "Copied to clipboard";
+        case Id::ClipboardNothingToCopy: return "Nothing to copy";
+        case Id::ClipboardFailed:        return "Clipboard not available";
+
+        // ---- Endar Spire tutorial keyboard hints (Surface 1: popups) ----
+        case Id::TutHintCombatFeat:
+            return "Combat feats are in the action menu. Open Attacks with Shift and 1 and activate with Enter.";
+        case Id::TutHintGrenade:
+            return "Throw grenades from the action menu. Open Explosives with Shift and 7 and activate with Enter.";
+        case Id::TutHintMine:
+            return "Place mines from the action menu. Open Explosives with Shift and 7 and activate with Enter.";
+        case Id::TutHintFriendlyPower:
+            return "Friendly Force powers are in the action menu. Open self powers with Shift and 4 and activate with Enter.";
+        case Id::TutHintHostilePower:
+            return "Hostile Force powers are in the action menu. Open target powers with Shift and 2 and activate with Enter.";
+        case Id::TutHintActionMenuScroll:
+            return "In the action menu, move between entries with up and down, and between categories with left and right.";
+        case Id::TutHintOpenScreens:
+            return "Open game screens directly: M map, J messages, L quests, K abilities, P character, I inventory, U equip, O options. Escape returns.";
+        case Id::TutHintCycleTargets:
+            return "Choose targets with Q and E. Cycle objects with comma and period; the minus key announces the focused object. In combat you can only target enemies.";
+        case Id::TutHintEquipSlot:
+            return "On the equip screen, choose a slot with the arrows and Enter, then pick an item from the list. Read an item's description with Shift and an arrow.";
+        case Id::TutHintEnemyNear:
+            return "An enemy is near. Cycle targets with Q and E and attack with Enter.";
+        case Id::TutHintBash:
+            return "To bash, focus the door or container, open the action menu with Shift and Enter, and choose Bash.";
+        case Id::TutHintAttack:
+            return "Focus an enemy with Q and E and attack with Enter. One press is enough; your character then attacks automatically each round until you choose another target.";
+        case Id::TutHintAttackAuto:
+            return "Remember: one press of Enter attacks automatically each round. Only a new target changes that.";
+        case Id::TutHintMovement:
+            return "Press F1 anytime for the help menu, a list of every key, and Ctrl and F1 for the keys of the current screen. To move, press W and S to walk forward and back, A and D to step sideways left and right, and Z and C to turn left and right. Z and C rotate the camera and, with it, your walking direction, so the two always point the same way. As you move, the shape of the room around you is described. Press right Alt to repeat your facing direction and current room.";
+        case Id::TutHintMapScreen:
+            return "The map shows every explored area of a level. Important areas are marked, and some areas, such as cities, are mapped before you explore them. Move around the map with W, A, S and D. Switch between map hints with comma and period. Press Shift and N to place your own map hint at your position. Press Ctrl and minus to hear the route to the selected map hint, or Shift and minus to walk there automatically.";
+        case Id::TutHintJournal:
+            return "The quest screen shows your progress and hints on what to do next. Open it with L. Choose an entry with the arrows and read its details with Shift and an arrow.";
+        case Id::TutHintInventory:
+            return "The inventory lists your party's items, shared across all members. Open it with I. Move through the items with the arrows and read an item's description with Shift and an arrow.";
+        case Id::TutHintMessages:
+            return "The messages screen shows values such as experience points, attack and damage rolls, and changes to your character. Open it with J.";
+        case Id::TutHintPartyDies:
+            return "A party member has fallen. Members downed in combat are revived after the fight, but if all members die the game is over. Press Tab to control a different member.";
+
+        // ---- Endar Spire tutorial keyboard hints (Surface 2: Trask / pop) ----
+        case Id::TutTraskGettingStarted:
+            return "You now have control. The basics: press F1 anytime for the full list of keys, or Ctrl and F1 for the keys of the current screen. W and S walk forward and back, A and D step sideways left and right, and Z and C turn left and right. Z and C rotate the camera and, with it, your walking direction, so the two always point the same way. Q and E switch between targets and objects, and Enter interacts with the focused object.";
+        case Id::TutTraskEquipOpen:
+            return "The equip screen is where you choose armor and weapons. Open it with U.";
+        case Id::TutTraskEquipBrowse:
+            return "Move through the equip slots with the arrows; each slot holds an item you can assign. Read the item's description with Shift and an arrow.";
+        case Id::TutTraskEquipWeapon:
+            return "Select the weapon slot and press Enter, then choose a weapon from the list.";
+        case Id::TutTraskCamera:
+        case Id::TutTraskFootlocker:
+            return "You change the camera, and with it your walking direction, with Z and C. N turns you 90 degrees. Q and E cycle through all visible objects. Comma and period navigate a list of every object you have already seen. Shift with comma or period switches between object categories. Press Enter to walk to a selected object and activate it.";
+        case Id::TutTraskPickItem:
+            return "Choose a slot with the arrows and Enter, browse the list, and confirm the item with Enter.";
+        case Id::TutTraskLeader:
+            return "You control the party leader. Press Tab to switch the member you control.";
+        case Id::TutTraskMakeLeader:
+            return "Press Tab to make me the leader, then open the door.";
+        case Id::TutTraskMenus:
+            return "Open game screens directly with keys: L quests, M map, and more.";
+        case Id::TutTraskTabs:
+            return "Switch between tabs with Q and E.";
+        case Id::TutTraskActionMenu:
+            return "Open the action menu with Shift and Enter for your target. A number from 1 to 7 fires the last used action of that category; Shift and a number 1 to 7 opens the category to choose.";
+        case Id::TutTraskMedkit:
+            return "Use medkits from the action menu. Open Medical with Shift and 5 and activate with Enter.";
+        case Id::TutTraskOpenDoor:
+            return "Focus the door with comma and period and open it with Enter.";
+        case Id::TutTraskActivateEntry:
+            return "In the action menu, choose an entry with up and down and activate it with Enter.";
+        case Id::TutTraskTargetMenu:
+            return "Focus a target with Q and E, or objects with comma and period. Press Enter for the default action, or Shift and Enter to open the action menu.";
+        case Id::TutTraskConfirmEntry:
+            return "Highlight the entry with up and down and confirm with Enter.";
+        case Id::TutTraskPaused:
+            return "Even while paused, choose targets with Q and E and switch the controlled member with Tab.";
+        case Id::TutTraskWalkTo:
+            return "Focus the footlocker with Q and E and open it with Enter.";
+        case Id::TutTraskSecurity:
+            return "Focus the door, open the action menu with Shift and Enter, and choose Security.";
+        case Id::TutTraskHealWounded:
+            return "Switch to the wounded character with Tab, open Medical with Shift and 5, and choose the medkit.";
+        case Id::TutLevelUp:
+            return "To level up, press Shift and L and follow the prompts.";
+        case Id::TutStealthMode:
+            return "Press G to turn stealth mode on or off. You must have a stealth field generator equipped to use it.";
+        case Id::DialogRepeatLineHint:
+            return "Press R to repeat the last dialogue line.";
+        case Id::CameraFeed:            return "Camera view.";
+        case Id::DialogRepeatLineHintPad:
+            return "Pull both triggers together to repeat the last dialogue line.";
+
+        // ---- KOTOR 2 tutorial hints (tutorial_hints.cpp K2 tables). The
+        //      shared rows 0-42 reuse the TutHint* wordings above; these
+        //      cover KOTOR 2's own popups and the Ebon Hawk prologue lines.
+        case Id::TutK2SwoopRace:
+            return "Shift up with W when you hear the audio cue and jump over low bars with the Space bar. Steer with A and D to dodge obstacles and hit the accelerator pads.";
+        case Id::TutK2ActionQueue:
+            return "Press Enter to add the default action to the command queue; entries from the action menu queue up the same way. Multiple actions run in the order you added them.";
+        case Id::TutK2ActionRemove:
+            return "Actions can only be removed from the command queue during combat; the most recently added action is removed first.";
+        case Id::TutK2PlasmaTorch:
+            return "Damaged doors are best bashed open with a tool like the plasma torch. Press U to open the equip screen and equip it. Then target the door, open the action menu with Shift and Enter, and choose Bash.";
+        case Id::TutK2FirstPerson:
+            return "Caps Lock toggles first-person view. You do not need it when playing with a screen reader.";
+        case Id::TutK2SpaceSuit:
+            return "Target the space suit with comma and period and press Enter to put it on or take it off.";
+        case Id::TutK2CommRoom:
+            return "Choose a console with comma and period and activate it with Enter. To use the computers you need the programming spike from the container in the cockpit.";
+        case Id::TutK2Mines:
+            return "You detect mines and traps with your Awareness skill while standing still. Target a detected mine with comma and period, open the action menu with Shift and Enter, and choose Disable or Recover. Now disable or recover three proton torpedo fragments around the rocket.";
+        case Id::TutK2Vibrocutter:
+            return "The vibrocutter is a melee weapon and beats blasters up close. Press U to open the equip screen and place it in a weapon slot. The secondary weapon slots hold a second configuration.";
+        case Id::TutK2DialogueChoice:
+            return "Choose replies with arrow up and down and confirm with Enter. Press R to repeat the last dialogue line.";
+        case Id::TutK2Pause:
+            return "The Space bar pauses and resumes the game. While paused you can plan your actions calmly.";
+        case Id::TutK2EquipWeapon:
+            return "Press U to open the equip screen, choose a weapon slot with the arrow keys and Enter, and pick the weapon from the list.";
+        case Id::TutK2WeaponConfig:
+            return "The equip screen has two weapon configurations, active and secondary, for example for melee and ranged weapons. Fill the slots with the arrow keys and Enter.";
+        case Id::TutK2TakeItem:
+            return "Target the container with comma and period and open it with Enter. Take the programming spike and use it on the computer terminal.";
+        case Id::TutK2GalaxyMap:
+            return "Set course for Peragus: on the galaxy map, choose Peragus with arrow left and right; Enter starts the journey.";
+        case Id::TutK2SoloMode:
+            return "You can only get through this door in solo mode: press V, and only the controlled party member moves. Bring 3C-FD alone to the security computer so it opens the door.";
+        case Id::TutK2RepairKit:
+            return "Repair kits heal droids. Use them from the action menu: open Medical with Shift and 5 and activate with Enter.";
+        case Id::TutK2SecuritySpike:
+            return "This lock is beyond your skill; use a security spike. Target the container, open the action menu with Shift and Enter, and choose Security.";
+
+        // ---- KOTOR 2 J/L swap: KOTOR 2's default keymap puts Quests on J
+        //      and Messages on L, the mirror image of KOTOR 1 (its keymap.2da
+        //      rows 13/14). Same texts as the TutHint* twins above with the two
+        //      letters exchanged; the pad wordings name no letter keys, so
+        //      kTwins points these at the existing *Pad ids.
+        case Id::TutK2OpenScreens:
+            return "Open game screens directly: M map, L messages, J quests, K abilities, P character, I inventory, U equip, O options. Escape returns.";
+        case Id::TutK2Messages:
+            return "The messages screen shows values such as experience points, attack and damage rolls, and changes to your character. Open it with L.";
+        case Id::TutK2Journal:
+            return "The quest screen shows your progress and hints on what to do next. Open it with J. Choose an entry with the arrows and read its details with Shift and an arrow.";
+
+        // ---- KOTOR 2 controller twins (deliberate omissions: see strings.h).
+        case Id::TutK2SwoopRacePad:
+            return "Press B to accelerate and shift up when you hear the audio cue, and A to jump over low bars. Dodge obstacles and hit the accelerator pads with the left stick.";
+        case Id::TutK2ActionQueuePad:
+            return "Press A to add the default action to the command queue; entries from the action menu queue up the same way. Multiple actions run in the order you added them.";
+        case Id::TutK2PlasmaTorchPad:
+            return "Damaged doors are bashed open with a tool like the plasma torch. Open the equip screen from the quick menu on Y, entry Menus, step to it with the shoulder buttons and equip it. Then focus the door, pull the left trigger, and choose Bash.";
+        case Id::TutK2SpaceSuitPad:
+            return "Focus the space suit with the D-pad left and right and press A to put it on or take it off.";
+        case Id::TutK2CommRoomPad:
+            return "Focus a console with the D-pad left and right and activate it with A. To use the computers you need the programming spike from the container in the cockpit.";
+        case Id::TutK2MinesPad:
+            return "You detect mines and traps with your Awareness skill while standing still. Focus a detected mine with the D-pad left and right, pull the left trigger for the action menu, and choose Disable or Recover. Now disable or recover three proton torpedo fragments around the rocket.";
+        case Id::TutK2VibrocutterPad:
+            return "The vibrocutter is a melee weapon and beats blasters up close. Open the equip screen from the quick menu on Y, entry Menus, and place it in a weapon slot. The secondary weapon slots hold a second configuration.";
+        case Id::TutK2DialogueChoicePad:
+            return "Choose replies with the D-pad up and down and confirm with A. Pull both triggers together to repeat the last dialogue line.";
+        case Id::TutK2EquipWeaponPad:
+            return "Open the equip screen from the quick menu on Y, entry Menus, and step to it with the shoulder buttons. Choose a weapon slot with the D-pad and A and pick the weapon from the list.";
+        case Id::TutK2WeaponConfigPad:
+            return "The equip screen has two weapon configurations, active and secondary, for example for melee and ranged weapons. Fill the slots with the D-pad and A.";
+        case Id::TutK2TakeItemPad:
+            return "Focus the container with the D-pad left and right and open it with A. Take the programming spike and use it on the computer terminal.";
+        case Id::TutK2GalaxyMapPad:
+            return "Set course for Peragus: on the galaxy map, choose Peragus with the D-pad left and right; A starts the journey.";
+        case Id::TutK2SoloModePad:
+            return "You can only get through this door in solo mode: toggle it from the quick menu on Y, entry solo mode, and only the controlled party member moves. Bring 3C-FD alone to the security computer so it opens the door.";
+        case Id::TutK2RepairKitPad:
+            return "Repair kits heal droids. Pull the left trigger, step to Medical with the D-pad left and right, and press A.";
+        case Id::TutK2SecuritySpikePad:
+            return "This lock is beyond your skill; use a security spike. Focus the container, pull the left trigger for the action menu, and choose Security.";
+        case Id::SwoopRaceControlsPad:
+            return "Press B to shift up on the audio cue. Steer with the left stick. Avoid the obstacles and hit the accelerator pads to beat the time.";
+        case Id::SwoopRaceControlsK2Pad:
+            return "Press B to shift up on the audio cue and A to jump over an obstacle. Steer with the left stick. Avoid the obstacles and hit the accelerator pads to beat the time.";
+        case Id::SwoopRaceStuckHintPad:
+            return "Steer aside, then B and A.";
+        case Id::SwoopRaceStuckHintLeftPad:
+            return "Steer left, then B.";
+        case Id::SwoopRaceStuckHintRightPad:
+            return "Steer right, then B.";
+        case Id::SwoopRaceStuckBarWallLeftPad:
+            return "Steer left, then A, then B.";
+        case Id::SwoopRaceStuckBarWallRightPad:
+            return "Steer right, then A, then B.";
+        case Id::SwoopRaceStuckBarStripPad:
+            return "Follow the tone, then B.";
+        case Id::SwoopRaceStuckBarJumpPad:
+            return "A, then B.";
+
+        // ---- Controller wording for the tutorial hints above. Selected by
+        //      binding_hints::Text() when a gamepad is present; see strings.h.
+
+        case Id::TutHintCombatFeatPad:
+            return "Combat feats are in the action menu. Pull the left trigger to open it, step to Attacks with the D-pad left and right, and press A.";
+        case Id::TutHintGrenadePad:
+            return "Throw grenades from the action menu. Pull the left trigger to open it, step to Explosives with the D-pad left and right, and press A.";
+        case Id::TutHintMinePad:
+            return "Place mines from the action menu. Pull the left trigger to open it, step to Explosives with the D-pad left and right, and press A.";
+        case Id::TutHintFriendlyPowerPad:
+            return "Friendly Force powers are in the action menu. Pull the left trigger to open it, step to self powers with the D-pad left and right, and press A.";
+        case Id::TutHintHostilePowerPad:
+            return "Hostile Force powers are in the action menu. Pull the left trigger to open it, step to target powers with the D-pad left and right, and press A.";
+        case Id::TutHintActionMenuScrollPad:
+            return "In the action menu, move between entries with the D-pad up and down, and between categories with the D-pad left and right.";
+        case Id::TutHintOpenScreensPad:
+            return "Press Y for the quick menu and choose Menus to open the game screens. The left and right shoulder buttons then step between map, messages, quests, abilities, character, inventory and equip. B returns.";
+        case Id::TutHintCycleTargetsPad:
+            return "Choose targets with the left and right shoulder buttons. Step through the objects you have discovered with the D-pad left and right. In combat you can only target enemies.";
+        case Id::TutHintEquipSlotPad:
+            return "On the equip screen, choose a slot with the D-pad and A, then pick an item from the list. Hold Y and press the D-pad up or down to read an item's description.";
+        case Id::TutHintEnemyNearPad:
+            return "An enemy is near. Cycle targets with the left and right shoulder buttons and attack with A.";
+        case Id::TutHintBashPad:
+            return "To bash, focus the door or container, pull the left trigger to open the action menu, and choose Bash.";
+        case Id::TutHintAttackPad:
+            return "Focus an enemy with the left and right shoulder buttons and attack with A. One press is enough; your character then attacks automatically each round until you choose another target.";
+        case Id::TutHintAttackAutoPad:
+            return "Remember: one press of A attacks automatically each round. Only a new target changes that.";
+        case Id::TutHintMovementPad:
+            return "Pull both triggers together anytime for the keys of the current screen, and press Y for the quick menu, entry Help, for the full list. To move, push the left stick in any direction. Push the right stick left or right to turn the camera and, with it, your walking direction, so the two always point the same way. As you move, the shape of the room around you is described. Pull the right trigger to repeat your facing direction and current room.";
+        case Id::TutHintMapScreenPad:
+            return "The map shows every explored area of a level. Important areas are marked, and some areas, such as cities, are mapped before you explore them. Move around the map with the left stick. Switch between map hints with the D-pad left and right. Pull the left trigger together with the left shoulder button to hear the route to the map hint, or the right trigger with the right shoulder button to walk there automatically.";
+        case Id::TutHintJournalPad:
+            return "The quest screen shows your progress and hints on what to do next. Open it from the quick menu on Y, entry Menus, then step to it with the shoulder buttons. Choose an entry with the D-pad, and read its details by holding Y and pressing the D-pad up or down.";
+        case Id::TutHintMessagesPad:
+            return "The messages screen shows values such as experience points, attack and damage rolls, and changes to your character. Open it from the quick menu on Y, entry Menus, then step to it with the shoulder buttons.";
+        case Id::TutHintPartyDiesPad:
+            return "A party member has fallen. Members downed in combat are revived after the fight, but if all members die the game is over. Press X to control a different member.";
+        case Id::TutHintInventoryPad:
+            return "The inventory lists your party's items, shared across all members. Open it from the quick menu on Y, entry Menus, then step to it with the shoulder buttons. Move through the items with the D-pad, and read an item's description by holding Y and pressing the D-pad up or down.";
+        case Id::TutTraskGettingStartedPad:
+            return "You now have control. The basics: pull both triggers together for the keys of the current screen, or press Y for the quick menu, entry Help, for the full list. Push the left stick to walk, and the right stick left or right to turn the camera and, with it, your walking direction, so the two always point the same way. The left and right shoulder buttons switch between targets, the D-pad left and right steps through objects, and A interacts with the focused object.";
+        case Id::TutTraskEquipOpenPad:
+            return "The equip screen is where you choose armor and weapons. Open it from the quick menu on Y, entry Menus, then step to it with the shoulder buttons.";
+        case Id::TutTraskEquipBrowsePad:
+            return "Move through the equip slots with the D-pad; each slot holds an item you can assign. Hold Y and press the D-pad up or down to read the item's description.";
+        case Id::TutTraskEquipWeaponPad:
+            return "Select the weapon slot and press A, then choose a weapon from the list.";
+        case Id::TutTraskCameraPad:
+        case Id::TutTraskFootlockerPad:
+            return "You change the camera, and with it your walking direction, with the right stick. Press the right stick to turn to the next compass direction. The left and right shoulder buttons cycle through all visible objects. The D-pad left and right navigates a list of every object you have already seen, and up and down switches between object categories. Press A to walk to a selected object and activate it.";
+        case Id::TutTraskPickItemPad:
+            return "Choose a slot with the D-pad and A, browse the list, and confirm the item with A.";
+        case Id::TutTraskLeaderPad:
+            return "You control the party leader. Press X to switch the member you control.";
+        case Id::TutTraskMakeLeaderPad:
+            return "Press X to make me the leader, then open the door.";
+        case Id::TutTraskMenusPad:
+            return "Open the game screens from the quick menu on Y, entry Menus. The shoulder buttons then step between them.";
+        case Id::TutTraskTabsPad:
+            return "Switch between tabs with the left and right shoulder buttons.";
+        case Id::TutTraskActionMenuPad:
+            return "Pull the left trigger to open the action menu for your target. The D-pad left and right steps between categories, up and down between entries, and A fires the entry you are on.";
+        case Id::TutTraskMedkitPad:
+            return "Use medkits from the action menu. Pull the left trigger to open it, step to Medical with the D-pad left and right, and press A.";
+        case Id::TutTraskOpenDoorPad:
+            return "Focus the door with the D-pad left and right and open it with A.";
+        case Id::TutTraskActivateEntryPad:
+            return "In the action menu, choose an entry with the D-pad up and down and activate it with A.";
+        case Id::TutTraskTargetMenuPad:
+            return "Focus a target with the left and right shoulder buttons, or objects with the D-pad left and right. Press A for the default action, or pull the left trigger to open the action menu.";
+        case Id::TutTraskConfirmEntryPad:
+            return "Highlight the entry with the D-pad up and down and confirm with A.";
+        case Id::TutTraskPausedPad:
+            return "Even while paused, choose targets with the left and right shoulder buttons and switch the controlled member with X.";
+        case Id::TutTraskWalkToPad:
+            return "Focus the footlocker with the left and right shoulder buttons and open it with A.";
+        case Id::TutTraskSecurityPad:
+            return "Focus the door, pull the left trigger to open the action menu, and choose Security.";
+        case Id::TutTraskHealWoundedPad:
+            return "Switch to the wounded character with X, pull the left trigger and step to Medical, and choose the medkit.";
+        case Id::TutLevelUpPad:
+            return "To level up, pull the left trigger and press Y, then follow the prompts.";
+        case Id::TutStealthModePad:
+            return "Press Y for the quick menu and choose Stealth to turn stealth mode on or off. You must have a stealth field generator equipped to use it.";
+
+        case Id::FloorPuzzleIntro:
+            return "Floor plate puzzle: nine plates in a three by three grid, "
+                   "reset plate on the south side.";
+        case Id::FmtFloorReadHint:
+            return "Press %s to read the plate state.";
+        case Id::FloorPuzzleStoryHint:
+            return "You should have found a story hint that will help you solve the puzzle.";
+        case Id::FmtFloorSoloHint:
+            return "Tip: enable solo mode, key %s, or companions will toggle plates too.";
+        case Id::FloorPartyToggled:  return "Companion toggled plates";
+        case Id::FmtPlateName:       return "Plate %s";
+        case Id::PlateCenterWord:    return "Center";
+        case Id::PlateResetName:     return "Reset plate";
+        case Id::FmtPlateEntered:    return "Stepped on %s";
+        case Id::FmtPlateLit:        return "%s lights up";
+        case Id::FmtPlateDark:       return "%s goes dark";
+        case Id::FmtPlateLitCount:   return "%d of 9 lit";
+        case Id::PlatesAllDark:      return "All plates dark";
+        case Id::FloorPuzzleSolved:
+            return "Puzzle solved. The massive door opens.";
+
+        case Id::FmtModLoadedVersion:   return "Voice of the Old Republic loaded, version %s";
+        case Id::FmtChargenFeatUnnamed: return "Feat %u";
+        case Id::ChargenBtnRecommended: return "Recommended";
+        case Id::ChargenBtnAccept:      return "Accept";
+        case Id::ChargenBtnBack:        return "Back";
+        case Id::ExitAnnoNew:           return "new";
+        case Id::ExitAnnoVisited:       return "visited";
+        case Id::ExitAnnoNothingLeft:   return "nothing left";
+        case Id::ExitAnnoBack:          return "back";
+        case Id::FmtExitAnnoTo:         return "to %s";
+        case Id::ExitAnnoToCorridor:    return "to a corridor";
+        case Id::ExitAnnoToJunction:    return "to a junction";
+        case Id::ExitAnnoToArea:        return "to an area";
+        case Id::ExitAnnoToDeadEnd:     return "to a dead end";
+        case Id::LockNeedStoryOnly:       return "opens only through the story";
+        case Id::LockNeedTryIt:           return "may open when you try";
+        case Id::LockNeedKey:             return "needs a key";
+        case Id::FmtLockNeedSecurity:     return "Security %d";
+        case Id::FmtRegionHere:           return "Here: %s";
+        case Id::FmtRegionHereMore:       return "%d more";
+        case Id::FmtOverviewExplored:     return "Explored %d of %d regions";
+        case Id::OverviewNoMap:           return "No map of this area yet";
+        case Id::FmtOverviewNearest:      return "Nearest unexplored: %s";
+        case Id::OverviewAllExplored:     return "Everything you can reach is explored";
+        case Id::FmtOverviewLockedAway:   return "%d more behind locked doors";
+        case Id::FmtOverviewToSearch:     return "To search: %d";
+        case Id::OverviewNothingToSearch: return "Nothing left to search";
+        case Id::KbNameExploreOverview:   return "Exploration overview";
+        case Id::HelpKeyExploreOverview:  return "Ctrl plus N: the room you are in, how much of this area you have explored, the nearest unexplored place and the way there, and what is left to search";
+        case Id::ModSettingQEAllAround:       return "Q and E: everything around you, not just what the camera sees";
+        case Id::FmtPartyMemberHp:            return "%s %d of %d";
+        case Id::PartyCanLevelUp:             return "can level up";
+        case Id::FmtCanLevelUpNotice:         return "%s can level up";
+        case Id::KbNamePartyStatus:           return "Party health";
+        case Id::HelpKeyPartyStatus:          return "Ctrl plus H: health of everyone in your party, and who can level up";
+        case Id::FmtWalkingTo:                return "Walking: %s";
+        case Id::KbNameExploreWalkUnexplored: return "Walk to the nearest unexplored place";
+        case Id::KbNameExploreWalkLoot:       return "Walk to the nearest thing to search";
+        case Id::HelpKeyExploreWalk:          return "Control plus Shift plus N: walk toward the nearest unexplored place; when only locked doors lead on, it tries the nearest one. Control plus L: walk to the nearest container or item left to search";
+        case Id::FmtLockBestSecurity:         return "best in your party: %s with %d";
+        case Id::FmtRouteVia:                 return "via %s, about %d metres to walk";
+        case Id::FmtRouteWalk:                return "about %d metres to walk";
+        case Id::RouteLocked:                 return "behind a locked door";
+        case Id::FmtDoorLeads:                return "leads %s";
+        case Id::FmtLootReminder:             return "Still here: %s";
+        case Id::EndarTraskDoorOwnCharacter:  return "Your own character has to open this door. Switch back with Tab first.";
+        case Id::RouteNoWayLocked:            return "No way there now: it is behind a locked door.";
+        case Id::GuidancePausedHint:          return "The game is paused. Press Space to walk.";
+        case Id::FmtCompanionInTheWay:        return "%s is standing in the way. Switch to them with Tab and step aside.";
+        case Id::FmtCreatureInTheWay:         return "%s is in the way.";
+        case Id::FmtOverviewTryDoor:          return "Door to try: %s";
+        case Id::ExploreTryingDoor:           return "Everything you can reach is explored, so trying this door.";
+        case Id::FmtDoorOpensNearby:          return "%s opens";
+        case Id::FmtAlreadyAttacking:         return "Already attacking %s";
+        case Id::CombatIdleNotice:            return "You are not attacking. Choose an enemy with Q or E and press R.";
+        case Id::FmtOverviewWayOut:           return "Way out: %s";
+        case Id::FmtExploreWayOut:            return "Way out: %s. Press Enter to go there.";
+        case Id::Count_:               return "";
     }
     return "";
-}
-
-unsigned CodepageFor(Lang l) {
-    switch (l) {
-        // Western European — the byte escapes in these tables are Windows-1252,
-        // which is also CP_ACP on their users' systems.
-        case Lang::En:
-        case Lang::De:
-        case Lang::Fr:
-        case Lang::It:
-        case Lang::Es: return 1252;
-        // Cyrillic. Must be pinned: a Russian KOTOR install is commonly run on
-        // a non-Russian Windows, where CP_ACP would be 1252 and garble it.
-        case Lang::Ru: return 1251;
-        // Central European. Same reasoning as Russian, and it bites harder:
-        // ą ć ę ł ń ś ź ż are absent from 1252 entirely, and a Polish KOTOR is
-        // usually a Polish tlk dropped onto an English or German install, so
-        // CP_ACP is the wrong page far more often than not.
-        case Lang::Pl: return 1250;
-    }
-    return 1252;
 }
 
 }  // namespace acc::strings

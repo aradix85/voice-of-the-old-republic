@@ -270,18 +270,16 @@ int ReadItemRowCharges(void* rowControl);
 // handle is a sentinel, or the name does not resolve.
 bool ReadItemRowName(void* rowControl, char* outBuf, size_t bufSize);
 
-// Text of the CExoLocString at base+offset in ANOTHER language, for strings
-// the game's own language cannot resolve. The engine's lookup
-// (CExoLocString::GetString) tries only the current language's substring and
-// then the TLK strref; it never falls back across languages. Mod items that
-// ship an English-only inline name therefore read as empty on a German game —
-// in the store, the row caption and the name accessor both come back blank.
+// Text of the CExoLocString at base+offset from a substring that is not
+// English, for strings the English game cannot resolve. The engine's lookup
+// (CExoLocString::GetString) tries only the game language's substring and
+// then the TLK strref; it never falls back across languages, so a mod item
+// with only a foreign or malformed substring (mods write ids such as
+// 0xFFFFFFFF, which no language lookup matches) reads as empty.
 //
-// True only when NO substring exists for the game's language and some other
-// substring has text: English (id 0/1) preferred, otherwise the first
-// non-empty one (mods also write malformed ids such as 0xFFFFFFFF, which no
-// language lookup matches). False whenever the game's language has its own
-// substring, so the engine's localised text is never overridden.
+// True only when no English substring exists and the first substring has
+// text; false whenever an English substring exists, so the engine's own
+// text is never overridden.
 bool ReadLocStringOtherLanguage(void* base, size_t locStringOffset,
                                 char* outBuf, size_t bufSize);
 

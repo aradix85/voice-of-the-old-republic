@@ -28,11 +28,6 @@ PFN_BrailleMessage pBrailleMessage = nullptr;
 bool g_initTried = false;
 bool g_ready     = false;
 
-// Active narrow-text codepage. Both our own string tables and the engine's
-// CExoString payload are in the *game's* codepage, not necessarily the OS one
-// (see SetSpeechCodepage); DetectLanguageFromTlk in core_dllmain.cpp pins it.
-UINT g_speechCodepage = CP_ACP;
-
 // Last-utterance capture, in the game codepage. Sized well above
 // kAnnounceTextMax (1024) so an utterance is never truncated; over-long text
 // is truncated rather than dropped.
@@ -47,10 +42,10 @@ bool Resolve(HMODULE lib, T& fn, const char* name) {
 }
 
 std::wstring Widen(const char* text) {
-    const int n = MultiByteToWideChar(g_speechCodepage, 0, text, -1, nullptr, 0);
+    const int n = MultiByteToWideChar(kGameCodepage, 0, text, -1, nullptr, 0);
     if (n <= 0) return {};
     std::wstring out(static_cast<size_t>(n), L'\0');
-    if (MultiByteToWideChar(g_speechCodepage, 0, text, -1, &out[0], n) <= 0) return {};
+    if (MultiByteToWideChar(kGameCodepage, 0, text, -1, &out[0], n) <= 0) return {};
     out.resize(static_cast<size_t>(n) - 1);
     return out;
 }
@@ -58,10 +53,10 @@ std::wstring Widen(const char* text) {
 // To the game codepage; best-fit characters are allowed, since an
 // approximation beats losing the line.
 std::string Narrow(const wchar_t* text) {
-    const int n = WideCharToMultiByte(g_speechCodepage, 0, text, -1, nullptr, 0, nullptr, nullptr);
+    const int n = WideCharToMultiByte(kGameCodepage, 0, text, -1, nullptr, 0, nullptr, nullptr);
     if (n <= 0) return {};
     std::string out(static_cast<size_t>(n), '\0');
-    if (WideCharToMultiByte(g_speechCodepage, 0, text, -1, &out[0], n, nullptr, nullptr) <= 0)
+    if (WideCharToMultiByte(kGameCodepage, 0, text, -1, &out[0], n, nullptr, nullptr) <= 0)
         return {};
     out.resize(static_cast<size_t>(n) - 1);
     return out;
@@ -135,14 +130,6 @@ void Speak(const char* text, bool interrupt) {
     const std::wstring wide = Widen(text);
     if (!wide.empty()) Send(text, wide.c_str(), interrupt);
 }
-
-void SetSpeechCodepage(unsigned codepage) {
-    if (codepage == 0 || g_speechCodepage == codepage) return;
-    g_speechCodepage = static_cast<UINT>(codepage);
-    acclog::Write("Speech", "narrow-text codepage set to %u", codepage);
-}
-
-unsigned GetSpeechCodepage() { return g_speechCodepage; }
 
 void Silence() {
     if (!g_ready) return;

@@ -8,6 +8,10 @@
 
 namespace acc::speech {
 
+// Codepage of every narrow string on the way to NVDA: the English game's
+// text (CExoString) and our own table.
+constexpr unsigned kGameCodepage = 1252;
+
 // Loads the controller client once; true when it is there. Safe to call again.
 bool Init();
 
@@ -15,21 +19,9 @@ bool Init();
 // first cancels what NVDA is still saying.
 void Speak(const wchar_t* text, bool interrupt);
 
-// Narrow overload — text in GetSpeechCodepage(). Right entry point for our
-// own tables and CExoString-sourced text.
+// Narrow overload — text in kGameCodepage. Right entry point for our own
+// table and CExoString-sourced text.
 void Speak(const char* text, bool interrupt);
-
-// Codepage of every narrow string on the way to NVDA — both our own tables and
-// engine CExoString text. Defaults to CP_ACP, which is right for en/de/fr/it/es
-// (all Windows-1252). Must be pinned explicitly for languages whose codepage
-// differs from the player's OS codepage: a Russian install is Windows-1251 even
-// on a German or English Windows, where CP_ACP is 1252 and would garble every
-// Cyrillic byte; Polish is 1250.
-//
-// Set once from the detected game language at startup; a 0 argument is
-// ignored. Safe to call before Init().
-void SetSpeechCodepage(unsigned codepage);
-unsigned GetSpeechCodepage();
 
 // Cancel what NVDA is saying.
 void Silence();
@@ -40,7 +32,7 @@ void Silence();
 // heard" without each subsystem keeping its own copy. See speech_clipboard.cpp
 // (Ctrl+R).
 //
-// Returns the text in the *game* codepage — widen with GetSpeechCodepage().
+// Returns the text in kGameCodepage.
 // Never null; "" when nothing has been spoken yet. Stable until the next
 // utterance.
 const char* LastSpoken();

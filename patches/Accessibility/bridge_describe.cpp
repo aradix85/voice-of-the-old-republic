@@ -40,7 +40,7 @@ std::string GameFields() {
 // Game codepage (what the engine and the speech path hand us) -> UTF-8.
 std::string ToUtf8(const char* text) {
     if (!text || !*text) return std::string();
-    UINT cp = acc::speech::GetSpeechCodepage();
+    const UINT cp = acc::speech::kGameCodepage;
     int wlen = MultiByteToWideChar(cp, 0, text, -1, nullptr, 0);
     if (wlen <= 0) return std::string(text);
     std::wstring w(static_cast<size_t>(wlen), L'\0');

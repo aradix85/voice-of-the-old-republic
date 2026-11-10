@@ -58,10 +58,10 @@ void SpeakFeedback(S id) {
 }
 
 // Publish `text` (game codepage) as CF_UNICODETEXT. Unicode rather than
-// CF_TEXT so umlauts / Cyrillic survive the paste; Windows synthesises CF_TEXT
+// CF_TEXT so accented letters survive the paste; Windows synthesises CF_TEXT
 // from it for consumers that want ANSI, so one format is enough.
 bool CopyToClipboard(const char* text) {
-    const UINT cp = acc::speech::GetSpeechCodepage();
+    const UINT cp = acc::speech::kGameCodepage;
     int wideLen = MultiByteToWideChar(cp, 0, text, -1, nullptr, 0);
     if (wideLen <= 0) {
         acclog::Write("Clipboard", "MultiByteToWideChar(cp=%u) failed, err=%lu",

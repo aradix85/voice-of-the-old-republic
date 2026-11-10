@@ -1,24 +1,8 @@
-// User-facing string table.
+// The mod's spoken text: one Id per line the user hears; Get() resolves
+// it to the English string in strings.cpp.
 //
-// Layer: i18n/ — sits between the speech path (cycle_input, future
-// announce paths) and speech. Centralises every string the user hears so
-// language swaps + wording changes happen in one place.
-//
-// Logs stay English regardless of the active language: developer-readable
-// log lines (acc::filter::CategoryName etc.) are NOT routed through this
-// table. Only spoken strings use Get().
-//
-// Encoding: source files use 7-bit ASCII for English and Windows-1252
-// hex escapes (e.g. "T\xFCr") for German, so the literal bytes already
-// match speech's narrow overload (which calls MultiByteToWideChar(CP_ACP)
-// — CP_ACP = Windows-1252 on a German Windows install). UTF-8 source
-// would also work but only if the build script sets /utf-8 explicitly,
-// which create-patch.bat does not.
-//
-// Format-string IDs use printf-style placeholders. The argument order is
-// stable across languages (`%s` first for the name, `%d` for clock, `%d`
-// for metres) — German just keeps the same order with different unit
-// words and the "auf X Uhr" navigation idiom.
+// Logs stay out of this table; only spoken strings use Get().
+// Format-string Ids use printf placeholders.
 
 #pragma once
 
@@ -2430,52 +2414,8 @@ enum class Id : int {
     Count_,
 };
 
-enum class Lang : int {
-    En,
-    De,
-    Fr,
-    It,
-    Es,
-    // Russian — community translation (Allard). Unlike the five above it is
-    // NOT identified by the dialog.tlk LanguageID: Allard's tlk declares ID 0
-    // (the English slot) and re-encodes the strings in Windows-1251, so
-    // detection is content-based. See DetectLanguageFromTlk.
-    Ru,
-    // Polish — the official Licomp Empik Multimedia (LEM) localisation, 2004.
-    // Never sold on Steam or GoG, so players install it over one of those, but
-    // it is a first-party translation and its tlk carries BioWare's real Polish
-    // LanguageID 5. That makes it ID-detected like the five above, not
-    // content-detected like Russian.
-    Pl,
-};
-
-// Windows codepage the language's narrow string bytes are written in. Fed to
-// acc::speech::SetSpeechCodepage so Cyrillic renders on a non-Russian Windows.
-unsigned CodepageFor(Lang l);
-
-// Set the active language. Default is German (per user direction at
-// lay-off 4 wiring). Thread-safe in the sense that the patch DLL is
-// single-threaded around the speech path; no locking needed.
-void SetLanguage(Lang l);
-Lang GetLanguage();
-
-// Resolve a string ID to its language-specific bytes. Never returns
-// nullptr — out-of-range / Count_ ids resolve to "" so callers can
-// snprintf without null-checking.
+// Resolve a string Id. Never nullptr: Count_ and unknown ids give "", so
+// callers can snprintf without a null check.
 const char* Get(Id id);
-
-// Per-language tables. Defined in strings_en.cpp / strings_de.cpp /
-// strings_fr.cpp; the dispatcher in strings.cpp picks one based on the
-// active language. All seven are complete, independent tables — strings_fr.cpp
-// is a real 651-entry French translation, not an alias for lang_en (that
-// claim was stale). Combat speech is localised separately, in
-// combat_strings.cpp.
-namespace lang_en { const char* Get(Id id); }
-namespace lang_de { const char* Get(Id id); }
-namespace lang_fr { const char* Get(Id id); }
-namespace lang_it { const char* Get(Id id); }
-namespace lang_es { const char* Get(Id id); }
-namespace lang_ru { const char* Get(Id id); }
-namespace lang_pl { const char* Get(Id id); }
 
 }  // namespace acc::strings

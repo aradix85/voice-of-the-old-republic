@@ -1,4 +1,4 @@
-# speech.h (58 lines)
+# speech.h (50 lines)
 
 Source: `patches/Accessibility/speech.h`
 
@@ -8,12 +8,12 @@ Init MUST NOT run inside DllMain (LoadLibrary under the loader lock).
 
 ## Declarations (in source order)
 
-- L12 `bool Init()`: Loads the controller client once; true when it is there.
-- L16 `void Speak(const wchar_t* text, bool interrupt)`: One line to NVDA, spoken and shown on the braille display.
-- L20 `void Speak(const char* text, bool interrupt)`: Narrow overload — text in GetSpeechCodepage().
-- L31 `void SetSpeechCodepage(unsigned codepage)`: Codepage of every narrow string on the way to NVDA — both our own tables and engine CExoString text.
-- L32 `unsigned GetSpeechCodepage()`
-- L35 `void Silence()`: Cancel what NVDA is saying.
-- L46 `const char* LastSpoken()`: ---- Last-utterance capture -------------------------------------------- Every Speak records its text here, so a hotkey can act on "the thing I just heard" without each subsystem keeping its own copy.
-- L52 `void SuppressNextCapture()`: One-shot: the next Speak call does not overwrite LastSpoken().
-- L55 `void Shutdown()`: No more speech for the rest of the process (DLL detach).
+- L16 `bool Init()`: Loads the controller client once; true when it is there.
+- L20 `void Speak(const wchar_t* text, bool interrupt)`: One line to NVDA, spoken and shown on the braille display.
+- L24 `void Speak(const char* text, bool interrupt)`: Narrow overload — text in kGameCodepage.
+- L27 `void Silence()`: Cancel what NVDA is saying.
+- L38 `const char* LastSpoken()`: ---- Last-utterance capture -------------------------------------------- Every Speak records its text here, so a hotkey can act on "the thing I just heard" without each subsystem keeping its own copy.
+- L44 `void SuppressNextCapture()`: One-shot: the next Speak call does not overwrite LastSpoken().
+- L47 `void Shutdown()`: No more speech for the rest of the process (DLL detach).
+
+Also 1 constants or variables at namespace scope.
