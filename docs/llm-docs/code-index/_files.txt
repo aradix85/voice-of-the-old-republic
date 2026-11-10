@@ -186,7 +186,13 @@ patches/Accessibility/menus_abilities.cpp
 patches/Accessibility/menus_abilities.h
 patches/Accessibility/menus_chain.cpp
 patches/Accessibility/menus_chain.h
+patches/Accessibility/menus_chain_build.cpp
+patches/Accessibility/menus_chain_buttons.cpp
+patches/Accessibility/menus_chain_filter.cpp
 patches/Accessibility/menus_chain_input.cpp
+patches/Accessibility/menus_chain_internal.h
+patches/Accessibility/menus_chain_state.cpp
+patches/Accessibility/menus_chain_tabs.cpp
 patches/Accessibility/menus_chargen_attr.cpp
 patches/Accessibility/menus_chargen_attr.h
 patches/Accessibility/menus_chargen_feats.cpp
