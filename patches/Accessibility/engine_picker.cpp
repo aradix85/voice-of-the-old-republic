@@ -1,133 +1,107 @@
+// The engine's own default action for a target: build its action
+// descriptor the way a mouse hover does, read it, and dispatch it the way a
+// click does, or open the radial menu when there is none (engine_picker.h).
+
 #include "engine_picker.h"
 
 #include <windows.h>
 #include <cstdint>
 #include <cstring>
 
-#include "engine_area.h"        // ResolveClientObject — client creature for
-                                // the direct ActionInitiateDialog call.
 #include "engine_app.h"         // GetClientApp, GetClientAppInternal
-#include "engine_offsets.h"     // CExoString
-#include "engine_panels.h"      // ResolveGuiInGame, ResolveMainInterface
-#include "engine_player.h"      // SetPlayerInputEnabled (auto-restore
-                                // gate around the dispatch — same pattern
-                                // guidance::UseObject uses) +
-                                // GetPlayerCharacterName for the empty-
-                                // descriptor diagnostic.
-#include "engine_radial.h"      // ResolveTargetActionMenu, LogStateWide,
-                                // LogTargetDiag — used around the empty-
-                                // descriptor wrapper call to capture both
-                                // the wrapper's TAM output and the input
-                                // target's class+state so empty-rows logs
-                                // are self-explanatory.
-#include "log.h"
-#include "engine_rebase.h"
+#include "engine_area.h"        // ResolveClientObject
+#include "engine_offsets.h"
 #include "engine_offsets_select.h"
+#include "engine_panels.h"      // ResolveGuiInGame, ResolveMainInterface
+#include "engine_player.h"      // SetPlayerInputEnabled, GetActiveLeaderName
+#include "engine_radial.h"      // diagnostics around the radial fallback
+#include "engine_reads.h"
+#include "engine_rebase.h"
+#include "log.h"
 
 namespace {
 
-// CClientExoAppInternal field offsets we need beyond what engine_player
-// already declares. Sourced from the C header at
-// docs/llm-docs/re/swkotor.exe.h (struct CClientExoAppInternal,
-// 2026-04-29 export) and confirmed by decompile of HandleMouseClickInWorld
-// + GetDefaultActions.
-//
-//   +0x040  CGuiInGame*           gui_in_game
-//   +0x2b4  ulong                 last_target          (client-side)
-//   +0x2b8  ulong                 last_clicked_on_target (client-side)
-//   +0x4a4  ulong                 field283_0x4a4       (hover target;
-//                                                       must equal
-//                                                       last_target for
-//                                                       the click gate
-//                                                       to dispatch)
-//   +0x4c8  CSWGuiInterfaceAction* descriptor_array     (first slot used
-//                                                        by HandleMouse-
-//                                                        ClickInWorld)
-//   +0x4cc  int                   descriptor_count     (gate: must be
-//                                                        > 0 to dispatch)
-// K2 values witnessed in the hover-update twin (0x007B3A00): it stores the
-// hovered id at internal+0x4b0 (pos vector at +0x4b4..bc), compares it against
-// last_target at the UNCHANGED +0x2b4, and reads the descriptor as
-// array=+0x4cc / count=+0x4d0 (K1's pair shifted +4). last_clicked_on_target
-// +0x2b8 witnessed in the click twin (0x007B3CA0) alongside the same cluster.
+using acc::engine::TryReadPtr;
+using acc::engine::TryReadU32;
+using acc::picker::ActionSnapshot;
+
+// CClientExoAppInternal fields (struct in docs/llm-docs/re/swkotor.exe.h,
+// confirmed by the decompiles of HandleMouseClickInWorld and
+// GetDefaultActions):
+//   last_target, last_clicked_on_target: client-side target ids
+//   hover target: must equal last_target for the click gate to dispatch
+//   descriptor array (CSWGuiInterfaceAction*) and count: the default action;
+//     the count must be > 0 to dispatch
+// KOTOR 2 values from the hover-update twin (0x007B3A00) and the click twin
+// (0x007B3CA0): the hover id moved to +0x4b0 and the descriptor pair
+// shifted by 4.
 const size_t kInternalLastTargetOffset          = acc::off::Same(0x2b4);
 const size_t kInternalLastClickedOnTargetOffset = acc::off::Same(0x2b8);
 const size_t kInternalHoverTargetOffset         = acc::off::Pick(0x4a4, 0x4b0);
 const size_t kInternalDescriptorArrayOffset     = acc::off::Pick(0x4c8, 0x4cc);
 const size_t kInternalDescriptorCountOffset     = acc::off::Pick(0x4cc, 0x4d0);
 
-// CSWGuiInterfaceAction layout (decompile of GetDefaultActions writes,
-// + struct in swkotor.exe.h line 5437). Stride 0x38 between entries.
-// K2: every field position unchanged — witnessed across the K2
-// GetDefaultActions descriptor writes (fn imm32 at +0xc, target +0x1c,
-// id +8, icon SetIcon receiver desc+0x20, flags +0x30) and both Do*Action
-// bodies; label is the leading 8-byte CExoString (+0..+7, pinned by id at
-// +8). Only the stride grew, 0x38 -> 0x3C — tail growth.
-const size_t kInterfaceActionLabelOffset    = acc::off::Same(0x00);  // CExoString
-const size_t kInterfaceActionIdOffset       = acc::off::Same(0x08);  // ulong
-const size_t kInterfaceActionFnOffset       = acc::off::Same(0x0c);  // void*
-const size_t kInterfaceActionTargetOffset   = acc::off::Same(0x1c);  // ulong
-const size_t kInterfaceActionIconOffset     = acc::off::Same(0x20);  // CResRef (16B)
-const size_t kInterfaceActionStride         = acc::off::Pick(0x38, 0x3c);
-constexpr size_t kResRefMaxLen                  = 16;
+// CSWGuiInterfaceAction fields (the writes in GetDefaultActions; struct in
+// swkotor.exe.h). Same positions in KOTOR 2, witnessed across its
+// GetDefaultActions writes and both Do*Action bodies. The stride (0x38,
+// K2 0x3c) and the fn pointer at +0x0c are not needed here.
+const size_t kInterfaceActionLabelOffset  = acc::off::Same(0x00);  // CExoString
+const size_t kInterfaceActionIdOffset     = acc::off::Same(0x08);  // ulong
+const size_t kInterfaceActionTargetOffset = acc::off::Same(0x1c);  // ulong
+const size_t kInterfaceActionIconOffset   = acc::off::Same(0x20);  // CResRef
+constexpr size_t kResRefMaxLen = 16;
 
-// Engine entry points. Addresses confirmed from XML symbol table
-// (k1_win_gog_swkotor.exe.xml) on 2026-05-05; GoG bytes match Steam
-// per memory project_ghidra_gog_steam_bytes_match.
-// K2 GetDefaultActions found by icon-resref string xrefs (the only
-// function referencing all six of i_noaction/i_dialog/i_opendoor/
-// i_useplace/i_disablemine/i_recovermine); K2 HandleMouseClickInWorld
-// confirmed by decompile — same three gates (gui busy flag now +0xcc,
-// gui_in_game+0x30, camera-mode-5), same click-gate triple, same
-// `fn(desc+0xc)(id(+8), player)` dispatch, sits right before
-// GetDefaultActions exactly like KOTOR 1's source order.
-const uintptr_t kAddrCClientExoAppInternalGetDefaultActions = acc::addr::Pick(0x00620620, 0x007B40F0);
-const uintptr_t kAddrCClientExoAppInternalHandleMouseClickInWorld = acc::addr::Pick(0x00620350, 0x007B3CA0);
-const uintptr_t kAddrCGuiInGameSetMainInterfaceTarget = acc::addr::Pick(0x0062b000, 0x007CE710);
-// CSWGuiMainInterface::PopulateMenus @0x00689d80 — builds the radial
-// action menu. Called by HandleMouseClickInWorld's NOT-MATCH branch
-// (vanilla first-click-on-target behavior). We invoke it directly when
-// the engine descriptor is empty (no default action available) so the
-// user gets the same fallback UI a sighted player would see.
-// K2 twin 0x0074CFE0 takes a NEW int argument (every engine caller,
-// including K2 HandleMouseClickInWorld's NOT-MATCH branch and the
-// RePopulateMainInterface forwarder, passes 1) — call through the
-// per-game shape below, never the K1 argless typedef.
-const uintptr_t kAddrCSWGuiMainInterfacePopulateMenus = acc::addr::Pick(0x00689d80, 0x0074CFE0);
+// K2 GetDefaultActions was found by its icon-resref string xrefs (the only
+// function referencing all six of i_noaction, i_dialog, i_opendoor,
+// i_useplace, i_disablemine and i_recovermine); K2 HandleMouseClickInWorld
+// by decompile: the same three gates, click-gate triple and dispatch, right
+// before GetDefaultActions as in KOTOR 1.
+const uintptr_t kAddrGetDefaultActions = acc::addr::Pick(0x00620620, 0x007B40F0);
+const uintptr_t kAddrHandleMouseClickInWorld = acc::addr::Pick(0x00620350, 0x007B3CA0);
+const uintptr_t kAddrSetMainInterfaceTarget = acc::addr::Pick(0x0062b000, 0x007CE710);
+// CSWGuiMainInterface::PopulateMenus builds the radial action menu;
+// HandleMouseClickInWorld calls it on the first click on a target.
+const uintptr_t kAddrPopulateMenus = acc::addr::Pick(0x00689d80, 0x0074CFE0);
 
-typedef void (__thiscall* PFN_GetDefaultActions)(void* this_);
-typedef void (__thiscall* PFN_HandleMouseClickInWorld)(void* this_);
-// SetMainInterfaceTarget purges 8 bytes (ret 8) per its Ghidra stack frame
-// (k1_win_gog_swkotor.exe.xml: BYTES_PURGED="8"), i.e. it cleans TWO dwords off
-// the stack even though the decompiler only references param_1. Declaring a
-// single arg made us push 4 bytes while the callee popped 8 — a -4 stack
-// imbalance that corrupted the CALLER's frame (DispatchInteractImpl's `handle`/
-// `target` locals read back a fixed garbage pointer 0x049cc2d0 right after the
-// Drive that calls this; patch-20260618-162656.log DIAG[1] vs DIAG[2]). Pushing
-// a matching second dword (unused by the engine) balances the cleanup.
-typedef void (__thiscall* PFN_SetMainInterfaceTarget)(void* this_,
-                                                     uint32_t target,
+typedef void (__thiscall* PFN_ThisOnly)(void* this_);
+// SetMainInterfaceTarget cleans TWO dwords off the stack (ret 8) although
+// the decompiler shows one parameter. Pushing one corrupted the caller's
+// frame; the second is unused padding.
+typedef void (__thiscall* PFN_SetMainInterfaceTarget)(void* this_, uint32_t target,
                                                      uint32_t pad);
-typedef void (__thiscall* PFN_PopulateMenus)(void* this_);
-// KOTOR 2's PopulateMenus grew an int argument (callee-cleaned): every engine
-// caller — HandleMouseClickInWorld's NOT-MATCH branch and the RePopulate
-// forwarder — passes 1 (full repopulate). Calling the K1 argless shape there
-// under-pushes and corrupts the caller frame; use this per-game.
+// KOTOR 2's PopulateMenus takes an int the engine always passes as 1 (full
+// repopulate) and cleans it; the argless KOTOR 1 shape would under-push.
 typedef void (__thiscall* PFN_PopulateMenusK2)(void* this_, int mode);
 
-// One guarded call, correct shape per game. MUST stay free of objects with
-// destructors (SEH frame).
 bool CallPopulateMenus(void* mainIf) {
     __try {
         if (acc::game::IsKotor2()) {
-            auto fn = reinterpret_cast<PFN_PopulateMenusK2>(
-                kAddrCSWGuiMainInterfacePopulateMenus);
-            fn(mainIf, 1);
+            reinterpret_cast<PFN_PopulateMenusK2>(kAddrPopulateMenus)(mainIf, 1);
         } else {
-            auto fn = reinterpret_cast<PFN_PopulateMenus>(
-                kAddrCSWGuiMainInterfacePopulateMenus);
-            fn(mainIf);
+            reinterpret_cast<PFN_ThisOnly>(kAddrPopulateMenus)(mainIf);
         }
+        return true;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+}
+
+// Points the main interface at the target and has the engine build its
+// action descriptor for it. SetMainInterfaceTarget takes the CGuiInGame.
+bool BuildDescriptor(void* guiIn, void* internal, uint32_t targetClient) {
+    __try {
+        reinterpret_cast<PFN_SetMainInterfaceTarget>(kAddrSetMainInterfaceTarget)(
+            guiIn, targetClient, 0u);
+        reinterpret_cast<PFN_ThisOnly>(kAddrGetDefaultActions)(internal);
+        return true;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+}
+
+bool CallHandleMouseClickInWorld(void* internal) {
+    __try {
+        reinterpret_cast<PFN_ThisOnly>(kAddrHandleMouseClickInWorld)(internal);
         return true;
     } __except (EXCEPTION_EXECUTE_HANDLER) {
         return false;
@@ -135,110 +109,142 @@ bool CallPopulateMenus(void* mainIf) {
 }
 
 void WriteUInt32(void* base, size_t offset, uint32_t value) {
-    if (!base) return;
     __try {
-        *reinterpret_cast<uint32_t*>(
-            reinterpret_cast<unsigned char*>(base) + offset) = value;
+        *reinterpret_cast<uint32_t*>(static_cast<unsigned char*>(base) + offset) = value;
     } __except (EXCEPTION_EXECUTE_HANDLER) {
-        // Engine state moved out from under us mid-call — caller's
-        // observable signal is the absent log line on the next read,
-        // not a fatal here.
     }
 }
 
-uint32_t ReadUInt32(void* base, size_t offset) {
-    if (!base) return 0;
-    __try {
-        return *reinterpret_cast<uint32_t*>(
-            reinterpret_cast<unsigned char*>(base) + offset);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return 0;
-    }
-}
-
-// Copy a null-terminated string from src into dst (capacity bytes
-// including terminator) under SEH. Returns true if the copy completed
-// without faulting; false otherwise (dst[0] = '\0' on fault).
-bool CopyCStringSafe(const char* src, char* dst, size_t cap) {
-    if (cap == 0) return false;
-    dst[0] = '\0';
-    if (!src) return false;
-    __try {
-        size_t i = 0;
-        for (; i + 1 < cap; ++i) {
-            char c = src[i];
-            dst[i] = c;
-            if (c == '\0') return true;
-        }
-        dst[i] = '\0';
-        return true;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        dst[0] = '\0';
-        return false;
-    }
-}
-
-// Read an inline CResRef (a 16-byte fixed-buffer string used for
-// engine resource identifiers like "i_dialog"). Treated as
-// NUL-terminated within the 16-byte window.
-void ReadResRef(void* base, size_t offset, char* out, size_t outCap) {
-    if (outCap == 0) return;
+// Copies a NUL-terminated string of at most `limit` bytes, truncated to the
+// buffer. "" on a null source or a fault.
+void CopyCString(const char* src, size_t limit, char* out, size_t outCap) {
     out[0] = '\0';
-    if (!base) return;
+    if (!src) return;
     __try {
-        const char* src = reinterpret_cast<const char*>(
-            reinterpret_cast<unsigned char*>(base) + offset);
-        size_t lim = outCap - 1;
-        if (lim > kResRefMaxLen) lim = kResRefMaxLen;
         size_t i = 0;
-        for (; i < lim; ++i) {
-            char c = src[i];
-            out[i] = c;
-            if (c == '\0') return;
-        }
+        for (; i + 1 < outCap && i < limit && src[i] != '\0'; ++i) out[i] = src[i];
         out[i] = '\0';
     } __except (EXCEPTION_EXECUTE_HANDLER) {
         out[0] = '\0';
     }
 }
 
-// Read a CExoString (c_string + length pair). Falls back to "" on any
-// fault. Truncates into the caller's buffer.
-void ReadExoString(void* base, size_t offset, char* out, size_t outCap) {
-    if (outCap == 0) return;
-    out[0] = '\0';
-    if (!base) return;
-    __try {
-        auto* es = reinterpret_cast<CExoString*>(
-            reinterpret_cast<unsigned char*>(base) + offset);
-        if (!es->c_string) return;
-        CopyCStringSafe(es->c_string, out, outCap);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        out[0] = '\0';
+// The engine's id for a handle from either namespace: server ids have the
+// high bit clear, the cursor system uses the OR'd client form. 0 for no
+// object.
+uint32_t ToClientHandle(uint32_t handle) {
+    if (handle == 0u || handle == 0xFFFFFFFFu || handle == kInvalidObjectId) return 0u;
+    return handle | 0x80000000u;
+}
+
+// The descriptor the engine last built. valid only with a count above 0.
+void SnapshotDescriptor(void* internal, ActionSnapshot* snap) {
+    std::memset(snap, 0, sizeof(*snap));
+    void*    action = nullptr;
+    uint32_t count = 0;
+    if (!TryReadPtr(internal, kInternalDescriptorArrayOffset, &action) ||
+        !TryReadU32(internal, kInternalDescriptorCountOffset, &count)) {
+        return;
+    }
+    snap->count = static_cast<int>(count);
+    if (!action || snap->count <= 0) return;
+
+    TryReadU32(action, kInterfaceActionIdOffset, &snap->action_id);
+    TryReadU32(action, kInterfaceActionTargetOffset, &snap->target_id);
+    void* label = nullptr;
+    TryReadPtr(action, kInterfaceActionLabelOffset, &label);
+    CopyCString(static_cast<const char*>(label), sizeof(snap->label), snap->label,
+                sizeof(snap->label));
+    CopyCString(static_cast<const char*>(action) + kInterfaceActionIconOffset,
+                kResRefMaxLen, snap->icon, sizeof(snap->icon));
+    snap->valid = true;
+}
+
+// Drops a descriptor that is not a usable action on this target.
+void RejectUnusable(ActionSnapshot& snap, uint32_t targetClient) {
+    if (!snap.valid) return;
+    // The engine's "nothing to do here" verb, label "No Action", is what it
+    // fills in for an object it will not let you interact with. Taken as an
+    // action it was spoken as a verb, dispatched and then reported as failed.
+    if (snap.action_id == acc::picker::kActionIdNoop) {
+        acclog::Write("Picker", "descriptor is the engine noop verb (action_id=0x%x "
+                      "label=[%s] target=0x%08x): treating as no default action",
+                      snap.action_id, snap.label, snap.target_id);
+        snap.valid = false;
+        return;
+    }
+    // GetDefaultActions builds into a fixed slot, and when it has nothing to
+    // say about the new target (a waypoint: not clickable) it leaves the
+    // PREVIOUS target's descriptor there, which looks valid. The dispatch
+    // trusts the descriptor's target, so Enter on a landmark once opened a
+    // conversation with a party member. Conclusive only when our handle
+    // names a real object: some callers arrive with a value from the wrong
+    // namespace, and there the descriptor's own target is the better answer.
+    if (snap.target_id && snap.target_id != targetClient &&
+        acc::engine::ResolveClientObjectHandle(targetClient)) {
+        acclog::Write("Picker", "descriptor belongs to 0x%08x, not 0x%08x (label=[%s] "
+                      "action_id=0x%x): engine did not rebuild for this target; "
+                      "treating as no default action",
+                      snap.target_id, targetClient, snap.label, snap.action_id);
+        snap.valid = false;
     }
 }
 
-// Snapshot the descriptor at internal+0x4c8. Sets snap.valid only if
-// the pointer is non-null AND count > 0.
-void SnapshotDescriptor(void* internal, acc::picker::ActionSnapshot* snap) {
-    std::memset(snap, 0, sizeof(*snap));
-    if (!internal) return;
+// No default action, or the radial was asked for: open the radial menu the
+// way the first mouse click on a target does, through the PopulateMenus
+// wrapper. The wrapper resolves the player and the target (with the
+// CGameObject to CSWCObject downcast that direct calls to the inner
+// PopulateMenus lacked), refills the six personal-action lists and the
+// target-action lists, and updates the UI rows.
+bool OpenRadial(void* mainIf, uint32_t targetClient, int descriptorCount,
+                bool forceRadial) {
+    // The currently controlled party member, and the target's class and
+    // state: tells an exhausted target (open door) from one the engine
+    // should have offered something for (locked door, skill mismatch).
+    char leaderName[64] = "";
+    acc::engine::GetActiveLeaderName(leaderName, sizeof(leaderName));
+    acclog::Write("Picker", "%s diag: leader=[%s] target=0x%08x descriptor_count=%d",
+                  forceRadial ? "force-radial" : "empty-descriptor",
+                  leaderName[0] ? leaderName : "?", targetClient, descriptorCount);
+    acc::engine_radial::LogTargetDiag(targetClient, "before-wrapper");
 
-    uint32_t descPtr = ReadUInt32(internal, kInternalDescriptorArrayOffset);
-    int      count   = static_cast<int>(
-        ReadUInt32(internal, kInternalDescriptorCountOffset));
-    snap->count = count;
+    const bool opened = CallPopulateMenus(mainIf);
+    if (void* tam = acc::engine_radial::ResolveTargetActionMenu()) {
+        acc::engine_radial::LogStateWide(tam, "after-wrapper");
+    }
+    acclog::Write("Picker", "%s: %s (target=0x%08x descriptor_count=%d)",
+                  forceRadial ? "force-radial" : "empty descriptor",
+                  opened ? "opened radial via PopulateMenus" : "PopulateMenus SEH-FAULT",
+                  targetClient, descriptorCount);
+    return opened;
+}
 
-    if (descPtr == 0 || count <= 0) return;
+// Dispatches the descriptor the way a mouse click does.
+bool DispatchClick(void* internal, uint32_t targetClient, const ActionSnapshot& snap) {
+    // The click gate: HandleMouseClickInWorld dispatches (instead of opening
+    // the radial) only when these three hold the same valid id. Written
+    // directly; the engine's setters add side flags.
+    WriteUInt32(internal, kInternalLastTargetOffset, targetClient);
+    WriteUInt32(internal, kInternalLastClickedOnTargetOffset, targetClient);
+    WriteUInt32(internal, kInternalHoverTargetOffset, targetClient);
 
-    void* action = reinterpret_cast<void*>(static_cast<uintptr_t>(descPtr));
-    snap->action_id = ReadUInt32(action, kInterfaceActionIdOffset);
-    snap->target_id = ReadUInt32(action, kInterfaceActionTargetOffset);
-    ReadExoString(action, kInterfaceActionLabelOffset,
-                  snap->label, sizeof(snap->label));
-    ReadResRef(action, kInterfaceActionIconOffset,
-               snap->icon, sizeof(snap->icon));
-    snap->valid = true;
+    // Player input goes off for the action the engine enqueues, so the
+    // per-tick movement input does not clobber it; TickPlayerInputRestore
+    // gives it back when the queue drains. NOT for the walk-to-act verbs
+    // (talk, use, bash, door, disable mine): the engine's own walk-then-act
+    // only moves the PC with input left ENABLED, and disabling it froze
+    // distant talks and silently failed distant loots
+    // (docs/llm-docs/interaction-dispatch-model.md). The interact feature
+    // arms its own approach watchdog for those.
+    const bool inputDisabled = !acc::picker::IsWalkToActVerb(snap.action_id) &&
+                               acc::engine::SetPlayerInputEnabled(false);
+    const bool dispatched = CallHandleMouseClickInWorld(internal);
+    if (!dispatched && inputDisabled) acc::engine::SetPlayerInputEnabled(true);
+    acclog::Write("Picker", "HandleMouseClickInWorld %s target=0x%08x action_id=0x%x "
+                  "label=[%s] (input_disabled=%d)",
+                  dispatched ? "dispatched" : "SEH-FAULT", targetClient, snap.action_id,
+                  snap.label, inputDisabled ? 1 : 0);
+    return dispatched;
 }
 
 }  // namespace
@@ -247,362 +253,95 @@ namespace acc::picker {
 
 bool Drive(uint32_t targetServerHandle, ActionSnapshot* outSnapshot,
            bool forceRadial, bool populateOnly) {
-    ActionSnapshot localSnap = {};
+    ActionSnapshot snap = {};
+    if (outSnapshot) *outSnapshot = snap;
+    const uint32_t targetClient = ToClientHandle(targetServerHandle);
+    if (!targetClient) return false;
 
-    if (targetServerHandle == 0u || targetServerHandle == 0xFFFFFFFFu ||
-        targetServerHandle == kInvalidObjectId) {
-        if (outSnapshot) *outSnapshot = localSnap;
-        return false;
-    }
-
-    // server → client conversion: server ids have the high bit clear
-    // (per memory project_object_handle_namespaces); the cursor system
-    // uses the OR'd form. If the caller already passed a client handle
-    // (high bit set) we leave it untouched.
-    uint32_t targetClient =
-        (targetServerHandle & 0x80000000u) ? targetServerHandle
-                                           : (targetServerHandle | 0x80000000u);
-
-    void* exoApp   = acc::engine::GetClientApp();
     void* internal = acc::engine::GetClientAppInternal();
     void* guiIn    = acc::engine::ResolveGuiInGame();
     void* mainIf   = acc::engine::ResolveMainInterface();
-
-    if (!internal || !guiIn) {
-        acclog::Write("Picker", "chain unresolved (target=0x%08x exoApp=%p "
-            "internal=%p guiIn=%p mainIf=%p)",
-            targetClient, exoApp, internal, guiIn, mainIf);
-        if (outSnapshot) *outSnapshot = localSnap;
+    if (!internal || !guiIn || !mainIf) {
+        acclog::Write("Picker", "chain unresolved (target=0x%08x exoApp=%p internal=%p "
+                      "guiIn=%p mainIf=%p)", targetClient, acc::engine::GetClientApp(),
+                      internal, guiIn, mainIf);
         return false;
     }
-
-    // Step 1 — point CSWGuiMainInterface.field1_0x64 at our target.
-    // GetDefaultActions reads main_interface->field1_0x64 to know
-    // which target to compute actions for.
-    if (mainIf) {
-        __try {
-            auto fn = reinterpret_cast<PFN_SetMainInterfaceTarget>(
-                kAddrCGuiInGameSetMainInterfaceTarget);
-            // SetMainInterfaceTarget takes the CGuiInGame*, not the
-            // main_interface — the wrapper resolves through this. The trailing 0
-            // is the unused second dword the callee purges (ret 8); see typedef.
-            fn(guiIn, targetClient, 0u);
-        } __except (EXCEPTION_EXECUTE_HANDLER) {
-            acclog::Write("Picker", "SetMainInterfaceTarget SEH-FAULT target=0x%08x",
-                targetClient);
-            if (outSnapshot) *outSnapshot = localSnap;
-            return false;
-        }
-    } else {
-        acclog::Write("Picker", "main_interface null (in-world too early?); "
-            "target=0x%08x — skipping Drive",
-            targetClient);
-        if (outSnapshot) *outSnapshot = localSnap;
+    if (!BuildDescriptor(guiIn, internal, targetClient)) {
+        acclog::Write("Picker", "SetMainInterfaceTarget/GetDefaultActions SEH-FAULT "
+                      "target=0x%08x", targetClient);
         return false;
     }
+    SnapshotDescriptor(internal, &snap);
+    RejectUnusable(snap, targetClient);
 
-    // Step 2 — populate +0x4c8 / +0x4cc by running the engine's own
-    // descriptor builder against the target we just installed.
-    __try {
-        auto fn = reinterpret_cast<PFN_GetDefaultActions>(
-            kAddrCClientExoAppInternalGetDefaultActions);
-        fn(internal);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        acclog::Write("Picker", "GetDefaultActions SEH-FAULT target=0x%08x",
-            targetClient);
-        if (outSnapshot) *outSnapshot = localSnap;
-        return false;
+    if (!snap.valid || forceRadial) {
+        snap.radial_opened = OpenRadial(mainIf, targetClient, snap.count, forceRadial);
+        if (outSnapshot) *outSnapshot = snap;
+        return snap.radial_opened;
     }
-
-    // Step 3 — read back what the engine picked. Useful for the log
-    // and for refined pre-roll narration even when we don't end up
-    // dispatching.
-    SnapshotDescriptor(internal, &localSnap);
-
-    // Step 3b — is this descriptor actually about the object we asked for?
-    //
-    // GetDefaultActions builds into a fixed slot on the client internal, and
-    // when it has nothing to say about the new target it leaves what was
-    // already there. The descriptor then still carries the PREVIOUS target's
-    // id and verb, and looks perfectly valid. Waypoints are the reproducible
-    // case — not clickable, so the engine never rebuilds for one — and since
-    // the dispatch below trusts target_id over the handle we asked about, the
-    // action lands on whoever was asked about last: in the beta log, Enter on
-    // a landmark opened a conversation with a party member, 12 landmark
-    // presses out of 12 (patch-20260813-150242, 15:07-15:22).
-    //
-    // The mismatch is only conclusive when OUR handle names a real object.
-    // Some callers arrive with a pointer-shaped value in the wrong namespace
-    // (see the radial re-anchor note below); there the descriptor's own target
-    // is the better answer, so leave those alone and let the existing
-    // target_id fallback do its job.
-    // A noop descriptor is not an action. 0x404 is the engine's own "nothing
-    // to do here" verb (see the action_id table in engine_picker.h, and
-    // IsWalkToActVerb which already excludes it) — for an object the engine
-    // will not let you interact with at all, it fills the slot with 0x404 and
-    // the label "No Action". Treated as valid, that produced two misleading
-    // announcements in a row for a ground item that simply cannot be picked
-    // up: the engine's internal label spoken as if it were a verb ("No Action
-    // g_w_sbrcrstl11"), then a dispatch of it, then "Interact with ... failed"
-    // when the dispatch predictably went nowhere. Reporting no default action
-    // routes it to the same honest "no actions available" wording every other
-    // actionless target gets.
-    if (localSnap.valid && localSnap.action_id == kActionIdNoop) {
-        acclog::Write("Picker", "descriptor is the engine noop verb "
-            "(action_id=0x%x label=[%s] target=0x%08x) — treating as no "
-            "default action",
-            localSnap.action_id, localSnap.label, localSnap.target_id);
-        localSnap.valid = false;
-    }
-
-    if (localSnap.valid && localSnap.target_id &&
-        localSnap.target_id != targetClient &&
-        acc::engine::ResolveClientObjectHandle(targetClient)) {
-        acclog::Write("Picker", "descriptor belongs to 0x%08x, not 0x%08x "
-            "(label=[%s] action_id=0x%x) — engine did not rebuild for this "
-            "target; treating as no default action",
-            localSnap.target_id, targetClient, localSnap.label,
-            localSnap.action_id);
-        localSnap.valid = false;
-    }
-
-    if (!localSnap.valid || forceRadial) {
-        // Diagnostic — capture leader name + target class/state BEFORE
-        // calling the wrapper. Lets us tell, when action_lists comes back
-        // empty, whether the target is in a "no actions remaining" final
-        // state (open door, used placeable) or in a state where the engine
-        // *should* have surfaced something but didn't (locked door, leader
-        // skill mismatch). GetActiveLeaderName resolves the *currently-
-        // controlled* party member — Tab-swapping to Trask is reflected
-        // here, unlike GetPlayerCharacterName which always returns the
-        // PC's chargen name.
-        const char* tag = forceRadial ? "force-radial diag"
-                                      : "empty-descriptor diag";
-        char leaderName[64] = "";
-        acc::engine::GetActiveLeaderName(leaderName, sizeof(leaderName));
-        acclog::Write("Picker", "%s — leader=[%s] target=0x%08x descriptor_count=%d",
-            tag, leaderName[0] ? leaderName : "?", targetClient,
-            localSnap.count);
-        acc::engine_radial::LogTargetDiag(targetClient, "before-wrapper");
-
-        // Engine has no default action for this target (count==0).
-        // Vanilla mouse flow at this point opens the radial menu via
-        // HandleMouseClickInWorld's NOT-MATCH branch, which calls
-        // CSWGuiMainInterface::PopulateMenus(main_interface) — no args.
-        // We do the same. The wrapper's decompile (Decompile.java run
-        // 2026-05-05, see docs/radial-menu-investigation.md) shows that
-        // it internally:
-        //   1. Resolves the player creature via GetSWParty/GetPlayerCharacter.
-        //   2. Resolves the target object via GetGameObject(field1_0x64)
-        //      AND downcasts CGameObject* -> CSWCObject* via
-        //      vtable->AsSWCObject(). This downcast is the missing piece
-        //      that broke our previous direct inner-PopulateMenus calls.
-        //   3. Refills field5_0x74[0..5] (six personal-action lists on
-        //      the main interface) via CSWCCreature::GetPersonalActions.
-        //   4. Calls inner CSWGuiTargetActionMenu::PopulateMenus(player,
-        //      mode, swc_target, &result) with the correct types. Inner
-        //      then refills target_action_menu.action_lists[0..2] via
-        //      CSWCCreature::GetTargetActions(player, swc_target, row).
-        //   5. Updates main_interface UI rows from the personal-action lists.
-        // So the wrapper alone produces the correct populated state.
-        bool radialOpened = CallPopulateMenus(mainIf);
-        if (!radialOpened) {
-            acclog::Write("Picker", "PopulateMenus SEH-FAULT target=0x%08x "
-                "(empty-descriptor radial fallback)",
-                targetClient);
-        }
-
-        // Synchronous wide diagnostic — captures the wrapper's output so
-        // we can verify action_lists[] populated correctly without
-        // depending on a next-frame OnUpdate tick that might never come.
-        void* dtam = acc::engine_radial::ResolveTargetActionMenu();
-        if (dtam) {
-            acc::engine_radial::LogStateWide(dtam, "after-wrapper");
-        }
-
-        localSnap.radial_opened = radialOpened;
-        if (outSnapshot) *outSnapshot = localSnap;
-
-        if (radialOpened) {
-            acclog::Write("Picker", "%s — opened radial via PopulateMenus "
-                "(target=0x%08x descriptor_count=%d)",
-                forceRadial ? "force-radial"
-                            : "empty descriptor",
-                targetClient, localSnap.count);
-        } else {
-            acclog::Write("Picker", "%s (target=0x%08x descriptor_count=%d) and "
-                "PopulateMenus faulted",
-                forceRadial ? "force-radial requested"
-                            : "GetDefaultActions returned empty descriptor",
-                targetClient, localSnap.count);
-        }
-        return radialOpened;
-    }
-    if (outSnapshot) *outSnapshot = localSnap;
-
+    if (outSnapshot) *outSnapshot = snap;
     acclog::Write("Picker", "descriptor populated target=0x%08x action_id=0x%x "
-        "label=[%s] icon=[%s] count=%d%s",
-        targetClient, localSnap.action_id,
-        localSnap.label, localSnap.icon, localSnap.count,
-        populateOnly ? " (populate-only; caller dispatches)" : "");
-
-    // populate-only: the read half is done. The caller picks the dispatch
-    // primitive per verb (use-equivalent → guidance::UseObject; rest →
-    // re-call with populateOnly=false). Skip the click gate + input-disable +
-    // HandleMouseClickInWorld below.
+                  "label=[%s] icon=[%s] count=%d%s",
+                  targetClient, snap.action_id, snap.label, snap.icon, snap.count,
+                  populateOnly ? " (populate-only; caller dispatches)" : "");
+    // populate-only: the caller picks the dispatch primitive per verb.
     if (populateOnly) return true;
-
-    // Step 4 — set the engine's click gate so HandleMouseClickInWorld
-    // takes the dispatch branch instead of the PopulateMenus branch.
-    // All three slots must hold the same value AND last_clicked_on_target
-    // must be != INVALID. We write directly (engine helpers like
-    // SetLastTarget add side flags we don't want to bias).
-    WriteUInt32(internal, kInternalLastTargetOffset,          targetClient);
-    WriteUInt32(internal, kInternalLastClickedOnTargetOffset, targetClient);
-    WriteUInt32(internal, kInternalHoverTargetOffset,         targetClient);
-
-    // Disable the per-tick player-input movement clobber for the duration of
-    // whatever the engine action enqueues — walk-to-then-use, attack, … share
-    // the same composite shape. TickPlayerInputRestore flips control back when
-    // the action queue drains (or the walk stalls); on any SEH fault below we
-    // restore immediately. A repeat dispatch (e.g. mashing Enter) re-issues the
-    // engine action but does not extend the restore window — see the no-re-arm
-    // guard in SetPlayerInputEnabled (that was the janicebug livelock).
-    //
-    // EXCEPTION — walk-to-act verbs (talk / use / bash / door / disable-mine,
-    // see IsWalkToActVerb): we do NOT disable input. Verified by decompile +
-    // in-game (docs/llm-docs/interaction-dispatch-model.md): the engine's native
-    // walk-then-act (server input case 8 → SetAILevel(player,1) → the AI action
-    // that AddMoveToPointActionToFront's the player when out of range) only moves
-    // the PC with input left ENABLED; disabling it (→ SwitchMode(player,0))
-    // suppresses the approach and produced the distant-talk freeze
-    // (project_distant_npc_dialogue_stuck) — and, for 0x3f7 use/open, the
-    // silent distant-corpse loot failure (save "lootbugbarriere?",
-    // patch-20260618-080635.log: the near corpse opened, far ones never walked).
-    // The talk-only fix is now generalised to the whole family. Because input
-    // stays enabled there is no TickPlayerInputRestore session for these; the
-    // interact feature arms its own approach watchdog instead, which breaks the
-    // livelock where the target is reachable on screen but no walkable point
-    // lands within interaction range (e.g. behind a railing) and announces
-    // "way blocked".
-    const bool skipInputDisable = acc::picker::IsWalkToActVerb(localSnap.action_id);
-    bool inputDisabled = false;
-    if (!skipInputDisable) {
-        inputDisabled = acc::engine::SetPlayerInputEnabled(false);
-    }
-
-    // Step 5 — actual dispatch.
-    bool dispatched = true;
-    __try {
-        auto fn = reinterpret_cast<PFN_HandleMouseClickInWorld>(
-            kAddrCClientExoAppInternalHandleMouseClickInWorld);
-        fn(internal);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        dispatched = false;
-        if (inputDisabled) acc::engine::SetPlayerInputEnabled(true);
-        acclog::Write("Picker", "HandleMouseClickInWorld SEH-FAULT target=0x%08x "
-            "action_id=0x%x label=[%s]",
-            targetClient, localSnap.action_id, localSnap.label);
-    }
-
-    if (dispatched) {
-        acclog::Write("Picker", "HandleMouseClickInWorld dispatched target=0x%08x "
-            "action_id=0x%x label=[%s] (input_disabled=%d)",
-            targetClient, localSnap.action_id, localSnap.label,
-            inputDisabled ? 1 : 0);
-    }
-
-    return dispatched;
+    return DispatchClick(internal, targetClient, snap);
 }
 
+// Drive's radial branch without the diagnostics: it runs on every radial
+// keypress. Rebuilds the target-action menu for our target, over whatever
+// the cursor's last mouse move left there.
 bool ReanchorRadial(uint32_t targetServerHandle) {
-    if (targetServerHandle == 0u || targetServerHandle == 0xFFFFFFFFu ||
-        targetServerHandle == kInvalidObjectId) {
-        return false;
-    }
-    uint32_t targetClient =
-        (targetServerHandle & 0x80000000u) ? targetServerHandle
-                                           : (targetServerHandle | 0x80000000u);
-
+    const uint32_t targetClient = ToClientHandle(targetServerHandle);
     void* internal = acc::engine::GetClientAppInternal();
     void* guiIn    = acc::engine::ResolveGuiInGame();
     void* mainIf   = acc::engine::ResolveMainInterface();
-    if (!internal || !guiIn || !mainIf) return false;
+    if (!targetClient || !internal || !guiIn || !mainIf) return false;
 
-    // Same three engine calls as Drive's force-radial branch, minus the
-    // diagnostics — this runs on every radial keypress, so it must stay
-    // quiet. SetMainInterfaceTarget points field1_0x64 at our target;
-    // GetDefaultActions + PopulateMenus rebuild the target-action menu for
-    // it, overwriting whatever the cursor's last mouse-move left there.
-    __try {
-        auto setTgt = reinterpret_cast<PFN_SetMainInterfaceTarget>(
-            kAddrCGuiInGameSetMainInterfaceTarget);
-        setTgt(guiIn, targetClient, 0u);  // trailing 0: callee purges 8 (ret 8)
-
-        auto getActions = reinterpret_cast<PFN_GetDefaultActions>(
-            kAddrCClientExoAppInternalGetDefaultActions);
-        getActions(internal);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        acclog::Write("Picker", "ReanchorRadial SEH-FAULT target=0x%08x",
-            targetClient);
-        return false;
-    }
-    if (!CallPopulateMenus(mainIf)) {
-        acclog::Write("Picker", "ReanchorRadial PopulateMenus SEH-FAULT "
-            "target=0x%08x", targetClient);
+    if (!BuildDescriptor(guiIn, internal, targetClient) || !CallPopulateMenus(mainIf)) {
+        acclog::Write("Picker", "ReanchorRadial SEH-FAULT target=0x%08x", targetClient);
         return false;
     }
     return true;
 }
 
 bool ReadCurrent(ActionSnapshot* outSnapshot) {
-    ActionSnapshot localSnap = {};
-    void* internal = acc::engine::GetClientAppInternal();
-    SnapshotDescriptor(internal, &localSnap);
-    if (outSnapshot) *outSnapshot = localSnap;
-    return localSnap.valid;
+    ActionSnapshot snap = {};
+    SnapshotDescriptor(acc::engine::GetClientAppInternal(), &snap);
+    if (outSnapshot) *outSnapshot = snap;
+    return snap.valid;
 }
 
-// CSWCCreature::ActionInitiateDialog @0x0060f620. __thiscall; decompile shows
-// the two declared stack params are unused, but __thiscall is callee-cleanup so
-// we must still push them (the function ret 8's). this = target NPC client
-// creature. K2 twin witnessed as the fn-pointer immediate the K2
-// GetDefaultActions stores into the talk descriptor (id 0x3ea, "i_dialog") —
-// the same slot KOTOR 1's stores 0x0060f620 into. VERIFY K2 ret n before
-// clearing the gate (see typedef note above).
-const uintptr_t kAddrCSWCCreatureActionInitiateDialog = acc::addr::Pick(0x0060f620, 0x0077CF70);
-typedef void (__thiscall* PFN_ActionInitiateDialog)(void* this_,
-                                                    uint32_t unused1,
+// CSWCCreature::ActionInitiateDialog, `this` = the target NPC's client
+// creature. Its two stack parameters are unused but callee-cleaned (ret 8),
+// so they must be pushed. The K2 twin is the fn pointer K2's
+// GetDefaultActions stores into the talk descriptor (id 0x3ea, "i_dialog"),
+// the slot KOTOR 1 stores 0x0060f620 into; its ret count is unverified.
+const uintptr_t kAddrActionInitiateDialog = acc::addr::Pick(0x0060f620, 0x0077CF70);
+typedef void (__thiscall* PFN_ActionInitiateDialog)(void* this_, uint32_t unused1,
                                                     void* unused2);
 
 bool InitiateDialog(uint32_t targetServerHandle) {
-    if (targetServerHandle == 0u || targetServerHandle == 0xFFFFFFFFu ||
-        targetServerHandle == kInvalidObjectId) {
-        return false;
-    }
-    uint32_t clientHandle =
-        (targetServerHandle & 0x80000000u) ? targetServerHandle
-                                           : (targetServerHandle | 0x80000000u);
-
-    void* targetClientCreature = acc::engine::ResolveClientObject(clientHandle);
-    if (!targetClientCreature) {
+    const uint32_t clientHandle = ToClientHandle(targetServerHandle);
+    if (!clientHandle) return false;
+    void* creature = acc::engine::ResolveClientObject(clientHandle);
+    if (!creature) {
         acclog::Write("Picker", "InitiateDialog: client creature unresolved "
-            "(target=0x%08x)", clientHandle);
+                      "(target=0x%08x)", clientHandle);
         return false;
     }
-
     __try {
-        auto fn = reinterpret_cast<PFN_ActionInitiateDialog>(
-            kAddrCSWCCreatureActionInitiateDialog);
-        fn(targetClientCreature, 0u, nullptr);
+        reinterpret_cast<PFN_ActionInitiateDialog>(kAddrActionInitiateDialog)(
+            creature, 0u, nullptr);
     } __except (EXCEPTION_EXECUTE_HANDLER) {
-        acclog::Write("Picker", "InitiateDialog: SEH-FAULT target=0x%08x "
-            "creature=%p", clientHandle, targetClientCreature);
+        acclog::Write("Picker", "InitiateDialog: SEH-FAULT target=0x%08x creature=%p",
+                      clientHandle, creature);
         return false;
     }
-
     acclog::Write("Picker", "InitiateDialog dispatched (target=0x%08x creature=%p)",
-        clientHandle, targetClientCreature);
+                  clientHandle, creature);
     return true;
 }
 
