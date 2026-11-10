@@ -198,11 +198,6 @@ void AbsorbAdjacentStragglers(const acc::engine::navgraph::NavGraphSnapshot& g,
 void AbsorbStragglersByBoundingBox(void* area,
                                    const acc::engine::navgraph::NavGraphSnapshot& g,
                                    int n, BuildPasses& bp) {
-    const float* nodeFloorZ = bp.nodeFloorZ;
-    const acc::engine::WallEdge* gw = bp.gw;
-    const int  gwCount = bp.gwCount;
-    const bool haveGW  = bp.haveGW;
-
     int bboxSnapRoot[kMaxNodes];
     int bboxSnapSize[kMaxNodes];
     for (int i = 0; i < n; ++i) {

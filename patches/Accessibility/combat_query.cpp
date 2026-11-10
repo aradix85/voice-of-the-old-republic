@@ -233,7 +233,7 @@ int BuildEffectIconSummary(void* serverObject, char* outBuf, size_t outBufSize) 
             if (n < 0) break;
             off += static_cast<size_t>(n);
             ++written;
-            if (off >= outBufSize) { off = outBufSize - 1; break; }
+            if (off >= outBufSize) break;
         }
     } __except (EXCEPTION_EXECUTE_HANDLER) {
         // Partial result is fine.
@@ -292,7 +292,7 @@ bool BuildEffectsSummary(void* serverObject, char* outBuf, size_t outBufSize) {
                 (off == 0) ? "%s" : ", %s", name);
             if (written < 0) break;
             off += static_cast<size_t>(written);
-            if (off >= outBufSize) { off = outBufSize - 1; break; }
+            if (off >= outBufSize) break;
         }
     } __except (EXCEPTION_EXECUTE_HANDLER) {
         // Partial result is fine; whatever we already wrote is valid.
@@ -427,9 +427,8 @@ bool BuildTargetCombatBrief(void* targetServerObject,
     //    target reticle; expose the same affordance as a metres readout.
     //    2D horizontal distance (matches the cycle audio cue's range model).
     float distM = ComputePlayerDistanceMeters(targetServerObject);
-    int distMeters = -1;
     if (distM >= 0.0f) {
-        distMeters = static_cast<int>(distM + 0.5f);   // round to nearest
+        const int distMeters = static_cast<int>(distM + 0.5f);   // round to nearest
         BriefAppend(b, acc::strings::Get(S::FmtBriefDistanceMeters),
                     distMeters);
     }

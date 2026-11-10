@@ -133,7 +133,6 @@ void PassCoreMerge(const acc::engine::navgraph::NavGraphSnapshot& g,
     const bool*  nodeRoom         = bp.nodeRoom;
     const float* nodeFloorZ       = bp.nodeFloorZ;
     const bool*  chainStraight    = bp.chainStraight;
-    const float* chainStraightCos = bp.chainStraightCos;
     const acc::engine::WallEdge* gw = bp.gw;
     const int  gwCount = bp.gwCount;
     const bool haveGW  = bp.haveGW;

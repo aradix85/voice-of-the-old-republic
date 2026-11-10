@@ -125,16 +125,16 @@ bool     g_circling_announced  = false;
 
 // 8 cardinals, +X = East, +Y = North. Order: N, NE, E, SE, S, SW, W, NW.
 constexpr float kSqrt2Over2 = 0.70710678f;
-struct ProbeDir { float x, y; acc::strings::Id strId; const char* tag; };
+struct ProbeDir { float x, y; acc::strings::Id strId; };
 const ProbeDir kProbeDirs[8] = {
-    { 0.0f,         1.0f,         acc::strings::Id::DirNorth,     "N"  },
-    { kSqrt2Over2,  kSqrt2Over2,  acc::strings::Id::DirNortheast, "NE" },
-    { 1.0f,         0.0f,         acc::strings::Id::DirEast,      "E"  },
-    { kSqrt2Over2, -kSqrt2Over2,  acc::strings::Id::DirSoutheast, "SE" },
-    { 0.0f,        -1.0f,         acc::strings::Id::DirSouth,     "S"  },
-    {-kSqrt2Over2, -kSqrt2Over2,  acc::strings::Id::DirSouthwest, "SW" },
-    {-1.0f,         0.0f,         acc::strings::Id::DirWest,      "W"  },
-    {-kSqrt2Over2,  kSqrt2Over2,  acc::strings::Id::DirNorthwest, "NW" },
+    { 0.0f,         1.0f,         acc::strings::Id::DirNorth },
+    { kSqrt2Over2,  kSqrt2Over2,  acc::strings::Id::DirNortheast },
+    { 1.0f,         0.0f,         acc::strings::Id::DirEast },
+    { kSqrt2Over2, -kSqrt2Over2,  acc::strings::Id::DirSoutheast },
+    { 0.0f,        -1.0f,         acc::strings::Id::DirSouth },
+    {-kSqrt2Over2, -kSqrt2Over2,  acc::strings::Id::DirSouthwest },
+    {-1.0f,         0.0f,         acc::strings::Id::DirWest },
+    {-kSqrt2Over2,  kSqrt2Over2,  acc::strings::Id::DirNorthwest },
 };
 
 void RunStuckProbe(const Vector& pos) {

@@ -42,7 +42,6 @@ constexpr float kLosShortenM = 0.6f;
 constexpr float kWallSetPlaceableM = 2.0f;
 
 struct Candidate {
-    void*    obj;
     uint32_t handle;
     float    angle;  // clockwise from straight ahead, 0..360
     float    dist;
@@ -139,7 +138,7 @@ bool HandlePress(int direction) {
             std::atan2(dy, dx) * 57.29577951308232f);
         float rel = std::fmod(bearing - facing + 720.0f, 360.0f);
         if (rel >= 359.5f) rel = 0.0f;
-        cands.push_back(Candidate{obj, handle, rel, dist});
+        cands.push_back(Candidate{handle, rel, dist});
     }
 
     if (cands.empty()) {

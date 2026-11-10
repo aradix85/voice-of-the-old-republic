@@ -57,11 +57,6 @@ struct EditboxPanelSpec {
     // it at the documented offset).
     void* (*findEditbox)(void* panel);
 
-    // Locate the panel's submit button (BTN_OK / "Annehmen" analogue) for
-    // Enter-to-submit dispatch. Inline-embedded button; we feed it to
-    // pending::QueueActivate which calls vtable[15].HandleInputEvent(0x27).
-    void* (*findSubmitButton)(void* panel);
-
     // Optional title-speech override. Called from menus.cpp's
     // AnnouncePanelTitle when this panel matches; returning a non-null
     // string substitutes that string for the generic title-walk speech
@@ -89,11 +84,6 @@ void* ChargenNameFindEditbox(void* panel) {
     return static_cast<unsigned char*>(panel) + kNameChargenEditboxOffset;
 }
 
-void* ChargenNameFindSubmitButton(void* panel) {
-    if (!panel) return nullptr;
-    return static_cast<unsigned char*>(panel) + kNameChargenEndButtonOffset;
-}
-
 // Substitute the chargen Name panel's title speech: read subtitle_label
 // ("Name") instead of letting the generic walk land on main_title_label
 // ("CHARAKTERAUSWAHL"). Reading the live label rather than hardcoding a
@@ -114,7 +104,6 @@ constexpr EditboxPanelSpec kChargenNameSpec = {
     /*logTag*/           "ChargenName",
     /*matches*/          ChargenNameMatches,
     /*findEditbox*/      ChargenNameFindEditbox,
-    /*findSubmitButton*/ ChargenNameFindSubmitButton,
     /*titleOverride*/    ChargenNameTitleOverride,
 };
 
@@ -131,11 +120,6 @@ bool SaveNameMatches(void* panel) {
 void* SaveNameFindEditbox(void* panel) {
     if (!panel) return nullptr;
     return static_cast<unsigned char*>(panel) + kSaveNameEditboxOffset;
-}
-
-void* SaveNameFindSubmitButton(void* panel) {
-    if (!panel) return nullptr;
-    return static_cast<unsigned char*>(panel) + kSaveNameOkButtonOffset;
 }
 
 // Substitute the save-name popup's title speech with its own title_label.
@@ -156,7 +140,6 @@ constexpr EditboxPanelSpec kSaveNameSpec = {
     /*logTag*/           "SaveName",
     /*matches*/          SaveNameMatches,
     /*findEditbox*/      SaveNameFindEditbox,
-    /*findSubmitButton*/ SaveNameFindSubmitButton,
     /*titleOverride*/    SaveNameTitleOverride,
 };
 

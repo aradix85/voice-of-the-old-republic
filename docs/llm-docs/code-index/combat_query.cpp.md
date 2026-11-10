@@ -1,4 +1,4 @@
-# combat_query.cpp (587 lines)
+# combat_query.cpp (586 lines)
 
 Source: `patches/Accessibility/combat_query.cpp`
 
@@ -16,5 +16,5 @@ transient (engine LYT loader use-after-free)
 - L303 `acc::strings::Id DamageLevelStringIdFor(int level)`
 - L318 `void TickLeaderChangeAutoAnnounce()`
 - L395 `bool BuildTargetCombatBrief(void* targetServerObject, const char* targetName, char* outBuf, size_t outBufSize)`
-- L485 `void SpeakSelfStatus()`
-- L560 `void PollWin32SelfStatusHotkey()`
+- L484 `void SpeakSelfStatus()`
+- L559 `void PollWin32SelfStatusHotkey()`

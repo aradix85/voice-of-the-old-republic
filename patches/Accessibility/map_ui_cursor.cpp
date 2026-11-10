@@ -878,7 +878,7 @@ void Tick() {
     }
     if (hitHint && bestDistHint2 < bestHit2) {
         hit = const_cast<void*>(static_cast<const void*>(hitHint));
-        hitIsPin = false; bestHit2 = bestDistHint2;
+        hitIsPin = false;
     }
 
     if (moved) {
