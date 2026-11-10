@@ -1,4 +1,5 @@
-// Finding a panel's buttons by what they say (Close, Cancel) and the arrow buttons next to a control.
+// Finding a panel's buttons by what they say (Close, Cancel) and the arrow
+// buttons next to a control.
 
 #include "menus_chain_internal.h"
 
@@ -12,13 +13,8 @@ namespace {
 // Does `text` OPEN WITH the whole word `word`? A plain prefix test is not
 // enough: the difficulty cycler on the gameplay settings reads "Normal",
 // which starts with the cancel keyword "No", so Esc on that screen
-// activated the difficulty cycler instead of closing — and since Esc was
-// consumed, the screen became unleavable by keyboard (K1 round 2026-08-20,
-// log patch-20260820-120136: 22x "Menus.Esc: cancel ... kind=GameSettings
-// target=136F6E24", id 2, text "Normal"). Long-standing, not new: the panel
-// already identified as GameSettings in patch-20260731-132418, so this Esc
-// path was reachable then too — a two-letter keyword in a prefix test is
-// simply a trap that waits for the right caption.
+// activated the difficulty cycler instead of closing, and since Esc was
+// consumed, the screen could not be left by keyboard.
 //
 // Requiring the next character to be a non-letter/non-digit keeps the
 // keyword list a word list rather than a prefix list; trailing punctuation
@@ -54,6 +50,8 @@ void* FindButtonByWords(void* panel, const char* const* words, int wordCount) {
 
 }  // namespace
 
+// The nearest text-less control (an arrow button) on the same row as
+// `focused`, to its right or left.
 void* FindAdjacentArrow(void* panel, void* focused, bool toRight) {
     if (!panel || !focused) return nullptr;
 

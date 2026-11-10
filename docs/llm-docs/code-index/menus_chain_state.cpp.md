@@ -2,4 +2,4 @@
 
 Source: `patches/Accessibility/menus_chain_state.cpp`
 
-The state the menus_chain files share, defined in one place; each item is described where it is declared, in menus_chain_internal.h.
+The chain state, defined in one place; each item is described where it is declared, in menus_chain.h (g_chainVtable in menus_chain_internal.h).

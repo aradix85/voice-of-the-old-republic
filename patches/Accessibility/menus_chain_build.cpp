@@ -1,8 +1,10 @@
-// Building the chain's entries: controls, list-box rows, the virtual rows for value labels (credits, stats, wager, equipment stats, mod settings), the reading order, and the click offsets for slots and class icons.
+// Building the chain's entries: controls, list-box rows, the virtual rows for
+// value labels (credits, stats, wager, equipment stats, mod settings), the
+// reading order, and the click offsets for slots and class icons.
 
 #include "menus_chain_internal.h"
 
-#include "engine_game.h"     // IsKotor2 — per-game cursor-warp hit-test shims
+#include "engine_game.h"     // IsKotor2: filter-strip demotion, class icons
 #include "engine_offsets.h"
 #include "engine_panels.h"
 #include "engine_reads.h"
@@ -17,23 +19,6 @@
 namespace acc::menus::chain {
 
 namespace {
-
-
-// Shared body of the four virtual-row anchors below (credits, charsheet
-// stat rows, pazaak wager, equip stats). All four register a label control
-// the engine renders for sighted players but that IsChainNavigable rejects,
-// so the chain walker would otherwise skip it.
-//
-// cx comes from the real label position so a cursor warp on chain step
-// lands the mouse on the actual on-screen text; cy is overridden to the
-// caller's synthetic sortCy so the y-sort produces the logical reading
-// order instead of interleaving with the real buttons.
-//
-// `probe` is the row's own extractor, called only to answer "does this row
-// have text yet". A label can be present but empty — a mid-frame race
-// during a re-snapshot, or a field the engine has not populated. Those are
-// skipped silently and reappear on the next rebind.
-typedef bool (*RowProbe)(void* panel, void* labelControl);
 
 // Synthetic sortCy base for a filter strip demoted below the list. Real
 // control cy tops out near 1800 at 2880x1800 and the mod-settings root sits
@@ -53,6 +38,22 @@ void AppendChainTextOnly(void* control, void* panel) {
         /*textOnly=*/true, /*virtualKind=*/0, /*geometricOrder=*/true
     };
 }
+
+// Shared body of the four virtual-row anchors below (credits, charsheet
+// stat rows, pazaak wager, equip stats). All four register a label control
+// the engine renders for sighted players but that IsChainNavigable rejects,
+// so the chain walker would otherwise skip it.
+//
+// cx comes from the real label position so a cursor warp on chain step
+// lands the mouse on the actual on-screen text; cy is overridden to the
+// caller's synthetic sortCy so the y-sort produces the logical reading
+// order instead of interleaving with the real buttons.
+//
+// `probe` is the row's own extractor, called only to answer "does this row
+// have text yet". A label can be present but empty — a mid-frame race
+// during a re-snapshot, or a field the engine has not populated. Those are
+// skipped silently and reappear on the next rebind.
+typedef bool (*RowProbe)(void* panel, void* labelControl);
 
 bool AppendVirtualRow(void* labelControl, int sortCy, void* panel,
                       RowProbe probe) {
@@ -125,111 +126,73 @@ void AppendChainEntry(void* control, int sortCy) {
     };
 }
 
-    // Listbox dispatch:
-    //   * size > 1  — recurse one level into button children (sub-dialog
-    //     settings list).
-    //   * size == 1 in a modal popup — promote the listbox to a text-only
-    //     chain entry so arrow keys can land for re-announce.
-    //   * size == 1 elsewhere — descriptive label blob; skipped.
+// A listbox among the panel's controls:
+//   * size > 1  — recurse one level into button children (sub-dialog
+//     settings list).
+//   * size == 1 in a modal popup — promote the listbox to a text-only
+//     chain entry so arrow keys can land for re-announce.
+//   * size == 1 elsewhere — descriptive label blob; skipped.
 void AppendListBoxChildren(void* panel, void* c, void* equipPickerLb,
                            void* workbenchUpgradeLb, bool modalText,
                            int& listBlockTop) {
     void** vt = *reinterpret_cast<void***>(c);
-    if (reinterpret_cast<uintptr_t>(vt) == kVtableListBox) {
-        // Store mode filter: the engine keeps BOTH shopitems and
-        // invitems listboxes in panel.controls regardless of which
-        // is currently visible. Walking the hidden one's children
-        // bleeds unreachable rows into the chain — the user nav
-        // would land on items they can neither examine nor trade.
-        // Skip the listbox entirely if it's the hidden one. The
-        // three action buttons live in panel.controls (not in a
-        // listbox) so they stay in the chain.
-        if (acc::menus::store::IsHiddenStoreListBox(panel, c)) {
-            return;
+    if (reinterpret_cast<uintptr_t>(vt) != kVtableListBox) return;
+    // The engine keeps BOTH store listboxes (shop and inventory) in
+    // panel.controls whichever is visible; the hidden one's rows can be
+    // neither examined nor traded. The K2 crafting screens flip visibility
+    // the same way. The two pickers have their own specs.
+    if (acc::menus::store::IsHiddenStoreListBox(panel, c) ||
+        acc::menus::crafting::IsHiddenCraftingListBox(panel, c) ||
+        c == equipPickerLb || c == workbenchUpgradeLb) {
+        return;
+    }
+    // The journal's quest list (items_listbox @ panel+0x5c4) must expose its
+    // rows even when only ONE quest is active — the norm in the Endar Spire
+    // tutorial — or the user hears no journal content. Its rows carry the
+    // journal-entry Enter handler, so descend exactly like the size>1 path.
+    // The description listbox (+0x1a4) is a different control and stays
+    // skipped. The inventory's item list needs the same exemption: one item
+    // carried is a real state (the opening hour of KOTOR 2), and the size==1
+    // rule was written for description blobs, not for a short list.
+    const PanelKind pk = IdentifyPanel(panel);
+    auto* pb = reinterpret_cast<unsigned char*>(panel);
+    const bool shortListOk =
+        (pk == PanelKind::InGameJournal && c == pb + kJournalItemsListBoxOffset) ||
+        (pk == PanelKind::InGameInventory && c == pb + kInventoryItemListBoxOffset);
+    // Sort anchor for every row this listbox contributes. Row extents are
+    // listbox-local content coordinates that keep climbing one row-pitch at a
+    // time whether or not the row is inside the viewport, so they are not
+    // comparable with the panel buttons' screen coordinates. The listbox
+    // itself IS a panel-direct child with a screen-absolute extent, so its top
+    // places the whole block where the list actually sits. Falls back to
+    // per-row cy if the extent is degenerate.
+    int blockSortCy = kSortByOwnCy;
+    int lbCx, lbCy;
+    if (GetControlCenter(c, lbCx, lbCy)) {
+        blockSortCy = *reinterpret_cast<int*>(
+            reinterpret_cast<unsigned char*>(c) +
+            kControlExtentOffset + sizeof(int));   // extent.top
+    }
+    auto* lbList = reinterpret_cast<CExoArrayList*>(
+        reinterpret_cast<unsigned char*>(c) + kListBoxControlsOffset);
+    if (!lbList || !lbList->data) return;
+    if (lbList->size > 1 || (shortListOk && lbList->size == 1)) {
+        // AppendChainEntry stops at the chain bound anyway; the same bound
+        // here keeps the two limits in lockstep.
+        int lbN = lbList->size > kMaxChainEntries ? kMaxChainEntries
+                                                  : lbList->size;
+        for (int j = 0; j < lbN; ++j) {
+            AppendChainEntry(lbList->data[j], blockSortCy);
         }
-        // Same visibility model on the K2 crafting screens: LB_SHOPITEMS
-        // and LB_INVITEMS share one screen slot and the engine flips the
-        // visibility bit on whichever view is active. Skip the hidden one.
-        if (acc::menus::crafting::IsHiddenCraftingListBox(panel, c)) {
-            return;
+        // Report the block anchor so DemoteFilterStripAboveList knows where
+        // the list content starts; only a block that contributed rows and had
+        // a usable extent counts.
+        if (lbN > 0 && blockSortCy != kSortByOwnCy &&
+            blockSortCy < listBlockTop) {
+            listBlockTop = blockSortCy;
         }
-        if (c == equipPickerLb) {
-            return;
-        }
-        if (c == workbenchUpgradeLb) {
-            return;
-        }
-        // The journal's quest list (items_listbox @ panel+0x5c4) must
-        // expose its rows even when only ONE quest is active — otherwise
-        // the lone entry (the norm in the Endar Spire tutorial, where the
-        // sole quest is the Endar Spire one) is unreachable and
-        // the user hears no journal content. Its rows carry the dedicated
-        // journal-entry Enter handler (isJournalRow below), so descend via
-        // AppendChainEntry exactly like the size>1 path. The description
-        // listbox (+0x1a4) is a different control and stays skipped.
-        const bool isJournalItemsLb =
-            IdentifyPanel(panel) == PanelKind::InGameJournal &&
-            c == reinterpret_cast<unsigned char*>(panel) +
-                     kJournalItemsListBoxOffset;
-        // The inventory's item list needs the same exemption, for the same
-        // reason: with exactly ONE item carried, the size>1 test below left
-        // the row out and the screen offered nothing but its filter strip.
-        // "You own one thing" is a real state — the opening hour of KOTOR 2
-        // is spent in it — and the generic size==1 rule was written for
-        // description blobs (a listbox holding one label), not for a list
-        // that happens to be short.
-        const bool isInventoryItemsLb =
-            IdentifyPanel(panel) == PanelKind::InGameInventory &&
-            c == reinterpret_cast<unsigned char*>(panel) +
-                     kInventoryItemListBoxOffset;
-        // Sort anchor for every row this listbox contributes. Row extents are
-        // listbox-local content coordinates that keep climbing one row-pitch
-        // at a time whether or not the row is inside the viewport, so they are
-        // not comparable with the panel buttons' screen coordinates and must
-        // not go into the y-sort. The listbox itself IS a panel-direct child
-        // with a screen-absolute extent, so its top places the whole block
-        // where the list actually sits — above every control below it, at any
-        // row count. Falls back to per-row cy if the extent is degenerate.
-        int blockSortCy = kSortByOwnCy;
-        {
-            int lbCx, lbCy;
-            if (GetControlCenter(c, lbCx, lbCy)) {
-                blockSortCy = *reinterpret_cast<int*>(
-                    reinterpret_cast<unsigned char*>(c) +
-                    kControlExtentOffset + sizeof(int));   // extent.top
-            }
-        }
-        auto* lbList = reinterpret_cast<CExoArrayList*>(
-            reinterpret_cast<unsigned char*>(c) + kListBoxControlsOffset);
-        if (lbList && lbList->data) {
-            if (lbList->size > 1 ||
-                ((isJournalItemsLb || isInventoryItemsLb) &&
-                 lbList->size == 1)) {
-                // Cap the per-listbox walk at the chain bound — AppendChain
-                // Entry self-stops there anyway, so anything past it would
-                // spin the loop for nothing. Using kMaxChainEntries (not a
-                // separate magic number) keeps the two limits in lockstep,
-                // so raising the chain size lifts the item ceiling with it.
-                int lbN = lbList->size > kMaxChainEntries
-                              ? kMaxChainEntries
-                              : lbList->size;
-                for (int j = 0; j < lbN; ++j) {
-                    AppendChainEntry(lbList->data[j], blockSortCy);
-                }
-                // Report the block anchor to the caller so
-                // DemoteFilterStripAboveList knows where this panel's list
-                // content starts. Only blocks that actually contributed rows
-                // count, and only when the listbox had a usable extent — a
-                // degenerate one falls back to per-row cy, which is
-                // listbox-local and not comparable with screen coordinates.
-                if (lbN > 0 && blockSortCy != kSortByOwnCy &&
-                    blockSortCy < listBlockTop) {
-                    listBlockTop = blockSortCy;
-                }
-            } else if (lbList->size == 1 && modalText) {
-                AppendChainTextOnly(c, panel);
-            }
-        }
+    } else if (lbList->size == 1 && modalText) {
+        AppendChainTextOnly(c, panel);
     }
 }
 
@@ -238,14 +201,10 @@ void AppendListBoxChildren(void* panel, void* c, void* equipPickerLb,
 // the engine renders for sighted players. ForEachCreditsRowAnchor is a
 // no-op for unsupported panel kinds, so we call it unconditionally.
 //
-// Registered BEFORE the control/listbox walk below — not after, like the
-// other per-kind virtual rows — because Inventory's item listbox can
-// append 60+ entries and fill the chain to kMaxChainEntries; a credits
-// row queued afterwards silently lost its slot to the cap and vanished
-// once the player's inventory grew large (Store, with its smaller shop
-// listbox, stayed under the cap and kept working). The cy-sort below
-// still lands credits at the top via its synthetic sortCy regardless of
-// insertion order.
+// RebindChain registers it BEFORE the control/listbox walk, unlike the other
+// virtual rows, because Inventory's item listbox can fill the chain to
+// kMaxChainEntries and a credits row queued afterwards lost its slot to the
+// cap. The cy-sort still lands credits at the top via its synthetic sortCy.
 bool OnCreditsAnchor(void* labelControl, int sortCy, void* userData) {
     return AppendVirtualRow(labelControl, sortCy, userData, ProbeCreditsRow);
 }
@@ -289,12 +248,11 @@ bool OnEquipStatAnchor(void* labelControl, int sortCy, void* userData) {
 }
 
 // Virtual "Mod settings" entry for InGameOptions + MainMenuOptions.
-// Same shape as the credits / stat-row anchors, but the control
-// pointer is a static sentinel (acc::menus::modsettings::GetRoot
-// Anchor) rather than an engine label — we never need to read /
-// dispatch through it as if it were a real CSWGuiControl. Position
-// is synthetic: sortCy=9000 lands the entry at the end of the
-// chain, after every real button on the Options strip.
+// Same shape as the credits / stat-row anchors, but the control pointer is
+// a static sentinel from menus_modsettings rather than an engine label: it
+// is never read or dispatched as a real CSWGuiControl. Position is
+// synthetic: sortCy=9000 lands the entry at the end of the chain, after
+// every real button on the Options strip.
 bool OnModSettingsAnchor(void* sentinel, int sortCx, int sortCy,
                          void* /*userData*/) {
     if (g_chainCount >= kMaxChainEntries) return false;
@@ -319,7 +277,7 @@ bool OnModSettingsAnchor(void* sentinel, int sortCx, int sortCy,
 // is what's read rather than the placeholder. The y-sort below drops them
 // above OK (cy ~25 vs ~51) into natural reading order.
 void AppendStatusSummaryRows(void* panel, CExoArrayList* list, int n) {
-if (IdentifyPanel(panel) == PanelKind::StatusSummary) {
+    if (IdentifyPanel(panel) != PanelKind::StatusSummary) return;
     for (int i = 0; i < n; ++i) {
         void* c = list->data[i];
         if (!c) continue;
@@ -329,7 +287,6 @@ if (IdentifyPanel(panel) == PanelKind::StatusSummary) {
         if ((bitFlags & kControlVisibleBit) == 0) continue;
         AppendChainTextOnly(c, panel);  // self-skips empty text / no extent
     }
-}
 }
 
 // House rule: on a list-driven screen the list is read first and its filter /
@@ -384,13 +341,13 @@ void DemoteFilterStripAboveList(void* panel, int listBlockTop) {
 // separates them and their relative order is decided purely by the order
 // AppendListBoxChildren walked them — i.e. the engine's own row order.
 void SortChainBySortCy() {
-for (int i = 1; i < g_chainCount; ++i) {
-    for (int j = i; j > 0 && ChainEntryPrecedes(g_chain[j], g_chain[j-1]); --j) {
-        ChainEntry tmp = g_chain[j];
-        g_chain[j]   = g_chain[j-1];
-        g_chain[j-1] = tmp;
+    for (int i = 1; i < g_chainCount; ++i) {
+        for (int j = i; j > 0 && ChainEntryPrecedes(g_chain[j], g_chain[j - 1]); --j) {
+            ChainEntry tmp = g_chain[j];
+            g_chain[j]     = g_chain[j - 1];
+            g_chain[j - 1] = tmp;
+        }
     }
-}
 }
 
 // Squash cycle-arrow flankers from the chain. Empty-text navigable
@@ -457,8 +414,8 @@ void SquashCycleFlankers(void* panel) {
 // simulated click position. Zero when the panel is not InGameEquip or
 // fewer than two slots made it into the chain.
 void ComputeEquipSlotClickOffset(void* panel) {
-g_equipSlotClickOffsetY = 0;
-if (IdentifyPanel(panel) == PanelKind::InGameEquip) {
+    g_equipSlotClickOffsetY = 0;
+    if (IdentifyPanel(panel) != PanelKind::InGameEquip) return;
     int firstSlotIdx = -1;
     int firstSlotY   = 0;
     for (int i = 0; i < g_chainCount; ++i) {
@@ -469,12 +426,10 @@ if (IdentifyPanel(panel) == PanelKind::InGameEquip) {
             firstSlotY   = g_chain[i].cy;
         } else if (g_chain[i].cy != firstSlotY) {
             int spacing = g_chain[i].cy - firstSlotY;
-            if (spacing < 0) spacing = -spacing;
-            g_equipSlotClickOffsetY = spacing;
+            g_equipSlotClickOffsetY = spacing < 0 ? -spacing : spacing;
             break;
         }
     }
-}
 }
 
 // Column pitch between chargen class-selection icons, same purpose as
@@ -483,35 +438,26 @@ if (IdentifyPanel(panel) == PanelKind::InGameEquip) {
 // KOTOR 1 ONLY. The compensation exists because KOTOR 1's classsel.gui
 // hit-test resolves one column to the RIGHT of each icon's own extent:
 // warping to BTN_SEL2's centre (x=189) hovers BTN_SEL1, so the warp has to
-// aim at x=276 to land on BTN_SEL2 (patch-20260731-140902.log: every
-// MoveMouseToPosition on that panel is centre + 87 and every one reports
-// `after == target`). KOTOR 2 has no such shift — the same log line on K2
-// reads `MoveMouseToPosition(1257,769) target=<SEL2> after=<SEL3>`, i.e.
-// the K1 compensation overshoots by exactly one column, which is why class
-// selection there skipped icons, needed repeated presses, and left the
-// per-icon class-label cache populated for whichever icon the cursor
-// actually hit (so the focused one announced as silence).
+// aim at x=276 (centre + 87) to land on BTN_SEL2. KOTOR 2 has no such shift:
+// the K1 compensation overshoots by exactly one column there, which skipped
+// icons, needed repeated presses, and left the focused icon silent.
 void ComputeClassIconClickOffset(void* panel) {
-g_classIconClickOffsetX = 0;
-if (acc::game::IsKotor2()) return;
-{
-    void** pVt = panel ? *reinterpret_cast<void***>(panel) : nullptr;
-    if (reinterpret_cast<uintptr_t>(pVt) ==
-            kVtableCSWGuiClassSelection) {
-        int firstIconIdx = -1;
-        for (int i = 0; i < g_chainCount; ++i) {
-            if (!IsClassSelectionIcon(panel, g_chain[i].control)) continue;
-            if (firstIconIdx < 0) {
-                firstIconIdx = i;
-            } else if (g_chain[i].cy == g_chain[firstIconIdx].cy) {
-                int spacing = g_chain[i].cx - g_chain[firstIconIdx].cx;
-                if (spacing < 0) spacing = -spacing;
-                if (spacing > 0) g_classIconClickOffsetX = spacing;
-                break;
-            }
+    g_classIconClickOffsetX = 0;
+    if (acc::game::IsKotor2() || !panel) return;
+    void** pVt = *reinterpret_cast<void***>(panel);
+    if (reinterpret_cast<uintptr_t>(pVt) != kVtableCSWGuiClassSelection) return;
+    int firstIconIdx = -1;
+    for (int i = 0; i < g_chainCount; ++i) {
+        if (!IsClassSelectionIcon(panel, g_chain[i].control)) continue;
+        if (firstIconIdx < 0) {
+            firstIconIdx = i;
+        } else if (g_chain[i].cy == g_chain[firstIconIdx].cy) {
+            int spacing = g_chain[i].cx - g_chain[firstIconIdx].cx;
+            if (spacing < 0) spacing = -spacing;
+            if (spacing > 0) g_classIconClickOffsetX = spacing;
+            break;
         }
     }
-}
 }
 
 }  // namespace acc::menus::chain

@@ -1,4 +1,4 @@
-# menus_chain_tabs.cpp (114 lines)
+# menus_chain_tabs.cpp (107 lines)
 
 Source: `patches/Accessibility/menus_chain_tabs.cpp`
 
@@ -6,6 +6,6 @@ Tabbed panels: finding a panel's row of tab buttons and where a click on a tab l
 
 ## Declarations (in source order)
 
-- L12 `int ComputeTabClickOffsetY(void* panel)`
+- L16 `int ComputeTabClickOffsetY(void* panel)`: The vertical spacing of the tab buttons: the click/warp offset for a tab.
 - L31 `bool DetectTabsCluster(void* panel, int& outStart, int& outCount)`
-- L101 `bool IsTabButton(void* control)`
+- L94 `bool IsTabButton(void* control)`

@@ -1,4 +1,5 @@
-// Tabbed panels: finding a panel's row of tab buttons and where a click on a tab lands.
+// Tabbed panels: finding a panel's row of tab buttons and where a click on a
+// tab lands.
 
 #include "menus_chain_internal.h"
 
@@ -9,6 +10,9 @@
 
 namespace acc::menus::chain {
 
+// The vertical spacing of the tab buttons: the click/warp offset for a tab.
+// Computed on demand rather than at rebind, when the tabs may not be latched
+// yet.
 int ComputeTabClickOffsetY(void* panel) {
     if (!panel || g_tabbedPanel != panel || g_tabsCount < 2) return 0;
     int firstTabIdx = -1;
@@ -24,17 +28,13 @@ int ComputeTabClickOffsetY(void* panel) {
     return 0;
 }
 
-// ============================================================================
-// Tab-cluster detection.
-// ============================================================================
-
 bool DetectTabsCluster(void* panel, int& outStart, int& outCount) {
     outStart = -1;
     outCount = 0;
     if (!panel) return false;
 
-    // Guard against a stale g_currentPanel that the engine already freed.
-    // See IsPanelLive comment above for the save-popup teardown crash.
+    // Guard against a stale g_currentPanel that the engine already freed
+    // (see IsPanelLive for the save-popup teardown crash).
     if (!IsPanelLive(panel)) {
         acclog::Write("DetectTabsCluster", "%p not in panels[]; skipping", panel);
         return false;
@@ -42,12 +42,11 @@ bool DetectTabsCluster(void* panel, int& outStart, int& outCount) {
 
     // Store is structurally tab-cluster-shaped (listbox @ controls[0],
     // three navigable buttons clumped further down) but the three buttons
-    // are Sell / Close / Buy — distinct action buttons,
-    // not page tabs. Flagging them as tabs makes the chain Enter handler
-    // route through click-sim (the tab path) instead of FireActivate,
-    // which lands the click on whatever overlay sits at the button's
-    // y-coordinate — in the wild that misroutes Close into the engine
-    // quit-confirm popup.
+    // are Sell / Close / Buy, distinct action buttons, not page tabs.
+    // Flagging them as tabs makes the chain Enter handler route through
+    // click-sim (the tab path) instead of FireActivate, which lands the click
+    // on whatever overlay sits at the button's y-coordinate: Close went into
+    // the engine's quit-confirm popup.
     if (acc::menus::store::IsStorePanel(panel)) return false;
 
     // The workbench upgrade panel (upgrade.gui) is the same shape: LB_ITEMS
@@ -55,10 +54,8 @@ bool DetectTabsCluster(void* panel, int& outStart, int& outCount) {
     // contiguous navigable run. Those are slot pickers, not page tabs.
     // Latching them as tabs routes their Enter through the tab click-sim path
     // (which opens nothing) instead of the chain handler's
-    // OnEnterSlot+OnSlotSelected arm. The detection fired the first time only
-    // after the user opened a slot, so re-entering any slot after a picker Esc
-    // did nothing until the workbench was closed and reopened
-    // (patch-20260616-141620.log).
+    // OnEnterSlot+OnSlotSelected arm, so re-entering a slot after a picker
+    // Esc did nothing until the workbench was closed and reopened.
     if (acc::engine::IdentifyPanel(panel) ==
             acc::engine::PanelKind::WorkbenchUpgrade) {
         return false;
@@ -93,10 +90,6 @@ bool DetectTabsCluster(void* panel, int& outStart, int& outCount) {
     outCount = end - start + 1;
     return true;
 }
-
-// ============================================================================
-// Chain builders + cycle-arrow + button finders.
-// ============================================================================
 
 bool IsTabButton(void* control) {
     if (!control || !g_tabbedPanel || g_tabsCount < 2) return false;

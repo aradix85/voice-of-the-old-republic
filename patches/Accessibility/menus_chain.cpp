@@ -1,4 +1,6 @@
-// The menu chain: one flat, top-to-bottom list of a panel's navigable controls that the arrow keys walk. Here: its state, the checks that the bound panel is still the same live panel, and RebindChain, which builds the list.
+// The menu chain: one flat, top-to-bottom list of a panel's navigable
+// controls that the arrow keys walk. Here: the checks that the bound panel is
+// still the same live panel, and RebindChain, which builds the list.
 
 #include "menus_chain_internal.h"
 
@@ -22,9 +24,6 @@ namespace acc::menus::chain {
 
 namespace {
 
-// IsModalTextPanel was a file-static helper inside menus.cpp; only
-// RebindChain calls it, so it lives here now (anonymous namespace).
-
 bool IsModalTextPanel(PanelKind k) {
     switch (k) {
     case PanelKind::MessageBoxModal:
@@ -43,40 +42,31 @@ bool IsModalTextPanel(PanelKind k) {
 // this is the trace we read back when a control goes missing from
 // arrow navigation or announces the wrong text.
 void LogChainContents(void* panel, void* active) {
-acclog::Write("Menus.Chain", "rebind panel=%p count=%d index=%d active=%p "
-              "equipSlotOffsetY=%d classIconOffsetX=%d",
-              panel, g_chainCount, g_chainIndex, active,
-              g_equipSlotClickOffsetY, g_classIconClickOffsetX);
-for (int i = 0; i < g_chainCount; ++i) {
-    char text[256];
-    const char* src = acc::menus::extract::FromControl(g_chain[i].control,
-                                              text, sizeof(text),
-                                              panel);
-    // Per-game offsets, not literals: on KOTOR 2 both fields sit +4 and the
-    // hardcoded KOTOR 1 values printed a neighbouring dword, which made
-    // every K2 chain dump look like garbage flags (bit_flags=0x10,
-    // is_active=434) and sent one investigation chasing a phantom.
-    unsigned int isActive =
-        *reinterpret_cast<unsigned int*>(
-            reinterpret_cast<unsigned char*>(g_chain[i].control) +
-            kControlIsActiveOffset);
-    unsigned int bitFlags =
-        *reinterpret_cast<unsigned int*>(
-            reinterpret_cast<unsigned char*>(g_chain[i].control) +
-            kControlBitFlagsOffset);
-    // sortCy is only printed when it differs from cy — i.e. for virtual rows
-    // and listbox blocks — so the common case stays as terse as before.
-    char sortNote[32];
-    sortNote[0] = '\0';
-    if (g_chain[i].sortCy != g_chain[i].cy) {
-        snprintf(sortNote, sizeof(sortNote), " sort=%d", g_chain[i].sortCy);
+    acclog::Write("Menus.Chain", "rebind panel=%p count=%d index=%d active=%p "
+                  "equipSlotOffsetY=%d classIconOffsetX=%d",
+                  panel, g_chainCount, g_chainIndex, active,
+                  g_equipSlotClickOffsetY, g_classIconClickOffsetX);
+    for (int i = 0; i < g_chainCount; ++i) {
+        char text[256];
+        const char* src = acc::menus::extract::FromControl(
+            g_chain[i].control, text, sizeof(text), panel);
+        // Per-game offsets: on KOTOR 2 both fields sit +4.
+        auto* base = reinterpret_cast<unsigned char*>(g_chain[i].control);
+        unsigned int isActive =
+            *reinterpret_cast<unsigned int*>(base + kControlIsActiveOffset);
+        unsigned int bitFlags =
+            *reinterpret_cast<unsigned int*>(base + kControlBitFlagsOffset);
+        // sortCy only when it differs from cy (virtual rows, listbox blocks).
+        char sortNote[32] = "";
+        if (g_chain[i].sortCy != g_chain[i].cy) {
+            snprintf(sortNote, sizeof(sortNote), " sort=%d", g_chain[i].sortCy);
+        }
+        acclog::Write("Menus.Chain",
+                      "  [%d] %p (%d,%d)%s%s %s text=\"%s\" is_active=%u bit_flags=0x%x",
+                      i, g_chain[i].control, g_chain[i].cx, g_chain[i].cy,
+                      sortNote, g_chain[i].textOnly ? " text-only" : "",
+                      src ? src : "?", src ? text : "", isActive, bitFlags);
     }
-    acclog::Write("Menus.Chain", "  [%d] %p (%d,%d)%s%s %s text=\"%s\" is_active=%u bit_flags=0x%x",
-                  i, g_chain[i].control, g_chain[i].cx, g_chain[i].cy,
-                  sortNote,
-                  g_chain[i].textOnly ? " text-only" : "",
-                  src ? src : "?", src ? text : "", isActive, bitFlags);
-}
 }
 
 }  // namespace
@@ -88,8 +78,7 @@ for (int i = 0; i < g_chainCount; ++i) {
 // listbox while g_currentPanel still points at the freed SaveLoad
 // allocation. By then the heap allocator has typically reused that block for
 // combat-log strings, so panel+0x20/+0x24 (CExoArrayList data+size) come
-// back as ASCII text — the data[0] deref then takes an AV
-// (crash analysed 2026-05-29, dump swkotor.exe(1).31228.dmp).
+// back as ASCII text and the data[0] deref takes an AV.
 bool IsPanelLive(void* panel) {
     if (!panel) return false;
     constexpr int kCap = 32;
@@ -125,8 +114,7 @@ int FindChainEntry(void* control) {
 // exactly one category button carries bit_flags bit 3 (0x8 =
 // CSWGuiControl::SetEnabled) at a time. Find it and name it so a blind user
 // knows which step to do next; fall back to a generic "not your turn" line if
-// none resolves. bit 3 verified against the current step in
-// patch-20260608-125730/125909 (current 0x..8f, others 0x..06/0x..04).
+// none resolves (the current step reads 0x..8f, the others 0x..06/0x..04).
 void SpeakLevelUpDoStepFirst() {
     for (int i = 0; i < g_chainCount; ++i) {
         void* c = g_chain[i].control;
@@ -182,10 +170,9 @@ void InvalidateChain() {
     // the tabbed panel are orthogonal: closing a sub-panel (Graphics) only
     // needs to invalidate the chain, but used to also wipe g_tabbedPanel for
     // the still-live parent (Options), forcing MaybeDetectTabs to re-latch
-    // on every reopen — leaving the click-sim/warp offset stale in the
-    // window between rebind and re-detect (patch-20260530-110829.log,
-    // line 374-511). ValidateTabbedPanel handles tabbed-panel liveness
-    // independently each tick.
+    // on every reopen and leaving the click-sim/warp offset stale between
+    // rebind and re-detect. ValidateTabbedPanel handles tabbed-panel
+    // liveness independently each tick.
 }
 
 void ValidateTabbedPanel() {
@@ -211,21 +198,21 @@ uintptr_t ReadVtable(void* obj) {
 
 // Identity check for the panel the chain is bound to.
 //
-// IsPanelLive (below) asks "is this pointer in panels[]", which a freed
+// IsPanelLive (above) asks "is this pointer in panels[]", which a freed
 // panel can pass again the moment the allocator hands its block to a NEW
 // panel — the pointer looks live because something else now lives there.
 // KOTOR 2 chargen hit exactly that: the Abilities panel was freed, we kept
-// dispatching its buttons (their is_active read as garbage — 2622030025 in
-// patch-20260819-221733), and the Skills panel was then allocated onto the
-// same block, inheriting a half-written creature field. The engine's own
+// dispatching its buttons (their is_active read as garbage), and the Skills
+// panel was then allocated onto the same block, inheriting a half-written
+// creature field. The engine's own
 // handlers then walked that field and took the process down.
 //
 // Comparing the vtable we recorded at rebind against the one at that
 // address now catches the reuse-by-a-different-class case cheaply: same
 // pointer, different class, so the object is not what we bound.
 //
-// NOT covered: reuse by a panel of the SAME class. That needs a generation
-// token; this lands first because it is falsifiable on the known repro.
+// NOT covered: reuse by a panel of the SAME class (that would need a
+// generation token).
 bool ChainPanelIdentityHolds() {
     if (!g_chainPanel || g_chainVtable == 0) return true;  // nothing vouched
     uintptr_t now = ReadVtable(g_chainPanel);
@@ -304,9 +291,8 @@ void RebindChain(void* panel) {
     void* craftViewToggleBtn = acc::menus::crafting::ViewToggleButton(panel);
     void* craftCommitBtn     = acc::menus::crafting::CommitButton(panel);
 
-    // Resolve the engine's localized close caption (strref 1582 →
-    // "Close"/"OK"/…) once per rebind, for the universal
-    // close-button filter in isDecorative below. Empty on TLK miss, which
+    // Resolve the engine's close caption (strref 1582) once per rebind, for
+    // the universal close-button filter in IsDecorativeControl. Empty on TLK miss, which
     // disables the filter (fail-open — never hides a real action button).
     char closeCaption[64];
     bool haveCloseCaption =

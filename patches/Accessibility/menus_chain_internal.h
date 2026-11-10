@@ -12,7 +12,6 @@
 #include <cstring>
 
 #include "engine_manager.h"
-
 #include "engine_offsets.h"
 #include "menus_internal.h"
 
@@ -25,21 +24,10 @@ using acc::menus::detail::ScaleGuiThresholdPx;
 
 namespace acc::menus::chain {
 
-// ============================================================================
-// State definitions (extern decls live in menus_chain.h).
-// ============================================================================
-extern ChainEntry g_chain[kMaxChainEntries];
-extern void*      g_chainPanel;
-extern uintptr_t  g_chainVtable;
-extern int        g_chainIndex;
-extern int        g_chainCount;
-
-extern void* g_tabbedPanel;
-extern int   g_tabsStart;
-extern int   g_tabsCount;
-
-extern int g_equipSlotClickOffsetY;
-extern int g_classIconClickOffsetX;
+// The chain state is declared in menus_chain.h (the other menu files use it
+// too) and defined in menus_chain_state.cpp. Only this one is module-only:
+// the vtable of the bound panel, recorded at rebind (ChainPanelIdentityHolds).
+extern uintptr_t g_chainVtable;
 
 // Helpers shared across the files, by the file that defines them.
 

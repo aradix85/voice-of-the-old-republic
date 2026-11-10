@@ -1,4 +1,5 @@
-// Which controls stay out of the chain: decorative labels and buttons, and the per-panel controls that are reached another way.
+// Which controls stay out of the chain: decorative labels and buttons, and the
+// per-panel controls that are reached another way.
 
 #include "menus_chain_internal.h"
 
@@ -22,16 +23,11 @@ namespace acc::menus::chain {
 // existing `[◀] value [▶]` UX without needing the head_3d_scene_control
 // (a non-button, IsChainNavigable would reject it) as a chain anchor.
 void* ResolvePortraitChargenSkip(void* panel) {
-    void* portraitChargenSkip = nullptr;
-{
     void** pVt = *reinterpret_cast<void***>(panel);
-    if (reinterpret_cast<uintptr_t>(pVt) ==
-            kVtableCSWGuiPortraitCharGen) {
-        portraitChargenSkip = reinterpret_cast<unsigned char*>(panel) +
-                              kPortraitRightArrowOffset;
+    if (reinterpret_cast<uintptr_t>(pVt) != kVtableCSWGuiPortraitCharGen) {
+        return nullptr;
     }
-}
-    return portraitChargenSkip;
+    return reinterpret_cast<unsigned char*>(panel) + kPortraitRightArrowOffset;
 }
 
 // Store-panel action buttons (Close / Sell / Buy).
@@ -43,12 +39,11 @@ void* ResolvePortraitChargenSkip(void* panel) {
 void ResolveStoreActionButtons(void* panel, void*& storeCancelBtn,
                                void*& storeToggleBtn,
                                void*& storeAcceptBtn) {
-if (acc::menus::store::IsStorePanel(panel)) {
+    if (!acc::menus::store::IsStorePanel(panel)) return;
     auto* p = reinterpret_cast<unsigned char*>(panel);
     storeCancelBtn = p + kStoreCancelButtonOffset;
     storeToggleBtn = p + kStoreToggleButtonOffset;
     storeAcceptBtn = p + kStoreAcceptButtonOffset;
-}
 }
 
 // InGameEquip picker listbox (LB_ITEMS, id=5): the equip panel keeps
@@ -59,16 +54,13 @@ if (acc::menus::store::IsStorePanel(panel)) {
 // "Sith Energy Shield" into the equip screen between the slot
 // buttons. The picker has its own dedicated listbox spec
 // (EquipPickerSpec in menus_listbox.cpp) that drives row selection
-// when armed; chain nav never needs to step into it.
+// when armed; chain nav never needs to step into it. Engine member, not .gui
+// id: a variant equip_p.gui renumbers LB_ITEMS and the id lookup then
+// excludes the WRONG control, leaking every picker row into the chain.
 void* ResolveEquipPickerListBox(void* panel) {
-void* equipPickerLb = nullptr;
-if (IdentifyPanel(panel) == PanelKind::InGameEquip) {
-    // Engine member, not .gui id: a variant equip_p.gui renumbers
-    // LB_ITEMS and the id lookup then excludes the WRONG control,
-    // leaking every picker row into the chain (userlogs/077noequipment).
-    equipPickerLb = acc::menus::detail::EquipPanelItemsListBox(panel);
-}
-    return equipPickerLb;
+    return IdentifyPanel(panel) == PanelKind::InGameEquip
+        ? acc::menus::detail::EquipPanelItemsListBox(panel)
+        : nullptr;
 }
 
 // WorkbenchUpgrade LB_ITEMS (id=0): the compatible-crystal list. Exactly
@@ -77,25 +69,23 @@ if (IdentifyPanel(panel) == PanelKind::InGameEquip) {
 // generic flatten would expose every crystal row, including rows scrolled
 // off the visible page, as standalone chain buttons. Those off-page rows
 // are un-presented phantoms: their hit-test returns NULL and FireActivate
-// on one AVs the engine (lightsabercrystalcrash — a user arrowed onto the
-// leaked off-page row after Esc-ing the picker and the game shut down).
-// The picker has its own spec (WorkbenchUpgradeSpec) that drives row
-// selection + scroll safely while armed; chain nav must never step into it.
+// on one AVs the engine (arrowing onto a leaked off-page row after Esc-ing
+// the picker shut the game down). The picker has its own spec
+// (WorkbenchUpgradeSpec) that drives row selection + scroll safely while
+// armed; chain nav must never step into it. Engine member, not .gui id, as
+// for the equip picker (docs/gui-id-audit.md).
 void* ResolveWorkbenchUpgradeListBox(void* panel) {
-void* workbenchUpgradeLb = nullptr;
-if (IdentifyPanel(panel) == PanelKind::WorkbenchUpgrade) {
-    // Engine member, not .gui id — same variant-file hazard as the equip
-    // picker exclusion above (docs/gui-id-audit.md).
-    workbenchUpgradeLb = acc::menus::detail::UpgradePanelItemsListBox(panel);
-}
-    return workbenchUpgradeLb;
+    return IdentifyPanel(panel) == PanelKind::WorkbenchUpgrade
+        ? acc::menus::detail::UpgradePanelItemsListBox(panel)
+        : nullptr;
 }
 
 // Per-kind decorative filter. Identifies non-interactive icon buttons
 // that the engine drops in panel.controls[] but the user has no reason
 // to focus — IsChainNavigable can't tell them from real buttons (same
-// CSWGuiButton vtable). Keyed on (panel kind, .gui id at +0x50) so
-// adding a new entry is one line per kind.
+// CSWGuiButton vtable). Keyed on the panel kind and the control's embedded
+// member, never the .gui id: variant .gui files renumber ids, and ids
+// collide across the two games.
 //
 // Currently registered:
 //   InGameCharacter btn_3dchar — interaction button for the 3D character
@@ -117,7 +107,6 @@ if (IdentifyPanel(panel) == PanelKind::WorkbenchUpgrade) {
 //     ship in the title screen. It jumps into an arbitrary module by
 //     resref; there is nothing here for a player, and the engine already
 //     hides it visually.
-//   All are matched by embedded member, never by .gui id — see below.
 bool IsDecorativeControl(void* panel, void* c,
                          const char* closeCaption, bool haveCloseCaption) {
     PanelKind pk = IdentifyPanel(panel);
@@ -135,19 +124,11 @@ bool IsDecorativeControl(void* panel, void* c,
          c == acc::menus::detail::WagerPopupPanelMoreButton(panel))) {
         return true;
     }
-    // Charsheet decorative ids are strictly per game: K2's panel dropped
-    // the party portraits/pagination entirely and re-numbered the model
-    // rotator (BTN_3DCHAR 1 → 5) — and K1's ids 65/66 are K2's BTN_AUTO /
-    // BTN_LEVELUP, real actions that must stay in the chain (mined from K2
-    // character_p.gui 2026-08-02; override copy id-identical to gui.bif).
     if (pk == PanelKind::InGameCharacter) {
-        // Members, not .gui ids. The ids were per game and COLLIDED across
-        // them: K1's decorative 65/66 are K2's BTN_AUTO and BTN_LEVELUP,
-        // real actions that must stay navigable — so an id set applied to
-        // the wrong game (or to a variant character.gui) silently deletes a
-        // live button from the chain. The four party controls exist on K1
-        // only; their offsets poison on K2 and acc::off::Ptr answers
-        // nullptr, which no live control can equal.
+        // Members, not .gui ids: K1's decorative ids 65/66 are K2's BTN_AUTO
+        // and BTN_LEVELUP, real actions that must stay navigable. The four
+        // party controls exist on K1 only; their offsets poison on K2 and
+        // acc::off::Ptr answers nullptr, which no live control can equal.
         if (c == acc::off::Ptr(panel, kCharacterPanel3DCharButtonOffset) ||
             c == acc::off::Ptr(panel, kCharacterPanelChangeParty1ButtonOffset) ||
             c == acc::off::Ptr(panel, kCharacterPanelChangeParty2ButtonOffset) ||
@@ -170,9 +151,8 @@ bool IsDecorativeControl(void* panel, void* c,
     // hotkey replaces chain landing.
     //
     // Matched by embedded-member offset like the party-cycle strip
-    // below, NOT by .gui id: a variant equip_p.gui renumbers these
-    // (userlogs/077noequipment) and an id match would then drop a
-    // different, live control from the chain.
+    // below, NOT by .gui id: a variant equip_p.gui renumbers these and an
+    // id match would then drop a different, live control from the chain.
     //
     // InGameEquip bottom-row party-cycle buttons. Tab cycles the
     // active leader engine-side; the panel re-binds and
@@ -244,8 +224,7 @@ bool IsDecorativeControl(void* panel, void* c,
     // the button is the engine's gamepad-A shortcut, so it dispatches
     // activate to panel.active_control rather than to our chain focus, and
     // our cursor warp usually fails to land on an item row (the hit test
-    // returns NULL for them — "mouseOver after=00000000" on every row warp in
-    // patch-20260731-083448.log). Pressing it therefore fires whatever row
+    // returns NULL for them). Pressing it therefore fires whatever row
     // the engine still considers active, which can be a different item than
     // the one the user is standing on. Enter on the row reaches the same
     // per-item handler (CreateItemEntry AddEvent's OnControlSelected /
@@ -264,9 +243,8 @@ bool IsDecorativeControl(void* panel, void* c,
     // a name. Treating them as decorative drops them from the
     // chain entirely so arrow keys only step through usable picks.
     //
-    // The KOTOR 1 flag word is NOT a reliable gate —
-    // patch-20260526-120026.log slots 6/7/8 had values
-    // 0xfffffff9 / 0x5f484c41 / 0x39000001 (uninitialised heap whose
+    // The KOTOR 1 flag word is NOT a reliable gate: slots 6/7/8 read values
+    // like 0xfffffff9 / 0x5f484c41 / 0x39000001 (uninitialised heap whose
     // low bit randomly happens to be 1). The roster index IS
     // reliable on both games, so route the decision through the
     // engine: keep the portrait if the slot is in the active
@@ -285,7 +263,7 @@ bool IsDecorativeControl(void* panel, void* c,
     // has marked non-interactive (bit_flags & 0x2 == 0). For a 3-slot
     // ranged weapon (saber=3) these are the 4 crystal positions;
     // for a 4-slot saber/double-shaft (saber=2) they are the 3
-    // Aufwertungs positions. Sighted players see them greyed; a
+    // upgrade positions. Sighted players see them greyed; a
     // keyboard navigator has nothing to do with them — OnSlotSelected
     // gates on is_active so even pressing Enter does nothing useful.
     // Dropping them from the chain lets arrow-down go straight from
@@ -301,7 +279,7 @@ bool IsDecorativeControl(void* panel, void* c,
         }
         if ((bf & 0x2) == 0) return true;
     }
-    // Universal close-button filter (language-agnostic). Every
+    // Universal close-button filter. Every
     // standalone "close/back" button the engine ships across
     // sub-screens — whatever the .gui names it (BTN_EXIT / BTN_BACK /
     // BTN_CANCEL / BTN_Cancel) — renders caption strref 1582. Esc
@@ -320,13 +298,10 @@ bool IsDecorativeControl(void* panel, void* c,
     //
     // EqualsTrimmed, not strcmp: KOTOR 2 renders this caption as
     // "\x11 Close" — an Aspyr controller-glyph marker, then a pad space,
-    // then the word — against a dialog.tlk that says "Close". A
-    // byte-exact compare never matched, so the close button survived in every
-    // K2 sub-screen chain (patch-20260806-173225.log: `[5] button
-    // text="\x11 Close"`, and not one "filter close button" line in the
-    // whole session). ReadGuiString takes the 0x11 off, this takes the space
-    // off; both halves are needed. KOTOR 1 emits neither, which is why the
-    // same code was correct there for months.
+    // then the word — against a dialog.tlk that says "Close", so a
+    // byte-exact compare never matched on K2. ReadGuiString takes the 0x11
+    // off, this takes the space off; both halves are needed. KOTOR 1 emits
+    // neither.
     if (haveCloseCaption &&
         CallDowncast(c, kVtableAsButton) != nullptr) {
         char btnText[64];
