@@ -73,7 +73,7 @@ const uintptr_t kAddrCGuiInGameSetLevelUpMode = acc::addr::Pick(0x00628650, 0x00
 // Pure read-only predicate (RE'd by byte dump 2026-06-16): returns 1 only
 // when the leader's current level is below the level cap, accumulated
 // experience >= required_exp_per_level[level] (rules table at 0x007a3a28),
-// AND the two class-side gates pass — i.e. exactly when the Charakterblatt
+// AND the two class-side gates pass — i.e. exactly when the character sheet
 // btn_levelup button is enabled. No writes, no allocations, so it's safe
 // to call purely as a gate. ECX = CSWSCreatureStats*, no stack params.
 // KOTOR 2: 0x006B9790, disasm-matched line for line: GetLevel(0), ServerInfo
@@ -101,7 +101,7 @@ typedef void     (__thiscall* PFN_SetLevelUpMode)(void* this_, int mode);
 
 // Read the live CSWGuiInGameCharacter pointer from the CGuiInGame
 // singleton. Returns nullptr if the panel hasn't been instantiated (e.g.
-// user never opened the Charakterblatt this session).
+// user never opened the character sheet this session).
 void* GetInGameCharacterPanel(void* gui) {
     if (!gui) return nullptr;
     __try {
@@ -189,7 +189,7 @@ bool s_heldForPopup   = false;  // logged-once flag for the trailing-popup hold
 // True while the granted-feats SkillInfoBox popup is still on the modal stack.
 //
 // The level-up flow mounts that popup BEFORE the wizard (modal[0], with the
-// wizard pushed on top at modal[2]), so committing with Annehmen destroys the
+// wizard pushed on top at modal[2]), so committing with Accept destroys the
 // wizard and leaves the popup as the new top modal, waiting for its OK button.
 // Releasing input_class/sw_gui_status at that moment strands it: the popup is
 // foreground and modal, but the keyboard is world-routed again, so nothing the
@@ -338,7 +338,7 @@ bool TriggerLevelUp() {
 
     // Fallback: top-level CGuiInGame::ShowLevelUpGUI. Same internal
     // gates, just dispatched from the singleton instead of the panel —
-    // works when the user has never opened the Charakterblatt.
+    // works when the user has never opened the character sheet.
     __try {
         auto fn = reinterpret_cast<PFN_ShowLevelUpGUI>(
             kAddrCGuiInGameShowLevelUpGUI);

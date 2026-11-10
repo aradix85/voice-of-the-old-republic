@@ -79,20 +79,20 @@ bool IsStoreItemRow(void* control);
 // SEH-wrapped; logs the dispatch outcome.
 //
 // Also arms the trade-outcome watcher (see TickMonitorMode): if the
-// active listbox shrinks/grows within ~3 ticks, speaks "Verkauft" /
-// "Gekauft"; if it doesn't, speaks "Kann nicht verkauft werden" /
-// "Kann nicht gekauft werden". Without this every refused-by-engine
+// active listbox shrinks/grows within ~3 ticks, speaks "Sold" /
+// "Bought"; if it doesn't, speaks "Cannot be sold" /
+// "Cannot be bought". Without this every refused-by-engine
 // sell looks identical to a successful one from the user's perspective.
 void DispatchTradeAction(void* panel, void* row);
 
 // Synthesize a click on the store's examine_button (mode toggle). The
 // engine handles the actual buy↔sell flip; our per-tick monitor sees
-// the bit_flags change and announces "Modus Kaufen" / "Modus Verkaufen"
+// the bit_flags change and announces "Buy mode" / "Sell mode"
 // plus rebinds the chain. Returns false (and logs) if no Store panel is
 // in the foreground or an op is already pending.
 bool ToggleModeFromHotkey();
 
-// Synthesize a click on the store's cancel_button (Schliess.). Closes
+// Synthesize a click on the store's cancel_button (Close). Closes
 // the store and returns the user to the dialog. Returns false (and
 // logs) if no Store panel is foreground or an op is already pending.
 bool CloseFromEsc();

@@ -35,7 +35,7 @@ bool FirePendingAtReplyBreak();
 bool SyntheticActive();
 const char* SyntheticHint();
 
-// Per-tick: detect the synthetic popup closing (Weiter/OK) and clear state +
+// Per-tick: detect the synthetic popup closing (OK) and clear state +
 // unpause. Cheap; safe to call every frame.
 void PollDismiss();
 

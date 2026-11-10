@@ -21,7 +21,7 @@ void TickPendingOps();
 
 // OnSetActiveControl writes the slot per panel-focus event; this drains
 // it once. Last-write-wins collapses intra-tick SetActive cascades to a
-// single announcement (e.g. MessageBox init firing NULL → OK → Abbrechen
+// single announcement (e.g. MessageBox init firing NULL → OK → Cancel
 // back-to-back).
 void DrainPendingAnnounce();
 

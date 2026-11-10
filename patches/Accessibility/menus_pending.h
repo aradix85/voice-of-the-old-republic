@@ -59,7 +59,7 @@ bool QueueClickAt(int x, int y, void* target);
 
 // Queue a direct-activate via vtable[15].HandleInputEvent(0x27, 1). Bypasses
 // hit-test entirely — used when the click target is covered by another
-// control's extent (Schliess. inside an Options listbox, settings buttons,
+// control's extent (Close inside an Options listbox, settings buttons,
 // cycle-arrow flankers, Esc → cancel/close button, container give-mode).
 bool QueueActivate(void* target);
 
@@ -110,7 +110,7 @@ bool QueueWorkbenchUpgradeCommit(void* panel, void* row, void* btnAssemble);
 // Queue a KOTOR 2 upgrade install/remove — a single engine call. On K2 the
 // picker row's own activate handler (CSWGuiUpgrade::OnUpgradeSelected) does
 // the whole install-or-remove and closes the picker itself; there is no
-// separate assemble step per pick (that is what Zusammenbauen/OnAssemble
+// separate assemble step per pick (that is what Assemble/OnAssemble
 // does, and firing it after every pick popped the panel back to the item
 // list without installing). Fires OnUpgradeSelected(panel, row) only. K1
 // keeps the two-step QueueWorkbenchUpgradeCommit.
@@ -141,7 +141,7 @@ bool QueueSliderInput(void* target, int code);
 // is the dedicated Enter-on-store-row path.
 //
 // The mode is re-resolved at drain time from the listbox visibility
-// bit, in case the user toggled Verkaufsliste between the input event
+// bit, in case the user toggled the sell list between the input event
 // and the next tick.
 bool QueueStoreItemActivate(void* panel, void* row);
 

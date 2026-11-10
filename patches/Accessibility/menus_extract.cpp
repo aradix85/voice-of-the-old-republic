@@ -83,7 +83,7 @@ void AppendToggleSuffix(void* control, char* outBuf, size_t bufSize) {
     }
 }
 
-// Append "nicht verfügbar" / "unavailable" suffix when the focused
+// Append "unavailable" / "unavailable" suffix when the focused
 // button is engine-disabled. CSWGuiControl.bit_flags (+0x44 on KOTOR 1,
 // +0x48 on KOTOR 2 — use kControlBitFlagsOffset, never the literal; a
 // hardcoded 0x44 here read four bytes low on KOTOR 2 and made EVERY
@@ -100,13 +100,13 @@ void AppendToggleSuffix(void* control, char* outBuf, size_t bufSize) {
 // (bit 3). Its non-current categories keep bit 1 set but bit 3 clear,
 // so on that panel we key the suffix on bit 3 — otherwise only the
 // no-points categories (bit 1 clear) would read as unavailable and the
-// not-yet-your-turn ones (e.g. Kräfte before Fähigkeiten) would sound
+// not-yet-your-turn ones (e.g. Powers before Skills) would sound
 // actionable. menus_chain blocks their activation on the same bit 3, so
 // the announcement and the gate agree. Verified in
 // patch-20260608-125730/125909: current step 0x..8f, others 0x..06/0x..04;
-// Annehmen gains bit 3 only once every step is done.
+// Accept gains bit 3 only once every step is done.
 //
-// Skipped for toggles — their ", ein" / ", aus" suffix already
+// Skipped for toggles — their ", on" / ", off" suffix already
 // disambiguates state. Gated on IsChainNavigable so labels don't get
 // the suffix.
 void AppendDisabledSuffix(void* control, void* ownerPanel,
@@ -200,7 +200,7 @@ bool EmitText(char* outBuf, size_t bufSize, const char* text) {
 //
 // The IsPanelInManager filter drops stale/wild owner pointers: the
 // resolution chain can surface a freed g_currentPanel right after a
-// commit-style button (Annehmen on InGameLevelUp) synchronously destroys
+// commit-style button (Accept on InGameLevelUp) synchronously destroys
 // its panel inside our FireActivate dispatch. IsPanelInManager is
 // deref-free, so it's safe even when the candidate is wild. Every consumer
 // below (IdentifyPanel, IsStatRowAnchor, IsClassSelectionIcon,

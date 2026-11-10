@@ -30,7 +30,7 @@
 // Reading the inline CExoString sidesteps it. On KOTOR 1 the inline field is
 // often empty, which is why the real extractor prefers gui_string — and the
 // first working run answered the open question: KOTOR 2 DOES populate it on
-// buttons ("Neues Spiel" / "Spiel laden" / "Filmsequenzen" all read straight
+// buttons ("New Game" / "Load Game" / "Movies" all read straight
 // out of it). So the unverified gui_string offset does not block text
 // extraction here, which is a real divergence from KOTOR 1.
 //
@@ -77,7 +77,7 @@ namespace {
 // Observed on the first speaking KOTOR 2 build: every arrow-key navigation
 // produced two events, the real one from CSWGuiNavigable::HandleInputEvent and
 // a second from here that dragged focus back to one fixed button, so the menu
-// read "Neues Spiel, Spiel laden, Filmsequenzen, Spiel laden".
+// read "New Game, Load Game, Movies, Load Game".
 //
 // The KOTOR 1 address is corroborated independently: hooks.toml hooks
 // HandleFocusChange at 0x41896b, i.e. this function +0xb.
@@ -169,7 +169,7 @@ void WarpCursorToControl(void* control) {
             // (0x00414230) was established, on the reasoning that KOTOR 1's
             // navigation chain calls exactly that and a known-good engine line
             // should beat a reimplementation. **It regressed immediately**:
-            // focus was dragged back to "Spiel laden" after every keypress —
+            // focus was dragged back to "Load Game" after every keypress —
             // precisely the bug this function exists to fix.
             //
             // The address is not wrong; the assumption was. KOTOR 2's

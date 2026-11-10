@@ -39,13 +39,13 @@ constexpr float kProbeLenWu = 25.0f;
 // .pth has no height) while SegmentCrossesWalkmesh rejects walls outside
 // its z-guard — unlifted probes on any elevated floor report open space
 // everywhere. This broke the alcove gate for EVERY degree-1 node on the
-// Peragus Minenschächte floor (z≈3.4) and made the corridor dead-mark
+// Peragus mine shafts floor (z≈3.4) and made the corridor dead-mark
 // beyond-probe always clear (2026-08-11).
 //
 // The clearance dump's earlier per-caller lift used the single NEAREST
 // endpoint's z, which latches onto multi-storey anomaly walls the moment
 // a closer wall leaves the cache — opening a door reclassified a
-// Sackgasse pocket as open space because its probe jumped to a leftover
+// dead end pocket as open space because its probe jumped to a leftover
 // edge 4m overhead. So: vote instead of nearest. Endpoints within
 // kZVoteRadiusM are bucketed into 1m height bands; the winner is the
 // band with the most support including its two adjacent bands (floor
@@ -196,8 +196,8 @@ float ProbeDistance(const Vector& pos, float dx, float dy) {
 //     sides = the corridor walls (~2.5-2.8m). The old alcove-only test
 //     (all three rays within 2m) rejected these because a corridor is wider
 //     than an alcove, so the terminus got filtered and LookupAt spoke the
-//     corridor body's axis ("Ost-West") while the player stood on its dead
-//     end instead of "Sackgasse" (2026-07-19 Endar Spire node[5]:
+//     corridor body's axis ("East-West") while the player stood on its dead
+//     end instead of "dead end" (2026-07-19 Endar Spire node[5]:
 //     rays E=17.2 back-W=1.4 sides N=2.8/S=2.5).
 // A wall-curve artefact in an open area fails both: it sits ALONG a wall, so
 // its back and/or a side ray runs off into open space beyond kDeadEndSideM.

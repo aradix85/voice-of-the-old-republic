@@ -300,7 +300,7 @@ bool ResumeWorldIfPaused(const char* reason) {
     }
     __try {
         // Deliberately NOT flagged as our own call: we WANT OnSetPauseState to
-        // fire un-suppressed so the engine's resume cue ("Fortgesetzt") speaks
+        // fire un-suppressed so the engine's resume cue ("Unpaused") speaks
         // as the menu-close announcement.
         reinterpret_cast<PFN_SetPausedByCombat>(kAddrSetPausedByCombat)(
             client, 0, 4, 0);
@@ -323,7 +323,7 @@ void TickInputClassReassert() {
     //   2. has-active-sub-screen true → false — last InGame* sub-screen
     //      just left panels[]. Esc on the bare panel goes through
     //      HideSWInGameGui which usually unpauses natively, BUT when the
-    //      user came in via Options → Spiel speichern → CSWGuiSaveLoad,
+    //      user came in via Options → Save Game → CSWGuiSaveLoad,
     //      then Esc(SaveLoad) → Esc(Options), the engine's natural path
     //      gets confused: sw_gui_status oscillates 3→4→3 and the final
     //      close leaves the pause bit set + audio muted. The safety-net
@@ -357,7 +357,7 @@ void TickInputClassReassert() {
         // Suppress modal-edge unpause when a sub-screen is still alive:
         // TutorialBox / MessageBoxModal popups can fire on top of an open
         // panel (e.g. a tutorial that appears while the user is in
-        // Inventar, or an in-Options confirm dialog). Dismissing the
+        // Inventory, or an in-Options confirm dialog). Dismissing the
         // popup leaves the user still inside a panel — pause must stay
         // until the sub-screen itself closes. The sub-screen edge below
         // handles the eventual unpause when panels[] empties of
@@ -428,7 +428,7 @@ extern "C" void __cdecl OnSwitchToSWInGameGui(void* thisPtr, int guiId) {
     // sub-screen. After we return, the original SwitchToSWInGameGui
     // executes its body and pushes the new sub-screen onto a clean
     // panels[]. Both calls land in the same engine call chain, so the
-    // sequencing is safe (the engine's own OnQuit→Schliess paths do
+    // sequencing is safe (the engine's own OnQuit→Close paths do
     // exactly this kind of in-engine cascade).
     if (!acc::engine::HasActiveSubScreen()) {
         return;
@@ -497,12 +497,12 @@ extern "C" void __cdecl OnSetSWGuiStatus(void* thisPtr,
     //
     // Also drop the pending-announce slot. OnSetActiveControl writes it
     // on every focus event, so a SetActive fired just before the area
-    // transition (e.g. PartySelection re-taking focus when the "Bist du
-    // mit der Zusammenstellung..." MessageBox closes on OK) leaves a
+    // transition (e.g. PartySelection re-taking focus when the party
+    // confirmation MessageBox closes on OK) leaves a
     // dangling control pointer that the next tick's DrainPendingAnnounce
     // would deref through its now-freed vtable. Crash dumps 20996 / 2288
-    // (2026-05-22, ESI = the cached Hinzuf. button) caught this exact
-    // path during the Versteck → tar_m02aa load.
+    // (2026-05-22, ESI = the cached Add button) caught this exact
+    // path during the Hideout → tar_m02aa load.
     if (new_status == 4) {
         acc::menus::chain::InvalidateChain();
         acc::menus::ClearPendingAnnounce();

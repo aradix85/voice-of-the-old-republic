@@ -1,7 +1,7 @@
 // Level-up screen trigger.
 //
 // Calls CGuiInGame::ShowLevelUpGUI @0x0062dc00 — same surface the
-// Charakterblatt btn_levelup click reaches via
+// character sheet btn_levelup click reaches via
 // CSWGuiInGameCharacter::ShowLevelUpGUI @0x006b0bb0. Going through the
 // CGuiInGame variant works without the InGameCharacter panel
 // constructed; the engine surfaces the level-up panel from the
@@ -16,7 +16,7 @@ namespace acc::engine_levelup {
 
 // True iff the active leader has actually earned the next level, per the
 // engine's own CSWSCreatureStats::CanLevelUp @0x005a6810 — the same
-// predicate that drives the Charakterblatt btn_levelup enabled state
+// predicate that drives the character sheet btn_levelup enabled state
 // (checks level cap, accumulated XP vs the required-XP table, and the
 // class-side gates). Pure read-only; safe to poll. False when the leader
 // can't be resolved (returns the same as "not ready" so callers gate

@@ -283,7 +283,7 @@ constexpr int kWorkbenchUpgradeLbItemsId = 0;  // LB_ITEMS
 // — inside K1's slot-button range, the same collision
 // IsWorkbenchUpgradeSlotButtonId already routes around.
 const int kWorkbenchUpgradeBtnBackId = acc::game::IsKotor2() ? 13 : 28;  // BTN_BACK
-const int kEquipBtnBackId    = acc::game::IsKotor2() ? 39 : 36;  // BTN_BACK         (TLK 1582 = Schliess.)
+const int kEquipBtnBackId    = acc::game::IsKotor2() ? 39 : 36;  // BTN_BACK         (TLK 1582 = Close)
 const int kEquipBtnEquipId   = acc::game::IsKotor2() ? 40 : 37;  // BTN_EQUIP        (TLK 1580 = OK)
 
 namespace acc::menus::detail {
@@ -339,7 +339,7 @@ inline int UpgradeSlotButtonCount() { return acc::game::IsKotor2() ? 9 : 7; }
 // tripwire). Panel identity itself is the CSWGuiSaveLoad vtable — see
 // IsSaveLoadPanel above. Defined in menus_internal.cpp.
 void* SaveLoadPanelGamesListBox(void* panel);   // LB_GAMES
-void* SaveLoadPanelActionButton(void* panel);   // BTN_SAVELOAD (Laden/Speichern)
+void* SaveLoadPanelActionButton(void* panel);   // BTN_SAVELOAD (Load/Save)
 void* SaveLoadPanelBackButton(void* panel);     // BTN_BACK
 
 // K2 workbench/crafting engine-truth resolvers (ctor-bound embedded
@@ -400,7 +400,7 @@ void* ContainerPanelGiveItemsButton(void* panel); // BTN_GIVEITEMS (give mode)
 // GuiIdMismatch tripwire inside these resolvers. Defined in
 // menus_internal.cpp.
 void* FeatsPanelAcceptButton(void* panel);       // BTN_ACCEPT ("OK")
-void* FeatsPanelBackButton(void* panel);         // BTN_BACK ("Abbrechen")
+void* FeatsPanelBackButton(void* panel);         // BTN_BACK ("Cancel")
 void* FeatsPanelRecommendedButton(void* panel);  // BTN_RECOMMENDED
 
 // CSWGuiSkillInfoBox (skillinfo / skillinfo_p) engine-truth resolvers —
@@ -418,8 +418,8 @@ void* SkillInfoBoxPanelOkButton(void* panel);       // BTN_OK
 // The offsets poison on KOTOR 2, where the class does not exist, so these
 // answer nullptr there. Defined in menus_internal.cpp.
 void* ScriptSelectPanelAiStateListBox(void* panel);  // LST_AIState
-void* ScriptSelectPanelAcceptButton(void* panel);    // BTN_Accept ("Wählen")
-void* ScriptSelectPanelBackButton(void* panel);      // BTN_Back ("Abbrechen")
+void* ScriptSelectPanelAcceptButton(void* panel);    // BTN_Accept ("Choose")
+void* ScriptSelectPanelBackButton(void* panel);      // BTN_Back ("Cancel")
 
 // CSWGuiWagerPopup (pazaakwager / pazaakwager_p) engine-truth resolvers —
 // the pazaak bet popup. Panel identity is already the CSWGuiWagerPopup
@@ -436,11 +436,11 @@ void* WagerPopupPanelMaximumLabel(void* panel);   // LBL_MAXIMUM (max + credits)
 // vtable (IsPazaakStartStructural). The clear button is KOTOR 2 only and
 // answers nullptr on KOTOR 1 (poisoned offset). Defined in
 // menus_internal.cpp.
-void* PazaakStartPanelPlayButton(void* panel);    // BTN_ATEXT ("Spielen")
+void* PazaakStartPanelPlayButton(void* panel);    // BTN_ATEXT ("Play")
 void* PazaakStartPanelClearButton(void* panel);   // BTN_CLEARCARDS (K2)
 
 // CSWGuiInGameOptKeyMappings (OPTKeyMapping / OPTKeyMapping_p) engine-truth
-// resolvers — the Tastaturbelegung screen. Panel identity comes from the
+// resolvers — the Keymapping screen. Panel identity comes from the
 // panel-kind probe; these move the eight controls the navigator drives off
 // their .gui ids. FilterButton takes the engine's own filter index
 // (0 = MOVEMENT, 1 = GAME, 2 = MINIGAME) — the same index KOTOR 2's
@@ -449,7 +449,7 @@ void* PazaakStartPanelClearButton(void* panel);   // BTN_CLEARCARDS (K2)
 void* KeyMapPanelEventListBox(void* panel);       // LST_EventList
 void* KeyMapPanelDefaultButton(void* panel);      // BTN_Default ("Standard")
 void* KeyMapPanelAcceptButton(void* panel);       // BTN_Accept ("OK")
-void* KeyMapPanelCancelButton(void* panel);       // BTN_Cancel ("Abbrechen")
+void* KeyMapPanelCancelButton(void* panel);       // BTN_Cancel ("Cancel")
 void* KeyMapPanelFilterButton(void* panel, int filterIndex);
 
 // CSWGuiUpgradeItemSelect (upgradeitems / upgradeitems_p) engine-truth
@@ -466,7 +466,7 @@ void* WorkbenchItemsPanelBackButton(void* panel);     // BTN_BACK
 // embedded CSWGuiButton + item id + borders + text. OnEnterSlot tags the
 // currently-equipped row via SetItem(id, /*param_2=*/1, 0); SetItem packs
 // (param_2 & 1) into bit 1 (0x2) of field6_0x394 — the same flag that makes
-// the engine append the " (Ausgew.)" suffix. So bit 0x2 set ⇔ "this row is
+// the engine append the selected-item suffix. So bit 0x2 set ⇔ "this row is
 // the item currently equipped in the selected slot". Used by EquipPickerOnEnter
 // to route Enter on the equipped row to an unequip (commit the row-0
 // 0x7f000000 "empty" entry) instead of a no-op re-equip.

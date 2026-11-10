@@ -37,11 +37,11 @@ namespace {
 //     against the K2 TLK).
 //
 //     Both weapon sets carry a set qualifier on KOTOR 2, not just the
-//     second one: the two rows are otherwise identical ("Linke Waffe"
+//     second one: the two rows are otherwise identical ("Left Weapon"
 //     twice), and the panel itself labels the columns. The qualifier words
-//     are the mod's own "aktiv" / "sekund\xE4r" (EquipSetActive /
-//     EquipSetSecondary), NOT the engine's on-screen "Konfig 1" /
-//     "Konfig 2" (dialog.tlk 49038/49039): the engine keeps no active-set
+//     are the mod's own "active" / "secondary" (EquipSetActive /
+//     EquipSetSecondary), NOT the engine's on-screen "Config 1" /
+//     "Config 2" (dialog.tlk 49038/49039): the engine keeps no active-set
 //     state — SwitchWeaps physically moves the items between the slot
 //     pairs — so the first pair is by construction what the character
 //     holds and the second pair the stored one. Numbered configs would
@@ -132,7 +132,7 @@ const char* TryPartyPortrait(void* control, char* outBuf, size_t bufSize,
         char name[128];
         if (GetPartyNpcNameForSlot(npcSlot, name, sizeof(name)) &&
             name[0]) {
-            // Compose "{name}, im Team" / "{name}, verfügbar" so the
+            // Compose "{name}, in party" / "{name}, available" so the
             // user hears whether the slot is currently selected for
             // the party or just on the bench, plus the lock when the
             // engine won't let it change. The per-tick focus
@@ -389,8 +389,6 @@ const char* TryInGameMenuIcon(void* control, void* owner,
         // spacesuit hint there, which is exactly what the first KOTOR 2 test
         // round heard (patch-20260801-225529.log). The K2 cluster is
         // 48620..48628, mined the same way (parse TLK header, walk entries).
-        // Two K2 captions genuinely differ in wording: "Charaktere" (not
-        // "Charakterblatt") and "Tagebuch" (not "Auftr\xe4ge").
         struct InGameMenuName {
             int         guiId;    // label id; the button is guiId + 8
             uint32_t    strrefK1; // 0xFFFFFFFF = no strref, use literal
@@ -507,8 +505,8 @@ const char* TryEquipSlot(void* control, void* owner,
             if (slotLabel[0] == '\0') return nullptr;
 
             // Weapon-set qualifier (KOTOR 2's two weapon rows). Appended to
-            // the slot name so the pair reads "Linke Waffe aktiv" /
-            // "Linke Waffe sekund\xE4r" instead of the same words twice.
+            // the slot name so the pair reads "Left Weapon active" /
+            // "Left Weapon secondary" instead of the same words twice.
             if (kEquipTableIsK2 && s.setQualifier != 0) {
                 const char* setText = acc::strings::Get(
                     s.setQualifier == 1

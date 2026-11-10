@@ -1,7 +1,7 @@
-// In-game "Fähigkeiten" screen (CSWGuiInGameAbilities, abilities.gui).
+// In-game "Abilities" screen (CSWGuiInGameAbilities, abilities.gui).
 //
 // A view-only character screen shaped like the settings menu: three tab
-// buttons (Powers / Skills / Talents) switch which list the single
+// buttons (Powers / Skills / Feats) switch which list the single
 // LB_ABILITY listbox shows, and selecting a row repaints a detail area
 // (name + rank/bonus/total labels + the LB_DESC description box).
 //
@@ -20,7 +20,7 @@
 
 namespace acc::menus::abilities {
 
-// True iff `panel` is the in-game Fähigkeiten screen.
+// True iff `panel` is the in-game Abilities screen.
 bool IsAbilitiesPanel(void* panel);
 
 // Repaint the detail area (name/rank/bonus/total labels + LB_DESC) for the
@@ -28,10 +28,10 @@ bool IsAbilitiesPanel(void* panel);
 // Shift+Up/Down reads a description that matches the focused entry.
 void RefreshDetail(void* panel);
 
-// Dedicated input handler for the Fähigkeiten screen — a two-level submenu so
+// Dedicated input handler for the Abilities screen — a two-level submenu so
 // the engine's mouse-only / crash-prone paths never see the keys:
 //   * Tab level (where you land): Up/Down move between the available tabs
-//     (Skills / Powers-if-Jedi / Talente), clamped; Enter drills into the tab's
+//     (Skills / Powers-if-Jedi / Feats), clamped; Enter drills into the tab's
 //     list; Esc falls through to close the screen.
 //   * List level (after Enter): Up/Down browse entries, clamped (no wrap) —
 //     Skills are driven by us via OnEnterSkill (name + rank/bonus/total),
@@ -40,8 +40,8 @@ void RefreshDetail(void* panel);
 //
 // The three shared label pairs are announced on every tab except Feats, where
 // UpdateView hides them and leaves the previous tab's text in place. On Powers
-// they hold the force cost (Basispreis / alignment Anp. / Kosten pro
-// Verwendung), written by OnEnterPower.
+// they hold the force cost (base cost / alignment adj. / cost per
+// use), written by OnEnterPower.
 //
 // Feats/Powers rank handling: a chart row is one chain and its columns are that
 // chain's ranks. The engine parks the column cursor at 0 unless the mouse moves

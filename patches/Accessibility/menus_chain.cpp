@@ -188,11 +188,11 @@ bool DetectTabsCluster(void* panel, int& outStart, int& outCount) {
 
     // Store is structurally tab-cluster-shaped (listbox @ controls[0],
     // three navigable buttons clumped further down) but the three buttons
-    // are Verkaufsliste / Schliess. / Kaufen — distinct action buttons,
+    // are Sell / Close / Buy — distinct action buttons,
     // not page tabs. Flagging them as tabs makes the chain Enter handler
     // route through click-sim (the tab path) instead of FireActivate,
     // which lands the click on whatever overlay sits at the button's
-    // y-coordinate — in the wild that misroutes Schliess. into the engine
+    // y-coordinate — in the wild that misroutes Close into the engine
     // quit-confirm popup.
     if (acc::menus::store::IsStorePanel(panel)) return false;
 
@@ -264,7 +264,7 @@ void InvalidateChain() {
     g_chainIndex = 0;
     g_chainCount = 0;
     // Tabbed-panel state is intentionally NOT reset here. The chain panel and
-    // the tabbed panel are orthogonal: closing a sub-panel (Grafik) only
+    // the tabbed panel are orthogonal: closing a sub-panel (Graphics) only
     // needs to invalidate the chain, but used to also wipe g_tabbedPanel for
     // the still-live parent (Options), forcing MaybeDetectTabs to re-latch
     // on every reopen — leaving the click-sim/warp offset stale in the
@@ -441,7 +441,7 @@ void* FindButtonByWords(void* panel, const char* const* words, int wordCount) {
 }  // namespace
 
 void* FindCloseButton(void* panel) {
-    // "Schliessen" as well as the engine's truncated "Schliess." — the word
+    // "Close" as well as the engine's truncated "Schliess." — the word
     // rule would reject the longer form as a different word.
     static const char* const kWords[] = {
         "Schliess.", "Schliessen", "Close", "OK", "Weiter", "Continue",
@@ -517,7 +517,7 @@ void* ResolvePortraitChargenSkip(void* panel) {
     return portraitChargenSkip;
 }
 
-// Store-panel action buttons (Schliess. / Verkaufsliste / Kaufen).
+// Store-panel action buttons (Close / Sell / Buy).
 // These live at fixed struct offsets and we drive them via dedicated
 // hotkeys (Esc to close, G to toggle mode, Enter on item to trade)
 // rather than chain navigation. Walking past the inventory rows into
@@ -538,8 +538,8 @@ if (acc::menus::store::IsStorePanel(panel)) {
 // the picker's item listbox in panel.controls[] even when the picker
 // isn't visually shown — the engine pre-populates it with the body-
 // slot candidates at panel open. Letting the chain recurse into its
-// children leaks rows like "Brejiks Armband" / "Energieschild" /
-// "Sith-Energieschild" into the equip screen between the slot
+// children leaks rows like "Brejik's Armband" / "Energy Shield" /
+// "Sith Energy Shield" into the equip screen between the slot
 // buttons. The picker has its own dedicated listbox spec
 // (EquipPickerSpec in menus_listbox.cpp) that drives row selection
 // when armed; chain nav never needs to step into it.
@@ -594,7 +594,7 @@ if (IdentifyPanel(panel) == PanelKind::WorkbenchUpgrade) {
 //     the 9-slot NPC roster. Useless in KOTOR 1: max active party is 3
 //     (PC + 2 NPCs), and the 2 portrait slots already cover both
 //     companions. KOTOR 1 only; the K2 panel has neither.
-//   PartySelection accept_button ("Hinzuf.") — the mouse flow's second
+//   PartySelection accept_button ("Add") — the mouse flow's second
 //     step; Enter on a portrait runs the same OnToggled directly.
 //   MainMenu warp_button — the developer module-warp button both games
 //     ship in the title screen. It jumps into an arbitrary module by
@@ -610,7 +610,7 @@ bool IsDecorativeControl(void* panel, void* c,
     // Pazaak wager popup: mask the less/more SpeedButtons. The wager is
     // adjusted with Left/Right (held = auto-repeat) via pazaak::Tick's polled
     // stepper, so these buttons are redundant in the chain — dropping them
-    // lets Up/Down step straight from the wager row to Setzen/Beenden.
+    // lets Up/Down step straight from the wager row to the wager buttons.
     // Identified by the popup's own members, not by .gui id (the two games
     // number them 4/5 vs 6/7); see WagerPopupPanel* in menus_internal.cpp.
     if (pk == PanelKind::PazaakWager &&
@@ -643,13 +643,13 @@ bool IsDecorativeControl(void* panel, void* c,
     // picker-commit button. The accessibility picker dispatcher
     // (menus_listbox.cpp EquipPickerOnEnter) commits the selected item
     // directly via QueueEquipCommit, so OK has no role in chain nav.
-    // When the picker isn't armed the engine renders it as "OK, nicht
-    // verfügbar" — landing on that announces a dead-end. Drop it.
+    // When the picker isn't armed the engine renders it as "OK,
+    // unavailable" — landing on that announces a dead-end. Drop it.
     //
-    // InGameEquip BTN_BACK ("Schliess."): Esc closes the panel via the
+    // InGameEquip BTN_BACK ("Close"): Esc closes the panel via the
     // engine's universal modal-close path, so the close button is
     // functionally redundant for keyboard nav. Same reasoning as
-    // Store's Schliess./Verkaufsliste/Kaufen filter above — dedicated
+    // Store's Close/Sell/Buy filter above — dedicated
     // hotkey replaces chain landing.
     //
     // Matched by embedded-member offset like the party-cycle strip
@@ -673,15 +673,15 @@ bool IsDecorativeControl(void* panel, void* c,
             return true;
         }
     }
-    // InGameLevelUp "Zurück" (button_back) and "Abbrechen"
-    // (button_cancel). Both are dead ends for keyboard nav: Zurück
+    // InGameLevelUp "Back" (button_back) and "Cancel"
+    // (button_cancel). Both are dead ends for keyboard nav: Back
     // only steps the engine's visual category highlight — we already
     // navigate the level-up categories with our own arrow keys — and
-    // Abbrechen routes to OnCancelPressed, which the engine gates on a
+    // Cancel routes to OnCancelPressed, which the engine gates on a
     // can-cancel flag it only ever sets to 0 (see kLevelUpButton*Offset
     // in engine_offsets.h). An in-game level-up cannot be cancelled in
-    // vanilla; Annehmen is the sole exit. Drop both so arrow nav steps
-    // only through the actionable category buttons + Annehmen.
+    // vanilla; Accept is the sole exit. Drop both so arrow nav steps
+    // only through the actionable category buttons + Accept.
     if (pk == PanelKind::InGameLevelUp) {
         auto* p = reinterpret_cast<unsigned char*>(panel);
         if (c == p + kLevelUpButtonBackOffset ||
@@ -689,13 +689,13 @@ bool IsDecorativeControl(void* panel, void* c,
             return true;
         }
     }
-    // InGameMap up_button / down_button ("Vorheriger Hinweis" /
-    // "Nächster Hinweis"). They step the engine's GetPrevMapNote /
+    // InGameMap up_button / down_button ("previous note" /
+    // "next note"). They step the engine's GetPrevMapNote /
     // GetNextMapNote cycle, which our map cursor supersedes: W/A/S/D
     // sweeps the map and map_ui_cursor speaks every note it crosses, so
     // the engine's own note stepper is a second, weaker way to do the
     // same thing. Dropping both lets arrow nav step straight to
-    // Gruppenauswahl / the return button. The per-kind extractor that
+    // party selection / the return button. The per-kind extractor that
     // names them (menus_extract TryInGameMapArrow) stays — it still
     // labels them for the diagnostic walk and for any focus event the
     // engine raises on its own.
@@ -706,7 +706,7 @@ bool IsDecorativeControl(void* panel, void* c,
             return true;
         }
     }
-    // PartySelection "Hinzuf." (BTN_NPC). Enter on a portrait already
+    // PartySelection "Add" (BTN_NPC). Enter on a portrait already
     // drives the engine's OnToggled directly, so this button is the
     // mouse flow's redundant second step — landing on it after every
     // portrait just doubles the path to OK.
@@ -722,8 +722,8 @@ bool IsDecorativeControl(void* panel, void* c,
         c == acc::off::Ptr(panel, kMainMenuWarpButtonOffset)) {
         return true;
     }
-    // Inventory "Verwenden" (useitem_button). Same redundancy as the
-    // PartySelection Hinzuf. above, plus a correctness problem of its own:
+    // Inventory "Use" (useitem_button). Same redundancy as the
+    // PartySelection Add above, plus a correctness problem of its own:
     // the button is the engine's gamepad-A shortcut, so it dispatches
     // activate to panel.active_control rather than to our chain focus, and
     // our cursor warp usually fails to land on an item row (the hit test
@@ -766,7 +766,7 @@ bool IsDecorativeControl(void* panel, void* c,
     // WorkbenchUpgrade slot buttons (matched by position in the panel's
     // embedded button run — UpgradeSlotIndexFromButton) that the engine
     // has marked non-interactive (bit_flags & 0x2 == 0). For a 3-slot
-    // ranged weapon (saber=3) these are the 4 Kristall positions;
+    // ranged weapon (saber=3) these are the 4 crystal positions;
     // for a 4-slot saber/double-shaft (saber=2) they are the 3
     // Aufwertungs positions. Sighted players see them greyed; a
     // keyboard navigator has nothing to do with them — OnSlotSelected
@@ -797,16 +797,16 @@ bool IsDecorativeControl(void* panel, void* c,
     // strref slot empty, so a text compare is the reliable signal.
     // Gated to plain buttons (AsButton): close buttons are never
     // toggles/sliders, and this keeps ReadButtonText off slider structs.
-    // This subsumes the per-panel Store/Equip/Options Schliess. filters
+    // This subsumes the per-panel Store/Equip/Options Close filters
     // above; those stay for their non-1582 siblings (Equip OK, Store
-    // Verkaufsliste/Kaufen) and as the Esc-routing anchors.
+    // Sell/Buy) and as the Esc-routing anchors.
     //
     // EqualsTrimmed, not strcmp: KOTOR 2 renders this caption as
-    // "\x11 Schliessen" — an Aspyr controller-glyph marker, then a pad space,
-    // then the word — against a dialog.tlk that says "Schliessen". A
+    // "\x11 Close" — an Aspyr controller-glyph marker, then a pad space,
+    // then the word — against a dialog.tlk that says "Close". A
     // byte-exact compare never matched, so the close button survived in every
     // K2 sub-screen chain (patch-20260806-173225.log: `[5] button
-    // text="\x11 Schliessen"`, and not one "filter close button" line in the
+    // text="\x11 Close"`, and not one "filter close button" line in the
     // whole session). ReadGuiString takes the 0x11 off, this takes the space
     // off; both halves are needed. KOTOR 1 emits neither, which is why the
     // same code was correct there for months.
@@ -862,7 +862,7 @@ void AppendListBoxChildren(void* panel, void* c, void* equipPickerLb,
         // The journal's quest list (items_listbox @ panel+0x5c4) must
         // expose its rows even when only ONE quest is active — otherwise
         // the lone entry (the norm in the Endar Spire tutorial, where the
-        // sole quest is "Angriff auf die Endar Spire") is unreachable and
+        // sole quest is the Endar Spire one) is unreachable and
         // the user hears no journal content. Its rows carry the dedicated
         // journal-entry Enter handler (isJournalRow below), so descend via
         // AppendChainEntry exactly like the size>1 path. The description
@@ -1005,20 +1005,20 @@ bool OnCreditsAnchor(void* labelControl, int sortCy, void* userData) {
 }
 
 // Per-kind virtual chain entries. For InGameCharacter the panel
-// hosts a dense value-label cluster (Klasse, Stufe, Erfahrung, HP,
+// hosts a dense value-label cluster (Class, Level, Experience, HP,
 // FP, six attributes) that the snapshot announce already covers
 // but the chain doesn't expose — labels aren't IsChainNavigable.
 // ForEachStatRowAnchor visits each value-label control; we register
 // it as a text-only chain entry at its real (cx, cy). The y-sort
 // below then drops them into top-to-bottom reading order alongside
-// the real buttons (Autom. Levelaufst., Levelaufst., bottom-row
+// the real buttons (Auto Level Up, Level Up, bottom-row
 // navigation).
 //
 // Text-only flag means Enter re-announces (calls AnnounceControl
 // again) instead of firing vtable[15] — safe for label controls
 // that have no activate handler. FromControl routes through
 // ExtractStatRow at section 0 so the user hears the composed phrase
-// ("Stärke 14, +2") rather than the bare label text ("14").
+// ("Strength 14, +2") rather than the bare label text ("14").
 bool OnStatRowAnchor(void* labelControl, int sortCy, void* userData) {
     return AppendVirtualRow(labelControl, sortCy, userData, ProbeStatRow);
 }
@@ -1048,7 +1048,7 @@ bool OnEquipStatAnchor(void* labelControl, int sortCy, void* userData) {
 // Anchor) rather than an engine label — we never need to read /
 // dispatch through it as if it were a real CSWGuiControl. Position
 // is synthetic: sortCy=9000 lands the entry at the end of the
-// chain, after every real button on the Optionen strip.
+// chain, after every real button on the Options strip.
 bool OnModSettingsAnchor(void* sentinel, int sortCx, int sortCy,
                          void* /*userData*/) {
     if (g_chainCount >= kMaxChainEntries) return false;
@@ -1069,7 +1069,7 @@ bool OnModSettingsAnchor(void* sentinel, int sortCx, int sortCy,
 // hidden templates whose text still reads "<CUSTOM0>"; only the shown
 // rows carry the CSWGuiControl visible bit (kControlVisibleBit at +0x44).
 // Expose just those as text-only entries so the user can arrow back and
-// re-read, and so the substituted value ("Erfahrungspunkte erhalten: 45")
+// re-read, and so the substituted value ("Experience gained: 45")
 // is what's read rather than the placeholder. The y-sort below drops them
 // above OK (cy ~25 vs ~51) into natural reading order.
 void AppendStatusSummaryRows(void* panel, CExoArrayList* list, int n) {
@@ -1105,12 +1105,12 @@ constexpr int kFilterStripSortBase = 8000;
 
 // House rule: on a list-driven screen the list is read first and its filter /
 // toggle strip after it. KOTOR 2 lays several of those strips out ABOVE the
-// list — the journal's three sort-mode buttons (Zeit / Name / Planet) sit over
-// the quest list, the load/save screen's Cloud-Speicher toggle sits over the
+// list — the journal's three sort-mode buttons (Time / Name / Planet) sit over
+// the quest list, the load/save screen's cloud-save toggle sits over the
 // save slots — and this chain sorts geometrically, so the strip became the
 // first thing Up/Down reached AND the panel's initial focus (RebindChain
 // anchors at index 0 when the engine's active control is the listbox itself,
-// which is exactly what saveload does). Opening "Spiel laden" therefore spoke
+// which is exactly what saveload does). Opening "Load Game" therefore spoke
 // the first save slot and then the focused Cloud toggle, one Enter away from
 // flipping a setting the user never went looking for.
 //
@@ -1347,8 +1347,8 @@ void RebindChain(void* panel) {
     // chargen wizard step (abchrgen_p, skchrgen_p, portcust_p) straight out
     // of the parent step-list's button handler, so the walk never ran and
     // the routing layer logged "fg=<step> current=<parent>" for the whole
-    // visit. The visible cost was the Attribute / Fähigkeiten rows speaking
-    // a bare "8" instead of "Stärke, 8": CaptureLabels lives at the end of
+    // visit. The visible cost was the Attributes / Skills rows speaking
+    // a bare "8" instead of "Strength, 8": CaptureLabels lives at the end of
     // this walk and binds ability_labels[i] onto ability_buttons[i].
     //
     // Placed ahead of the control walk below so the capture is in the cache
@@ -1382,7 +1382,7 @@ void RebindChain(void* panel) {
     void* craftCommitBtn     = acc::menus::crafting::CommitButton(panel);
 
     // Resolve the engine's localized close caption (strref 1582 →
-    // "Schliess."/"Close"/…) once per rebind, for the universal
+    // "Close"/"OK"/…) once per rebind, for the universal
     // close-button filter in isDecorative below. Empty on TLK miss, which
     // disables the filter (fail-open — never hides a real action button).
     char closeCaption[64];

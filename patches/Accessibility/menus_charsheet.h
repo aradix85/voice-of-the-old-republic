@@ -4,9 +4,9 @@
 // / XP / 6 attributes + their pre-formatted modifiers / alignment
 // slider). None of them is IsChainNavigable, so this module surfaces
 // them as virtual, text-only chain entries the user arrows through —
-// each read as a composed localised phrase ("Stärke 14, +2").
+// each read as a composed localised phrase ("Strength 14, +2").
 //
-// Opening the panel speaks its name only ("Charakterblatt"), from the
+// Opening the panel speaks its name only ("Character"), from the
 // generic sub-screen announce in menus_monitors.cpp. There is
 // deliberately NO read-everything-on-open path: an earlier opener that
 // composed all 12 rows into one line was removed once the rows became
@@ -23,11 +23,11 @@
 
 namespace acc::menus::charsheet {
 
-// Per-row formatted speech for one Charakterblatt value label.
+// Per-row formatted speech for one character sheet value label.
 // `labelControl` should be a pointer to one of the inline CSWGuiLabel
 // fields inside `panel` (e.g. lbl_class at panel+0x2e4, lbl_str at
 // panel+0x1d24, …). On match, fills `outBuf` with the localised
-// composed phrase ("Stärke 14, +2", "Klasse: Soldat") and returns
+// composed phrase ("Strength 14, +2", "Class: Soldier") and returns
 // true. Returns false if `labelControl` is not a recognised stat-row
 // anchor for InGameCharacter — caller falls through to the standard
 // extract ladder.
@@ -37,7 +37,7 @@ namespace acc::menus::charsheet {
 //     anchored on the value labels at their real y coordinates.
 //   * FromControl (menus_extract.cpp) routes through this helper
 //     before the standard label-text path so the user hears the
-//     composed phrase rather than the bare "14" / "Soldat".
+//     composed phrase rather than the bare "14" / "Soldier".
 //
 // Single-shot read; safe to call per chain rebind + per focus tick.
 // Re-reads the live label text each invocation so cycling characters
@@ -55,7 +55,7 @@ bool IsStatRowAnchor(void* panel, void* labelControl);
 // invoked once per anchor with the live CSWGuiLabel pointer + the
 // synthetic sort-cy that the chain should use to position the virtual
 // entry. Visiting stops if the callback returns false. Anchors are
-// emitted in spec-table order (Klasse → Stufe → Erfahrung → HP → FP
+// emitted in spec-table order (Class → Level → Experience → HP → FP
 // → Str → Dex → Con → Int → Wis → Cha); RebindChain uses sortCy as
 // the chain entry's cy so the y-sort produces this logical reading
 // order regardless of where the engine actually renders each label.

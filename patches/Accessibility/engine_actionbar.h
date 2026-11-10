@@ -1,4 +1,4 @@
-// Engine bindings for the player action bar (Aktionsmenü).
+// Engine bindings for the player action bar (action menu).
 //
 // Pure read + primitive layer. Mirrors engine_radial: resolve through
 // the standard chain, per-column reads, drive engine widgets via the
@@ -134,7 +134,7 @@ bool SendUseItemRequestK2(uint32_t actionId, void* targetClientCreature);
 // kInvalidObjectId when no narrated target — PopulateMenus then leaves
 // hostile-targeted action items with unresolved creature_ids so
 // dispatch silently no-ops instead of mistargeting. Self-buff items
-// (Medikit Selbst, stims) still receive creature_id=player so they
+// (self-use medpacs, stims) still receive creature_id=player so they
 // fire regardless.
 bool PrepareBareDispatch(uint32_t targetClientHandle);
 

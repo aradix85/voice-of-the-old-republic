@@ -168,7 +168,7 @@ Mode     g_tradeWatchMode           = Mode::Unknown;
 int      g_tradeWatchSizeAtArm      = -1;
 int      g_tradeWatchTicksRemaining = 0;
 // Price of the item at dispatch time. Reused for the success speech so
-// the user hears "Verkauft für 16 Credits" instead of plain "Verkauft".
+// the user hears "Sold for 16 credits" instead of plain "Sold".
 uint32_t g_tradeWatchPrice          = 0;
 // Player gold (CSWGuiStore.field31_0x2270) at dispatch time. The primary
 // trade-completion signal: BuyItem subtracts the price from this field and
@@ -354,8 +354,8 @@ void TickMonitorMode() {
                 ? kStoreShopItemsListBoxOffset
                 : kStoreInvItemsListBoxOffset);
         // Drop any in-flight trade watch — the user toggled mode rather
-        // than waiting for the trade outcome. Speaking "Verkauft" /
-        // "Kann nicht…" after a mode flip would be incoherent.
+        // than waiting for the trade outcome. Speaking "Sold" /
+        // "Cannot…" after a mode flip would be incoherent.
         g_tradeWatchArmed = false;
         return;
     }
@@ -535,7 +535,7 @@ void DispatchTradeAction(void* panel, void* row) {
     // Raise the row's is_active bit if it's clear. Both OnControl{Store,Inv}
     // AButton gate their *entire* body on `param_1->is_active != 0` and
     // silently no-op (no popup, no gold change) otherwise — that early-out
-    // is what produced the false "Kann nicht gekauft werden" on Computersonde
+    // is what produced the false "Cannot be bought" on Computer Probe
     // / Parts. A real mouse click sets the row selected (is_active=1) before
     // the engine dispatches; we call the handler directly from the keyboard,
     // so rows the chain hasn't freshly hovered still read 0. is_active is the

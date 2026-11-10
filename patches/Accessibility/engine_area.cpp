@@ -287,7 +287,7 @@ void SubstitutePlayerNameToken(char* buf, size_t bufSize) {
 
     // The chargen-name slot is the right source, but it comes back empty
     // on KOTOR 2 (witnessed 2026-08-13: the Peragus tank announced as
-    // "Kolto-Tank von " with nothing after the preposition). Fall back to
+    // "'s Kolto Tank" with nothing before the possessive). Fall back to
     // the active leader, which resolves in-world on both games.
     char pcName[64] = "";
     if (!GetPlayerCharacterName(pcName, sizeof(pcName)) || pcName[0] == '\0') {
@@ -297,7 +297,7 @@ void SubstitutePlayerNameToken(char* buf, size_t bufSize) {
         }
     }
     // Substituting an empty string leaves dangling grammar — "'s Kolto
-    // Tank", "Kolto-Tank von " — which is worse than the raw token,
+    // Tank" — which is worse than the raw token,
     // because at least the token tells the listener a name is missing
     // rather than sounding like a finished sentence. Leave it alone.
     if (pcName[0] == '\0') return;
@@ -483,9 +483,9 @@ void AppendLockNeed(void* obj, char* outBuf, size_t bufSize) {
 // state (closed, and never locked here) AND has no transition target /
 // description.
 //
-// Order is deliberate: state first ("Tür, verriegelt") because that's the
-// most actionable bit for the player; destination second ("Tür, offen,
-// Brücke") so the user hears it before any long-form description; then
+// Order is deliberate: state first ("Door, locked") because that's the
+// most actionable bit for the player; destination second ("Door, open,
+// Bridge") so the user hears it before any long-form description; then
 // description last.
 void BuildDoorSuffix(void* serverDoor, char* outBuf, size_t bufSize) {
     if (!outBuf || bufSize == 0) return;
@@ -494,8 +494,8 @@ void BuildDoorSuffix(void* serverDoor, char* outBuf, size_t bufSize) {
 
     // Static doors are non-interactive set dressing — the engine never lets
     // anyone open them (it offers no actions at all). They're frequently also
-    // flagged locked in the blueprint, but "verriegelt" misleads the player
-    // into hunting for a key/slice that doesn't exist. Label them "kosmetisch"
+    // flagged locked in the blueprint, but "locked" misleads the player
+    // into hunting for a key/slice that doesn't exist. Label them "cosmetic"
     // instead and skip the rest of the suffix (state/transition/description are
     // all meaningless on a door that can't be used). IsDoorCosmetic carries
     // the KOTOR 2 exception: Obsidian flags real, lock-bearing doors Static
@@ -521,7 +521,7 @@ void BuildDoorSuffix(void* serverDoor, char* outBuf, size_t bufSize) {
         // Stock KOTOR uses 0=closed, ≥1=opening/open in our observations
         // (CSWCDoor.state=2 was the post-open value seen in the May 5
         // logs); the server-side byte mirrors that. If the value space
-        // turns out wider, the worst case is we read "offen" for an
+        // turns out wider, the worst case is we read "open" for an
         // animating door — better signal than silent.
         AppendCommaSeparated(outBuf, bufSize,
             acc::strings::Get(acc::strings::Id::DoorOpen));
@@ -534,7 +534,7 @@ void BuildDoorSuffix(void* serverDoor, char* outBuf, size_t bufSize) {
         // here — the player has picked or keyed it since. Worth saying: it
         // confirms the unlock landed, and it explains why the door still
         // counts in the locked-door numbering sequence. Short-lived in
-        // practice (the player normally opens it a beat later, and "offen"
+        // practice (the player normally opens it a beat later, and "open"
         // then wins above).
         AppendCommaSeparated(outBuf, bufSize,
             acc::strings::Get(acc::strings::Id::DoorUnlocked));
@@ -594,7 +594,7 @@ bool GetObjectDisplayNameByHandle(uint32_t handle,
     // looked server-side (high bit clear), retry with the high bit
     // set. CClientExoApp::GetObjectName resolves only the client-side
     // namespace (verified 2026-05-10 in patch-20260510-003647.log:
-    // 0x8000002c → "Sith-Soldat" succeeded; 0x0000002c → empty/tag
+    // 0x8000002c → "Sith-Soldier" succeeded; 0x0000002c → empty/tag
     // fallback). Server-side IDs with high bit cleared share their
     // low 24 bits with the matching client handle per
     // memory:project_object_handle_namespaces, so OR'ing 0x80000000
@@ -682,7 +682,7 @@ bool GetObjectBaseName(void* gameObject, char* outBuf, size_t bufSize) {
     bool got = false;
     switch (K(kind)) {
         case K::Door:
-            // Bare LocName only. The state ("verriegelt"/"offen"/
+            // Bare LocName only. The state ("locked"/"open"/
             // "entriegelt") + transition destination + description
             // enrichment lives in AppendObjectStateSuffix, which
             // GetObjectName applies on top — so narration can slot a
@@ -698,7 +698,7 @@ bool GetObjectBaseName(void* gameObject, char* outBuf, size_t bufSize) {
             // strrefs, so the per-stats path below would otherwise fall
             // through to the raw tag. Verified in combat.cpp /
             // combat_queue.cpp where the same accessor returns
-            // "Sith-Soldat" etc.
+            // "Sith-Soldier" etc.
             uint32_t handle = GetObjectHandle(gameObject);
             if (handle != 0u &&
                 GetObjectDisplayNameByHandle(handle, outBuf, bufSize) &&
@@ -862,9 +862,9 @@ bool IsTransitionTrigger(void* trigger) {
         // != 0.0f — but the 0xFFFFFFFF sentinel decodes as NaN, and
         // NaN != 0.0f is true, so EVERY destination-less trigger (traps,
         // banter/dialogue triggers, shield triggers) classified as a
-        // transition: they polluted the Übergang cycling category and
+        // transition: they polluted the transition cycling category and
         // fired the Transition proximity cue on approach (2026-07-16
-        // Südlicher Strand session). Mirror ExtractTextOrStrRef's
+        // Southern Strand session). Mirror ExtractTextOrStrRef's
         // resolution order instead, with LookupTlk's strref validity
         // bounds, minus the actual TLK call (this predicate runs per
         // object per tick in the change detector).

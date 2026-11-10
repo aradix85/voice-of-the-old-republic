@@ -260,7 +260,7 @@ State g_state;
 // Resolve a composed entry's text. The bare-number line lists the category
 // names (1..7) using the same MenuCat* strings the action menu speaks, so the
 // help never drifts from what the user navigates. Key→category order is linear
-// and matches the engine dispatch: 6 → Misc (Sonstiges), 7 → Explosives.
+// and matches the engine dispatch: 6 → Miscellaneous, 7 → Explosives.
 void BuildComposedText(S formatId, char* out, size_t cap) {
     if (formatId == S::FmtHelpNumberActions) {
         std::snprintf(out, cap, acc::strings::Get(formatId),

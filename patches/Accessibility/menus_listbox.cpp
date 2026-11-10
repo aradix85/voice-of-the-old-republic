@@ -51,9 +51,9 @@ constexpr const ListBoxPanelSpec* kSpecs[] = {
     // Workbench panels (Phase: workbench accessibility).
     &kWorkbenchItemsSpec,
     &kWorkbenchUpgradeSpec,
-    // Combat-system plan, Phase 2C — Ö Examine engine panel.
+    // Examine engine panel.
     &kExamineSpec,
-    // Character sheet "Kurzbefehle" combat-behaviour picker.
+    // Character sheet "Shortcuts" combat-behaviour picker.
     &kScriptSelectSpec,
 };
 constexpr int kNumSpecs = static_cast<int>(sizeof(kSpecs) / sizeof(kSpecs[0]));
@@ -182,7 +182,7 @@ void LogStandard(int n, void* thisPtr, int param_1, int param_2,
 
 }  // namespace
 
-// The plain "<row text>, N von M" announce. Three specs want exactly this
+// The plain "<row text>, N of M" announce. Three specs want exactly this
 // and had it written out three times, differing only in buffer sizes.
 // Sized to the largest of the three, so nothing that used to fit still
 // truncates.

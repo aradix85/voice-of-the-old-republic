@@ -120,7 +120,7 @@ extern "C" int __cdecl OnHandleInputEvent(void* thisPtr, int param_1, int param_
     // just opened a sub-screen / drilled / etc.
     //
     // Concrete observed double-fire:
-    //   * Enter on "Spiel laden" → QueueActivate opens SaveLoad → engine
+    //   * Enter on "Load Game" → QueueActivate opens SaveLoad → engine
     //     release fires onClick on the now-focused row 0 → first save
     //     auto-loads.
     //
@@ -270,7 +270,7 @@ extern "C" int __cdecl OnHandleInputEvent(void* thisPtr, int param_1, int param_
     // every other GUI key so they don't bleed through to the parent
     // panel. Runs ahead of the chain / radial / etc. dispatchers
     // because the submenu has no real engine panel — the parent
-    // Optionen panel is still foreground and would otherwise eat the
+    // Options panel is still foreground and would otherwise eat the
     // keys we want for the virtual menu.
     if (param_2 != 0 && acc::menus::modsettings::IsOpen()) {
         if (acc::menus::modsettings::HandleInput(param_1)) {
@@ -443,7 +443,7 @@ extern "C" int __cdecl OnHandleInputEvent(void* thisPtr, int param_1, int param_
         }
     }
 
-    // In-game Fähigkeiten screen — dedicated two-level handler (tab level:
+    // In-game Abilities screen — dedicated two-level handler (tab level:
     // Up/Down pick a tab, Enter drills in; list level: Up/Down browse, Esc
     // back). Runs before the listbox dispatcher and chain nav so it owns every
     // nav key on this screen; the engine's own paths for it are mouse-only or
@@ -486,7 +486,7 @@ extern "C" int __cdecl OnHandleInputEvent(void* thisPtr, int param_1, int param_
         }
     }
 
-    // Chargen "Talente" main panel — 2D feat-tree chart navigation. Not
+    // Chargen "Feats" main panel — 2D feat-tree chart navigation. Not
     // a listbox-shaped surface (the chart is a single chart-control
     // child of feats_listbox), so it has its own dispatcher rather than
     // a listbox spec entry. See menus_chargen_feats.h for the design.
@@ -523,7 +523,7 @@ extern "C" int __cdecl OnHandleInputEvent(void* thisPtr, int param_1, int param_
     // Pazaak board game — dedicated arrow-zone navigator (your hand / your
     // board / opponent board / actions), same model as the deck builder. Owns
     // arrows + Enter for the board so the generic chain can't double-fire on
-    // its Weiter/Halten buttons; letter shortcuts (s/e/c/t/Shift+C) are
+    // its End Turn/Stand buttons; letter shortcuts (s/e/c/t/Shift+C) are
     // Win32-polled in pazaak::Tick.
     {
         int rv = 0;
@@ -559,7 +559,7 @@ extern "C" int __cdecl OnHandleInputEvent(void* thisPtr, int param_1, int param_
     // Keyboard-mapping screen — dedicated two-level submenu (tab level:
     // categories + OK/Cancel/Default; list level: browse + arm rebind) plus
     // pass-through while a key capture is armed. Runs before the generic chain
-    // so it owns every nav key, mirroring the Fähigkeiten handler above. See
+    // so it owns every nav key, mirroring the Abilities handler above. See
     // menus_keymap.h.
     {
         int rv = 0;

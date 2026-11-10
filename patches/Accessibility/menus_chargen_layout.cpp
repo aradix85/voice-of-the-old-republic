@@ -215,7 +215,7 @@ bool AnnounceDescription(const PanelDesc& d, void* panel, void* control) {
     if (!acc::engine::ReadLabelText(row, buf, sizeof(buf))) return false;
 
     // Flatten embedded newlines for the single-line diagnostic log — the
-    // engine renders "Attribut: <attr>.\n<body>", which would otherwise
+    // engine renders "Attribute: <attr>.\n<body>", which would otherwise
     // hide the body. Speech gets the original text with its newlines.
     char dump[1024];
     {

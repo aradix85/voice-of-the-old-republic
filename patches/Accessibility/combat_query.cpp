@@ -278,7 +278,7 @@ bool BuildEffectsSummary(void* serverObject, char* outBuf, size_t outBufSize) {
                 reinterpret_cast<unsigned char*>(eff) +
                 kGameEffectTypeOffset));
             const char* name = acc::examine_view::EffectName(type);
-            if (!name) continue;  // unmapped — skip in brief, Ö examine lists it
+            if (!name) continue;  // unmapped — skip in brief, the examine view lists it
 
             bool dup = false;
             for (int j = 0; j < seenCount; ++j) {
@@ -346,7 +346,7 @@ void TickLeaderChangeAutoAnnounce() {
     // the PC's name talks over the area-name cue. We re-baseline silently for
     // a short grace window after any area change. The load_from_savegame flag
     // can't anchor this: it clears a hair before the new leader becomes
-    // readable (patch-20260614-165512.log — "Bereich: …" and the leader
+    // readable (patch-20260614-165512.log — "Area: …" and the leader
     // change both land after the flag has dropped), so the gate missed. The
     // area-pointer change is the robust anchor — it's exactly what
     // transitions::SpeakArea fires on.

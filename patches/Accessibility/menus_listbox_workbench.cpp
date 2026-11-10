@@ -33,21 +33,21 @@ namespace {
 //
 // Esc-to-close (BTN_BACK at ID 28) when the picker is not armed is
 // handled by an explicit workbench branch in menus.cpp's Esc handler —
-// FindCancelButton resolves to "Abbrechen" reliably for this panel.
+// FindCancelButton resolves to "Cancel" reliably for this panel.
 // ============================================================================
 // LB_ITEMS / BTN_BACK / BTN_ASSEMBLE resolve through the UpgradePanel*
 // member resolvers in menus_internal.cpp (engine ctor bindings — variant
 // .gui files renumber the ids, docs/gui-id-audit.md). Only the title
 // label is still id-addressed: announce-only, so a variant install
 // degrades to the generic title walk instead of breaking input.
-constexpr int kWorkbenchUpgradeTitleId     = 25;  // LBL_TITLE ("Werkbank")
+constexpr int kWorkbenchUpgradeTitleId     = 25;  // LBL_TITLE ("Workbench")
 
 // ============================================================================
 // WorkbenchItems — per-category item picker (upgradeitems.gui).
 // LB_ITEMS at ID 0 holds the player's upgradable weapons in the chosen
-// category. Enter → BTN_UPGRADEITEM (ID 4, "Aufwerten") commits the
+// category. Enter → BTN_UPGRADEITEM (ID 4, "Upgrade") commits the
 // selection and opens the slot-detail panel. Esc → BTN_BACK (ID 5,
-// "Schliess.") closes back to upgradesel.gui.
+// "Close") closes back to upgradesel.gui.
 // ============================================================================
 
 bool WorkbenchItemsMatches(void* p) {
@@ -99,7 +99,7 @@ void* WorkbenchUpgradeFindLb(void* p) {
 // items picker.
 // The engine's compatible-mods list carries a "none / remove" entry whose
 // display text is a bare "-" (dash). Spoken with the position suffix it
-// reads as ", 1 von 1" — heard as "1" — or, on readers that swallow a lone
+// reads as ", 1 of 1" — heard as "1" — or, on readers that swallow a lone
 // dash, as silence. Both were reported from the K2 workbench. Treat a blank
 // or dash-only row name as the none entry and speak a real word instead.
 // Also covers the rare row whose text doesn't extract at all (would have
@@ -119,7 +119,7 @@ bool IsDashOrBlankRowText(const char* s) {
 // K2 only: is this picker row the engine's "-" none/remove entry? Its
 // upgrades key at entry+0x1e0 is -1 (the ctor's seed; a real mod row carries
 // the actual key). Reading the key, not the text, keeps a real-but-unreadable
-// mod row from being mislabelled as the none entry — the "two Kein Gegenstand"
+// mod row from being mislabelled as the none entry — the two "No item" rows
 // the disabled-slot picker showed. SEH-guarded; false on fault.
 bool IsK2UpgradeNoneRow(void* row) {
     if (!row || !acc::game::IsKotor2()) return false;
@@ -138,8 +138,8 @@ void WorkbenchUpgradeAnnounce(void* /*lb*/, const ListBoxNavResult& r) {
                                                      sizeof(rowText)) &&
                     !IsDashOrBlankRowText(rowText);
     if (!readable) {
-        // Unreadable row: the engine's remove entry says "Kein Gegenstand";
-        // a real mod row we simply can't name gets a generic "Aufwertung"
+        // Unreadable row: the engine's remove entry says "No item";
+        // a real mod row we simply can't name gets a generic "Upgrade"
         // (never masked as the none entry). On K1 (no key field) a dash row
         // is the remove entry, so it maps to none there.
         acc::strings::Id sid =
@@ -224,7 +224,7 @@ bool WorkbenchUpgradeOnEnter(void* panel) {
         if (row) {
             // The outcome (installed / removed / refused for an incompatible
             // slot) is announced from the drain, which compares the slot's
-            // field35 before vs. after the engine call — an immediate "eingesetzt"
+            // field35 before vs. after the engine call — an immediate "installed"
             // here would lie when the engine refuses an incompatible mod.
             acc::menus::pending::QueueWorkbenchUpgradeInstallK2(panel, row);
             acclog::Write("WorkbenchUpgrade", "K2 install/remove queued (row sel=%d "
@@ -283,7 +283,7 @@ bool WorkbenchUpgradeOnEsc(void* panel) {
 // The generic title-walk would land on the first leftover placeholder label
 // (id 19 "Item Property" — a design-time string the engine repopulates per
 // slot at runtime, alongside id 20 "Slot Name" / id 21 "Lightsaber Slot Name")
-// instead of the real title. Read LBL_TITLE (id 25, "Werkbank") directly so
+// instead of the real title. Read LBL_TITLE (id 25, "Workbench") directly so
 // first-sight speaks the panel name. Returns nullptr to fall back to the
 // generic walk if the title control can't be read.
 const char* WorkbenchUpgradeTitleOverride(void* panel) {

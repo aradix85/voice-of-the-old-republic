@@ -1,7 +1,7 @@
 // Per-puzzle state-label registry.
 //
 // KOTOR puzzles often encode state as a small int on a placeable (the
-// Sith-base "Lights Out" wall switches keep Aus/An at CSWSPlaceable+0x260;
+// Sith-base "Lights Out" wall switches keep off/on at CSWSPlaceable+0x260;
 // levers / pressure plates / consoles follow similar shapes). The engine
 // never surfaces a user-facing label.
 //

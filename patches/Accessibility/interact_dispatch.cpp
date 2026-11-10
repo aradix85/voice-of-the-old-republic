@@ -302,7 +302,7 @@ void DispatchInteractImpl(void* target, uint32_t handle, bool forceRadial) {
     // Neither has a use-node, so the engine action picker has no verb for
     // either, and the dispatch below would fall through to the UseObject
     // fallback, which queues a walk-to-use the engine can't resolve → the PC
-    // never moves → false "Weg versperrt". Walk to the coordinate instead
+    // never moves → false "way blocked". Walk to the coordinate instead
     // (engine A*, input left enabled like the cycle coord-walk); for a
     // transition, crossing into the region fires it. Same fix as
     // cycle_input::OnPathfindFocus, which routes both the same way — Shift+-
@@ -406,7 +406,7 @@ void DispatchInteractImpl(void* target, uint32_t handle, bool forceRadial) {
     // docs/engine-action-picker.md.
     //
     // Pre-roll narration: the picker returns the engine's localised verb
-    // (e.g. "Sicherheit") in snap.label. We speak that prefixed to the
+    // (e.g. "Security") in snap.label. We speak that prefixed to the
     // target name when valid; otherwise we keep the per-category fallback
     // string (which still tells the user *something* happened even when
     // the engine refuses to enumerate actions).
@@ -419,8 +419,8 @@ void DispatchInteractImpl(void* target, uint32_t handle, bool forceRadial) {
 
     // Radial-opened path: arm the input gate and speak the row+action
     // announce in one call. ArmAfterPopulate handles the speech itself
-    // (so we get "Aktionsmenü, Tür. Aktion 1/N: Öffnen" instead of just
-    // "Aktionsmenü, Tür" with no follow-up). Falls back to the static
+    // (so we get "action menu, Door. Action 1/N: Open" instead of just
+    // "action menu, Door" with no follow-up). Falls back to the static
     // pre-roll string when arming fails (no rows populated → menu isn't
     // actually navigable; keeps prior behaviour).
     char msg[192];
@@ -440,7 +440,7 @@ void DispatchInteractImpl(void* target, uint32_t handle, bool forceRadial) {
             // (e.g. door-you-can-only-open: Open lives on the engine's
             // default-action descriptor, never enters any radial row).
             // Tell the user there's nothing in the menu rather than
-            // speaking the generic "Aktionsmenü, X" pre-roll that
+            // speaking the generic "action menu, X" pre-roll that
             // implies a menu they can navigate. Shift+Enter gets a
             // redirect to plain Enter (which dispatches the default
             // action when one exists); plain Enter just reports the
@@ -619,7 +619,7 @@ void DispatchInteractImpl(void* target, uint32_t handle, bool forceRadial) {
         "0x%08x) -> [%s]", handleUsable ? 1 : 0, dispatchHandle, failMsg);
 }
 
-// Speak "{label} eingesetzt" (or the empty-column phrase) for a bare-press
+// Speak "{label} used" (or the empty-column phrase) for a bare-press
 // of action-bar key 4..7. Call AFTER the foreground/inWorld gate so the
 // announcement matches what the engine actually fires.
 //
@@ -638,7 +638,7 @@ void AnnounceBarePersonalKey(int slot) {
     // let the engine's bare-key action through this press; a consumed Shift+combo
     // skips it, so GetPrePressDepth (consume-on-read) returns -1. Without this,
     // the shift-release race (PersonalKey rising after Shift lifts on a Shift+4
-    // submenu open) would speak a phantom "X, Platz 0" for an action that never
+    // submenu open) would speak a phantom "X, position 0" for an action that never
     // fired. Read it first so every early-out below also stays silent on phantoms.
     int preDepth = acc::combat::queue::GetPrePressDepth();
     if (preDepth < 0) {
@@ -694,20 +694,20 @@ void AnnounceBarePersonalKey(int slot) {
     }
 
     // Non-empty column: the engine queued (or cap-rejected) the action. The
-    // authoritative "X, Platz N" / "Warteschlange voll" cue is spoken by the
+    // authoritative "X, position N" / "X, queue full" cue is spoken by the
     // CSWSCombatRound::AddAction detour (queue::OnEngineActionAdded), which is
     // 1:1 with real adds — no rising-edge under-count on key auto-repeat, no
     // pre/post race against the queue drain. This poll path now only keeps the
     // empty-column feedback above; the successful-queue announce moved to the
     // hook. preDepth is still consumed at the top purely as the phantom-press
-    // gate (a consumed Shift+combo / dialog key must not even speak "leer").
+    // gate (a consumed Shift+combo / dialog key must not even speak "empty").
     acclog::Write("ActionBar", "bare key slot=%d variants=%d idx=%d label=[%s] "
         "pre=%d — queued; announce via AddAction hook",
         slot, nVar, idx, label, preDepth);
 }
 namespace {
 
-// Speak "{label} eingesetzt" for a bare-press of target-action key 1..3.
+// Speak "{label} used" for a bare-press of target-action key 1..3.
 // Same pattern as AnnounceBarePersonalKey but reads target_actions[row]
 // from the embedded CSWGuiTargetActionMenu (which the radial-menu path
 // already wraps via engine_radial::ReadRowActionLabel).
@@ -756,7 +756,7 @@ void AnnounceBareTargetKey(int row) {
         return;
     }
 
-    // Non-empty row: the authoritative "X, Platz N" / "Warteschlange voll"
+    // Non-empty row: the authoritative "X, position N" / "X, queue full"
     // cue is spoken by the CSWSCombatRound::AddAction detour
     // (queue::OnEngineActionAdded) — see AnnounceBarePersonalKey. This poll
     // path keeps only the empty-row feedback above. preDepth stays consumed at

@@ -23,7 +23,7 @@
 //   GetDefaultActions       @0x00620620
 //   SetMainInterfaceTarget  @0x0062b000
 // CSWGuiInterfaceAction layout:
-//   +0x00 CExoString label    ("Sicherheit", "Öffnen", ...)
+//   +0x00 CExoString label    ("Security", "Open", ...)
 //   +0x08 ulong     action_id (0x404 noop, 0x3ea talk, 0x3f7 use,
 //                              0x3f5 bash, 0x3f2 door toggle,
 //                              0x3f4 disable mine, ...)
@@ -79,7 +79,7 @@ struct ActionSnapshot {
     bool     radial_opened;    // Drive opened the radial via
                                // PopulateMenus (count==0 or forceRadial)
                                // instead of dispatching. Caller should
-                               // announce "Aktionsmenü".
+                               // announce "action menu".
 };
 
 // targetServerHandle = server-side id (engine::GetObjectHandle). Picker
@@ -89,7 +89,7 @@ struct ActionSnapshot {
 // radial (vanilla right-click semantics). Bound to Shift+Enter. Without
 // it the radial only opens on count==0, which misses the most useful
 // case: a locked door with Bash + Security in the radial but a single
-// "Öffnen" default.
+// "Open" default.
 //
 // populateOnly: run only the read half — SetMainInterfaceTarget +
 // GetDefaultActions + snapshot, plus the radial fallback (PopulateMenus) when

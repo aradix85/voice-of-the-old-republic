@@ -36,7 +36,7 @@
 namespace acc::unified_menu {
 
 // Open on a specific TARGET category (Shift+1/2/3, row 0..2). Requires a
-// focused (narrated) target; speaks "kein Fokus" and returns false when
+// focused (narrated) target; speaks "No object focused" and returns false when
 // none, or the empty-category phrase when that row has no actions. Does
 // NOT silently fall through to the personal block — Shift+1/2/3 are the
 // explicit target openers.
@@ -62,10 +62,10 @@ bool FirePersonal(int col);
 
 // Arm from the Shift+Enter radial path. The picker (engine_picker::Drive
 // with forceRadial) has already run PopulateMenus against `targetHandle`.
-// `name` is the target name for the "Aktionsmenü, X" pre-roll. Opens on the
+// `name` is the target name for the "action menu, X" pre-roll. Opens on the
 // first populated TARGET category. Returns false — and arms nothing — when
 // no target category is populated, so the caller can speak the exact
-// existing "keine Aktionen … Enter" message (no regression).
+// existing "No actions available … Enter" message (no regression).
 bool ArmFromRadial(const char* name, uint32_t targetHandle);
 
 bool IsActive();

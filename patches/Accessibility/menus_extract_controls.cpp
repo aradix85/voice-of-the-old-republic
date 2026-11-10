@@ -36,7 +36,7 @@ bool IsCycleFlankerArrow(void* panel, void* control) {
     if (CallDowncast(control, kVtableAsButton) == nullptr) return false;
 
     // Self must have empty own text — real cycle value buttons (carrying
-    // "Normal", "8", "Aus", …) keep the sibling-label fallback off the
+    // "Normal", "8", "Off", …) keep the sibling-label fallback off the
     // table anyway, so this check guards the "image-only" classification.
     char selfTxt[64];
     if (ExtractTextOrStrRefIndirect(control,
@@ -89,7 +89,7 @@ bool IsCycleFlankerArrow(void* panel, void* control) {
 // candidate positions:
 //
 //   1. Same y-row, to the visual LEFT (horizontal layouts, e.g. labelled
-//      buttons on a config row — `[Schliess]   Standard`).
+//      buttons on a config row — `[Close]   Default`).
 //   2. Directly ABOVE the control (vertical layouts, e.g. KOTOR's Sound
 //      panel where each slider has a label rendered on the line above it
 //      rather than to its left).
@@ -205,9 +205,9 @@ const char* FindSiblingLabel(void* panel, void* control,
 }
 
 // Identify the movie-volume slider on optionssound.gui. The stock German
-// .gui mislabels it as "Musik-Lautstärke" (same string as the music
+// .gui mislabels it as "music volume" (same string as the music
 // slider above it), so FindSiblingLabel returns a duplicate; we swap in
-// a synthesised "Video-Lautstärke" / "Movie volume" instead. We don't
+// a synthesised "Movie volume" instead. We don't
 // ship a .gui override, so the fix lives in the screen-reader path only.
 //
 // Fingerprint: the panel must carry sliders at .gui control IDs
@@ -219,7 +219,7 @@ const char* FindSiblingLabel(void* panel, void* control,
 // KOTOR 1 only, and the fingerprint enforces that on its own: K2's
 // optsound_p.gui numbers its sliders {2,5,8,9}, so has1/has4/has7 can never
 // all be true there. Nothing to port — K2 gives LBL_MOVIE its own strref
-// ("Film-Lautstärke"), so the duplicate-label bug this works around simply
+// ("Movie volume"), so the duplicate-label bug this works around simply
 // doesn't exist in that game.
 bool IsSoundOptionsMovieSlider(void* panel, void* control) {
     if (!panel || !control) return false;
@@ -261,7 +261,7 @@ bool IsSoundOptionsMovieSlider(void* panel, void* control) {
 //
 //    This step was UNGATED until Phase-3 B2 — it ran even when step 0 had
 //    already produced a per-kind phrase, so a control carrying a tooltip
-//    would lose its composed text ("Stärke 14, +2" replaced by the raw
+//    would lose its composed text ("Strength 14, +2" replaced by the raw
 //    field), and a faulting read cleared step 0's result outright. Step 0
 //    was added above this one years later, precisely so the formatted
 //    phrase wins; the `!source` gate it needed was never added here.
@@ -359,13 +359,13 @@ const char* TryLabelHilight(void* control, char* outBuf, size_t bufSize) {
 // 6. CSWGuiSlider — no AsSlider downcast accessor exists; detect by
 //    vtable identity. cur_value / max_value are Lane-named uint32 fields.
 //    The slider widget itself has no inline category text (its CExoString
-//    is the rendered "X von Y"); the category name lives on a sibling
+//    is the rendered "X of Y"); the category name lives on a sibling
 //    CSWGuiLabel rendered to the left of the slider. Look it up via
 //    FindSiblingLabel and prepend.
 //
 //    Engine-text fix-up for the Sound options panel's movie-volume
 //    slider (id=8): the stock German .gui labels both the music slider
-//    and the movie slider as "Musik-Lautstärke", so FindSiblingLabel
+//    and the movie slider as "music volume", so FindSiblingLabel
 //    resolves a duplicate. When the slider sits on a panel whose ID
 //    fingerprint matches optionssound.gui ({1,4,7,8} — locale-stable),
 //    we substitute the localized "Video volume" string for the label.
@@ -379,7 +379,7 @@ const char* TryLabelHilight(void* control, char* outBuf, size_t bufSize) {
 //    (patch-20260804-191607.log: `Routing: fg=333D2C60 current=31EB85D8`).
 //    FindSiblingLabel then walked the wrong panel's controls, found no label
 //    near the slider, and all four volume sliders announced as a bare
-//    "85 von 100".
+//    "85 of 100".
 const char* TrySlider(void* control, void* owner,
                       char* outBuf, size_t bufSize) {
     const char* source = nullptr;
@@ -449,16 +449,16 @@ const char* TryEditbox(void* control, char* outBuf, size_t bufSize) {
 
 // 7. CSWGuiListBox content. STRICTLY single-row only. Many in-game
 //    modals (CSWGuiMessageBox-style — the recurring 07434E40 OK/Cancel
-//    in our log, and the quit-confirmation "Möchtest du wirklich
-//    aufhören?") put their message text in a single listbox row
+//    in our log, and the quit-confirmation "Do you really want to
+//    quit?") put their message text in a single listbox row
 //    rather than directly in a panel label, so without this path the
 //    modal appears as src=none.
 //
 //    For multi-row listboxes (skills, inventory, save list, journal
 //    entries, etc.) we return nullptr — the engine's SetActiveControl
 //    auto-focus on a multi-row listbox would read every row
-//    concatenated into one blob ("Computerkenntnisse  Sprengstoff…"
-//    on every Fähigkeiten open). Row-by-row navigation via the
+//    concatenated into one blob ("Computer Use  Demolitions…"
+//    on every Abilities open). Row-by-row navigation via the
 //    ListBoxPanelSpec / chain handlers is the only correct way to
 //    expose those contents; SetActiveControl on the container
 //    deliberately speaks nothing now.
@@ -567,7 +567,7 @@ const char* TryItemEntryRow(void* control, char* outBuf, size_t bufSize) {
 //    Cycle flanker arrows (chargen ± and Difficulty-style left/right)
 //    are suppressed here so the cycle-mechanism's empty-text predicate
 //    engages. Without the suppression the nearest plain label would
-//    paint both flankers (e.g. "Stärke" for the + and the -),
+//    paint both flankers (e.g. "Strength" for the + and the -),
 //    defeating both the chain squash and FindAdjacentArrow.
 //
 //    `owner` is FromControl's ResolveOwnerPanel result — the panel that
@@ -581,7 +581,7 @@ const char* TryItemEntryRow(void* control, char* outBuf, size_t bufSize) {
 //    engaged, and FindSiblingLabel captioned the stepper with whichever
 //    of custpnl_p's LBL_NUM1..6 step numbers happened to line up. That
 //    is the stray "1" entry the KOTOR 2 chargen Attribute and
-//    Fähigkeiten chains grew between their 4th, 5th and 6th rows
+//    Abilities chains grew between their 4th, 5th and 6th rows
 //    (patch-20260803-095222.log, chain indices 4 and 6 on both panels).
 //
 //    Gated on IsPanelDirectChild as well, and that gate is what keeps the

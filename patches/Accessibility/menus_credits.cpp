@@ -43,7 +43,7 @@ const size_t kStoreCreditsValueLabelOffsetLocal =
 // agreeing on the ids.
 //
 // The heading is read from the panel instead of using our own word: the game
-// already labels it "Alle Komponenten" / "Alle Chemikalien" in the player's
+// already labels it "All Components" / "All Chemicals" in the game's
 // language, which is both correct per bench and free of a translation we
 // would have to maintain in seven files.
 constexpr size_t kAnchorByGuiId       = (size_t)-1;
@@ -155,7 +155,7 @@ bool ExtractCreditsRow(void* panel, void* labelControl,
     if (value[0] == '\0') return false;
 
     // Panels that carry their own heading label speak it verbatim
-    // ("Alle Komponenten: 77"); the rest use our localised credits wording.
+    // ("All Components: 77"); the rest use our own credits wording.
     if (spec && spec->headingGuiId >= 0) {
         void* heading = acc::menus::detail::FindControlById(
             panel, spec->headingGuiId);

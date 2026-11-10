@@ -46,7 +46,7 @@ char s_rootSentinel = 0;
 //     cycle to everything in the area (the old "extended/spoilery" listing).
 //     The filter lives in cycle_state::BuildCategoryListing.
 //   - RoomShapes      = ON. Preserves the current corridor / junction /
-//     Platz announce flow on cluster transitions.
+//     plaza announce flow on cluster transitions.
 //   - AudioGlossary   = unused slot (RowKind::Submenu, not a toggle).
 // Index order MUST match the Option enum.
 bool s_toggles[static_cast<int>(Option::Count)] = {
@@ -92,7 +92,7 @@ bool s_toggles[static_cast<int>(Option::Count)] = {
 // `s_fgAtOpen` is the engine-foreground panel captured at OpenSubMenu
 // time — used as the divergence baseline so we don't false-fire on
 // stack configurations that are stable from the user's perspective.
-// (In-game Optionen leaves the InGameMenu strip at panels[top]; the
+// (In-game Options leaves the InGameMenu strip at panels[top]; the
 // strip never equals our parent but the user is still "in" the panel
 // they selected.)
 //
@@ -116,7 +116,7 @@ bool   s_keybindsOpen    = false;
 
 // Pending glossary playback. Stamped by Enter on a glossary row;
 // drained by Tick() once GetTickCount() ≥ s_pendingFireAt. The pause
-// exists so the row name announcement ("Wand") finishes before the cue
+// exists so the row name announcement ("Wall") finishes before the cue
 // plays — without it the speech bleeds over the sample and the user
 // can't cleanly correlate name with sound. 750 ms tuned by feel
 // 2026-05-27: long enough to clear the speech tail at default rate,
@@ -138,7 +138,7 @@ acc::audio::LoopSource s_glossaryPreview;
 enum class RowKind {
     Toggle,    // Enter flips s_toggles[idx]; speech reads "Name: state"
     Submenu,   // Enter opens a nested view; speech reads "Name" only
-    Slider,    // Left/Right adjust a percent; speech reads "Name: N Prozent"
+    Slider,    // Left/Right adjust a percent; speech reads "Name: N percent"
     Link,      // Enter opens a URL in the browser; speech reads "Name" only
 };
 
@@ -155,7 +155,7 @@ constexpr const char* kReadmeUrl =
 
 // Cue-volume slider step (percent per Left/Right press) and the cue used
 // for the audible preview. The preview rides priority group 0xb so it
-// survives the in-game Optionen pause (SetSoundMode mutes everything else),
+// survives the in-game Options pause (SetSoundMode mutes everything else),
 // and plays at the slider-scaled per-source volume so the user hears the
 // level they just dialled in. The swoop race's shift chirp is short and
 // clean.
@@ -346,10 +346,10 @@ void CancelPendingGlossaryCue() {
 // raised by Alt+F4 / quit-confirm, but also any other engine modal
 // the user hits while the submenu is logically focused. Also true if
 // the saved parent panel itself disappeared (engine teardown after
-// Spiel beenden, save reload, etc.).
+// Quit Game, save reload, etc.).
 //
 // Baseline is the snapshot taken at OpenSubMenu time, NOT s_parentPanel:
-// the In-Game Optionen flow keeps the InGameMenu strip pinned at
+// the In-Game Options flow keeps the InGameMenu strip pinned at
 // panels[top] so `GetForegroundPanel != parent` is the steady state
 // inside that panel. We only care about the foreground CHANGING after
 // the user entered the submenu (modal push, parent dismissed, etc.).
@@ -383,8 +383,8 @@ void ForEachRootAnchor(void* panel,
     // sortCy = a very large synthetic y. The chain's insertion sort is
     // by cy ascending; placing the virtual entry at y=9000 lands it at
     // the end of the chain — below every real sub-screen button and
-    // (on InGameOptions) below the bottom-row "Schliess." / "Spiel
-    // beenden" buttons. User hears the existing options first on
+    // (on InGameOptions) below the bottom-row "Close" / "Quit
+    // Game" buttons. User hears the existing options first on
     // Down-arrow, then "Mod settings" as the last stop. Top-of-chain
     // wrap (Home) still works.
     //
@@ -422,7 +422,7 @@ void OpenSubMenu(void* parentPanel) {
     // HandleInput calls compare against this baseline so we only
     // auto-close on a real foreground push (modal popup, parent
     // teardown) and not on the stable strip-on-top arrangement the
-    // In-Game Optionen panel runs under.
+    // In-Game Options panel runs under.
     void* mgr = *reinterpret_cast<void**>(kAddrGuiManagerPtr);
     s_fgAtOpen = mgr ? acc::engine::GetForegroundPanel(mgr) : nullptr;
     acclog::Write("ModSettings",
@@ -563,7 +563,7 @@ void ActivateLinkRow(Option opt) {
 
 // Adjust the cue-volume slider by delta (clamped to 0..100), re-announce it,
 // and play a hint-sound cue at the new level on priority group 0xb (survives
-// the in-game Optionen pause), reusing the glossary preview handle.
+// the in-game Options pause), reusing the glossary preview handle.
 void AdjustSlider(int delta) {
     int next = acc::audio::GetGlobalCueVolumePercent() + delta;
     if (next < 0)   next = 0;
@@ -601,7 +601,7 @@ bool HandleInputList(int keyCode) {
         return false;
     }
     // Up / Down / Home / End: step or jump focus with end-clamp (no wrap —
-    // sighted "list box" semantics match Optionen panels above and below).
+    // sighted "list box" semantics match Options panels above and below).
     // Home / End used to be swallowed by the block-everything switch in
     // HandleInput without moving anything, which read as a dead key.
     {
@@ -743,7 +743,7 @@ bool HandleInput(int keyCode) {
     if (s_keybindsOpen) {
         // Route to the keybind configurator. When the user Esc's out of its
         // top (category) level it flips IsOpen() to false — we then drop the
-        // routing and re-announce the Tastenbelegung row so the user is
+        // routing and re-announce the Key bindings row so the user is
         // anchored back at the Mod-settings root.
         handled = acc::menus::keybinds::HandleInput(keyCode);
         if (!acc::menus::keybinds::IsOpen()) {

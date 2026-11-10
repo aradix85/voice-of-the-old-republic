@@ -239,12 +239,8 @@ void InitDefaults() {
     bind(Action::TargetActionOpen2,    '2',       0, kModShift, 0);
     bind(Action::TargetActionOpen3,    '3',       0, kModShift, 0);
     bind(Action::LevelUpOpen,          'L',       0, kModShift, 0);
-    // Unbound by default — Examine is a dev/power-user surface, and the
-    // physical Ö key it used to sit on (VK_OEM_3 on the German layout) is
-    // now where the installer moves KOTOR 2's SwitchWeaps game binding
-    // (swkotor2.ini Action265; every letter key is engine-bound on K2, so
-    // the freed Ö was the only comfortable spot). Rebindable through the
-    // keybind configurator for anyone who wants the panel back.
+    // Unbound by default: Examine is a dev/power-user surface. Rebindable
+    // through the keybind configurator for anyone who wants the panel.
     bind(Action::ExamineOpen,          0,         0, 0,
                                        kModShift | kModCtrl | kModAlt | kModAltGr);
     // Shift+H — H is engine-unbound, so Shift+H does NOT leak to any engine
@@ -292,7 +288,7 @@ void InitDefaults() {
     // rule: the handler gates on the foreground panel kind, so exactly one
     // of the three fires per press. Flips the workbench / lab-station
     // screen between the create list and the break-down list, which is what
-    // its "Inventar betrachten" button does — the button is filtered out of
+    // its "View Inventory" button does — the button is filtered out of
     // the chain in exchange, so the screen reads the same way a store or a
     // container does.
     bind(Action::CraftViewToggle,      'Q', 'E', 0, 0);

@@ -3,7 +3,7 @@
 // This is NOT public API. The Phase-1 structure pass (refactoring
 // candidate 14) moved OnCombatRoundAddAction out of combat_diag.cpp
 // because it is not a diagnostic: it drives the shipped combat-queue
-// announce ("X, Platz N" / "Warteschlange voll") by forwarding to
+// announce ("X, position N" / "X, queue full") by forwarding to
 // acc::combat::queue::OnEngineActionAdded. The three genuinely
 // diagnostic CSWSCombatRound hooks stayed behind.
 //

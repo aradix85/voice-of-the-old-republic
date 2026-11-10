@@ -52,7 +52,7 @@ namespace {
 //                      HandleInputEvent call. Read by IsInSynthesizedQE
 //                      so input_pipeline doesn't re-arm press_active for
 //                      our own synthesized event, and by OnEngineShowObject
-//                      so a second sentinel speaks "Kein Ziel" instead of
+//                      so a second sentinel speaks "No target" instead of
 //                      arming a third retry.
 struct QEState {
     bool press_active   = false;
@@ -303,7 +303,7 @@ void OnEngineShowObject(uint32_t handle) {
             if (was_retry) {
                 // Synthetic retry also landed on sentinel — the engine's
                 // candidate halo really has nothing visible to the player.
-                // Speak "Kein Ziel" so the user knows the press wasn't
+                // Speak "No target" so the user knows the press wasn't
                 // eaten, then disarm so subsequent presses re-enter the
                 // first-attempt branch (one fresh retry per user press).
                 const char* msg = acc::strings::Get(

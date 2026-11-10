@@ -129,8 +129,8 @@ bool GetObjectName(void* gameObject, char* outBuf, size_t bufSize);
 // unaffected.
 //
 // Narration uses the split so the same-name ordinal can group by the STABLE
-// half and land right after the name: "T\xfc""r 3, verriegelt" rather than
-// "T\xfc""r, verriegelt 3". Grouping by the enriched string made a door's
+// half and land right after the name: "Door 3, locked" rather than
+// "Door, locked 3". Grouping by the enriched string made a door's
 // number a function of its live lock/open state, so opening or unlocking one
 // door renumbered every other door in the area.
 bool GetObjectBaseName(void* gameObject, char* outBuf, size_t bufSize);
@@ -141,8 +141,8 @@ void AppendObjectStateSuffix(void* gameObject, char* outBuf, size_t bufSize);
 // anything. kDoorLockedOffset is the LIVE flag; this is the frozen one.
 //
 // Narration groups its door numbering on this rather than the live flag so a
-// door keeps its slot when the player picks its lock: "T\xfc""r 2, verriegelt"
-// becomes "T\xfc""r 2, entriegelt", and the other locked doors keep their
+// door keeps its slot when the player picks its lock: "Door 2, locked"
+// becomes "Door 2, unlocked", and the other locked doors keep their
 // numbers. False for non-doors, for doors already unlocked at load, and for
 // doors that first appeared after the snapshot.
 bool WasDoorLockedAtAreaLoad(void* serverDoor);
@@ -301,7 +301,7 @@ bool IsDoorStatic(void* serverDoor);
 // HammerHeadDoor2), so there Static alone is not enough: a live lock, an
 // open state, or locked-at-load re-classifies the door as real. This is
 // the predicate narration, numbering, and the room-shape door snapshot
-// must share — they must never disagree on what "kosmetisch" means.
+// must share — they must never disagree on what "cosmetic" means.
 bool IsDoorCosmetic(void* serverDoor);
 
 // Root-cause fix (2026-07-19, rev 2): the Endar Spire opening HOLDS the global
@@ -662,7 +662,7 @@ const size_t kPlaceableItemRepositoryOffset = acc::off::Pick(0x36c, 0x3c4);
 const size_t kItemRepositoryItemCountOffset = acc::off::Same(0x10);
 const size_t kWaypointHasMapNoteOffset     = acc::off::Pick(0x228, 0x268);
 // CSWSTrigger.transition_destination — a CExoLocString holding the
-// human-readable "to X" exit label (e.g. "Zur Oberstadt"). Read as a
+// human-readable "to X" exit label (e.g. "To Upper City"). Read as a
 // LocString by GetObjectName's Trigger case. IsTransitionTrigger tests
 // presence structurally: inline text pointer at +0 (with length at +4),
 // else the +4 slot is the TLK strref, where the GFF sentinel 0xFFFFFFFF

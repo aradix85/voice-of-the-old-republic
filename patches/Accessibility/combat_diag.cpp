@@ -536,7 +536,7 @@ void __cdecl OnUseItemRequestK2(void* thisPtr, void* ebp) {
                   thisPtr, itemId, mode, sub, userId, haveTarget, x, y, z);
     // A sent request is proof the press dispatched — the engine acted even
     // when the action never lands in the combat round (mines plant without
-    // an AddAction and were reading as "Nicht möglich" while visibly
+    // an AddAction and were reading as "Not possible." while visibly
     // working, 2026-08-12 test round). A genuinely refused press never
     // reaches this writer, so the no-op watch still speaks for those.
     acc::combat::queue::CancelNoOpWatch();

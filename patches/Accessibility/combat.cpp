@@ -128,7 +128,7 @@ void TickCombatMode() {
             // lingers across the combat→explore boundary, so the first
             // post-fight Enter lands on a menu entry instead of the world
             // object the user meant to use (patch-20260617-215141.log: Enter
-            // queued "Heilen" instead of using the Versorgungsstation). Gated
+            // queued "Heal" instead of using the medical station). Gated
             // on partyInCombat, not the leader global, so a Tab to a peaceful
             // member no longer tears the menu down (and releases its pause)
             // mid-fight.
@@ -164,8 +164,8 @@ void TickCombatMode() {
             s_lastLeader = s_pendingLeader;
             // Only speak when the leader dropped to peace but the encounter is
             // still live (partyInCombat). On a real end both fall together and
-            // partyInCombat is already false here, so the strong "Kampf
-            // beendet" fires instead and this stays silent.
+            // partyInCombat is already false here, so the strong "Combat
+            // ends" fires instead and this stays silent.
             if (wasLeaving && partyInCombat) {
                 const char* phrase =
                     acc::strings::Get(acc::strings::Id::CombatLeaderAtPeace);

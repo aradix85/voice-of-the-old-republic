@@ -313,7 +313,7 @@ void RetryColdStartReacquire() {
 // focus-gain reacquire fired at 09:03:26, and then ZERO key presses reached the
 // engine (no Diag.ClientHIE val=128, no Menus.Input) until a second alt-tab at
 // 09:03:59. The engine's quit-confirm popup was up, correctly announced, with
-// OK and Abbrechen focusable — and unreachable, because no keystroke could get
+// OK and Cancel focusable — and unreachable, because no keystroke could get
 // to it. Cold start needed 13 retries that same session; one shot was never
 // going to be enough.
 //
@@ -471,7 +471,7 @@ void WatchDeadKeyboard() {
     //     into a wall. Position and camera yaw both sit still there, but the
     //     engine is plainly acting on the key, and says so by playing a
     //     footstep per step. Added 2026-08-14 off the first post-fix K2 log,
-    //     where a dead end ("Sackgasse") armed the watchdog three times in
+    //     where a dead end ("dead end") armed the watchdog three times in
     //     forty seconds while FootstepSup logged steps the whole way through.
     const ULONGLONG lastKey  = acc::engine::LastEngineKeyEventMs();
     const ULONGLONG lastStep =

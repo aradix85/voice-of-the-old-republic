@@ -26,9 +26,9 @@ namespace {
 // Available to Place in Container and blah blah blah" — the chargen flow
 // doesn't override it at runtime, so we substitute via titleOverride.
 //
-// In the chargen Talente flow this surfaces as the "ShowGranted" popup —
+// In the chargen Feats flow this surfaces as the "ShowGranted" popup —
 // CSWGuiFeatsCharGen mounts skillinfo.gui to dump the class's auto-granted
-// feats (different per class — Soldat, Schurke, SpÃ¤her) before letting the
+// feats (different per class — Soldier, Scoundrel, Scout) before letting the
 // user proceed to actual feat selection on the underlying main panel.
 // Each row carries only icon + name strref; the feat ID itself isn't
 // stored on the row, so we recover it by reverse-lookup against the
@@ -215,8 +215,8 @@ bool SkillInfoBoxOnEnter(void* panel) {
 //
 // This is what separates the level-up popup's two lives. While the wizard is up
 // the label is still the placeholder and the popup is a silent passenger. Once
-// Annehmen commits, the engine writes the real "Du hast in diesem Level
-// folgende(s) Talent(e) erhalten." onto the same label and the popup becomes the
+// Accept commits, the engine writes the real "you gained these feats
+// this level" text onto the same label and the popup becomes the
 // last thing standing between the user and the world.
 bool SkillInfoBoxTitleIsPlaceholder(void* panel, char* outText, size_t outSize) {
     if (outSize) outText[0] = '\0';
@@ -230,7 +230,7 @@ bool SkillInfoBoxTitleIsPlaceholder(void* panel, char* outText, size_t outSize) 
            strncmp(outText, "Items Available", 15) == 0;
 }
 
-// Title override: substitute the localised "Du erhÃ¤ltst diese Talente"
+// Title override: substitute our "You receive these feats"
 // string for the BioWare placeholder text baked into skillinfo.gui.
 // Only applies in the chargen Feats flow — gated by FindFeatsCharGenPanel
 // so future Force-Powers / Skills reuse can layer on different titles.

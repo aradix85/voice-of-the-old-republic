@@ -36,8 +36,8 @@ struct ChainEntry {
     //     are listbox-local content coordinates that keep growing past the
     //     visible viewport (a 206-item Inventory ran to cy 5410 against a
     //     480px panel), so sorting rows by their own cy interleaved them with
-    //     the panel's buttons — the user got 7 items, then "Zeigen:" and
-    //     "Verwenden", then the remaining 199. Journal did the same from the
+    //     the panel's buttons — the user got 7 items, then "Show:" and
+    //     "Use", then the remaining 199. Journal did the same from the
     //     10th quest on. Anchoring the block keeps every item / quest above
     //     the action buttons at any list length.
     int   sortCy;
@@ -158,7 +158,7 @@ void ResetTabbedState();
 void ValidateTabbedPanel();
 
 // Post-FireActivate guard against a dangling g_chainPanel. Some commit-style
-// buttons (InGameLevelUp "Annehmen", quit-confirm "OK") synchronously
+// buttons (InGameLevelUp "Accept", quit-confirm "OK") synchronously
 // destroy their parent panel inside vtable[15] dispatch. Cached g_chain
 // entries then point at freed controls; the next tick's
 // MonitorFocusedControl calls extract::FromControl on one of them, walks a
@@ -198,9 +198,9 @@ bool IsTabButton(void* control);
 void* FindAdjacentArrow(void* panel, void* focused, bool toRight);
 
 // Heuristic finders for the back-out / cancel buttons used by the Esc
-// handler. FindCloseButton matches "Schliess." / "Schliessen" / "Close" /
-// "OK" / "Weiter" / "Continue"; FindCancelButton matches "Abbrechen" /
-// "Cancel" / "Nein" / "No". The match is on the caption's opening WORD, not
+// handler. FindCloseButton matches "Close" / "OK" /
+// "Continue"; FindCancelButton matches "Cancel" /
+// "No". The match is on the caption's opening WORD, not
 // a bare prefix — "Normal" must not read as "No" (see the note above
 // LabelOpensWithWord in menus_chain.cpp). Probe order matters at the call
 // site (cancel-first to route Esc on confirm dialogs to the safe option).

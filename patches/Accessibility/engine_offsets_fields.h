@@ -159,7 +159,7 @@ const size_t kAurGuiStringCStrOffset   = acc::off::Same(0x14);   // CAurGUIStrin
 
 // CSWGuiKeyMapButton — the keyboard-mapping screen's row control (vtable
 // 0x007593c8). Each row embeds TWO CSWGuiButtons: action_button at +0 (the
-// event name, "Vorwärts" — read via the normal button offsets) and
+// event name, "Forward" — read via the normal button offsets) and
 // mapped_key_button at +0x1c8 (the bound key, "W"). Layout decompiled from
 // swkotor.exe.h CSWGuiKeyMapButton + the field-offset anchors
 // (key_mappings ptr at +0x38c ⇒ sizeof(CSWGuiButton)=0x1c4 ⇒ mapped_key_button
@@ -223,19 +223,19 @@ const size_t    kEditboxShortB             = acc::off::Pick(0x152, 0x15a);
 const size_t    kEditboxStringCStrOffset   = acc::off::Pick(0x158, 0x160);
 const size_t    kEditboxStringLengthOffset = acc::off::Pick(0x15c, 0x164);
 
-// CSWGuiNameChargen (chargen "Name eingeben" panel — step 5 of Eigener
-// Charakter, also reused in the Standard-Charakter quick flow). Verified
+// CSWGuiNameChargen (chargen "Enter Name" panel — step 5 of Custom
+// Character, also reused in the Quick Character flow). Verified
 // against k1_win_gog_swkotor.exe.xml SYMBOL CSWGuiNameChargen_vtable @
 // 0x00759F38 + STRUCTURE size 0x9C4 + swkotor.exe.h CSWGuiNameChargen.
 //
 //   +0x00..+0x64   CSWGuiPanel    panel
 //   +0x64          undefined4 field1
 //   +0x68          undefined4 field2
-//   +0x6c          CSWGuiButton   end_button   (BTN_OK — "Annehmen")
+//   +0x6c          CSWGuiButton   end_button   (BTN_OK — "Accept")
 //   +0x230         CSWGuiEditbox  name_editbox
 //   +0x390         CSWGuiLabel    main_title_label
 //   +0x4d0         CSWGuiLabel    subtitle_label
-//   +0x610         CSWGuiButton   back_button  (BTN_CANCEL — "Abbrechen")
+//   +0x610         CSWGuiButton   back_button  (BTN_CANCEL — "Cancel")
 //   +0x7d4         CSWGuiButton   random_button ("Zufallsname")
 //   ...
 //
@@ -265,8 +265,8 @@ const size_t    kNameChargenSubtitleLabelOffset = acc::off::Pick(0x4d0, 0x4f0);
 //
 //   +0x00..+0x64   CSWGuiPanel           panel
 //   +0x64          undefined4            field1
-//   +0x68          CSWGuiButton          ok_button     (submit — "Annehmen")
-//   +0x22c         CSWGuiButton          cancel_button ("Abbrechen")
+//   +0x68          CSWGuiButton          ok_button     (submit — "Accept")
+//   +0x22c         CSWGuiButton          cancel_button ("Cancel")
 //   +0x3f0         CSWGuiSaveGameEditBox edit_box
 //   +0x550         CSWGuiLabel           title_label
 //
@@ -283,8 +283,8 @@ const size_t    kSaveNameEditboxOffset        = acc::off::Pick(0x3f0, 0x40c);
 const size_t    kSaveNameOkButtonOffset       = acc::off::Pick(0x68, 0x6c);
 const size_t    kSaveNameTitleLabelOffset     = acc::off::Pick(0x550, 0x574);
 
-// CSWGuiClassSelection (chargen "Klassenauswahl" panel — also backs the
-// second-level "Standard- vs. Eigener Charakter" prompt). Verified against
+// CSWGuiClassSelection (chargen "Class Selection" panel — also backs the
+// second-level "Quick vs. Custom Character" prompt). Verified against
 // k1_win_gog_swkotor.exe.xml SYMBOL @ 0x00758020 + STRUCTURE size 0x1560.
 //
 //   +0x00..+0x64   CSWGuiPanel panel
@@ -326,7 +326,7 @@ const size_t    kClassSelectionClassLabelOffset  = acc::off::Pick(0x1254, 0x12d0
 // as the in-game menu icons — see the note in docs/kotor2-port.md.
 const int       kClassSelDescLabelId             = 5;
 
-// CSWGuiPortraitCharGen (chargen "Porträtauswahl" panel). Verified against
+// CSWGuiPortraitCharGen (chargen "portrait selection" panel). Verified against
 // k1_win_gog_swkotor.exe.xml SYMBOL @ 0x00759ea8 + STRUCTURE size 0x1240.
 //
 //   +0x00..+0x64   CSWGuiPanel panel
@@ -394,8 +394,8 @@ const size_t    kCreaturePortraitResRefOffset    = acc::off::Todo(0xa8);
 // A ResRef is a fixed 16-byte engine-wide primitive, so divergence is unlikely.
 constexpr size_t kResRefSize                     = 16;
 
-// CSWGuiAbilitiesCharGen (chargen "Attribute" panel — step 2 of Eigener
-// Charakter). Verified against k1_win_gog_swkotor.exe.xml SYMBOL @
+// CSWGuiAbilitiesCharGen (chargen "Attributes" panel — step 2 of Custom
+// Character). Verified against k1_win_gog_swkotor.exe.xml SYMBOL @
 // 0x00759c68 + STRUCTURE size 0x3df4.
 //
 //   +0x110c..+0x1ba4   ability_labels[6]   (CSWGuiLabel[6], 0x140 each)
@@ -451,8 +451,8 @@ const size_t    kCSWGuiButtonSize                      = acc::off::Pick(0x1c4, 0
 // layout one, and both ctors loop `for (i = 0; i < 6; ++i)`.
 const int       kAbilitiesCharGenAbilityCount          = acc::off::Same(6);
 
-// CSWGuiSkillsCharGen (chargen "Fähigkeiten" panel — step 3 of Eigener
-// Charakter). Same shape as CSWGuiAbilitiesCharGen — three info-pair
+// CSWGuiSkillsCharGen (chargen "Skills" panel — step 3 of Custom
+// Character). Same shape as CSWGuiAbilitiesCharGen — three info-pair
 // labels, value buttons, +/- buttons, an int "currently focused" index
 // — just 8 skills instead of 6 abilities and no modifier concept.
 // Verified against k1_win_gog_swkotor.exe.xml SYMBOL @ 0x00759990 +
@@ -549,7 +549,7 @@ const size_t    kAbilitiesCharGenModifierValueOffset  = acc::off::Kotor1Only(0xe
 // Skills panel (both ctors bind LB_DESC to panel+0x70).
 const size_t    kAbilitiesCharGenDescriptionListBoxOffset      = acc::off::Pick(0x6c, 0x70);
 
-// CSWGuiFeatsCharGen (chargen "Talente" panel — step 5 of Eigener Charakter,
+// CSWGuiFeatsCharGen (chargen "Feats" panel — step 5 of Custom Character,
 // also reused at level-up). Verified against k1_win_gog_swkotor.exe.xml
 // SYMBOL CSWGuiFeatsCharGen_vtable @ 0x007598b0 + STRUCTURE size 0x1a1c.
 //
@@ -562,13 +562,13 @@ const size_t    kAbilitiesCharGenDescriptionListBoxOffset      = acc::off::Pick(
 //
 //   +0xbac   CSWGuiLabel  name_label              (focused feat's name)
 //   +0xcec   CSWGuiButton accept_button           (BTN_ACCEPT, "OK")
-//   +0xeb0   CSWGuiButton back_button             (BTN_BACK, "Abbrechen")
+//   +0xeb0   CSWGuiButton back_button             (BTN_BACK, "Cancel")
 //   +0x1074  CSWGuiButton reccomended_button      (BTN_RECOMMENDED)
-//   +0x1238  CSWGuiButton select_button           (BTN_SELECT, "Hinzuf./Entf.")
+//   +0x1238  CSWGuiButton select_button           (BTN_SELECT, "Add/Remove")
 //   +0x13fc  CSWGuiListBox feats_listbox          (LB_FEATS — picker rows)
 //   +0x16dc  CSWGuiListBox description_listbox    (LB_DESC — wrapped text)
 //
-// The "second popup" the user sees when entering Talente isn't the main
+// The "second popup" the user sees when entering Feats isn't the main
 // panel — it's the SkillInfoBox-slot ShowGranted overlay (skillinfo.gui)
 // rendered on top, with its own listbox of granted feats. The main panel
 // stays underneath; its description_listbox.controls[0] mirrors the picker
@@ -767,7 +767,7 @@ const size_t    kPowersPanelRecommendedButtonOffset    = acc::off::Pick(0x12ac, 
 const size_t    kPowersPanelAcceptButtonOffset         = acc::off::Pick(0x1634, 0x1578);
 const size_t    kPowersPanelBackButtonOffset           = acc::off::Pick(0x17f8, 0x1748);
 
-// CSWGuiContainer — the loot panel ("Plündern"). Ctor-bound embedded
+// CSWGuiContainer — the loot panel ("Loot"). Ctor-bound embedded
 // members, mined 2026-08-18 for the gui-id audit (docs/gui-id-audit.md).
 // K1 ctor CSWGuiContainer::CSWGuiContainer @0x006b6dc0 (named symbol; raw
 // offsets read off the listing's `LEA reg,[ESI+0xNNNN]` + `PUSH <tag>`
@@ -1133,7 +1133,7 @@ const size_t    kUpgradePanelActiveSlotPtrOff = acc::off::Kotor2Only(0x3dbc);
 // it 0xffffffff and OnUpgradeSelected treats -1 as the "-" none/remove row
 // (obj id 0x7f000000). Distinguishes the true remove entry from a real (but
 // possibly unreadable) mod row, so only the real remove entry is announced as
-// "Kein Gegenstand".
+// "No item".
 const size_t    kUpgradePickerRowKeyOff = acc::off::Kotor2Only(0x1e0);
 
 // CSWGuiUpgrade.field27_0x2f54 — the CSWSItem* currently being upgraded (the
@@ -1456,7 +1456,7 @@ const size_t    kEquipPanelLeftWeaponIdOffset      = acc::off::Pick(0x427c, 0x50
 const size_t    kEquipPanelRightWeaponIdOffset     = acc::off::Pick(0x4280, 0x50a0);
 const size_t    kEquipPanelGlovesIdOffset          = acc::off::Pick(0x4294, 0x50b4);  // hands
 const size_t    kEquipPanelBeltIdOffset            = acc::off::Pick(0x429c, 0x50bc);
-// KOTOR 2's second weapon set ("Konfig 2" on the panel; BTN_INV_WEAP_L2 /
+// KOTOR 2's second weapon set ("Config 2" on the panel; BTN_INV_WEAP_L2 /
 // BTN_INV_WEAP_R2, .gui ids 20/21). KOTOR 1 has no such slots.
 //
 // Read out of the engine's own slot-bit -> array-index mapper 0x008a91c0,
@@ -1503,8 +1503,8 @@ const size_t    kEquipPickerOpenFlagOff = acc::off::Pick(0x4270, 0x5094);  // pa
 //   * `tohit_label`     (0x2a98) and `damage_label` (0x2bd8) are
 //                       CAPTION-only labels with static TLK strrefs
 //                       (31385/31386). The engine never overwrites
-//                       them — they remain "Trefferchance" /
-//                       "Schaden".
+//                       them — they remain "Hit chance" /
+//                       "Damage".
 // Single-weapon mode: only the RIGHT-hand pair carries values; LEFT pair
 // is blanked to "". Dual-wield: both pairs carry per-hand values.
 // K2 column witnessed in the K2 stat-writer 0x008AD930 (the UpdateInventory
@@ -1595,19 +1595,19 @@ const size_t    kEquipPanelSlotLabelStride    = acc::off::Pick(0x0140, 0x0148);
 // order; new code should index from this base.
 const size_t    kEquipPanelSlotItemIdsOffset  = acc::off::Pick(0x427c, 0x509c);
 
-// CSWGuiLevelUpPanel "Zurück" (button_back) and "Abbrechen"
+// CSWGuiLevelUpPanel "Back" (button_back) and "Cancel"
 // (button_cancel) — the two trailing CSWGuiButton members before
 // field9_0x1ccc in the struct. Both are dead ends for keyboard nav and
-// are filtered from the chain (see menus_chain.cpp isDecorative): Zurück
+// are filtered from the chain (see menus_chain.cpp isDecorative): Back
 // only steps the engine's visual category highlight (we navigate
-// categories with our own arrows), and Abbrechen → OnCancelPressed is
+// categories with our own arrows), and Cancel → OnCancelPressed is
 // gated on a can-cancel flag that the engine only ever assigns 0
 // (CSWGuiLevelUpCharGen::OnPanelAdded calls SetCanCancel(panel, 0), the
 // sole caller in the binary) — so an in-game level-up cannot be
-// cancelled; Annehmen is the only exit. Identify by offset, not control
-// id: ids are reassigned per session (Zurück seen as id 19 then id 1).
+// cancelled; Accept is the only exit. Identify by offset, not control
+// id: ids are reassigned per session (Back seen as id 19 then id 1).
 // Derived 2026-05-31 from patch-20260531-182325.log: panel 15E793C8,
-// Zurück@0x1944 (15E7AD0C). Stride 0x1c4 = sizeof(CSWGuiButton); struct
+// Back@0x1944 (15E7AD0C). Stride 0x1c4 = sizeof(CSWGuiButton); struct
 // order per swkotor.exe.h CSWGuiLevelUpPanel (…button_back, button_cancel,
 // field9_0x1ccc@0x1ccc).
 // KOTOR 2 values by .gui tag out of its own constructor (BTN_BACK / BTN_CANCEL),
@@ -1616,7 +1616,7 @@ const size_t    kLevelUpButtonBackOffset              = acc::off::Pick(0x1944, 0
 const size_t    kLevelUpButtonCancelOffset            = acc::off::Pick(0x1B08, 0x1a78);
 
 // CSWGuiInGameMap up_button / down_button — the two image-only buttons
-// flanking the map render ("Vorheriger Hinweis" / "Nächster Hinweis" once
+// flanking the map render ("previous note" / "next note" once
 // menus_extract's per-kind fallback names them). Both dispatch
 // CSWGuiPanel::HandleInputEvent(0x31/0x32, 1), which the InGameMap override
 // routes to CSWGuiMapHider::GetPrevMapNote / GetNextMapNote — the engine's
@@ -1638,9 +1638,9 @@ const size_t    kInGameMapUpButtonOffset              = acc::off::Pick(0xAB0, 0x
 const size_t    kInGameMapDownButtonOffset            = acc::off::Pick(0xC74, 0x7e0);
 
 // ----------------------------------------------------------------------------
-// CSWGuiInGameAbilities — the in-game "Fähigkeiten" screen (CGuiInGame slot
+// CSWGuiInGameAbilities — the in-game "Abilities" screen (CGuiInGame slot
 // 0x18, abilities.gui). A view-only character screen shaped like the settings
-// menu: three tab buttons (Powers / Skills / Talents) switch which list the
+// menu: three tab buttons (Powers / Skills / Feats) switch which list the
 // single LB_ABILITY listbox shows, and selecting a row repaints a detail area
 // (name + rank/bonus/total labels + the LB_DESC description box). NOT the
 // chargen/level-up button-grid shape — it rides the shared ListBoxPanelSpec +
@@ -1662,9 +1662,9 @@ const size_t    kAbilitiesBonusValueLabelOffset  = acc::off::Pick(0x2550, 0x2524
 const size_t    kAbilitiesTotalLabelOffset       = acc::off::Pick(0x2690, 0x266c);  // LBL_TOTAL
 const size_t    kAbilitiesTotalValueLabelOffset  = acc::off::Pick(0x27D0, 0x27b4);  // LBL_TOTALVAL
 const size_t    kAbilitiesNameLabelOffset        = acc::off::Pick(0x2910, 0x28fc);  // LBL_NAME
-const size_t    kAbilitiesFeatsButtonOffset      = acc::off::Pick(0x2B90, 0x2b8c);  // BTN_FEATS  (Talente)
-const size_t    kAbilitiesPowersButtonOffset     = acc::off::Pick(0x2D54, 0x2d5c);  // BTN_POWERS (Kräfte)
-const size_t    kAbilitiesSkillsButtonOffset     = acc::off::Pick(0x2F18, 0x2f2c);  // BTN_SKILLS (Fähigkeiten)
+const size_t    kAbilitiesFeatsButtonOffset      = acc::off::Pick(0x2B90, 0x2b8c);  // BTN_FEATS  (Feats)
+const size_t    kAbilitiesPowersButtonOffset     = acc::off::Pick(0x2D54, 0x2d5c);  // BTN_POWERS (Powers)
+const size_t    kAbilitiesSkillsButtonOffset     = acc::off::Pick(0x2F18, 0x2f2c);  // BTN_SKILLS (Skills)
 const size_t    kAbilitiesListBoxOffset          = acc::off::Pick(0x30DC, 0x40bc);  // LB_ABILITY (main list)
 const size_t    kAbilitiesDescListBoxOffset      = acc::off::Pick(0x33BC, 0x43ac);  // LB_DESC (description)
 
@@ -1691,7 +1691,7 @@ const size_t    kGuiInGameAbilitiesTabOffset      = acc::off::Pick(0xbc0, 0xfc0)
 
 // CSWSCreatureStats.feats @+0x0 — CExoArrayList<ushort>. Count lives
 // at +0x4 (size field of the list). Static feat list (granted at level-
-// up + class); doesn't drift mid-combat. Used by the Ö examine view to communicate
+// up + class); doesn't drift mid-combat. Used by the examine view to communicate
 // "this creature has N feats" without enumerating them.
 // K2 same offset: the stats FeatList GFF saver (0x006B4EA0) loops
 // `i < [stats+4]` fetching each id via GetFeatAtIndex 0x006BC430, which
@@ -1716,7 +1716,7 @@ const size_t    kExaminePanelHandleOffset         = acc::off::Todo(0x984);
 //   exit_button  @+0x930
 // KOTOR 2 has TWO instances: the CGuiInGame slot one and a second the
 // CSWGuiInGameJournal ctor (0x007FAE60) builds and keeps at journal+0x1a20 —
-// the one the journal's "Nachrichten-Log" button opens. IdentifyPanel
+// the one the journal's "Message Log" button opens. IdentifyPanel
 // therefore also matches the class vtable (engine_panels.cpp).
 // KOTOR 2 rebuilt this panel (ctor 0x00757C40): separate LB_MESSAGES /
 // LB_DIALOG / LB_COMBAT / LB_EFFECTS_GOOD / LB_EFFECTS_BAD listboxes with a
@@ -2061,11 +2061,11 @@ const size_t    kBaseItemItemTypeOffset          = acc::off::Same(0xac);
 // Used by the K2 section replica only — K1's guard never reads it.
 const size_t    kSwsItemBaseItemIdOffset         = acc::off::Same(0xc);
 
-// CSWGuiInGameJournal — quest journal panel (the "Aufträge" sub-screen).
+// CSWGuiInGameJournal — quest journal panel (the "Quests" sub-screen).
 //
 // Layout (from SARIF):
 //   0x000 panel base
-//   0x064 title_label                  ("Aufträge — Laufende Aufträge - …")
+//   0x064 title_label                  ("Quests — Active Quests - …")
 //   0x1a4 item_description_label       (CSWGuiListBox, holds 1 row with
 //                                        "<Planet>:\n<entry text>")
 //   0x484 description label inline     (the single row inside item_description)
@@ -2111,21 +2111,21 @@ const size_t    kJournalFilterTimeButtonOffset         = acc::off::Pick(0, 0xc78
 const size_t    kJournalFilterNameButtonOffset         = acc::off::Pick(0, 0xe48);
 const size_t    kJournalFilterPlanetButtonOffset       = acc::off::Pick(0, 0x1018);
 
-// CSWGuiInGameInventory — the "Inventar" sub-screen. Same embedded-button
+// CSWGuiInGameInventory — the "Inventory" sub-screen. Same embedded-button
 // shape as the journal above: every button is constructed in place at
 // panel+offset, so identifying one by offset is locale-independent.
 //
 // Layout (SARIF DATATYPE dump):
 //   0x1a4 item_description_label
-//   0x420 inventory_label       ("Gruppengepäck - <CURRENT filter>")
+//   0x420 inventory_label       ("party inventory - <CURRENT filter>")
 //   0x424 credits_value_label   (see menus_credits.cpp)
 //   0x564 item_listbox          (one CSWGuiInGameItemEntry per filtered item)
 //   0x1164 exit_button          (caption strref 1582 — dropped by the
 //                                universal close-button filter)
-//   0x1328 useitem_button       ("Verwenden")
+//   0x1328 useitem_button       ("Use")
 //   0x14ec questitems_button    — Ghidra's name is wrong for this panel:
 //                                SetNextFilter @0x006b2a80 writes
-//                                "Zeigen: <NEXT filter>" into it, so it is
+//                                "Show: <NEXT filter>" into it, so it is
 //                                the item-filter cycle button.
 //   0x1a38 / 0x1bfc switch_left / switch_right (the filter's cycle arrows,
 //                                dropped by SquashCycleFlankers)
@@ -2172,7 +2172,7 @@ const size_t    kInventoryFilterButtonStride           = acc::off::Pick(1, 0x1d0
 // ---------------------------------------------------------------------------
 
 // CSWGuiSkillInfoBox (skillinfo / skillinfo_p) — the granted-feats popup the
-// chargen Talente flow and the in-world level-up both mount.
+// chargen Feats flow and the in-world level-up both mount.
 // K1 ctor @0x006ce7c0 (named decompile: skills_listbox / message_label /
 // ok_button, each with a tagged InitControl and its own ctor-bank LEA).
 // K2 ctor FUN_0089c5f0 (same three tags in the same order; second witness =
@@ -2195,14 +2195,14 @@ const size_t    kScriptSelectPanelAiStateListBoxOffset = acc::off::Kotor1Only(0x
 const size_t    kScriptSelectPanelBackButtonOffset     = acc::off::Kotor1Only(0x8b0);
 const size_t    kScriptSelectPanelAcceptButtonOffset   = acc::off::Kotor1Only(0xa74);
 
-// CSWGuiWagerPopup (pazaakwager / pazaakwager_p) — the "Wie viel setzt du?"
+// CSWGuiWagerPopup (pazaakwager / pazaakwager_p) — the wager prompt
 // bet popup. K1 ctor @0x0067f000 (named), K2 ctor FUN_00886fc0.
 // BTN_LESS / BTN_MORE are CSWGuiSpeedButtons: the ctor overwrites each one's
 // control vtable with CSWGuiSpeedButton_vtable right after constructing it,
 // which is the second witness on both games (K2 in_ECX[0x110] / [0x188]),
 // alongside the tagged InitControl and the `bit_flags &= ~4` at member+0x44
 // (K1) / +0x48 (K2). LBL_MAXIMUM is the label the ctor finally SetText's the
-// "Maximaler Einsatz / Credits" block onto.
+// "Maximum wager / Credits" block onto.
 // Historical ids: LBL_MAXIMUM 3 (K1) / 2 (K2), BTN_LESS 4/6, BTN_MORE 5/7.
 const size_t    kWagerPopupPanelMaximumLabelOffset = acc::off::Pick(0x1a4, 0x1b0);
 const size_t    kWagerPopupPanelLessButtonOffset   = acc::off::Pick(0x424, 0x440);
@@ -2210,7 +2210,7 @@ const size_t    kWagerPopupPanelMoreButtonOffset   = acc::off::Pick(0x5f8, 0x620
 
 // CSWGuiPazaakStart (pazaaksetup / pazaaksetup_p) — the side-deck builder.
 // K1 ctor @0x00681a90 (named), K2 ctor FUN_00887da0.
-// BTN_ATEXT is the "Spielen" commit; BTN_CLEARCARDS empties the chosen deck
+// BTN_ATEXT is the "Play" commit; BTN_CLEARCARDS empties the chosen deck
 // and exists only on KOTOR 2. Second witness on both: the AddEvent(0x27)
 // registration (HandleAcceptButton / K2 FUN_00889c00, FUN_0088aa80) paired
 // with the `bit_flags &= ~4` at member+0x48 on K2 (0x8da0 / 0x9210).
@@ -2219,7 +2219,7 @@ const size_t    kPazaakStartPanelPlayButtonOffset  = acc::off::Pick(0x7108, 0x8d
 const size_t    kPazaakStartPanelClearButtonOffset = acc::off::Kotor2Only(0x91c8);
 
 // CSWGuiInGameOptKeyMappings (OPTKeyMapping / OPTKeyMapping_p) — the
-// Tastaturbelegung screen. K1 ctor @0x006edc90 (named), K2 ctor FUN_008fff20.
+// Keymapping screen. K1 ctor @0x006edc90 (named), K2 ctor FUN_008fff20.
 // All eight members carry a tagged InitControl plus a ctor-bank LEA; the
 // buttons additionally carry their handler registration (OnDefaultClick /
 // OnAcceptClick / OnBButtonPressed / OnFilter{Move,Game,Mini}) and, on K2,
@@ -2281,7 +2281,7 @@ const size_t    kCharacterPanelChangeParty2ButtonOffset = acc::off::Kotor1Only(0
 const size_t    kCharacterPanelCharLeftButtonOffset     = acc::off::Kotor1Only(0x4eb4);
 const size_t    kCharacterPanelCharRightButtonOffset    = acc::off::Kotor1Only(0x5078);
 
-// CSWGuiPartySelection (partyselection.gui) BTN_ACCEPT — the "Hinzuf." button
+// CSWGuiPartySelection (partyselection.gui) BTN_ACCEPT — the "Add" button
 // the chain drops, because Enter on a portrait already runs the same
 // OnToggled handler. K1 ctor @0x006bfa40: tagged InitControl, plus the
 // `bit_flags &= ~4` + AddEvent(0x27, OnToggled) pair, plus the 0x1c4 stride

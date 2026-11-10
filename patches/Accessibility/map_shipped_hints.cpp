@@ -11,9 +11,9 @@ namespace {
 
 // Positions from the module .git files:
 //  - danm14ad: dan14ad_door02, the unmarked Sandral-estate backdoor (the
-//    front door carries the vanilla "Anwesen der Sandral" note; this one
+//    front door carries the vanilla "Sandral Estate" note; this one
 //    has none and is the feud-quest sneak entrance).
-//  - tar_m05aa: the two lootable "Toter Rebell" containers
+//  - tar_m05aa: the two lootable "Dead Rebel" containers
 //    (tar05_promcorpse) carrying the Promised-Land datapads.
 //  - tat_m18ac: centroid of the 12 bantha patrol waypoints — the herd
 //    wanders a ~90x160m band, but one bantha in sight is enough to

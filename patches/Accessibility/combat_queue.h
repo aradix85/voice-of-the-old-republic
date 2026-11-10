@@ -1,8 +1,8 @@
 // Combat action-queue submenu.
 //
 // While active:
-//   Open        — speaks "Aktionsschlange, N Aktionen" (or "leer").
-//   Up/Down     — cycles entries, "Angriff Malak, 1 von 3".
+//   Open        — speaks "Action queue, N actions." (or that it is empty).
+//   Up/Down     — cycles entries, "Attack Malak, 1 of 3".
 //   Enter       — removes focused entry; re-announces or closes if empty.
 //   Shift+Enter — clears all + closes.
 //   Esc         — closes.
@@ -21,7 +21,7 @@ namespace acc::combat::queue {
 
 // Returns the player's filtered combat-round queue size (excludes the
 // engine's 0xFF "currently dispatching" placeholder). Used by the
-// action-bar / target-action announce path to report "Platz N" after
+// action-bar / target-action announce path to report "position N" after
 // firing. 0 on no-player / no-combat-round / read fault.
 int CountPlayerEntries();
 
@@ -53,7 +53,7 @@ void ArmUserQueueAdd();
 //
 // KOTOR 1 refuses an unusable action at the GUI layer — DoPersonalAction sees
 // the entry's usable bit clear, plays its error sound and never dispatches, and
-// the unified menu speaks the engine's own reason for it ("Volle Gesundheit").
+// the unified menu speaks the engine's own reason for it ("Full health").
 // KOTOR 2 does not: the same medkit at full health passes that test, the
 // handler runs, and it silently does nothing — no queue add, no feedback line,
 // no sound. The press is simply swallowed.
@@ -65,7 +65,7 @@ void ArmUserQueueAdd();
 // TARGET-ROW actions must NOT arm it, which is why this is a separate call
 // rather than part of ArmUserQueueAdd. They routinely act without any
 // combat-round add inside the window and would every one of them be announced
-// as impossible: Sicherheit, Sicherheits-Überbrücker and a Schallmine placed
+// as impossible: Security, a security spike and a Sonic Mine placed
 // on a footlocker's lock all fired correctly — the mine visibly blew the lock
 // open — while producing no add (patch-20260808-103232.log). Only the personal
 // block has the evidence that an add is the expected outcome.
@@ -81,17 +81,17 @@ void CancelNoOpWatch();
 void TickNoOpWatch();
 
 // Announce a queued action the engine just accepted (or rejected at the
-// cap) — the authoritative "X, Platz N" / "Warteschlange voll" cue. Called
+// cap) — the authoritative "X, position N" / "X, queue full" cue. Called
 // from the CSWSCombatRound::AddAction detour, which fires once per genuine
 // add at function entry (pre-insert), so the round's current count is the
-// pre-add depth: 0..3 land at slot count+1, >=4 is rejected ("voll"). This
+// pre-add depth: 0..3 land at slot count+1, >=4 is rejected ("queue full"). This
 // replaces the old rising-edge poll announce, which under-counted on key
 // auto-repeat and raced the queue drain. Only the controlled creature's
 // round announces, and only when attributable to a user press (see
 // ArmUserQueueAdd) — engine auto-attacks are ignored.
 void OnEngineActionAdded(void* combatRound, void* action);
 
-// True iff armed (queue had >= 1 entry — empty queue speaks "leer" and
+// True iff armed (queue had >= 1 entry — an empty queue says so and
 // returns false).
 bool Open();
 

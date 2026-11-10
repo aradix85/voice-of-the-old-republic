@@ -59,7 +59,7 @@ void* FindOwningPanel(void* control);
 
 // Pointer-equality scan over panels[]. No deref of `panel` — safe with
 // stale/wild pointers. Used by FromControl so a freed g_currentPanel
-// (e.g. Annehmen destroys CSWGuiLevelUpPanel synchronously during
+// (e.g. Accept destroys CSWGuiLevelUpPanel synchronously during
 // FireActivate's vtable[15] dispatch) doesn't reach panel-kind probes
 // that deref *panel.
 bool IsPanelInManager(void* panel);

@@ -74,7 +74,7 @@ bool IsWorkbenchFamilyKind(PanelKind k) {
 
 // The K2 workbench dialog reply pushes CSWGuiUpgrade (the slot detail for
 // the FIRST upgradeable item) on TOP of the item list, so the user lands
-// inside "Aufwerten: <first item>" and has to Escape to reach the list —
+// inside "Upgrade: <first item>" and has to Escape to reach the list —
 // the engine's own flow, but the wrong entry point for keyboard users, who
 // want the list first (reported 2026-08-12; verified engine-driven, no mod
 // action precedes the push in patch-20260812-144927.log).
@@ -115,7 +115,7 @@ void* TitleLabelFor(void* panel, PanelKind k) {
 // Replaces pointer-keyed first-sight for these panels on K2: the stacked
 // push spoke four construction-time titles in a row, and the pre-built
 // panels are reused so re-entries stayed silent. The upgrade screen
-// formats its title as "Aufwerten: <item name>" and retries while the
+// formats its title as "Upgrade: <item name>" and retries while the
 // engine hasn't yet replaced the .gui placeholder.
 void AnnounceFamilyTitleOnFgEdge(void* fg, PanelKind pk, bool edge,
                                  bool suppress) {

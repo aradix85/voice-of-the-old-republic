@@ -1,11 +1,11 @@
-// chargen "Talente" main panel (CSWGuiFeatsCharGen).
+// chargen "Feats" main panel (CSWGuiFeatsCharGen).
 //
 // The screen is a 2D feat-tree chart: a CSWGuiSkillFlowChart of N rows ×
 // up to 3 columns, embedded as the single child of feats_listbox. Each
 // row is a feat-progression chain (col0 root → col1 successor → col2
 // master); each cell carries (feat ID, status byte). The user picks
 // feats by clicking cells with the right status — Add for available,
-// Remove for chosen-this-level — and the same Hinzuf./Entf. button
+// Remove for chosen-this-level — and the same Add/Remove button
 // reflects the cell's add/remove affordance.
 //
 // This panel doesn't fit the listbox-driven dispatcher in
@@ -15,7 +15,7 @@
 // row-major cursor over non-empty chart cells + 3 trailing button
 // virtual-entries, navigated with K/L. The three are ordered as the panel
 // lays them out left to right, which the two games mirror: KOTOR 1 is
-// Empfohlen / OK / Abbrechen, KOTOR 2 Abbrechen / OK / Empfohlen. Each
+// Recommended / OK / Cancel, KOTOR 2 Cancel / OK / Recommended. Each
 // entry carries the engine-member resolver for its button (FeatsPanel*,
 // menus_internal.h) — the .gui ids they used to carry survive only as
 // GuiIdMismatch tripwires inside those resolvers.

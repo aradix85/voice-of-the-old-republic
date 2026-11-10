@@ -32,7 +32,7 @@ namespace {
 // once during BuildForArea against whatever door set was visible at
 // that moment. Door-set updates after the initial build don't
 // retro-classify clusters. This is accepted lossy behaviour: any
-// late-arriving door still shows up as a "Tür" exit through the
+// late-arriving door still shows up as a "Door" exit through the
 // per-edge query, and the worst case is that a cluster's classification
 // is one door short — strictly better than missing the door entirely as
 // today.
@@ -116,7 +116,7 @@ void SnapshotDoors(void* area) {
         }
         // Cosmetic doors are non-interactive set dressing — the engine
         // offers no actions on them. In the room-shape system a cosmetic
-        // door at the end of a corridor otherwise reads as a "Tür" exit,
+        // door at the end of a corridor otherwise reads as a "Door" exit,
         // sending the player hunting for a way through that doesn't exist.
         // Skip them here so they never enter the door snapshot: the edge
         // then classifies on walkmesh geometry alone (dead end / wall),
@@ -203,8 +203,8 @@ void SnapshotTransitionTriggers(void* area) {
         // GIT XPosition/YPosition the Geometry list is authored against),
         // not where the player crosses it. Transition polygons are long
         // strips across a corridor mouth, so the origin can sit many
-        // metres from the crossing (Wohnmodul 082 Ost: origin
-        // 8m east of the actual crossing, voiced as "Übergang Ost" for a
+        // metres from the crossing (Wohnmodul 082 East: origin
+        // 8m east of the actual crossing, voiced as "transition East" for a
         // south-west exit). The polygon centroid is what the bearing and
         // the nearest-node attach must use; origin only as fallback.
         Vector pos = origin;
@@ -427,7 +427,7 @@ EdgeResult ClassifyEdge(void* areaForDiag,
 // doors have no neighbour door within ~5–6m (door nearest-neighbour p10),
 // so the nearest-door pick is still effectively unambiguous; the CONFLICT
 // and UNMATCHED log lines below remain the watchdog for the rest.
-// Original 3.0m anchor case still passes: "Zur Oberstadt" landmark
+// Original 3.0m anchor case still passes: "To Upper City" landmark
 // @ (112.61, 83.34) ↔ door[4] @ (112.5, 81.8) → 1.5m.
 //
 // Diagnostics: per-landmark match / unmatched line + summary line for

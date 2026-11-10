@@ -35,9 +35,9 @@ bool CorridorEndIsDead(const acc::engine::navgraph::NavGraphSnapshot& g,
     }
     if (nodeDeadEnd[nb]) return true;
     // Beyond-probe: continue the corridor axis past the end node. A
-    // terminus wall sits close (Minenschächte droid pocket: 3.3m); a
+    // terminus wall sits close (mine shafts droid pocket: 3.3m); a
     // continuing space probes past the threshold. -1 (no wall cache)
-    // leaves the end unmarked — a wrong "Sackgasse" on the only onward
+    // leaves the end unmarked — a wrong "dead end" on the only onward
     // arm is the inverse of the bug this fixes, so fail toward silence.
     const float kBeyondWallMaxM = 6.0f;
     float bx = g.nodes[nb].pos.x - centroid.x;
@@ -49,7 +49,7 @@ bool CorridorEndIsDead(const acc::engine::navgraph::NavGraphSnapshot& g,
 }  // namespace
 
 // Area path: probe-owned merged spaces (open / room / merged big
-// junction). One neutral "Bereich" label, long-axis cue only when
+// junction). One neutral "Area" label, long-axis cue only when
 // elongated, then the exit list — door rewrites kept (the navigational
 // anchors), wall-curve degree-1 artefacts dropped.
 void ClassifyAsArea(const acc::engine::navgraph::NavGraphSnapshot& g, int n,
@@ -153,8 +153,8 @@ void ClassifyAsArea(const acc::engine::navgraph::NavGraphSnapshot& g, int n,
     Id axisId = Id::AxisEastWest;
     bool elong = ComputeCentroidAxis(centroid, centroidFloorZ, axisExt,
                                      axisId);
-    // Large-footprint clusters swap the neutral "Bereich" noun for
-    // "Großer Bereich" — expectation-setting only; axis/exits/kind
+    // Large-footprint clusters swap the neutral "Area" noun for
+    // "Large area" — expectation-setting only; axis/exits/kind
     // are identical. Large areas only take the areaHint != 0 path
     // anyway (they're merged spaces), so the swap lives here.
     const char* noun  = acc::strings::Get(isLargeArea ? Id::AreaNounLarge
@@ -166,7 +166,7 @@ void ClassifyAsArea(const acc::engine::navgraph::NavGraphSnapshot& g, int n,
     // an elongated area whose only exits are the two ends of that axis
     // (both plain directions — a named door exit is always kept, its
     // destination is information the axis word doesn't carry) reads as
-    // "Bereich Ost-West", not "Bereich Ost-West. Ausgänge: Ost, West".
+    // "Area East-West", not "Area East-West. exits: East, West".
     // Narrow by construction — only fires when the exit mask is exactly
     // the axis pair, so the common case (exits differ from elongation)
     // is untouched.
@@ -273,7 +273,7 @@ void ClassifyAsDeadEnd(const acc::engine::navgraph::NavGraphSnapshot& g, int n,
     // when no unfiltered candidate is within snap range. That is what
     // keeps the documented Bucket-3 alcove (tar_m11aa: rejected node
     // 0.8m away, nearest labelled cluster 23.8m) audible instead of
-    // falling through to the neutral "Bereich".
+    // falling through to the neutral "Area".
     if (!gateAgrees) {
         outFiltered = true;
         acclog::Write(
@@ -308,7 +308,7 @@ void ClassifyAsDeadEnd(const acc::engine::navgraph::NavGraphSnapshot& g, int n,
         }
     } else {
         // The single direction is the way OUT — if that way out climbs
-        // a level, say so ("Sackgasse, Rampe Nord").
+        // a level, say so ("dead end, Ramp North").
         std::string w = DirEntry(dir, /*markDeadEnd=*/false,
                                  ExitIsRamp(nb, centroidFloorZ));
         const char* fmt  = acc::strings::Get(Id::FmtMapCursorDeadEnd);
@@ -347,10 +347,10 @@ void ClassifyAsCorridor(const acc::engine::navgraph::NavGraphSnapshot& g, int n,
     // Door verdicts precomputed on the actual graph edges, kept PER END
     // (member→nbA and member→nbB are different exits and routinely
     // different doors). Collapsing them onto one index is what made the
-    // Peragus hangar ramp announce "Tür Süd-Ost, Süd-West nach
+    // Peragus hangar ramp announce "Door South-East, South-West to
     // Treibstoffdepot": the noun belonged to the south-west end but was
     // spoken against the south-east one, and the south-east end's own
-    // "Sicherheitstür" was never voiced at all.
+    // "security door" was never voiced at all.
     int doorA = externalDoorIdx ? externalDoorIdx[0] : -1;
     int doorB = externalDoorIdx ? externalDoorIdx[1] : -1;
     // Neither graph edge carried a door: fall back to the corridor-span
@@ -377,7 +377,7 @@ void ClassifyAsCorridor(const acc::engine::navgraph::NavGraphSnapshot& g, int n,
     bool deadB = (doorB < 0) && CorridorEndIsDead(g, nbB, centroid, nodeDeadEnd);
     // Ramp marker per end, same precedence as elsewhere (door > dead >
     // ramp): which end of the run climbs to another level is the cue
-    // the Backbord field was missing — its north-east end IS the way
+    // the port-side field was missing — its north-east end IS the way
     // up to the spine, but nothing said so.
     bool rampA = (doorA < 0) && ExitIsRamp(nbA, centroidFloorZ);
     bool rampB = (doorB < 0) && ExitIsRamp(nbB, centroidFloorZ);
@@ -423,7 +423,7 @@ void ClassifyDemotedToDeadEnd(const Vector& centroid,
     const char* dirWord = acc::strings::Get(dirId);
     if (!trigEntries.empty()) {
         // Same rule as the degree-1 path: a transition trigger makes
-        // this a passage toward the exit, not a Sackgasse.
+        // this a passage toward the exit, not a dead end.
         std::string list = trigEntries;
         std::string way;
         if (octantDoorIdx[bit] >= 0) {
@@ -527,10 +527,10 @@ for (int idx = 0; idx < 8; ++idx) {
     mask |= (1 << bit);
     Id dirId = BitToOctant(bit);
 
-    // Door wins over Sackgasse: when an octant carries a door, the
-    // (Sackgasse) annotation is suppressed and the direction word
-    // is replaced with the "Tür DIR" form. The door is the player-
-    // actionable information; Sackgasse is metadata about geometry
+    // Door wins over dead end: when an octant carries a door, the
+    // (dead end) annotation is suppressed and the direction word
+    // is replaced with the "Door DIR" form. The door is the player-
+    // actionable information; dead end is metadata about geometry
     // beyond the door that doesn't matter once we've named the
     // gateway.
     if (octantDoorIdx[bit] >= 0) {
@@ -556,8 +556,8 @@ for (int idx = 0; idx < 8; ++idx) {
 AppendListEntry(dirList, trigEntries);
 
 // Reached by a hub (singleton or merged) with no open/room geometry, so
-// this path renders "Kreuzung". A hub that IS open/room was flagged a
-// probe-owned place by the caller and took the "Bereich" area path above.
+// this path renders "junction". A hub that IS open/room was flagged a
+// probe-owned place by the caller and took the "Area" area path above.
 const char* fmt = acc::strings::Get(Id::FmtMapCursorJunctionDirs);
 if (fmt[0] && !dirList.empty()) {
     outLabel = acc::strfmt::Format(fmt, dirList.c_str());

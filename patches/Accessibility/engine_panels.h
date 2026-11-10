@@ -92,7 +92,7 @@ enum class PanelKind {
 
     // KOTOR 2 crafting screens (K2-only classes, identified by vtable).
     //   CreateItem    — CSWGuiCreateItem (component_p.gui), the workbench
-    //                   "Neue Gegenstände erzeugen" screen: LB_SHOPITEMS
+    //                   "Create Items" screen: LB_SHOPITEMS
     //                   (craftable list) vs LB_INVITEMS (breakdown list)
     //                   with the store-style visibility flip, five
     //                   create-category + five breakdown-category buttons,
@@ -112,7 +112,7 @@ enum class PanelKind {
     // Title-screen CSWGuiOptions (vtable 0x00758838). Not under
     // CGuiInGame — title is pre-game so CGuiInGame isn't resolvable
     // yet. Controls: 0 body listbox, 1..5 tab buttons, 6 title label,
-    // 8 Schliess. button. Identified by vtable equality.
+    // 8 Close button. Identified by vtable equality.
     MainMenuOptions,
 
     // Title-screen CSWGuiMainMenu (vtable 0x00752f70). Pre-game, no
@@ -120,7 +120,7 @@ enum class PanelKind {
     // title-walk lands on the optional "New downloadable content is
     // available…" notice label (Steam-side, unactionable on this
     // build); AnnouncePanelTitle substitutes Id::PanelTitleMainMenu
-    // for this kind so the user hears "Main menu" / "Hauptmenü"
+    // for this kind so the user hears "Main menu" / "main menu"
     // instead of the DLC notice.
     MainMenu,
 
@@ -138,19 +138,19 @@ enum class PanelKind {
 
     // Quest-items sub-screen (CSWGuiQuestItem, vtable 0x00757c20). Heap-
     // allocated modal owned by the journal panel (field9_0xfb4), pushed when
-    // the journal's "Auftrags-Gegenstände" button (cmd 0x29) is activated.
+    // the journal's "Quest Items" button (cmd 0x29) is activated.
     // Lists the player's plot/quest items as CSWGuiInGameItemEntry rows with a
     // hover-description box; identified by vtable.
     InGameQuestItems,
 
     // Combat-behaviour picker (CSWGuiScriptSelect, vtable 0x007590a8). Heap-
-    // allocated modal opened by the character sheet's "Kurzbefehle" button
-    // (after a one-time TutorialBox). Title "Kurzbefehl-Auswahl". A single
+    // allocated modal opened by the character sheet's "Shortcuts" button
+    // (after a one-time TutorialBox). Title "Shortcut Selection". A single
     // ai_state_list_box (id 0) holds 3 CSWGuiButtonToggle rows — the combat
-    // AI presets (Standardangriff / Grenadier / Jedi-/Droiden-Unterstützung).
-    // It is single-select: the panel's Wählen handler reads the ONE selected
-    // row and writes creature_stats->ai_state, so the toggles' ein/aus is
-    // just a marker of which row is active. Wählen = id 4, Abbrechen = id 3.
+    // AI presets (attack / grenadier / Jedi or droid support).
+    // It is single-select: the panel's Choose handler reads the ONE selected
+    // row and writes creature_stats->ai_state, so the toggles' on/off is
+    // just a marker of which row is active. Choose = id 4, Cancel = id 3.
     // Driven as a select-then-confirm listbox in menus_listbox.cpp.
     ScriptSelect,
 
@@ -288,19 +288,19 @@ bool HasActiveLevelUpPanel();
 bool LookupUpgradeSlotType(int slotCustomValue, int category,
                            int* outUpgradeType, uint32_t* outStrRef);
 
-// Heap-allocated Options sub-screen (Spieleinstellungen / Grafik /
-// Sound / Auto-Pause / Feedback / Tastenbelegung / Mauseinstellungen).
+// Heap-allocated Options sub-screen (Gameplay / Graphics /
+// Sound / Auto-Pause / Feedback / Keymapping / Mouse settings).
 // No CGuiInGame slot → IdentifyPanel returns Unknown; positive
 // classification needs the panels[]-stack context.
 //
-// Used by the Esc gate to route through QueueActivate(Schliess.) —
+// Used by the Esc gate to route through QueueActivate(Close) —
 // the engine's vanilla Esc path for these triggers a stack-cookie smash
-// (0xc0000409) matching the LevelUp Annehmen signature.
+// (0xc0000409) matching the LevelUp Accept signature.
 bool IsInGameOptionsSubScreen(void* panel);
 
 // CGuiInGame::PrevSWInGameGui @0x0062cdf0 — engine's "back to strip"
 // primitive. Removes the sub-screen from panels[] cleanly across all
-// kinds; per-screen Schliess onClick silent-fails on InGameOptions
+// kinds; per-screen Close onClick silent-fails on InGameOptions
 // (reorders panels[] without popping).
 bool CallPrevSWInGameGui();
 

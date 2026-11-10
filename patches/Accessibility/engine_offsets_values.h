@@ -35,7 +35,7 @@ constexpr int kVtableAsButtonToggle = 23;
 // questitem, upgrade*, all options sub-tabs, titlemovie), BTN_CANCEL
 // (container) and BTN_Cancel (store) — points its CAPTION at this single
 // strref (verified by dumping CONTROLS across all 21 panels with gffdump).
-// It renders as "Schliess." in German, "Close" in English, etc., so a
+// It renders as "Close" in the English game, so a
 // match on the engine's *resolved* text for this strref is fully
 // locale-agnostic. Confirm/Yes-No popups deliberately use 1580 (OK/Yes) and
 // 1581 (Cancel/No), NOT 1582, so matching 1582 never strips the only

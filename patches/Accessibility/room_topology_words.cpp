@@ -79,8 +79,8 @@ acc::strings::Id BitToOctant(int bit) {
     return Id::DirEast;
 }
 
-// Spoken form of an attached transition trigger, e.g. "Übergang Ost nach
-// Tempel-Außenbereich". Reuses the door-transition format with the generic
+// Spoken form of an attached transition trigger, e.g. "transition East to
+// temple exterior". Reuses the door-transition format with the generic
 // transition noun (walk-through triggers have no authored loc_name). The
 // destination drops the "<planet> - " prefix — every trigger destination
 // shares the current planet, so the prefix is pure filler in a label
@@ -131,8 +131,8 @@ Vector ExitPoint(int doorIdx, const Vector& fallback) {
 // source of truth for the dead-end / corridor / junction-octant
 // rewrites. Each format takes (noun, direction[, extra]):
 //   - noun = door's authored CSWSDoor.loc_name when non-empty (e.g.
-//     "Lift", "Sicherheitstür"); falls back to the localized generic
-//     "Tür"/"Door". Doors named with the generic word collapse to the
+//     "Lift", "security door"); falls back to the localized generic
+//     "Door"/"Door". Doors named with the generic word collapse to the
 //     same output as the fallback, which is fine — no deny-list needed.
 // Selection priority for the WHICH format:
 //   1. landmarkName non-empty  → "%s %s, %s" (FmtMapCursorDoorLandmark)
@@ -140,9 +140,9 @@ Vector ExitPoint(int doorIdx, const Vector& fallback) {
 //      door. Reads cleaner than the area-transition string and lets the
 //      proximity-landmark path (transitions::TickProximityLandmarks)
 //      suppress a separate redundant announce.
-//   2. transitionDest non-empty and != noun → "%s %s nach %s" (FmtMapCursorDoorTransition)
+//   2. transitionDest non-empty and != noun → "%s %s to %s" (FmtMapCursorDoorTransition)
 //      Engine-derived cross-area destination text (e.g. "Taris -
-//      Südliche Oberstadt"). Used when no landmark is attached.
+//      Southern Upper City"). Used when no landmark is attached.
 //   3. bare door form → "%s %s" (FmtMapCursorDoor)
 std::string RenderDoorDirection(int doorIdx, const char* dirWord) {
     using acc::strings::Id;
@@ -161,11 +161,11 @@ std::string RenderDoorDirection(int doorIdx, const char* dirWord) {
     if (!noun || !noun[0]) noun = "Tür";  // last-ditch fallback if strings table missing
 
     // Designer-authored doors often duplicate the landmark string into
-    // CSWSDoor.loc_name (e.g. Taris Versteck NW exit: loc_name and the
-    // companion waypoint's map-note both read "Zum Apartmentkomplex").
+    // CSWSDoor.loc_name (e.g. Taris Hideout NW exit: loc_name and the
+    // companion waypoint's map-note both read "To Apartment Complex").
     // Without this dedup the FmtMapCursorDoorLandmark expansion
-    // "%s %s, %s" prints the same word twice — "Zum Apartmentkomplex
-    // Nord-West, Süd, Zum Apartmentkomplex". When noun == landmark
+    // "%s %s, %s" prints the same word twice — "To Apartment Complex
+    // North-West, South, To Apartment Complex". When noun == landmark
     // (case-insensitive), drop the landmark suffix and fall through to
     // the transitionDest or bare-door path.
     bool landmarkEqualsNoun = false;
@@ -178,8 +178,8 @@ std::string RenderDoorDirection(int doorIdx, const char* dirWord) {
         if (fmt[0]) return acc::strfmt::Format(fmt, noun, dirWord, landmark);
     }
     // Same duplication on the transition path: a door whose loc_name IS
-    // its destination (K2 Wohnmodul 082 Ost: "Zum Unterhaltungsmodul 081",
-    // K1 Tatooine: "Enklave der Sandleute") read "X Nord nach X". The
+    // its destination (K2 Residential Module 082 East: "To Entertainment Module 081",
+    // K1 Tatooine: "Sand People Enclave") read "X North to X". The
     // name already says where it leads, so drop the suffix.
     bool destEqualsNoun = (dest && dest[0] && _stricmp(dest, noun) == 0);
     if (dest && dest[0] && !destEqualsNoun) {
@@ -195,30 +195,30 @@ std::string RenderDoorDirection(int doorIdx, const char* dirWord) {
 // symmetry so the spoken form stays terse for clean axes but exposes
 // both endpoints when the corridor turns:
 //   - opposite CARDINAL octants (N+S, E+W) AND no door on either end →
-//     the dedicated axis words ("Nord-Süd" / "Ost-West"). Unambiguous:
+//     the dedicated axis words ("North-South" / "East-West"). Unambiguous:
 //     neither is an octant name, so they can only be heard as an axis.
 //   - opposite DIAGONAL octants (NE+SW, NW+SE) → both direction words,
 //     same as the asymmetric form below. These USED to abbreviate to
-//     the northern-half octant word ("Nord-Ost") — but that word IS a
+//     the northern-half octant word ("North-East") — but that word IS a
 //     direction name, so by ear it read as "one exit, north-east" and
-//     hid the south-west continuation entirely. On the Südlicher
+//     hid the south-west continuation entirely. On the Southern
 //     Strand the abbreviated NE–SW connector
-//     between the two Kreuzungen was the only route to the beach, and
+//     between the two junctions was the only route to the beach, and
 //     its south-west end was never voiced.
 //   - non-opposite octants = asymmetric / L-shaped corridor → both
-//     direction words rendered, more-northern-first ("Korridor West,
-//     Süd-Ost"). Caught the "Korridor West" failure mode where the
+//     direction words rendered, more-northern-first ("corridor West,
+//     South-East"). Caught the "corridor West" failure mode where the
 //     old single-octant axis collapsed an asymmetric corridor to a
 //     single direction and lost the other endpoint.
 // `doorA` / `doorB` are the door indices of the A-end and B-end exits
 // respectively (-1 = no door). Each end is rendered independently via
 // RenderDoorDirection, so a corridor whose ends are different doors
-// keeps both names ("Sicherheitstür Ost, Tür West nach Treibstoffdepot")
+// keeps both names ("security door East, Door West to Fuel Depot")
 // instead of collapsing onto whichever door was collected first.
 // `deadA` / `deadB` mark an end whose neighbour leads nowhere onward:
-// that direction word is wrapped "Sackgasse %s", same as junction
-// dead-end octants. Without the marker the Peragus Minenschächte droid
-// pocket announced as a plain "Ost" exit and the player searched the
+// that direction word is wrapped "dead end %s", same as junction
+// dead-end octants. Without the marker the Peragus mine shafts droid
+// pocket announced as a plain "East" exit and the player searched the
 // east wall for a way out that never existed.
 // `posA` / `posB` are where each end leads (ExitPoint); when the two
 // ends are named separately they are noted as exits (NoteExit). The
@@ -239,11 +239,11 @@ std::string RenderCorridorAxis(int bitA, int doorA, bool deadA,
     // used when neither end is a door. Folding a door into it drops the
     // one fact the player needs — which end the door is on — and the old
     // single-doorIdx form then printed that noun in front of whichever
-    // octant happened to sort first: "Tür Ost-West" for a corridor whose
-    // east end is a Sicherheitstür and whose west end is a plain Tür.
+    // octant happened to sort first: "Door East-West" for a corridor whose
+    // east end is a security door and whose west end is a plain Door.
     // Same reasoning that already un-collapsed the diagonal pairs below.
     // A dead-end arm disqualifies the collapse for the same reason a
-    // door does: "Nord-Süd" names the run and would swallow the one
+    // door does: "North-South" names the run and would swallow the one
     // fact that matters — which end is the cul-de-sac. Ditto a ramp end:
     // which end climbs to another level is exactly the fact the collapse
     // would swallow.
@@ -281,13 +281,13 @@ std::string RenderCorridorAxis(int bitA, int doorA, bool deadA,
         second = bitA; secondDoor = doorA; secondDead = deadA;
         secondRamp = rampA; secondPos = posA;
     }
-    // Passable end first: the corridor form "Sackgasse
-    // Nord, Süd" and the standalone dead-end form "Sackgasse, Nord"
+    // Passable end first: the corridor form "dead end
+    // North, South" and the standalone dead-end form "dead end, North"
     // differ only by comma position — near-indistinguishable through a
     // screen reader, with opposite meanings for the marked direction.
     // Keeping the marked end LAST makes the rule parseable by ear: a
-    // label that STARTS with "Sackgasse" means you are standing in one;
-    // "Sackgasse <dir>" later in the label always names a dead END.
+    // label that STARTS with "dead end" means you are standing in one;
+    // "dead end <dir>" later in the label always names a dead END.
     // Only fires when exactly one end is marked — none or both marked
     // keeps the north/east-first geographic order.
     if (firstDead && !secondDead) {
@@ -329,10 +329,10 @@ std::string RenderCorridorAxis(int bitA, int doorA, bool deadA,
 }
 
 // Render one direction entry. When `markDeadEnd` is set, the direction
-// word is wrapped via FmtMapCursorJunctionDeadEndExit ("Sackgasse %s") so
+// word is wrapped via FmtMapCursorJunctionDeadEndExit ("dead end %s") so
 // the user knows that exit doesn't lead onward (junctions whose edges
 // include degree-1 stubs call them out). Prefix form mirrors the door
-// rewrite ("Tür %s nach %s") so every special exit reads NOUN-then-
+// rewrite ("Door %s to %s") so every special exit reads NOUN-then-
 // direction within the junction list.
 std::string DirEntry(acc::strings::Id dirId, bool markDeadEnd,
                      bool markRamp) {
@@ -343,7 +343,7 @@ std::string DirEntry(acc::strings::Id dirId, bool markDeadEnd,
             acc::strings::Id::FmtMapCursorJunctionDeadEndExit);
         if (fmt[0]) return acc::strfmt::Format(fmt, word);
     }
-    // Ramp annotation ("Rampe %s") — only when the dead-end marker
+    // Ramp annotation ("Ramp %s") — only when the dead-end marker
     // didn't already claim the entry: a dead end isn't worth the walk
     // whether it ramps or not, so the dead-end verdict is the decision-
     // relevant one. Door rewrites never reach DirEntry at all.
@@ -363,7 +363,7 @@ std::string DirEntry(acc::strings::Id dirId, bool markDeadEnd,
 // areaHint: 0 = not an area (use the graph deadend/corridor/junction
 // rendering below); 1 = room (immediate-announce); 2 = big area
 // (delayed-announce). Non-zero short-circuits to the unified neutral
-// "Bereich [axis]. Ausgänge: …" rendering — open spaces, merged rooms
+// "Area [axis]. exits: …" rendering — open spaces, merged rooms
 // and merged big junctions all read the same way, geometry = long axis
 // only when elongated, then the exits. centroidFloorZ feeds the axis
 // probe.
@@ -371,15 +371,15 @@ std::string DirEntry(acc::strings::Id dirId, bool markDeadEnd,
 // The graph path (areaHint == 0) runs for any cluster the caller did NOT
 // flag as a probe-owned place: every singleton, plus multi-node hubs that
 // merged by the space rule but carry no open/room geometry (a merged
-// corridor-junction). It renders Sackgasse / Korridor / Kreuzung from the
-// exit topology, never the merged-space "Platz". For a multi-node hub the
+// corridor-junction). It renders dead end / corridor / junction from the
+// exit topology, never the merged-space "plaza". For a multi-node hub the
 // centroid is the synthesized member midpoint and externalNbs is the union
 // of every member's external exits, so the same per-octant logic applies:
 //   externalCount == 1  → dead-end (direction = centroid → that exit)
 //   externalCount == 2  → corridor (axis between the two exits,
-//                                   cardinal cases use "Nord-Süd" /
-//                                   "Ost-West" axis words)
-//   externalCount >= 3  → junction ("Kreuzung").
+//                                   cardinal cases use "North-South" /
+//                                   "East-West" axis words)
+//   externalCount >= 3  → junction ("junction").
 //                         8-octant bucketing with passable-wins:
 //                         per-octant aggregation marks the octant as
 //                         dead-end only when EVERY exit in it leads
@@ -392,7 +392,7 @@ std::string DirEntry(acc::strings::Id dirId, bool markDeadEnd,
 // entry appended to the label — and a dead-end cluster that carries one
 // is no dead end at all: the walkmesh ends there because the AREA ends
 // there, so it re-renders as a passage toward the transition instead of
-// "Sackgasse" (the Südlicher Strand exit-corridor fix).
+// "dead end" (the Southern Strand exit-corridor fix).
 // ---------------------------------------------------------------------
 // ClassifyCluster's shape branches.
 //
@@ -410,10 +410,10 @@ std::string DirEntry(acc::strings::Id dirId, bool markDeadEnd,
 // Far-end exit qualifier (see the FarAt* string ids). An exit's octant
 // word is its bearing from the zone centre; octant rounding swallows up
 // to 22.5°, which across a zone-scale footprint hides that the exit
-// sits at one END of the zone. Returns the localized suffix ("weit im
-// Norden") when the exit lies in the outer band of a long-enough axis
+// sits at one END of the zone. Returns the suffix ("far to the
+// north") when the exit lies in the outer band of a long-enough axis
 // AND the announced word lacks that end's cardinal component — the
-// component check is what keeps expected corner exits ("Süd-West" exit
+// component check is what keeps expected corner exits ("South-West" exit
 // in the far south-west) unqualified. At most one axis can ever
 // qualify: the word's own components are suppressed, and the bearing
 // guarantees the word contains the dominant axis. nullptr = no

@@ -184,7 +184,7 @@ const char* TryClassSelectionIcon(void* control, void* owner,
                     name[0] != '\0') {
                     // Append the class blurb the engine writes into LBL_DESC
                     // in the same OnEnterButton pass that set class_label —
-                    // "Jedi-Wächter" alone says nothing about what the class
+                    // "Jedi Guardian" alone says nothing about what the class
                     // plays like, and the description is on screen for
                     // sighted players. It has to be captured HERE rather
                     // than read at announce time for exactly the reason
@@ -226,7 +226,7 @@ const char* TryClassSelectionIcon(void* control, void* owner,
 //     Button (0x006f8ad0) writes the new resref into CSWCObject.portrait
 //     (+0xa8, inline CSWPortrait = CResRef = char[16]) on every cycle.
 //     Reading those 16 bytes and parsing the `po_p[mf]h[abc]\d` pattern
-//     gives us a localised description (e.g. "weiblich asiatisch 3").
+//     gives us a description (e.g. "female asian 3").
 //     The per-frame focused-control monitor re-extracts every tick —
 //     when the resref changes, the composed string changes and the
 //     diff fires speech.
@@ -326,7 +326,7 @@ const char* TryPortraitCharGenArrow(void* control, void* owner,
                 // Reading a single char at [7] turned every K2 portrait into
                 // variant "0", an exact-case compare would have dropped the
                 // upper-case rows, and the unknown 'h' fell through to the
-                // raw-resref branch — the user heard "Porträt: po_pmhh02".
+                // raw-resref branch — the user heard "Portrait: po_pmhh02".
                 //
                 // The variant number comes from PortraitVariantRank, not
                 // from the stem: see the PortraitRow tables for why the

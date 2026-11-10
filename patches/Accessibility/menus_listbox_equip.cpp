@@ -94,7 +94,7 @@ bool EquipPickerOnEnter(void* panel) {
 
     // Is the selected row the item currently equipped in this slot? OnEnterSlot
     // tags that row with field6_0x394 bit 0x2 (the same flag that appends
-    // " (Ausgew.)"). If so, Enter means "take it off" — re-equipping the same
+    // selected-item suffix). If so, Enter means "take it off" — re-equipping the same
     // item is a no-op in the engine, so we route the commit to the row-0 empty
     // entry, whose 0x7f000000 id sends OnItemSelected into its UnequipItem
     // branch. See docs/equip-flow-investigation.md.

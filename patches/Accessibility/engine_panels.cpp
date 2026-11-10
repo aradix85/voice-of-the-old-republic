@@ -63,7 +63,7 @@ bool IsWorkbenchUpgradeStructural(void* panel) {
 
 // CSWGuiInGameMessages, second instance. KOTOR 2's journal constructs its
 // own messages panel (journal ctor 0x007FAE60 stores it at journal+0x1a20)
-// and its "Nachrichten-Log" button opens THAT one, which the CGuiInGame slot
+// and its "Message Log" button opens THAT one, which the CGuiInGame slot
 // table never sees — every K2 log up to 2026-09-17 shows it as "first sight
 // UNKNOWN panel ... vtable=0x0099e5ec". Vtable from the RTTI census
 // (.?AVCSWGuiInGameMessages@@). KOTOR 1 has one instance only, reached by
@@ -110,7 +110,7 @@ bool IsWorkbenchSelectStructural(void* panel) {
 }
 
 // KOTOR 2 crafting screens: CSWGuiCreateItem (component_p.gui — the
-// workbench "Neue Gegenstände erzeugen" / breakdown screen, pushed by the
+// workbench "Create Items" / breakdown screen, pushed by the
 // upgradesel BTN_CREATEITEMS handler) and CSWGuiCreateMedicalItem
 // (chemical_p.gui — the lab-station twin). Both heap-allocated modals with
 // no CGuiInGame slot; single K2-only class each, so vtable equality is the
@@ -142,7 +142,7 @@ bool IsWorkbenchCreateMedicalStructural(void* panel) {
 }
 
 // CSWGuiLevelUpPanel identity by vtable. The panel is heap-allocated by
-// CSWGuiInGameCharacter::ShowLevelUpGUI when the user clicks Levelaufst.,
+// CSWGuiInGameCharacter::ShowLevelUpGUI when the user clicks Level Up,
 // so it has no CGuiInGame slot. Lane's SARIF labels the vtable at
 // 0x00759568 (verified via Ghidra ListSymbolsByName 2026-05-14).
 const uintptr_t kVtableCSWGuiLevelUpPanel = acc::addr::Pick(0x00759568, 0x009AA1AC);
@@ -156,8 +156,8 @@ bool IsLevelUpStructural(void* panel) {
 // via Ghidra ListSymbolsByName (CSWGuiCustomPanel_vtable / CSWGuiQuickPanel_
 // vtable) and against the live panels in patch-20260608-135543.log
 // (custom=0x007595e0 21 controls, quick=0x00759668 12 controls). Both drive
-// their build steps (Porträt / Attribute / Fähigkeiten / Talente / Name /
-// Spielen) sequentially, enabling one at a time via CSWGuiControl::SetEnabled
+// their build steps (Portrait / Attributes / Skills / Feats / Name /
+// Play) sequentially, enabling one at a time via CSWGuiControl::SetEnabled
 // (bit_flags bit 3) — same shape as the in-game level-up wizard.
 const uintptr_t kVtableCSWGuiCustomPanel = acc::addr::Pick(0x007595e0, 0x009AA9A4);
 const uintptr_t kVtableCSWGuiQuickPanel  = acc::addr::Pick(0x00759668, 0x009AAA24);
@@ -208,7 +208,7 @@ bool IsPazaakStartStructural(void* panel) {
     return HasVtable(panel, kVtableCSWGuiPazaakStart);
 }
 
-// CSWGuiWagerPopup — the "Wie viel setzt du?" bet popup pushed over the
+// CSWGuiWagerPopup — the wager popup pushed over the
 // side-deck builder. Single class, heap-allocated, so vtable equality is the
 // identifier (CSWGuiWagerPopup_vtable, verified against the live panel dump in
 // patch-20260601-090245.log: 8-control panel, vtable=0x007534c8).
@@ -218,7 +218,7 @@ bool IsPazaakWagerStructural(void* panel) {
     return HasVtable(panel, kVtableCSWGuiWagerPopup);
 }
 
-// CSWGuiQuestItem — the journal's "Auftrags-Gegenstände" sub-screen. Single
+// CSWGuiQuestItem — the journal's "Quest Items" sub-screen. Single
 // class, heap-allocated and owned by the journal (no CGuiInGame slot), so
 // vtable equality is the identifier (CSWGuiQuestItem_vtable, verified against
 // the live panel dump in patch-20260603-090028.log: 3-element chain with a
@@ -233,7 +233,7 @@ bool IsQuestItemStructural(void* panel) {
     return HasVtable(panel, kVtableCSWGuiQuestItem);
 }
 
-// CSWGuiScriptSelect — the character sheet's "Kurzbefehle" combat-behaviour
+// CSWGuiScriptSelect — the character sheet's "Shortcuts" combat-behaviour
 // picker. Heap-allocated modal with no CGuiInGame slot, so vtable equality is
 // the identifier (verified via Ghidra: destructor at 0x006e9ef0, vtable label
 // at 0x007590a8, against the live panel dump in patch-20260613-205358.log).
@@ -266,7 +266,7 @@ bool IsPowersLevelUpStructural(void* panel) {
 // Pazaak — vtable equality is the cleanest identifier. Vtables captured
 // 2026-06-13 from the PanelProbe "first sight UNKNOWN" dumps in
 // patch-20260613-194918.log; each is paired there with the title the
-// label-walk speaks (e.g. 0x007587c0 → "Soundeinstellungen"). GoG-derived
+// label-walk speaks (e.g. 0x007587c0 → "Sound Settings"). GoG-derived
 // addresses match the Steam build (see memory ghidra_gog_steam_bytes_match),
 // matching every other hardcoded title-screen vtable above.
 //
@@ -787,7 +787,7 @@ PanelKind IdentifyPanel(void* panel) {
     // probe below identifies by vtable, so none of them can claim a panel
     // that isn't theirs. It used to matter — WorkbenchSelect's loose id-shape
     // fallback ("id 0 present + id 9 button + id 10 button") also matched the
-    // force-power picker (id 0 placeholder, id 9 "Empfohlen", id 10
+    // force-power picker (id 0 placeholder, id 9 "Recommended", id 10
     // BTN_SELECT) and stole it, silencing the skill tree, which is why
     // PowersLevelUp was moved ahead of it. Both fallbacks are gone; keeping
     // the tighter detector first still costs nothing.

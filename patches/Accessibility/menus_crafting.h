@@ -65,14 +65,14 @@ void DispatchRowCommit(void* panel, void* listBox, void* row);
 // anything that isn't a row of the currently actionable list.
 void AnnounceChainStepSuffix(void* panel, void* control);
 
-// The K2 crafting screen's BTN_Examine ("Inventar betrachten"), or nullptr
+// The K2 crafting screen's BTN_Examine ("View Inventory"), or nullptr
 // when `panel` isn't one of the two crafting screens. Two callers: the Q/E
 // handler fires it, and RebindChain filters it out of the chain — the same
 // trade the store makes with its buy/sell button, so both screens read the
 // same way (Q or E flips the list; the button itself is not a stop).
 void* ViewToggleButton(void* panel);
 
-// The screen's BTN_Accept ("Objekt erstellen"), or nullptr off the crafting
+// The screen's BTN_Accept ("Create Item"), or nullptr off the crafting
 // screens. RebindChain filters it out for the same reason the store filters
 // its Buy/Sell button: Enter on a row already commits that row, so the button
 // is a second stop that does exactly what the user just did. Note this is a
@@ -87,7 +87,7 @@ void* CommitButton(void* panel);
 bool ToggleViewFromHotkey();
 
 // Mirror chain focus into the engine's own listbox selection on a K2
-// crafting screen, so the panel's "Objekt erstellen" button acts on the row
+// crafting screen, so the panel's "Create Item" button acts on the row
 // the user is standing on.
 //
 // Same mechanism as chargen_attr::SyncSelectedAbilityFromChainFocus — called
@@ -123,7 +123,7 @@ bool OwnsPanelTitle(void* panel);
 //   * announces the screen's title when a workbench-family panel ARRIVES
 //     in the foreground (replaces first-sight for these panels on K2 —
 //     see OwnsPanelTitle). The upgrade slot screen speaks
-//     "Aufwerten: <item name>" from its LBL_TITLE, retrying while the
+//     "Upgrade: <item name>" from its LBL_TITLE, retrying while the
 //     label still holds the .gui placeholder "Item Name" (the engine
 //     writes the real name a moment after the stacked push);
 //   * crafting screens: announces create/breakdown view flips

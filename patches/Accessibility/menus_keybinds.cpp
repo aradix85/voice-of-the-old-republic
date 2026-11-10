@@ -311,7 +311,7 @@ void Reset() {
 bool HandleInput(int keyCode) {
     if (!g_open) return false;
     // While capture is armed, swallow every routed key so the underlying
-    // Optionen panel can't act on it. The capture itself runs in Tick() off
+    // Options panel can't act on it. The capture itself runs in Tick() off
     // Win32 polling; Esc-to-cancel is handled there too.
     if (g_capturing) return true;
 
@@ -344,7 +344,7 @@ bool HandleInput(int keyCode) {
         }
         if (esc) {
             // Close back to the Mod-settings root. The caller re-announces the
-            // Tastenbelegung row once it sees IsOpen() == false.
+            // Key bindings row once it sees IsOpen() == false.
             g_open = false;
             acclog::Write("Keybinds", "closed (esc at category level)");
             return true;

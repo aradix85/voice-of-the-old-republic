@@ -55,11 +55,11 @@ void RegisterUserMarker(void* pin) {
 // Compose a friendly auto-name from the cursor's spot. Falls back to
 // a bare "Marker N" if no room context is available.
 //
-//   Format: "{room/landmark} - Marker N" (DE: "Marke N")
+//   Format: "{room/landmark} - Marker N"
 //   Fallback: "Marker N" alone
 //
 // 64 bytes is plenty for a localized name (Bioware landmark names are
-// short — "Brücke", "Frachtraum"; even with a numeric suffix this
+// short — "Bridge", "Cargo Hold"; even with a numeric suffix this
 // fits easily).
 void BuildAutoName(void* area, const Vector& pos, int seq,
                    char* outBuf, size_t bufSize) {

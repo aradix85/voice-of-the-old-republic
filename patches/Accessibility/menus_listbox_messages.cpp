@@ -72,7 +72,7 @@ void* MsgViewButton(void* panel, MsgView v) {
 }
 
 // The name the screen itself shows for the stop: the view button's caption,
-// or for the two effects lists their headings ("Gute Effekte" / ...).
+// or for the two effects lists their headings ("Good Effects" / ...).
 bool ReadMsgViewName(void* panel, MsgView v, char* out, size_t outN) {
     if (v == MsgView::EffectsGood) {
         return ReadLabelTextAt(panel, kInGameMessagesEffectsGoodLabelOffset, out, outN);
@@ -100,7 +100,7 @@ MsgView CurrentMsgView(void* panel) {
     return MsgView::Feedback;
 }
 
-// "<view>, N Einträge" / "<view>, leer".
+// "<view>, N entries" / "<view>, empty".
 void FormatMsgView(void* panel, MsgView v, char* out, size_t outN) {
     char name[128];
     if (!ReadMsgViewName(panel, v, name, sizeof(name))) name[0] = '\0';

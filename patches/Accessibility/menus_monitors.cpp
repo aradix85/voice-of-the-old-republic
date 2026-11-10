@@ -53,7 +53,7 @@ using acc::menus::detail::FindListBoxChild;
 // keeps snapping selection back to the row under it. Symptom is always the
 // same: only the two rows adjacent to the hovered one are reachable, and the
 // hovered row itself is never announced (observed first on the droid repair
-// submenu, then on the Tastenbelegung screen). The workbench/equip pickers hit
+// submenu, then on the Key bindings screen). The workbench/equip pickers hit
 // the same engine behaviour and defeat it by parking the cursor off their
 // listbox (ParkPickerCursorOffList in menus_listbox.cpp).
 //
@@ -136,7 +136,7 @@ void AnnounceControl(void* control) {
     char text[acc::menus::detail::kAnnounceTextMax];
     // Pass the chain panel so the extraction is identical to
     // MonitorFocusedControl's (which also passes g_chainPanel). FromControl's
-    // panel-scoped enrichment — notably the InGameLevelUp "nicht verfügbar"
+    // panel-scoped enrichment — notably the InGameLevelUp "unavailable"
     // suffix keyed on the per-step enabled flag — only fires when it knows the
     // owning panel; announcing without it produced a plain label here and a
     // suffixed one from the monitor a tick later, which the monitor heard as a
@@ -198,7 +198,7 @@ namespace {
 
 void MonitorFocusedControl() {
     // Eager rebind for the chargen wizard steps. Each of these panels is
-    // pushed by its parent sub-menu ("Eigener Charakter") WITHOUT firing
+    // pushed by its parent sub-menu ("Custom Character") WITHOUT firing
     // OnSetActiveControl, so the chain stays bound to the parent until the
     // user's first arrow press. HandleNavStep then rebinds AND steps in a
     // single call, so the first Down lands on index 1 and the initially-
@@ -214,7 +214,7 @@ void MonitorFocusedControl() {
     // from the in-game strip, and a blanket rebind here would fight it every
     // tick. PortraitCharGen was the first of these found; Abilities and
     // Skills joined it from the KOTOR 2 chargen round (their index-0 row —
-    // Stärke / Computer benutzen — was silent on open).
+    // Strength / Computer Use — was silent on open).
     if (void* mgr = *reinterpret_cast<void**>(kAddrGuiManagerPtr)) {
         void* fg = GetForegroundPanel(mgr);
         if (fg && fg != acc::menus::chain::g_chainPanel) {
@@ -242,7 +242,7 @@ void MonitorFocusedControl() {
         // whole chargen wizard (abchrgen_p, skchrgen_p) as well, all pushed
         // straight out of the parent step-list's button handler. The gate
         // then suppressed the text-change re-announce for the entire visit:
-        // on KOTOR 2 that is why Left/Right on an Attribut or Fähigkeit
+        // on KOTOR 2 that is why Left/Right on an attribute or skill
         // silently changed the value (patch-20260803-095222.log — twelve
         // Menus.Cycle dispatches, twelve FireActivate calls, zero
         // AnnounceValueChange lines).
@@ -302,8 +302,8 @@ void MonitorFocusedControl() {
             // the engine equips each row as you land on it (its live preview;
             // OnItemSelected is the row's select handler and calls EquipItem
             // directly). So arrowing down one row produced two lines: the
-            // picker's own "Kampfstab, 2 von 48" and then this monitor's
-            // "Rechte Waffe, Kampfstab", sometimes three when the swap flashed
+            // picker's own "Quarterstaff, 2 of 48" and then this monitor's
+            // "Right Weapon, Quarterstaff", sometimes three when the swap flashed
             // through an empty slot first (patch-20260817-074321.log). The
             // second line repeats an item name the user has just been told and
             // describes a state that is not committed yet.
@@ -403,7 +403,7 @@ const InGameSubScreenSpec k_inGameSubScreens[] = {
     // KOTOR 1 the party screen is a standalone panel and must not drill.
     { PanelKind::PartySelection,  4, 0xFFFFFFFFu, 48625u, "Gruppenauswahl",
       /*kotor2Only=*/true },
-    // Quest-items modal pushed by the journal's "Auftrags-Gegenstände" button.
+    // Quest-items modal pushed by the journal's "Quest Items" button.
     // Not a strip sub-screen (no icon → guiId -1); its title is read live from
     // LBL_TITLE in the announce path, so strref/literal are unused sentinels.
     { PanelKind::InGameQuestItems, -1, 0xFFFFFFFFu, 0xFFFFFFFFu, nullptr },
@@ -493,7 +493,7 @@ void AnnounceNewSubScreens(void** panels, int count) {
             acc::speech::Speak(literal, /*interrupt=*/false);
         }
 
-        // (Charakterblatt no longer reads the full stat block on open —
+        // (the character sheet no longer reads the full stat block on open —
         // legacy workaround from when the panel wasn't keyboard-navigable.
         // Stats are now reachable via in-panel arrow navigation; the panel
         // name spoken above is the sole open-announce, matching every
@@ -508,7 +508,7 @@ void AnnounceNewSubScreens(void** panels, int count) {
     s_visibleSubScreenCount = nowCount;
 
     // Sole drill-arm site. Triggers on any newly-visible sub-screen kind
-    // (Inventar, Karte, Auftraege, …) regardless of which engine function
+    // (Inventory, Map, Journal, …) regardless of which engine function
     // opened it — ShowSWInGameGui (cold path, e.g. Esc → Options),
     // SwitchToSWInGameGui (warm path, strip-icon Enter / hotkey while a
     // sub-screen is already up), our own Tab cycle queue, or any future
@@ -556,8 +556,8 @@ bool IsContentMonitored(PanelKind k) {
     // without losing coverage.
     // InGameInventory and InGameEquip removed 2026-05-30 — the engine
     // populates the stat sidebar one tick AFTER the panel first appears
-    // (placeholder header labels "VIT" / "DEF" / "Ausw." flip into real
-    // values "6/6" / "15" / "Angriff 0" etc.), which the fingerprint
+    // (placeholder header labels "VIT" / "DEF" / ... flip into real
+    // values "6/6" / "15" / "Attack 0" etc.), which the fingerprint
     // diff path treated as new content and spoke as a batch on every
     // open. Per-row navigation inside the panels covers the rest.
     case PanelKind::MessageBoxModal:
@@ -567,7 +567,7 @@ bool IsContentMonitored(PanelKind k) {
     // is a cluster of per-notification labels plus a lone OK button, but it
     // was never content-monitored, so only the chain's OK button got read on
     // nav and the body text was silent (observed live 2026-06-03, StatusSummary
-    // popup after entering Taris Südliche Oberstadt). It has no
+    // popup after entering Taris Southern Upper City). It has no
     // InGameSubScreenSpec, so first-sight speaks the body once. BuildContent
     // Fingerprint filters to the visible row(s) below — see that note.
     case PanelKind::StatusSummary:
@@ -604,7 +604,7 @@ bool IsContentMonitored(PanelKind k) {
 //     swaps the displayed party member and the Force-points row appears or
 //     disappears (see the RebindChainPreserveIndex call in
 //     MonitorPanelContents). Its twelve stat rows are arrow-reachable as
-//     composed phrases ("Stärke 14, +2"), whereas the fingerprint read the
+//     composed phrases ("Strength 14, +2"), whereas the fingerprint read the
 //     value labels generically and spoke bare context-free numbers — "14",
 //     "120000" — verified across the shipped logs.
 //   * InGameJournal — menus_journal.cpp speaks each entry and its
@@ -1167,7 +1167,7 @@ void MonitorDialogReplies() {
         if (acc::tutorial_popup::FirePendingAtReplyBreak()) return;
         // Sole speaker for dialogue replies (the input path drives the cursor
         // silently — see the no-announce note on the dialog specs in
-        // menus_listbox.cpp). Append the "%d von %d" position so the user knows
+        // menus_listbox.cpp). Append the "%d of %d" position so the user knows
         // how many replies there are.
         char msg[320];
         snprintf(msg, sizeof(msg),

@@ -1,9 +1,9 @@
 // Curated spoken-label overrides for cryptic authored map notes.
 //
 // Vanilla K1 reuses corridor-style note strings across areas: dialog.tlk
-// strref 33413 ("S\xFCdlicher Pfad") marks three different destinations in
-// three Dantooine modules, 33425 ("Nordpfad") three more, 33461
-// ("Ausgang") four. Sighted players cross-reference the map picture; the
+// strref 33413 ("Southern Path") marks three different destinations in
+// three Dantooine modules, 33425 ("north path") three more, 33461
+// ("Exit") four. Sighted players cross-reference the map picture; the
 // spoken cycle can't, so these notes get replaced with the DESTINATION
 // name of the transition they mark (resolved from the destination area's
 // own tlk name strref — self-localising in every game language), or with

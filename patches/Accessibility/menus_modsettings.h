@@ -1,9 +1,9 @@
 // virtual mod-settings submenu.
 //
 // Layer: menus/ (UI state + speech). Reachable via a virtual "Mod
-// Einstellungen" chain entry that we inject into both the in-game
-// Optionen panel (PanelKind::InGameOptions) and the title-screen
-// Optionen panel (PanelKind::MainMenuOptions).
+// settings" chain entry that we inject into both the in-game
+// Options panel (PanelKind::InGameOptions) and the title-screen
+// Options panel (PanelKind::MainMenuOptions).
 //
 // Design summary:
 //
@@ -12,7 +12,7 @@
 //     someone else's button and never touch engine-allocated controls.
 //     RebindChain inserts a virtual ChainEntry whose `virtualKind ==
 //     kVirtualMod_SettingsRoot`; menus_extract::FromControl special-
-//     cases the sentinel and returns the localised "Mod Einstellungen"
+//     cases the sentinel and returns the "Mod settings"
 //     phrase; the Enter dispatcher in menus.cpp special-cases the
 //     virtual-kind tag and opens the submenu instead of FireActivate.
 //
@@ -77,14 +77,14 @@ bool IsRootAnchor(void* control);
 // once on InGameOptions / MainMenuOptions; no-op for every other panel
 // kind. Mirrors the credits / stat-row callback shape — sortCy is the
 // synthetic y-coordinate the chain should use when sorting (we place
-// the entry just above the Schliess. button so it lands as the last
+// the entry just above the Close button so it lands as the last
 // stop on a top-to-bottom arrow walk).
 void ForEachRootAnchor(void* panel,
                        bool (*callback)(void* sentinel, int sortCx, int sortCy,
                                         void* userData),
                        void* userData);
 
-// Format the root entry's speech ("Mod Einstellungen"). Returns true on
+// Format the root entry's speech ("Mod settings"). Returns true on
 // success with `outBuf` filled. False only if the buffer is degenerate;
 // the phrase itself is a constant localised string and never empty.
 bool ExtractRootLabel(char* outBuf, size_t bufSize);

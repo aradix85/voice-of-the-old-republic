@@ -79,7 +79,7 @@ private:
     float                pending_ = 0.0f;
 };
 
-// Format one segment as "{rounded metres} Meter {DirectionWord}". The
+// Format one segment as "{rounded metres} metres {DirectionWord}". The
 // outBuf must have room; returns bytes written excluding NUL.
 int FormatSegment(const Segment& seg, char* outBuf, size_t outBufSize) {
     int metres = static_cast<int>(seg.dist + 0.5f);
@@ -149,10 +149,9 @@ bool Speak(const Vector& playerPos,
         return true;
     }
 
-    // Build the per-segment joined list: "5 Meter Norden, 4 Meter Nord-
-    // Ost, 6 Meter Osten". Separator and word choices live in
-    // strings.h so localisation can swap them without touching this
-    // code.
+    // Build the per-segment joined list: "5 metres north, 4 metres north-
+    // east, 6 metres east". Separator and word choices live in
+    // strings.h.
     const char* sep = acc::strings::Get(
         acc::strings::Id::RouteJoinSeparator);
 

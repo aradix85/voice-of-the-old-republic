@@ -163,7 +163,7 @@ typedef int (__thiscall* PFN_RemoveChosenCard)(void* panel, int slot);
 const uintptr_t kAddrAddChosenCard = acc::addr::Pick(0x0067fb10, 0x00889DD0);
 const uintptr_t kAddrRemoveChosenCard = acc::addr::Pick(0x0067fd10, 0x0088A0B0);
 
-// "Spielen" (BTN_ATEXT) and KOTOR 2's BTN_CLEARCARDS resolve through the
+// "Play" (BTN_ATEXT) and KOTOR 2's BTN_CLEARCARDS resolve through the
 // panel's own ctor-bound members — see PazaakStartPanel* in
 // menus_internal.cpp and docs/gui-id-audit.md. The .gui ids they used to be
 // looked up by (78/95 and 96) survive only as those resolvers' GuiIdMismatch

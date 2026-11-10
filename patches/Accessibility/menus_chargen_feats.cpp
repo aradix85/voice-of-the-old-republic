@@ -1,4 +1,4 @@
-// chargen "Talente" main panel input handler.
+// chargen "Feats" main panel input handler.
 // See menus_chargen_feats.h for the design rationale.
 
 #include <windows.h>
@@ -37,8 +37,8 @@ namespace {
 // and K1's BTN_BACK id 12 is K2's LB_FEATS, a LISTBOX. Reading a listbox
 // as a button walked off the end of the CSWGuiButton layout, so its
 // gui_string read faulted and the str_ref fallback resolved whatever
-// dword sat at the button str_ref offset: the row spoke "<CUSTOM0> hat
-// die Gruppe verlassen." and Enter fired the listbox instead of the
+// dword sat at the button str_ref offset: the row spoke "<CUSTOM0> has
+// left the party." and Enter fired the listbox instead of the
 // accept button (patch-20260803-011930.log). The historical ids now live
 // only inside the resolvers, as the GuiIdMismatch tripwire.
 
@@ -48,7 +48,7 @@ namespace {
 // vertical move tries to keep the same column, falling back to the
 // nearest filled column in the destination row.
 //
-// The 3 buttons (Empfohlen / OK / Abbrechen) are appended as virtual
+// The 3 buttons (Recommended / OK / Cancel) are appended as virtual
 // rows after the chart's last row — past the bottom of the chart, Down
 // enters the button area where each button is its own one-cell row.
 
@@ -66,10 +66,10 @@ struct ButtonRow {
 
 // Both tables are in on-screen left-to-right order, which is the order
 // Down steps through them — and the same order the generic chain produces
-// on the sibling Attribute / Fähigkeiten panels of the same game, so the
+// on the sibling Attributes / Skills panels of the same game, so the
 // three chargen screens stay consistent with each other. The two games
-// lay the row out mirrored: K1 is Empfohlen / OK / Abbrechen, K2 is
-// Abbrechen / OK / Empfohlen. That mirroring is a .gui layout property —
+// lay the row out mirrored: K1 is Recommended / OK / Cancel, K2 is
+// Cancel / OK / Recommended. That mirroring is a .gui layout property —
 // in MEMORY both ctors order the members accept < back < recommended —
 // so each table is one game's on-screen answer even though the resolvers
 // behind them are shared.
@@ -358,7 +358,7 @@ void AnnounceFocused(void* panel) {
 
     char name[128];
     if (!ReadNameLabel(panel, name, sizeof(name)) || name[0] == '\0') {
-        // Localised fallback - was a hardcoded "Talent %u".
+        // Fallback when the name label can't be read.
         snprintf(name, sizeof(name),
                  acc::strings::Get(acc::strings::Id::FmtChargenFeatUnnamed),
                  (unsigned)featId);
@@ -437,7 +437,7 @@ void NavHorizontal(void* panel, bool right) {
 // Home / End across the whole 2D surface, not just the current row. The
 // grid is a chart of feat chains followed by the three virtual button
 // rows, so "first item" is the leftmost filled cell of the first chart row
-// and "last item" is the final button (Abbrechen) — the same two anchors a
+// and "last item" is the final button (Cancel) — the same two anchors a
 // sighted user reaches by dragging the scrollbar to either end. Jumping
 // within the current row instead would be near-useless here: rows are at
 // most three cells wide and Left/Right already clamps to both.
@@ -448,7 +448,7 @@ void NavJumpEnd(void* panel, bool toEnd) {
     if (total <= 0) return;
 
     if (toEnd) {
-        s_curRow = total - 1;   // last button row (BTN_BACK / Abbrechen)
+        s_curRow = total - 1;   // last button row (BTN_BACK / Cancel)
         s_curCol = 0;
     } else {
         s_curRow = 0;           // first chart row, or first button if empty

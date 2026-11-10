@@ -81,7 +81,7 @@ void OnObjectNarrated(void* obj) {
     // cue (cf. never-silence-the-fallback).
 
     // interrupt=false so the warning follows the name/brief the funnel just
-    // spoke ("Republikanischer Soldat, 17 Meter …") rather than cutting it.
+    // spoke ("Republic Soldier, 17 metres …") rather than cutting it.
     acc::speech::Speak(DramaticLine(), /*interrupt=*/false);
     acclog::Write("Spectator", "doomed-battle cue -> [%s]", DramaticLine());
 }

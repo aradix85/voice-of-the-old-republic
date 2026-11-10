@@ -383,7 +383,7 @@ void PollModalKeys(ArmedState& s) {
         // (when the user Escapes out of the menu after the save completes),
         // which is why the unwanted dialogue appears on menu-exit rather than
         // at the keypress. Confirmed in patch-20260713-002917.log lines
-        // 3247-3257: VK_RETURN edit-mode-off and Enter->Dialoge on the same
+        // 3247-3257: VK_RETURN edit-mode-off and Enter->dialogue on the same
         // tick, panel still in the stack. Self-expiring so a later genuine
         // interact is unaffected.
         acc::input::NoteEditboxSubmitClosed();
@@ -603,7 +603,7 @@ void TickEditboxMonitors() {
     // Already armed against this editbox. Manage the focus edges.
     if (!focusedNow) {
         // Focus left the editbox (chain nav stepped to OK / Random /
-        // Abbrechen). Disarm completely; if focus comes back, the next
+        // Cancel). Disarm completely; if focus comes back, the next
         // tick's "fresh entry" branch will re-arm + auto-enter edit mode.
         DisarmIfArmed("focus left editbox");
         return;

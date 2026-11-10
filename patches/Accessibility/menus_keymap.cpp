@@ -1,4 +1,4 @@
-// Tastaturbelegung screen — see menus_keymap.h for the design rationale.
+// Keymapping screen — see menus_keymap.h for the design rationale.
 
 #include <windows.h>
 #include <cstdint>
@@ -74,7 +74,7 @@ struct TabEntry {
     EntryKind kind;
     int       filterIndex;              // Category: engine filter index; else -1
     void*   (*resolveButton)(void*);    // Button: engine-member resolver
-    bool      closesScreen;             // Button: OK/Abbrechen pop the panel
+    bool      closesScreen;             // Button: OK/Cancel pop the panel
     const char* logName;
 };
 // Category rows are in engine filter order (MOVE, GAME, MINI): their tab
@@ -199,7 +199,7 @@ bool StepRow(void* panel, ListBoxNavOp op) {
     ListBoxNavResult r;
     // Engine-driven commit (SetSelectedControl): sets the row's real highlight
     // and scrolls the page natively, so the row we announce is the row the list
-    // actually shows — the 29-entry "Spiel" category is multipage.
+    // actually shows — the 29-entry "Game" category is multipage.
     if (!DriveListBoxSelectionEngine(lb, op, 0, r)) {
         return false;
     }
@@ -406,7 +406,7 @@ bool HandleInput(void* activePanel, int param_1, int param_2, int& outRv) {
                 acclog::Write("Menus.KeyMap", "drill into category %s",
                               e.logName);
             } else {
-                // OK / Abbrechen / Standard — activate via the engine's own
+                // OK / Cancel / Standard — activate via the engine's own
                 // click path (deferred click-sim, like every other button
                 // activation in the mod). OK/Cancel pop the panel; Standard
                 // resets and stays, so re-announce the current tab after.

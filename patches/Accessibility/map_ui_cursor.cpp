@@ -192,7 +192,7 @@ struct CursorState {
     AmbientKind last_spoken_ambient_kind     = AmbientKind::None;
     int         last_spoken_ambient_room_idx = -1;
     // Text-based dedup overlay: when adjacent rooms produce identical
-    // labels ("Kreuzung, Nord, Ost" in three Taris rooms with
+    // labels ("junction, North, East" in three Taris rooms with
     // different signatures), the (kind, sig) comparator alone treats
     // them as distinct and re-announces on every crossing. Storing
     // the last-spoken text and comparing case-sensitively collapses
@@ -740,13 +740,13 @@ void Tick() {
                       g_state.world.x, g_state.world.y, g_state.world.z);
 
         // Speak the area title once per map-open. This is what a sighted
-        // player gets from the green banner ("Taris - Südliche
+        // player gets from the green banner ("Taris - Southern
         // Apartments"); blind players need it announced or they lose the
         // "which map am I looking at" anchor.
         //
         // The engine's own panel first-sight announce speaks the map title
-        // ("Karte") the instant the map opens; interrupt=false queues the
-        // area name AFTER it, so the user hears "Karte" then the area name.
+        // ("Map") the instant the map opens; interrupt=false queues the
+        // area name AFTER it, so the user hears "Map" then the area name.
         void* area = acc::engine::GetCurrentArea();
         if (!g_state.announced_area_name) {
             if (area) {
@@ -1138,7 +1138,7 @@ void Tick() {
 
         // Dedup overlay: text-equality OR (kind, key) equality.
         // The text path collapses adjacent regions whose labels happen
-        // to be identical ("Kreuzung, Nord, Ost" in two adjacent
+        // to be identical ("junction, North, East" in two adjacent
         // clusters) into one announce. The key path is the primary
         // identity match — cluster id for TerrainShape (stable inside
         // a perceptual region), room index for Landmark/RoomName.

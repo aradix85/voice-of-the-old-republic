@@ -706,7 +706,7 @@ void TickApproach() {
     // PC is out of range — so we must NOT cancel the (possibly still-running)
     // interaction or announce a false "way blocked". The pre-unify watchdog hit
     // exactly this: a wrong-namespace targetObj faulted GetObjectPosition and the
-    // (0,0,0) fallback pos read as "miles away" → bogus "Bewegung abgebrochen"
+    // (0,0,0) fallback pos read as "miles away" → bogus "Movement cancelled"
     // mid-open (patch-20260618-223250.log, a stale build). The unify already
     // snapshots a real pos at arm so the common path resolves; this keeps the
     // blocked verdict honest for any caller whose target can't be positioned —

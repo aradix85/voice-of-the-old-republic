@@ -664,7 +664,7 @@ const char* Get(Id id) {
         case Id::InputKeyboardLost:
             return "The game has lost its keyboard. Please restart the game.";
 
-        // ---- Tastenbelegung (mod keybind configurator) ----
+        // ---- Key bindings (mod keybind configurator) ----
         case Id::KeybindsRootLabel:       return "Key bindings";
         case Id::KeybindsOpened:          return "Key bindings opened";
         case Id::KeybindCatWorld:         return "World and actions";

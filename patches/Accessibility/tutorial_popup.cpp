@@ -41,7 +41,7 @@ using PFN_SetMessageStrref = void(__thiscall*)(void* box, uint32_t strref);
 const uintptr_t kAddrSetMessageStrref = acc::addr::Pick(0x006249d0, 0x0040FFB0);
 
 // CSWGuiTutorialBox::SetTutorialReason @0x006aa900 — configures the box as a
-// TUTORIAL (single "Weiter"/OK prompt, page state) for a row, the way the funnel
+// TUTORIAL (single OK prompt, page state) for a row, the way the funnel
 // does. Without it the box renders as a generic two-button message box.
 // KOTOR 2: 0x00898f60 — writes the row byte (+0x9d8), zeroes the page counter
 // (+0x9d9), loads the first "Message_PC%i" page and installs the per-reason OK
@@ -157,7 +157,7 @@ void FirePopup(uint32_t strref, const char* hint) {
         // line's original (mouse-worded) strref.
         void* box = *reinterpret_cast<void**>(g + kGuiTutorialBoxOffset);
         if (box) {
-            // Configure as a real tutorial (single Weiter/OK prompt) for our
+            // Configure as a real tutorial (single OK prompt) for our
             // reason, then override the visible text with the line's own strref.
             reinterpret_cast<PFN_SetTutorialReason>(kAddrSetTutorialReason)(
                 box, kSyntheticReason);
@@ -239,7 +239,7 @@ const char* SyntheticHint() { return s_activeHint; }
 void PollDismiss() {
     if (!s_active) return;
     if (TutorialBoxPresent()) return;
-    // The box closed (Weiter/OK). Clear state and unpause.
+    // The box closed (OK). Clear state and unpause.
     s_active     = false;
     s_activeHint = nullptr;
     acclog::Write("TutorialPopup", "dismissed (box gone)");

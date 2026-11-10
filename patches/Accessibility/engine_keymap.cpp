@@ -184,9 +184,9 @@ constexpr CodeScan kEngineCommands[] = {
     // upcoming free-config conflict checker and are inert for consume until a
     // mod binding lands on them. K/M/O/P/I codes are not yet confirmed — they
     // surface in the Diag.ModShadow "not consumed" log when pressed.
-    {213,  0x24},  // J — Messages (Nachrichten)
-    {214,  0x16},  // U — Equip (Ausrüstung)
-    {221,  0x26},  // L — Quests (Aufträge)
+    {213,  0x24},  // J — Messages
+    {214,  0x16},  // U — Equip (Equipment)
+    {221,  0x26},  // L — Quests (Quests)
     // Target cycle — bound to Q/E with NO modifier by the mod (so never
     // consumed), listed for completeness / the free-config checker.
     {204,  0x12},  // E — cycle right

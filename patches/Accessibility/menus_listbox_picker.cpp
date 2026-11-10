@@ -492,7 +492,7 @@ void MonitorWorkbenchUpgradePicker() {
 // reach it through the same CSWGuiListBox::SetSelectedControl.
 //
 // The side effect is that each arrow press makes the engine append its ordinary
-// inventory feedback ("Gegenstand entfernt." / "Item Removed.") to the in-game
+// inventory feedback ("Item Removed.") to the in-game
 // message buffer, where the router's raw-speech fallback reads it out. Stepping
 // through five items narrated five removals of things the player never removed
 // (K2 patch-20260817-065149.log, K1 patch-20260813-204335.log).

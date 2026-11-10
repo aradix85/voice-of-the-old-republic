@@ -5,7 +5,7 @@
 // Set (the file is a handful of lines, so a full rewrite is trivial and
 // keeps the on-disk state always consistent).
 //
-// This exists because the Mod-Einstellungen toggles and the cue-volume
+// This exists because the Mod settings toggles and the cue-volume
 // slider are otherwise in-memory only — they reset to their defaults every
 // launch. Owners (menus_modsettings for the toggles, audio_bus for the cue
 // volume) pull their persisted value on first use and push back here on

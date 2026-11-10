@@ -288,7 +288,7 @@ namespace {
 // is a non-null literal pointer + a small length (3 bytes) yielding
 // CP1252 control-range bytes 0x80..0x9F — code points the engine never
 // emits in any localised UI string. Rejecting those lets the caller fall
-// back to the proper "Keine Beschreibung verfügbar" cue.
+// back to the proper "No description available" cue.
 bool LooksLikeReadableText(const char* buf, size_t len) {
     if (!buf || len == 0) return false;
     size_t printable = 0;
@@ -380,8 +380,8 @@ bool ReadControlTooltip(void* control, char* outBuf, size_t bufSize) {
 // True for the byte-level glyph markers KOTOR 2 embeds in a rendered
 // gui_string. The Aspyr build prefixes an actionable button's caption with a
 // controller-icon code — 0x11 followed by a space — so the close button on
-// every sub-screen renders as "\x11 Schliessen" while dialog.tlk 1582 says
-// "Schliessen". Not whitespace, so no amount of trimming reaches it; it has to
+// every sub-screen renders as "\x11 Close" while dialog.tlk 1582 says
+// "Close". Not whitespace, so no amount of trimming reaches it; it has to
 // come off as a distinct class of byte.
 //
 // Whitespace controls are deliberately NOT in the set. '\n' in particular

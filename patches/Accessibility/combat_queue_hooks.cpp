@@ -3,7 +3,7 @@
 // Split out of combat_diag.cpp by the Phase-1 structure pass (refactoring
 // candidate 14). This hook is NOT a diagnostic despite having lived in a
 // file named diag: it is the mechanism behind the shipped queue announce
-// ("X, Platz N" / "Warteschlange voll"), forwarding every genuine engine
+// ("X, position N" / "X, queue full"), forwarding every genuine engine
 // action-add to acc::combat::queue::OnEngineActionAdded. It sits next to
 // combat_queue.cpp so that relationship is visible from the filename.
 //
@@ -68,7 +68,7 @@ extern "C" void __cdecl OnCombatRoundAddAction(void* this_combatRound,
         this_combatRound, action,
         static_cast<unsigned>(action_type), param2);
 
-    // Authoritative "X, Platz N" / "Warteschlange voll" announce. This hook
+    // Authoritative "X, position N" / "X, queue full" announce. This hook
     // fires once per genuine add at function entry, so it never under-counts
     // on key auto-repeat or races the queue drain the way the old rising-edge
     // poll did. OnEngineActionAdded self-filters to the controlled creature's

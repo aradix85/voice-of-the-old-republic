@@ -1,5 +1,5 @@
-// chargen "Fähigkeiten" panel (step 3 of Eigener
-// Charakter) tweaks.
+// chargen "Skills" panel (step 3 of Custom
+// Character) tweaks.
 //
 // Mirror of menus_chargen_attr.{h,cpp} for CSWGuiSkillsCharGen — the
 // engine struct shape is the same: 8 skill_buttons + 8 skill_labels +
@@ -63,7 +63,7 @@ void CaptureLabelsIfApplicable(void* panel);
 // See menus_chargen_attr.h for the underlying engine quirk.
 int RowPitchForCursorWarp(void* panel, void* control);
 
-// Speak the per-row info suffix ("Preis 1" / "Preis 2") synchronously
+// Speak the per-row info suffix ("Cost 1" / "Cost 2") synchronously
 // from the chain-step input handler, right after the existing
 // "Computer, 0" announce. Cost is computed from
 // CSWGuiSkillsCharGen::IsClassSkill rather than the label — see
@@ -92,7 +92,7 @@ bool AnnounceChainStepDescription(void* panel, void* control);
 bool IsChargenSkillsDescriptionListbox(void* listBox);
 
 // On a +/- press, override the default "{label}, {value}"
-// re-announcement with "{value}, verbleibende Punkte {remaining}".
+// re-announcement with "{value}, remaining points {remaining}".
 // Returns true when the override fired. The label is omitted on this
 // path (fresh in context); cost is omitted because it's constant for
 // a given skill throughout its normal range (the user heard it in

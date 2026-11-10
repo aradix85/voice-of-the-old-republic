@@ -71,7 +71,7 @@ void SyncSelectedFromChainFocus(const PanelDesc& d);
 // Bind each row's NAME label to its value button in the cycle-category
 // cache. Without this the generic capture resolves the category to the
 // button's own inline text — the value ("8", "0") rather than the name —
-// so FromControl would say "8" instead of "Stärke, 8".
+// so FromControl would say "8" instead of "Strength, 8".
 void CaptureLabels(const PanelDesc& d, void* panel);
 
 // Speak the focused row's description. Calls the engine's

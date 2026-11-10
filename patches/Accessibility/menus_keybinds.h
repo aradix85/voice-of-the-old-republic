@@ -1,4 +1,4 @@
-// Mod keybind configurator — the "Tastenbelegung" submenu reached from Mod
+// Mod keybind configurator — the "Key bindings" submenu reached from Mod
 // settings. Lets the user freely rebind every user-rebindable hotkeys::Action.
 //
 // Layer: menus/ (UI state + speech). Like the Audio glossary, this is an
@@ -36,7 +36,7 @@ const char* DisplayName(acc::hotkeys::Action action);
 bool IsOpen();
 
 // Open at the category level and announce the title + first category. Called
-// from menus_modsettings when the user presses Enter on the Tastenbelegung row.
+// from menus_modsettings when the user presses Enter on the Key bindings row.
 void Open();
 
 // Press-edge input handler. `keyCode` is the engine kInput* value (the same

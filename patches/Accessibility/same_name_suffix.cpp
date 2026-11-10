@@ -63,7 +63,7 @@ Entry* FindEntry(uint32_t handle) {
 
 // Live "empty" tag for loot containers. Appended last (after the numeric
 // disambiguation suffix and any state-override label) so it reads as a
-// trailing note: "Fu\xDFschlie\xDFfach 2, leer". No-op for everything that
+// trailing note: "Footlocker 2, empty". No-op for everything that
 // isn't an emptied loot container — IsEmptyContainer self-gates on object
 // kind + has_inventory and reads the repository item count fresh, so the
 // tag tracks the player looting the container without any caching.
@@ -236,12 +236,12 @@ void AppendObjectQualifiers(void* gameObject,
                             char* outBuf, size_t bufSize) {
     // Number → engine state → override label → empty-loot note, in that
     // order: the number belongs to the object's identity and must sit right
-    // after its name ("Tür 3, verriegelt") rather than trailing the state
+    // after its name ("Door 3, locked") rather than trailing the state
     // word, and the empty note reads last as a closing remark.
     //
     // Every caller takes the WHOLE sequence. The in-world cycle used to
     // replicate it inline and stopped one call short, so a looted container
-    // said ", leer" under Q/E and stayed silent about it under `,`/`.`.
+    // said ", empty" under Q/E and stayed silent about it under `,`/`.`.
     AppendDisambiguator(gameObject, category, outBuf, bufSize);
     acc::engine::AppendObjectStateSuffix(gameObject, outBuf, bufSize);
     acc::state::AppendStateLabel(gameObject, outBuf, bufSize);

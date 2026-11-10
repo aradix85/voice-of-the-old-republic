@@ -425,7 +425,7 @@ void Drain(void* gm) {
     }
 
     // Direct activate via vtable[15].HandleInputEvent(0x27, 1). Bypasses
-    // hit-test, so a button covered by a listbox extent (e.g. Schliess.
+    // hit-test, so a button covered by a listbox extent (e.g. Close
     // in an Options sub-dialog) still fires its onClick when we target it.
     //
     // Raise is_active=1 before the dispatch to mirror what HandleLMouseDown
@@ -462,21 +462,21 @@ void Drain(void* gm) {
         if (op.a) {
             // Snapshot the panel kind before dispatch — used post-fn to
             // decide whether op.a may have freed itself. Done up front
-            // because the LevelUp Annehmen path is exactly when we
+            // because the LevelUp Accept path is exactly when we
             // *can't* re-identify the panel safely after fn() returns.
             acc::engine::PanelKind panelKindAtDispatch =
                 acc::engine::IdentifyPanel(acc::menus::chain::g_chainPanel);
 
             // Capture chargen sub-screen close intent before the
             // dispatch — the sub-screen panel may be freed inside fn()
-            // when Annehmen/Abbrechen close it, so reading its vtable
+            // when Accept/Cancel close it, so reading its vtable
             // afterwards is unsafe. Sub-screens of InGameLevelUp share
-            // a .gui-id convention: BTN_ACCEPT=11 ("OK" / "Annehmen"),
-            // BTN_BACK=12 ("Abbrechen"). Closing one of these via id
+            // a .gui-id convention: BTN_ACCEPT=11 ("OK" / "Accept"),
+            // BTN_BACK=12 ("Cancel"). Closing one of these via id
             // 11/12 is the same shape as the InGameOptions sub-screen
             // Esc close that already InvalidateChain's in menus.cpp —
             // without it, the parent InGameLevelUp panel's updated
-            // chain entries ("Attribute, nicht verfügbar" etc.) can
+            // chain entries ("Attribute, unavailable" etc.) can
             // stay silent on restore because channel-0 dedup and the
             // monitor's last-text cache still hold pre-close text.
             bool chargenSubClosing = false;
@@ -512,16 +512,16 @@ void Drain(void* gm) {
                                chainPanel) ||
                            acc::menus::chargen_skills::IsChargenSkillsPanel(
                                chainPanel)) {
-                    // Still id-based (11/12 = Annehmen/Abbrechen by the
+                    // Still id-based (11/12 = Accept/Cancel by the
                     // InGameLevelUp sub-screen convention) until those
                     // surfaces get their audit batch.
                     int btnId = *reinterpret_cast<int*>(
                         reinterpret_cast<unsigned char*>(op.a) + kControlIdOffset);
                     if (btnId == 11 || btnId == 12) {
-                        // Disambiguate Annehmen/Abbrechen from same-id
+                        // Disambiguate Accept/Cancel from same-id
                         // sibling controls (e.g. chargen-skills row arrows
-                        // sometimes get id 11/12 too — Sprengstoff's right
-                        // arrow has id 11). Annehmen/Abbrechen are labeled
+                        // sometimes get id 11/12 too — Demolitions' right
+                        // arrow has id 11). Accept/Cancel are labeled
                         // buttons; arrows have empty rendered text.
                         char text[32];
                         bool hasText = acc::engine::ReadButtonText(
@@ -577,7 +577,7 @@ void Drain(void* gm) {
                 }
             }
             // Self-destroying-button hazard: some buttons free themselves
-            // inside the onClick we just dispatched. Annehmen on
+            // inside the onClick we just dispatched. Accept on
             // InGameLevelUp is the known case (commits the level-up AND
             // pops the panel — the button's own memory is freed before
             // fn returns). Within the same tick the engine defers both
@@ -593,7 +593,7 @@ void Drain(void* gm) {
             // unconditionally is wrong for toggles, sliders, cycles, and
             // tabs — those mutate state in place, the engine does NOT
             // refocus afterward, and the chain entry needs to survive so
-            // the next-tick monitor speaks the new value ("ein"/"aus",
+            // the next-tick monitor speaks the new value ("on"/"off",
             // updated slider %, new cycle text). Nulling them silently
             // drops the post-toggle announce.
             //
@@ -659,7 +659,7 @@ void Drain(void* gm) {
                 }
             }
             // Inventory filter repair — the journal-Sort case exactly. The
-            // "Zeigen: …" button dispatches cmd 0x29, which only picks the
+            // "Show: …" button dispatches cmd 0x29, which only picks the
             // next filter and raises the panel's repopulate bit; the list is
             // rebuilt through CheckFilter LAZILY in Draw() next frame. The row
             // controls are pooled and reused, so nothing dangles, but the
@@ -698,7 +698,7 @@ void Drain(void* gm) {
     //   3. OnSelectSlot(panel, slot_btn) — if items_listbox.size > 1, stages
     //      the equip (raises panel.field33_0x4270 |= 1, pre-selects row 1,
     //      shows description). If size == 1 (only protoitem template), pops
-    //      the engine's "Für diesen Slot..." modal — which is the correct
+    //      the engine's empty-slot modal — which is the correct
     //      behaviour for a slot the player has no fitting items for.
     //
     // Dispatched here (not synchronously from the input hook) for the same
@@ -974,7 +974,7 @@ void Drain(void* gm) {
     // It self-guards greyed rows (routes them to the can't-select stub) and
     // calls CloseItems at the end, closing the picker and refocusing the slot.
     // So there is NO separate assemble step per pick — that is what OnAssemble
-    // (Zusammenbauen) does, and firing it here with K1's button id popped the
+    // (Assemble) does, and firing it here with K1's button id popped the
     // whole panel back to the item list without installing (the round-1 K2
     // bug). K1 keeps its two-step WorkbenchUpgradeCommit above.
     case Kind::WorkbenchUpgradeInstallK2: {

@@ -9,7 +9,7 @@
 // re-numbered between the games, see the id table in the .cpp) holds
 // CSWGuiSkillFlow rows (one per power family), each with up to 3
 // CSWGuiFlowSkillStruct cells (base / improved / master variants) —
-// identical layout to chargen Talente. The chart at
+// identical layout to chargen Feats. The chart at
 // kPowersLevelUpChartOffset (0x19fc K1 / 0x1bf8 K2) is a
 // CSWGuiSkillFlowChart tracking (row, col) selection state.
 //

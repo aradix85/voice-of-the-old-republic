@@ -25,9 +25,9 @@ namespace {
 //
 //     The category enum (field25_0x2f4c) selects the table column:
 //         1 = lightsaber (saber UX with crystal picker)
-//         2 = 4-slot non-saber (Kristall-Steckplatz widgets)
+//         2 = 4-slot non-saber (crystal slot widgets)
 //         3 = 3-slot non-saber weapon (Aufwertungs widgets)
-//         4 = 2-slot non-saber (Kristall widgets, slots 1..2)
+//         4 = 2-slot non-saber (crystal widgets, slots 1..2)
 //     Sentinel entries (UpgradeType = -1) mark positions the
 //     category doesn't use; fall back to the position-only name for
 //     those so the user still gets *some* orientation.
@@ -147,8 +147,8 @@ const char* TryWorkbenchSlot(void* control, void* owner,
             }
 
             // Append occupancy state so the user hears whether the slot
-            // already holds an upgrade — "Energiezelle, Massive Kritische"
-            // when occupied, "Energiezelle, leer" when empty. Reuses the
+            // already holds an upgrade — "Power Cell, holds Massive Criticals"
+            // when occupied, "Power Cell, empty" when empty. Reuses the
             // shared equip-slot composition templates. field35_0x2f74[cval]
             // is the installed mod item (engine-constructed from the mod
             // template at panel-open / install; see OnPanelAdded).
@@ -170,13 +170,13 @@ const char* TryWorkbenchSlot(void* control, void* owner,
                                            sizeof(modName)) &&
                                        modName[0] != '\0';
                         if (gotName) {
-                            // "<slot type>, belegt mit <mod>" — connecting word
+                            // "<slot type>, holds <mod>" — connecting word
                             // so an identical slot/mod name doesn't read twice.
                             snprintf(outBuf, bufSize,
                                      Get(Id::WorkbenchFmtSlotItem),
                                      slotName, modName);
                         } else {
-                            // Name unresolved: "<slot type>, belegt".
+                            // Name unresolved: "<slot type>, occupied".
                             snprintf(outBuf, bufSize, Get(Id::FmtEquipSlotItem),
                                      slotName, Get(Id::WorkbenchSlotFilled));
                         }
@@ -199,7 +199,7 @@ const char* TryWorkbenchSlot(void* control, void* owner,
 //      (upgradesel_p.gui id 7). The .gui bakes no strref and no text and
 //      the ctor never SetTexts it (icon-only for sighted users), so the
 //      generic ladder falls through to the "control 7" placeholder. Speak
-//      the game's own TLK line 111574 ("Neue Gegenstände erzeugen" — the
+//      the game's own TLK line 111574 ("Create Items" — the
 //      title of the screen the button opens), which localizes for free.
 //      K1's upgradesel has no id-7 button-with-empty-text (id 7 is a
 //      ProtoItem icon there and never chain-navigable), but the check is

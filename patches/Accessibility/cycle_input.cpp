@@ -91,7 +91,7 @@ CategoryBindings BindingsFor(
         case C::Item:
             return {S::CategoryItem,       S::EmptyItems};
         case C::Landmark:
-            // Map context renames to "Map hint" / "Hinweis" — matches the
+            // Map context renames to "Map hint" — matches the
             // engine's own GetNext/PrevMapNote terminology so the spoken
             // category word lines up with what sighted players see in the
             // InGameMap up/down buttons. World context keeps the broader
@@ -166,7 +166,7 @@ void ResolveEntryName(const acc::cycle::CategoryListing& listing, int idx,
 
 // Append a north-to-south positional ordinal to a LISTING entry's name when
 // two or more entries in the listing share the same spoken label. Designer
-// map "hints" (Nordpfad ×4) and duplicate placeables (Fußlocker ×3) repeat
+// map "hints" (north path ×4) and duplicate placeables (footlocker ×3) repeat
 // the same label; the appended number lets the user refer back to a specific
 // one.
 //
@@ -257,7 +257,7 @@ void AnnounceCurrent(const acc::cycle::CategoryListing& listing,
     //     Landmark + Transition go here too — GetObjectName now folds the
     //     waypoint map-note (+0x230) and the trigger transition_destination
     //     (+0x30c) into its own fallback chain, so those resolve to the
-    //     human-readable label ("Zur Oberstadt") instead of the raw tag.
+    //     human-readable label ("To Upper City") instead of the raw tag.
     // The map-context branch below still reads GetWaypointMapNote directly
     // so its same-name numbering keys off the exact map string.
     bool isPin    = listing.isPin[s.focusedIndex];
@@ -299,11 +299,11 @@ void AnnounceCurrent(const acc::cycle::CategoryListing& listing,
     }
 
     // Disambiguate same-name entries with a stable ordinal, so repeated
-    // labels ("Nordpfad" ×4, "Kath-Hund" ×3) are individually referable.
+    // labels ("north path" ×4, "Kath Hound" ×3) are individually referable.
     // Two keying strategies by mobility, and they must match what the Q/E
     // focus path speaks for the same object:
     //  - Static objects number by north-to-south world position, so
-    //    "Nordpfad 3" is the same marker every visit, save, and player — a
+    //    "north path 3" is the same marker every visit, save, and player — a
     //    global reference frame independent of entry direction or distance.
     //  - Creatures move; position-ranking would swap their numbers as they
     //    walk. They keep the handle-keyed same-name suffix instead, shared
@@ -321,8 +321,8 @@ void AnnounceCurrent(const acc::cycle::CategoryListing& listing,
                               sizeof(name));
     } else {
         // The full qualifier tail in one call — ordinal, door state
-        // (", verriegelt", ", Zur Brücke"), placeable state tag
-        // (", gefangen"), and the looted-container note (", leer"). Shared
+        // (", locked", ", To Bridge"), placeable state tag
+        // (", trapped"), and the looted-container note (", empty"). Shared
         // verbatim with the Q/E path's GetSpokenName so an object speaks the
         // same string on both surfaces; this used to be three inlined calls
         // that left the empty-container note off the cycle only.
@@ -600,8 +600,8 @@ void OnAnnounceFocus() {
 
 // Per-kind pre-roll Id picker. Mirrors interact_hotkey's PreRollFor (kept
 // local because that one's in an anon namespace) — the Shift+- autowalk
-// speech uses the same vocabulary as Enter ("Sprich mit X", "Öffne X",
-// "Hebe X auf") so users hear consistent verbs across the two paths.
+// speech uses the same vocabulary as Enter ("Talk to X", "Open X",
+// "Pick up X") so users hear consistent verbs across the two paths.
 acc::strings::Id GuidancePreRollFor(acc::filter::CycleCategory c) {
     using C = acc::filter::CycleCategory;
     using S = acc::strings::Id;
@@ -720,7 +720,7 @@ void OnPathfindFocus() {
     // Transitions are TRIGGER regions — they fire when the PC walks *into* them,
     // not on "use". UseObject on a trigger queues a walk-to-use the engine can't
     // resolve (no use-node), so the PC never moves and the approach tracker
-    // declares a false "Weg versperrt". Route them as a coordinate walk like map
+    // declares a false "way blocked". Route them as a coordinate walk like map
     // pins: the engine A* walks to the trigger's position and crossing into the
     // region fires the transition.
     const bool walkToCoord =

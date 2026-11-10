@@ -38,15 +38,15 @@
 // AppendToMsgBuffer events to:
 //
 //   * Merge the 3-or-4-line attack sequence
-//     (Summary → Angriffsstatistik → [Bedrohungsstatistik] →
-//      Abwehrstatistik → [Schadensstatistik]) into a single compact line.
+//     (Summary → Attack Breakdown → [Threat Breakdown] →
+//      Defense Breakdown → [Damage Breakdown]) into a single compact line.
 //   * Speak Bedrohungsstatistik as-is mid-block (so the threat-roll cue
 //     stays audible without disrupting the buffer).
 //
 // Everything else (heals, item-use, kill/XP, loot, world feedback) falls
 // through to the router's raw-speech fallback. Sequence established
 // empirically from patch-20260521-100345.log. The block opens on a
-// summary line, closes on Schadensstatistik (hit) or on any
+// summary line, closes on Damage Breakdown (hit) or on any
 // unrecognized line (miss).
 
 #include "msg_router.h"
@@ -67,22 +67,22 @@ struct AttackBlock {
     bool has_abwehr;
     bool has_schaden;
     bool hit;
-    bool crit_tag;       // "Kritischer Treffer!" in summary
-    bool auto_hit;       // "Automatischer Treffer!"
-    bool auto_fail;      // "Automatischer Fehlschlag!"
+    bool crit_tag;       // "Critical Hit!" in summary
+    bool auto_hit;       // "Automatic Hit!"
+    bool auto_fail;      // "Automatic Miss!"
     char actor[96];
     char target[96];
-    char feat[96];       // optional, e.g. "Starke Explosion"
+    char feat[96];       // optional, e.g. "Power Attack"
     int  sum_attack;
     int  sum_defense;
     int  sum_damage;
-    char angriff_hand[32];     // "Haupthand" / "Nebenhand"
-    char angriff_comps[256];   // pre-formatted: "W14+Basis 1+Reichweite 10+..."
+    char angriff_hand[32];     // "Mainhand" / off hand
+    char angriff_comps[256];   // pre-formatted: "R14+Dex 2+Effect 1+..."
     char abwehr_nums[64];      // pre-formatted: "10+3+2" (labels dropped)
-    char schaden_text[128];    // full-breakdown form: "Energie 6+Bonus 5 x2"
-    char schaden_short[128];   // short-form: "6 Energie + 5 Bonus"  (value first, " + " separator)
-    char dmg_type[32];         // primary damage type label, e.g. "Energie" / "Physisch"
-    char status[96];           // applied status from summary tail, e.g. "betäubt" ("" if none)
+    char schaden_text[128];    // full-breakdown form: "Energy 6+Bonus 5 x2"
+    char schaden_short[128];   // short-form: "6 Energy + 5 Bonus"  (value first, " + " separator)
+    char dmg_type[32];         // primary damage type label, e.g. "Energy" / "Physical"
+    char status[96];           // applied status from summary tail, e.g. "stunned" ("" if none)
 };
 
 AttackBlock g_pending = {};
@@ -92,7 +92,7 @@ AttackBlock g_pending = {};
 // We accumulate a burst (running total + count) and flush a single spoken
 // line once kAbsorbQuietMs passes with no new absorb. namepart/suffix are
 // captured verbatim from the engine line so the spoken total stays locale-
-// agnostic: "<namepart>absorbiert <total><suffix>".
+// agnostic: "<namepart>absorbs <total><suffix>".
 // Windows widened 600/2500 → 1500/5000 (2026-07-17, Star Forge feedback):
 // autofire volleys spaced ~1s kept splitting into a spoken line per volley —
 // 296 absorb lines in one session. One line per exchange is the target.
@@ -109,7 +109,7 @@ DWORD g_absorb_first_tick    = 0;
 // The engine emits one full "Reflexionsstatistik: ..." breakdown per
 // deflected pellet — a Jedi tanking turret autofire produced 322 raw
 // spoken lines in one session (patch-20260716-221327.log). We claim the
-// line, count per deflector, and flush "<actor> reflektiert N Schüsse"
+// line, count per deflector, and flush "<actor> deflects N shots"
 // on the same debounce shape as the absorb burst. Party deflectors only
 // reach speech; NPC-vs-NPC deflections are logged and dropped, matching
 // the weapon-path policy.
@@ -129,9 +129,9 @@ DeflectSlot g_deflect[kMaxDeflectSlots] = {};
 // ---- Ability / grenade / force-power effect merging.
 // A power's use, each target's saving throw, the damage, and any applied
 // status arrive as separate engine lines (interleaved with other combat
-// chatter). We remember the last "benutzt <action>" and accumulate per-
+// chatter). We remember the last "<actor> uses <action>" and accumulate per-
 // target outcomes into slots, flushed as one merged line on a debounce.
-constexpr DWORD kAbilityWindowMs = 5000;   // "benutzt" stays attributable this long
+constexpr DWORD kAbilityWindowMs = 5000;   // " uses " stays attributable this long
 constexpr DWORD kFxQuietMs       = 500;    // flush a target's effect after this gap
 constexpr DWORD kFxMaxHoldMs     = 2500;
 constexpr int   kMaxFx           = 12;
@@ -151,11 +151,11 @@ struct EffectTarget {
     char  caster[96];   // who used it ("" if unknown)
     bool  has_save;
     bool  saved;
-    char  save_type[40];  // "Reflex" / "Tapferkeit" / "Willensstärke"
+    char  save_type[40];  // "Reflex" / "Fortitude" / "Will"
     bool  has_dmg;
     int   dmg;
     char  dmg_type[32];
-    char  status[64];     // applied status, e.g. "betäubt"
+    char  status[64];     // applied status, e.g. "stunned"
     DWORD first_tick;
     DWORD last_tick;
 };
@@ -265,11 +265,11 @@ bool ParseSummary(const char* text, AttackBlock& b) {
     if (!ParseSummaryHead(text, b)) return false;
 
     // Status tail: an applied effect rides the end of the summary as
-    // "<target> ist <status>" (e.g. "Kath-Hund ist betäubt"). The target
-    // name only re-appears here in that clause — "mit Angriff auf <target>."
-    // is followed by '.', not " ist " — so a plain search for "<target> ist "
-    // pins the status without colliding with the opening "<actor> ist
-    // erfolgreich". Captures everything after to end-of-line.
+    // "<target> is <status>" (e.g. "Kath Hound is stunned"). The target
+    // name only re-appears here in that clause — "attack on <target>."
+    // is followed by '.', not " is " — so a plain search for "<target> is "
+    // pins the status (the opening "<actor> succeeds with attack on" has no
+    // " is "). Captures everything after to end-of-line.
     if (b.target[0]) {
         char needle[112];
         int nn = snprintf(needle, sizeof(needle), "%s%s", b.target, L.status_ist_marker);
@@ -322,7 +322,7 @@ bool ParseAngriff(const char* text, AttackBlock& b) {
         if (!comp_end) comp_end = p + strlen(p);
 
         // Truncate the W-value component before any auto-hit/auto-fail tail
-        // (engine glues "Würfelergebnis 1 Automatischer Fehlschlag!" with no
+        // (engine glues "roll 1 Automatic Miss!" with no
         // "+" separator). Back up one to include the preceding space.
         const char* auto_h = strstr(p, L.tag_auto_hit);
         const char* auto_f = strstr(p, L.tag_auto_fail);
@@ -444,8 +444,8 @@ bool ParseSchaden(const char* text, AttackBlock& b) {
     p = eq + 3;
 
     // Two parallel outputs:
-    //   out      — full-breakdown format "Energie 6+Bonus 5"   (type first, +-joined)
-    //   shortBuf — short-form format     "6 Energie + 5 Bonus" (value first, " + "-joined)
+    //   out      — full-breakdown format "Energy 6+Bonus 5"   (type first, +-joined)
+    //   shortBuf — short-form format     "6 Energy + 5 Bonus" (value first, " + "-joined)
     char out[128];      size_t out_len = 0;
     char shortBuf[128]; size_t short_len = 0;
     bool first = true;
@@ -473,7 +473,7 @@ bool ParseSchaden(const char* text, AttackBlock& b) {
         first = false;
 
         // Resolve a (type-label, value-string) pair for this component.
-        // Either "Energie: 6" (colon split) or "Bonusschaden 5" (no colon,
+        // Either "Energy: 6" (colon split) or "bonus damage 5" (no colon,
         // last-space split with label shortening).
         const char* type_start = p;
         const char* type_end   = nullptr;
@@ -494,7 +494,7 @@ bool ParseSchaden(const char* text, AttackBlock& b) {
             type_end  = colon;
             val_start = colon + 2;
         } else {
-            // No colon — Bonusschaden style. Number is whatever follows the
+            // No colon — "bonus damage" style. Number is whatever follows the
             // last space.
             const char* space = text_end;
             while (space > p && *(space - 1) != ' ') --space;
@@ -510,8 +510,8 @@ bool ParseSchaden(const char* text, AttackBlock& b) {
         }
 
         // Primary damage type = first component's type label (the elemental
-        // type: Energie / Physisch / Ionen / ...). Bonus components
-        // (Spezialwaffe, Stärke-Mod., Bonusschaden) are additive, not types,
+        // type: Energy / Physical / Ion / ...). Bonus components
+        // (special weapon, Strength mod., bonus damage) are additive, not types,
         // and always follow — so the first label is the one to speak.
         if (b.dmg_type[0] == '\0' && !type_replacement && type_end > type_start) {
             CopyRange(b.dmg_type, sizeof(b.dmg_type), type_start, type_end);
@@ -615,14 +615,14 @@ void BuildCompact(const AttackBlock& b, char* out, size_t cap) {
 
 // ---- Phase-2 short results-only lines.
 //
-// The verbose stat breakdown (Angriffs-/Abwehr-/Schadensstatistik) stays in
+// The verbose stat breakdown (Attack / Defense / Damage Breakdown) stays in
 // the engine message log; only the urgent result is spoken. Actor-led for
 // the party's own special moves, victim-led for incoming hits — the
 // "who's hurt" name leads when damage lands on us.
 //
-// Common tail: ", kritisch" on a crit and ", <status>" when an effect was
+// Common tail: ", critical" on a crit and ", <status>" when an effect was
 // applied. Damage type keeps the engine's casing (German type nouns are
-// capitalised: "Energie", "Physisch", "Ionen").
+// capitalised: "Energy", "Physical", "Ion").
 namespace {
 void BuildResultTail(const AttackBlock& b, char* tail, size_t cap) {
     const auto& L = acc::combat::loc::Get();
@@ -636,9 +636,9 @@ void BuildResultTail(const AttackBlock& b, char* tail, size_t cap) {
 
 // The party's own attack. Feats name the move; plain auto-attacks omit it
 // (a feat replaces the auto-attack for that swing, so the two never collide):
-//   feat hit    → "<actor>, <feat>, <target>, <dmg> <type>[, kritisch][, status]"
-//   feat miss   → "<actor>, fehlgeschlagen, <feat>, <target>"
-//   plain hit   → "<actor>, <target>, <dmg> <type>[, kritisch][, status]"
+//   feat hit    → "<actor>, <feat>, <target>, <dmg> <type>[, critical][, status]"
+//   feat miss   → "<actor>, failed, <feat>, <target>"
+//   plain hit   → "<actor>, <target>, <dmg> <type>[, critical][, status]"
 //   plain miss  → (not emitted — caller suppresses)
 // The target is named: companions pick their own targets and a fight often
 // has several enemies, so "who took it" is not implied by the actor. (The
@@ -664,7 +664,7 @@ void BuildOutgoingLine(const AttackBlock& b, char* out, size_t cap) {
     }
 }
 
-// Incoming hit on a party member: "<target>: <dmg> <type> von <actor>[, ...]".
+// Incoming hit on a party member: "<target>: <dmg> <type> from <actor>[, ...]".
 void BuildIncomingLine(const AttackBlock& b, char* out, size_t cap) {
     const auto& L = acc::combat::loc::Get();
     char tail[140]; BuildResultTail(b, tail, sizeof(tail));
@@ -678,10 +678,10 @@ void BuildIncomingLine(const AttackBlock& b, char* out, size_t cap) {
 }
 
 // A status condition applied to a party member (stunned, poisoned, paralysed,
-// feared — whatever the engine echoes in "<target> ist <status>") is a
+// feared — whatever the engine echoes in "<target> is <status>") is a
 // disabling state the player needs to act on, so it shouldn't wait behind
 // queued combat chatter. When `victim` is a party member and `status` is
-// non-empty, speak it as its own interrupting line ("<victim> ist <status>"),
+// non-empty, speak it as its own interrupting line ("<victim> is <status>"),
 // like a kill, and return true so the caller drops the status from the
 // queued damage/effect line. The status word is moved, not duplicated.
 bool MaybeSpeakStatusUrgent(const char* victim, const char* status) {
@@ -762,7 +762,7 @@ bool RuleSchaden(const char* text) {
     return true;
 }
 
-// "Auswirkungsstatistik:<target> ist <status>" — the engine's trailing status
+// "Effect Application Breakdown:<target> is <status>" — the engine's trailing status
 // echo. Two cases:
 //   * A force power applied it: an effect slot for <target> already exists —
 //     attach the status so the merged effect line speaks it.
@@ -787,13 +787,13 @@ bool RuleAuswirkung(const char* text) {
     return true;  // claimed, no speech
 }
 
-// "<actor> benutzt <action>[.  Investierte Machtpunkte: ...]" — a power/grenade
+// "<actor> uses <action>[. ...]" — a power/grenade
 // /item use. Record it for effect attribution, and speak a shortened cue
-// (dropping the Machtpunkte math) only for the party's own casts/throws —
+// (dropping the Force point math) only for the party's own casts/throws —
 // incoming enemy powers announce via their effect line instead.
 bool RuleAbilityUse(const char* text) {
     const auto& L = acc::combat::loc::Get();
-    const char* m = strstr(text, L.ability_use_marker);   // " benutzt "
+    const char* m = strstr(text, L.ability_use_marker);   // " uses "
     if (!m) return false;
     char actor[96];
     CopyRange(actor, sizeof(actor), text, m);
@@ -822,11 +822,11 @@ bool RuleAbilityUse(const char* text) {
     return true;  // claimed (suppress the verbose raw use line)
 }
 
-// "<saver> <SaveType>-Rettungswurf. Erfolg!|Misserfolg! ..." — buffer the
+// "<saver> <SaveType> Save. success!|failure! ..." — buffer the
 // outcome into the saver's effect slot; flushed merged on the debounce.
 bool RuleSaveThrow(const char* text) {
     const auto& L = acc::combat::loc::Get();
-    const char* sm = strstr(text, L.save_marker);   // "-Rettungswurf."
+    const char* sm = strstr(text, L.save_marker);   // " Save. "
     if (!sm) return false;
     const char* ts = sm;
     while (ts > text && ts[-1] != ' ') --ts;        // start of the SaveType word
@@ -850,10 +850,10 @@ bool RuleSaveThrow(const char* text) {
     return true;
 }
 
-// "<actor> verletzt <target>: N Schaden (Type: N)" — direct/ability damage.
+// "<actor> damages <target>: N damage (Type: N)" — direct/ability damage.
 bool RuleDirectDamage(const char* text) {
     const auto& L = acc::combat::loc::Get();
-    const char* dm = strstr(text, L.damage_marker);  // " verletzt "
+    const char* dm = strstr(text, L.damage_marker);  // " damages "
     if (!dm) return false;
     char actor[96];
     CopyRange(actor, sizeof(actor), text, dm);
@@ -897,13 +897,13 @@ void BuildEffectLine(const EffectTarget& e, char* out, size_t cap) {
         if (e.dmg_type[0]) snprintf(dmg_clause, sizeof(dmg_clause), "%d %s", e.dmg, e.dmg_type);
         else               snprintf(dmg_clause, sizeof(dmg_clause), "%d", e.dmg);
     }
-    char von_action[120] = "";   // " von <action>"
+    char von_action[120] = "";   // " from <action>"
     if (e.action[0]) snprintf(von_action, sizeof(von_action), " %s %s", L.word_von, e.action);
     char action_only[110] = "";  // " <action>"
     if (e.action[0]) snprintf(action_only, sizeof(action_only), " %s", e.action);
 
     if (e.has_save && e.saved) {
-        // Resisted: "<target> widersteht <action>[, <dmg>], <SaveType>"
+        // Resisted: "<target> resists <action>[, <dmg>], <SaveType>"
         if (dmg_clause[0])
             snprintf(out, cap, "%s %s%s, %s, %s",
                      e.target, L.word_resists, action_only, dmg_clause, e.save_type);
@@ -911,7 +911,7 @@ void BuildEffectLine(const EffectTarget& e, char* out, size_t cap) {
             snprintf(out, cap, "%s %s%s, %s",
                      e.target, L.word_resists, action_only, e.save_type);
     } else if (e.has_save && !e.saved) {
-        // Failed save: damage and/or status, tagged "<SaveType> misslungen".
+        // Failed save: damage and/or status, tagged "<SaveType> failed".
         if (dmg_clause[0] && e.status[0])
             snprintf(out, cap, "%s: %s%s, %s, %s %s",
                      e.target, dmg_clause, von_action, e.status, e.save_type, L.word_save_failed);
@@ -925,7 +925,7 @@ void BuildEffectLine(const EffectTarget& e, char* out, size_t cap) {
             snprintf(out, cap, "%s%s, %s %s",
                      e.target, action_only, e.save_type, L.word_save_failed);
     } else {
-        // No save (direct damage / status): "<target>: <dmg> von <action>[, <status>]"
+        // No save (direct damage / status): "<target>: <dmg> from <action>[, <status>]"
         char status_clause[80] = "";
         if (e.status[0]) snprintf(status_clause, sizeof(status_clause), ", %s", e.status);
         if (dmg_clause[0])
@@ -949,7 +949,7 @@ void FlushEffect(EffectTarget& e) {
         auto& r = acc::msg::Router::Instance();
         // Suppress ONLY a positively-identified NPC-vs-NPC effect: a known
         // non-party caster acting on a non-party target. An unknown caster
-        // (powers that emit no "benutzt" line — e.g. a Betäuben queued during
+        // (powers that emit no " uses " line — e.g. a Stun queued during
         // pause) defaults to announce: in the player's own fight an
         // unattributed effect is almost always something we caused.
         bool caster_is_party = (e.caster[0] && IsPartyMember(e.caster));
@@ -1001,8 +1001,8 @@ bool RuleAbsorb(const char* text) {
     memcpy(namepart, text, nlen);
     namepart[nlen] = '\0';
 
-    // Normalize the damage-resistance variant ("<name> : Schadensresistenz
-    // absorbiert ...") to the bare "<name> " the energy-shield lines use:
+    // Normalize the damage-resistance variant ("<name> : Damage Resistance
+    // absorbs ...") to the bare "<name> " the energy-shield lines use:
     // cut at the " : " separator, keeping the name's trailing space. Both
     // sources then share one burst key — they fire together for the same
     // volley — and the engine's odd colon phrasing never reaches speech.
@@ -1012,7 +1012,7 @@ bool RuleAbsorb(const char* text) {
     }
 
     char suffix[64];
-    const char* cut = strstr(numEnd, " :");        // drop "...: M Punkte verbleiben"
+    const char* cut = strstr(numEnd, " :");        // drop "...: M points remaining"
     const char* e   = cut ? cut : numEnd + strlen(numEnd);
     size_t slen = (size_t)(e - numEnd);
     if (slen >= sizeof(suffix)) slen = sizeof(suffix) - 1;
@@ -1033,8 +1033,8 @@ bool RuleAbsorb(const char* text) {
     return true;  // claimed
 }
 
-// Flush one deflection slot as a single spoken line ("<actor> reflektiert
-// N Schüsse"). Party deflectors only; an NPC deflecting our shots is the
+// Flush one deflection slot as a single spoken line ("<actor> deflects
+// N shots"). Party deflectors only; an NPC deflecting our shots is the
 // same information the suppressed miss line already carried, so it stays
 // log-only.
 void FlushDeflect(DeflectSlot& s) {
@@ -1053,10 +1053,10 @@ void FlushDeflect(DeflectSlot& s) {
     s = {};
 }
 
-// "Reflexionsstatistik: <actor> reflektiert Projektil mit N = <roll math>
-// gegen Angriff N" — one full breakdown per deflected pellet. Claim it,
+// "Deflection Breakdown: <actor> deflects projectile with N = <roll math>
+// vs. attack N" — one full breakdown per deflected pellet. Claim it,
 // count per actor, flush via TickCombatDeflect. The matching miss summary
-// ("... Reflektiert!") is already suppressed with all plain misses, so this
+// ("... Deflected!") is already suppressed with all plain misses, so this
 // burst line is the only audible trace of deflection — by design one line
 // per volley instead of one per pellet.
 bool RuleDeflect(const char* text) {
@@ -1102,8 +1102,8 @@ bool RuleDeflect(const char* text) {
 
 // Bedrohungsstatistik is the critical-hit *confirmation* roll. Its only
 // actionable outcome — did the hit crit — is already carried by the summary's
-// "Kritischer Treffer!" tag, which the merged attack line speaks as
-// ", kritisch". The roll math (threat range, confirmation attack vs defense)
+// "Critical Hit!" tag, which the merged attack line speaks as
+// ", critical". The roll math (threat range, confirmation attack vs defense)
 // is review-log detail, so claim + suppress it instead of speaking it raw.
 bool RuleBedrohung(const char* text) {
     const auto& L = acc::combat::loc::Get();
@@ -1111,7 +1111,7 @@ bool RuleBedrohung(const char* text) {
     return true;  // claimed, no speech
 }
 
-// "<actor> neutralisiert <target>: N EPs" — a defeat. Spoken verbatim and
+// "<actor> killed <target>: N XP" — a defeat. Spoken verbatim and
 // interrupting, so a kill cuts through queued combat chatter instead of
 // waiting behind it.
 bool RuleKill(const char* text) {
@@ -1121,7 +1121,7 @@ bool RuleKill(const char* text) {
 }
 
 // Mine-detection feedback enrichment. The engine line (TLK 42132,
-// "<detector> entdeckt <Minenname>: Bewusstsein <roll> gegen SK <dc>")
+// "<detector> detects <mine>: Awareness <roll> vs DC <dc>")
 // tells the player a mine exists but not WHERE — sighted players see the
 // red ground overlay appear at the same moment. trap_watch records every
 // fresh party mine detection (name + position); when a message-buffer
@@ -1130,7 +1130,7 @@ bool RuleKill(const char* text) {
 // keep the text up to the roll-math colon (the math is review-log
 // detail, same reasoning as RuleBedrohung) and append clock direction +
 // distance via the shared announce format:
-//   "Jolee entdeckt Normale Blitzmine, auf 2 Uhr, 6 Meter"
+//   "<detect line>, 2 o'clock, 6 metres"
 bool RuleMineDetect(const char* text) {
     char   mineName[96];
     Vector minePos;
@@ -1182,7 +1182,7 @@ bool RuleMineDetect(const char* text) {
 
 void OnUnmatched(const char* /*text*/) {
     // Unknown mid-block line is a clean boundary — emit whatever
-    // breakdown we have (typically a miss whose Schadensstatistik
+    // breakdown we have (typically a miss whose Damage Breakdown
     // never arrives) before the router speaks the new line raw.
     if (g_pending.has_summary) FlushPending();
 }
@@ -1192,7 +1192,7 @@ void OnUnmatched(const char* /*text*/) {
 void RegisterCombatMsgRules() {
     auto& r = acc::msg::Router::Instance();
     // Mine-detect first: it only activates while a fresh detection is
-    // queued (cheap peek), and its line shape ("<actor> entdeckt <mine>:
+    // queued (cheap peek), and its line shape ("<actor> detects <mine>:
     // ...") must not fall through to the generic rules.
     r.AddRule("CombatMineDetect", RuleMineDetect);
     r.AddRule("CombatSummary",   RuleSummary);

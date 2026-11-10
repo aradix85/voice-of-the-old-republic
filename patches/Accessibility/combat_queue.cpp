@@ -14,9 +14,9 @@
 #include "engine_subscreen.h" // Begin/EndOverlayPause — freeze the world while open
                               // GetPlayerCharacterName
 #include "examine_view.h"     // ResolveFeatName — decode type=11 entries to
-                              // their specific feat name (e.g. "Starke
-                              // Explosion") instead of the generic
-                              // "Talent einsetzen" verb
+                              // their specific feat name (e.g. "Power
+                              // Attack") instead of the generic
+                              // "Use talent" verb
 #include "hotkeys.h"
 #include "log.h"
 #include "same_name_suffix.h" // AppendSuffix for same-LocName disambiguator
@@ -171,9 +171,8 @@ void* GetQueueAction(void* combatRound, int index) {
 //                                                    Flurry / etc.)
 //
 // QueueVerbUseTalent serves as our "Use Feat" word since the existing
-// table already groups feat/talent activations under that ID (TSL
-// renamed them "talents" anyway, and the German "Talent einsetzen"
-// reads correctly for both feats and force-power adjacent talents).
+// table already groups feat activations under that ID and the word
+// reads correctly for both feats and force-power adjacent feats.
 acc::strings::Id VerbForActionType(unsigned char actionType) {
     switch (actionType) {
         case 1:  return acc::strings::Id::QueueVerbAttack;
@@ -254,7 +253,7 @@ uint32_t ReadActionItemHandle(void* action) {
 // Built at Open() and rebuilt after every mutation (remove / clear).
 //
 // The controlled creature is added first via GetPlayerServerCreature
-// (the same path the "Platz N" announce uses). The remaining party
+// (the same path the "position N" announce uses). The remaining party
 // members come from CSWPartyTable.pt_member_ids via GetPartyMembers —
 // those are NPC *roster* slots (companions); the PC is not a roster NPC
 // and never appears there, which is why the player's own queue must be
@@ -303,7 +302,7 @@ int BuildRows() {
     g_state.count = 0;
 
     // The controlled creature's queue comes FIRST, via GetPlayerServer
-    // creature — the same accessor CountPlayerEntries (the "Platz N"
+    // creature — the same accessor CountPlayerEntries (the "position N"
     // announce) uses. This is the only path that reliably reaches the
     // player's own combat round: the party-table walk below resolves NPC
     // *roster* slots (companions), and the PC is not a roster NPC, so it
@@ -373,7 +372,7 @@ int BuildRows() {
 
 // Build the spoken label for a queued action node: the SPECIFIC ability name
 // for force powers / items / feats (type 9/10/11), else the generic verb
-// ("Angriff" / "Talent einsetzen" / ...). Shared by SpeakRow (Shift+H review)
+// ("Attack" / "Use Feat" / ...). Shared by SpeakRow (Shift+H review)
 // and OnEngineActionAdded (the live queue announce) so both name a queued
 // entry identically.
 //   type=9  (Force power) — spell_id @+0x24 → CSWSpell::GetSpellNameText
@@ -546,8 +545,8 @@ int CountPlayerEntries() {
     // Read the engine's authoritative count field at
     // CSWSCombatRound.actions->internal->count. This matches the value
     // CSWSCombatRound::AddAction's cap check inspects (`if (3 < count)`)
-    // so "Platz N" lines up 1:1 with what the engine considers slot N
-    // and "Warteschlange voll" fires the same press the engine would
+    // so "position N" lines up 1:1 with what the engine considers slot N
+    // and "queue full" fires the same press the engine would
     // free the node.
     //
     // We deliberately bypass the 0xFF-placeholder filter that
@@ -555,7 +554,7 @@ int CountPlayerEntries() {
     // placeholder slot is part of the engine's queue from the cap-
     // mechanic's point of view; filtering it produces off-by-one
     // announcements where the first press in a fresh combat reads as
-    // "eingesetzt" (filtered count still 0 while the engine already
+    // "used" (filtered count still 0 while the engine already
     // sees count 1).
     void* server = acc::engine::GetPlayerServerCreature();
     if (!server) return 0;
@@ -651,7 +650,7 @@ void OnEngineActionAdded(void* combatRound, void* action) {
 
     // Pre-add count (detour fires at function entry, before the node is
     // inserted). Engine cap is `if (3 < count)`: 0..3 accept → slot count+1,
-    // >=4 reject → "Warteschlange voll".
+    // >=4 reject → "queue full".
     int preCount = RawRoundCount(combatRound);
     if (preCount < 0) return;
 

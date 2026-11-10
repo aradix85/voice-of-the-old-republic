@@ -16,20 +16,20 @@ namespace acc::menus::listbox {
 namespace {
 
 // ============================================================================
-// ScriptSelect — the character sheet's "Kurzbefehle" combat-behaviour picker
+// ScriptSelect — the character sheet's "Shortcuts" combat-behaviour picker
 // (CSWGuiScriptSelect). A single ai_state_list_box (id 0) holds 3
 // CSWGuiButtonToggle rows (the AI presets). It is single-select: the panel's
 // confirm handler reads GetSelectedControl(&ai_state_list_box) and writes the
 // one chosen row's value into creature_stats->ai_state.
 //
 // Engine semantics (decompiled CSWGuiScriptSelect::HandleInputEvent): the
-// activate code 0x27 (our Enter) IS the "Wählen"/confirm action — it applies
-// the selected row and pops+destroys the panel; 0x28 (Esc) is "Abbrechen"
+// activate code 0x27 (our Enter) IS the "Choose"/confirm action — it applies
+// the selected row and pops+destroys the panel; 0x28 (Esc) is "Cancel"
 // (close without applying). There is no per-row toggle action, so we drive it
 // as a select-then-confirm listbox: Up/Down move the listbox selection (which
-// is what Wählen reads), Enter routes to BTN_WAEHLEN, Esc to BTN_ABBRECHEN.
+// is what Choose reads), Enter routes to BTN_WAEHLEN, Esc to BTN_ABBRECHEN.
 //
-// The toggle rows render a localized on/off suffix ("Standardangriff, ein").
+// The toggle rows render an on/off suffix ("<preset>, on").
 // That suffix tracks the committed state at panel open, not the pending
 // selection (DriveListBoxSelection bypasses the engine's onSelectionChanged
 // redraw — same caveat as SaveLoad's preview labels), so the announce strips
@@ -48,7 +48,7 @@ constexpr size_t kScriptSelectOptionDescOffset  = 0;
 // PowersLevelUp (pwrlvlup.gui) is NOT a flat listbox despite the
 // "powers_listbox" name in the SARIF struct. Its rows are CSWGuiSkillFlow
 // tree-rows with up to 3 cells per row (base / improved / master variants),
-// identical in shape to the chargen Talente chart. A ListBoxPanelSpec can't
+// identical in shape to the chargen Feats chart. A ListBoxPanelSpec can't
 // represent that 2D structure — Up/Down would only change row, not column,
 // and the row text via FromControl returns empty because the row IS a
 // CSWGuiSkillFlow with no rendered label. Handled in menus_powers_levelup.cpp
@@ -56,13 +56,13 @@ constexpr size_t kScriptSelectOptionDescOffset  = 0;
 // AnnouncePanelTitle path in menus.cpp.
 
 // ============================================================================
-// Examine — CSWGuiExamine panel opened by Ö. Listbox is the embedded
+// Examine — CSWGuiExamine panel opened by ExamineOpen. Listbox is the embedded
 // CSWGuiMessageBox.listbox_message at +0x67c. The engine populates the
 // rows from a local object cache when ShowExamineBox(handle, 0) is called
 // (vtable[27] on the listbox does the populate-from-object — verified
 // from the ShowExamineBox decomp). Up/Down speak each row;
 // Enter / Esc let the engine's HandleInputEvent handle close natively
-// (Schliess. and Abbrechen buttons both call HideExamineBox).
+// (Close and Cancel buttons both call HideExamineBox).
 // ============================================================================
 
 bool ExamineMatches(void* p) {
@@ -92,7 +92,7 @@ void* ScriptSelectFindLb(void* p) {
     return ScriptSelectPanelAiStateListBox(p);
 }
 
-// Speak the behaviour name + position, dropping the toggle's ", ein"/", aus"
+// Speak the behaviour name + position, dropping the toggle's ", on"/", off"
 // state suffix. Strip at the last ", " only when the trailing token is a
 // single word (no space) — the localized on/off markers always are, while a
 // future behaviour name containing ", " (with multi-word tail) is left intact.
@@ -155,7 +155,7 @@ void ScriptSelectEnrichRow(void* panel, const ListBoxNavResult& r) {
     }
 }
 
-// Enter → Wählen: applies the selected ai_state and closes. Esc → Abbrechen:
+// Enter → Choose: applies the selected ai_state and closes. Esc → Cancel:
 // closes without applying. Both are plain CSWGuiButtons; activating them
 // drives the panel's confirm/cancel path (engine codes 0x2d / 0x2e), which
 // reads the same selection_index DriveListBoxSelection writes.
@@ -202,7 +202,7 @@ constexpr ListBoxPanelSpec kScriptSelectSpec = {
     /*logExtra*/                nullptr,
     /*onEnter*/                 ScriptSelectOnEnter,
     /*onEsc*/                   ScriptSelectOnEsc,
-    /*titleOverride*/           nullptr,             // real "Kurzbefehl-Auswahl" label
+    /*titleOverride*/           nullptr,             // real "Shortcut Selection" label
     /*emptyStateId*/            acc::strings::Id::Count_,  // always 3 presets
     /*alwaysReturnFromHandler*/ true,                // self-contained modal popup
 };

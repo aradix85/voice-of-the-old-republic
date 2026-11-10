@@ -56,7 +56,7 @@ enum class Action : int {
     TargetActionOpen2,     // Shift+2
     TargetActionOpen3,     // Shift+3
     LevelUpOpen,           // Shift+L
-    ExamineOpen,           // Ö (bare)
+    ExamineOpen,           // unbound by default
     CombatQueueOpen,       // Shift+H
     SelfStatusAnnounce,    // H — leader HP / effects / equipped weapon
 

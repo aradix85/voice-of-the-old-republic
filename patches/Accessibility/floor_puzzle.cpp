@@ -128,7 +128,7 @@ void ResetAreaState() {
 
 // ---- Naming -----------------------------------------------------------------
 
-// Short name: the bare direction word ("Nord-West", "Mitte") used inside
+// Short name: the bare direction word ("North-West", "Center") used inside
 // delta lists; kResetIndex gets the full reset-plate noun.
 const char* ShortName(int idx) {
     if (idx == kResetIndex) return Get(Id::PlateResetName);
@@ -136,7 +136,7 @@ const char* ShortName(int idx) {
     return Get(kPlateWord[idx]);
 }
 
-// Full name: "Platte <word>" for grid plates, the reset noun as-is.
+// Full name: "Plate <word>" for grid plates, the reset noun as-is.
 std::string FullName(int idx) {
     if (idx == kResetIndex) return std::string(Get(Id::PlateResetName));
     return acc::strfmt::Format(Get(Id::FmtPlateName), ShortName(idx));
@@ -183,15 +183,15 @@ float DistToPlate(const Plate& p, float x, float y) {
     return best;
 }
 
-// World-cardinal offsets to the plate's AREA, e.g. "2 Meter Nord" —
+// World-cardinal offsets to the plate's AREA, e.g. "2 metres north" —
 // per user direction the puzzle is walked with cardinal stutter-steps
 // (align north once, then forward/back + strafe), and the player aims
 // at the plate as a whole, not its centre point. An axis is spoken only
 // when the player is OUTSIDE the plate's span on that axis, measured to
 // the near edge of the span. Standing anywhere in the gap beside a
-// plate therefore yields a single word ("1 Meter Nord" = one step
+// plate therefore yields a single word ("1 metre north" = one step
 // north lands on it); the earlier centre-based version reported a
-// diagonal ("1 Meter Nord, 1 Meter Ost") from the same spot, which
+// diagonal ("1 metre north, 1 metre east") from the same spot, which
 // read as two moves where one was needed (2026-07-16 session review).
 // Empty when inside both spans (i.e. on the plate).
 std::string AxisPhrase(const Vector& playerPos, const Plate& p) {
@@ -352,7 +352,7 @@ void SpeakIntro(const Vector& playerPos) {
 }
 
 // Itemized flip list, phrased as the TRANSITION each plate just made
-// ("Nord-West leuchtet auf, West erlischt") + running lit count.
+// ("North-West lights up, West goes dark") + running lit count.
 std::string DeltaText(const bool* flipped, const bool* lit, int litCount) {
     std::string out;
     if (litCount == 0) {
@@ -372,8 +372,8 @@ std::string DeltaText(const bool* flipped, const bool* lit, int litCount) {
 
 // Live board summary spoken on demand (R key). Unlike DeltaText this
 // ignores flips — it names every lit plate plus the count so the player
-// can re-orient at any point ("Nord-West, Mitte, Süd-Ost. 3 von 9
-// leuchten."). Reuses the delta strings; nothing lit -> "all dark".
+// can re-orient at any point ("North-West, Center, South-East. 3 of 9
+// lit."). Reuses the delta strings; nothing lit -> "all dark".
 std::string BoardStateText(const bool* lit, int litCount) {
     if (litCount == 0) return std::string(Get(Id::PlatesAllDark));
     std::string out;
@@ -390,7 +390,7 @@ std::string BoardStateText(const bool* lit, int litCount) {
 // Board-navigation position: the view-mode virtual cursor when view mode
 // is active, otherwise the real party leader. In view mode the leader is
 // frozen in place, so without this the distance/entry stream would never
-// move; feeding it the cursor lets "Platte X betreten" and the nearest-
+// move; feeding it the cursor lets "Stepped on Plate X" and the nearest-
 // plate offsets track where the player is scanning. The cursor never steps
 // on a plate, so no lit/dark toggle — and thus no delta — can fire off it.
 bool GetNavPosition(Vector& out) {

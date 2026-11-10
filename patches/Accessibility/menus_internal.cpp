@@ -108,7 +108,7 @@ bool acc::menus::detail::GetControlCenter(void* control, int& outCx, int& outCy)
 // CharButton / ActivatedButton / ButtonToggle) OR a CSWGuiSlider.
 // MoveMouseToPosition's hover→active promotion path is safe for buttons but
 // crashes when the active control is a label (verified: navigating onto the
-// main-menu "Neue Inhalte verfügbar…" label froze the game). Sliders are
+// main-menu "New content available…" label froze the game). Sliders are
 // included because Sound's Music/Voice/SFX/Movie controls are real sliders
 // and we want chain navigation to land on them so we can announce their
 // numeric value.
@@ -420,7 +420,7 @@ void* acc::menus::detail::ContainerPanelGiveItemsButton(void* panel) {
 // BTN_BACK id 12 lands on K2's LB_FEATS listbox, which is what made the
 // old id table mis-fire on KOTOR 2 (patch-20260803-011930.log: reading a
 // listbox as a button spoke a stray str_ref and Enter activated the
-// listbox instead of Abbrechen).
+// listbox instead of Cancel).
 void* acc::menus::detail::FeatsPanelAcceptButton(void* panel) {
     return PanelMemberWithTripwire(panel, kFeatsCharGenAcceptButtonOffset,
                                    acc::game::IsKotor2() ? 10 : 11,
@@ -588,7 +588,7 @@ int acc::menus::detail::UpgradeSlotIndexFromButton(void* panel,
     return idx < UpgradeSlotButtonCount() ? idx : -1;
 }
 
-// Detect the CSWGuiSaveLoad panel (the "Spiel laden" / "Spiel speichern"
+// Detect the CSWGuiSaveLoad panel (the "Load Game" / "Save Game"
 // dialog). The panel is allocated dynamically when the user activates the
 // load/save action, has no slot in CGuiInGame, and so doesn't show up via
 // the slot table — but it carries its own vtable, and for a dynamically

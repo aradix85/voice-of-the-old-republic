@@ -1,4 +1,4 @@
-// chargen Fähigkeiten panel tweaks.
+// chargen Skills panel tweaks.
 // See menus_chargen_skills.h for the design rationale.
 
 #include <windows.h>

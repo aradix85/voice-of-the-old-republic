@@ -39,23 +39,23 @@ constexpr int   kRoomMinMidRays   = 3;
 //
 // Measured: it fires where small rooms are (Ebon Hawk 21, Apartments 9) and
 // not outdoors (Slums 3).
-// Area geometry cue: the only shape we speak for a "Bereich" is its long
+// Area geometry cue: the only shape we speak for a "Area" is its long
 // axis, and only when the space is clearly elongated. At the cluster
 // centroid the full extent across each of the 4 axes is the sum of its
 // two opposite rays; the space is "elongated" when the longest axis
 // exceeds kAxisElongRatio × the perpendicular one. Square / round / open
-// spaces fall below the ratio and get no axis word (just "Bereich").
+// spaces fall below the ratio and get no axis word (just "Area").
 constexpr float kAxisElongRatio = 1.8f;
 
 // Zone-scale hub threshold: a merged junction web (3+ external exits,
 // no open/room member) whose member-node bounding box exceeds this
-// renders through the area path ("Bereich. Ausgänge: ...") instead of
-// "Kreuzung". The word "Kreuzung" promises a decision point a few steps
-// wide; the Lehon Südlicher Strand rock-web cluster spans 46m and its
+// renders through the area path ("Area. exits: ...") instead of
+// "junction". The word "junction" promises a decision point a few steps
+// wide; the Lehon Southern Strand rock-web cluster spans 46m and its
 // re-announcement on every re-entry from a fringe channel read as
 // discovering a new crossing each time — four phantom crossings in 80s.
 // Step-scale merged hubs (double junctions, ~5m) stay
-// Kreuzung. Sized between the biggest legitimate crossing (<10m) and
+// junction. Sized between the biggest legitimate crossing (<10m) and
 // the smallest observed zone-web (46m); node-bbox under-reads true
 // footprint, so 15m of node spread is already a place, not a point.
 constexpr float kJunctionZoneExtentMeters = 15.0f;
@@ -66,7 +66,7 @@ constexpr float kJunctionZoneExtentMeters = 15.0f;
 // min-side test is the discriminator: vanilla hallways run 2.5-3m wide,
 // so anything sprawling past this in its SHORT dimension is a field,
 // not a run. Sized well above corridor width and below the observed
-// fields (hull Backbord deck 10.6m, comb 7.1m) so both read as places
+// fields (hull port deck 10.6m, comb 7.1m) so both read as places
 // while hallways keep their corridor voice.
 constexpr float kZoneMinWidthM = 6.0f;
 
@@ -120,8 +120,8 @@ void ComputeNodeShapeFeatures(const acc::engine::navgraph::NavGraphSnapshot& g,
         // single-nearest-endpoint lift that lived here: when a door
         // opening dropped the nearest wall from the cache, the lift
         // latched onto a multi-storey anomaly edge 4m overhead and the
-        // all-clear probe reclassified a Sackgasse pocket as open space
-        // (Minenschächte node 76).
+        // all-clear probe reclassified a dead end pocket as open space
+        // (mine shafts node 76).
         probePos.z = acc::wall_probe::ResolveProbeZ(cw, cwCount, probePos);
         nodeFloorZ[i] = probePos.z;
         float r[8];
@@ -210,7 +210,7 @@ void ComputeNodeShapeFeatures(const acc::engine::navgraph::NavGraphSnapshot& g,
     // guard. Computed in Pass 3 it arrived after every merge had run,
     // so a rejected dead-end could not be un-clustered — that is what
     // the "filtered / rescue-only" flag was papering over, and what let
-    // three interconnected hull lanes stand as silent ghost Sackgassen
+    // three interconnected hull lanes stand as silent ghost dead ends
     // (Ebon-Hawk 002ebo). Computed here, the merge passes can consume it.
     //
     // The probe runs from the NODE along its single graph edge. The old
@@ -242,7 +242,7 @@ void ComputeNodeShapeFeatures(const acc::engine::navgraph::NavGraphSnapshot& g,
 
 // Long-axis test for an area cluster: is the space clearly elongated,
 // and along which axis word? Returns false (no axis) for roughly
-// square / round / open spaces — those speak as a bare "Bereich". The
+// square / round / open spaces — those speak as a bare "Area". The
 // axis is the only geometry cue we surface; there is no size.
 //
 // memberExt: the cluster's per-axis extents (index 0=E-W, 1=NE-SW,
@@ -250,11 +250,11 @@ void ComputeNodeShapeFeatures(const acc::engine::navgraph::NavGraphSnapshot& g,
 // probes (ComputeNodeShapeFeatures). Preferred over a single probe at
 // the centroid, which is what this used to be: the centroid of a
 // corridor sits mid-run, and mid-run is exactly where a crossing
-// corridor opens up. Citadel Station Wohnmodul 082 Ost,
+// corridor opens up. Citadel Station Wohnmodul 082 East,
 // the Apartmentkomplex-C corridor: 11 nodes spanning 23m east-west,
 // 9 of them boxed to ~9m north-south, but the centroid landed on the
 // entrance corridor crossing it and its N-S rays ran 50m through the
-// door — "Bereich Nord-Süd" for a corridor you walk east-west. The
+// door — "Area North-South" for a corridor you walk east-west. The
 // median ignores the two crossing members. nullptr falls back to the
 // centroid probe (no per-node data — wall cache missing at feature
 // time, in which case the probe here fails the same way).
@@ -284,7 +284,7 @@ bool ComputeCentroidAxis(const Vector& centroid, float floorZ,
     for (int a = 1; a < 4; ++a) if (ext[a] > ext[longA]) longA = a;
     int perpA = (longA + 2) % 4;  // 90° away
     // ext[longA] > 0 guards the all-zero case (per-node data never
-    // computed) — 0 >= 1.8 * 0 would otherwise claim an "Ost-West" axis.
+    // computed) — 0 >= 1.8 * 0 would otherwise claim an "East-West" axis.
     bool elong = ext[longA] > 0.0f &&
                  ext[longA] >= kAxisElongRatio * ext[perpA];
     acclog::Write("WallTopo",
@@ -300,16 +300,16 @@ bool ComputeCentroidAxis(const Vector& centroid, float floorZ,
     switch (longA) {
         case 0: outAxisId = Id::AxisEastWest;   break;
         case 2: outAxisId = Id::AxisNorthSouth; break;
-        case 1: outAxisId = BitToOctant(1);     break;  // NE-SW → "Nord-Ost"
-        case 3: outAxisId = BitToOctant(3);     break;  // NW-SE → "Nord-West"
+        case 1: outAxisId = BitToOctant(1);     break;  // NE-SW → "North-East"
+        case 3: outAxisId = BitToOctant(3);     break;  // NW-SE → "North-West"
     }
     return true;
 }
 
 // The two opposite octant bits an elongation axis covers, or 0 for a
-// non-axis Id. Used to drop a redundant exit list: an "Ost-West" area whose
-// only exits are exactly Ost + West has an exit list that just echoes the
-// axis word, so we speak "Bereich Ost-West" alone. The four values mirror
+// non-axis Id. Used to drop a redundant exit list: an "East-West" area whose
+// only exits are exactly East + West has an exit list that just echoes the
+// axis word, so we speak "Area East-West" alone. The four values mirror
 // the axisId cases ComputeCentroidAxis can emit.
 int AxisOctantMask(acc::strings::Id axisId) {
     using acc::strings::Id;
@@ -415,12 +415,12 @@ void PassClassifyClusters(void* area,
         // outside node only register once. Capture the source cluster
         // member alongside the nb so ClassifyCluster's door-on-edge
         // test can use the ACTUAL graph edge (member.pos → nb.pos)
-        // rather than the centroid → nb.pos blur. For multi-node Platz
+        // rather than the centroid → nb.pos blur. For multi-node plaza
         // clusters the centroid is a synthesized midpoint between
         // members; testing perpendicular distance from that midpoint
         // matches doors that aren't on any real graph edge, which is
-        // why the Upper-City plaza was lighting up with "Tür Nord, Tür
-        // Ost, Tür Süd, Tür West" all at once.
+        // why the Upper-City plaza was lighting up with "Door North, Door
+        // East, Door South, Door West" all at once.
         //
         // Edge-class filtering: each member→nb graph edge runs through
         // ClassifyEdge (the unified wall + door primitive). Blocked
@@ -493,18 +493,18 @@ void PassClassifyClusters(void* area,
         }
 
         // Announce decision — now independent of how the cluster merged.
-        // A cluster speaks as "Bereich" only when the clearance probe says
+        // A cluster speaks as "Area" only when the clearance probe says
         // it is a PLACE: any open-class member, a multi-node room cluster,
         // or an isolated cluster with no exits. Everything else takes the
         // graph path and is voiced by its exit topology — a tight merged
-        // hub with no open/room geometry reads as "Kreuzung", a degree-2
-        // run as "Korridor", a single exit as "Sackgasse". This is what
+        // hub with no open/room geometry reads as "junction", a degree-2
+        // run as "corridor", a single exit as "dead end". This is what
         // keeps junctions sounding like junctions and corridors like
         // corridors even though they merge by the same space rule.
         //
         // The old "size>1 && externalCount>=3 → area" clause was dropped on
         // purpose: a merged corridor-junction hub (space-class by degree
-        // alone) must stay a Kreuzung, not become a Bereich.
+        // alone) must stay a junction, not become a Area.
         //   - any open-class member       → big area (delayed)
         //   - multi-node room cluster      → room  (immediate)
         //   - isolated cluster (no exits)  → area (open/room by flag)
@@ -515,28 +515,28 @@ void PassClassifyClusters(void* area,
 
         // Zone-scale refinement of that dropped clause: a junction web
         // whose footprint exceeds kJunctionZoneExtentMeters is a place,
-        // not a crossing — render it as a Bereich (see the constant's
+        // not a crossing — render it as a Area (see the constant's
         // comment for the Lehon evidence). externalCount >= 3 keeps
         // long merged corridor CHAINS (2 exits, routinely >15m) and
         // dead-end runs out of the override; small merged hubs stay
-        // Kreuzung per the original decision.
+        // junction per the original decision.
         // Zone-scale rule, one statement for every exit count: a cluster
         // whose member footprint is zone-scale is a PLACE, and renders
-        // through the area path ("Bereich [axis]. Ausgänge: …") rather
+        // through the area path ("Area [axis]. exits: …") rather
         // than the crossing / run / cul-de-sac vocabulary, which all
         // promise something a few steps wide.
         //
         // Two ways to qualify, and the difference is only about what
         // protects long hallways:
         //   - 3+ exits: a junction web that big is a plaza whatever its
-        //     shape (Lehon Südlicher Strand, 46m, re-announced as a new
+        //     shape (Lehon Southern Strand, 46m, re-announced as a new
         //     crossing from every fringe channel).
         //   - 1-2 exits: must be big in BOTH dimensions, because a real
         //     corridor is long and NARROW (2.5-3m in vanilla content) —
         //     the min-side test is what keeps hallways sounding like
         //     hallways. Covers the one-exit case too: the Ebon-Hawk
-        //     Backbord deck is a 34-node field with a single ramp out,
-        //     and calling that "Sackgasse" hid a space you walk around
+        //     port deck is a 34-node field with a single ramp out,
+        //     and calling that "dead end" hid a space you walk around
         //     in — you have to cross it to reach the Protonenraketen.
         if (areaHint == 0 && bboxExtent >= kJunctionZoneExtentMeters &&
             (externalCount >= 3 || bboxMinSide >= kZoneMinWidthM)) {

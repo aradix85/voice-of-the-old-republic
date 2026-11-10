@@ -97,7 +97,7 @@ const StateOverride kOverrides[] = {
     {"sta_plc_captive6", kLocalBoolWordOffset, kCaptiveJediLabels, kLocalBoolUsedMask},
     {"sta_plc_captive7", kLocalBoolWordOffset, kCaptiveJediLabels, kLocalBoolUsedMask},
     {"sta_plc_captive8", kLocalBoolWordOffset, kCaptiveJediLabels, kLocalBoolUsedMask},
-    // Battle-droid terminals, Star Forge decks (Terminal Typ A/D/E/F + MK).
+    // Battle-droid terminals, Star Forge decks (Terminal Type A/D/E/F + MK).
     {"k45_plc_assdroid", kLocalBoolWordOffset, kSfTerminalLabels, kLocalBoolUsedMask},
     {"k45_plc_prbdroid", kLocalBoolWordOffset, kSfTerminalLabels, kLocalBoolUsedMask},
     {"k45_plc_excharge", kLocalBoolWordOffset, kSfTerminalLabels, kLocalBoolUsedMask},

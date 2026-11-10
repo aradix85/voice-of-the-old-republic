@@ -19,7 +19,7 @@ bool ReadControlNameFields(void* control, const char*& outTip,
 // vtable[index](control) as __thiscall.
 //
 // SEH-wrapped: per-tick monitors walk panels[] and call this on every
-// child control. During engine teardown (FireActivate("Spielen") /
+// child control. During engine teardown (FireActivate("Play") /
 // quit-confirm OK) the engine frees children synchronously while the
 // panel pointer can still resolve next tick. The freed control's vtable
 // slot yields garbage; without SEH the deref would crash. Faults map
@@ -47,8 +47,8 @@ bool LookupTlk(uint32_t strref, char* outBuf, size_t bufSize);
 // sides. The compare to reach for whenever engine-RENDERED text is matched
 // against our own LookupTlk resolution of the same strref: the two are not
 // byte-identical, because the engine pads captions when it builds the
-// gui_string. KOTOR 2 renders every close button as " Schliessen" against a
-// TLK that says "Schliessen", which is exactly how a plain strcmp let the
+// gui_string. KOTOR 2 renders every close button as " Close" against a
+// TLK that says "Close", which is exactly how a plain strcmp let the
 // close-button chain filter fail on every K2 sub-screen. (The 0x11 glyph
 // marker that K2 puts ahead of that pad space is NOT whitespace and is not
 // this function's job — ReadGuiString removes it at the read.)
@@ -176,7 +176,7 @@ bool ReadItemPropertyDescription(void* item, char* outBuf, size_t bufSize);
 struct ItemDescriptionBlocks {
     char tags[2048];        // required feats / weapon proficiency / restriction
     char values[2048];      // damage, range, crit, on-hit, attack & defence bonus
-    char properties[4096];  // "Spezial:" special / enchant-style modifications
+    char properties[4096];  // "Special:" special / enchant-style modifications
     char description[4096]; // RPG flavour text
 };
 
@@ -283,7 +283,7 @@ int ReadItemStack(void* item);
 // Resolve the CSWSItem* behind an item-tagged CSWGuiInterfaceAction
 // action_id (high nibble 0x4xxxxxxx, low 28 bits = server game-object id).
 // Returns nullptr for non-item tags / unresolved handles. Lets the action
-// menu read stack + charges for its "Gegenstände" entries the same way
+// menu read stack + charges for its "Items" entries the same way
 // inventory rows do.
 void* ItemFromActionId(uint32_t actionId);
 

@@ -24,7 +24,7 @@ namespace {
 // Windowed net-progress stuck detection (replaced the per-frame 0.3 m/s
 // sample 2026-07-15). Wall contact is not a steady state at frame level:
 // the engine alternates exact dead-stop frames with micro-slide / bounce
-// frames at 1-14 m/s, so any instantaneous threshold flaps (Shyrack-Höhle
+// frames at 1-14 m/s, so any instantaneous threshold flaps (Shyrack cave
 // log: 1250 stuck edges in 38 min, ~60% of footsteps leaking during
 // wall-grinding). Judge NET displacement over a rolling window instead —
 // bounce cancels out, genuine movement accumulates.
@@ -108,7 +108,7 @@ bool     g_stuck_announced         = false;
 // little net progress = oscillating in obstacles.
 // Window raised 4 s → 5 s (and min-path scaled with it) 2026-07-16,
 // same complaint as kStuckWindowMs: the circling path was the actual
-// source of nearly all "Frei:" fires in the 2026-07-16 session logs and
+// source of nearly all "free" fires in the 2026-07-16 session logs and
 // interrupted deliberate tight manoeuvring. Longer window = the player
 // must keep going nowhere for a full 5 s before the probe speaks.
 constexpr uint64_t kCirclingWindowMs       = 5000;   // 5s window

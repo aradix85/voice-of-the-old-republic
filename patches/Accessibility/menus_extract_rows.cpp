@@ -19,7 +19,7 @@ namespace {
 // ---- Pazaak wager popup virtual row --------------------------------------
 // CSWGuiWagerPopup.field13_0xc94 is the live wager (UpdateWagerText writes it
 // to wager_value_label each step). The maximum_label renders
-// "Maximaler Einsatz: M\nCredits: K". We surface a single top-of-chain row
+// "Maximum wager: M\nCredits: K". We surface a single top-of-chain row
 // combining the live wager with that max+credits line — the analogue of the
 // inventory credits row.
 // KOTOR 2: +0xe30, observed in its own CSWGuiWagerPopup::HandleInputEvent
@@ -35,7 +35,7 @@ void* FindWagerMaxLabel(void* panel) {
     return acc::menus::detail::WagerPopupPanelMaximumLabel(panel);
 }
 
-// Format "Einsatz N. Maximaler Einsatz: M, Credits: K" from the live wager
+// Format "Wager N. Maximum wager: M, Credits: K" from the live wager
 // (panel field) + the maximum_label's rendered text (`maxLabel`).
 bool ExtractWagerRow(void* panel, void* maxLabel, char* outBuf, size_t bufSize) {
     if (!panel || !maxLabel || bufSize == 0) return false;
@@ -161,8 +161,8 @@ const char* TryPazaakWager(void* control, void* owner,
     return source;
 }
 
-// Journal quest-items button. The engine renders an unclear German
-// label ("Aus Auftrag"); speak a clearer localized term on focus.
+// Journal quest-items button. The engine's own label is unclear;
+// speak a clearer term on focus.
 // Identified by struct offset (quest_items_button @ +0x8a4). The
 // sub-screen it opens still announces its own LBL_TITLE on entry.
 const char* TryJournalQuestItemsButton(void* control, void* owner,
@@ -181,11 +181,11 @@ const char* TryJournalQuestItemsButton(void* control, void* owner,
 }
 
 // Keyboard-mapping row (CSWGuiKeyMapButton). The row's own button text
-// (action_button at +0) is just the event name ("Vorwärts"); the bound
+// (action_button at +0) is just the event name ("Forward"); the bound
 // key lives in the embedded mapped_key_button at +0x1c8. Compose
 // "{action}: {key}" so the user hears the current binding, and flag
 // non-remappable rows. Gated on the owning panel kind AND the row
-// vtable so the panel's other buttons (filter tabs, OK/Abbrechen) fall
+// vtable so the panel's other buttons (filter tabs, OK/Cancel) fall
 // through to the normal ladder.
 const char* TryKeyBindingRow(void* control, void* owner,
                              char* outBuf, size_t bufSize) {
@@ -229,8 +229,8 @@ const char* TryKeyBindingRow(void* control, void* owner,
 // 0. Per-kind row formatter for virtual chain entries. Runs BEFORE
 //    the standard text-extraction ladder because the formatted
 //    phrase must OVERRIDE the bare label text. lbl_class's inline
-//    CExoString is "Soldat"; the user navigating the stat chain
-//    expects "Klasse: Soldat" with the context word, so without
+//    CExoString is "Soldier"; the user navigating the stat chain
+//    expects "Class: Soldier" with the context word, so without
 //    this early hook the AsLabel path (section 4) would return the
 //    bare value and never reach the per-kind handler.
 //
@@ -266,7 +266,7 @@ void ForEachWagerRowAnchor(void* panel,
     void* maxLabel = FindWagerMaxLabel(panel);
     if (!maxLabel) return;
     // sortCy=1 lands the wager row at the very top of the chain, above the
-    // less/more/Setzen/Beenden buttons (cy 226+) — same placement as credits.
+    // less/more/bet/quit buttons (cy 226+) — same placement as credits.
     callback(maxLabel, /*sortCy=*/1, userData);
 }
 

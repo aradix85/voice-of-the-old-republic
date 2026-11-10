@@ -1,4 +1,4 @@
-// In-game Fähigkeiten screen — see menus_abilities.h for the design rationale.
+// In-game Abilities screen — see menus_abilities.h for the design rationale.
 
 #include <windows.h>
 #include <cstdint>
@@ -288,8 +288,8 @@ void AppendPair(void* panel, size_t labelOff, size_t valueOff,
 // Speak the shown entry: LBL_NAME, plus the rank/bonus/total pairs on every tab
 // EXCEPT Feats. The three label pairs are shared real estate that UpdateView
 // re-purposes per tab:
-//   * Skills (0): Fähigkeitenrang / Bonus / Gesamtrang.
-//   * Powers (1): Basispreis / <alignment> Anp. / Kosten pro Verwendung — the
+//   * Skills (0): rank / bonus / total rank.
+//   * Powers (1): base cost / <alignment> adj. / cost per use — the
 //     force-point cost, the light-or-dark-side adjustment, and the adjusted
 //     total, all written by OnEnterPower. Real data, so we speak it.
 //   * Feats (2): UpdateView HIDES all six controls (clears their visible bit)

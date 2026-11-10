@@ -23,7 +23,7 @@ namespace {
 
 // Snap radius for runtime LookupAt: any player position more than this
 // many world units (KOTOR = metres) from the nearest graph node falls
-// back to the neutral "Bereich" label. 15m matches the typical room-diagonal in
+// back to the neutral "Area" label. 15m matches the typical room-diagonal in
 // vanilla content while still catching the central plaza / exterior
 // case where the nav graph is sparse. Tune from log evidence.
 constexpr float kMaxSnapM = 15.0f;
@@ -158,7 +158,7 @@ void BuildForArea(void* area) {
     // can race a partially-populated server-object array; the per-tick
     // MaybeRefreshDoors loop catches late-arriving doors. Initial
     // cluster classification is locked to whatever was visible now
-    // (accepted lossy behaviour — late doors still show up as "Tür"
+    // (accepted lossy behaviour — late doors still show up as "Door"
     // exits via the per-edge query).
     SnapshotDoors(area);
     LogDoorSnapshotDetails(area);
@@ -373,7 +373,7 @@ bool LookupAt(void* area, const Vector& worldPos,
     // logged play, including multi-elevation maps). Including dz in
     // the distance broke elevated areas: Taris Sewers spawns the
     // player at z≈28m on the upper platform, which alone exceeds the
-    // 15m snap radius and pins every position to the neutral "Bereich"
+    // 15m snap radius and pins every position to the neutral "Area"
     // fallback. Multi-floor disambiguation needs to come from room-id,
     // not z against an always-zero graph.
     //
@@ -383,7 +383,7 @@ bool LookupAt(void* area, const Vector& worldPos,
     // Primary wins whenever a candidate sits within snap range. Rescue
     // is consulted only when no primary in range — recovers the
     // Bucket-3 "alcove dropped by the geometry gate, no other labelled
-    // cluster nearby → would have emitted the neutral Bereich" case without
+    // cluster nearby → would have emitted the neutral Area" case without
     // re-introducing wall-curve artefacts on inhabited terrain (those
     // get absorbed by the core-merge / straggler-absorb passes upstream,
     // or lose on distance to a real labelled cluster).
@@ -558,7 +558,7 @@ bool LookupAt(void* area, const Vector& worldPos,
         }
     }
 
-    // No primary, no rescue: emit the neutral "Bereich" when the graph
+    // No primary, no rescue: emit the neutral "Area" when the graph
     // has at least one candidate (so the player gets one stable "you're
     // in an area" cue). Return false only when the graph is empty.
     if (best < 0 && bestFiltered < 0 && blockedSeen == 0) {

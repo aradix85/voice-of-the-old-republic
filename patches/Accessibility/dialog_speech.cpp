@@ -620,7 +620,7 @@ void Tick() {
             acclog::Write("Dialog.Speech", "panel closed");
             s_lastPanel = nullptr;
             s_lastNpcLine[0] = '\0';
-            // A Trask Q&A branch (e.g. "Wie kann ich Türen öffnen?") can record
+            // A Trask Q&A branch (e.g. "How do I open doors?") can record
             // its keyboard hint and then return straight to the world with no
             // further reply break — so the reply-break trigger in
             // MonitorDialogReplies never flushed it. Flush on dialogue close so
@@ -686,14 +686,14 @@ void Tick() {
                     acc::menus::modsettings::Option::HumanSubtitles);
 
             // When suppressing, still surface a leading skill-check outcome
-            // marker ([Erfolg]/[Fehlschlag] etc.) so a Persuade/Computer/Repair
+            // marker ([Success]/[Failure] etc.) so a Persuade/Computer/Repair
             // result reaches the player without the redundant Basic VO line.
             char marker[80] = "";
             bool spokeMarker = false;
             if (!suppress) {
                 // A forced VO-less line queues (interrupt=false) so it lands
                 // AFTER a cue already in flight from the same interaction — the
-                // "Dieses Objekt ist gesperrt" feedback that triggered this
+                // "This object is locked" feedback that triggered this
                 // dialogue — instead of clobbering it. Normal lines interrupt.
                 acc::speech::Speak(npc, /*interrupt=*/!forcedSpoken);
                 // The line is silent unless force-spoken, so tell the player once

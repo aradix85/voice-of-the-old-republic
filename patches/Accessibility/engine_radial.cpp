@@ -369,8 +369,8 @@ bool ReadRowActionLabel(void* tam, int row, char* outBuf, size_t bufSize) {
     // *will* render into action_button on its next paint pass — at populate
     // time the rendered button text is empty (verified in
     // patch-20260505-101621.log: action_lists[1].data[0] peek showed
-    // [Sicherheit] while target_actions[1].action_button was []). Without
-    // this fallback the user hears "Aktion 1/1" with no label on the very
+    // [Security] while target_actions[1].action_button was []). Without
+    // this fallback the user hears "Action 1/1" with no label on the very
     // first arm of a freshly-populated row.
     void* descriptor = FindSelectedActionDescriptor(tam, row);
     if (descriptor &&

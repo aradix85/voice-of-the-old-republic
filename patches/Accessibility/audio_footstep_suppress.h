@@ -64,7 +64,7 @@ void NoteLeaderFootstep();
 // liveness channel. A footstep is the engine acting on a held movement key, and
 // it keeps firing when the player is walking into a wall — the one case where
 // position and camera yaw both stay put while the keyboard is demonstrably
-// fine. Witnessed on K2 (patch-20260813-232824.log, "Sackgasse" dead end): the
+// fine. Witnessed on K2 (patch-20260813-232824.log, "dead end" dead end): the
 // engine logged footsteps with stuck=1 throughout, and the watchdog still armed
 // three times because it could not see them.
 uint64_t LastLeaderFootstepMs();

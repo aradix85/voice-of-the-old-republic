@@ -31,8 +31,8 @@
 //     sweeps the virtual cursor, the entry + nearest-plate distance
 //     announcements track the CURSOR instead of the leader. The cursor
 //     never toggles a plate, so no lit/dark delta can fire in this mode —
-//     only positional lines ("Platte Nord-West, 1 Meter Nord", "Platte
-//     Nord-West betreten"),
+//     only positional lines ("Plate North-West, 1 metre north", "Stepped on
+//     Plate North-West"),
 //   - a solved announcement, after which the module goes quiet (the
 //     engine inerts the plates via the UNK_TILES global; we mirror that
 //     by observing the all-lit board).

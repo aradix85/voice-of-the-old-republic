@@ -43,7 +43,7 @@ void ClassifyClusterShape(const acc::engine::navgraph::NavGraphSnapshot& g,
 
     // externalCount == 0 never reaches here: the caller forces areaHint != 0
     // for any zero-exit cluster (see BuildForArea's isArea test), so an
-    // isolated cluster always takes the "Bereich" area path above.
+    // isolated cluster always takes the "Area" area path above.
     if (externalCount == 1) {
         ClassifyAsDeadEnd(g, n, centroid, centroidFloorZ,
                           externalNbs, externalDoorIdx,
@@ -59,7 +59,7 @@ void ClassifyClusterShape(const acc::engine::navgraph::NavGraphSnapshot& g,
         return;
     }
 
-    // 3+ external edges = junction or Platz. First pass: per-octant
+    // 3+ external edges = junction or plaza. First pass: per-octant
     // aggregation. octantHasExit[bit] is set whenever any external
     // neighbour bucket-classifies into `bit`. octantAllDeadEnd[bit]
     // starts true and gets cleared the moment a non-dead-end exit
@@ -73,8 +73,8 @@ void ClassifyClusterShape(const acc::engine::navgraph::NavGraphSnapshot& g,
                                 true, true, true, true};
     // First-door-per-octant: if any external edge in an octant crosses
     // a CSWSDoor, store its index here. The emit loop swaps the plain
-    // direction word for the "Tür DIR" / "Tür DIR nach DEST" rewrite
-    // and skips the (Sackgasse) marker for that octant — door wins.
+    // direction word for the "Door DIR" / "Door DIR to DEST" rewrite
+    // and skips the (dead end) marker for that octant — door wins.
     int octantDoorIdx[8] = {-1, -1, -1, -1, -1, -1, -1, -1};
     // Where each octant's exit leads (ExitMark): the first
     // contributing neighbour (a door octant is placed at the door itself,
@@ -94,7 +94,7 @@ void ClassifyClusterShape(const acc::engine::navgraph::NavGraphSnapshot& g,
     //   - real onward exit (degree ≥ 2)     → octant emits direction
     //   - real dead-end alcove (degree == 1, walkmesh agrees) → emits
     //                                          direction, may carry
-    //                                          (Sackgasse) marker
+    //                                          (dead end) marker
     //   - wall-curve (degree == 1, walkmesh disagrees) → contributes
     //                                          NOTHING — direction is
     //                                          dropped entirely when the
@@ -164,7 +164,7 @@ void ClassifyClusterShape(const acc::engine::navgraph::NavGraphSnapshot& g,
             if (ExitIsRamp(nb, centroidFloorZ)) octantAnyRamp[bit]  = true;
             else                                octantAnyLevel[bit] = true;
         }
-        // (Sackgasse) marker survives only when no onward exit shares
+        // (dead end) marker survives only when no onward exit shares
         // the octant. Mixed real-dead-end + wall-curve still gets the
         // marker (the real dead-end carries it); mixed real-dead-end +
         // onward exit doesn't (the onward exit dominates).

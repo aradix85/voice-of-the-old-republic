@@ -124,7 +124,7 @@ void PollHotkey() {
     // takes the foreground and input, yet the menu would otherwise stay armed
     // and keep consuming the same arrow / Enter keys, so the modal AND our
     // menu both react to one keypress (patch-20260609-111933.log — quit-confirm
-    // nav double-spoke "Abbrechen" / "OK" alongside UnifiedMenu entries).
+    // nav double-spoke "Cancel" / "OK" alongside UnifiedMenu entries).
     //
     // Notify the menu of the current foreground-blocked state every tick. It
     // SUSPENDS (stops owning input, keeps its state + pause) while a blocker is
@@ -172,15 +172,15 @@ void PollHotkey() {
         // Slot mapping is LINEAR — key N drives column N-4:
         //   key 4 / Shift+4 → slot 0  Friendly Force
         //   key 5 / Shift+5 → slot 1  Medical
-        //   key 6 / Shift+6 → slot 2  Misc (Sonstiges)
-        //   key 7 / Shift+7 → slot 3  Explosives (Sprengstoffe)
+        //   key 6 / Shift+6 → slot 2  Miscellaneous
+        //   key 7 / Shift+7 → slot 3  Explosives
         // This matches the engine's own DoPersonalAction dispatch, proven
         // from a clean seabed log (patch-20260615-010243): bare 6 fired the
-        // Schallgenerator in Sonstiges while bare 7 hit the empty Explosives
+        // Sonic Generator in Miscellaneous while bare 7 hit the empty Explosives
         // column. The earlier "engine swaps 6↔7" belief was wrong — it had
-        // been read off our own announce, not a real `benutzt` line — and it
+        // been read off our own announce, not a real " uses " line — and it
         // left the announce/menu pointing at the opposite column from what
-        // the engine actually fired (press 7 for Sonstiges, get Explosives).
+        // the engine actually fired (press 7 for Miscellaneous, get Explosives).
         if (risingOpen1) acc::unified_menu::OpenPersonal(0);
         if (risingOpen2) acc::unified_menu::OpenPersonal(1);
         if (risingOpen3) acc::unified_menu::OpenPersonal(2);
@@ -206,7 +206,7 @@ void PollHotkey() {
 
         // Shift+L — open the engine's level-up panel directly
         // (CGuiInGame::ShowLevelUpGUI). First-version escape hatch for
-        // the tutorial level: navigating into the Charakterblatt and
+        // the tutorial level: navigating into the character sheet and
         // hitting btn_levelup is the vanilla path, but currently the
         // user's chain-walker Enter on the InGameAbilities Powers tab
         // crashes (CSWGuiInGameAbilities::OnEnterPower null deref) —
@@ -259,7 +259,7 @@ void PollHotkey() {
     // announce path. The engine fires the action through its DirectInput
     // handler regardless of what we do; this branch only adds the
     // screen-reader announcement so the user knows what they fired
-    // ("Medikit eingesetzt", "Sicherheit eingesetzt"). No engine-side
+    // ("Medpac used", "Security used"). No engine-side
     // suppression — both paths run in parallel, same arrangement as
     // passive_narrate alongside Q/E target cycles.
     //
@@ -288,7 +288,7 @@ void PollHotkey() {
     // keys belong to the reply selection, not the action bar. The engine's
     // combat dispatch is suppressed in that context (see input_pipeline.cpp
     // OnClientHandleInputEvent's matching HasActiveDialogPanel guard), so
-    // announcing "X eingesetzt" here would be a phantom cue for an action
+    // announcing "X used" here would be a phantom cue for an action
     // that never fired. Skip the announce while a dialog owns the keys.
     if (inWorld && !acc::engine::HasActiveDialogPanel()) {
         if (risingK1) AnnounceBareTargetKey(0);
@@ -307,7 +307,7 @@ void PollHotkey() {
         if (risingK9) acc::unified_menu::FirePersonal(5);
     }
 
-    // Combat system, Phase 2C — Ö opens the navigable examine view
+    // ExamineOpen opens the navigable examine view
     // (synthetic in-DLL listbox). Toggle: pressing again while open closes.
     acc::examine_view::PollWin32Hotkey();
 

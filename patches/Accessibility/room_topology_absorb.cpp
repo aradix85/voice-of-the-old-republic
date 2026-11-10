@@ -18,7 +18,7 @@ namespace {
 // shape readings as the player walks) and the building-corner stragglers
 // in open areas. kStragglerAbsorbMaxM is a sanity cap on the corner→core
 // edge length — adjacency (a real nav edge) is the connector, not
-// distance; 16m covers the Oberstadt store corners (9.9m off the frontage)
+// distance; 16m covers the Upper City store corners (9.9m off the frontage)
 // with headroom while excluding cross-plaza edges. Tune from harvested
 // absorb logs. (The target-must-be-multi-node and door-veto gates that
 // keep corridors from being eaten live in the pass body.)
@@ -37,7 +37,7 @@ constexpr float kStragglerAbsorbMaxM    = 16.0f;
 // This is what the "filtered / rescue-only" flag could not do from
 // Pass 3: by then clustering was frozen, so a false dead-end could only
 // be muted, never un-clustered. Three interconnected Ebon-Hawk hull
-// lanes stood as silent ghost "Sackgasse" regions for exactly that
+// lanes stood as silent ghost "dead end" regions for exactly that
 // reason, while the crossing they hang off advertised a northern exit
 // that only loops back into them.
 //
@@ -69,7 +69,7 @@ constexpr float kPendantAbsorbMaxM = 11.0f;
 //       material (chainStraight) folds into an adjacent multi-node core
 //       across a clear, door-free edge within kStragglerAbsorbMaxM.
 //       Cascades to a fixpoint on LIVE membership, so a corner two hops
-//       from a core still folds in (Oberstadt store corner 24 → spoke
+//       from a core still folds in (Upper City store corner 24 → spoke
 //       14 → frontage core — the case the old hub pass structurally
 //       missed, since it froze its snapshot before building the core).
 //       Real corridors are safe: they are multi-node cores (Pass 1
@@ -113,9 +113,9 @@ void AbsorbAdjacentStragglers(const acc::engine::navgraph::NavGraphSnapshot& g,
                 // and collect the distinct cores X reaches. A node that
                 // reaches >= 2 distinct cores BRIDGES two areas — keep it as
                 // its own announcing junction so both connections stay
-                // audible (Oberstadt node 25 links the store frontage to the
+                // audible (Upper City node 25 links the store frontage to the
                 // cantina avenue; folding it into the avenue erased the
-                // "Süd" exit cue and the avenue became unfindable from the
+                // "South" exit cue and the avenue became unfindable from the
                 // frontage). Only a pendant — exactly one reachable core —
                 // folds in.
                 int coreRootA = -1, coreNbA = -1;
@@ -194,7 +194,7 @@ void AbsorbAdjacentStragglers(const acc::engine::navgraph::NavGraphSnapshot& g,
 // Snapshot taken now, after the adjacency cascade, so the bbox reflects
 // the final cores. Single pass over a frozen snapshot — absorbing a
 // candidate does not recompute the bbox or re-test others (iteration
-// could chain-absorb a real corridor sticking out of a Platz).
+// could chain-absorb a real corridor sticking out of a plaza).
 void AbsorbStragglersByBoundingBox(void* area,
                                    const acc::engine::navgraph::NavGraphSnapshot& g,
                                    int n, BuildPasses& bp) {

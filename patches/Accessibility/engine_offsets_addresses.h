@@ -103,7 +103,7 @@ const uintptr_t kVtableCSWGuiNameChargen   = acc::addr::Pick(0x00759F38, 0x009AA
 // layout is documented in engine_offsets_fields.h.
 const uintptr_t kVtableCSWGuiSaveNamePanel    = acc::addr::Pick(0x007576D0, 0x009A42C4);
 
-// CSWGuiSaveLoad vtable (the Spiel laden / Spiel speichern dialog itself).
+// CSWGuiSaveLoad vtable (the Load Game / Save Game dialog itself).
 // K1: the ctor @0x006cc680 writes it at object+0 (labelled
 // CSWGuiSaveLoad_vtable in the database). K2: the twin ctor FUN_00850770
 // writes it the same way. Since the gui-id audit this vtable IS the
@@ -135,7 +135,7 @@ const uintptr_t kVtableCSWGuiPartySelectionButton = acc::addr::Pick(0x00756BB8, 
 
 // CSWCCreature::GetPortraitId — __thiscall, no args, returns the portrait
 // row index into portraits.2da (verified live: returned 24 → 25 across a
-// Right+Right+Left cycle in the chargen Porträtauswahl panel). The named
+// Right+Right+Left cycle in the chargen portrait selection panel). The named
 // CSWCCreatureStats.portrait_id at +0x11c, CSWGuiPortraitCharGen.portrait_id
 // at +0x1238, and CSWCObject.portrait at +0xa8 are all stale during chargen
 // — this accessor is the only reliable read-side primitive we have.
@@ -329,7 +329,7 @@ const uintptr_t kAddrCSWGuiPowersLevelUpOnEnterPower = acc::addr::Pick(0x006f146
 // Mirror of CSWGuiFeatsCharGen::OnFeatPicked — the canonical "user clicked
 // BTN_SELECT" entry. Dispatches DeterminePower → AddChosenPower /
 // RemoveChosenPower / can't-change message box. Calling directly with the
-// focused cell's powerId lets us bypass the click-sim on Hinzuf. Macht.
+// focused cell's powerId lets us bypass the click-sim on Add Power.
 // K2 twin 0x00908E30, decompile-confirmed: KEEPS K1'S EXACT message strrefs
 // (0xa5e6 main-character-only on power ids 6/0xE, 0xa621 all-selected,
 // 0xa4c9 cannot-deselect, 0xa4ca prerequisites; K2 adds a case-4 0x1b412),
@@ -388,7 +388,7 @@ typedef void (__thiscall* PFN_CSWGuiListBoxSetSelectedControl)(void* listbox,
 const uintptr_t kAddrCSWGuiListBoxSetSelectedControl = acc::addr::Pick(0x0041c040, 0x0041E870);
 
 // CTlkTable::GetSimpleString — resolves a TLK str_ref to a localized string.
-// Many KOTOR UI controls (e.g. Options screen "Annehmen"/"Abbrechen", certain
+// Many KOTOR UI controls (e.g. Options screen "Accept"/"Cancel", certain
 // chargen labels) leave their CExoString empty and store only a str_ref; the
 // engine renders by resolving the str_ref through dialog.tlk every frame.
 //
@@ -422,7 +422,7 @@ const uintptr_t kAddrGetSimpleString = acc::addr::Pick(0x0041e8f0, 0x0071DEE0);
 //     panel.selected_slot. No is_active gate. Equivalent to mouse-hover.
 //   OnSelectSlot(panel, slot_btn) — stages the equip if items_listbox has
 //     entries (raises panel.field33_0x4270 |= 1 and pre-selects row 1), or
-//     pops the "Für diesen Slot..." modal if empty. Gates on
+//     pops the empty-slot modal if empty. Gates on
 //     `slot_btn->is_active != 0` — caller must raise that bit first.
 //     Equivalent to mouse-click after hover.
 //
@@ -760,7 +760,7 @@ const uintptr_t kAddrCSWSpellArrayGetSpell = acc::addr::Pick(0x0059b6d0, 0x006C1
 // bypasses the engine's onSelectionChanged), calling it repaints the detail
 // labels + description for the new row. The On*ButtonPressed trio switches tab.
 // OnEnterPower null-derefs when the Powers tab has no powers (the tutorial-save
-// "Kräfte, nicht verfügbar" case) — guard the Powers tab before driving it.
+// "Powers, unavailable" case) — guard the Powers tab before driving it.
 // Per-entry repaint handlers — the coordinate-free path. OnEnterSkill reads
 // row->id as the skill index; OnEnterFeat takes a feat id; both rewrite the
 // detail labels + description. These (NOT OnAbilitySelectionChanged, which is
@@ -925,7 +925,7 @@ const uintptr_t kAddrServerExoAppGetItemByGameObjectID = acc::addr::Pick(0x004ae
 // mod, misc) followed by the base description. IMPORTANT (decompile-verified):
 // for base item_type 0x2e (lightsaber crystals) and 6 (grenades) it SKIPS the
 // whole property block and returns ONLY the description — for a crystal that's
-// usually just the bare "Spezial:" header, since crystal templates carry no
+// usually just the bare "Special:" header, since crystal templates carry no
 // item properties (the bonus lives on the assembled saber / in the workbench's
 // keyed-property line, CSWSItem::GetKeyedPropertyString @0x0055f510). The caller
 // passes uninitialised stack memory for `out`; the function constructs a
@@ -1021,7 +1021,7 @@ const uintptr_t kAddrJournalPopulateItemListBox = acc::addr::Pick(0x00645330, 0x
 // sibling of the journal call above. Rebuilds item_listbox from the equipped
 // slots + the party item repository, keeping only rows CheckFilter accepts,
 // then clears bit_flags bit 0 so the next Draw won't repopulate again. The
-// filter button ("Zeigen: …") only raises that bit, so calling this makes the
+// filter button ("Show: …") only raises that bit, so calling this makes the
 // new list final before we re-bind the chain to it.
 // NOT in the 2004-relink rebase table (no known-good bytes to sigscan for);
 // R() returns 0 there and inventory::ForceRepopulate self-skips via

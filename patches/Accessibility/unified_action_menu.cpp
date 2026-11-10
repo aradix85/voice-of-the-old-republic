@@ -176,7 +176,7 @@ uint32_t ReadActionId(void* tam, void* mi, const Cat& c, int idx) {
         : acc::engine_actionbar::ReadVariantActionId(mi, c.slot, idx);
 }
 
-// Append ", N Stück" / ", N Ladungen" to an item entry's label, matching the
+// Append ", N in stack" / ", N charges" to an item entry's label, matching the
 // inventory / store suffixes. Resolves the CSWSItem behind the entry's
 // item-tagged action_id; no-op for non-item entries (attacks, force powers)
 // and single non-charged items. Charged items can't stack, so the two
@@ -224,7 +224,7 @@ const char* CategoryName(const Cat& c) {
             // KOTOR 2 only. Its main interface fills a fifth column the first
             // game does not have — the party-AI combat stance, Aggressive and
             // three siblings (confirmed live: UnifiedMenu.cols read
-            // [4]=4 with "Aggressiv" at index 0). KOTOR 1 never populates it,
+            // [4]=4 with "Aggressive" at index 0). KOTOR 1 never populates it,
             // so BuildCategoryList drops it there and this name is unreachable.
             case 4: return acc::strings::Get(S::MenuCatCombatBehaviour);
             // KOTOR 2 only, and only once the character has learned a form:
@@ -319,8 +319,8 @@ bool DetectCreature(void* tam, uint32_t handle) {
 
 // ---- speech --------------------------------------------------------------
 
-// Build the full category announce ("Name: label, N Optionen" / "label, N
-// Optionen" for unnamed rows) into `out`. ApplySelection must have run.
+// Build the full category announce ("Name: label, N options" / "label, N
+// options" for unnamed rows) into `out`. ApplySelection must have run.
 void FormatCategory(void* tam, void* mi, const Cat& c, int count, int idx,
                     char* out, size_t n) {
     char label[128] = "";
@@ -347,7 +347,7 @@ void FormatCategory(void* tam, void* mi, const Cat& c, int count, int idx,
     }
 }
 
-// Speak the current category in full. `prefix` (e.g. "Aktionsmenü, X") is
+// Speak the current category in full. `prefix` (e.g. "action menu, X") is
 // prepended with ". " when non-null/non-empty (Shift+Enter open only).
 void SpeakCategory(void* tam, void* mi, const char* prefix) {
     Cat& c = g.cats[g.curCat];
@@ -553,7 +553,7 @@ bool ArmFromRadial(const char* name, uint32_t targetHandle) {
     }
     // Preserve Shift+Enter semantics: only arm when a target category is
     // populated. No target rows → return false so the caller speaks the
-    // existing "keine Aktionen … Enter" redirect (no regression).
+    // existing "No actions available … Enter" redirect (no regression).
     int firstRow = FirstPopulatedTargetRow(tam);
     if (firstRow < 0) {
         acclog::Write("UnifiedMenu", "ArmFromRadial — no populated target row; "
@@ -595,7 +595,7 @@ bool OpenTarget(int row) {
     uint32_t handle = ResolveNarratedServerHandle();
     if (handle == 0) {
         // No focused target — Shift+1/2/3 are explicit target openers, so
-        // say "kein Fokus" rather than dropping into the personal block.
+        // say "No object focused" rather than dropping into the personal block.
         acc::speech::Speak(acc::strings::Get(acc::strings::Id::GuidanceNoFocus),
                      /*interrupt=*/true);
         acclog::Write("UnifiedMenu", "OpenTarget row=%d — no narrated target", row);
@@ -625,7 +625,7 @@ bool OpenTarget(int row) {
             g.reqSlot, g.targetHandle);
         // A menu still armed from an earlier open (possibly against a
         // DIFFERENT target) must not survive this refusal: it kept its old
-        // categories navigable after "Spalte N ist leer", so the user
+        // categories navigable after "Column N is empty", so the user
         // browsed and fired the OLD target's menu believing it was the new
         // one (the 13:20 Machtbruch-on-Malak in patch-20260717-131859.log).
         // Worse, the g.targetHandle capture above had already clobbered the
@@ -667,7 +667,7 @@ bool OpenPersonal(int col) {
 
     // Shift+4..7 is a PERSONAL entry point, but the menu is meant to be
     // TRULY unified: if a hostile target is in focus we fold its three target
-    // rows (Angriffe / Machtkräfte / Gegenstände) in alongside the personal
+    // rows (Attacks / Force Powers / Items) in alongside the personal
     // columns, so Left/Right crosses the personal⇄target border freely. The
     // cursor still lands on the requested personal column; the target
     // categories sit one Left away — parity with Shift+1..3 / Shift+Enter.
@@ -771,7 +771,7 @@ bool OpenPersonal(int col) {
 namespace {
 
 // Esc — close. When we held the world pause, ForceDisarm → EndOverlayPause
-// resumes the world and the engine's pause-resume cue ("Pause aufgehoben")
+// resumes the world and the engine's pause-resume cue ("Unpaused")
 // is the close announcement (no extra phrase — it was redundant and
 // misleading: Esc closes the menu, it doesn't cancel; queued actions stay
 // queued and run on resume). When the Action Menu auto-pause option is off
@@ -786,7 +786,7 @@ if (outOfCombat) {
     // matches that out of combat. ForceDisarm already released our own
     // overlay pause (auto-pause option on) via EndOverlayPause; if the
     // world is STILL paused that is the player's own manual pause, so
-    // resume it here — the engine's "Fortgesetzt" resume cue is then the
+    // resume it here — the engine's "Unpaused" resume cue is then the
     // close announcement. When nothing resumed (never paused, or the
     // overlay release already unpaused silently) speak an explicit close
     // confirmation so the close is never silent.
@@ -943,7 +943,7 @@ void DescribeSelectedEntry(void* tam, void* mi, const Cat& cur, int sel) {
 // menu sits open the engine re-bakes the lists against its own
 // current target (combat reassert / cursor hover), so an Enter
 // seconds after arming fired at the wrong object (Machtbruch
-// meant for a Gefangener-Jedi container hit Malak, patch-
+// meant for a captive-Jedi container hit Malak, patch-
 // 20260717-131859.log). Restamp the whole row with the menu's
 // armed target right before dispatch: raw field writes, safe
 // from this poll context (unlike RePopulate — phantom-confirm,
@@ -965,7 +965,7 @@ void RestampTargetRowForDispatch(void* tam, const Cat& cur) {
 // bit is the native Shift-held "queue" flag. Our synthetic dispatch
 // bypasses the engine's shift capture, so without this every Enter
 // overwrites the previous queued action (observed 2026-06-08:
-// Macht-Tapferkeit then Kurieren left only Kurieren). Set it for
+// Force Valor then Cure left only Cure). Set it for
 // the dispatch, restore afterward so the creature's real combat
 // mode is untouched.
 // Speak the engine's own refusal, when it is about to refuse.
@@ -1020,7 +1020,7 @@ bool DispatchWithQueueAppend(void* tam, void* mi, const Cat& cur) {
 
     acc::combat_diag::LogPreFire("menu-enter");
     // Attribute the AddAction this dispatch triggers to the user so its
-    // detour speaks the "X, Platz N" cue (see ArmUserQueueAdd).
+    // detour speaks the "X, position N" cue (see ArmUserQueueAdd).
     acc::combat::queue::ArmUserQueueAdd();
     // Personal only — a target row acting without a queue add is normal, not a
     // no-op (see ArmNoOpWatch).
@@ -1042,7 +1042,7 @@ bool DispatchWithQueueAppend(void* tam, void* mi, const Cat& cur) {
 //   actions can be lined up without re-opening the menu between
 //   each, exactly like the in-combat menu. The world stays
 //   paused; Esc (or a manual unpause) commits the queue and
-//   closes. The "<action>, Platz N" cue from the AddAction hook
+//   closes. The "<action>, position N" cue from the AddAction hook
 //   is the confirmation that the menu stayed open on this entry.
 //
 //   World RUNNING → fire-and-close, matching the sighted mouse
@@ -1068,7 +1068,7 @@ void ApplyPostFireClosePolicy() {
             return;
         }
         // Close is silent by design: the action's confirmation was just
-        // spoken by the AddAction hook ("<action>, Platz 1" —
+        // spoken by the AddAction hook ("<action>, position 1" —
         // out-of-combat actions still route through the leader's combat
         // round, and ArmUserQueueAdd above put us in its attribution
         // window).
@@ -1117,7 +1117,7 @@ void SpeakMedPickerRow(bool withTitle) {
 // Fire a Medicine-row entry at a specific CLIENT creature via the direct
 // use-item request (DoPersonalAction is a dead end for K2 medical items —
 // see SendUseItemRequestK2). Arms the same attribution + no-op watch the
-// normal dispatch path arms, so the AddAction hook speaks "X, Platz N" on
+// normal dispatch path arms, so the AddAction hook speaks "X, position N" on
 // success and the generic line speaks if the server drops the request.
 bool FireMedicalDirect(void* mi, const Cat& c, int sel, void* targetCre,
                        const char* how) {
@@ -1320,8 +1320,8 @@ bool HandleEnter(void* tam, void* mi, const Cat& cur, int sel,
     // action that should have fired.
     if (refused) SpeakRefusal(refusalStrRef);
 
-    // The queued-action confirmation ("X, Platz N" / "Warteschlange
-    // voll") is spoken by the CSWSCombatRound::AddAction detour
+    // The queued-action confirmation ("X, position N" / "X, queue
+    // full") is spoken by the CSWSCombatRound::AddAction detour
     // (queue::OnEngineActionAdded) that Dispatch() triggers — one
     // authoritative cue per real add, shared with the bare-key path.
     // No separate pre/post snapshot here: it raced the queue drain and
@@ -1347,7 +1347,7 @@ bool HandleEnter(void* tam, void* mi, const Cat& cur, int sel,
 //
 // On the announcement: speak the label BEFORE dispatching. If the entry turns
 // out to be a real combat-round action, the CSWSCombatRound::AddAction detour
-// speaks the authoritative "X, Platz N" with interrupt=true and simply
+// speaks the authoritative "X, position N" with interrupt=true and simply
 // replaces this line — which is the behaviour bare 4..7 already have. If it is
 // a stance toggle that never reaches AddAction, this line is the only
 // confirmation there is. Correct either way, without the mod having to know

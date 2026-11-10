@@ -23,7 +23,7 @@ namespace {
 void* s_pendingInfoPanel = nullptr;
 
 // ============================================================================
-// SaveLoad — Spiel laden / Spiel speichern dialog.
+// SaveLoad — Load Game / Save Game dialog.
 // ============================================================================
 
 // K1 only, deliberately. The spec consumes Up/Down outright to drive the
@@ -200,8 +200,8 @@ void MonitorK2SaveLoadSelection() {
 // them a tick later gives the engine its frame to fill them in.
 //
 //   LBL_PLANETNAME   planet / module   ("Ebon Hawk")
-//   LBL_AREANAME     area              ("Innenbereich")
-//   LBL_TIMEPLAYED   play time         ("Zeit: 8S 16M")
+//   LBL_AREANAME     area              ("Interior")
+//   LBL_TIMEPLAYED   play time         ("Time: 8H 16M")
 //
 // The labels are the panel's ctor-bound embedded members (gui-id audit;
 // they were read by .gui id 3/5/9 before). LBL_TIMEPLAYED exists only on

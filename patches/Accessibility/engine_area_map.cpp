@@ -59,7 +59,7 @@ bool GetWaypointMapNote(void* waypoint, char* outBuf, size_t bufSize) {
     // Mirrors ExtractTextOrStrRef's order with one insertion: embedded
     // note text (mods author it directly) always wins; strref-resolved
     // notes first consult the curated rename table — vanilla's cryptic
-    // corridor labels ("S\xFCdlicher Pfad") speak their transition
+    // corridor labels ("Southern Path") speak their transition
     // destination instead (see map_note_renames) — then fall back to the
     // vanilla tlk text.
     //

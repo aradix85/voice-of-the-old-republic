@@ -122,7 +122,7 @@ void TrapSpokenName(void* obj, bool isMine, char* out, size_t size) {
     }
 }
 
-// "<label>, auf X Uhr, Y Meter" via the shared announce format; falls
+// "<label>, X o'clock, Y metres" via the shared announce format; falls
 // back to the bare label when the viewpoint is unreadable.
 std::string WithClock(const char* label, const Vector& target) {
     // Camera-anchored viewpoint, not the creature's: KOTOR's A/D turns the

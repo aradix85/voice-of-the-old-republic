@@ -1,5 +1,5 @@
-// chargen attributes panel (step 2 of Eigener
-// Charakter) tweaks.
+// chargen attributes panel (step 2 of Custom
+// Character) tweaks.
 //
 // Two fixes for CSWGuiAbilitiesCharGen, both rooted in the same engine
 // quirk: the panel's six +/- buttons all dispatch to OnPlusButton /
@@ -10,7 +10,7 @@
 //      no ability name, leaving the user blind to which row they're on.
 //      We mirror the matching ability_label's text into the cycle-
 //      category cache; FromControl's existing prefix logic then says
-//      "Stärke, 8" instead of bare "8".
+//      "Strength, 8" instead of bare "8".
 //
 //   2. selected_ability stays at 0 (STR) for the panel's lifetime
 //      because the engine only writes it on a real mouse click — our
@@ -69,13 +69,13 @@ int RowPitchForCursorWarp(void* panel, void* control);
 void SyncSelectedAbilityFromChainFocus();
 
 // Capture each ability_button → its matching ability_label text into
-// the cycle-category cache, so FromControl produces "Stärke, 8" etc.
+// the cycle-category cache, so FromControl produces "Strength, 8" etc.
 // No-op when `panel` isn't a chargen attributes panel.
 void CaptureLabelsIfApplicable(void* panel);
 
-// Speak the per-row info suffix ("Modifikator -1, Preis 1") synchronously
+// Speak the per-row info suffix ("Modifier -1, Cost 1") synchronously
 // from the chain-step input handler, right after the existing
-// "Stärke, 8" announce. We compute the modifier and cost ourselves
+// "Strength, 8" announce. We compute the modifier and cost ourselves
 // from the focused button's current value rather than reading the
 // engine's modifier_value / cost_value labels:
 //
@@ -110,7 +110,7 @@ bool AnnounceChainStepDescription(void* panel, void* control);
 bool IsChargenAttributesDescriptionListbox(void* listBox);
 
 // On a +/- press, override the default "{label}, {value}"
-// re-announcement with "{value}, verbleibende Punkte {remaining}".
+// re-announcement with "{value}, remaining points {remaining}".
 // Returns true when the override fired (caller should NOT also speak
 // the default text), false otherwise. The label is intentionally
 // omitted on this path: the user just navigated to and acted on this

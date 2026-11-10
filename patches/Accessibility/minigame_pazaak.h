@@ -43,7 +43,7 @@ bool IsSignChoiceCard(int index);
 
 // True iff the Pazaak board is the current foreground panel (updated each
 // Tick). The manager input hook uses this to swallow arrow keys so the engine
-// doesn't move focus onto its own Weiter/Halten buttons during board play.
+// doesn't move focus onto its own End Turn/Stand buttons during board play.
 bool IsBoardForeground();
 
 // Manager-hook input handler for the board's arrow-zone navigator. Returns

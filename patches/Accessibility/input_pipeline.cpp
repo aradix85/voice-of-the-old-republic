@@ -313,7 +313,7 @@ extern "C" int __cdecl OnClientHandleInputEvent(void* this_ptr,
             // poll/tick context synthesised a phantom confirm, 2026-06-07).
             // The bare-key prep below never runs for a consumed press, so
             // without this the menu shows whatever target the lists were
-            // last built for — the "Spalte N ist leer" misfires on the
+            // last built for — the "column N is empty" misfires on the
             // Star Forge captive Jedi (patch-20260717-093733.log). Run the
             // same SetTarget + RePopulate here, in the engine's own
             // input-dispatch context, where the bare path has proven safe.
@@ -387,7 +387,7 @@ extern "C" int __cdecl OnClientHandleInputEvent(void* this_ptr,
     //     key 7=0xec), so by logical code:
     //         0xe8 (key 4) → DoPersonalAction(slot=0)  Friendly Force
     //         0xea (key 5) → DoPersonalAction(slot=1)  Medical
-    //         0xee (key 6) → DoPersonalAction(slot=2)  Misc (Sonstiges)
+    //         0xee (key 6) → DoPersonalAction(slot=2)  Miscellaneous
     //         0xec (key 7) → DoPersonalAction(slot=3)  Explosives
     //   * Both DoTargetAction and DoPersonalAction read `creature_id` from
     //     the action-list item (CSWGuiInterfaceAction+0x1c) and bail
@@ -414,7 +414,7 @@ extern "C" int __cdecl OnClientHandleInputEvent(void* this_ptr,
     //     then builds empty target_actions and, for personal-action
     //     items the engine flags hostile-targeted, leaves creature_id
     //     unresolved — engine bails silently instead of mistargeting.
-    //     Self-buff personal items (Medikit (Selbst), stims) still get
+    //     Self-buff personal items (self-use medpacs, stims) still get
     //     creature_id=player from GetPersonalActions regardless, so
     //     pressing 5 still fires the medikit even without a narrated
     //     enemy.
@@ -464,7 +464,7 @@ extern "C" int __cdecl OnClientHandleInputEvent(void* this_ptr,
         // AddAction detour is installed.
         acc::combat::queue::ReportPrePressDepth();
         // Attribute the resulting CSWSCombatRound::AddAction to this press
-        // so its detour speaks the authoritative "X, Platz N" cue (and
+        // so its detour speaks the authoritative "X, position N" cue (and
         // engine auto-attacks, which have no press, stay silent).
         acc::combat::queue::ArmUserQueueAdd();
         // Watch for a swallowed press on the PERSONAL columns only (4..7 —
@@ -503,7 +503,7 @@ extern "C" int __cdecl OnClientHandleInputEvent(void* this_ptr,
         // the engine routes to column 3 (Explosives). So the engine is
         // LINEAR in key number (key 4→col0, 5→col1, 6→col2, 7→col3) — the
         // earlier "engine swaps 6↔7" belief was wrong (it was read off our
-        // own announce, not a real `benutzt` line). In logical-code terms:
+        // own announce, not a real " uses " line). In logical-code terms:
         //   0xe8 (key 4) → col 0   Friendly Force
         //   0xea (key 5) → col 1   Medical
         //   0xee (key 6) → col 2   Misc

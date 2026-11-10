@@ -28,7 +28,7 @@
 #include "speech.h"
 #include "menus.h"           // public surface — Step 1 mod-wide tick split
 #include "menus_chargen_attr.h" // Chargen "Attribute" panel label + selected_ability sync
-#include "menus_chargen_skills.h" // Chargen "Fähigkeiten" panel — same shape as Attribute
+#include "menus_chargen_skills.h" // Chargen "Skills" panel — same shape as Attributes
 #include "menus_extract.h"   // Step 2B — text extraction lifted out
 #include "menus_internal.h"  // Step 2B — shared seam with menus_extract
 #include "menus_focus.h"     // first-sight / focus-capture (Phase-1 split)
@@ -42,7 +42,7 @@
 #include "menus_crafting.h"  // K2 workbench/crafting watcher — view flips + rebinds
 #include "menus_store.h"     // Store / trading panel — price+stock suffix + mode announce
 #include "menus_galaxymap.h"  // Galaxy / star-map travel screen — planet cycle
-#include "menus_keymap.h"     // dedicated Tastaturbelegung two-level handler
+#include "menus_keymap.h"     // dedicated Keymapping two-level handler
 #include "engine_area.h"     // IsLoadingSaveGame — gate the save-load GUI burst
 #include "engine_input.h"
 #include "engine_manager.h"
@@ -223,7 +223,7 @@ using acc::menus::MarkSpoken;
 // engine's broken `.gui` focus-cycle from running. Left/Right are consumed
 // selectively (slider passes through, otherwise dispatched to a cycle-arrow
 // neighbour). Enter (0xb5/0xbb → KEYBOARD_F1) and Esc (0xb4/0xdf → KEYBOARD_F2)
-// route to our chain-target activation and Schliess-button fallback paths.
+// route to our chain-target activation and Close-button fallback paths.
 
 // Chain state (g_chain, g_chainPanel/Index/Count, ChainEntry struct,
 // kMaxChainEntries) moved to menus_chain.cpp in Step 5; brought back into
@@ -290,7 +290,7 @@ bool g_drilledIntoSubScreen = false;
 // Two reasons this beats the old "decrement a budget on every event" knob:
 //
 //   1. Triple-burst panel-open events (NULL → first child → engine's actual
-//      default focus) used to produce two utterances ("OK, Abbrechen" on
+//      default focus) used to produce two utterances ("OK, Cancel" on
 //      MessageBox open). With the slot, the first two writes get overwritten
 //      by the third before the next tick reads.
 //   2. Voluntary-nav echoes (chain step + cursor warp → engine echoes a
@@ -367,7 +367,7 @@ bool s_synthesizedNav = false;
 // handler in OnHandleInputEvent.
 
 // True for engine-pushed modal popup panels that the user dismisses via a
-// close button (Schliess / OK / Weiter / Continue). Used by the Esc handler
+// close button (Close / OK / Continue). Used by the Esc handler
 // to know when to fall back to FindCloseButton on standalone modals — the
 // older "tabbed sub-dialog" gate only covers Esc inside Options sub-tabs,
 // missing the post-action info popups (StatusSummary after a skill check,
@@ -518,8 +518,8 @@ extern "C" void __cdecl OnSetActiveControl(void* panel, void* newControl) {
     // it as a navigable menu — hotkeys + Tab/Shift+Tab drill the user
     // directly into the sub-screens it would otherwise route to. Engine
     // still fires SetActiveControl on it (panel-open and panelIdx=7
-    // "Nachrichten" once per first open) which previously produced spurious
-    // "Ausrüstung" + "Nachrichten" utterances over the actual sub-screen's
+    // "Messages" once per first open) which previously produced spurious
+    // "Equipment" + "Messages" utterances over the actual sub-screen's
     // title/focus speech. Diagnostic walk above stays; only speech-side
     // paths get the gate.
     if (IdentifyPanel(panel) == PanelKind::InGameMenu) {
@@ -671,7 +671,7 @@ extern "C" void __cdecl OnListBoxSetActiveControl(void* listBox, void* newRow,
             }
         }
 
-        // Chargen Fähigkeiten description_list_box: silence everything
+        // Chargen Skills description_list_box: silence everything
         // the engine pushes here. The hover-driven population is
         // off-by-one on this panel (the cursor warp's hit-test
         // resolves to skill_labels[i-1] regardless of Y compensation
@@ -814,7 +814,7 @@ void ValidatePanels() {
     // can deref it.
     ValidateTabbedPanel();
     // Same hazard for g_chainPanel / g_chain[].control: when Esc on the
-    // Main-Menu Optionen strip (or any other panel our Esc gate doesn't
+    // Main-Menu Options strip (or any other panel our Esc gate doesn't
     // catch) falls through to the engine's native handler, the engine
     // destroys the panel and its children. The chain still references the
     // freed buttons; next tick MonitorFocusedControl dereferences one and
@@ -833,8 +833,8 @@ void TickMonitors() {
     // listbox-paired monitors (Container, EquipPicker, give-mode key poll)
     // co-locate with their spec entries in menus_listbox.cpp.
     //
-    // Store runs FIRST so its trade-outcome speech ("Verkauft" /
-    // "Gekauft" / "Kann nicht …") and chain rebind land before the focus
+    // Store runs FIRST so its trade-outcome speech ("Sold" /
+    // "Bought" / "Cannot …") and chain rebind land before the focus
     // monitor's per-tick re-extract of the focused chain row. Without
     // this ordering, a successful sell speaks the next item's name
     // (focus monitor saw the row's text mutate when the listbox
@@ -904,7 +904,7 @@ void TickPendingOps() {
 // sibling control after a voluntary chain step), suppress speech. This is
 // the InGameOptions cursor-warp hit-test miss pattern — chain steps to
 // "Gameplay" (index 2), engine's own DOWN handler / hit-test miss fires
-// SetActive on "Spiel laden" (chain[0]) instead. The chain handler's
+// SetActive on "Load Game" (chain[0]) instead. The chain handler's
 // AnnounceControl has already spoken the intended target; drop the
 // engine's wrong-sibling echo so the user doesn't hear two button names.
 //
@@ -922,8 +922,8 @@ void DrainPendingAnnounce() {
     // Multi-row listbox guard — mirrors AnnounceControl in menus_monitors.cpp.
     // OnSetActiveControl on a multi-row listbox container is engine-driven
     // panel-open auto-focus, not user navigation. Speaking "control N"
-    // here was the source of the "control 3" noise on Fähigkeiten /
-    // Inventar open after the FromControl listbox-blob path was removed.
+    // here was the source of the "control 3" noise on Abilities /
+    // Inventory open after the FromControl listbox-blob path was removed.
     // Row navigation inside the listbox is owned by ListBoxPanelSpec /
     // chain handlers.
     const bool isListBoxContainer = IsListBox(control);

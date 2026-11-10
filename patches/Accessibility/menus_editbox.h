@@ -15,12 +15,12 @@
 //   * In edit mode, this dispatcher consumes:
 //       - Up / Down → re-speak the full current text (single-line field, so
 //         vertical motion has nothing else to do).
-//       - Enter     → fire the panel's submit button (BTN_OK / "Annehmen")
+//       - Enter     → fire the panel's submit button (BTN_OK / "Accept")
 //         via the deferred-op queue and exit edit mode. No confirmation
 //         speech — the next panel's own announce takes over.
 //       - Esc       → silently exit edit mode. The editbox keeps engine
 //         focus; subsequent Up/Down then fall through to chain nav so the
-//         user can move to OK / Random / Abbrechen.
+//         user can move to OK / Random / Cancel.
 //   * Letter / Backspace / Left / Right are NOT consumed — the engine
 //     handles caret movement and text mutation natively. The per-tick poll
 //     diffs the (text, caret) snapshot each frame and announces:
@@ -29,7 +29,7 @@
 //       - |Δlength| > 1 → speak the full new text (covers Zufallsname
 //         button replacing the field in one shot)
 //       - caret moved without length change → speak char at new caret;
-//         "Ende" if the caret is past the last char.
+//         "end" if the caret is past the last char.
 //
 // Why focus-enter speech lives in extract (not here): keeps the per-control
 // announce path uniform — chain nav's AnnounceControl always asks

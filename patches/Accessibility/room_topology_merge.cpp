@@ -12,7 +12,7 @@ namespace {
 // Pass 1 / corridor rule — collapse straight degree-2 chain runs
 // into one cluster. K1 corridors are authored as 5-15 degree-2 patrol
 // nodes ~3-5m apart along a single axis; without merging each becomes
-// its own cluster and a 15m hallway re-announces "Korridor Ost-West"
+// its own cluster and a 15m hallway re-announces "corridor East-West"
 // 3+ times as the player walks it (one corridor label was heard 13 times).
 //
 // A node is "straight" iff its two outgoing edge vectors point in
@@ -126,7 +126,7 @@ void ComputeChainStraightness(const acc::engine::navgraph::NavGraphSnapshot& g,
 // (the nav nodes sit at z=0, so a z=0 segment would run under same-floor
 // walls). Adjacency — a real engine nav edge — is the connector, so two
 // spaces that merely face each other across a junction throat stay
-// separate (the Oberstadt store / cantina-avenue fix).
+// separate (the Upper City store / cantina-avenue fix).
 void PassCoreMerge(const acc::engine::navgraph::NavGraphSnapshot& g,
                    int n, BuildPasses& bp) {
     const bool*  nodeOpen         = bp.nodeOpen;

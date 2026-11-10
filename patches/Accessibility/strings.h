@@ -18,16 +18,14 @@ enum class Id : int {
     CategoryLandmark,
     CategoryTransition,
     // Map-context override for CategoryLandmark — matches the engine's own
-    // "Hinweis" / "map note" terminology on the InGameMap up/down buttons.
+    // "map note" terminology on the InGameMap up/down buttons.
     // BindingsFor swaps in this string + EmptyMapHints when the cycle ctx is
     // Map, so blind users hear the same word sighted players see in the UI.
     CategoryMapHint,
 
     // ---- Empty-category messages — full pre-formatted phrases. The
-    //      plural form differs per category (German: T\xFCren, Personen,
-    //      Beh\xE4lter, Gegenst\xE4nde, Orte, \xDCberg\xE4nge), and even
-    //      English has the singular/plural split, so it's cleaner to
-    //      write each empty-state independently than to template it.
+    //      wording differs per category, so each empty state is written
+    //      out rather than templated.
     EmptyDoors,
     EmptyNpcs,
     EmptyContainers,
@@ -57,8 +55,8 @@ enum class Id : int {
     //   FmtSavedMarkerAutoWithRoom — combined name when a landmark /
     //                                friendly room name covers the
     //                                cursor's room. 1 `%s` (room name)
-    //                                + 1 `%d` (sequence). Ex: "Brücke -
-    //                                Marke 1".
+    //                                + 1 `%d` (sequence). Ex: "Bridge -
+    //                                Marker 1".
     //   FmtSavedMarkerPlaced       — confirmation spoken on success.
     //                                1 `%s` (the resolved name).
     //   SavedMarkerFailed          — spoken when CreateMapPin returns
@@ -73,7 +71,7 @@ enum class Id : int {
     //      own curated hints folded into the Map hint cycle, and
     //      replacement labels for the curated note renames
     //      (map_note_renames) where the destination-area name doesn't
-    //      apply (danm16's two exits share one "Ausgang" strref and are
+    //      apply (danm16's two exits share one "Exit" strref and are
     //      told apart by which door they sit at).
     HintBackEntrance,
     HintRebelCorpse,
@@ -179,10 +177,10 @@ enum class Id : int {
     //                               (`%d`), localised compass direction
     //                               word (`%s` — DirNorth.. via strings.Get).
     //      `RouteJoinSeparator`   — joiner between segments (typically
-    //                               ", " in both languages; centralised so
+    //                               ", "; centralised so
     //                               punctuation tweaks happen here).
-    //      `RouteOneTransition`   — tail "1 Übergang" / "1 transition".
-    //      `RouteNoTransition`    — tail "kein Übergang" / "no transition".
+    //      `RouteOneTransition`   — tail "1 transition".
+    //      `RouteNoTransition`    — tail "no transition".
     FmtRouteTo,
     FmtRouteNoPath,
     FmtRouteMapUnreadable,
@@ -208,10 +206,10 @@ enum class Id : int {
 
     // ---- Engine-picked action pre-roll. Used when the engine action
     //      picker (CClientExoAppInternal::GetDefaultActions) returns a
-    //      localised verb for the focused target (e.g. "Sicherheit",
-    //      "Angriff", "Bash", "Disable Trap"). Two args:
-    //      `%s` action verb (already localised by the engine via
-    //          dialog.tlk; we pass it through unmodified), then
+    //      verb for the focused target (e.g. "Security",
+    //      "Attack", "Bash", "Disable Trap"). Two args:
+    //      `%s` action verb (from the engine's dialog.tlk, passed
+    //          through unmodified), then
     //      `%s` target name (CSWSObject tag / first_name).
     //      Falls back to the per-kind FmtInteract* phrases when the
     //      engine descriptor is empty.
@@ -269,7 +267,7 @@ enum class Id : int {
     EndarDoorBattleHint,
     EndarStuckReloadHint,
 
-    // ---- Player action bar (Aktionsmenü) submenu, armed by Shift+4..7.
+    // ---- Player action bar (action menu) submenu, armed by Shift+4..7.
     //      `FmtActionBarOpened`      — opener pre-roll. Args: column
     //                                  number 1..6 (`%d`), current variant
     //                                  label (`%s`), variant count (`%d`).
@@ -360,9 +358,7 @@ enum class Id : int {
 
     // ---- Container loot panel announces.
     //      `ContainerEmpty`        — count == 0.
-    //      `ContainerOneItem`      — count == 1 (German singular has different
-    //                                stem: "Gegenstand" vs "Gegenst\xE4nde";
-    //                                trying to template that with %d would
+    //      `ContainerOneItem`      — count == 1 (a %d template would
     //                                read wrong on the 1-case).
     //      `FmtContainerItems`     — count >= 2; takes (count_int).
     //      `FmtContainerItemAt`    — per-row navigation; takes (row_text_str,
@@ -377,13 +373,13 @@ enum class Id : int {
     //          CItemRepository is live-read as holding zero items. Distinct
     //          from `ContainerEmpty` (sentence-case standalone phrase used
     //          inside the loot panel); this one reads as a name tag —
-    //          "Fu\xDFschlie\xDFfach, leer". See engine_area::IsEmptyContainer
+    //          "Footlocker, empty". See engine_area::IsEmptyContainer
     //          and narration::GetSpokenName.
     ContainerEmptySuffix,
 
     //      Star Forge placeable state tags — appended like the wall-switch
-    //          labels via state_overrides (", gefangen" / ", befreit" on the
-    //          Malak-fight captive Jedi; ", aktiv" / ", deaktiviert" on the
+    //          labels via state_overrides (", captured" / ", freed" on the
+    //          Malak-fight captive Jedi; ", active" / ", deactivated" on the
     //          battle-droid control terminals). Lowercase name tags, same
     //          register as ContainerEmptySuffix.
     PlaceableStateCaptive,
@@ -411,10 +407,8 @@ enum class Id : int {
     //      paper-doll BTN_INV_* buttons. The .gui file gives them no
     //      strrefs (all 4294967295), so the per-kind fallback path in
     //      ExtractAnnounceableText looks up dialog.tlk strrefs first
-    //      (TLK 31375-31383 block, contiguous + locale-stable) and falls
-    //      back to these literals if TLK lookup fails. Keeps a German
-    //      install reading the engine's exact slot names while a non-
-    //      German install still gets a sensible label.
+    //      (TLK 31375-31383 block, contiguous) and falls
+    //      back to these literals if TLK lookup fails.
     //
     EquipSlotHead,
     EquipSlotImplant,
@@ -427,8 +421,8 @@ enum class Id : int {
     EquipSlotHands,
 
     //      KOTOR 2 weapon-set qualifier appended to the two weapon-slot
-    //      pairs ("Rechte Waffe, aktiv" / "Rechte Waffe, sekund\xE4r").
-    //      Deliberately NOT the engine's own "Konfig 1"/"Konfig 2"
+    //      pairs ("Right Weapon, active" / "Right Weapon, secondary").
+    //      Deliberately NOT the engine's own "Config 1"/"Config 2"
     //      (dialog.tlk 49038/49039): the numbers suggest two persistent
     //      loadouts, but the engine has no active-set state — a swap
     //      moves the items, so the first pair is always what you hold
@@ -444,14 +438,14 @@ enum class Id : int {
     //      item icon inside each slot; we surface the same info by
     //      appending the item name to the slot label.
     //   FmtEquipSlotItem  — 2 `%s` (slot label, item name). Ex:
-    //                       "K\xF6rper, Kampfanzug".
-    //   FmtEquipSlotEmpty — 1 `%s` (slot label). Ex: "K\xF6rper, leer".
+    //                       "Body, Combat Suit".
+    //   FmtEquipSlotEmpty — 1 `%s` (slot label). Ex: "Body, empty".
     FmtEquipSlotItem,
     FmtEquipSlotEmpty,
 
     //      Spoken confirmation when Enter on the currently-equipped row
-    //      (the "(Ausgew.)" item) in the LB_ITEMS picker unequips it.
-    //      No args. Ex: "Ausr\xFCstung abgelegt".
+    //      in the LB_ITEMS picker unequips it.
+    //      No args. Ex: "Equipment removed".
     EquipUnequipped,
 
     //      Follow-up after the engine's "no items for this slot" modal
@@ -461,10 +455,9 @@ enum class Id : int {
     //      no-candidates flag, checked before the item list) — so the
     //      modal alone sounds like the equipped item vanished (userlogs
     //      077noequipment: pistol equipped, "no items that can be
-    //      equipped"). Phrased noun-first so the item name needs no
-    //      gender agreement in any language.
-    //   FmtEquipStillEquipped — 1 `%s` (item name). Ex: "Gegenstand
-    //                           weiterhin angelegt: Blaster".
+    //      equipped").
+    //   FmtEquipStillEquipped — 1 `%s` (item name). Ex: "Item
+    //                           still equipped: Blaster".
     FmtEquipStillEquipped,
 
     //      In-world announcement when the weapon sets swap (KOTOR 2 only
@@ -476,10 +469,10 @@ enum class Id : int {
     //      (slots 18/19) — so weapon_set_watch detects the cross-exchange
     //      of the four slot handles and speaks what the leader now holds.
     //   FmtWeaponSwitchedOne — 1 `%s` (the one equipped weapon).
-    //                          Ex: "Waffen gewechselt: Doppelklinge".
+    //                          Ex: "Weapons switched: Double-Bladed Sword".
     //   FmtWeaponSwitchedTwo — 2 `%s` (main hand, off hand).
     //   WeaponSwitchedBare   — no args; both new slots empty or names
-    //                          unresolvable. Ex: "Waffen gewechselt".
+    //                          unresolvable. Ex: "Weapons switched".
     FmtWeaponSwitchedOne,
     FmtWeaponSwitchedTwo,
     WeaponSwitchedBare,
@@ -508,7 +501,7 @@ enum class Id : int {
     //      (CExoLocString — localized when the area has a name strref) or
     //      fall back to the area tag (modder ID like "tar_m02ac"). Room
     //      names come from CSWSArea.room_names which holds .lyt-room
-    //      identifiers like "m02_03e" — NOT localized; the "Room:"/"Raum:"
+    //      identifiers like "m02_03e" — NOT localized; the "Room:"
     //      prefix is what tells the user this is a room name and not an
     //      arbitrary token.
     FmtTransitionArea,
@@ -533,7 +526,7 @@ enum class Id : int {
 
     // ---- Door state suffixes appended by `engine_area::GetObjectName` for
     //      doors. Only the *informative* states get a suffix — the default
-    //      "closed and unlocked" reads as bare "Tür"/"Door" so common-case
+    //      "closed and unlocked" reads as bare "Door"/"Door" so common-case
     //      cycle/narrate stays terse. See `BuildDoorSuffix`.
     DoorOpen,
     DoorLocked,
@@ -549,10 +542,8 @@ enum class Id : int {
     DoorCosmetic,
 
     // ---- Octagonal compass directions for turn announcement
-    //      (Pillar 2 sub-feature C). German uses traditional
-    //      "Norden / Osten / S\xFCden / Westen" forms with hyphenated
-    //      intercardinals ("Nord-Ost"). English uses bare "North" /
-    //      "Northeast" so screen readers don't mispronounce hyphens.
+    //      (Pillar 2 sub-feature C). Bare "North" / "Northeast", no
+    //      hyphens, so screen readers don't mispronounce them.
     DirNorth,
     DirNortheast,
     DirEast,
@@ -630,7 +621,7 @@ enum class Id : int {
     //      user knows the panel was requested even before its controls
     //      register with our chain walker. `LevelUpFailed` is spoken on
     //      SEH fault inside the engine call (chain unresolved, or the
-    //      call faulted) — mirrors the autowalk "fehlgeschlagen" pattern
+    //      call faulted) — mirrors the autowalk "failed" pattern
     //      so silent failure can't leave the user wondering whether the
     //      key did anything.
     LevelUpOpen,
@@ -638,7 +629,7 @@ enum class Id : int {
     LevelUpAlreadyOpen,
     // Spoken when Shift+L is pressed but the leader hasn't earned the next
     // level yet — gates on the engine's own CSWSCreatureStats::CanLevelUp
-    // predicate (the same check that greys out the Charakterblatt
+    // predicate (the same check that greys out the character sheet
     // btn_levelup button). Without this the mod force-opened the wizard
     // regardless of XP and the player could level up endlessly.
     LevelUpNotReady,
@@ -650,7 +641,7 @@ enum class Id : int {
     // an active in-world level-up wizard (see SkillInfoBoxTitleOverride); the
     // chargen Feats flow keeps its own ChargenFeatGrantedTitle. No args.
     LevelUpScreenHint,
-    // Appended to the SAME SkillInfoBox popup's real title once Annehmen has
+    // Appended to the SAME SkillInfoBox popup's real title once Accept has
     // committed and destroyed the wizard. The engine mounts that popup under
     // the wizard, so it resurfaces as the top modal afterwards and its OK
     // button is the only way back to the world — a dead end for a blind player
@@ -667,7 +658,7 @@ enum class Id : int {
     //      composed string when the engine cycles to the next portrait.
     // PortraitLabel — value-display prefix used when the cycle pattern
     //                 lands on a single anchor (left_arrow, with right_arrow
-    //                 squashed). Reads as "Porträt" / "Portrait" — the
+    //                 squashed). Reads as "Portrait" / "Portrait" — the
     //                 user hears the noun, then the cycled value.
     // PortraitArrowPrev / PortraitArrowNext — kept for the
     //                 directional-fallback path (single-arrow chains where
@@ -692,7 +683,7 @@ enum class Id : int {
     // PortraitRaceTypeH — KOTOR 2 adds a fourth head family (P_MAL_H /
     // P_FEM_H, portraits.2da rows 45/60 male and 58/59 female). Unlike
     // a/b/c it carries no readable ethnic sense, so this is a deliberately
-    // neutral placeholder ("Typ H") rather than an invented description.
+    // neutral placeholder ("Type H") rather than an invented description.
     PortraitRaceTypeH,
     FmtPortraitDescription,
 
@@ -705,7 +696,7 @@ enum class Id : int {
 
     // ---- Party selection portrait status suffix. Appended (with leading
     //      ", ") to the companion name when speaking a portrait in the
-    //      Gruppenauswahl panel. Two states the user can hit on this
+    //      party selection panel. Two states the user can hit on this
     //      panel:
     //        FmtPartyPortraitInTeam    — slot is currently in the active
     //                                    party (partyId >= 0 in the
@@ -745,14 +736,14 @@ enum class Id : int {
     //      handlers (CSWGuiLevelUpPanel::OnSelectAbilitiesButton etc. at
     //      0x006ee350-0x006ee500), all of which gate `if (is_active != 0)`
     //      and silently drop the click otherwise. The suffix turns the
-    //      silent drop into an audible "Attribute, nicht verfügbar" /
+    //      silent drop into an audible "Attribute, unavailable" /
     //      "Attribute, unavailable" so the user understands why Enter
     //      does nothing.
     DisabledSuffix,
 
     // ---- Toggle (checkbox) element-state suffix. Appended (with leading
     //      ", ") to an options-screen toggle's announced label to voice its
-    //      on/off state — e.g. "Untertitel, ein" / "Subtitles, on". Read
+    //      on/off state — e.g. "Subtitles, on". Read
     //      from the control via ReadToggleState. Distinct from the full
     //      ViewModeOn/MouseLookOn *phrases*: these are bare name-tag
     //      suffixes, same register as DisabledSuffix.
@@ -762,7 +753,7 @@ enum class Id : int {
     // ---- Slider value readout. Composed for options-screen sliders
     //      (volume, difficulty, gamma, …). The engine exposes only a raw
     //      cur/max pair (CSWGuiSlider +cur/+max); we join them with the
-    //      localised "of" idiom so the reader hears "8 of 10" / "8 von 10".
+    //      word "of" so the reader hears "8 of 10".
     //      `FmtSliderValueLabeled` — label present. Args: label (`%s`),
     //                                cur (`%u`), max (`%u`).
     //      `FmtSliderValue`        — no sibling label resolved. Args: cur
@@ -773,9 +764,8 @@ enum class Id : int {
     // ---- Equipment sub-screen name. Unlike the other seven in-game
     //      sub-screens (Inventory, Character, Map, …), the Equipment screen
     //      has no dialog.tlk strref — the engine never requests its caption
-    //      via TLK — so the strref-based localisation path can't reach it.
-    //      This Id supplies the per-language name so a non-German install
-    //      stops hearing the hardcoded "Ausrüstung" literal. Used for both
+    //      via TLK — so the strref path can't reach it. This Id supplies
+    //      the name instead of a hardcoded literal. Used for both
     //      the icon-strip label (menus_extract) and the sub-screen-open
     //      announce (menus_monitors).
     EquipMenuName,
@@ -786,7 +776,7 @@ enum class Id : int {
     //      the step you may do now — and a real mouse click is inert on the
     //      rest. Our deferred FireActivate force-raises is_active and would
     //      otherwise let the user open a later step out of order; doing the
-    //      Kräfte (powers) step before an earlier step makes the engine's
+    //      Powers (powers) step before an earlier step makes the engine's
     //      ChangeState/ClearPowers resync wipe the freshly-chosen power on
     //      commit (see memory project_levelup_power_lost_investigation).
     //      FmtLevelUpDoStepFirst — spoken when Enter lands on a non-current
@@ -806,7 +796,7 @@ enum class Id : int {
     //      that opener is gone — the panel speaks its name only.)
     //
     //      Class line: takes 1 `%s` (class name as the engine renders it,
-    //      e.g. "Soldat" / "Soldier" — already localised via dialog.tlk).
+    //      e.g. "Soldier" — from dialog.tlk).
     //      Trailing ". " makes screen readers pause before the next field.
     //      Class name needs no own prefix — coming first, it gives natural
     //      context.
@@ -866,7 +856,7 @@ enum class Id : int {
     FmtChargenAttrValueChangeWithCost,
     FmtChargenAttrValueChangeWithModAndCost,
 
-    // ---- Chargen Fähigkeiten panel (CSWGuiSkillsCharGen).
+    // ---- Chargen Skills panel (CSWGuiSkillsCharGen).
     //      Same shape as the Attribute panel but skills don't have a
     //      D&D modifier — only rank + per-+1 cost (1 for class
     //      skills, 2 for cross-class). The cost is constant per row
@@ -884,11 +874,11 @@ enum class Id : int {
     FmtChargenSkillInfoSuffix,
     FmtChargenSkillValueChange,
 
-    // ---- Chargen Talente panel (CSWGuiFeatsCharGen).
+    // ---- Chargen Feats panel (CSWGuiFeatsCharGen).
     //      The "second popup" on entry is skillinfo.gui mounted on the
     //      engine's SkillInfoBox slot, populated via ShowGranted with the
     //      feats the chargen class auto-grants at level 1 (different per
-    //      class, e.g. Soldat vs. Schurke). Its title label carries a
+    //      class, e.g. Soldier vs. Scoundrel). Its title label carries a
     //      BioWare dev placeholder ("Items Available to Place in Container
     //      and blah blah blah") that never gets overwritten — substitute
     //      ChargenFeatGrantedTitle. Each row announces with
@@ -900,7 +890,7 @@ enum class Id : int {
     ChargenFeatGrantedTitle,
     FmtChargenFeatGrantedRow,
 
-    // ---- Chargen Talente main panel (CSWGuiFeatsCharGen).
+    // ---- Chargen Feats main panel (CSWGuiFeatsCharGen).
     //      Each chart cell announces its feat name + a status word from
     //      the cell's status byte (0=avail, 1=existing, 2=granted,
     //      3=locked, 4=chosen).
@@ -922,9 +912,9 @@ enum class Id : int {
     //                     on focus-enter, separated from the current value
     //                     by ". " in the announce path.
     //      EditboxEmpty — placeholder spoken instead of an empty value
-    //                     ("leer" / "empty"). Used both on focus-enter and
+    //                     ("empty"). Used both on focus-enter and
     //                     on Up/Down re-read when the field has no text.
-    //      EditboxEnd   — caret-at-end-of-string marker ("Ende" / "end").
+    //      EditboxEnd   — caret-at-end-of-string marker ("end").
     //                     Spoken when Right arrow lands the caret past the
     //                     last character (no char to read at the new caret).
     EditboxRole,
@@ -966,7 +956,7 @@ enum class Id : int {
     //      effects, main-hand weapon, off-hand weapon.
     //      Args `FmtTargetCombatBrief`: target_name (`%s`).
     //      `FactionHostile` / `FactionFriendly` / `FactionNeutral` —
-    //      faction-relation words (still used by the Ö examine
+    //      faction-relation words (still used by the examine
     //      row, not by the Q/E brief).
     //      `TargetIsDead` — appended when the creature is dead.
     FmtTargetCombatBrief,
@@ -980,15 +970,15 @@ enum class Id : int {
     //   FmtBriefCondition      — args: damage-level word (`%s`). Skipped
     //                            when the target is at full HP so common
     //                            healthy-target transitions stay terse.
-    //   FmtBriefDistanceMeters — args: meters (`%d`). Q/E + Ö examine.
+    //   FmtBriefDistanceMeters — args: meters (`%d`). Q/E + examine view.
     //   FmtBriefEffects        — args: joined unique effect names (`%s`).
-    //                            Q/E only; Ö examine lists each effect
+    //                            Q/E only; the examine view lists each effect
     //                            individually via the examine listbox.
     //   FmtBriefWielding       — args: main-hand item display name (`%s`).
     //   FmtBriefOffHand        — args: off-hand item display name (`%s`).
     //                            Dual-wield / shield / off-hand pistol.
-    //   FmtBriefEffectsCount   — args: count (`%d`). Ö examine only.
-    //   FmtBriefFeatsCount     — args: count (`%d`). Ö examine only.
+    //   FmtBriefEffectsCount   — args: count (`%d`). Examine view only.
+    //   FmtBriefFeatsCount     — args: count (`%d`). Examine view only.
     FmtBriefCondition,
     FmtBriefDistanceMeters,
     FmtBriefEffects,
@@ -1010,12 +1000,12 @@ enum class Id : int {
     FmtSelfStatusHpOf,
     FmtSelfStatusFpOf,
 
-    // ---- Combat system, Phase 2C — examine hotkey (Ö). Spoken on
+    // ---- Examine hotkey. Spoken on
     //      open / close / no-target failure.
     ExamineNoTarget,
     ExamineFailed,
 
-    // ---- Examine view — navigable list opened by Ö. The view is
+    // ---- Examine view — navigable list opened by ExamineOpen. The view is
     //      a synthetic in-DLL listbox (no engine panel — KOTOR 1 doesn't
     //      have a real creature-examine panel). Up/Down step rows, Esc
     //      closes. See examine_view.cpp.
@@ -1025,18 +1015,18 @@ enum class Id : int {
     //                          1-based index (`%d`), total (`%d`).
     //   ExamineViewClosed    — Esc cue.
     //   FmtExamineRowName    — row label "Name: %s".
-    //   FmtExamineRowFaction — row label "Fraktion: %s".
+    //   FmtExamineRowFaction — row label "Disposition: %s".
     //   FmtExamineRowHp      — row label "Lebenspunkte: %d".
-    //   FmtExamineRowDistance— row label "Entfernung: %d Meter".
-    //   FmtExamineRowWeapon  — row label "Hauptwaffe: %s".
-    //   ExamineRowWeaponNone — "Hauptwaffe: keine" (unarmed).
-    //   FmtExamineRowEffect  — row label "Effekt: %s".
-    //   FmtExamineRowFeat    — row label "Talent: %s".
-    //   FmtExamineRowEffectUnknown — "Effekt #%d" fallback for unmapped types.
-    //   FmtExamineRowFeatUnknown   — "Talent #%d" fallback when feat name
+    //   FmtExamineRowDistance— row label "Distance: %d meters".
+    //   FmtExamineRowWeapon  — row label "Main hand: %s".
+    //   ExamineRowWeaponNone — "Main hand: none" (unarmed).
+    //   FmtExamineRowEffect  — row label "Effect: %s".
+    //   FmtExamineRowFeat    — row label "Feat: %s".
+    //   FmtExamineRowEffectUnknown — "Effect #%d" fallback for unmapped types.
+    //   FmtExamineRowFeatUnknown   — "Feat #%d" fallback when feat name
     //                                resolution fails.
-    //   ExamineRowNoEffects  — "Keine aktiven Effekte".
-    //   ExamineRowNoFeats    — "Keine Talente".
+    //   ExamineRowNoEffects  — "No active effects".
+    //   ExamineRowNoFeats    — "No feats".
     FmtExamineOpened,
     FmtExamineRowOf,
     ExamineViewClosed,
@@ -1138,8 +1128,7 @@ enum class Id : int {
     //      reply is gated (active=0).
     // Per-row reply announce when the entry is greyed (active=0). Args:
     // row_text (`%s`), unavailable_word (`%s`), index (`%d`), total
-    // (`%d`). Separate from FmtContainerItemAt so the localised "von" /
-    // "of" stays in the table.
+    // (`%d`). Separate from FmtContainerItemAt.
 
     // ---- Dialog screen — replies-not-live cue. Spoken (deduped on the
     //      generic empty-state channel) when the user presses Up/Down on
@@ -1194,7 +1183,7 @@ enum class Id : int {
     // explored, walkable cell with no explicit waypoint/landmark/named-
     // room match. The 4-direction wall probe in map_ui_cursor classifies
     // local walkmesh extents and resolves to one of these.
-    MapCursorJunction,        // bare "Junction" / "Kreuzung" — fallback only
+    MapCursorJunction,        // bare "Junction" / "junction" — fallback only
     FmtMapCursorDeadEnd,      // "Dead end opening %s"
     FmtMapCursorJunctionDirs, // "Junction, openings %s" — comma-separated direction list
     // Path-3 nav-graph topology vocabulary. Corridor labels are
@@ -1202,35 +1191,35 @@ enum class Id : int {
     // map) so the player never hears "south-corridor"; the axis is a
     // line, not a vector, and showing both ends would double the
     // vocabulary for zero information. Transitions speak as a doorway
-    // ("Türschwelle") and optionally compose with the friendly room
+    // ("doorway") and optionally compose with the friendly room
     // name in transitions.cpp.
-    FmtMapCursorCorridorDir,  // "%s" — direction word alone, "Korridor"/"Corridor" noun dropped 2026-05-22
+    FmtMapCursorCorridorDir,  // "%s" — direction word alone, "corridor"/"Corridor" noun dropped 2026-05-22
     // Door announce — replaces the corridor/dead-end/junction-octant
     // direction word when a CSWSDoor in the area sits on the relevant
-    // nav-graph edge. Single `%s` = direction word ("Nord", "Nord-Süd",
-    // "Süd-West", …). Transition form adds the cross-area destination
-    // ("Brücke", "Manaan-Dock") as the second `%s`.
+    // nav-graph edge. Single `%s` = direction word ("North", "North-South",
+    // "South-West", …). Transition form adds the cross-area destination
+    // ("Bridge", "Manaan-Dock") as the second `%s`.
     // Door noun fallback — used as the first %s in the door format
     // strings when CSWSDoor.loc_name @+0x39c is empty / unreadable.
-    // Authored door names ("Lift", "Sicherheitstür") substitute for
+    // Authored door names ("Lift", "security door") substitute for
     // this generic word; vanilla doors with no authored name fall back
     // to it so the output stays identical to the pre-loc-name behaviour.
-    MapCursorDoorNoun,           // "Tür" / "Door"
+    MapCursorDoorNoun,           // "Door" / "Door"
     FmtMapCursorDoor,            // "%s %s"           — noun + direction
-    FmtMapCursorDoorTransition,  // "%s %s nach %s"   — noun + direction + dest
+    FmtMapCursorDoorTransition,  // "%s %s to %s"     — noun + direction + dest
     // Landmark variant — used when a CSWCWaypoint with a non-empty map
-    // note sits on the door (e.g. "Zur Oberstadt"). Preferred over
+    // note sits on the door (e.g. "To Upper City"). Preferred over
     // FmtMapCursorDoorTransition because the landmark name is the
     // content-author's canonical phrasing and reads cleaner than the raw
-    // area-transition string (which already starts with "Zur …" / "Zu …"
-    // and would yield awkward "… nach Zur Oberstadt"). Comma separator
+    // area-transition string (which already starts with "To …"
+    // and would yield awkward "… to To Upper City"). Comma separator
     // avoids the prep-clash.
     FmtMapCursorDoorLandmark,    // "%s %s, %s"       — noun + direction + landmark
     // Junction-edge annotation: when a junction's direction leads
     // directly to a degree-1 dead-end neighbour, the direction word
     // is wrapped to flag the dead-end so the user doesn't waste a
     // walk attempting it. Single `%s` (the direction word).
-    FmtMapCursorJunctionDeadEndExit, // "Sackgasse %s" / "dead end %s" — prefix-style, matches "Tür %s" so junction list reads NOUN-then-direction
+    FmtMapCursorJunctionDeadEndExit, // "dead end %s" / "dead end %s" — prefix-style, matches "Door %s" so junction list reads NOUN-then-direction
     // Exit-level-change annotation: when every real exit in a direction
     // crosses a floor-height step larger than the same-floor tolerance
     // (kWallCrossZToleranceM), the direction word is wrapped so the user
@@ -1238,22 +1227,22 @@ enum class Id : int {
     // that distinguishes "walk west" from "walk west UP onto the spine"
     // (Ebon-Hawk-hull session 2026-08-25). Single `%s` (direction word).
     // Dead-end and door annotations win over this one.
-    FmtRampExit,                     // "Rampe %s" / "ramp %s"
+    FmtRampExit,                     // ramp + direction
     AxisNorthSouth,
     AxisEastWest,
     // Unified neutral area vocabulary. Open spaces, merged rooms and
-    // merged big junctions all speak as one neutral noun ("Bereich" /
+    // merged big junctions all speak as one neutral noun ("Area" /
     // "area") — we never commit to room-vs-place-vs-open. Geometry is the
     // long axis only when the space is clearly elongated (no size). Then
     // the exits. The kind (KindPlatz vs KindRoom) decides delayed vs
     // immediate announce but is never spoken.
-    AreaNoun,            // "Bereich" / "area"
-    AreaNounLarge,       // "Großer Bereich" / "large area" — noun swapped in
+    AreaNoun,            // "Area" / "area"
+    AreaNounLarge,       // "Large area" / "large area" — noun swapped in
                          // for clusters whose footprint exceeds
                          // kLargeAreaExtentMeters; sets the expectation that
                          // wall/object cues are sparse here by design.
-    FmtAreaAxisExits,    // "%s %s. Ausgänge: %s" — noun + axis + exit list
-    FmtAreaExits,        // "%s. Ausgänge: %s"    — noun + exit list (no axis)
+    FmtAreaAxisExits,    // "%s %s. exits: %s" — noun + axis + exit list
+    FmtAreaExits,        // "%s. exits: %s"    — noun + exit list (no axis)
     FmtAreaAxisOnly,     // "%s %s"               — noun + axis (no exits)
     // Far-end exit qualifier for zone-scale areas. An exit's direction
     // word is the bearing from the zone centre rounded to an octant; in
@@ -1261,11 +1250,10 @@ enum class Id : int {
     // of the zone (a west exit 17m up at the north edge still rounds to
     // "West"). When the exit lies in the outer band of a long-enough
     // axis AND its word lacks that end's cardinal, the matching suffix
-    // is appended: "West weit im Norden". Full declined phrases per
-    // direction because the preposition varies by language (FR: au nord
-    // / à l'est). Appended with a space — never a comma, which would
+    // is appended: "West far to the north". Full phrases per
+    // direction. Appended with a space — never a comma, which would
     // read as an extra exit in the comma-separated list.
-    FarAtNorth,          // "weit im Norden" / "far to the north"
+    FarAtNorth,          // "far to the north"
     FarAtSouth,
     FarAtEast,
     FarAtWest,
@@ -1384,8 +1372,8 @@ enum class Id : int {
     FmtStoreNotEnoughCredits,
 
     // ---- Journal quest-items button (CSWGuiInGameJournal.quest_items_button
-    //      @+0x8a4). The engine renders an unclear label ("Aus Auftrag" in
-    //      German); spoken with this clearer term on focus. The sub-screen it
+    //      @+0x8a4). The engine's own label is unclear, so this clearer
+    //      term is spoken on focus. The sub-screen it
     //      opens still announces its own LBL_TITLE on entry.
     JournalQuestItemsButton,
 
@@ -1399,7 +1387,7 @@ enum class Id : int {
     FmtCredits,
 
     // ---- Workbench (upgrade.gui / upgradeitems.gui / upgradesel.gui).
-    //      Three heap-allocated panels opened by the "Werkbank benutzen"
+    //      Three heap-allocated panels opened by the "Use Workbench"
     //      placeable-conversation reply: category-select → item-pick →
     //      slot detail. The 7 BTN_UPGRADE3X/4X slot buttons on the slot
     //      detail panel have no inline text (their on-screen contents
@@ -1444,8 +1432,8 @@ enum class Id : int {
 
     // ---- Workbench slot occupancy + Shift+arrow description peek.
     //      Slot focus appends state to the slot type name via the shared
-    //      FmtEquipSlotItem / FmtEquipSlotEmpty templates ("Energiezelle,
-    //      Massive Kritische" / "Energiezelle, leer"). WorkbenchSlotFilled
+    //      FmtEquipSlotItem / FmtEquipSlotEmpty templates ("Power Cell,
+    //      Massive Criticals" / "Power Cell, empty"). WorkbenchSlotFilled
     //      is the fallback word when the installed mod's name can't be read.
     //      WorkbenchSlotPeekEmpty is spoken when Shift+arrow peeks an empty
     //      slot (occupied slots read the installed mod's property text).
@@ -1453,16 +1441,16 @@ enum class Id : int {
     WorkbenchSlotPeekEmpty,    // Shift+arrow on an empty slot
     WorkbenchFmtSlotItem,      // 2 %s (slot type, mod name) — connecting word
                                // between so identical names don't read twice
-                               // ("Panzerverst\xE4rkung, belegt mit Panzerverst\xE4rkung")
+                               // ("Armor Reinforcement, holds Armor Reinforcement")
     WorkbenchPickerInstalled,  // suffix/marker for the picker row that is the
                                // crystal currently installed in (or colour set
-                               // on) the open slot ("…, eingesetzt")
+                               // on) the open slot ("…, installed")
     WorkbenchPickerNone,       // the engine's "-" none/remove row in the mod
                                // picker (blank/dash text → spoken word so it
                                // isn't heard as "1" or as silence)
     WorkbenchPickerUnnamed,    // a real mod row whose name can't be read (K2)
                                // — generic "Upgrade" so it isn't masked as the
-                               // none entry ("Kein Gegenstand")
+                               // none entry ("No item")
     WorkbenchUpgradeFailed,    // commit refused (slot/mod incompatible) — the
                                // slot's field35 didn't change after the install
 
@@ -1471,21 +1459,21 @@ enum class Id : int {
     //      (LB_SHOPITEMS) and the breakdown inventory list (LB_INVITEMS)
     //      — same visibility-bit model as the store's Buy/Sell. Spoken by
     //      crafting::Tick when the bit flips, mirroring StoreModeBuy/Sell.
-    WorkbenchModeCreate,       // create view active ("Modus Herstellen")
-    WorkbenchModeBreakdown,    // breakdown view active ("Modus Zerlegen")
+    WorkbenchModeCreate,       // create view active ("Create mode")
+    WorkbenchModeBreakdown,    // breakdown view active ("Breakdown mode")
     FmtWorkbenchUpgradeTitle,  // K2 upgrade slot screen fg-edge title —
                                // one %s (the item being upgraded, from
-                               // the panel's LBL_TITLE): "Aufwerten: %s"
+                               // the panel's LBL_TITLE): "Upgrade: %s"
 
     // ---- Sound options panel (optionssound.gui) label fix-up.
-    //      The stock German .gui labels the 4th slider (movie/video volume)
-    //      as "Musik-Lautst\xE4rke" — a duplicate of the 1st slider — and
+    //      The stock .gui (seen on the German install) labels the 4th slider
+    //      (movie volume) with the music slider's string, and
     //      the engine renders that duplicate verbatim. We don't ship a
     //      .gui override (per project policy), so we substitute the
     //      category label in the screen-reader announcement only.
     //      Detection: slider control id == 8 on a panel whose slider IDs
     //      match the Sound options fingerprint {1, 4, 7, 8} (those IDs
-    //      come from the .gui file and are stable across locales).
+    //      come from the .gui file).
     SoundOptionsMovieVolume,
 
     // ---- Swoop racing minigame (tar_m03mg, manm26mg, tat_m17mg).
@@ -1555,7 +1543,7 @@ enum class Id : int {
     SwoopRaceWrecked,
     SwoopRaceEnded,
     // Gear-shift cue spoken urgently on each shift event so the player
-    // hears "Gang 2 / 3 / 4 / 5" through NVDA's typed-character cancel.
+    // hears "Gear 2 / 3 / 4 / 5" through NVDA's typed-character cancel.
     // One %d (1..5). Reset to 1 on race entry and on suspected reset
     // events (collision speed drop). The exact gear field inside
     // CSWMiniPlayer is unconfirmed at this lay-off — see minigame_swoop_race.cpp
@@ -1618,7 +1606,7 @@ enum class Id : int {
 
     // ---- Mod-settings virtual submenu (menus_modsettings).
     //      Root label: text spoken when the user lands on the virtual
-    //      "Mod settings" chain entry inside the Optionen panels.
+    //      "Mod settings" chain entry inside the Options panels.
     //      The three option-name strings are the toggle leaves; each is
     //      paired with FmtModSettingOption to compose "Name: state".
     //      Open / Close lines are status announcements (submenu enter /
@@ -1638,7 +1626,7 @@ enum class Id : int {
 
     // Cue-volume slider row (menus_modsettings). Left/Right adjust the
     // global hint-sound volume in 10% steps; FmtModSettingSlider composes
-    // "Name: N Prozent" (one %s name + one %d percent).
+    // "Name: N percent" (one %s name + one %d percent).
     ModSettingCueVolume,
     FmtModSettingSlider,
 
@@ -1654,9 +1642,7 @@ enum class Id : int {
     // LinkOpened / LinkFailed are the spoken outcome of that press.
     ModSettingSupportModder,              // row label — opens the Ko-fi page
     ModSettingLatestChanges,              // row label — opens the latest release page
-    ModSettingOpenReadme,                 // row label — opens the readme for the
-                                          // active mod language (same URL scheme
-                                          // as the installer's end screen)
+    ModSettingOpenReadme,                 // row label — opens README.md of this fork
     ModSettingLinkOpened,
     ModSettingLinkFailed,
 
@@ -1860,8 +1846,8 @@ enum class Id : int {
     // is the entire remedy.
     InputKeyboardLost,
 
-    // ---- Mod-settings → Tastenbelegung (mod keybind configurator,
-    //      menus_keybinds.cpp). Reached via the "Tastenbelegung" row in Mod
+    // ---- Mod-settings → Key bindings (mod keybind configurator,
+    //      menus_keybinds.cpp). Reached via the "Key bindings" row in Mod
     //      settings. Two-level: a category list, then the actions in a
     //      category. Enter on an action arms capture; the next physical key +
     //      held modifiers becomes the new binding. Esc cancels capture / backs
@@ -1989,7 +1975,7 @@ enum class Id : int {
 
     // ---- Endar Spire tutorial keyboard hints. The vanilla tutorial popups
     //      (tutorial.2da → TutorialBox) and Trask's guided-conversation lines
-    //      are worded for mouse ("Linksklick", "Mausrad", "Klicke auf …").
+    //      are worded for mouse ("left-click", "mouse wheel", "click on …").
     //      We leave the on-screen text untouched (sighted / rest-sight mouse
     //      users still read it) and substitute a keyboard-oriented line into
     //      the *spoken* channel only. See tutorial_hints.cpp.
@@ -2018,7 +2004,7 @@ enum class Id : int {
     //
     //      Surface 2 — Endar Spire dialogue (Trask + pop windows), voice-acted.
     //      Keyed by the line's source strref, matched via the engine's own TLK
-    //      (LookupTlk) so it stays language-independent. The German VO still
+    //      (LookupTlk). The voice-over still
     //      says "mouse"; the screen reader speaks the keyboard line.
     TutTraskGettingStarted,  // 10326 (end_trask "grab your things, we have to go" —
                              //        the intro tree's closing line, fired as the
@@ -2048,7 +2034,7 @@ enum class Id : int {
     //      Taris — Carth's stealth tutorial (voice-acted; identical Surface 2
     //      mechanic, keyed by strref). The mouse-worded "click the Stealth
     //      ability to activate it" line is rewritten to the G keyboard toggle.
-    TutStealthMode,          // 48557 (n_m1bncart01030_ "Klickt auf ... Tarnung")
+    TutStealthMode,          // 48557 (n_m1bncart01030_ "click ... Stealth")
 
     //      Surface 3 — VO-less subtitle lines. A handful of tutorial dialogue
     //      nodes ship as subtitle text with NO voice-over (the developer never
@@ -2121,7 +2107,7 @@ enum class Id : int {
     //      FloorPartyToggled   — prefix when the board changed without
     //                            the leader entering a plate (a follower
     //                            stepped on one).
-    //      FmtPlateName        — "Platte %s" wrapper; `%s` is a Dir word
+    //      FmtPlateName        — "Plate %s" wrapper; `%s` is a Dir word
     //                            or PlateCenterWord.
     //      PlateCenterWord     — the centre plate's direction word.
     //      PlateResetName      — the reset plate's full spoken name.
@@ -2148,8 +2134,7 @@ enum class Id : int {
     PlatesAllDark,
     FloorPuzzleSolved,
 
-    // ---- Startup + chargen fallbacks (Phase-3 F8). These paths used to
-    //      speak hardcoded English regardless of the active language.
+    // ---- Startup + chargen fallbacks.
     FmtModLoadedVersion,      // spoken once at DLL init - the first thing heard
     FmtChargenFeatUnnamed,    // fallback when the feat's name label is empty
     ChargenBtnRecommended,    // fallback when the button's own text is empty

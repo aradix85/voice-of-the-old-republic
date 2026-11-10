@@ -26,7 +26,7 @@ namespace acc::room_topology {
 // sig & 0xff = kind. Transitions defers the announce for KindPlatz (big
 // merged spaces — the player may be crossing through). KindRoom is a
 // merged small space that announces immediately. Both render the same
-// neutral "Bereich" label; the kind split exists only to drive that
+// neutral "Area" label; the kind split exists only to drive that
 // delay distinction, never surfaced to the player.
 enum Kind {
     KindDeadEnd     = 0,
@@ -40,7 +40,7 @@ enum Kind {
 // Real cluster ids are non-negative UFFind roots. Sentinels:
 //   None     — no graph / outside snap radius / all candidates filtered.
 //              "No fact yet, do nothing."
-//   OpenArea — synthetic neutral-"Bereich" fallback label. Stable
+//   OpenArea — synthetic neutral-"Area" fallback label. Stable
 //              identity so the entry transition fires exactly once.
 // (A runtime coverage-gap probe with its own sentinel ids lived here
 // briefly in 2026-08; replaced by build-time walkmesh seeding — see
@@ -50,11 +50,11 @@ constexpr int kClusterIdNone      = -1;
 constexpr int kClusterIdOpenArea  = -2;
 
 // One exit entry of a region label, exactly as it appears in the label
-// text ("Nord", "Tür Süd-West nach X"), and the world point it leads to —
+// text ("North", "Door South-West to X"), and the world point it leads to —
 // what exit_memory annotates and camera_orient (N) turns to. Recorded while
 // the label is built; the label itself never changes.
 // Empty text = an exit the label names only through its axis word
-// ("Korridor Nord-Süd", "Bereich Ost-West"): it has a real point but no
+// ("corridor North-South", "Area East-West"): it has a real point but no
 // entry of its own, so only camera_orient uses it.
 struct ExitMark {
     std::string text;
@@ -147,7 +147,7 @@ bool LookupAt(void* area, const Vector& worldPos,
 struct ClusterInfo {
     int    kind      = -1;     // see Kind
     // Longest bounding-box side of the member nodes, metres. Zero for a
-    // single node. Drives the dwell gate and the Großer-Bereich flag.
+    // single node. Drives the dwell gate and the large-area flag.
     float  extentM   = -1.0f;
     // How wide the space is on the floor: the larger of extentM and the
     // narrowest wall-to-wall width through the members (the clearance
@@ -155,7 +155,7 @@ struct ClusterInfo {
     // centre rule's "near" radius.
     float  footprintM = -1.0f;
     Vector centre    = {0.0f, 0.0f, 0.0f};  // what its exit words are measured from
-    // Big enough to speak as "Großer Bereich" (the noun swap applies only
+    // Big enough to speak as "Large area" (the noun swap applies only
     // to area labels; the flag is extent alone).
     bool   largeArea = false;
 };

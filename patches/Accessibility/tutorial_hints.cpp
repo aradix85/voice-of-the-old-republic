@@ -63,8 +63,8 @@ constexpr DialogHint kDialogHintsK1[] = {
     {48555, Id::TutTraskSecurity},
     {48556, Id::TutTraskHealWounded},
     {48324, Id::TutLevelUp},
-    // Taris — Carth's stealth tutorial. His mouse-worded "Klickt auf die
-    // Fähigkeit Tarnung, um diese zu aktivieren" line becomes the G-key hint,
+    // Taris — Carth's stealth tutorial. His mouse-worded "click the
+    // Stealth ability to activate it" line becomes the G-key hint,
     // fired as a popup at the reply break / dialogue close like the Trask set.
     {48557, Id::TutStealthMode},
 };
@@ -418,8 +418,8 @@ const char* HintForMouseText(const char* text) {
 // the current locale's text once (same lazy TLK path as the hint map) and
 // trim-match it against the rendered line so dialog_speech can force it spoken.
 //
-//   39454 — "Du hast genug Erfahrung, um aufzusteigen. Mache den Levelaufstieg,
-//            bevor du durch diese Tür gehst." Trask's Endar Spire level-up-gate
+//   39454 — "You have enough experience to level up. Level up
+//            before you go through this door." Trask's Endar Spire level-up-gate
 //            line, said when the player tries the locked door before assigning
 //            their first level. No VO recorded; subtitle only. (verified in the
 //            German dialog.tlk, 2026-07-19)

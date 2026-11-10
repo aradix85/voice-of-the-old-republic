@@ -1,13 +1,13 @@
-// In-game / title-screen "Tastaturbelegung" screen (CSWGuiInGameOptKeyMappings,
+// In-game / title-screen "Keymapping" screen (CSWGuiInGameOptKeyMappings,
 // optkeymapping.gui).
 //
-// Shaped like the Fähigkeiten screen (menus_abilities) — a two-level submenu so
+// Shaped like the Abilities screen (menus_abilities) — a two-level submenu so
 // the engine's mouse-only rebind path never sees the keys as raw chain nav:
 //
 //   * Tab level (where you land): Up/Down move across a single flat list of
-//     [Bewegung, Spiel, Minigames, OK, Abbrechen, Standard], clamped. Enter on
+//     [Movement, Game, Minigames, OK, Cancel, Default], clamped. Enter on
 //     a category drills into that category's binding listbox; Enter on
-//     OK / Abbrechen / Standard activates the engine button (commit / discard /
+//     OK / Cancel / Standard activates the engine button (commit / discard /
 //     reset). Esc falls through to the engine's close.
 //   * List level (after Enter on a category): Up/Down/Home/End browse the
 //     bindings, each announced as "{action}: {key}". Enter on a changeable row

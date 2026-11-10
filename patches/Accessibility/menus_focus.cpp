@@ -251,7 +251,7 @@ static void AnnouncePanelTitle(void* panel) {
             // kControlBitFlagsOffset reads garbage for LABELS — five labels on
             // the K2 load screen came back 0x2130140a, 0x965b7e8a, 0x3d5c210a,
             // 0x272f1d0a, 0x6375920a, all with a consistent low byte and noise
-            // above it — so every real panel title, "Spiel laden" included, was
+            // above it — so every real panel title, "Load Game" included, was
             // suppressed as invisible. The offset is game-selected and works
             // for BUTTONS on both games; labels are evidently laid out
             // differently on K2 and would need their own witness first.
@@ -383,7 +383,7 @@ void acc::menus::focus::WalkAndCaptureOnFirstSight(void* panel) {
     // (the current value), so the generic capture above resolves the
     // category to the value itself (useless). Override here by reading
     // ability_labels[i] for each ability_buttons[i] and binding the pair
-    // into the cycle-category cache so FromControl produces "Stärke, 8".
+    // into the cycle-category cache so FromControl produces "Strength, 8".
     acc::menus::chargen_attr::CaptureLabelsIfApplicable(panel);
 
     // Same for the Skills panel — value buttons all read "0" initially
@@ -415,12 +415,12 @@ void acc::menus::focus::WalkAndCaptureOnFirstSight(void* panel) {
 // control's announcement still fires after, so the user hears
 // "<panel title>, <focused control>" on entry.
 //
-// In-game sub-screens (Inventar, Karte, Optionen, …) are skipped here:
+// In-game sub-screens (Inventory, Map, Options, …) are skipped here:
 // AnnounceNewSubScreens in menus_monitors.cpp announces them with the
-// TLK-localized strref name on push. Doing both produces "Optionen,
-// Spiel speichern, Optionen" on Options open (panel title + focus +
-// sub-screen monitor) instead of the intended "Optionen, Spiel
-// speichern" sequence.
+// TLK-localized strref name on push. Doing both produces "Options,
+// Save Game, Options" on Options open (panel title + focus +
+// sub-screen monitor) instead of the intended "Options, Save
+// Game" sequence.
 void acc::menus::focus::SpeakPanelTitleOnFirstSight(void* panel) {
     if (!panel || panel == g_lastTitledPanel) return;
     g_lastTitledPanel = panel;
@@ -451,7 +451,7 @@ void acc::menus::focus::AnnounceNewFocusedControl(int n, void* panel, void* newC
     // 2): the message body is spoken as a keyboard hint by the content-fingerprint
     // monitor, and the buttons read on arrow-nav. Suppress the engine-focus-driven
     // announce of the raw control here so neither the mouse body nor a button
-    // (e.g. "Abbrechen") is read on the popup's first-sight SetActiveControl.
+    // (e.g. "Cancel") is read on the popup's first-sight SetActiveControl.
     if (IdentifyPanel(panel) == PanelKind::TutorialBox &&
         (acc::tutorial_popup::SyntheticActive() ||
          acc::tutorial_hints::HintForTutorialRow(
@@ -474,8 +474,8 @@ void acc::menus::focus::AnnounceNewFocusedControl(int n, void* panel, void* newC
     // calling SetActiveControl on whichever item-listbox just became
     // visible. FromControl on a listbox returns the concatenation of
     // every row label — for a merchant with 30 items that's a full
-    // inventory dump after every G press. We already announce "Modus
-    // Kaufen" / "Modus Verkaufen" from TickMonitorMode and rebind the
+    // inventory dump after every G press. We already announce "Buy
+    // mode" / "Sell mode" from TickMonitorMode and rebind the
     // chain; the user can Up/Down to hear individual items. Suppress
     // the listbox-blob speech the same way Container does.
     bool suppressForStore =
@@ -500,7 +500,7 @@ void acc::menus::focus::AnnounceNewFocusedControl(int n, void* panel, void* newC
     // settled control. But MessageBox-open same-tick also fires a follow-up
     // SetActive on the underlying panel's listbox (engine refresh of the
     // now-visible row). Without this guard that fourth fire overwrites the
-    // MessageBox's Abbrechen with the listbox's row text, which dedups
+    // MessageBox's Cancel with the listbox's row text, which dedups
     // against what was already spoken and the popup announces nothing.
     //
     // Fix: when the new SetActive lands on a different panel than the

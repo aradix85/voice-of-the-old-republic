@@ -25,10 +25,10 @@ struct Rename {
     acc::strings::Id stringId;
 };
 
-// Destination-area name strrefs (dialog.tlk): 7470 "Dantooine - Hof",
-// 7851 "- Matale-Anwesen", 8000 "- Geh\xF6lz", 8724 "- Sandral-Anwesen".
-// Note strrefs: 33413 "S\xFCdlicher Pfad", 33425 "Nordpfad", 33461
-// "Ausgang". Each note sits 2-11m from exactly one transition trigger in
+// Destination-area name strrefs (dialog.tlk): 7470 "Dantooine - Courtyard",
+// 7851 "- Matale Estate", 8000 "- Grove", 8724 "- Sandral Estate".
+// Note strrefs: 33413 "Southern Path", 33425 "North Path", 33461
+// "Exit". Each note sits 2-11m from exactly one transition trigger in
 // the module data, so the destination is unambiguous; danm14aa's two
 // 33413 notes both lead to danm14ab (west + east path) and share one
 // entry — the cycle's position ordinal then numbers them 1/2.
@@ -42,7 +42,7 @@ const Rename kRenames[] = {
     { "danm14ad", 33425, false, 0.0f,  0.0f,  8000, kNoString },
     { "danm14ae", 33461, false, 0.0f,  0.0f,  8724, kNoString },
     { "danm15",   33461, false, 0.0f,  0.0f,  7470, kNoString },
-    // Sandral estate interior: both exits carry 33461 "Ausgang" and lead
+    // Sandral estate interior: both exits carry 33461 "Exit" and lead
     // to danm14ad through different doors. Front (dan16_door03, links to
     // the marked outdoor entrance) vs back (dan16_door04, the estate
     // backdoor used in the feud quest) — anchors are the notes' authored

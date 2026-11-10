@@ -52,7 +52,7 @@ using acc::strfmt::ToLowerAscii;
 using acc::strfmt::ToUpperAscii;
 
 // North-to-south total order — mirrors cycle_input::PositionLess so the
-// discovery ordinal matches the spoken "Nordpfad 3" numbering the player
+// discovery ordinal matches the spoken "north path 3" numbering the player
 // already hears. Greater Y = more north = ranks first; X then Z break ties.
 bool PositionLess(const Vector& a, const Vector& b) {
     if (a.y != b.y) return a.y > b.y;
@@ -220,7 +220,7 @@ void Persist() {
 // area's save var loads, keyed by object tag (tags extracted from the
 // module rims with xoreos-tools, 2026-07-17).
 //   sta_m45ab — deck-2 turret-defense computers ("Computerterminal")
-//   sta_m45ac — battle-droid control terminals (Terminal Typ A/D/E/F + MK)
+//   sta_m45ac — battle-droid control terminals (Terminal Type A/D/E/F + MK)
 //   sta_m45ad — Malak fight: the captive Jedi (tags captive2..captive8)
 struct AreaSeed {
     const char*        areaKey;   // module resref, matches g_areaTag

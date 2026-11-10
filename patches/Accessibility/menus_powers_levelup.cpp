@@ -54,8 +54,8 @@ struct ButtonRow {
     const char* logTag;
 };
 
-// Button virtual entries after the chart cells. SELECT_BTN ("Hinzuf.
-// Macht") is intentionally omitted — Enter on a focused cell dispatches
+// Button virtual entries after the chart cells. SELECT_BTN ("Add
+// Power") is intentionally omitted — Enter on a focused cell dispatches
 // OnPowerPicked directly, which is the same engine action SELECT_BTN's
 // click would fire. Mirrors the chargen_feats button list
 // (recommended / accept / back).
@@ -390,7 +390,7 @@ void NavHorizontal(void* panel, bool right) {
 }
 
 // Home / End across the whole 2D surface — leftmost filled cell of the
-// first power row, and the final button row (Abbrechen). Mirrors
+// first power row, and the final button row (Cancel). Mirrors
 // chargen_feats::NavJumpEnd; see the rationale there.
 void NavJumpEnd(void* panel, bool toEnd) {
     int oldR  = s_curRow;
@@ -399,7 +399,7 @@ void NavJumpEnd(void* panel, bool toEnd) {
     if (total <= 0) return;
 
     if (toEnd) {
-        s_curRow = total - 1;   // last button row (BTN_BACK / Abbrechen)
+        s_curRow = total - 1;   // last button row (BTN_BACK / Cancel)
         s_curCol = 0;
     } else {
         s_curRow = 0;

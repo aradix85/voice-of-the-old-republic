@@ -130,7 +130,7 @@ bool ReadDeadFlag(void* serverCreature) {
 // branch rolls a saving throw and mutates perception state (PacifyCreature /
 // AddToVisibleList), so it must not be called from this passive readout. And it
 // is redundant: AppendEffectRows below already walks the effect list read-only
-// and names an active INVISIBILITY effect (type 47 → "Unsichtbar"). Decompile of
+// and names an active INVISIBILITY effect (type 47 → "Invisible"). Decompile of
 // GetInvisible: param_1 is the OBSERVER; it answers "is this creature invisible
 // to that observer" (Stealth/Sanctuary, gated by the observer's see-invisibility
 // flags + a Will save). See git history for the full analysis.
@@ -548,7 +548,7 @@ bool IsHostileCreature(void* serverObject) {
 // off the row and resolves it through the dual-game TLK path (the retired
 // CSWSpell::GetSpellNameText call was a bare fetch of the same strref, but
 // KOTOR 1-only — on K2 it resolved to 0 and every queued power spoke as the
-// generic "Macht einsetzen"). SEH-guarded at every dereference. Used by
+// generic "Use Force Power"). SEH-guarded at every dereference. Used by
 // combat::queue's row speech for action_type=9 (Cast Force Power) entries.
 bool ResolveSpellName(int spellId, char* outBuf, size_t outBufSize) {
     if (!outBuf || outBufSize < 2) return false;
@@ -613,7 +613,7 @@ bool ResolveFeatName(unsigned short featIdx, char* outBuf, size_t outBufSize) {
     // (which is all that accessor does with the same +0x8 strref) because
     // its address was KOTOR 1-only — on K2 the call resolved to 0, the SEH
     // swallowed the fault, and every queued feat spoke as the generic
-    // "Talent einsetzen" (2026-08-04 K2 session). Offset is Same(0x08),
+    // "Use talent" (2026-08-04 K2 session). Offset is Same(0x08),
     // witnessed on K2 in the abilities OnEnterFeat twin.
     uint32_t nameStrRef = 0;
     __try {

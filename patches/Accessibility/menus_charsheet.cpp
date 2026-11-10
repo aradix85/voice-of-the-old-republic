@@ -25,8 +25,8 @@ namespace {
 // NOTE: Lane's struct names are partially misleading — verified live in
 // patch-20260505-151714.log:984 by reading every candidate offset and
 // inspecting the spoken output:
-//   - lbl_class @ 0x1A4 holds the HEADING "Klasse", not "Soldat"
-//   - lbl_class1 @ 0x2E4 holds the actual class name ("Soldat")
+//   - lbl_class @ 0x1A4 holds the HEADING "Class", not "Soldier"
+//   - lbl_class1 @ 0x2E4 holds the actual class name ("Soldier")
 //   - lbl_level @ 0x564 holds heading "Level", actual value at lbl_level1
 // XP slots: Lane's naming holds — lbl_exp_stat @0x11e4 is the current
 // XP value, lbl_needed_xp @0x1464 is the threshold for the next level.
@@ -34,7 +34,7 @@ namespace {
 // believed the player had 6000 current XP and 3001 was the threshold;
 // reversed the assignment so lbl_exp_stat became "threshold" and
 // lbl_needed_xp became "current". Verified wrong in session 20260514-
-// 201250: Gauner level 1 with 1275 XP (above the 1000 threshold so
+// 201250: Scoundrel level 1 with 1275 XP (above the 1000 threshold so
 // CAN level) read 0x11e4 = "1275" and 0x1464 = "1000", matching
 // Lane's naming. The earlier "6000 current XP" assumption was the
 // confused step — the dev's character was actually at 3001 current
@@ -46,7 +46,7 @@ namespace {
 // reversed these two based on a session where the user had godmoded
 // FP=999/999 and normal HP=36/36 — the dev concluded "Lane's names
 // are reversed" but the actually-godmoded slot was FP, not HP.
-// Verified via session 20260514-201250: Soldat level 3 with infinite-
+// Verified via session 20260514-201250: Soldier level 3 with infinite-
 // force cheat shows 0x16e4 = "999/999" (godmoded FP) and 0x1824 =
 // "30/36" (normal HP for that class+level). Names match Lane.
 // KOTOR 2 column mined from the K2 panel ctor 0x0084C3A0 (tag wiring, label
@@ -56,7 +56,7 @@ namespace {
 // into 0x1630/0x18c0 — the same role split assumed here. KOTOR 2's character
 // panel builds NO class or level labels at all (no CLASS/LEVEL tag in its
 // ctor), so those two rows are Kotor1Only and the spec walk skips them.
-const size_t kCharSheetLblClass    = acc::off::Kotor1Only(0x02e4);  // class name "Soldat" (lbl_class1)
+const size_t kCharSheetLblClass    = acc::off::Kotor1Only(0x02e4);  // class name "Soldier" (lbl_class1)
 const size_t kCharSheetLblLevel    = acc::off::Kotor1Only(0x06a4);  // level number "1" (lbl_level1)
 const size_t kCharSheetLblFort     = acc::off::Pick(0x0924, 0x588);   // fortitude save val
 const size_t kCharSheetLblRef      = acc::off::Pick(0x0a64, 0x6d0);   // reflex save val
@@ -118,23 +118,23 @@ bool DisplayedHasForce(void* panel) {
 // to read and how to format them.
 //
 // `sortCy` is the synthetic y-coordinate used to position the virtual
-// entry in the navigable chain. Real button entries on Charakterblatt
+// entry in the navigable chain. Real button entries on the character sheet
 // sit at cy >= 237; we anchor the stat block ABOVE those at cy 1..12
 // so Up/Down navigation reads:
 //
-//   [stats: Klasse, Stufe, Erfahrung, HP, FP, Str, Dex, Con, Int, Wis,
-//    Cha, Gesinnung] then [real buttons: Autom., Levelaufst, Schliess,
-//    Kurzbefehle, Vorheriger, Nächster].
+//   [stats: Class, Level, Experience, HP, FP, Str, Dex, Con, Int, Wis,
+//    Cha, Alignment] then [real buttons: Auto, Level Up, Close,
+//    Shortcuts, Previous, Next].
 //
 // Synthetic cy lets us enforce reading order independent of the engine's
 // label coordinates (which would otherwise interleave stats with buttons:
-// Stufe at panel y=112 lands ABOVE Gauner at y=120, Erfahrung at y=392
+// Level at panel y=112 lands ABOVE Scoundrel at y=120, Experience at y=392
 // lands AFTER attributes etc.). Mouse warp goes via cx which we still
 // read from the real label/slider position, so cursor lands on it.
 enum class StatRowKind {
     LabelValue,         // single label: %s
     LabelValueMod,      // value + modifier (attributes): %s, %s
-    LabelValueThresh,   // value + threshold (XP): %s von %s
+    LabelValueThresh,   // value + threshold (XP): %s of %s
     Slider,             // CSWGuiSlider cur_value / max_value (alignment)
 };
 

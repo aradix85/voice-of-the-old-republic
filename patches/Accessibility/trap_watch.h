@@ -10,14 +10,14 @@
 //
 // Three outputs:
 //   1. Ground mines (trigger kind): the engine already emits a feedback
-//      line ("<name> entdeckt <Minenname>: ...") through the combat
+//      line ("<name> detects <mine>: ...") through the combat
 //      message funnel. We only enrich it — combat.cpp's RuleMineDetect
 //      correlates the line with the freshest new detection via
 //      PeekFreshMine/ConsumeFreshMine and appends clock direction +
 //      distance.
 //   2. Trapped doors/placeables: the engine broadcasts NO feedback line
 //      for those (UpdateMineCheck only messages in the trigger branch).
-//      We announce "Falle entdeckt: <name>, auf X Uhr, Y Meter" on the
+//      We announce "Trap detected: <name>, X o'clock, Y metres" on the
 //      detected transition ourselves.
 //   3. Proximity warning: a detected ground mine within a small radius
 //      speaks its name + clock + metres ONCE per approach (re-arms only

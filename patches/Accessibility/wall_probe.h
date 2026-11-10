@@ -3,8 +3,8 @@
 // This is the wall system, distinct from the room-shape system that reads
 // it. Everything here is a single-ray or multi-ray cast against the cached
 // perimeter walls (acc::spatial::wall_surfaces::GetCachedWalls); nothing
-// here knows about nav-graph nodes, clusters, or the Korridor / Kreuzung /
-// Bereich vocabulary those produce.
+// here knows about nav-graph nodes, clusters, or the corridor / junction /
+// Area vocabulary those produce.
 //
 // The two systems' names got entangled during development: the probes
 // lived in a file called wall_topology.cpp which was, in substance, room

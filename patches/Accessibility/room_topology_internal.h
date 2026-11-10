@@ -49,13 +49,13 @@ constexpr int kMaxNodes = acc::engine::navgraph::kMaxNodes;
 // Spire decks) from collapsing vertically-aligned nodes. The old separate
 // 8m junction cap is gone — merging two degree-≥3 hubs is just one case of
 // the space rule now (this still collapses the Dias-Apartment pattern of
-// two Kreuzungen ~6m apart into one perceptual hub).
+// two junctions ~6m apart into one perceptual hub).
 constexpr float kMergeMaxZM = 1.0f;
 
 // Pass 1 / open rule — the large-space analog of the corridor and room
 // rules: it folds the several nav nodes of one open plaza/chamber into a
 // single cluster, so the player hears one place instead of flipping
-// between adjacent Kreuzungen (the Slums central-plaza re-fire — clusters
+// between adjacent junctions (the Slums central-plaza re-fire — clusters
 // 110/118 swap on every short loop).
 //
 // A node is "open" when at least kOpenMinRays of its 8 clearance rays
@@ -63,12 +63,12 @@ constexpr float kMergeMaxZM = 1.0f;
 // kOpenRayDistM. Two open nodes that are GRAPH-ADJACENT (share a nav
 // edge), within kOpenMergeRadiusM, mutually wall-clear and door-free
 // union into one open cluster. Adjacency is the connector — proximity
-// alone bridged junction throats (the Oberstadt store/cantina over-merge);
+// alone bridged junction throats (the Upper City store/cantina over-merge);
 // the engine's edges define what is actually contiguous. See the Pass 1
 // body for the full rationale + Slums adjacency audit.
 //
-// Threshold rationale (measured on the Slums and Manaan Östliches
-// Zentrum): a pure corridor X-junction has at most as many long rays as
+// Threshold rationale (measured on the Slums and Manaan's East
+// Central): a pure corridor X-junction has at most as many long rays as
 // it has arms, so its over-8m count tops out at ~3-5; a genuinely open
 // room needs its surrounding walls pulled back and reaches 6-8. Setting
 // kOpenMinRays=6 admits real rooms and rejects corridor intersections by
@@ -80,7 +80,7 @@ constexpr float kMergeMaxZM = 1.0f;
 // open→open graph edge we'll coalesce across (adjacency is the primary
 // connector). It covers every real Slums plaza edge (the largest open
 // open-coalesce gap there is 16.0m, node 110↔118 is 15.3m and is a direct
-// nav edge) while leaving long cross-plaza edges (e.g. Oberstadt 11↔18 at
+// nav edge) while leaving long cross-plaza edges (e.g. Upper City 11↔18 at
 // 23.7m) as separate spaces — current behaviour. The earlier "raise 12→16
 // to un-strand node 110" tuning is now moot: 110 was never stranded in the
 // graph, only in the old proximity form. The archway residual (two open
@@ -93,8 +93,8 @@ constexpr int   kOpenMinRays      = 6;
 constexpr float kOpenMergeRadiusM = 16.0f;
 
 // Large-area threshold: a cluster whose member-node bounding box has its
-// longer side ≥ this many metres speaks as "Großer Bereich" instead of
-// "Bereich". Pure label swap — axis, exits, kind and delay are unchanged;
+// longer side ≥ this many metres speaks as "Large area" instead of
+// "Area". Pure label swap — axis, exits, kind and delay are unchanged;
 // it just sets the expectation that wall/object cues are sparse across a
 // space this big (the Kashyyyk Great Walkway's main cluster spans ~160 m,
 // normal merged rooms ~20-30 m). Tuned conservatively so only genuinely
@@ -102,7 +102,7 @@ constexpr float kOpenMergeRadiusM = 16.0f;
 constexpr float kLargeAreaExtentMeters = 40.0f;
 
 // Kind values now live in the public header (room_topology.h) so
-// transitions.cpp can branch on Platz for the delayed-announce path.
+// transitions.cpp can branch on plaza for the delayed-announce path.
 // Aliases here keep the local code compact.
 constexpr int kKindDeadEnd  = KindDeadEnd;
 constexpr int kKindCorridor = KindCorridor;
@@ -122,13 +122,13 @@ struct DoorRecord {
     Vector pos;
     char   transitionDest[64];
     // CSWSDoor.loc_name @+0x39c — the door's own authored localized
-    // name (e.g. "Lift", "Sicherheitstür", "Tür zu Bastilas Quartier").
+    // name (e.g. "Lift", "security door", "Door to Bastila's Quarters").
     // Substituted as the noun in the FmtMapCursorDoor* formats; when
-    // empty, the localized generic ("Tür"/"Door") falls back so output
+    // empty, the localized generic ("Door"/"Door") falls back so output
     // matches the pre-loc-name behaviour for unnamed doors. Same field
     // Pillar 4 cycle narration speaks when Q/E lands on a door.
     char   locName[64];
-    // Attached landmark map-note (e.g. "Zur Oberstadt"), populated by
+    // Attached landmark map-note (e.g. "To Upper City"), populated by
     // AttachLandmarksToDoors during BuildForArea when a CSWCWaypoint
     // with has_map_note sits within kLandmarkDoorMatchMaxM of this
     // door's position. Preferred over transitionDest in cluster labels
@@ -144,22 +144,22 @@ constexpr int kMaxDoors = 128;
 // transition destination). Outdoor maps (Lehon beaches) use these instead
 // of doors for area exits: the walkmesh simply ends inside the trigger
 // polygon, so the nav graph sees a dead end there and the cluster label
-// said "Sackgasse" at the very spot that leaves the area (the Südlicher
+// said "dead end" at the very spot that leaves the area (the Southern
 // Strand's only walk-through exit). Snapshotted once per build like doors;
 // each record
 // binds to its nearest nav node so Pass 3 can voice the transition as a
 // named exit of that node's cluster.
 struct TransitionRecord {
     Vector pos;
-    char   destName[64];   // resolved TransitionDestin ("Unbekannte Welt -
-                           // Tempel-Außenbereich"); spoken with the
+    char   destName[64];   // resolved TransitionDestin ("Unknown World -
+                           // temple exterior"); spoken with the
                            // "<planet> - " prefix stripped
     int    nearestNode;    // -1 when no nav node within attach range
 };
 
 constexpr int   kMaxTransitions       = 16;
 // Nearest-node attach cap. The trigger sits past the walkmesh edge, so it
-// is farther from its nav node than a door is from its frame (Südlicher
+// is farther from its nav node than a door is from its frame (Southern
 // Strand temple trigger: 7.3 m). Beyond this we leave the trigger
 // unattached and log it rather than guess across half the map.
 constexpr float kTransitionAttachMaxM = 12.0f;
@@ -183,10 +183,10 @@ struct AreaGraph {
     int         node_cluster_id[kMaxNodes];
     // Per-node "filtered" flag. Set to true on degree-1 clusters whose
     // walkmesh-shape gate rejected the alcove claim. The label is still
-    // rendered (Sackgasse + direction) so the LookupAt rescue path can
+    // rendered (dead end + direction) so the LookupAt rescue path can
     // emit it when no unfiltered candidate sits within range — recovers
     // the rare Bucket-3 case (alcove dropped by the geometry gate, no
-    // labelled cluster nearby → would otherwise speak the neutral "Bereich").
+    // labelled cluster nearby → would otherwise speak the neutral "Area").
     // The primary scan in LookupAt skips filtered nodes, so wall-curve
     // graph artefacts in inhabited regions stay silent (the core-merge and
     // straggler-absorb passes also absorb most such artefacts before the gate
@@ -235,8 +235,8 @@ extern DoorStabilityState g_doors_stability;
 // filtering in Pass 3 classification:
 //   - kEdgeClear   → free movement; contributes its direction unmodified
 //   - kEdgeDoor    → free movement through a CSWSDoor (doorIdx valid);
-//                    contributes direction wrapped as "Tür X" / "Tür X
-//                    nach DEST"
+//                    contributes direction wrapped as "Door X" / "Door X
+//                    to DEST"
 //   - kEdgeBlocked → the segment crosses immovable walkmesh geometry;
 //                    the edge is dropped entirely (no merge, no
 //                    external-edge contribution).

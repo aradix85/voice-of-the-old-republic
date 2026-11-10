@@ -246,7 +246,7 @@ bool VariantRefusal(void* mi, int slot, int index, uint32_t* outStrRef) {
 
     // Logged on EVERY read, refusal or not. The word itself is the evidence:
     // KOTOR 1 answers a full-health medkit with bit 0 clear and reason 5
-    // ("Volle Gesundheit"), KOTOR 2 answers the same item with bit 0 set and
+    // ("Full health"), KOTOR 2 answers the same item with bit 0 set and
     // dispatches into a handler that silently does nothing. Whether that is
     // Aspyr permitting what KOTOR 1 forbids, or us reading a list KOTOR 2 has
     // not repopulated, is decided by comparing these two words for the same

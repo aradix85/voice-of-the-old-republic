@@ -6,7 +6,7 @@
 // inside the panel struct. The labels aren't IsChainNavigable, so the
 // chain walker would skip them — we surface them as virtual text-only
 // chain entries the same way menus_credits does for the credits readout
-// and menus_charsheet does for the Charakterblatt attribute block.
+// and menus_charsheet does for the character sheet attribute block.
 //
 // Ordering: stats anchor at sortCy values higher than every real button
 // on the panel so they read AFTER the 9 slot buttons and the Back /

@@ -107,7 +107,7 @@ const size_t kPanelStateOffset = acc::off::Pick(0x86d4, 0x9650); // game_state
 //     lives at panel+0x8c58. Clearing the field disables all three the same way.
 const size_t kTutorialActiveOffset = acc::off::Pick(0x7d20 + 0x994, 0x9630);
 
-// CSWGuiWagerPopup (the "Wie viel setzt du?" bet popup, a different panel from
+// CSWGuiWagerPopup (the wager popup, a different panel from
 // the board): current wager at +0xc94, maximum at +0xc98. The chain labels the
 // less/more buttons but only re-reads on focus change, so we poll the amount
 // and announce it when it changes (pure observation).

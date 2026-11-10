@@ -62,7 +62,7 @@ void HandleEnterActivation(void* activePanel, int code, int val, bool& consumed)
     // stranded engine-pushed modals (StatusSummary after a skill check, the
     // quit-confirm MessageBox, AreaTransition prompts) where the chain was
     // bound to the previous panel. Mirroring HandleNavStep's rebind here lets
-    // popups the engine pre-focuses (quit-confirm pre-focused on Abbrechen)
+    // popups the engine pre-focuses (quit-confirm pre-focused on Cancel)
     // activate the focused button on Enter alone. RebindChain anchors
     // g_chainIndex on panel.activeControl when present.
     if (g_chainPanel != activePanel) {
@@ -142,7 +142,7 @@ void HandleEnterActivation(void* activePanel, int code, int val, bool& consumed)
     // (OnControlInvAButton / OnControlStoreAButton based on mode) instead of
     // the generic FireActivate. The default vtable[15] event 0x27 path just
     // refreshes the description listbox via OnControlEntered — never actually
-    // sells or buys. Action buttons (Verkaufsliste / Schliess. / Kaufen) fall
+    // sells or buys. Action buttons (Sell / Close / Buy) fall
     // through to the default activate path below; they're plain CSWGuiButton
     // instances, not CSWGuiStoreItemEntry rows.
     bool isStoreItemRow =
@@ -173,7 +173,7 @@ void HandleEnterActivation(void* activePanel, int code, int val, bool& consumed)
             acc::engine::PanelKind::InGameJournal &&
         acc::menus::journal::IsJournalEntry(e.control);
 
-    // Quest-item row Enter — the QuestItem sub-screen ("Auftrags-Gegenstände")
+    // Quest-item row Enter — the QuestItem sub-screen ("Quest Items")
     // lists plot items as CSWGuiInGameItemEntry rows with no meaningful
     // activate action (only BTN_BACK does anything). Mirror the journal: read
     // the item's property description on Enter. BTN_BACK is a plain button
@@ -189,7 +189,7 @@ void HandleEnterActivation(void* activePanel, int code, int val, bool& consumed)
     // companions are chosen — the panel's chosen count climbs to 2 and the
     // toggle does nothing, leaving no state change for the focus monitor to
     // re-announce. We still let the engine run (the no-op path plays its UI
-    // click sound and refreshes the count label) but speak "Gruppe voll" so
+    // click sound and refreshes the count label) but speak "Party full" so
     // the silent refusal is audible. Not for a story-locked companion: the
     // engine refuses that one for its own reason (KOTOR 2 says why in a
     // message box), and the portrait already announced the lock.
@@ -205,17 +205,17 @@ void HandleEnterActivation(void* activePanel, int code, int val, bool& consumed)
         }
     }
 
-    // InGameLevelUp category / Annehmen the engine has not currently enabled.
+    // InGameLevelUp category / Accept the engine has not currently enabled.
     // The wizard enforces sequential leveling: only the "current" step carries
     // bit_flags bit 3 (0x8 = CSWGuiControl::SetEnabled); a real mouse click is
     // inert on the rest. Our deferred FireActivate force-raises is_active and
     // would otherwise let the user open a later step out of order — and doing
-    // the Kräfte (powers) step before an earlier one makes the engine's
+    // the Powers (powers) step before an earlier one makes the engine's
     // ChangeState/ClearPowers resync wipe the freshly-chosen power on commit
     // (root cause: memory project_levelup_power_lost_investigation). Block the
     // activation and point the user at the step the engine wants next. bit 3
     // is the real gate (bit 1 / is_active were both wrong on different button
-    // sets); Annehmen gains bit 3 only once every step is done, so this also
+    // sets); Accept gains bit 3 only once every step is done, so this also
     // correctly refuses a premature accept without trapping the user.
     bool isLevelUpInactiveStep = false;
     if (acc::engine::IdentifyPanel(g_chainPanel) ==
@@ -502,7 +502,7 @@ void HandleNavStep(void* activePanel, int code, int val, bool& consumed) {
     g_chainIndex = newIndex;
 
     ChainEntry& e = g_chain[g_chainIndex];
-    // Chargen Fähigkeiten descriptions are long (~10s of speech each) but the
+    // Chargen Skills descriptions are long (~10s of speech each) but the
     // user navigates Up/Down faster than they can read. With interrupt=false
     // (our default), each step queues "label, suffix, description" behind the
     // previous step's still-playing description — the user hears descriptions
@@ -523,7 +523,7 @@ void HandleNavStep(void* activePanel, int code, int val, bool& consumed) {
     // (selected_skill_index) on a different panel, same mechanism.
     acc::menus::chargen_skills::SyncSelectedSkillFromChainFocus();
     // Same for the K2 workbench / lab-station crafting screens — the engine's
-    // listbox selection_index is what "Objekt erstellen" builds from.
+    // listbox selection_index is what "Create Item" builds from.
     acc::menus::crafting::SyncSelectedRowFromChainFocus();
     // Per-row info suffixes / descriptions across panels that need them.
     // Each helper no-ops on every panel except its own.
@@ -534,8 +534,8 @@ void HandleNavStep(void* activePanel, int code, int val, bool& consumed) {
     acc::menus::store::AnnounceChainStepSuffix(g_chainPanel, e.control);
     acc::menus::crafting::AnnounceChainStepSuffix(g_chainPanel, e.control);
     // Inventory rows (CSWGuiInGameInventory / Container loot listbox): append
-    // "N Stück" when stack_size > 1. Store rows are deliberately excluded —
-    // the store suffix above already speaks "Lager N" / "du besitzt N".
+    // "N in stack" when stack_size > 1. Store rows are deliberately excluded —
+    // the store suffix above already speaks the stock and owned counts.
     // Silent on stack_size == 1 so weapons / armour stay quiet.
     if (acc::engine::IsInventoryItemRow(e.control)) {
         int stack = acc::engine::ReadItemRowStackCount(e.control);
@@ -650,7 +650,7 @@ void HandleLeftRight(void* activePanel, int code, int val, bool& consumed) {
         //   Right → activate right_arrow (cycles +1)
         // Engine's UpdatePortraitButton writes the new resref to
         // creature.portrait, the per-frame focus monitor re-reads, and
-        // the diff fires the new "Porträt: …" announcement.
+        // the diff fires the new "Portrait: …" announcement.
         void* portraitTarget = nullptr;
         {
             void** pVt = *reinterpret_cast<void***>(activePanel);
@@ -691,7 +691,7 @@ void HandleEsc(void* activePanel, int code, int val, bool& consumed) {
     if (val == 0) return;
     if (code != kInputEsc1 && code != kInputEsc2) return;
 
-    // Store-specific Esc: route to cancel_button (Schliess.) directly.
+    // Store-specific Esc: route to cancel_button (Close) directly.
     // The store isn't in IsModalPopupPanel (it's the foreground modal,
     // not a popup on top), and the chain doesn't include the cancel
     // button anymore (we filter it out so it doesn't clutter Up/Down
@@ -700,7 +700,7 @@ void HandleEsc(void* activePanel, int code, int val, bool& consumed) {
         if (acc::menus::store::CloseFromEsc()) consumed = true;
     }
 
-    // Workbench upgrade panel Esc: route to BTN_BACK ("Abbrechen") directly
+    // Workbench upgrade panel Esc: route to BTN_BACK ("Cancel") directly
     // (K1 upgrade.gui id 28; K2 upgrade_p.gui renumbers it to 13). Same
     // shape as the store branch above — the upgrade.gui panel is the
     // foreground modal (not a popup on top), so the generic Esc gate below
@@ -736,7 +736,7 @@ void HandleEsc(void* activePanel, int code, int val, bool& consumed) {
     }
 
     // InGameOptions sub-screen override: the parent strip's controls[0] is
-    // a button (Spiel laden), not a listbox, so DetectTabsCluster never
+    // a button (Load Game), not a listbox, so DetectTabsCluster never
     // latches and `g_tabbedPanel` stays null — the tabbed-parent arm above
     // misses every in-game Options sub-screen. The foreground may also be
     // a HUD layer rather than the sub-screen itself, depending on overlay
@@ -744,9 +744,9 @@ void HandleEsc(void* activePanel, int code, int val, bool& consumed) {
     //
     // `g_chainPanel` is the right discriminator: SetActiveControl re-binds
     // the chain to the heap-allocated sub-screen on entry, so it points at
-    // Spieleinstellungen / Grafik / Sound / Auto-Pause / Feedback /
-    // Tastenbelegung / Mauseinstellungen for the lifetime of that screen,
-    // and FindCloseButton on it resolves Schliess. reliably. The
+    // Gameplay / Graphics / Sound / Auto-Pause / Feedback /
+    // Keymapping / Mouse settings for the lifetime of that screen,
+    // and FindCloseButton on it resolves Close reliably. The
     // IsInGameOptionsSubScreen helper already excludes the parent strip.
     void* escTargetPanel = activePanel;
     bool  escIsOptionsSub = false;
@@ -767,13 +767,13 @@ void HandleEsc(void* activePanel, int code, int val, bool& consumed) {
             acclog::Write("Esc", "op already pending; ignoring");
             consumed = true;
         } else {
-            // Probe order matters: confirm-style popups (OK + Abbrechen,
+            // Probe order matters: confirm-style popups (OK + Cancel,
             // Yes + No, …) carry BOTH a cancel-intent button AND the
             // affirmative that FindCloseButton matches as "OK". Esc is a
-            // back-out gesture, never a confirm — try Abbrechen/Cancel
+            // back-out gesture, never a confirm — try Cancel/Cancel
             // first so the quit-confirm and save-overwrite-style dialogs
             // route Esc to the safe choice. Single-button info popups
-            // (StatusSummary's lone Schliess, AreaTransition's Weiter)
+            // (StatusSummary's lone Close, AreaTransition's Continue)
             // have no cancel button, so the FindCloseButton fallback
             // handles them.
             void* cancelBtn = FindCancelButton(escTargetPanel);
@@ -793,8 +793,8 @@ void HandleEsc(void* activePanel, int code, int val, bool& consumed) {
                 //
                 // ValidateChainPanel can't help (panel still in panels[]
                 // when it runs), and chain[10] nulling only covers
-                // Schliess. itself — the other 11 entries are equally
-                // dead. Invalidate the whole chain here; the Schliess.
+                // Close itself — the other 11 entries are equally
+                // dead. Invalidate the whole chain here; the Close
                 // pointer is already captured by QueueActivate and the
                 // next SetActiveControl rebuilds against whatever the
                 // engine refocuses on.

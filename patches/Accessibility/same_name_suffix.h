@@ -1,7 +1,7 @@
 // Per-object disambiguator for same-LocName objects.
 //
 // Multiple objects in an area often share a localized display name
-// (5x "Wandverkleidung" in one corridor; 3x "Sith-Soldat" in a fight).
+// (5x "Wall Panel" in one corridor; 3x "Sith Soldier" in a fight).
 // Sighted players tell them apart by position + reticle; blind players
 // hear the same name in a row with no way to refer back.
 //
@@ -70,7 +70,7 @@ void AppendSuffix(void* gameObject, char* outBuf, size_t bufSize);
 //     whole corridor every time a door was opened.
 //   - Doors locked at area load form their own sequence (engine
 //     WasDoorLockedAtAreaLoad — frozen, not live), so picking a lock turns
-//     "Tür 2, verriegelt" into "Tür 2, entriegelt" and leaves the other
+//     "Door 2, locked" into "Door 2, unlocked" and leaves the other
 //     locked doors alone.
 // Call with outBuf holding the base name only; the caller appends the state
 // suffix afterwards via engine::AppendObjectStateSuffix.
