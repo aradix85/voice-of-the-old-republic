@@ -231,6 +231,34 @@ AttachThreadInput branch gone); one ContainsNoCase in strfmt (f9a3c3f6).
 engine_area_walls: wall records and SegmentCrossesWalkmesh to the
 engine-free walkmesh_geometry (bd28beec), lean (e1c1f082: one mesh reader,
 portal filter and same-room dedup engine-free with tests).
+camera_orient: turns split off (0cd01306), lean (4ed0b3c9: the exit choice
+engine-free in camera_orient_pick with tests).
+room_topology_shape: Pass 3 in named steps (541819e6), moved to
+room_topology_classify.cpp (a8b3789c), lean (97abb26c); English fallback
+words "Door" and "Area" (36c31337).
+CI: the publish step retries three times on GitHub's HTTP 500 (57c0afae).
+tutorial_hints: dialog split off (86fcfb38), lean (071ac481: one TlkTexts
+cache template). text_match engine-free with tests, out of engine_reads
+(57c000cd).
+minigame_swoop_audio_obstacles: TickObstacleCues in named steps
+(dc21c158), bars split off (c49e10d9), lean (0405c4d2).
+menus_extract_icons: equipment and speculative reads split off
+(5192af4e), lean (6b697bf3). menus_crafting: rows split off (6e496ee3),
+lean (db2ed1cf). camera_spin_guard: named steps (08b69d0a), lean
+(46d71df5), 501 lines, kept whole. menus_editbox: lean (eff793ee, spec
+table, 311 lines). menus_store: lean (686dfad0, 380 lines).
+floor_puzzle: Tick in named steps (d6fc0304), the plate model engine-free
+in floor_puzzle_plates (95adc230), lean (57f53880: one Visit struct,
+tests).
+engine_reads: ReadControlId replaces the raw id reads (F14 done) and
+ReadEditboxText moves in from menus_editbox (dc8f308f);
+ReadControlNameFields reads the tooltip at the per-game offset.
+menus_extract_controls: lean (222d56de: TryAs over the engine_reads text
+readers, PanelControls, TryEditbox through ReadEditboxText, the dead
+TryTooltip gone).
+audio_footstep_suppress: stuck probe in named steps (0cbc1240), moved to
+audio_stuck_probe (14310482); its lean is next (engine-free stuck window
+with tests, one point-to-segment helper shared with floor_puzzle_plates).
 
 Careful: never rewrite source files with PowerShell ReadAllText/WriteAllText
 (it decodes UTF-8 and writes '?' for the dashes and umlauts in comments);
@@ -292,18 +320,18 @@ prefix (menus_listbox_picker.cpp).
 - Goal (Anouk, 2026-11-10): split every file above 600 lines where that is
   possible; for files above 500 lines, judge whether a split into modules of
   things that belong together makes sense, and do it where it does.
-- Next file, by size (2026-11-10 19:10, strings*.cpp excepted):
-  camera_orient 654, room_topology_shape 651, tutorial_hints 643,
-  minigame_swoop_audio_obstacles 636, menus_extract_icons 635,
-  menus_crafting 634, menus_editbox 633, camera_spin_guard 633, menus_store
-  631, floor_puzzle 627, menus_dispatch 626, menus_extract_controls 625,
-  audio_footstep_suppress 622, engine_picker 609, engine_reads 607; then 21
-  files of 500-600 to judge. The catalog headers (engine_offsets_fields.h
-  2318, engine_offsets_addresses.h 1060, engine_area.h 861) stay as they are.
+- Next file, by size (2026-11-10 21:15, strings*.cpp excepted):
+  audio_footstep_suppress lean, engine_reads 622, menus_dispatch 619,
+  minigame_swoop_audio_internal.h 616 (judge), engine_picker 609; then to
+  judge: combat_query 585, room_topology 578, room_topology_label_kinds
+  576, room_topology_doors 574, log 563, menus_chargen_feats 561,
+  input_poll_router 559, engine_player_party 551, spatial_wall_surfaces
+  546, combat_diag 543, minigame_turret_peg 536, engine_keymap 536,
+  menus_listbox_picker 524, menus_focus_k2 520, help 520, menus_focus 510,
+  menus_powers_levelup 510. The catalog headers (engine_offsets_fields.h
+  2318, engine_offsets_addresses.h 1060, engine_area.h 789) stay as they are.
 - F13 WriteJmpRel32 (engine_input_mouseguard) and WriteRel32Jmp
   (save_crash_guard) are the same four lines: one shared helper.
-- F14 about 20 raw reads of a control's id (`+ kControlIdOffset`) across
-  the menus and engine files: one ReadControlId in engine_reads.
 - F2b: share the save-variable code of exit_memory with discovery.cpp.
 - F3 menus_chargen_feats / menus_powers_levelup: about 15 same-named
   functions, 22 cloned blocks; one chart-grid module (check K2 plans).
