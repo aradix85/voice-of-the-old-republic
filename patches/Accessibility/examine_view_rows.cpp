@@ -2,259 +2,167 @@
 
 #include "examine_view_internal.h"
 
+#include "combat_query.h"    // ReadEquippedItemName
 #include "engine_area.h"
 #include "engine_offsets.h"
-#include "engine_reads.h"   // LookupTlk — strref → localized text, both games
+#include "engine_reads.h"     // ReadObjectCurrentHitPoints
+
+#include <windows.h>
+
+#include <cstdarg>
+#include <cstdio>
 
 namespace acc::examine_view {
 
 namespace {
 
-// Walk CSWSObject.effects (CExoArrayList<CGameEffect*> @+0x124) and emit
-// rows for up to `cap` effects. Returns the number of rows actually
-// written (could be < count if buffer is full).
-int AppendEffectRows(void* serverObject, char rows[][192],
-                     int& outIdx, int rowCap) {
-    if (!serverObject) return 0;
-    int wrote = 0;
-    __try {
-        auto* lst = reinterpret_cast<CExoArrayList*>(
-            reinterpret_cast<unsigned char*>(serverObject) +
-            kObjectEffectsOffset);
-        if (!lst || !lst->data || lst->size <= 0) return 0;
-        int n = lst->size > 64 ? 64 : lst->size;
-        for (int i = 0; i < n && outIdx < rowCap; ++i) {
-            void* eff = lst->data[i];
-            if (!eff) continue;
-            int type = static_cast<int>(*reinterpret_cast<unsigned short*>(
-                reinterpret_cast<unsigned char*>(eff) +
-                kGameEffectTypeOffset));
-            const char* name = EffectName(type);
-            if (name) {
-                std::snprintf(rows[outIdx], sizeof(rows[0]),
-                              acc::strings::Get(
-                                  acc::strings::Id::FmtExamineRowEffect),
-                              name);
-            } else {
-                std::snprintf(rows[outIdx], sizeof(rows[0]),
-                              acc::strings::Get(
-                                  acc::strings::Id::FmtExamineRowEffectUnknown),
-                              type);
-            }
-            ++outIdx;
-            ++wrote;
-        }
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        // Silent — partial data is fine.
-    }
-    return wrote;
+using S = acc::strings::Id;
+
+// Appends one formatted row while there is room.
+void AddRow(int& idx, const char* fmt, ...) {
+    if (idx >= kMaxRows) return;
+    va_list ap;
+    va_start(ap, fmt);
+    std::vsnprintf(g_state.rows[idx], sizeof(g_state.rows[0]), fmt, ap);
+    va_end(ap);
+    ++idx;
 }
 
-// Walk CSWSCreatureStats.feats (CExoArrayList<ushort> @+0x0) and emit
-// rows for up to `cap` feats with localized names from CSWRules::GetFeat.
-int AppendFeatRows(void* serverCreature, char rows[][192],
-                   int& outIdx, int rowCap) {
-    void* stats = ReadCreatureStats(serverCreature);
-    if (!stats) return 0;
-    int wrote = 0;
+void AddText(int& idx, S text) {
+    AddRow(idx, "%s", acc::strings::Get(text));
+}
+
+// One row per effect in CSWSObject.effects (CExoArrayList<CGameEffect*>).
+// A fault mid-walk keeps the rows so far.
+void AppendEffectRows(void* serverObject, int& idx) {
+    if (!serverObject) return;
     __try {
         auto* lst = reinterpret_cast<CExoArrayList*>(
-            reinterpret_cast<unsigned char*>(stats) +
-            kStatsFeatsListOffset);
-        if (!lst || !lst->data || lst->size <= 0) return 0;
-        int n = lst->size > 0x100 ? 0x100 : lst->size;
-        auto* ids = reinterpret_cast<unsigned short*>(lst->data);
-        for (int i = 0; i < n && outIdx < rowCap; ++i) {
-            unsigned short featId = ids[i];
-            char nameBuf[128] = "";
-            if (ResolveFeatName(featId, nameBuf, sizeof(nameBuf)) &&
-                nameBuf[0] != '\0') {
-                std::snprintf(rows[outIdx], sizeof(rows[0]),
-                              acc::strings::Get(
-                                  acc::strings::Id::FmtExamineRowFeat),
-                              nameBuf);
+            reinterpret_cast<unsigned char*>(serverObject) + kObjectEffectsOffset);
+        if (!lst || !lst->data || lst->size <= 0) return;
+        const int n = lst->size > 64 ? 64 : lst->size;
+        for (int i = 0; i < n && idx < kMaxRows; ++i) {
+            void* eff = lst->data[i];
+            if (!eff) continue;
+            const int type = static_cast<int>(*reinterpret_cast<unsigned short*>(
+                reinterpret_cast<unsigned char*>(eff) + kGameEffectTypeOffset));
+            if (const char* name = EffectName(type)) {
+                AddRow(idx, acc::strings::Get(S::FmtExamineRowEffect), name);
             } else {
-                std::snprintf(rows[outIdx], sizeof(rows[0]),
-                              acc::strings::Get(
-                                  acc::strings::Id::FmtExamineRowFeatUnknown),
-                              (int)featId);
+                AddRow(idx, acc::strings::Get(S::FmtExamineRowEffectUnknown), type);
             }
-            ++outIdx;
-            ++wrote;
         }
     } __except (EXCEPTION_EXECUTE_HANDLER) {
-        // Partial is fine.
     }
-    return wrote;
+}
+
+// One row per feat in CSWSCreatureStats.feats (CExoArrayList<ushort>).
+void AppendFeatRows(void* serverCreature, int& idx) {
+    void* stats = ReadCreatureStats(serverCreature);
+    if (!stats) return;
+    __try {
+        auto* lst = reinterpret_cast<CExoArrayList*>(
+            reinterpret_cast<unsigned char*>(stats) + kStatsFeatsListOffset);
+        if (!lst || !lst->data || lst->size <= 0) return;
+        const int n = lst->size > 0x100 ? 0x100 : lst->size;
+        auto* ids = reinterpret_cast<unsigned short*>(lst->data);
+        for (int i = 0; i < n && idx < kMaxRows; ++i) {
+            const unsigned short featId = ids[i];
+            char nameBuf[128] = "";
+            if (ResolveFeatName(featId, nameBuf, sizeof(nameBuf)) && nameBuf[0] != '\0') {
+                AddRow(idx, acc::strings::Get(S::FmtExamineRowFeat), nameBuf);
+            } else {
+                AddRow(idx, acc::strings::Get(S::FmtExamineRowFeatUnknown),
+                       static_cast<int>(featId));
+            }
+        }
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+    }
+}
+
+bool EquippedName(void* creature, size_t slotOffset, char* out, size_t cap) {
+    return acc::combat::query::ReadEquippedItemName(creature, slotOffset, "examine",
+                                                    out, cap) && out[0] != '\0';
+}
+
+// An occupied equipment slot gets a row; an empty one none (a sighted player
+// sees what is worn, not a list of empty slots).
+void AddEquipRow(void* creature, int& idx, size_t slotOffset, S fmt) {
+    char item[96] = "";
+    if (EquippedName(creature, slotOffset, item, sizeof(item))) {
+        AddRow(idx, acc::strings::Get(fmt), item);
+    }
+}
+
+void AddCreatureStatRows(void* obj, int& idx) {
+    AddRow(idx, acc::strings::Get(S::FmtExamineRowFaction),
+           acc::strings::Get(FactionWordIdFor(ReadFactionId(obj))));
+    const int dl = ReadDamageLevel(obj);
+    if (dl >= 0) {
+        AddRow(idx, acc::strings::Get(S::FmtExamineRowCondition),
+               acc::strings::Get(DamageLevelStringId(dl)));
+    }
+    const int hpCur = acc::engine::ReadObjectCurrentHitPoints(obj);
+    const int hpMax = ReadHpMax(obj);
+    if (hpCur >= 0 && hpMax > 0) {
+        AddRow(idx, acc::strings::Get(S::FmtExamineRowHpFull), hpCur, hpMax);
+    } else if (hpCur >= 0) {
+        AddRow(idx, acc::strings::Get(S::FmtExamineRowHp), hpCur);
+    }
+    const int lvl = ReadLevel(obj);
+    if (lvl > 0) AddRow(idx, acc::strings::Get(S::FmtExamineRowLevel), lvl);
+}
+
+void AddCreatureDetailRows(void* obj, int& idx) {
+    // Flags only when set; invisibility shows up among the effects.
+    if (ReadBlindFlag(obj)) AddText(idx, S::ExamineRowStatusBlind);
+
+    char wpn[96] = "";
+    if (EquippedName(obj, kInventoryRightWeaponHandleOffset, wpn, sizeof(wpn))) {
+        AddRow(idx, acc::strings::Get(S::FmtExamineRowWeapon), wpn);
+    } else {
+        AddText(idx, S::ExamineRowWeaponNone);
+    }
+    AddEquipRow(obj, idx, kInventoryLeftWeaponHandleOffset, S::FmtExamineRowOffHand);
+    AddEquipRow(obj, idx, kInventoryHeadHandleOffset,       S::FmtExamineRowHead);
+    AddEquipRow(obj, idx, kInventoryTorsoHandleOffset,      S::FmtExamineRowTorso);
+    AddEquipRow(obj, idx, kInventoryHandsHandleOffset,      S::FmtExamineRowHands);
+
+    // "No effects" / "No feats" confirm an empty list rather than leave it out.
+    const int effectStart = idx;
+    AppendEffectRows(obj, idx);
+    if (idx == effectStart) AddText(idx, S::ExamineRowNoEffects);
+    const int featStart = idx;
+    AppendFeatRows(obj, idx);
+    if (idx == featStart) AddText(idx, S::ExamineRowNoFeats);
 }
 
 }  // namespace
 
-// Row building.
-
-// (Re)build the row list for the cached target. Returns row count
-// (0 if target unresolvable, view should disarm).
 int BuildRows() {
-    using S = acc::strings::Id;
-
     void* obj = nullptr;
     if (!IsSentinel(g_state.targetHandle)) {
         obj = acc::engine::ResolveClientObjectHandle(g_state.targetHandle);
-        if (!obj) {
-            obj = acc::engine::ResolveServerObjectHandle(
-                g_state.targetHandle);
-        }
+        if (!obj) obj = acc::engine::ResolveServerObjectHandle(g_state.targetHandle);
     }
     g_state.targetObj = obj;
     if (!obj) return 0;
 
-    int kind = acc::engine::GetObjectKind(obj);
+    const bool isCreature =
+        acc::engine::GetObjectKind(obj) == static_cast<int>(acc::engine::GameObjectKind::Creature);
     int idx = 0;
 
-    // Row: Name.
     char name[96] = "";
-    if (!acc::engine::GetObjectDisplayNameByHandle(
-            g_state.targetHandle, name, sizeof(name)) || name[0] == '\0') {
+    if (!acc::engine::GetObjectDisplayNameByHandle(g_state.targetHandle, name, sizeof(name)) ||
+        name[0] == '\0') {
         acc::engine::GetObjectName(obj, name, sizeof(name));
     }
-    if (name[0] == '\0') std::strncpy(name, "?", sizeof(name) - 1);
-    std::snprintf(g_state.rows[idx], sizeof(g_state.rows[0]),
-                  acc::strings::Get(S::FmtExamineRowName), name);
-    ++idx;
+    AddRow(idx, acc::strings::Get(S::FmtExamineRowName), name[0] ? name : "?");
 
-    // Creature-only rows.
-    bool isCreature = (kind ==
-        static_cast<int>(acc::engine::GameObjectKind::Creature));
-
-    // Small helper to append a single optional equipment-slot row.
-    auto appendEquipRow = [&](size_t slotOffset, S fmtId) {
-        if (idx >= kMaxRows) return;
-        char item[96] = "";
-        if (ReadEquippedItemNameAtSlot(obj, slotOffset, item, sizeof(item)) &&
-            item[0] != '\0') {
-            std::snprintf(g_state.rows[idx], sizeof(g_state.rows[0]),
-                          acc::strings::Get(fmtId), item);
-            ++idx;
-        }
-    };
-
-    if (isCreature) {
-        // Row: Faction.
-        int factionId = ReadFactionId(obj);
-        acc::strings::Id factionWord = FactionWordIdFor(factionId);
-        std::snprintf(g_state.rows[idx], sizeof(g_state.rows[0]),
-                      acc::strings::Get(S::FmtExamineRowFaction),
-                      acc::strings::Get(factionWord));
-        ++idx;
-
-        // Row: Condition (damage level — visible wound state).
-        if (idx < kMaxRows) {
-            int dl = ReadDamageLevel(obj);
-            if (dl >= 0) {
-                std::snprintf(g_state.rows[idx], sizeof(g_state.rows[0]),
-                              acc::strings::Get(S::FmtExamineRowCondition),
-                              acc::strings::Get(DamageLevelStringId(dl)));
-                ++idx;
-            }
-        }
-
-        // Row: HP — full "cur of max" when GetMaxHitPoints resolves,
-        // otherwise the older single-value form.
-        if (idx < kMaxRows) {
-            int hpCur = acc::engine::ReadObjectCurrentHitPoints(obj);
-            int hpMax = ReadHpMax(obj);
-            if (hpCur >= 0 && hpMax > 0) {
-                std::snprintf(g_state.rows[idx], sizeof(g_state.rows[0]),
-                              acc::strings::Get(S::FmtExamineRowHpFull),
-                              hpCur, hpMax);
-                ++idx;
-            } else if (hpCur >= 0) {
-                std::snprintf(g_state.rows[idx], sizeof(g_state.rows[0]),
-                              acc::strings::Get(S::FmtExamineRowHp), hpCur);
-                ++idx;
-            }
-        }
-
-        // Row: Level.
-        if (idx < kMaxRows) {
-            int lvl = ReadLevel(obj);
-            if (lvl > 0) {
-                std::snprintf(g_state.rows[idx], sizeof(g_state.rows[0]),
-                              acc::strings::Get(S::FmtExamineRowLevel), lvl);
-                ++idx;
-            }
-        }
-    }
-
-    // Row: Distance (always shown for resolvable target).
-    int dist = Read2DDistanceMeters(obj);
-    if (dist >= 0 && idx < kMaxRows) {
-        std::snprintf(g_state.rows[idx], sizeof(g_state.rows[0]),
-                      acc::strings::Get(S::FmtExamineRowDistance), dist);
-        ++idx;
-    }
-
-    if (isCreature) {
-        // Status flags — only emit a row when the flag is set, so a
-        // healthy normal creature doesn't get a row of "not invisible".
-        // (Invisible is covered read-only by the effect list — see the note on
-        // ReadBlindFlag; the engine GetInvisible call was removed.)
-        if (idx < kMaxRows && ReadBlindFlag(obj)) {
-            std::strncpy(g_state.rows[idx],
-                         acc::strings::Get(S::ExamineRowStatusBlind),
-                         sizeof(g_state.rows[0]) - 1);
-            g_state.rows[idx][sizeof(g_state.rows[0]) - 1] = '\0';
-            ++idx;
-        }
-
-        // Rows: Equipment — main hand, off hand, head, torso, hands.
-        // Only emit rows for occupied slots (sighted players just see
-        // what's worn, not a list of empty slots).
-        if (idx < kMaxRows) {
-            char wpn[96] = "";
-            if (ReadEquippedItemNameAtSlot(obj,
-                    kInventoryRightWeaponHandleOffset,
-                    wpn, sizeof(wpn)) && wpn[0] != '\0') {
-                std::snprintf(g_state.rows[idx], sizeof(g_state.rows[0]),
-                              acc::strings::Get(S::FmtExamineRowWeapon),
-                              wpn);
-            } else {
-                std::strncpy(g_state.rows[idx],
-                             acc::strings::Get(S::ExamineRowWeaponNone),
-                             sizeof(g_state.rows[0]) - 1);
-                g_state.rows[idx][sizeof(g_state.rows[0]) - 1] = '\0';
-            }
-            ++idx;
-        }
-        appendEquipRow(kInventoryLeftWeaponHandleOffset, S::FmtExamineRowOffHand);
-        appendEquipRow(kInventoryHeadHandleOffset,       S::FmtExamineRowHead);
-        appendEquipRow(kInventoryTorsoHandleOffset,      S::FmtExamineRowTorso);
-        appendEquipRow(kInventoryHandsHandleOffset,      S::FmtExamineRowHands);
-
-        // Rows: Effects (one per active effect). Append "No effects" if
-        // none — gives the user a confirmed-empty signal vs absence.
-        int effectStart = idx;
-        AppendEffectRows(obj, g_state.rows, idx, kMaxRows);
-        if (idx == effectStart && idx < kMaxRows) {
-            std::strncpy(g_state.rows[idx],
-                         acc::strings::Get(S::ExamineRowNoEffects),
-                         sizeof(g_state.rows[0]) - 1);
-            g_state.rows[idx][sizeof(g_state.rows[0]) - 1] = '\0';
-            ++idx;
-        }
-
-        // Rows: Feats.
-        int featStart = idx;
-        AppendFeatRows(obj, g_state.rows, idx, kMaxRows);
-        if (idx == featStart && idx < kMaxRows) {
-            std::strncpy(g_state.rows[idx],
-                         acc::strings::Get(S::ExamineRowNoFeats),
-                         sizeof(g_state.rows[0]) - 1);
-            g_state.rows[idx][sizeof(g_state.rows[0]) - 1] = '\0';
-            ++idx;
-        }
-    }
-
+    if (isCreature) AddCreatureStatRows(obj, idx);
+    const int dist = Read2DDistanceMeters(obj);
+    if (dist >= 0) AddRow(idx, acc::strings::Get(S::FmtExamineRowDistance), dist);
+    if (isCreature) AddCreatureDetailRows(obj, idx);
     return idx;
 }
 

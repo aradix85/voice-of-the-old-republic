@@ -1,23 +1,18 @@
-# examine_view.cpp (169 lines)
+# examine_view.cpp (153 lines)
 
 Source: `patches/Accessibility/examine_view.cpp`
 
-(From examine_view.h.) Examine list view.
-
-Synthetic in-DLL arrow-navigable list of pre-composed rows. KOTOR 1's CSWGuiExamine is a generic TLK message box, not a rich examine panel, so we build our own from direct field reads + engine name accessors.
-
-User contract while armed: Open     — captures cycle/LastTarget focus, builds rows, speaks opener + row 0. Up/Down  — step through rows (Name, Faction, HP, Distance, Weapon, Effects×N, Feats×M). HP and distance refresh on step. Enter    — close (read-only, no commit). Esc      — close.
-
-Self-disarms when the target becomes unresolvable.
-
-Input routing lives in interact_hotkey.cpp.
+The examine panel: a read-only list of rows about the current target (name, faction, condition, hit points, level, distance, flags, equipment, effects, feats), walked with Up/Down while the world is paused.
 
 ## Declarations (in source order)
 
-- L15 `void SpeakRow(int idx)`
-- L26 `bool IsActive()`
-- L28 `void ForceDisarm(const char* reason)`
-- L40 `bool Open()`
-- L89 `bool HandleInputEvent(int code, int value)`
-- L139 `void Tick()`: Engine-panel open/close logger.
-- L150 `void PollWin32Hotkey()`
+- L23 `void SpeakRow(int idx)`
+- L32 `bool InWorld()`
+- L37 `void Close(const char* reason)`
+- L45 `bool Refresh(const char* lostReason)`: Rows are rebuilt on every step, so hit points and distance stay live.
+- L54 `bool IsActive()`
+- L56 `void ForceDisarm(const char* reason)`
+- L67 `bool Open()`
+- L108 `bool HandleInputEvent(int code, int value)`
+- L137 `void Tick()`
+- L142 `void PollWin32Hotkey()`: The ExamineOpen key toggles the panel.

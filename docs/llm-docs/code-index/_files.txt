@@ -149,7 +149,6 @@ patches/Accessibility/examine_view_effect_names.cpp
 patches/Accessibility/examine_view_internal.h
 patches/Accessibility/examine_view_reads.cpp
 patches/Accessibility/examine_view_rows.cpp
-patches/Accessibility/examine_view_state.cpp
 patches/Accessibility/exit_memory.h
 patches/Accessibility/exit_memory_annotate.cpp
 patches/Accessibility/exit_memory_area_doors.cpp

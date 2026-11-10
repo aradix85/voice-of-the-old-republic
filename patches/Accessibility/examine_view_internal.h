@@ -5,18 +5,15 @@
 
 #include "examine_view.h"
 
-#include <windows.h>
-#include <cmath>
-#include <cstdint>
-#include <cstdio>
-#include <cstring>
-
 #include "strings.h"
+
+#include <cstddef>
+#include <cstdint>
 
 namespace acc::examine_view {
 
-// Flat array of pre-composed strings. Recomposed on each Up/Down step
-// (cheap) to keep HP and distance live without per-tick churn.
+// Pre-composed rows, rebuilt on each Up/Down step so hit points and distance
+// stay live.
 constexpr int kMaxRows = 64;   // ~10 fixed + 5 effects + 30 feats
 
 struct State {
@@ -25,9 +22,10 @@ struct State {
     int       rowCount      = 0;
     char      rows[kMaxRows][192];
     uint32_t  targetHandle  = 0;
-    void*     targetObj     = nullptr;  // last resolved server obj — for refresh
+    void*     targetObj     = nullptr;  // the last resolved server object
 };
 
+// examine_view.cpp
 extern State g_state;
 
 // Helpers shared across the files, by the file that defines them.
@@ -43,11 +41,9 @@ acc::strings::Id DamageLevelStringId(int level);
 int ReadFactionId(void* serverCreature);
 acc::strings::Id FactionWordIdFor(int factionId);
 int Read2DDistanceMeters(void* obj);
-bool ReadEquippedItemNameAtSlot(void* serverCreature, size_t slotOffset, char* outBuf,
-                                size_t outBufSize);
 uint32_t ReadLastTargetHandle();
 
 // examine_view_rows.cpp
-int BuildRows();
+int BuildRows();  // 0 when the target is gone
 
 }  // namespace acc::examine_view
