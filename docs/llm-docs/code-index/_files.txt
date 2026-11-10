@@ -283,6 +283,12 @@ patches/Accessibility/pad_diag.cpp
 patches/Accessibility/pad_diag.h
 patches/Accessibility/pad_input.cpp
 patches/Accessibility/pad_input.h
+patches/Accessibility/pad_input_bindings.cpp
+patches/Accessibility/pad_input_dispatch.cpp
+patches/Accessibility/pad_input_internal.h
+patches/Accessibility/pad_input_poll.cpp
+patches/Accessibility/pad_input_state.cpp
+patches/Accessibility/pad_input_translate.cpp
 patches/Accessibility/pad_movement.cpp
 patches/Accessibility/pad_movement.h
 patches/Accessibility/pad_quickmenu.cpp
