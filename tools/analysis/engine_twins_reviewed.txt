@@ -1,0 +1,5 @@
+# Pairs engine_twins.py objects to that were read by hand and are right.
+# One `kAddrName: reason` per line.
+
+kAddrCSWSCreatureGetDead: KOTOR 1 walks the party table and answers 0 for a party member; KOTOR 2 tests a flag at +0x11ac for that. Both then go to the base class's GetDead (0x004cb810 / 0x005477f0).
+kAddrInitMouseEnd: not a function but the end of InitializeDirectInputMouse, a bound for a scan.

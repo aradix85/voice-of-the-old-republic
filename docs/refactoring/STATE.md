@@ -414,9 +414,15 @@ prefix (menus_listbox_picker.cpp).
     the one mismatch (SetMessage(strref), a slot-map error; the trap is
     described in docs/kotor2-port.md). Run it for both games after
     adding or changing an engine call. Open: 30 calls whose address goes
-    through a variable or a vtable slot are not checked. A twin with the
-    same argument count but the wrong function passes this check: the
-    slot map's rows for panel classes from slot 27 on are all one off.
+    through a variable or a vtable slot are not checked.
+  - engine_twins.py: is the KOTOR 2 address of a Pick(k1, k2) the same
+    method as the KOTOR 1 one? Compares the calls, engine globals and
+    strings both functions use. It catches the old popup address. Now:
+    163 function pairs, 91 agree, 0 disagree, 3 mixed (3 to 14 points
+    agree and one or two do not; not read by hand yet), 69 unproven:
+    nothing to compare, mostly small accessors. Two pairs read by hand
+    are in engine_twins_reviewed.txt. To prove more of the 69: compare
+    distinctive constants, or the callers of both.
 - Decision (Anouk, 2026-11-11): she plays on Steam; GOG support may go.
   What that is in the code: only KOTOR 2's GOG release is its own build
   (Kotor2Relink2021). KOTOR 1's GOG release is the same executable as
@@ -428,11 +434,11 @@ prefix (menus_listbox_picker.cpp).
   kdev and the installer; the installer must not install into a GOG
   KOTOR 2. (3) tools/re-scripts/k2_gog_*.py and the --k2 mode of kdev
   sigscan. (4) docs, README, CONTRIBUTING; the Ok() guard and the GOG
-  sentence in tutorial_popup.cpp. Asked, not answered yet: the 2004
-  relink of KOTOR 1 (the Russian 1.72 and Polish editions:
-  engine_rebase_table.inc, engine_rebase_rdata.inc, kXrefTable,
-  relink2004.hooks.toml, kdev sigscan). The scope is English only, so
-  it can go the same way; then engine_rebase is just the choice between
+  sentence in tutorial_popup.cpp. (5) Anouk, 2026-11-11 00:49: other
+  languages than English may go too. That is the 2004 relink of KOTOR 1
+  (the Russian 1.72 and Polish editions: engine_rebase_table.inc,
+  engine_rebase_rdata.inc, kXrefTable, relink2004.hooks.toml, the rest
+  of kdev sigscan); after it engine_rebase is just the choice between
   the two games.
   Run clang_tidy.py FILE on every file a lean rewrites: it caught an
   index of -1 in the first one it was used on (room_topology_doors).
