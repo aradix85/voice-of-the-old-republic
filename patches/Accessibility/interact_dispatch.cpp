@@ -1,17 +1,13 @@
+// Enter / Shift+Enter on the narrated target, and the announcements of the bare
+// action-bar keys. DispatchInteract is the one pipeline every caller shares
+// (Enter, view mode, the bridge, door walk-through, exploration).
+
 #include "interact_dispatch.h"
 #include "interact_internal.h"
 
-#include <windows.h>
-#include <cstdint>
-#include <cstdio>
-#include <cmath>
-
-#pragma comment(lib, "user32.lib")
-
-#include "combat_queue.h"   // Phase 3A — action-queue submenu (Shift+H)
+#include "combat_queue.h"
 #include "door_announce.h"   // walk-through once Enter opened a door into another area
 #include "endar_softlock.h"  // Trask may not try the Trask door himself
-#include "exit_memory.h"     // loot reminder when leaving a region
 #include "engine_actionbar.h"
 #include "engine_area.h"
 #include "engine_offsets.h"
@@ -19,33 +15,35 @@
 #include "engine_picker.h"
 #include "engine_player.h"
 #include "engine_radial.h"
+#include "exit_memory.h"     // loot reminder when leaving a region
 #include "filter_objects.h"
-#include "guidance_approach.h"   // ArmApproach — unified walk-to-act tracker
-#include "guidance_autowalk.h"   // UseObject primitive
-                            // overlay Esc-close so the engine-event consume
-                            // guard wins the poll-vs-event race
+#include "guidance_approach.h"
+#include "guidance_autowalk.h"
 #include "log.h"
 #include "narrated_target.h"
-#include "strings.h"
 #include "speech.h"
-#include "unified_action_menu.h"  // one menu for target + personal actions
-                            // while active (lay-off 5)
+#include "strings.h"
+#include "unified_action_menu.h"
+
+#include <cmath>
+#include <cstdint>
+#include <cstdio>
 
 namespace acc::interact {
 
 namespace {
 
-// Arm the unified approach tracker for an Enter-interact dispatch. The tracker
-// (guidance_approach.{h,cpp}) watches the engine's native walk-to-act over the
-// walkmesh and announces "way blocked" if it stalls out of range, disarms
-// quietly on success (dialog/loot panel opens, or the PC settles within reach),
-// and force-restores input on a blocked use-verb. Replaces the old per-file
-// g_approach watchdog. `target` is the dispatch object — the live way-blocked
-// reference, consistent with what we just acted on.
-// `useHandle` is the AddUseObjectAction target, and only the two UseObject
-// dispatch sites pass it: it lets the tracker's coordinate-walk retry re-fire
-// the use on arrival instead of stranding the player at the object (see
-// ApproachArm::useHandle). Verbs with nothing to re-fire leave it 0.
+constexpr uint32_t kActionUse  = 0x3f7;
+constexpr uint32_t kActionTalk = 0x3ea;
+
+const char* KeyName(bool forceRadial) {
+    return forceRadial ? "Shift+Enter" : "Enter";
+}
+
+// Arm the approach tracker (guidance_approach) for an Enter dispatch: it
+// announces "way blocked" when the walk-to-act stalls out of range and gives
+// input back on a blocked use. `useHandle` lets its coordinate-walk retry
+// re-fire a use on arrival; verbs with nothing to re-fire leave it 0.
 void ArmInteractApproach(const char* name, void* target, bool inputDisabled,
                          bool isDialog, uint32_t useHandle = 0) {
     acc::guidance::ApproachArm arm;
@@ -61,28 +59,7 @@ void ArmInteractApproach(const char* name, void* target, bool inputDisabled,
     acc::guidance::ArmApproach(arm);
 }
 
-// True iff the only thing blocking the action menu from opening is the
-// in-game menu itself (the Escape menu and its tabs — Inventory, Options,
-// Map, Messages, …). The game's own menu hotkeys (J → Messages, M → Map, …)
-// switch freely between those screens, so the action-menu openers should
-// too: we close the in-game menu back to the world first, then open the menu
-// in-world. Message boxes, dialogs, stores and other modal / interaction
-// panels stay hard blockers — the engine doesn't let its menu hotkeys switch
-// out of those either, and neither do we (the open path refuses over them).
-//
-// The InGameMenu strip stays the foreground panel while any of its sub-screens
-// is drilled (see engine_panels::IsForegroundUiBlocking), so a single fgKind
-// check covers every tab.
-}  // namespace  (seam: published via interact_internal.h)
-bool ShouldSwitchFromInGameMenu() {
-    acc::engine::UiBlockState blk;
-    if (!acc::engine::IsForegroundUiBlocking(&blk)) return false;
-    return blk.fgKind == acc::engine::PanelKind::InGameMenu;
-}
-namespace {
-
-// Pick the per-kind pre-roll string. Mirrors the cycle/passive_narrate
-// kind classification but produces an action verb instead of a label.
+// The action verb that goes before the target name, per kind.
 acc::strings::Id PreRollFor(acc::filter::CycleCategory c) {
     using C = acc::filter::CycleCategory;
     using S = acc::strings::Id;
@@ -98,10 +75,8 @@ acc::strings::Id PreRollFor(acc::filter::CycleCategory c) {
     return S::FmtInteractOpen;
 }
 
-// Classify like passive_narrate does — first matching category wins.
-// Returns Count_ if the object isn't in any of the six locked categories
-// (combat target / dialog target / etc. — we still let the user try
-// to interact, just without a localised pre-roll).
+// First matching category, like passive_narrate; Count_ when none matches
+// (the interact still runs, without a localised pre-roll).
 acc::filter::CycleCategory ClassifyForInteract(void* obj) {
     using C = acc::filter::CycleCategory;
     for (int i = 0; i < static_cast<int>(C::Count_); ++i) {
@@ -111,29 +86,27 @@ acc::filter::CycleCategory ClassifyForInteract(void* obj) {
     return C::Count_;
 }
 
-// Resolve the "what does the user want to interact with" target.
-//
-// Unified focus model: the activation target is whatever was last *spoken*
-// to the user as a target name. passive_narrate, cycle_input's announce
-// path, and view_mode's hover speech all stamp `narrated_target` on a
-// successful announcement. This collapses the three previously-independent
-// focus channels (cycle_state.focusedObj, engine LastTarget, view-mode
-// hover) into a single source of truth keyed on "what did I just hear?".
-//
-// No fallback: when the slot is empty / stale, the caller treats it as
-// "no focus" and speaks GuidanceNoFocus. Falling back to engine LastTarget
-// would re-introduce the very inconsistency the unified slot exists to
-// remove — engine LastTarget can be set by passive selection / Q/E even
-// when the candidate was filtered out (combat target, non-nav kind) and
-// never narrated. If the user didn't hear it, Enter shouldn't act on it.
-//
-// outHandle is populated with the server-side handle (AI-action namespace).
+void SpeakNoFocus(const char* why) {
+    const char* msg = acc::strings::Get(acc::strings::Id::GuidanceNoFocus);
+    acc::speech::Speak(msg, /*interrupt=*/true);
+    acclog::Write("Interact", "%s -> [%s]", why, msg);
+}
+
+// Speak a format string with the target name in it; `out` keeps the line for
+// the log.
+void SpeakWithName(acc::strings::Id fmt, const char* name, char* out, size_t cap) {
+    std::snprintf(out, cap, acc::strings::Get(fmt), name);
+    acc::speech::Speak(out, /*interrupt=*/true);
+}
+
+// The interact target is whatever was last spoken as a target name
+// (narrated_target: passive narration, the cycle keys, view-mode hover). No
+// fallback to the engine's LastTarget, which can hold something the user
+// never heard. `outHandle` gets the server-side handle.
 void* ResolveInteractTarget(uint32_t* outHandle) {
     *outHandle = 0;
-
     acc::narrated_target::Slot slot;
     if (!acc::narrated_target::TryGet(slot)) return nullptr;
-
     *outHandle = slot.handle;
     acclog::Write("Interact", "target source=narrated (tickStamp=%u) "
         "obj=%p handle=0x%08x",
@@ -141,638 +114,387 @@ void* ResolveInteractTarget(uint32_t* outHandle) {
     return slot.obj;
 }
 
-// Lay-off-5 refactor (2026-05-06): the post-resolution dispatch flow
-// (classify + name + picker + speak + UseObject fallback) is now exposed
-// publicly via `acc::interact::DispatchInteract` so view_mode can drive
-// the same Enter pipeline with its own target channel (the virtual
-// cursor's hover-pause tracker). DispatchInteractImpl keeps the body
-// here in the anonymous namespace so it can use the file-internal
-// helpers (ClassifyForInteract, PreRollFor, ...); the public symbol
-// at the bottom of the file is a thin forwarder.
-void DispatchInteractImpl(void* target, uint32_t handle, bool forceRadial);
-
-// PollHotkey's per-press handler. Resolves the target via the
-// cycle/LastTarget recency tie-break, then forwards to
-// DispatchInteractImpl for the shared dispatch flow. View mode bypasses
-// this resolver entirely (its hover channel is the truth) and calls the
-// public `acc::interact::DispatchInteract` directly with its own target.
-}  // namespace  (seam: published via interact_internal.h)
-void OnInteract(bool forceRadial) {
-    // Map-pin focus: Enter has nothing to dispatch to — pins are
-    // destinations, not interactables. Speak the localized hint and
-    // redirect to Ctrl+- (route) instead of falling into the "no
-    // target" silent path. Read the slot directly here because
-    // ResolveInteractTarget treats handle=0 as no-target and returns
-    // nullptr.
-    {
-        acc::narrated_target::Slot slot;
-        if (acc::narrated_target::TryGet(slot) && slot.isMapPin) {
-            const char* msg = acc::strings::Get(
-                acc::strings::Id::MapPinInteractHint);
-            acc::speech::Speak(msg, /*interrupt=*/true);
-            acclog::Write("Interact",
-                          "%s -> [%s] (map-pin focus, no interact)",
-                          forceRadial ? "Shift+Enter" : "Enter", msg);
-            return;
-        }
-    }
-
-    uint32_t handle = 0;
-    void* target = ResolveInteractTarget(&handle);
-
-    if (!target || handle == 0) {
-        const char* msg = acc::strings::Get(
-            acc::strings::Id::GuidanceNoFocus);
-        acc::speech::Speak(msg, /*interrupt=*/true);
-        acclog::Write("Interact", "%s -> [%s] no target",
-                      forceRadial ? "Shift+Enter" : "Enter", msg);
-        return;
-    }
-
-    DispatchInteractImpl(target, handle, forceRadial);
+// A re-press on the target already being walked to: that attempt is by
+// definition not progressing (a progressing one disarms on success), and
+// stacking another action on its queue only deepens the churn. Tear it down,
+// queue included. A press aimed elsewhere needs nothing: the new arm
+// supersedes the old one.
+void ClearStaleApproach(void* target) {
+    if (acc::guidance::ApproachTarget() != target) return;
+    acclog::Write("Interact", "re-press on in-flight approach target=%p — "
+        "clearing the stale attempt before re-dispatch", target);
+    acc::guidance::CancelMovement();
+    acc::guidance::CancelApproach();
 }
-namespace {
 
-void DispatchInteractImpl(void* target, uint32_t handle, bool forceRadial) {
-    if (!target || handle == 0) {
-        // Defensive — callers should resolve before dispatching, but if
-        // they don't, speak the same fallback OnInteract uses so silence
-        // isn't ambiguous (cf. `feedback_never_silence_fallback_announcement`).
-        const char* msg = acc::strings::Get(
-            acc::strings::Id::GuidanceNoFocus);
-        acc::speech::Speak(msg, /*interrupt=*/true);
-        acclog::Write("Interact", "DispatchInteract called with no target "
-            "(forceRadial=%d) -> [%s]",
-            forceRadial ? 1 : 0, msg);
-        return;
-    }
-
-    // Any new interact replaces a pending walk-through (re-armed below when
-    // this press is itself on a closed door into another area).
-    acc::door_announce::DisarmWalkThrough();
-
-    // WARNING — do NOT add a tag-keyed "this door is sealed, skip the dispatch"
-    // shortcut here, however dead the door looks. In this engine the open
-    // ATTEMPT is frequently the story trigger, carried by the door's OnOpen /
-    // OnFailToOpen script, and returning before the engine call suppresses it:
-    //   - end_door19  (Endar Spire): Plot=1, Locked=1, no reachable key — looks
-    //     inert, but OnFailToOpen = k_pend_traskdie1 is the Trask-death
-    //     sequence. The attempt makes Trask demand you level up first, then
-    //     fires his sacrifice. Sealing it (0a4d3a2) stranded the player at the
-    //     one door they must push against to advance.
-    //   - end_door10_cut2 (Endar Spire): Locked=0 in both blueprint and GIT,
-    //     with OnOpen = k_pend_room5_02 — the script that runs the doomed-
-    //     soldier battle and the Sith reinforcement wave. Sealing it (6e76ce1)
-    //     meant the door never opened, so the tutorial's fight never started
-    //     and end_door16 to the bridge never unlocked.
-    // Door guidance now hangs off the engine's own "This object is locked"
-    // report instead (endar_softlock::RegisterMsgRule), where a line can only
-    // ever speak when the door genuinely refused to open — and never replaces
-    // the attempt. Put new door hints there, not here.
-
-    // Re-press against the target we are already walking to. The in-flight
-    // attempt is by definition not progressing — a progressing one disarms on
-    // success — so stacking a second action onto its queue only deepens the
-    // churn: patch-20260816-095834.log has the Enter at 10:06:18 landing on the
-    // still-armed 10:06:15 approach and driving the pending-action count from 6
-    // to 8 with the PC rooted throughout. Tear the stale attempt down, queue
-    // included, so this press starts from a clean slate.
-    //
-    // Same-target only. A press aimed elsewhere is a change of intent, and the
-    // fresh ArmApproach already supersedes the old arm. Input is deliberately
-    // left as-is: the dispatch below re-disables it anyway, and if this press
-    // ends up opening the radial instead, engine_player's queue-watched restore
-    // sees the queue we just cleared and hands control back on its own.
-    if (acc::guidance::ApproachTarget() == target) {
-        acclog::Write("Interact", "re-press on in-flight approach target=%p — "
-            "clearing the stale attempt before re-dispatch", target);
-        acc::guidance::CancelMovement();
-        acc::guidance::CancelApproach();
-    }
-
-    char name[128] = "";
-    if (!acc::engine::GetObjectName(target, name, sizeof(name)) ||
-        name[0] == '\0') {
-        std::snprintf(name, sizeof(name), "%s",
-                      acc::strings::Get(acc::strings::Id::CategoryItem));
-    }
-
-    auto cat = ClassifyForInteract(target);
-
-    // Diagnostic: log the creature that the dispatched action will run
-    // against, so we can correlate "Tab swapped leader" against the
-    // engine action that fires.
-    void*    leader     = acc::engine::GetPlayerServerCreature();
-    uint32_t leaderId   = leader ? acc::engine::GetObjectHandle(leader) : 0u;
+// Which creature the action will run on, for correlating a leader swap with
+// the engine action that fires.
+void LogDispatchCreature() {
+    void*    leader   = acc::engine::GetPlayerServerCreature();
+    uint32_t leaderId = leader ? acc::engine::GetObjectHandle(leader) : 0u;
     char     leaderName[64] = "?";
-    if (leader) {
-        acc::engine::GetObjectName(leader, leaderName, sizeof(leaderName));
-    }
-    Vector leaderPos{};
-    bool   haveLeaderPos = acc::engine::GetPlayerPosition(leaderPos);
-    if (haveLeaderPos) {
+    if (leader) acc::engine::GetObjectName(leader, leaderName, sizeof(leaderName));
+    Vector pos{};
+    if (acc::engine::GetPlayerPosition(pos)) {
         acclog::Write("Interact", "dispatch creature=%p id=0x%08x name=[%s] "
-            "pos=(%.2f,%.2f,%.2f)",
-            leader, leaderId, leaderName,
-            leaderPos.x, leaderPos.y, leaderPos.z);
+            "pos=(%.2f,%.2f,%.2f)", leader, leaderId, leaderName, pos.x, pos.y, pos.z);
     } else {
         acclog::Write("Interact", "dispatch creature=%p id=0x%08x name=[%s] pos=?",
             leader, leaderId, leaderName);
     }
+}
 
-    // The one creature-keyed refusal (see endar_softlock.h — not a sealed-
-    // door shortcut): Trask as leader trying his own door stalls the scene.
+// A map note placed at a door ("Largo's Apartment" on his door) means the
+// door: a coordinate walk stops against it closed. Within the 5 m of the
+// landmark-to-door label match, Enter goes to the door itself.
+bool RedirectLandmarkToDoor(void* target, const char* name, bool forceRadial) {
+    Vector lpos{};
+    void* area = acc::engine::GetCurrentArea();
+    if (!area || !acc::engine::GetObjectPosition(target, lpos)) return false;
+    Vector dpos{};
+    void* door = acc::engine::NearestDoor(area, lpos, 5.0f, [](void* d) {
+        return !acc::engine::IsDoorCosmetic(d);
+    }, &dpos);
+    const uint32_t dh = door ? acc::engine::GetObjectHandle(door) : 0;
+    if (!dh) return false;
+    acclog::Write("Interact", "landmark [%s] sits %.1fm from door 0x%08x — Enter "
+        "goes to the door", name, std::hypot(dpos.x - lpos.x, dpos.y - lpos.y), dh);
+    DispatchInteract(door, dh, forceRadial);
+    return true;
+}
+
+// Transitions are trigger regions that fire on walk-in and landmarks are
+// waypoints: neither has a use node, so a use would never move the PC (and
+// report a false "way blocked"). Walk to the coordinate instead, input left
+// enabled, as Shift+- does; crossing into a transition fires it.
+bool WalkToTrigger(void* target, uint32_t handle, const char* name,
+                   acc::filter::CycleCategory cat, bool forceRadial) {
+    const bool landmark = cat == acc::filter::CycleCategory::Landmark;
+    Vector tpos{};
+    if (!acc::engine::GetObjectPosition(target, tpos) || !acc::guidance::WalkTo(tpos)) {
+        acclog::Write("Interact", "%s WalkTo dispatch unavailable — "
+            "falling through to picker/UseObject", landmark ? "landmark" : "transition");
+        return false;
+    }
+    char msg[192];
+    SpeakWithName(PreRollFor(cat), name, msg, sizeof(msg));
+    ArmInteractApproach(name, target, /*inputDisabled=*/false, /*isDialog=*/false);
+    acclog::Write("Interact", "%s -> [%s] %s via WalkTo(coord) "
+        "target=0x%08x pos=(%.2f,%.2f,%.2f)",
+        KeyName(forceRadial), msg, landmark ? "landmark waypoint" : "transition trigger",
+        handle, tpos.x, tpos.y, tpos.z);
+    return true;
+}
+
+// An open door has no verb, but Enter on it means going through: walk to it.
+bool WalkThroughOpenDoor(void* target, uint32_t handle, const char* name) {
+    Vector dpos{};
+    if (!acc::engine::GetObjectPosition(target, dpos) || !acc::guidance::WalkTo(dpos)) {
+        return false;
+    }
+    char msg[192];
+    SpeakWithName(acc::strings::Id::FmtWalkingTo, name, msg, sizeof(msg));
+    ArmInteractApproach(name, target, /*inputDisabled=*/false, /*isDialog=*/false);
+    acclog::Write("Interact", "Enter -> [%s] open door via WalkTo(coord) "
+        "target=0x%08x pos=(%.2f,%.2f,%.2f)", msg, handle, dpos.x, dpos.y, dpos.z);
+    return true;
+}
+
+// The pre-roll for a picked action. When the radial opened, the unified menu
+// speaks its own rows, anchored on the descriptor's client target id (the
+// param handle can be in the wrong namespace and corrupt the engine target on
+// a re-anchor); with no rows it says there is nothing to choose.
+void AnnouncePick(const acc::picker::ActionSnapshot& snap, uint32_t handle,
+                  const char* name, acc::filter::CycleCategory cat, bool forceRadial,
+                  char* msg, size_t cap) {
+    if (snap.radial_opened) {
+        const uint32_t anchor = snap.target_id ? snap.target_id : handle;
+        if (acc::unified_menu::ArmFromRadial(name, anchor)) {
+            std::snprintf(msg, cap, "action menu(%s)", name);  // the menu spoke
+            return;
+        }
+        // Get() on each arm, not on a cached Id: a cached local once read back
+        // garbage under /O2.
+        const char* fmt = forceRadial
+            ? acc::strings::Get(acc::strings::Id::FmtInteractNoActionsRedirect)
+            : acc::strings::Get(acc::strings::Id::FmtInteractNoActions);
+        std::snprintf(msg, cap, fmt, name);
+        acc::speech::Speak(msg, /*interrupt=*/true);
+    } else if (snap.valid && snap.label[0] != '\0') {
+        std::snprintf(msg, cap, acc::strings::Get(acc::strings::Id::FmtInteractEngine),
+                      snap.label, name);
+        acc::speech::Speak(msg, /*interrupt=*/true);
+    } else {
+        SpeakWithName(PreRollFor(cat), name, msg, cap);
+    }
+}
+
+// AddUseObjectAction with input disabled, its proven contract: on success
+// engine_player's queue-watched session gives control back, on a stall the
+// approach tracker does. A refused use gives input back at once.
+bool UseWithInputDisabled(uint32_t handle, bool* inputDisabled) {
+    *inputDisabled = acc::engine::SetPlayerInputEnabled(false);
+    if (acc::guidance::UseObject(handle)) return true;
+    if (*inputDisabled) acc::engine::SetPlayerInputEnabled(true);
+    return false;
+}
+
+// Dispatch the picked verb. Use goes through AddUseObjectAction (robust over
+// rough terrain), talk through ActionInitiateDialog with input enabled (the
+// engine walks, then talks), and everything else, or a failed use or talk,
+// through the engine's click pipeline.
+bool DispatchVerb(acc::picker::ActionSnapshot& snap, uint32_t dispatchHandle,
+                  const char* name, void* target, bool forceRadial) {
+    if (snap.action_id == kActionUse) {
+        bool inputDisabled = false;
+        if (UseWithInputDisabled(dispatchHandle, &inputDisabled)) {
+            acclog::Write("Interact", "use-verb dispatched via UseObject "
+                "(action_id=0x%x input_disabled=%d) target=0x%08x",
+                snap.action_id, inputDisabled ? 1 : 0, dispatchHandle);
+            ArmInteractApproach(name, target, /*inputDisabled=*/true,
+                                /*isDialog=*/false, dispatchHandle);
+            return true;
+        }
+    }
+    if (snap.action_id == kActionTalk && acc::picker::InitiateDialog(dispatchHandle)) {
+        acclog::Write("Interact", "dialogue dispatched via "
+            "ActionInitiateDialog target=0x%08x", dispatchHandle);
+        ArmInteractApproach(name, target, /*inputDisabled=*/false, /*isDialog=*/true);
+        return true;
+    }
+    // The second Drive re-asserts the engine target right before the click.
+    if (!acc::picker::Drive(dispatchHandle, &snap, forceRadial, /*populateOnly=*/false)) {
+        return false;
+    }
+    acclog::Write("Interact", "engine picker dispatched action_id=0x%x "
+        "label=[%s] target=0x%08x", snap.action_id, snap.label, dispatchHandle);
+    // Walk-to-act verbs keep input enabled, so the tracker owns no restore.
+    if (acc::picker::IsWalkToActVerb(snap.action_id)) {
+        ArmInteractApproach(name, target, /*inputDisabled=*/false,
+                            snap.action_id == kActionTalk);
+    }
+    return true;
+}
+
+// The bare action-bar keys: the empty-column phrase, 1-based for the user.
+void SpeakColumnEmpty(int index, char* msg, size_t cap) {
+    std::snprintf(msg, cap, acc::strings::Get(acc::strings::Id::FmtActionBarColumnEmpty),
+                  index + 1);
+    acc::speech::Speak(msg, /*interrupt=*/true);
+}
+
+}  // namespace
+
+// The in-game menu (Escape menu and its tabs, which keep the InGameMenu strip
+// in the foreground) is the only blocker the action-menu openers switch out
+// of, as the game's own menu hotkeys do; message boxes, dialogs and stores
+// stay hard blockers.
+bool ShouldSwitchFromInGameMenu() {
+    acc::engine::UiBlockState blk;
+    if (!acc::engine::IsForegroundUiBlocking(&blk)) return false;
+    return blk.fgKind == acc::engine::PanelKind::InGameMenu;
+}
+
+void OnInteract(bool forceRadial) {
+    // A map pin is a destination, not an interactable: point at Ctrl+-.
+    acc::narrated_target::Slot slot;
+    if (acc::narrated_target::TryGet(slot) && slot.isMapPin) {
+        const char* msg = acc::strings::Get(acc::strings::Id::MapPinInteractHint);
+        acc::speech::Speak(msg, /*interrupt=*/true);
+        acclog::Write("Interact", "%s -> [%s] (map-pin focus, no interact)",
+                      KeyName(forceRadial), msg);
+        return;
+    }
+
+    uint32_t handle = 0;
+    void* target = ResolveInteractTarget(&handle);
+    if (!target || handle == 0) {
+        char why[64];
+        std::snprintf(why, sizeof(why), "%s no target", KeyName(forceRadial));
+        SpeakNoFocus(why);
+        return;
+    }
+    DispatchInteract(target, handle, forceRadial);
+}
+
+void DispatchInteract(void* target, uint32_t handle, bool forceRadial) {
+    using C = acc::filter::CycleCategory;
+    if (!target || handle == 0) {
+        SpeakNoFocus(forceRadial ? "DispatchInteract with no target (forceRadial=1)"
+                                 : "DispatchInteract with no target (forceRadial=0)");
+        return;
+    }
+
+    // A new interact replaces a pending walk-through (re-armed below for a
+    // closed door into another area).
+    acc::door_announce::DisarmWalkThrough();
+
+    // Never skip the dispatch for a door that looks sealed: the open ATTEMPT is
+    // often the story trigger (OnOpen / OnFailToOpen). On the Endar Spire,
+    // end_door19's failed open runs Trask's sacrifice and end_door10_cut2's
+    // open starts the tutorial battle; skipping either stranded the player.
+    // Door hints belong on the engine's "This object is locked" report
+    // (endar_softlock::RegisterMsgRule), which only speaks after a real refusal.
+    ClearStaleApproach(target);
+
+    char name[128] = "";
+    if (!acc::engine::GetObjectName(target, name, sizeof(name)) || name[0] == '\0') {
+        std::snprintf(name, sizeof(name), "%s",
+                      acc::strings::Get(acc::strings::Id::CategoryItem));
+    }
+    const C cat = ClassifyForInteract(target);
+    LogDispatchCreature();
+
+    // The one creature-keyed refusal: Trask as leader trying his own door.
     if (acc::endar::BlockCompanionAttempt(target)) return;
 
-    // Going through a door or an exit: a short, non-blocking reminder of what
-    // is still worth searching in the region being left (spoken a beat after
-    // the walk line, never instead of it).
-    if (!forceRadial && (cat == acc::filter::CycleCategory::Door ||
-                         cat == acc::filter::CycleCategory::Transition)) {
+    // Short reminders a beat after the walk line, never instead of it: what is
+    // left to search in the region being left, and a target behind a locked
+    // door the walk can never reach.
+    if (!forceRadial && (cat == C::Door || cat == C::Transition)) {
         acc::exit_memory::RemindLootOnLeaving(target);
     }
-    // Something that lies only behind a locked door: the engine's walk can
-    // never get there and used to stall in silence. Say so a beat after the
-    // walk line; the dispatch below still runs (doors' open attempts can be
-    // story triggers, see the WARNING above).
     if (!forceRadial) acc::exit_memory::WarnIfBehindLock(target);
 
-    // Transitions are TRIGGER regions that fire on walk-IN, not on "use", and
-    // landmarks are WAYPOINTS — map markers with no physical presence at all.
-    // Neither has a use-node, so the engine action picker has no verb for
-    // either, and the dispatch below would fall through to the UseObject
-    // fallback, which queues a walk-to-use the engine can't resolve → the PC
-    // never moves → false "way blocked". Walk to the coordinate instead
-    // (engine A*, input left enabled like the cycle coord-walk); for a
-    // transition, crossing into the region fires it. Same fix as
-    // cycle_input::OnPathfindFocus, which routes both the same way — Shift+-
-    // on a landmark walked there correctly all through the beta session while
-    // Enter on the same object did not.
-    //
-    // Landmarks were added here after the beta log showed every one of them
-    // taking the picker path and coming back with another object's descriptor
-    // (see the Step 3b note in engine_picker). That check now stops the wrong
-    // action from being dispatched; this branch is what makes the right thing
-    // happen instead of an empty radial.
-    // A map note placed at a door ("To Sith Party" sits on the North
-    // Apartments entrance, "Largo's Apartment" on his door) means the door:
-    // a coordinate walk stops against it closed, and an open transition door
-    // still needs Enter to go through. Hand Enter to the door itself. The
-    // radius is that of the landmark-to-door label match (room_topology
-    // AttachLandmarksToDoors, 5 m): "To Upper City South" sits 3.2 m from
-    // its door.
-    if (cat == acc::filter::CycleCategory::Landmark) {
-        Vector lpos{};
-        void*  area = acc::engine::GetCurrentArea();
-        if (area && acc::engine::GetObjectPosition(target, lpos)) {
-            Vector dpos{};
-            void* door = acc::engine::NearestDoor(area, lpos, 5.0f, [](void* d) {
-                return !acc::engine::IsDoorCosmetic(d);
-            }, &dpos);
-            const float bestD = std::hypot(dpos.x - lpos.x, dpos.y - lpos.y);
-            const uint32_t dh = door ? acc::engine::GetObjectHandle(door) : 0;
-            if (dh) {
-                acclog::Write("Interact", "landmark [%s] sits %.1fm from door "
-                    "0x%08x — Enter goes to the door", name, bestD, dh);
-                DispatchInteractImpl(door, dh, forceRadial);
-                return;
-            }
-        }
+    if (cat == C::Landmark && RedirectLandmarkToDoor(target, name, forceRadial)) return;
+    if ((cat == C::Transition || cat == C::Landmark) &&
+        WalkToTrigger(target, handle, name, cat, forceRadial)) {
+        return;
     }
-
-    if (cat == acc::filter::CycleCategory::Transition ||
-        cat == acc::filter::CycleCategory::Landmark) {
-        Vector tpos{};
-        if (acc::engine::GetObjectPosition(target, tpos) &&
-            acc::guidance::WalkTo(tpos)) {
-            char tmsg[192];
-            std::snprintf(tmsg, sizeof(tmsg),
-                          acc::strings::Get(PreRollFor(cat)), name);
-            acc::speech::Speak(tmsg, /*interrupt=*/true);
-            // Coord walk leaves input enabled, so the tracker doesn't own input
-            // restore (matches the cycle WalkTo path).
-            ArmInteractApproach(name, target, /*inputDisabled=*/false,
-                                /*isDialog=*/false);
-            acclog::Write("Interact", "%s -> [%s] %s via WalkTo(coord) "
-                "target=0x%08x pos=(%.2f,%.2f,%.2f)",
-                forceRadial ? "Shift+Enter" : "Enter", tmsg,
-                cat == acc::filter::CycleCategory::Landmark
-                    ? "landmark waypoint" : "transition trigger",
-                handle, tpos.x, tpos.y, tpos.z);
-            return;
-        }
-        // Couldn't resolve the position / WalkTo faulted — fall through to the
-        // normal picker pipeline as a backup.
-        acclog::Write("Interact", "%s WalkTo dispatch unavailable — "
-            "falling through to picker/UseObject",
-            cat == acc::filter::CycleCategory::Landmark ? "landmark"
-                                                        : "transition");
+    if (!forceRadial && cat == C::Door && acc::engine::IsDoorOpen(target) &&
+        WalkThroughOpenDoor(target, handle, name)) {
+        return;
     }
-
-    // An open door has no verb — the engine offers nothing, so Enter used to
-    // answer "No actions available" — but a player pressing Enter on a door
-    // wants to go through it. Walk to it instead (engine A*), the way a
-    // transition is handled above. Shift+Enter keeps the radial.
-    if (!forceRadial && cat == acc::filter::CycleCategory::Door &&
-        acc::engine::IsDoorOpen(target)) {
-        Vector dpos{};
-        if (acc::engine::GetObjectPosition(target, dpos) &&
-            acc::guidance::WalkTo(dpos)) {
-            char dmsg[192];
-            std::snprintf(dmsg, sizeof(dmsg),
-                          acc::strings::Get(acc::strings::Id::FmtWalkingTo), name);
-            acc::speech::Speak(dmsg, /*interrupt=*/true);
-            ArmInteractApproach(name, target, /*inputDisabled=*/false,
-                                /*isDialog=*/false);
-            acclog::Write("Interact", "Enter -> [%s] open door via WalkTo(coord) "
-                "target=0x%08x pos=(%.2f,%.2f,%.2f)",
-                dmsg, handle, dpos.x, dpos.y, dpos.z);
-            return;
-        }
-    }
-
-    // A closed door into another area: the press below only opens it (or
-    // runs its story script). Go through once it is open, so one Enter takes
-    // the player into the next area. See door_announce::ArmWalkThrough.
-    if (!forceRadial && cat == acc::filter::CycleCategory::Door &&
-        acc::engine::DoorHasTransitionDest(target)) {
+    // A closed door into another area: the press only opens it; go through once
+    // it is open, so one Enter reaches the next area.
+    if (!forceRadial && cat == C::Door && acc::engine::DoorHasTransitionDest(target)) {
         acc::door_announce::ArmWalkThrough(handle);
     }
 
-    // First: try the engine action picker. It runs the same picker the
-    // cursor uses on hover (open / talk / Security / Bash / Disable Trap
-    // / …) and dispatches the result through the engine's own click
-    // pipeline — no per-kind logic in our patch. See
-    // docs/engine-action-picker.md.
-    //
-    // Pre-roll narration: the picker returns the engine's localised verb
-    // (e.g. "Security") in snap.label. We speak that prefixed to the
-    // target name when valid; otherwise we keep the per-category fallback
-    // string (which still tells the user *something* happened even when
-    // the engine refuses to enumerate actions).
-    // Populate the descriptor + open the radial when there's no default action,
-    // but do NOT dispatch yet — the dispatch block after the announce picks the
-    // primitive per verb (use-equivalent talk/open → robust UseObject; the rest
-    // → engine click pipeline).
+    // The engine's own action picker, as on cursor hover (docs/
+    // engine-action-picker.md). Populate only: the radial opens when there is
+    // no default action, and the verb is dispatched below.
     acc::picker::ActionSnapshot snap = {};
     acc::picker::Drive(handle, &snap, forceRadial, /*populateOnly=*/true);
-
-    // Radial-opened path: arm the input gate and speak the row+action
-    // announce in one call. ArmAfterPopulate handles the speech itself
-    // (so we get "action menu, Door. Action 1/N: Open" instead of just
-    // "action menu, Door" with no follow-up). Falls back to the static
-    // pre-roll string when arming fails (no rows populated → menu isn't
-    // actually navigable; keeps prior behaviour).
     char msg[192];
-    bool radialArmed = false;
-    if (snap.radial_opened) {
-        // Re-anchor with the descriptor's canonical client target_id, NOT
-        // `handle`. In some saves `handle` arrives as a pointer-shaped value
-        // in the wrong namespace; SetMainInterfaceTarget tolerates it at arm
-        // only because passive narration already set the correct target, but
-        // a later re-anchor with it corrupts the engine target (observed:
-        // DELTA 0x80000046 -> 0x86dfc420 -> empty menu). snap.target_id is
-        // the client id the engine actually populated the menu against.
-        uint32_t anchorTarget = snap.target_id ? snap.target_id : handle;
-        radialArmed = acc::unified_menu::ArmFromRadial(name, anchorTarget);
-        if (!radialArmed) {
-            // Radial opened but `target_action` rows are all empty
-            // (e.g. door-you-can-only-open: Open lives on the engine's
-            // default-action descriptor, never enters any radial row).
-            // Tell the user there's nothing in the menu rather than
-            // speaking the generic "action menu, X" pre-roll that
-            // implies a menu they can navigate. Shift+Enter gets a
-            // redirect to plain Enter (which dispatches the default
-            // action when one exists); plain Enter just reports the
-            // empty state — suggesting Enter again would be misleading
-            // since that's the press that just landed here.
-            // WORKAROUND 2026-05-31: caching the chosen Id into a
-            // local `phrase` variable, then calling Get(phrase), produced
-            // session-persistent garbage values (observed 81, 145, etc.)
-            // under /O2 on some loads — same compiled DLL, different
-            // sessions disagreed on the runtime int value of the local,
-            // and once a load picked a value it stuck for the whole
-            // session. Resolving the format string via Get(literal enum
-            // constant) on both arms of the ternary sidesteps it.
-            // Phrase-local symptom captured in
-            // patch-20260531-150602.log; direct-Get fix verified in
-            // patch-20260531-151058.log. Don't fold this back into a
-            // single phrase variable without re-verifying across cold
-            // sessions.
-            const char* fmt = forceRadial
-                ? acc::strings::Get(acc::strings::Id::FmtInteractNoActionsRedirect)
-                : acc::strings::Get(acc::strings::Id::FmtInteractNoActions);
-            std::snprintf(msg, sizeof(msg), fmt, name);
-            acc::speech::Speak(msg, /*interrupt=*/true);
-        } else {
-            // ArmAfterPopulate spoke; build a placeholder for the log line
-            // so the existing "engine_label=[…]" diagnostic still has a
-            // human-readable msg field.
-            std::snprintf(msg, sizeof(msg), "Aktionsmenü(%s)", name);
-        }
-    } else if (snap.valid && snap.label[0] != '\0') {
-        std::snprintf(
-            msg, sizeof(msg),
-            acc::strings::Get(acc::strings::Id::FmtInteractEngine),
-            snap.label, name);
-        acc::speech::Speak(msg, /*interrupt=*/true);
-    } else {
-        std::snprintf(
-            msg, sizeof(msg),
-            acc::strings::Get(PreRollFor(cat)), name);
-        acc::speech::Speak(msg, /*interrupt=*/true);
-    }
-
+    AnnouncePick(snap, handle, name, cat, forceRadial, msg, sizeof(msg));
     acclog::Write("Interact", "%s -> [%s] target=%p handle=0x%08x cat=%s "
         "engine_label=[%s] engine_action=0x%x engine_count=%d "
         "radial_opened=%d",
-        forceRadial ? "Shift+Enter" : "Enter",
-        msg, target, handle,
-        cat == acc::filter::CycleCategory::Count_
-            ? "(unclassified)"
-            : acc::filter::CategoryName(cat),
-        snap.label, snap.action_id, snap.count,
-        snap.radial_opened ? 1 : 0);
-
-    // Radial already opened by the populate-only Drive (no default action /
-    // Shift+Enter / locked door). Nothing to dispatch.
+        KeyName(forceRadial), msg, target, handle,
+        cat == C::Count_ ? "(unclassified)" : acc::filter::CategoryName(cat),
+        snap.label, snap.action_id, snap.count, snap.radial_opened ? 1 : 0);
     if (snap.radial_opened) {
         acclog::Write("Interact", "radial opened (no default action) target=0x%08x",
             handle);
         return;
     }
 
-    // Dispatch handle = snap.target_id, the client id the engine actually built
-    // the descriptor against (clear the high bit for the server namespace AI
-    // actions use). This is the authoritative target — it reflects any engine
-    // retarget to a linked object — and equals `handle` in the common case. Fall
-    // back to the param handle when the descriptor carried no target id.
-    uint32_t dispatchHandle = (snap.valid && snap.target_id)
+    // The descriptor's target id (server namespace: high bit cleared) is
+    // authoritative, it follows an engine retarget to a linked object. The
+    // engine writes kInvalidObjectId there when there is no target.
+    const uint32_t dispatchHandle = (snap.valid && snap.target_id)
         ? (snap.target_id & ~0x80000000u)
         : handle;
-    // kInvalidObjectId belongs in this list and was missing: the engine writes
-    // it into a descriptor's target when there is no target, and we dispatched
-    // it as if it were an object (patch-20260813-150242 logs the whole
-    // sequence three times — "usable=1" on 0x7f000000, then FAILED). The
-    // object resolvers in engine_area already treat all four the same way.
     const bool handleUsable = dispatchHandle != 0u && dispatchHandle != 1u &&
                               dispatchHandle != 0xFFFFFFFFu &&
                               dispatchHandle != kInvalidObjectId;
-
     acclog::Write("Interact", "dispatch handle=0x%08x (param=0x%08x "
         "snap.target_id=0x%08x) usable=%d",
         dispatchHandle, handle, snap.target_id, handleUsable ? 1 : 0);
 
-    if (snap.valid && handleUsable) {
-        // Open/use (0x3f7) → AddUseObjectAction via guidance::UseObject. As a
-        // direct server action it robustly walks the leader to use-range over
-        // rough terrain and triggers the open — the distant-corpse loot fix.
-        // Input-disabled is its proven contract; on success engine_player's
-        // queue-watched session restores control, on a blocked stall the approach
-        // tracker force-restores it.
-        //
-        // NOT talk: AddUseObjectAction "uses" an object — a creature isn't used,
-        // so it walks-then-does-nothing for dialogue. Talk is handled below.
-        if (snap.action_id == 0x3f7) {
-            bool inputDisabled = acc::engine::SetPlayerInputEnabled(false);
-            bool ok = acc::guidance::UseObject(dispatchHandle);
-            if (ok) {
-                acclog::Write("Interact", "use-verb dispatched via UseObject "
-                    "(action_id=0x%x input_disabled=%d) target=0x%08x",
-                    snap.action_id, inputDisabled ? 1 : 0, dispatchHandle);
-                ArmInteractApproach(name, target, /*inputDisabled=*/true,
-                                    /*isDialog=*/false, dispatchHandle);
-                return;
-            }
-            // UseObject refused — undo the input-disable and fall through to the
-            // engine click pipeline as a backup.
-            if (inputDisabled) acc::engine::SetPlayerInputEnabled(true);
-        }
-
-        // Talk (0x3ea) → CSWCCreature::ActionInitiateDialog directly, bypassing
-        // HandleMouseClickInWorld's first-click/confirm gate that needed two
-        // Enter presses. Input stays ENABLED so the engine walks-then-talks
-        // server-side (disabling it suppresses the approach — the distant_npc
-        // freeze). The approach tracker covers the genuinely-unreachable case.
-        if (snap.action_id == 0x3ea) {
-            if (acc::picker::InitiateDialog(dispatchHandle)) {
-                acclog::Write("Interact", "dialogue dispatched via "
-                    "ActionInitiateDialog target=0x%08x", dispatchHandle);
-                ArmInteractApproach(name, target, /*inputDisabled=*/false,
-                                    /*isDialog=*/true);
-                return;
-            }
-            // InitiateDialog faulted / client creature unresolved — fall through
-            // to the engine click pipeline (HandleMouseClickInWorld) as a backup.
-        }
-
-        // Everything else — door/mine/bash, attack, … (and talk only as a backup
-        // if ActionInitiateDialog above failed) — → engine click pipeline. This
-        // second Drive re-asserts the engine target right before the click
-        // (defends against a drifting cursor re-pointing the menu) then runs the
-        // click-gate + HandleMouseClickInWorld. IsWalkToActVerb verbs keep input
-        // enabled per engine_picker's skip so the native walk-then-act runs;
-        // attack stays input-disabled.
-        bool dispatched = acc::picker::Drive(dispatchHandle, &snap, forceRadial,
-                                             /*populateOnly=*/false);
-        if (dispatched) {
-            acclog::Write("Interact", "engine picker dispatched action_id=0x%x "
-                "label=[%s] target=0x%08x", snap.action_id, snap.label,
-                dispatchHandle);
-            if (acc::picker::IsWalkToActVerb(snap.action_id)) {
-                // Walk-to-act verbs leave input enabled, so the tracker doesn't
-                // own input restore here.
-                ArmInteractApproach(name, target, /*inputDisabled=*/false,
-                                    snap.action_id == 0x3ea);
-            }
-            return;
-        }
-        // Fall through to the generic fallback below.
+    if (snap.valid && handleUsable &&
+        DispatchVerb(snap, dispatchHandle, name, target, forceRadial)) {
+        return;
     }
 
-    // Picker had no descriptor (engine has no default action for this
-    // leader/target) or the engine dispatch faulted. Fall back to
-    // AddUseObjectAction — the right primitive for the simple "walk over and
-    // open / talk / pick up" cases that have always worked.
+    // No descriptor, or the engine dispatch faulted: AddUseObjectAction covers
+    // the plain walk-over-and-open/talk/pick-up cases.
     if (handleUsable) {
-        bool inputDisabled = acc::engine::SetPlayerInputEnabled(false);
-        bool fallbackOk    = acc::guidance::UseObject(dispatchHandle);
-        if (fallbackOk) {
+        bool inputDisabled = false;
+        if (UseWithInputDisabled(dispatchHandle, &inputDisabled)) {
             acclog::Write("Interact", "fallback UseObject dispatched "
                 "(input_disabled=%d target=0x%08x) after picker returned "
                 "valid=%d count=%d",
-                inputDisabled ? 1 : 0, dispatchHandle, snap.valid ? 1 : 0,
-                snap.count);
+                inputDisabled ? 1 : 0, dispatchHandle, snap.valid ? 1 : 0, snap.count);
             ArmInteractApproach(name, target, /*inputDisabled=*/true,
                                 /*isDialog=*/false, dispatchHandle);
             return;
         }
-        if (inputDisabled) acc::engine::SetPlayerInputEnabled(true);
     }
 
     char failMsg[192];
-    std::snprintf(failMsg, sizeof(failMsg),
-                  acc::strings::Get(acc::strings::Id::FmtInteractFailed),
-                  name);
-    acc::speech::Speak(failMsg, /*interrupt=*/true);
+    SpeakWithName(acc::strings::Id::FmtInteractFailed, name, failMsg, sizeof(failMsg));
     acclog::Write("Interact", "dispatch FAILED (handleUsable=%d dispatchHandle="
         "0x%08x) -> [%s]", handleUsable ? 1 : 0, dispatchHandle, failMsg);
 }
 
-// Speak "{label} used" (or the empty-column phrase) for a bare-press
-// of action-bar key 4..7. Call AFTER the foreground/inWorld gate so the
-// announcement matches what the engine actually fires.
-//
-// Slot mapping per the manual: 4→0 (Friendly Force), 5→1 (Medical),
-// 6→2 (Misc), 7→3 (Mine). Engine struct has 6 slots; only 4 hotkey-bound.
-//
-// We don't suppress the engine's own dispatch (no hook on DoPersonalAction)
-// — both fire in parallel, the engine processes the keypress through its
-// DirectInput handler, we read the column state at announce time. False
-// positives are possible (engine refused to fire e.g. action gated on
-// is_action=0); we mirror that by speaking the empty-column phrase rather
-// than claiming a fire when is_action is 0.
-}  // namespace  (seam: published via interact_internal.h)
+// Bare keys 4-7 fire personal action-bar columns 0-3 in the engine itself (no
+// hook on DoPersonalAction). A real queue add is announced by the AddAction
+// detour (combat_queue's OnEngineActionAdded); this path only speaks the empty
+// column, where the engine refused.
 void AnnounceBarePersonalKey(int slot) {
-    // Engine-dispatch gate. ReportPrePressDepth runs only when input_pipeline
-    // let the engine's bare-key action through this press; a consumed Shift+combo
-    // skips it, so GetPrePressDepth (consume-on-read) returns -1. Without this,
-    // the shift-release race (PersonalKey rising after Shift lifts on a Shift+4
-    // submenu open) would speak a phantom "X, position 0" for an action that never
-    // fired. Read it first so every early-out below also stays silent on phantoms.
-    int preDepth = acc::combat::queue::GetPrePressDepth();
+    // -1 when input_pipeline consumed the press (a Shift+combo), so nothing
+    // fired: stay silent rather than speak a phantom.
+    const int preDepth = acc::combat::queue::GetPrePressDepth();
     if (preDepth < 0) {
         acclog::Write("ActionBar", "bare key slot=%d — no engine dispatch this "
             "press (preDepth=-1); skipping phantom announce", slot);
         return;
     }
-
     void* mi = acc::engine_actionbar::ResolveMainInterface();
     if (!mi) {
-        acclog::Write("ActionBar", "bare key slot=%d — main_interface unresolved",
-            slot);
+        acclog::Write("ActionBar", "bare key slot=%d — main_interface unresolved", slot);
         return;
     }
-
-    int nVar = acc::engine_actionbar::VariantCount(mi, slot);
+    char msg[128];
+    const int nVar = acc::engine_actionbar::VariantCount(mi, slot);
     if (nVar <= 0) {
-        // Column unpopulated — engine almost certainly refused the
-        // keypress. Speak the same empty phrase the submenu Open path
-        // uses so vocabulary stays consistent across the two routes.
-        char msg[128];
-        std::snprintf(msg, sizeof(msg),
-                      acc::strings::Get(
-                          acc::strings::Id::FmtActionBarColumnEmpty),
-                      slot + 1);
-        acc::speech::Speak(msg, /*interrupt=*/true);
-        acclog::Write("ActionBar", "bare key slot=%d variants=0 -> [%s]",
-            slot, msg);
+        SpeakColumnEmpty(slot, msg, sizeof(msg));
+        acclog::Write("ActionBar", "bare key slot=%d variants=0 -> [%s]", slot, msg);
         return;
     }
-
-    // Read the variant at the index the menu last left us on. The menu's
-    // cycle path keeps this index in lock-step with the engine's per-
-    // column "currently selected" state via paired SelectVariant calls,
-    // so this matches what the engine bare-press fires.
+    // The menu keeps this index in step with the engine's selected variant.
     int idx = acc::unified_menu::PersonalSelection(slot);
     if (idx < 0 || idx >= nVar) idx = 0;
-
     char label[128] = "";
-    acc::engine_actionbar::ReadVariantLabel(mi, slot, idx,
-                                            label, sizeof(label));
+    acc::engine_actionbar::ReadVariantLabel(mi, slot, idx, label, sizeof(label));
     if (label[0] == '\0') {
-        char msg[128];
-        std::snprintf(msg, sizeof(msg),
-                      acc::strings::Get(
-                          acc::strings::Id::FmtActionBarColumnEmpty),
-                      slot + 1);
-        acc::speech::Speak(msg, /*interrupt=*/true);
+        SpeakColumnEmpty(slot, msg, sizeof(msg));
         acclog::Write("ActionBar", "bare key slot=%d variants=%d idx=%d "
-            "label=empty -> [%s]",
-            slot, nVar, idx, msg);
+            "label=empty -> [%s]", slot, nVar, idx, msg);
         return;
     }
-
-    // Non-empty column: the engine queued (or cap-rejected) the action. The
-    // authoritative "X, position N" / "X, queue full" cue is spoken by the
-    // CSWSCombatRound::AddAction detour (queue::OnEngineActionAdded), which is
-    // 1:1 with real adds — no rising-edge under-count on key auto-repeat, no
-    // pre/post race against the queue drain. This poll path now only keeps the
-    // empty-column feedback above; the successful-queue announce moved to the
-    // hook. preDepth is still consumed at the top purely as the phantom-press
-    // gate (a consumed Shift+combo / dialog key must not even speak "empty").
     acclog::Write("ActionBar", "bare key slot=%d variants=%d idx=%d label=[%s] "
         "pre=%d — queued; announce via AddAction hook",
         slot, nVar, idx, label, preDepth);
 }
-namespace {
 
-// Speak "{label} used" for a bare-press of target-action key 1..3.
-// Same pattern as AnnounceBarePersonalKey but reads target_actions[row]
-// from the embedded CSWGuiTargetActionMenu (which the radial-menu path
-// already wraps via engine_radial::ReadRowActionLabel).
-//
-// Row mapping per the manual: 1→row 0 (leftmost), 2→row 1 (centre),
-// 3→row 2 (rightmost). The radial uses the same indices (kRowCount=3).
-//
-// The radial may be empty when no target is actively cycled (the engine
-// only populates target_actions[] after a passive-selection or click).
-// In that case RowActionCount==0 → empty phrase; matches the personal-
-// column empty path.
-}  // namespace  (seam: published via interact_internal.h)
+// Bare keys 1-3: the target-action rows 0-2, the same way.
 void AnnounceBareTargetKey(int row) {
-    // Engine-dispatch gate — see AnnounceBarePersonalKey. -1 means this press
-    // didn't fire a bare engine action (consumed Shift+combo); stay silent.
-    int preDepth = acc::combat::queue::GetPrePressDepth();
+    const int preDepth = acc::combat::queue::GetPrePressDepth();
     if (preDepth < 0) {
         acclog::Write("ActionBar", "bare target row=%d — no engine dispatch this "
             "press (preDepth=-1); skipping phantom announce", row);
         return;
     }
-
     void* tam = acc::engine_radial::ResolveTargetActionMenu();
     if (!tam) {
-        acclog::Write("ActionBar", "bare target row=%d — TAM unresolved",
-            row);
+        acclog::Write("ActionBar", "bare target row=%d — TAM unresolved", row);
         return;
     }
-
-    int count = acc::engine_radial::RowActionCount(tam, row);
+    const int count = acc::engine_radial::RowActionCount(tam, row);
     char label[128] = "";
     acc::engine_radial::ReadRowActionLabel(tam, row, label, sizeof(label));
-
     if (count <= 0 || label[0] == '\0') {
-        // Same empty-column phrase shape — keeps the announce vocabulary
-        // consistent across both action-bar groups. Use row+1 for the
-        // user-visible 1..3 indexing the manual documents.
         char msg[128];
-        std::snprintf(msg, sizeof(msg),
-                      acc::strings::Get(
-                          acc::strings::Id::FmtActionBarColumnEmpty),
-                      row + 1);
-        acc::speech::Speak(msg, /*interrupt=*/true);
+        SpeakColumnEmpty(row, msg, sizeof(msg));
         acclog::Write("ActionBar", "bare target row=%d count=%d label=[%s] -> [%s]",
             row, count, label, msg);
         return;
     }
-
-    // Non-empty row: the authoritative "X, position N" / "X, queue full"
-    // cue is spoken by the CSWSCombatRound::AddAction detour
-    // (queue::OnEngineActionAdded) — see AnnounceBarePersonalKey. This poll
-    // path keeps only the empty-row feedback above. preDepth stays consumed at
-    // the top as the phantom-press gate.
     acclog::Write("ActionBar", "bare target row=%d label=[%s] "
         "pre=%d — queued; announce via AddAction hook", row, label, preDepth);
-}
-namespace {
-
-}  // namespace
-
-// Public seam introduced 2026-05-06 (lay-off 5). Thin forwarder into the
-// anonymous-namespace implementation so view_mode can drive the same
-// dispatch path PollHotkey runs after its own target resolution.
-void DispatchInteract(void* target, uint32_t handle, bool forceRadial) {
-    DispatchInteractImpl(target, handle, forceRadial);
 }
 
 }  // namespace acc::interact
