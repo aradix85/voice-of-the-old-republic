@@ -1,16 +1,26 @@
-// The combat log as speech: the rules that turn the engine's combat-log lines into the mod's short spoken lines, registered with acc::msg::Router. Here: the registry, the shared text helpers, and the one-line rules (a kill, a detected mine).
+// The combat log as speech: the rules, registered with acc::msg::Router, that
+// turn the engine's combat-log lines into the mod's short spoken lines. The
+// 3-or-4-line attack sequence (summary, Attack Breakdown, [Threat Breakdown],
+// Defense Breakdown, [Damage Breakdown]) becomes one compact line
+// (combat_log_attack.cpp); abilities, shields and deflection have their own
+// files. Everything else (heals, item use, loot, world feedback) falls
+// through to the router's raw-speech fallback. Here: the registry, the shared
+// text helpers, and the one-line rules (a kill, a detected mine).
+//
+// Parsing is anchor-based against the engine strings in combat_strings.*;
+// the anchors are exact (spacing and punctuation included) and must not be
+// "tidied".
 
 #include "combat_log_internal.h"
-#include "msg_router.h"
 
-#include "strings.h"
-#include "speech.h"
 #include "combat_strings.h"
-#include "engine_compass.h"   // ClockPosition — mine-detect line enrichment
-#include "strfmt.h"           // Format — heap-backed line assembly
-#include "trap_watch.h"       // PeekFreshMine / ConsumeFreshMine correlation
-#include "view_mode.h"        // GetEffectiveViewpoint — camera-anchored
-                              // position + facing for the spoken clock
+#include "engine_compass.h"   // ClockPosition
+#include "msg_router.h"
+#include "speech.h"
+#include "strfmt.h"           // Format
+#include "strings.h"
+#include "trap_watch.h"       // the fresh mine detection
+#include "view_mode.h"        // GetEffectiveViewpoint: the camera frame
 
 namespace acc::combat {
 
@@ -30,8 +40,8 @@ bool RuleKill(const char* text) {
 // tells the player a mine exists but not WHERE — sighted players see the
 // red ground overlay appear at the same moment. trap_watch records every
 // fresh party mine detection (name + position); when a message-buffer
-// line arrives that contains that mine's localized name, it is the
-// detect line, in ANY locale — no per-language anchor needed. Rewrite:
+// line arrives that contains that mine's name, it is the detect line, so
+// no anchor phrase is needed. Rewrite:
 // keep the text up to the roll-math colon (the math is review-log
 // detail, same reasoning as RuleThreat) and append clock direction +
 // distance via the shared announce format:
@@ -71,8 +81,7 @@ bool RuleMineDetect(const char* text) {
     if (acc::view_mode::GetEffectiveViewpoint(p, yaw)) {
         int clock = acc::engine::ClockPosition(yaw, minePos.x - p.x,
                                                minePos.y - p.y);
-        float dx = minePos.x - p.x, dy = minePos.y - p.y;
-        int m = static_cast<int>(sqrtf(dx * dx + dy * dy) + 0.5f);
+        int m = static_cast<int>(DistXY(p, minePos) + 0.5f);
         if (m < 1) m = 1;
         const char* fmt =
             acc::strings::Get(acc::strings::Id::FmtAnnounceWithClock);
@@ -108,17 +117,17 @@ void RegisterCombatMsgRules() {
     // ...") must not fall through to the generic rules.
     r.AddRule("CombatMineDetect", RuleMineDetect);
     r.AddRule("CombatSummary",   RuleSummary);
-    r.AddRule("CombatAngriff",   RuleAttack);
-    r.AddRule("CombatAbwehr",    RuleDefense);
-    r.AddRule("CombatSchaden",   RuleDamage);
-    r.AddRule("CombatAuswirkung", RuleEffectApplication);
+    r.AddRule("CombatAttack",    RuleAttack);
+    r.AddRule("CombatDefense",   RuleDefense);
+    r.AddRule("CombatDamage",    RuleDamage);
+    r.AddRule("CombatEffectApplication", RuleEffectApplication);
     r.AddRule("CombatAbsorb",    RuleAbsorb);
     r.AddRule("CombatDeflect",   RuleDeflect);
     r.AddRule("CombatAbilityUse", RuleAbilityUse);
     r.AddRule("CombatSaveThrow", RuleSaveThrow);
     r.AddRule("CombatDirectDamage", RuleDirectDamage);
     r.AddRule("CombatKill",      RuleKill);
-    r.AddRule("CombatBedrohung", RuleThreat);
+    r.AddRule("CombatThreat",    RuleThreat);
     r.AddOnUnmatched(OnUnmatched);
 }
 

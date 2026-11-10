@@ -1,10 +1,11 @@
-// Abilities, grenades and Force powers: who used what, the saving throws and damage per target, merged into one line per use.
+// Abilities, grenades and Force powers: who used what, the saving throws
+// and damage per target, merged into one line per use.
 
 #include "combat_log_internal.h"
-#include "msg_router.h"
-#include "party_cache.h"     // IsPartyMember
 
 #include "combat_strings.h"
+#include "msg_router.h"
+#include "party_cache.h"     // IsPartyMember
 
 namespace acc::combat {
 
@@ -62,14 +63,13 @@ EffectTarget* FxAlloc(const char* target) {
         e = &g_fx[i];
         *e = {};
         e->used = true;
-        size_t n = strnlen(target, sizeof(e->target) - 1);
-        memcpy(e->target, target, n); e->target[n] = '\0';
+        snprintf(e->target, sizeof(e->target), "%s", target);
         DWORD now = GetTickCount();
         e->first_tick = now;
         e->last_tick  = now;
         if (g_lastAbility.valid && (now - g_lastAbility.tick) <= kAbilityWindowMs) {
-            memcpy(e->action, g_lastAbility.action, strnlen(g_lastAbility.action, sizeof(e->action) - 1) + 1);
-            memcpy(e->caster, g_lastAbility.actor,  strnlen(g_lastAbility.actor,  sizeof(e->caster) - 1) + 1);
+            snprintf(e->action, sizeof(e->action), "%s", g_lastAbility.action);
+            snprintf(e->caster, sizeof(e->caster), "%s", g_lastAbility.actor);
         }
         return e;
     }
@@ -146,18 +146,19 @@ void FlushEffect(EffectTarget& e) {
         bool known_npc_vs_npc =
             (e.caster[0] && !caster_is_party && !target_is_party);
         if (!known_npc_vs_npc) {
-            acc::msg::Router::Instance().Speak(line);
+            r.Speak(line);
             r.LogEmit("emit-effect", line);
+        } else {
+            r.LogEmit("emit-effect-suppressed", line);
         }
-        else                   { r.LogEmit("emit-effect-suppressed", line); }
     }
     e = {};  // clears used
 }
 
 }  // namespace
 
-// "Effect Application Breakdown:<target> is <status>" — the engine's trailing status
-// echo. Two cases:
+// "Effect Application Breakdown:<target> is <status>" — the engine's
+// trailing status echo. Two cases:
 //   * A force power applied it: an effect slot for <target> already exists —
 //     attach the status so the merged effect line speaks it.
 //   * A weapon attack applied it: no slot exists; the status was already
@@ -181,8 +182,7 @@ bool RuleEffectApplication(const char* text) {
     return true;  // claimed, no speech
 }
 
-// "<actor> uses <action>[. ...]" — a power/grenade
-// /item use. Record it for effect attribution, and speak a shortened cue
+// "<actor> uses <action>[. ...]" — a power, grenade or item use. Record it for effect attribution, and speak a shortened cue
 // (dropping the Force point math) only for the party's own casts/throws —
 // incoming enemy powers announce via their effect line instead.
 bool RuleAbilityUse(const char* text) {
@@ -199,8 +199,8 @@ bool RuleAbilityUse(const char* text) {
     if (!actor[0] || !action[0]) return false;
 
     DWORD now = GetTickCount();
-    memcpy(g_lastAbility.actor,  actor,  strnlen(actor,  sizeof(g_lastAbility.actor)  - 1) + 1);
-    memcpy(g_lastAbility.action, action, strnlen(action, sizeof(g_lastAbility.action) - 1) + 1);
+    snprintf(g_lastAbility.actor,  sizeof(g_lastAbility.actor),  "%s", actor);
+    snprintf(g_lastAbility.action, sizeof(g_lastAbility.action), "%s", action);
     g_lastAbility.tick  = now;
     g_lastAbility.valid = true;
 
@@ -208,7 +208,7 @@ bool RuleAbilityUse(const char* text) {
     if (IsPartyMember(actor)) {
         char line[200];
         snprintf(line, sizeof(line), "%s%s%s", actor, L.ability_use_marker, action);
-        acc::msg::Router::Instance().Speak(line);
+        r.Speak(line);
         r.LogEmit("emit-use", line);
     } else {
         r.LogEmit("emit-use-suppressed", action);
@@ -239,7 +239,7 @@ bool RuleSaveThrow(const char* text) {
     if (!e) return false;  // table full — let it speak raw
     e->has_save = true;
     e->saved    = saved;
-    memcpy(e->save_type, save_type, strnlen(save_type, sizeof(e->save_type) - 1) + 1);
+    snprintf(e->save_type, sizeof(e->save_type), "%s", save_type);
     e->last_tick = GetTickCount();
     return true;
 }
@@ -275,8 +275,8 @@ bool RuleDirectDamage(const char* text) {
     if (!e) return false;
     e->has_dmg = true;
     e->dmg     = dmg;
-    if (dtype[0]) memcpy(e->dmg_type, dtype, strnlen(dtype, sizeof(e->dmg_type) - 1) + 1);
-    if (!e->caster[0]) memcpy(e->caster, actor, strnlen(actor, sizeof(e->caster) - 1) + 1);
+    if (dtype[0]) snprintf(e->dmg_type, sizeof(e->dmg_type), "%s", dtype);
+    if (!e->caster[0]) snprintf(e->caster, sizeof(e->caster), "%s", actor);
     e->last_tick = GetTickCount();
     return true;
 }

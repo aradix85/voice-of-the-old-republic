@@ -1,11 +1,13 @@
-// The attack sequence as one spoken line: collecting the summary and breakdown lines, then the compact, outgoing or incoming line, and the urgent status line.
+// The attack sequence as one spoken line: collecting the summary and
+// breakdown lines, then the outgoing or incoming line, and the urgent status
+// line.
 
 #include "combat_log_internal.h"
+
+#include "combat_strings.h"
 #include "msg_router.h"
 #include "party_cache.h"     // IsPartyMember
-
 #include "speech.h"
-#include "combat_strings.h"
 
 namespace acc::combat {
 
@@ -13,68 +15,31 @@ namespace {
 
 AttackBlock g_pending = {};
 
+// The whole block on one line, for the log of an attack that is not spoken.
 void BuildCompact(const AttackBlock& b, char* out, size_t cap) {
     const auto& L = acc::combat::loc::Get();
-    const char* verb = b.hit ? L.verb_hit : L.verb_miss;
-
-    char crit_part[32] = "";
-    if (b.hit && b.crit_tag) snprintf(crit_part, sizeof(crit_part), " %s", L.word_critical);
-
-    char feat_part[128] = "";
-    if (b.feat[0]) snprintf(feat_part, sizeof(feat_part), " (%s)", b.feat);
-
-    char auto_part[64] = "";
-    if (b.auto_hit)       snprintf(auto_part, sizeof(auto_part), " %s", L.word_auto_hit);
-    else if (b.auto_fail) snprintf(auto_part, sizeof(auto_part), " %s", L.word_auto_fail);
-
-    if (b.has_attack && b.has_defense && b.has_damage) {
-        snprintf(out, cap,
-                 "%s %s%s %s%s. %s %d (%s) %s %s %d (%s). %s.%s",
-                 b.actor, verb, crit_part, b.target, feat_part,
-                 L.word_attack, b.sum_attack, b.attack_comps,
-                 L.word_vs, L.word_def, b.sum_defense, b.defense_nums,
-                 b.damage_text, auto_part);
-    } else if (b.has_attack && b.has_defense) {
-        if (b.hit) {
-            snprintf(out, cap,
-                     "%s %s%s %s%s. %s %d (%s) %s %s %d (%s). %s %d.%s",
-                     b.actor, verb, crit_part, b.target, feat_part,
-                     L.word_attack, b.sum_attack, b.attack_comps,
-                     L.word_vs, L.word_def, b.sum_defense, b.defense_nums,
-                     L.word_damage, b.sum_damage, auto_part);
-        } else {
-            snprintf(out, cap,
-                     "%s %s%s %s%s. %s %d (%s) %s %s %d (%s).%s",
-                     b.actor, verb, crit_part, b.target, feat_part,
-                     L.word_attack, b.sum_attack, b.attack_comps,
-                     L.word_vs, L.word_def, b.sum_defense, b.defense_nums,
-                     auto_part);
-        }
-    } else if (b.has_attack) {
-        snprintf(out, cap,
-                 "%s %s%s %s%s. %s %d (%s) %s %s %d.%s",
-                 b.actor, verb, crit_part, b.target, feat_part,
-                 L.word_attack, b.sum_attack, b.attack_comps,
-                 L.word_vs, L.word_def, b.sum_defense, auto_part);
-    } else {
-        if (b.hit) {
-            snprintf(out, cap,
-                     "%s %s%s %s%s. %s %d %s %s %d. %s %d.%s",
-                     b.actor, verb, crit_part, b.target, feat_part,
-                     L.word_attack, b.sum_attack,
-                     L.word_vs, L.word_def, b.sum_defense,
-                     L.word_damage, b.sum_damage, auto_part);
-        } else {
-            snprintf(out, cap,
-                     "%s %s%s %s%s. %s %d %s %s %d.%s",
-                     b.actor, verb, crit_part, b.target, feat_part,
-                     L.word_attack, b.sum_attack,
-                     L.word_vs, L.word_def, b.sum_defense, auto_part);
-        }
-    }
+    size_t n = 0;
+    auto add = [&](const char* fmt, auto... args) {
+        if (n + 1 >= cap) return;
+        int k = snprintf(out + n, cap - n, fmt, args...);
+        if (k > 0) n = (n + k >= cap) ? cap - 1 : n + k;
+    };
+    add("%s %s", b.actor, b.hit ? L.verb_hit : L.verb_miss);
+    if (b.hit && b.crit_tag) add(" %s", L.word_critical);
+    add(" %s", b.target);
+    if (b.feat[0]) add(" (%s)", b.feat);
+    add(". %s %d", L.word_attack, b.sum_attack);
+    if (b.has_attack) add(" (%s)", b.attack_comps);
+    add(" %s %s %d", L.word_vs, L.word_def, b.sum_defense);
+    if (b.has_defense) add(" (%s)", b.defense_nums);
+    add(".");
+    if (b.has_damage) add(" %s.", b.damage_text);
+    else if (b.hit) add(" %s %d.", L.word_damage, b.sum_damage);
+    if (b.auto_hit) add(" %s", L.word_auto_hit);
+    else if (b.auto_fail) add(" %s", L.word_auto_fail);
 }
 
-// ---- Phase-2 short results-only lines.
+// ---- Short results-only lines.
 //
 // The verbose stat breakdown (Attack / Defense / Damage Breakdown) stays in
 // the engine message log; only the urgent result is spoken. Actor-led for
@@ -82,8 +47,8 @@ void BuildCompact(const AttackBlock& b, char* out, size_t cap) {
 // "who's hurt" name leads when damage lands on us.
 //
 // Common tail: ", critical" on a crit and ", <status>" when an effect was
-// applied. Damage type keeps the engine's casing (German type nouns are
-// capitalised: "Energy", "Physical", "Ion").
+// applied. Damage type keeps the engine's casing ("Energy", "Physical",
+// "Ion").
 
 void BuildResultTail(const AttackBlock& b, char* tail, size_t cap) {
     const auto& L = acc::combat::loc::Get();
@@ -101,8 +66,7 @@ void BuildResultTail(const AttackBlock& b, char* tail, size_t cap) {
 //   plain hit   → "<actor>, <target>, <dmg> <type>[, critical][, status]"
 //   plain miss  → (not emitted — caller suppresses)
 // The target is named: companions pick their own targets and a fight often
-// has several enemies, so "who took it" is not implied by the actor. (The
-// June 2026 results-only redesign had dropped it with no recorded reason.)
+// has several enemies, so "who took it" is not implied by the actor.
 void BuildOutgoingLine(const AttackBlock& b, char* out, size_t cap) {
     const auto& L = acc::combat::loc::Get();
     char target_part[110] = "";
@@ -161,7 +125,7 @@ void FlushPending() {
     char buf[640];
     if (announce_outgoing) {
         BuildOutgoingLine(g_pending, buf, sizeof(buf));
-        acc::msg::Router::Instance().Speak(buf);
+        r.Speak(buf);
         r.LogEmit("emit-outgoing", buf);
     } else if (g_pending.hit && target_is_party) {
         // Peel any applied status off the damage line and re-speak it
@@ -169,7 +133,7 @@ void FlushPending() {
         if (MaybeSpeakStatusUrgent(g_pending.target, g_pending.status))
             g_pending.status[0] = '\0';
         BuildIncomingLine(g_pending, buf, sizeof(buf));
-        acc::msg::Router::Instance().Speak(buf);
+        r.Speak(buf);
         r.LogEmit("emit-incoming", buf);
     } else {
         BuildCompact(g_pending, buf, sizeof(buf));
@@ -224,7 +188,7 @@ bool RuleDamage(const char* text) {
     return true;
 }
 
-// Bedrohungsstatistik is the critical-hit *confirmation* roll. Its only
+// The Threat Breakdown is the critical-hit *confirmation* roll. Its only
 // actionable outcome — did the hit crit — is already carried by the summary's
 // "Critical Hit!" tag, which the merged attack line speaks as
 // ", critical". The roll math (threat range, confirmation attack vs defense)

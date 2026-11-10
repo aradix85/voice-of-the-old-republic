@@ -1,10 +1,11 @@
-// Energy shields and blaster deflection: absorbed damage and deflected shots, collected and spoken once per burst.
+// Energy shields and blaster deflection: absorbed damage and deflected
+// shots, collected and spoken once per burst.
 
 #include "combat_log_internal.h"
-#include "msg_router.h"
-#include "party_cache.h"     // IsPartyMember
 
 #include "combat_strings.h"
+#include "msg_router.h"
+#include "party_cache.h"     // IsPartyMember
 
 namespace acc::combat {
 
@@ -14,11 +15,9 @@ namespace {
 // One engine line fires per blocked hit; a sustained shield emits dozens.
 // We accumulate a burst (running total + count) and flush a single spoken
 // line once kAbsorbQuietMs passes with no new absorb. namepart/suffix are
-// captured verbatim from the engine line so the spoken total stays locale-
-// agnostic: "<namepart>absorbs <total><suffix>".
-// Windows widened 600/2500 → 1500/5000 (2026-07-17, Star Forge feedback):
-// autofire volleys spaced ~1s kept splitting into a spoken line per volley —
-// 296 absorb lines in one session. One line per exchange is the target.
+// captured verbatim from the engine line: "<namepart>absorbs <total><suffix>".
+// Autofire volleys come about a second apart; these windows keep it to one
+// line per exchange instead of one per volley.
 constexpr DWORD kAbsorbQuietMs   = 1500;   // flush after this long with no new absorb
 constexpr DWORD kAbsorbMaxHoldMs = 5000;   // ...or this long since the burst began
 char  g_absorb_namepart[160] = {};   // text before the anchor (incl. trailing space)
@@ -29,10 +28,9 @@ DWORD g_absorb_last_tick     = 0;
 DWORD g_absorb_first_tick    = 0;
 
 // ---- Blaster-deflection burst coalescing.
-// The engine emits one full "Reflexionsstatistik: ..." breakdown per
-// deflected pellet — a Jedi tanking turret autofire produced 322 raw
-// spoken lines in one session (patch-20260716-221327.log). We claim the
-// line, count per deflector, and flush "<actor> deflects N shots"
+// The engine emits one full "Deflection Breakdown: ..." per deflected
+// pellet: a Jedi tanking turret autofire would hear hundreds of raw lines.
+// We claim the line, count per deflector, and flush "<actor> deflects N shots"
 // on the same debounce shape as the absorb burst. Party deflectors only
 // reach speech; NPC-vs-NPC deflections are logged and dropped, matching
 // the weapon-path policy.
@@ -58,7 +56,7 @@ void FlushAbsorb() {
     snprintf(line, sizeof(line), "%s%s %d%s",
              g_absorb_namepart, L.absorb_anchor, g_absorb_total, g_absorb_suffix);
     auto& r = acc::msg::Router::Instance();
-    acc::msg::Router::Instance().Speak(line);
+    r.Speak(line);
     r.LogEmit("emit-absorb", line);
     g_absorb_namepart[0] = '\0';
     g_absorb_suffix[0]   = '\0';
@@ -78,7 +76,7 @@ void FlushDeflect(DeflectSlot& s) {
     else              snprintf(line, sizeof(line), L.fmt_deflect_many, s.actor, s.count);
     auto& r = acc::msg::Router::Instance();
     if (IsPartyMember(s.actor)) {
-        acc::msg::Router::Instance().Speak(line);
+        r.Speak(line);
         r.LogEmit("emit-deflect", line);
     } else {
         r.LogEmit("emit-deflect-suppressed", line);
@@ -178,7 +176,7 @@ bool RuleDeflect(const char* text) {
         }
         *slot = {};
         slot->used = true;
-        memcpy(slot->actor, actor, strnlen(actor, sizeof(slot->actor) - 1) + 1);
+        snprintf(slot->actor, sizeof(slot->actor), "%s", actor);
         slot->first_tick = now;
     }
     ++slot->count;

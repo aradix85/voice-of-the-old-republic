@@ -1,4 +1,5 @@
-// Parsing the engine's attack sequence: the summary line and the attack, defense and damage breakdowns, into one AttackSeq.
+// Parsing the engine's attack sequence: the summary line and the attack,
+// defense and damage breakdowns, into one AttackBlock.
 
 #include "combat_log_internal.h"
 
@@ -111,10 +112,10 @@ bool ParseAttack(const char* text, AttackBlock& b) {
 
     struct Map { const char* from; size_t flen; const char* to; size_t tlen; };
     const Map kMap[] = {
-        { L.token_roll,    strlen(L.token_roll),    L.short_roll,    strlen(L.short_roll) },
-        { L.token_dex_mod,  strlen(L.token_dex_mod),  L.short_dex,      strlen(L.short_dex) },
-        { L.token_range, strlen(L.token_range), L.short_range, strlen(L.short_range) },
-        { L.token_effect,     strlen(L.token_effect),     L.short_effect,     strlen(L.short_effect) },
+        { L.token_roll,    strlen(L.token_roll),    L.short_roll,   strlen(L.short_roll) },
+        { L.token_dex_mod, strlen(L.token_dex_mod), L.short_dex,    strlen(L.short_dex) },
+        { L.token_range,   strlen(L.token_range),   L.short_range,  strlen(L.short_range) },
+        { L.token_effect,  strlen(L.token_effect),  L.short_effect, strlen(L.short_effect) },
     };
 
     char out[256];
@@ -125,9 +126,9 @@ bool ParseAttack(const char* text, AttackBlock& b) {
         const char* comp_end = strstr(p, "+ ");
         if (!comp_end) comp_end = p + strlen(p);
 
-        // Truncate the W-value component before any auto-hit/auto-fail tail
-        // (engine glues "roll 1 Automatic Miss!" with no
-        // "+" separator). Back up one to include the preceding space.
+        // Cut the roll component before any auto-hit/auto-fail tail (the
+        // engine glues "roll 1 Automatic Miss!" with no "+" separator). Back
+        // up one to include the preceding space.
         const char* auto_h = strstr(p, L.tag_auto_hit);
         const char* auto_f = strstr(p, L.tag_auto_fail);
         const char* auto_at = nullptr;
@@ -174,19 +175,11 @@ bool ParseAttack(const char* text, AttackBlock& b) {
     }
     out[out_len] = '\0';
 
-    // Prepend hand label only when it isn't the default (Nebenhand etc).
+    // The hand label only when it isn't the main hand.
     if (b.attack_hand[0] && strcmp(b.attack_hand, L.hand_main) != 0) {
-        char tmp[300];
-        snprintf(tmp, sizeof(tmp), "%s %s", b.attack_hand, out);
-        size_t n = strlen(tmp);
-        if (n >= sizeof(b.attack_comps)) n = sizeof(b.attack_comps) - 1;
-        memcpy(b.attack_comps, tmp, n);
-        b.attack_comps[n] = '\0';
+        snprintf(b.attack_comps, sizeof(b.attack_comps), "%s %s", b.attack_hand, out);
     } else {
-        size_t n = out_len;
-        if (n >= sizeof(b.attack_comps)) n = sizeof(b.attack_comps) - 1;
-        memcpy(b.attack_comps, out, n);
-        b.attack_comps[n] = '\0';
+        snprintf(b.attack_comps, sizeof(b.attack_comps), "%s", out);
     }
     b.has_attack = true;
     return true;

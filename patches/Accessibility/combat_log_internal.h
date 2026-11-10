@@ -5,34 +5,15 @@
 
 #include "combat.h"
 
-
 #include <windows.h>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
 
-
-// ============================================================================
-// Combat-log message-buffer rules.
-//
-// Registered into acc::msg::Router on first hook fire. Subscribes to
-// AppendToMsgBuffer events to:
-//
-//   * Merge the 3-or-4-line attack sequence
-//     (Summary → Attack Breakdown → [Threat Breakdown] →
-//      Defense Breakdown → [Damage Breakdown]) into a single compact line.
-//   * Speak Bedrohungsstatistik as-is mid-block (so the threat-roll cue
-//     stays audible without disrupting the buffer).
-//
-// Everything else (heals, item-use, kill/XP, loot, world feedback) falls
-// through to the router's raw-speech fallback. Sequence established
-// empirically from patch-20260521-100345.log. The block opens on a
-// summary line, closes on Damage Breakdown (hit) or on any
-// unrecognized line (miss).
-
-
 namespace acc::combat {
 
+// One attack sequence as it is collected: it opens on a summary line and
+// closes on the Damage Breakdown (hit) or on any unrecognised line (miss).
 struct AttackBlock {
     bool has_summary;
     bool has_attack;
