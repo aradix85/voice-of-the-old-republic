@@ -186,6 +186,7 @@ patches/Accessibility/input_pipeline.cpp
 patches/Accessibility/input_pipeline.h
 patches/Accessibility/input_poll_router.cpp
 patches/Accessibility/input_poll_router.h
+patches/Accessibility/interact_bare_keys.cpp
 patches/Accessibility/interact_dispatch.cpp
 patches/Accessibility/interact_dispatch.h
 patches/Accessibility/interact_internal.h
