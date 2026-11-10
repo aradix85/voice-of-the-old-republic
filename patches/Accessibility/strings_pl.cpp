@@ -51,7 +51,7 @@ const char* Get(Id id) {
 
         case Id::MapPinNoText:        return "Znacznik";
         case Id::MapPinAltDashUnsupported: return "Znacznik: Alt z my\x9Clnikiem nieobs\xB3ugiwany";
-        case Id::MapPinInteractHint:  return "Znacznik. Naci\x9Cnij Ctrl z my\x9Clnikiem, aby w\xB3\xB9""czy\xE6 sygna\xB3.";
+        case Id::MapPinInteractHint:       return "Znacznik. Naci\x9Cnij Ctrl z my\x9Clnikiem, aby us\xB3ysze\xE6 tras\xEA.";
 
         case Id::FmtSavedMarkerAutoNumber:   return "Znacznik %d";
         case Id::FmtSavedMarkerAutoWithRoom: return "%s - znacznik %d";
@@ -81,18 +81,16 @@ const char* Get(Id id) {
         case Id::SpectatorBattleDoomed: return "\xAFo\xB3nierze Republiki s\xB9 straceni. Nie mo\xBF""esz im pom\xF3""c. Droga jest zablokowana. Spiesz si\xEA na mostek!";
 
         // Beacon (Ctrl+-).
-        case Id::FmtBeaconStarted:     return "Sygna\xB3 do %s";
-        case Id::BeaconCancelled:      return "Sygna\xB3 wy\xB3\xB9""czony";
-        case Id::FmtBeaconNoPath:      return "Brak drogi st\xB9""d do %s. Mo\xBF""e da si\xEA tam dotrze\xE6 z innej strony.";
-        case Id::FmtBeaconMapUnreadable: return "Brak drogi do %s: nie mo\xBFna odczyta\xE6 mapy obszaru.";
-        case Id::BeaconAlreadyAtDest:  return "Ju\xBF u celu";
+        case Id::FmtRouteTo:            return "Trasa do %s";
+        case Id::FmtRouteNoPath:      return "Brak drogi st\xB9""d do %s. Mo\xBF""e da si\xEA tam dotrze\xE6 z innej strony.";
+        case Id::FmtRouteMapUnreadable: return "Brak drogi do %s: nie mo\xBFna odczyta\xE6 mapy obszaru.";
+        case Id::RouteAlreadyAtDest:  return "Ju\xBF u celu";
         // Route description.
         case Id::FmtRouteHeader:       return "Trasa do %s (%d metr\xF3w): %s. %s.";
         case Id::FmtRouteSegment:      return "%d metr\xF3w %s";
         case Id::RouteJoinSeparator:   return ", ";
         case Id::RouteOneTransition:   return "Jedno przej\x9C""cie";
         case Id::RouteNoTransition:    return "Bez przej\x9C\xE6";
-        case Id::FmtBeaconNextSegment: return "Dalej %d metr\xF3w %s";
 
         case Id::FmtInteractTalk:      return "Rozmawiaj z %s";
         case Id::FmtInteractOpen:      return "U\xBFyj %s";
@@ -198,6 +196,7 @@ const char* Get(Id id) {
 
         case Id::ViewModeOn:           return "Tryb obserwacji w\xB3\xB9""czony";
         case Id::ViewModeOff:          return "Tryb obserwacji wy\xB3\xB9""czony";
+        case Id::ViewModeWall:         return "\x8C""ciana";
 
         case Id::FmtSaveLoadRow:       return "%s, %s, %s, %d z %d";
         case Id::FmtSaveLoadRowNoLoc:  return "%s, %d z %d";
@@ -355,6 +354,7 @@ const char* Get(Id id) {
         case Id::MapNextNote:                return "Nast\xEApny znacznik mapy";
 
         case Id::MapCursorUnexplored:        return "Niezbadane";
+        case Id::MapCursorEdge:              return "Kraw\xEA""d\x9F mapy";
         case Id::MapCursorWaypointPOI:       return "Ciekawe miejsce";
         case Id::MapCursorJunction:          return "Skrzy\xBFowanie";
         case Id::FmtMapCursorDeadEnd:        return "\x8Clepy zau\xB3""ek, %s";
@@ -553,16 +553,6 @@ const char* Get(Id id) {
 
         case Id::ModSettingAudioGlossary:           return "S\xB3ownik d\x9Fwi\xEAk\xF3w";
         case Id::ModSettingsAudioGlossaryOpened:    return "Otwarto s\xB3ownik d\x9Fwi\xEAk\xF3w";
-        case Id::GlossaryEntryDoorOpen:             return "Drzwi otwarte";
-        case Id::GlossaryEntryDoorClosedMetal:      return "Metalowe drzwi zamkni\xEAte";
-        case Id::GlossaryEntryDoorClosedWood:       return "Drewniane drzwi zamkni\xEAte";
-        case Id::GlossaryEntryDoorClosedStone:      return "Kamienne drzwi zamkni\xEAte";
-        case Id::GlossaryEntryWall:                 return "\x8C""ciana";
-        case Id::GlossaryEntryHazard:               return "Zagro\xBF""enie";
-        case Id::GlossaryEntryCollision:            return "Zderzenie";
-        case Id::GlossaryEntryBeaconActive:         return "Sygna\xB3 aktywny";
-        case Id::GlossaryEntryBeaconWaypoint:       return "Osi\xB9gni\xEAto punkt sygna\xB3u";
-        case Id::GlossaryEntryBeaconDestination:    return "Osi\xB9gni\xEAto cel sygna\xB3u";
         case Id::GlossaryEntrySwoopAccelpadBoost:   return "Pole przyspieszenia \x9C""cigacza";
         case Id::GlossaryEntrySwoopObstacleWarn:    return "Ostrze\xBF""enie o przeszkodzie";
         case Id::GlossaryEntrySwoopWallImpact:      return "Uderzenie w \x9C""cian\xEA";
@@ -615,14 +605,15 @@ const char* Get(Id id) {
         case Id::HelpKeySelfStatus:     return "H: podaje twoje zdrowie, efekty i bro\xF1";
         case Id::HelpKeyAnnounceFocus:  return "Minus: podaje wybrany obiekt";
         case Id::HelpKeyWalkToFocus:    return "Shift i minus: id\x9F do wybranego obiektu";
-        case Id::HelpKeyBeacon:         return "Ctrl i minus: uruchamia sygna\xB3 prowadz\xB9""cy do wybranego obiektu";
+        case Id::HelpKeyRoute:          return "Ctrl i minus: opisuje krok po kroku tras\xEA do wybranego obiektu";
         case Id::HelpKeyDialogRepeat:   return "R: powtarza bie\xBF\xB9""c\xB9 wypowied\x9F";
 
         case Id::HelpKeyCycleObjects:   return "Przecinek i kropka: prze\xb3\xb9""czaj odkryte obiekty w bie\xbf\xb9""cej kategorii, do kt\xf3rych nadal mo\xbf""esz doj\x9c\xe6. Puste pojemniki i drzwi dekoracyjne s\xb9 pomijane";
         case Id::HelpKeyCycleCategory:  return "Shift z przecinkiem lub kropk\xB9: poprzednia lub nast\xEApna kategoria";
         case Id::HelpKeyCycleEnds:      return "Ctrl z przecinkiem lub kropk\xB9: skok do najbli\xBFszego lub najdalszego obiektu";
         case Id::HelpKeyHeading:        return "Prawy Alt: podaje kierunek patrzenia i obszar, w kt\xF3rym jeste\x9C";
-        case Id::HelpKeyCameraOrient:   return "N: obraca kamer\xEA na nast\xEApny kierunek lub w stron\xEA kolejnego punktu sygna\xB3u";
+        case Id::HelpKeyCameraOrient:
+            return "N: obraca kamer\xEA do najbli\xBFszego wyj\x9C""cia, potem zgodnie z ruchem wskaz\xF3wek zegara do kolejnego";
         case Id::HelpKeyDropMarker:     return "Shift i N: stawia znacznik mapy w twoim po\xB3o\xBF""eniu";
 
         case Id::FmtHelpNumberActions:   return "1 do 7: u\xBFycie ostatniej akcji z kategorii. 1 %s, 2 %s, 3 %s, 4 %s, 5 %s, 6 %s, 7 %s";
@@ -663,9 +654,10 @@ const char* Get(Id id) {
         case Id::HelpKeyPadSelfStatus:       return "Lewy spust z X: tw\xF3j w\xB3" "asny stan";
         case Id::HelpKeyPadActionQueue:      return "Lewy spust z B: kolejka akcji. Krzy\xBF" "ak w g\xF3r\xEA i w d\xF3\xB3 przechodzi przez pozycje, A usuwa ostatnio dodan\xB9, Y czy\x9C" "ci ca\xB3\xB9 kolejk\xEA, B zamyka";
         case Id::HelpKeyPadWalkToFocus:      return "Prawy spust z prawym bumperem: id\x9F do wybranego obiektu";
-        case Id::HelpKeyPadBeacon:           return "Lewy spust z lewym bumperem: sygna\xB3 d\x9Fwi\xEAkowy do wybranego obiektu";
+        case Id::HelpKeyPadRoute:            return "Lewy spust z lewym bumperem: opisuje tras\xEA do wybranego obiektu";
         case Id::HelpKeyPadDegrees:          return "Prawy spust: podaj kierunek patrzenia i obszar, w kt\xF3rym jeste\x9C";
-        case Id::HelpKeyPadCameraOrient:     return "Naci\x9Cni\xEA" "cie prawej ga\xB3ki: obr\xF3\xE6 kamer\xEA do nast\xEApnego punktu sygna\xB3u albo do nast\xEApnej strony \x9Cwiata";
+        case Id::HelpKeyPadCameraOrient:
+            return "Naci\x9Cni\xEA""cie prawej ga\xB3ki: obr\xF3\xE6 kamer\xEA do najbli\xBFszego wyj\x9C""cia, potem zgodnie z ruchem wskaz\xF3wek zegara do kolejnego";
         case Id::HelpKeyPadHelp:             return "Oba spusty: klawisze tego ekranu. Pozycja Pomoc w szybkim menu otwiera t\xEA list\xEA";
         case Id::HelpKeyPadQuickMenu:        return "Y: szybkie menu";
         case Id::HelpKeyPadCycleTargets:     return "Lewy i prawy bumper: zmiana celu";
@@ -801,7 +793,7 @@ const char* Get(Id id) {
         case Id::KbNameAnnounceFocus:       return "Podaj wybrany obiekt";
         case Id::KbNamePathfindFocus:       return "Id\x9F do wybranego";
         case Id::KbNamePathfindFocusForce:  return "Id\x9F do wybranego, wymu\x9C";
-        case Id::KbNameBeaconFocus:         return "Sygna\xB3 do wybranego";
+        case Id::KbNameRouteFocus:          return "Trasa do wybranego";
         case Id::KbNameAnnounceDegrees:     return "Kierunek patrzenia";
         case Id::KbNamePartyLeaderAnnounce: return "Podaj przyw\xF3""dc\xEA dru\xBFyny";
         case Id::KbNameCameraOrient:        return "Ustaw kamer\xEA";
@@ -877,9 +869,9 @@ const char* Get(Id id) {
         case Id::TutHintAttackAuto:
             return "Pami\xEAtaj: jedno naci\x9Cni\xEA""cie Enteru atakuje automatycznie w ka\xBF""dej rundzie. Zmienia to tylko nowy cel.";
         case Id::TutHintMovement:
-            return "Naci\x9Cnij F1 w dowolnej chwili, aby otworzy\xE6 menu pomocy z list\xB9 wszystkich klawiszy, albo Ctrl i F1, aby pozna\xE6 klawisze bie\xBF\xB9""cego ekranu. Aby si\xEA porusza\xE6, naciskaj W i S, by i\x9C\xE6 do przodu i do ty\xB3u, A i D, by zrobi\xE6 krok w lewo i w prawo, oraz Z i C, by skr\xEA""ca\xE6 w lewo i w prawo. Z i C obracaj\xB9 kamer\xEA, a wraz z ni\xB9 kierunek marszu, wi\xEA""c oba zawsze wskazuj\xB9 to samo. D\x9Fwi\xEAki ostrzegaj\xB9, gdy zbli\xBF""asz si\xEA do \x9C""ciany, a w trakcie ruchu opisywany jest kszta\xB3t pomieszczenia wok\xF3\xB3 ciebie. Naci\x9Cnij prawy Alt, aby powt\xF3rzy\xE6 kierunek i bie\xBF\xB9""ce pomieszczenie.";
+            return "Naci\x9Cnij F1 w dowolnej chwili, aby otworzy\xE6 menu pomocy z list\xB9 wszystkich klawiszy, albo Ctrl i F1, aby pozna\xE6 klawisze bie\xBF\xB9""cego ekranu. Aby si\xEA porusza\xE6, naciskaj W i S, by i\x9C\xE6 do przodu i do ty\xB3u, A i D, by zrobi\xE6 krok w lewo i w prawo, oraz Z i C, by skr\xEA""ca\xE6 w lewo i w prawo. Z i C obracaj\xB9 kamer\xEA, a wraz z ni\xB9 kierunek marszu, wi\xEA""c oba zawsze wskazuj\xB9 to samo. W trakcie ruchu opisywany jest kszta\xB3t pomieszczenia wok\xF3\xB3 ciebie. Naci\x9Cnij prawy Alt, aby powt\xF3rzy\xE6 kierunek i bie\xBF\xB9""ce pomieszczenie.";
         case Id::TutHintMapScreen:
-            return "Mapa pokazuje ka\xBF""dy zbadany obszar poziomu. Wa\xBFne miejsca s\xB9 oznaczone, a niekt\xF3re obszary, na przyk\xB3""ad miasta, s\xB9 naniesione, zanim je zbadasz. Po mapie poruszasz si\xEA klawiszami W, A, S i D. Mi\xEA""dzy znacznikami prze\xB3\xB9""czasz si\xEA przecinkiem i kropk\xB9. Naci\x9Cnij Shift i N, aby postawi\xE6 w\xB3""asny znacznik w swoim po\xB3o\xBF""eniu. Naci\x9Cnij Ctrl i minus, aby uruchomi\xE6 sygna\xB3 prowadz\xB9""cy do znacznika d\x9Fwi\xEAkiem, albo Shift i minus, aby doj\x9C\xE6 do wybranego znacznika automatycznie.";
+            return "Mapa pokazuje ka\xBF""dy zbadany obszar poziomu. Wa\xBFne miejsca s\xB9 oznaczone, a niekt\xF3re obszary, na przyk\xB3""ad miasta, s\xB9 naniesione, zanim je zbadasz. Po mapie poruszasz si\xEA klawiszami W, A, S i D. Mi\xEA""dzy znacznikami prze\xB3\xB9""czasz si\xEA przecinkiem i kropk\xB9. Naci\x9Cnij Shift i N, aby postawi\xE6 w\xB3""asny znacznik w swoim po\xB3o\xBF""eniu. Naci\x9Cnij Ctrl i minus, aby us\xB3ysze\xE6 tras\xEA do wybranego znacznika, albo Shift i minus, aby doj\x9C\xE6 do niego automatycznie.";
         case Id::TutHintJournal:
             return "Ekran zada\xF1 pokazuje twoje post\xEApy i podpowiedzi, co robi\xE6 dalej. Otw\xF3rz go klawiszem L. Wybierz pozycj\xEA strza\xB3kami i odczytaj szczeg\xF3\xB3y Shiftem ze strza\xB3k\xB9.";
         case Id::TutHintInventory:
@@ -1021,9 +1013,9 @@ const char* Get(Id id) {
         case Id::TutHintAttackAutoPad:
             return "Pami\xEAtaj: jedno naci\x9Cni\xEA" "cie A atakuje automatycznie w ka\xBF" "dej rundzie. Zmienia to tylko nowy cel.";
         case Id::TutHintMovementPad:
-            return "W ka\xBF" "dej chwili poci\xB9gnij oba spusty naraz, aby us\xB3ysze\xE6 klawisze bie\xBF\xB9" "cego ekranu, a naci\x9Cnij Y i wybierz Pomoc w szybkim menu, aby otworzy\xE6 pe\xB3n\xB9 list\xEA. Aby si\xEA porusza\xE6, wychyl lew\xB9 ga\xB3k\xEA w dowolnym kierunku. Wychyl praw\xB9 ga\xB3k\xEA w lewo lub w prawo, aby obr\xF3" "ci\xE6 kamer\xEA, a wraz z ni\xB9 kierunek marszu, tak by oba zawsze wskazywa\xB3y to samo. D\x9Fwi\xEAki ostrzegaj\xB9 ci\xEA przed zbli\xBF" "aniem si\xEA do \x9C" "ciany, a w trakcie ruchu opisywany jest kszta\xB3t pomieszczenia wok\xF3\xB3 ciebie. Poci\xB9gnij prawy spust, aby powt\xF3rzy\xE6 kierunek patrzenia i bie\xBF\xB9" "ce pomieszczenie.";
+            return "W ka\xBF""dej chwili poci\xB9gnij oba spusty naraz, aby us\xB3ysze\xE6 klawisze bie\xBF\xB9""cego ekranu, a naci\x9Cnij Y i wybierz Pomoc w szybkim menu, aby otworzy\xE6 pe\xB3n\xB9 list\xEA. Aby si\xEA porusza\xE6, wychyl lew\xB9 ga\xB3k\xEA w dowolnym kierunku. Wychyl praw\xB9 ga\xB3k\xEA w lewo lub w prawo, aby obr\xF3""ci\xE6 kamer\xEA, a wraz z ni\xB9 kierunek marszu, tak by oba zawsze wskazywa\xB3y to samo. W trakcie ruchu opisywany jest kszta\xB3t pomieszczenia wok\xF3\xB3 ciebie. Poci\xB9gnij prawy spust, aby powt\xF3rzy\xE6 kierunek patrzenia i bie\xBF\xB9""ce pomieszczenie.";
         case Id::TutHintMapScreenPad:
-            return "Mapa pokazuje ka\xBF" "dy zbadany obszar poziomu. Wa\xBFne miejsca s\xB9 zaznaczone, a niekt\xF3re obszary, na przyk\xB3" "ad miasta, s\xB9 naniesione jeszcze przed zbadaniem. Poruszaj si\xEA po mapie lew\xB9 ga\xB3k\xB9. Znaczniki zmieniasz krzy\xBF" "akiem w lewo i w prawo. Poci\xB9gnij lewy spust razem z lewym bumperem, aby uruchomi\xE6 sygna\xB3 d\x9Fwi\xEAkowy prowadz\xB9" "cy do znacznika, albo prawy spust z prawym bumperem, aby doj\x9C\xE6 tam automatycznie.";
+            return "Mapa pokazuje ka\xBF""dy zbadany obszar poziomu. Wa\xBFne miejsca s\xB9 zaznaczone, a niekt\xF3re obszary, na przyk\xB3""ad miasta, s\xB9 naniesione jeszcze przed zbadaniem. Poruszaj si\xEA po mapie lew\xB9 ga\xB3k\xB9. Znaczniki zmieniasz krzy\xBF""akiem w lewo i w prawo. Poci\xB9gnij lewy spust razem z lewym bumperem, aby us\xB3ysze\xE6 tras\xEA do znacznika, albo prawy spust z prawym bumperem, aby doj\x9C\xE6 tam automatycznie.";
         case Id::TutHintJournalPad:
             return "Ekran zada\xF1 pokazuje twoje post\xEApy i wskaz\xF3wki, co robi\xE6 dalej. Otw\xF3rz go z szybkiego menu na Y, pozycja Menu, a potem przejd\x9F do niego bumperami. Wybierz pozycj\xEA krzy\xBF" "akiem i przeczytaj szczeg\xF3\xB3y, przytrzymuj\xB9" "c Y i naciskaj\xB9" "c krzy\xBF" "ak w g\xF3r\xEA lub w d\xF3\xB3.";
         case Id::TutHintMessagesPad:

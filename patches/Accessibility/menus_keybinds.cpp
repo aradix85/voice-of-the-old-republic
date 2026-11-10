@@ -69,7 +69,7 @@ constexpr ActionEntry kExploration[] = {
     { A::AnnounceFocus,       S::KbNameAnnounceFocus },
     { A::PathfindFocus,       S::KbNamePathfindFocus },
     { A::PathfindFocusForce,  S::KbNamePathfindFocusForce },
-    { A::BeaconFocus,         S::KbNameBeaconFocus },
+    { A::RouteFocus,         S::KbNameRouteFocus },
     { A::AnnounceDegrees,     S::KbNameAnnounceDegrees },
     { A::PartyLeaderAnnounce, S::KbNamePartyLeaderAnnounce },
     { A::CameraOrient,        S::KbNameCameraOrient },

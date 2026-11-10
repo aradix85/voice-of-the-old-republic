@@ -1,4 +1,4 @@
-# probe_camera_distance.cpp (336 lines)
+# probe_camera_distance.cpp (335 lines)
 
 Source: `patches/Accessibility/probe_camera_distance.cpp`
 
@@ -33,6 +33,6 @@ Diagnostic-only TU; ships only while we're characterising the camera- distance s
 - L171 `const char* ModeName(ClampMode m)`
 - L181 `float ModeTarget(ClampMode m)`
 - L190 `void AdvanceClampMode()`
-- L217 `void DumpSnapshot()`: One-shot full state dump.
-- L270 `void TickClamp()`: Per-tick clamp + readback while a non-off clamp mode is active.
-- L322 `void Tick()`
+- L216 `void DumpSnapshot()`: One-shot full state dump.
+- L269 `void TickClamp()`: Per-tick clamp + readback while a non-off clamp mode is active.
+- L321 `void Tick()`

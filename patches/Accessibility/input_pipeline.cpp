@@ -227,7 +227,7 @@ extern "C" int __cdecl OnClientHandleInputEvent(void* this_ptr,
     // here.
 
     // ---- KOTOR 2 gamepad, in-world route -----------------------------------
-    // The shoulder chords (LT+LB beacon, RT+RB autowalk) and the right-stick
+    // The shoulder chords (LT+LB route, RT+RB autowalk) and the right-stick
     // press have to be claimed HERE rather than at the manager: this is the
     // route on which the engine actually performs Cycle Target and First-Person
     // View, so consuming at the manager would leave the engine action running

@@ -1,4 +1,4 @@
-# view_mode.cpp (756 lines)
+# view_mode.cpp (753 lines)
 
 Source: `patches/Accessibility/view_mode.cpp`
 
@@ -10,21 +10,21 @@ Hotkey B chosen because V is taken (Solo Mode in stock kotor.ini) and B is unbou
 
 ## Declarations (in source order)
 
-- L102 `void EnterViewMode()`
-- L143 `void ExitViewMode()`
-- L152 `void ToggleViewMode()`
-- L159 `void DumpCameraStateProbe()`: Shift+B diagnostic: snapshot CClientOptions to the log.
-- L209 `void StepCursor(float dt)`
-- L301 `bool ResolveCursorRegionLabel(void* area, const Vector& cursor, std::string& outBuf, const char*& outSource)`: Tier order matches the walking adapter: landmark → friendly room name → shape cache.
-- L355 `void AnnounceCursorRegion(void* area, const Vector& cursor)`: Per-tick region announce.
-- L404 `void NarrateNearestObject(void* area, const Vector& cursor)`
-- L493 `void PollEnter()`: Enter / Shift+Enter dispatch while view mode is active.
-- L534 `void ProcessPendingDispatch()`: Runs at the top of Tick BEFORE the IsActive() gate — by design, this fires after PollEnter exited view mode synchronously.
-- L587 `bool IsActive()`
-- L589 `bool ConsumedEnterThisTick()`
-- L595 `bool TryGetCursorPosition(Vector& out)`
-- L601 `bool GetEffectiveOrientationYawDegrees(float& out)`
-- L621 `bool GetEffectiveReferencePosition(Vector& out)`
-- L630 `bool GetEffectiveViewpoint(Vector& outPos, float& outYawDegrees)`
-- L640 `void PollWin32()`
-- L721 `void Tick()`
+- L99 `void EnterViewMode()`
+- L140 `void ExitViewMode()`
+- L149 `void ToggleViewMode()`
+- L156 `void DumpCameraStateProbe()`: Shift+B diagnostic: snapshot CClientOptions to the log.
+- L206 `void StepCursor(float dt)`
+- L298 `bool ResolveCursorRegionLabel(void* area, const Vector& cursor, std::string& outBuf, const char*& outSource)`: Tier order matches the walking adapter: landmark → friendly room name → shape cache.
+- L352 `void AnnounceCursorRegion(void* area, const Vector& cursor)`: Per-tick region announce.
+- L401 `void NarrateNearestObject(void* area, const Vector& cursor)`
+- L490 `void PollEnter()`: Enter / Shift+Enter dispatch while view mode is active.
+- L531 `void ProcessPendingDispatch()`: Runs at the top of Tick BEFORE the IsActive() gate — by design, this fires after PollEnter exited view mode synchronously.
+- L584 `bool IsActive()`
+- L586 `bool ConsumedEnterThisTick()`
+- L592 `bool TryGetCursorPosition(Vector& out)`
+- L598 `bool GetEffectiveOrientationYawDegrees(float& out)`
+- L618 `bool GetEffectiveReferencePosition(Vector& out)`
+- L627 `bool GetEffectiveViewpoint(Vector& outPos, float& outYawDegrees)`
+- L637 `void PollWin32()`
+- L718 `void Tick()`

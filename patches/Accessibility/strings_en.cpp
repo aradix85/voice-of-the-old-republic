@@ -28,7 +28,7 @@ const char* Get(Id id) {
 
         case Id::MapPinNoText:        return "Marker";
         case Id::MapPinAltDashUnsupported: return "Marker: Alt+Dash not supported";
-        case Id::MapPinInteractHint:  return "Marker. Press Ctrl+Dash to beacon.";
+        case Id::MapPinInteractHint:       return "Marker. Press Ctrl+Dash for the route.";
 
         case Id::FmtSavedMarkerAutoNumber:   return "Marker %d";
         case Id::FmtSavedMarkerAutoWithRoom: return "%s - Marker %d";
@@ -58,11 +58,10 @@ const char* Get(Id id) {
         case Id::SpectatorBattleDoomed: return "The Republic soldiers are lost. You cannot help them. The way is blocked. Hurry on to the bridge!";
 
         // Beacon (Ctrl+-).
-        case Id::FmtBeaconStarted:     return "Beacon to %s";
-        case Id::BeaconCancelled:      return "Beacon cancelled";
-        case Id::FmtBeaconNoPath:      return "No path from here to %s. It may be reachable from another side.";
-        case Id::FmtBeaconMapUnreadable: return "No path to %s: the area map could not be read.";
-        case Id::BeaconAlreadyAtDest:  return "Already at destination";
+        case Id::FmtRouteTo:            return "Route to %s";
+        case Id::FmtRouteNoPath:      return "No path from here to %s. It may be reachable from another side.";
+        case Id::FmtRouteMapUnreadable: return "No path to %s: the area map could not be read.";
+        case Id::RouteAlreadyAtDest:  return "Already at destination";
         // Route description.
         // Example: "Route to Door (25 metres): 5 metres North,
         //           4 metres Northeast, 6 metres East. No transition."
@@ -71,7 +70,6 @@ const char* Get(Id id) {
         case Id::RouteJoinSeparator:   return ", ";
         case Id::RouteOneTransition:   return "One transition";
         case Id::RouteNoTransition:    return "No transition";
-        case Id::FmtBeaconNextSegment: return "Continue %d metres %s";
 
         case Id::FmtInteractTalk:      return "Talk to %s";
         case Id::FmtInteractOpen:      return "Use %s";
@@ -177,6 +175,7 @@ const char* Get(Id id) {
 
         case Id::ViewModeOn:           return "View mode on";
         case Id::ViewModeOff:          return "View mode off";
+        case Id::ViewModeWall:         return "Wall";
 
         case Id::FmtSaveLoadRow:       return "%s, %s, %s, %d of %d";
         case Id::FmtSaveLoadRowNoLoc:  return "%s, %d of %d";
@@ -343,6 +342,7 @@ const char* Get(Id id) {
         case Id::MapNextNote:                return "Next map note";
 
         case Id::MapCursorUnexplored:        return "Unexplored";
+        case Id::MapCursorEdge:              return "Edge of the map";
         case Id::MapCursorWaypointPOI:       return "Point of interest";
         case Id::MapCursorJunction:          return "Junction";
         case Id::FmtMapCursorDeadEnd:        return "Dead end, %s";
@@ -555,16 +555,6 @@ const char* Get(Id id) {
 
         case Id::ModSettingAudioGlossary:           return "Audio glossary";
         case Id::ModSettingsAudioGlossaryOpened:    return "Audio glossary opened";
-        case Id::GlossaryEntryDoorOpen:             return "Door open";
-        case Id::GlossaryEntryDoorClosedMetal:      return "Metal door closed";
-        case Id::GlossaryEntryDoorClosedWood:       return "Wood door closed";
-        case Id::GlossaryEntryDoorClosedStone:      return "Stone door closed";
-        case Id::GlossaryEntryWall:                 return "Wall";
-        case Id::GlossaryEntryHazard:               return "Hazard";
-        case Id::GlossaryEntryCollision:            return "Collision";
-        case Id::GlossaryEntryBeaconActive:         return "Beacon active";
-        case Id::GlossaryEntryBeaconWaypoint:       return "Beacon waypoint reached";
-        case Id::GlossaryEntryBeaconDestination:    return "Beacon destination reached";
         case Id::GlossaryEntrySwoopAccelpadBoost:   return "Swoop accelerator pad";
         case Id::GlossaryEntrySwoopObstacleWarn:    return "Swoop obstacle warning";
         case Id::GlossaryEntrySwoopWallImpact:      return "Swoop wall impact";
@@ -617,14 +607,14 @@ const char* Get(Id id) {
         case Id::HelpKeySelfStatus:     return "H: announce your own health, effects and weapon";
         case Id::HelpKeyAnnounceFocus:  return "Minus: announce the focused object";
         case Id::HelpKeyWalkToFocus:    return "Shift plus minus: walk to the focused object";
-        case Id::HelpKeyBeacon:         return "Control plus minus: start a guidance beacon to the focused object";
+        case Id::HelpKeyRoute:          return "Control plus minus: describe the route to the focused object, step by step";
         case Id::HelpKeyDialogRepeat:   return "R: repeat the current spoken line";
 
         case Id::HelpKeyCycleObjects:   return "Comma and period: cycle objects you have already discovered and can still reach, in the current category. Empty containers and decorative doors are left out";
         case Id::HelpKeyCycleCategory:  return "Shift plus comma or period: previous or next category";
         case Id::HelpKeyCycleEnds:      return "Control plus comma or period: jump to the nearest or farthest object";
         case Id::HelpKeyHeading:        return "Right Alt: announce your facing direction and the area you are in";
-        case Id::HelpKeyCameraOrient:   return "N: turn the camera to the nearest exit, then clockwise to the next one, or face the next beacon waypoint";
+        case Id::HelpKeyCameraOrient:   return "N: turn the camera to the nearest exit, then clockwise to the next one";
         case Id::HelpKeyDropMarker:     return "Shift plus N: drop a map marker at your position";
 
         case Id::FmtHelpNumberActions:   return "1 to 7: use a category's most recent action. 1 %s, 2 %s, 3 %s, 4 %s, 5 %s, 6 %s, 7 %s";
@@ -665,9 +655,10 @@ const char* Get(Id id) {
         case Id::HelpKeyPadSelfStatus:       return "Left trigger with X: your own status";
         case Id::HelpKeyPadActionQueue:      return "Left trigger with B: the action queue. D-pad up and down step through the entries, A removes the last one queued, Y clears the whole queue, B closes";
         case Id::HelpKeyPadWalkToFocus:      return "Right trigger with right shoulder button: walk to the focused object";
-        case Id::HelpKeyPadBeacon:           return "Left trigger with left shoulder button: audio beacon to the focused object";
+        case Id::HelpKeyPadRoute:            return "Left trigger with left shoulder button: describe the route to the focused object";
         case Id::HelpKeyPadDegrees:          return "Right trigger: announce your facing direction and the area you are in";
-        case Id::HelpKeyPadCameraOrient:     return "Press the right stick: turn the camera to the beacon's next waypoint, otherwise to the nearest exit, then clockwise to the next one";
+        case Id::HelpKeyPadCameraOrient:
+            return "Press the right stick: turn the camera to the nearest exit, then clockwise to the next one";
         case Id::HelpKeyPadHelp:             return "Both triggers: keys for this screen. The quick menu's Help entry opens this list";
         case Id::HelpKeyPadQuickMenu:        return "Y: quick menu";
         case Id::HelpKeyPadCycleTargets:     return "Left and right shoulder buttons: cycle targets";
@@ -802,7 +793,7 @@ const char* Get(Id id) {
         case Id::KbNameAnnounceFocus:       return "Announce focus";
         case Id::KbNamePathfindFocus:       return "Walk to focus";
         case Id::KbNamePathfindFocusForce:  return "Walk to focus, force";
-        case Id::KbNameBeaconFocus:         return "Beacon to focus";
+        case Id::KbNameRouteFocus:          return "Route to focus";
         case Id::KbNameAnnounceDegrees:     return "Facing direction";
         case Id::KbNamePartyLeaderAnnounce: return "Announce party leader";
         case Id::KbNameCameraOrient:        return "Orient camera";
@@ -878,9 +869,9 @@ const char* Get(Id id) {
         case Id::TutHintAttackAuto:
             return "Remember: one press of Enter attacks automatically each round. Only a new target changes that.";
         case Id::TutHintMovement:
-            return "Press F1 anytime for the help menu, a list of every key, and Ctrl and F1 for the keys of the current screen. To move, press W and S to walk forward and back, A and D to step sideways left and right, and Z and C to turn left and right. Z and C rotate the camera and, with it, your walking direction, so the two always point the same way. Tones warn you when you approach a wall, and as you move the shape of the room around you is described. Press right Alt to repeat your facing direction and current room.";
+            return "Press F1 anytime for the help menu, a list of every key, and Ctrl and F1 for the keys of the current screen. To move, press W and S to walk forward and back, A and D to step sideways left and right, and Z and C to turn left and right. Z and C rotate the camera and, with it, your walking direction, so the two always point the same way. As you move, the shape of the room around you is described. Press right Alt to repeat your facing direction and current room.";
         case Id::TutHintMapScreen:
-            return "The map shows every explored area of a level. Important areas are marked, and some areas, such as cities, are mapped before you explore them. Move around the map with W, A, S and D. Switch between map hints with comma and period. Press Shift and N to place your own map hint at your position. Press Ctrl and minus to start a beacon that guides you to the map hint by sound, or Shift and minus to walk automatically to the selected map hint.";
+            return "The map shows every explored area of a level. Important areas are marked, and some areas, such as cities, are mapped before you explore them. Move around the map with W, A, S and D. Switch between map hints with comma and period. Press Shift and N to place your own map hint at your position. Press Ctrl and minus to hear the route to the selected map hint, or Shift and minus to walk there automatically.";
         case Id::TutHintJournal:
             return "The quest screen shows your progress and hints on what to do next. Open it with L. Choose an entry with the arrows and read its details with Shift and an arrow.";
         case Id::TutHintInventory:
@@ -1074,9 +1065,9 @@ const char* Get(Id id) {
         case Id::TutHintAttackAutoPad:
             return "Remember: one press of A attacks automatically each round. Only a new target changes that.";
         case Id::TutHintMovementPad:
-            return "Pull both triggers together anytime for the keys of the current screen, and press Y for the quick menu, entry Help, for the full list. To move, push the left stick in any direction. Push the right stick left or right to turn the camera and, with it, your walking direction, so the two always point the same way. Tones warn you when you approach a wall, and as you move the shape of the room around you is described. Pull the right trigger to repeat your facing direction and current room.";
+            return "Pull both triggers together anytime for the keys of the current screen, and press Y for the quick menu, entry Help, for the full list. To move, push the left stick in any direction. Push the right stick left or right to turn the camera and, with it, your walking direction, so the two always point the same way. As you move, the shape of the room around you is described. Pull the right trigger to repeat your facing direction and current room.";
         case Id::TutHintMapScreenPad:
-            return "The map shows every explored area of a level. Important areas are marked, and some areas, such as cities, are mapped before you explore them. Move around the map with the left stick. Switch between map hints with the D-pad left and right. Pull the left trigger together with the left shoulder button to start a beacon that guides you to the map hint by sound, or the right trigger with the right shoulder button to walk there automatically.";
+            return "The map shows every explored area of a level. Important areas are marked, and some areas, such as cities, are mapped before you explore them. Move around the map with the left stick. Switch between map hints with the D-pad left and right. Pull the left trigger together with the left shoulder button to hear the route to the map hint, or the right trigger with the right shoulder button to walk there automatically.";
         case Id::TutHintJournalPad:
             return "The quest screen shows your progress and hints on what to do next. Open it from the quick menu on Y, entry Menus, then step to it with the shoulder buttons. Choose an entry with the D-pad, and read its details by holding Y and pressing the D-pad up or down.";
         case Id::TutHintMessagesPad:

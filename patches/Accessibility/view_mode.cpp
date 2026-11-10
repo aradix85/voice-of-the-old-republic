@@ -8,8 +8,6 @@
 
 #pragma comment(lib, "user32.lib")
 
-#include "audio_bus.h"
-#include "audio_cues.h"
 #include "camera_announce.h"
 #include "engine_area.h"
 #include "engine_manager.h"
@@ -36,14 +34,13 @@ namespace {
 constexpr float kCursorSpeedMps = 2.0f;       // matches KOTOR walk pace
 constexpr float kMaxDtSec = 0.1f;             // guard against teleport-on-stall
 constexpr float kHoverRadiusMeters = 1.0f;    // cursor must be on the object
-constexpr DWORD kCollisionCueQuietMs = 250;   // collapse sustained wall contact
 
 struct ViewModeState {
     bool   active            = false;
     Vector cursor_pos        = { 0.0f, 0.0f, 0.0f };
     float  cursor_yaw_deg    = 0.0f;   // engine frame: 0° = +X, CCW positive
     DWORD  last_tick_ms      = 0;
-    DWORD  last_collision_ms = 0;
+    bool   at_wall           = false;  // "Wall" said for this contact
 
     // Hover-pause object debounce. Both handle and CSWSObject* are written
     // together so Enter dispatch reads them as a pair without re-resolving.
@@ -124,7 +121,7 @@ void EnterViewMode() {
     }
     g_state.cursor_yaw_deg     = yaw;
     g_state.last_tick_ms       = GetTickCount();
-    g_state.last_collision_ms  = 0;
+    g_state.at_wall            = false;
     g_state.hover_last_spoken     = 0;
     g_state.hover_pending         = 0;
     g_state.hover_pending_obj     = nullptr;
@@ -251,8 +248,8 @@ void StepCursor(float dt) {
         start.y + dy * dist,
         start.z };
 
-    // Surface-level collision: cursor stops only where the audio would
-    // announce a wall, not on portal-seam fragments the audio absorbs.
+    // Surface-level collision: the cursor stops at real walls, not on
+    // portal-seam fragments.
     Vector hit = end;
     bool collided = acc::spatial::wall_surfaces::SegmentCrossesSurface(
         start, end, hit);
@@ -278,21 +275,21 @@ void StepCursor(float dt) {
             g_state.cursor_pos = start;  // unreachable given dist > 0 guard
         }
 
-        DWORD now = GetTickCount();
-        if (g_state.last_collision_ms == 0 ||
-            now - g_state.last_collision_ms > kCollisionCueQuietMs) {
-            acc::audio::PlayCue3D(
-                acc::audio::GetNavCueResref(acc::audio::NavCue::Wall),
-                hit);
-            g_state.last_collision_ms = now;
+        // Said once per contact, not again while the cursor is held
+        // against the wall.
+        if (!g_state.at_wall) {
+            acc::speech::Speak(acc::strings::Get(acc::strings::Id::ViewModeWall),
+                               /*interrupt=*/true);
             acclog::Write("ViewMode", "collision at (%.2f,%.2f,%.2f) cursor clamped "
                 "to (%.2f,%.2f,%.2f)",
                 hit.x, hit.y, hit.z,
                 g_state.cursor_pos.x, g_state.cursor_pos.y,
                 g_state.cursor_pos.z);
         }
+        g_state.at_wall = true;
     } else {
         g_state.cursor_pos = end;
+        g_state.at_wall = false;
     }
 }
 

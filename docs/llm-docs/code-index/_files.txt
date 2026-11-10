@@ -40,8 +40,6 @@ patches/Accessibility/combat_query.h
 patches/Accessibility/combat_queue.cpp
 patches/Accessibility/combat_queue.h
 patches/Accessibility/combat_queue_hooks.cpp
-patches/Accessibility/combat_special_watch.cpp
-patches/Accessibility/combat_special_watch.h
 patches/Accessibility/combat_strings.cpp
 patches/Accessibility/combat_strings.h
 patches/Accessibility/core_dllmain.cpp
@@ -142,8 +140,6 @@ patches/Accessibility/guidance_approach.cpp
 patches/Accessibility/guidance_approach.h
 patches/Accessibility/guidance_autowalk.cpp
 patches/Accessibility/guidance_autowalk.h
-patches/Accessibility/guidance_beacon.cpp
-patches/Accessibility/guidance_beacon.h
 patches/Accessibility/guidance_description.cpp
 patches/Accessibility/guidance_description.h
 patches/Accessibility/guidance_pathfind.cpp
@@ -301,8 +297,6 @@ patches/Accessibility/passive_narrate.cpp
 patches/Accessibility/passive_narrate.h
 patches/Accessibility/peek_description.cpp
 patches/Accessibility/peek_description.h
-patches/Accessibility/probe_audio_frame.cpp
-patches/Accessibility/probe_audio_frame.h
 patches/Accessibility/probe_camera_distance.cpp
 patches/Accessibility/probe_camera_distance.h
 patches/Accessibility/probe_camera_state.cpp

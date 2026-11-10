@@ -123,7 +123,7 @@ bool   s_keybindsOpen    = false;
 // short enough that it doesn't feel laggy.
 bool                s_pendingValid  = false;
 DWORD               s_pendingFireAt = 0;
-acc::audio::NavCue  s_pendingCue    = acc::audio::NavCue::DoorOpen;
+acc::audio::NavCue  s_pendingCue    = acc::audio::NavCue::SwoopShiftReady;
 constexpr DWORD     kGlossaryDelayMs = 750;
 
 // Audition playback handle. The glossary fires its sample through a
@@ -187,12 +187,12 @@ const char* BuildReadmeUrl(char* buf, size_t bufSize) {
 // for the audible preview. The preview rides priority group 0xb so it
 // survives the in-game Optionen pause (SetSoundMode mutes everything else),
 // and plays at the slider-scaled per-source volume so the user hears the
-// level they just dialled in. BeaconActive (gui_check) is a short, clean
-// affirmative blip representative of the hint-sound vocabulary.
+// level they just dialled in. The swoop race's shift chirp is short and
+// clean.
 // The only slider is the cue volume; it steps 10 percent per press.
 constexpr int kSliderStep               = 10;
 constexpr int kCueVolumePreviewGroup    = 0x0b;
-constexpr acc::audio::NavCue kCueVolumePreviewCue = acc::audio::NavCue::BeaconActive;
+constexpr acc::audio::NavCue kCueVolumePreviewCue = acc::audio::NavCue::SwoopShiftReady;
 
 struct OptionSpec {
     Option              option;
@@ -288,34 +288,13 @@ void EnsureTogglesLoaded() {
     }
 }
 
-// Glossary entries — one row per NavCue. Order follows the NavCue
-// enum so a sighted reader can cross-reference against audio_cues.h.
-// Labels reuse the cycle Category* strings where the vocabulary
-// already exists (Door / Npc / Container / Item / Landmark /
-// Transition); Wall + the four special cues have glossary-specific
-// strings since the announce paths don't name them.
+// Glossary entries — one row per swoop-race cue, in audio_cues.h order.
 struct GlossaryEntry {
     acc::audio::NavCue  cue;
     acc::strings::Id    label;
 };
 
 constexpr GlossaryEntry k_glossary[] = {
-    { acc::audio::NavCue::DoorOpen,                 acc::strings::Id::GlossaryEntryDoorOpen         },
-    { acc::audio::NavCue::DoorClosedMetal,          acc::strings::Id::GlossaryEntryDoorClosedMetal  },
-    { acc::audio::NavCue::DoorClosedWood,           acc::strings::Id::GlossaryEntryDoorClosedWood   },
-    { acc::audio::NavCue::DoorClosedStone,          acc::strings::Id::GlossaryEntryDoorClosedStone  },
-    { acc::audio::NavCue::NpcCreature,              acc::strings::Id::CategoryNpc                   },
-    { acc::audio::NavCue::ContainerPlaceable,       acc::strings::Id::CategoryContainer             },
-    { acc::audio::NavCue::Item,                     acc::strings::Id::CategoryItem                  },
-    // Landmark omitted — cue is silent (TTS-only, 2026-05-27); a glossary
-    // row would play nothing on Enter and confuse the user.
-    { acc::audio::NavCue::TransitionExit,           acc::strings::Id::CategoryTransition            },
-    { acc::audio::NavCue::Wall,                     acc::strings::Id::GlossaryEntryWall             },
-    { acc::audio::NavCue::HazardLedge,              acc::strings::Id::GlossaryEntryHazard           },
-    { acc::audio::NavCue::Collision,                acc::strings::Id::GlossaryEntryCollision        },
-    { acc::audio::NavCue::BeaconActive,             acc::strings::Id::GlossaryEntryBeaconActive    },
-    { acc::audio::NavCue::BeaconWaypointReached,    acc::strings::Id::GlossaryEntryBeaconWaypoint  },
-    { acc::audio::NavCue::BeaconDestinationReached, acc::strings::Id::GlossaryEntryBeaconDestination },
     { acc::audio::NavCue::SwoopAccelpadBoost,       acc::strings::Id::GlossaryEntrySwoopAccelpadBoost },
     { acc::audio::NavCue::SwoopObstacleWarn,        acc::strings::Id::GlossaryEntrySwoopObstacleWarn  },
     { acc::audio::NavCue::SwoopWallImpact,          acc::strings::Id::GlossaryEntrySwoopWallImpact    },

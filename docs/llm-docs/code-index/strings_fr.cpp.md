@@ -1,4 +1,4 @@
-# strings_fr.cpp (1219 lines)
+# strings_fr.cpp (1212 lines)
 
 Source: `patches/Accessibility/strings_fr.cpp`
 

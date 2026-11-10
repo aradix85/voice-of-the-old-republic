@@ -38,7 +38,7 @@ const char* Get(Id id) {
 
         case Id::MapPinNoText:        return "Marke";
         case Id::MapPinAltDashUnsupported: return "Marke: Alt+Bindestrich nicht unterst\xFCtzt"; // unterst?tzt
-        case Id::MapPinInteractHint:  return "Marke. Strg+Bindestrich f\xFCr Beacon."; // f?r
+        case Id::MapPinInteractHint:       return "Marke. Strg+Bindestrich f\xFCr den Weg.";
 
         case Id::FmtSavedMarkerAutoNumber:   return "Marke %d";
         case Id::FmtSavedMarkerAutoWithRoom: return "%s - Marke %d";
@@ -68,11 +68,10 @@ const char* Get(Id id) {
         case Id::SpectatorBattleDoomed: return "Die republikanischen Soldaten sind verloren. Du kannst ihnen nicht mehr helfen. Der Weg ist versperrt. Eile weiter zur Br\xFC" "cke!";  // Br?cke
 
         // Beacon (Ctrl+-).
-        case Id::FmtBeaconStarted:     return "Beacon zu %s";
-        case Id::BeaconCancelled:      return "Beacon abgebrochen";
-        case Id::FmtBeaconNoPath:      return "Kein Pfad von hier zu %s. Vielleicht von einer anderen Seite erreichbar.";
-        case Id::FmtBeaconMapUnreadable: return "Kein Pfad zu %s: Die Gebietskarte ist nicht lesbar.";
-        case Id::BeaconAlreadyAtDest:  return "Bereits am Ziel";
+        case Id::FmtRouteTo:            return "Weg zu %s";
+        case Id::FmtRouteNoPath:      return "Kein Pfad von hier zu %s. Vielleicht von einer anderen Seite erreichbar.";
+        case Id::FmtRouteMapUnreadable: return "Kein Pfad zu %s: Die Gebietskarte ist nicht lesbar.";
+        case Id::RouteAlreadyAtDest:  return "Bereits am Ziel";
         // Route description.
         // Args: name, total metres, joined segment list, transition tail.
         // Example: "Route zu T\xFCr (25 Meter): 5 Meter Norden,
@@ -82,7 +81,6 @@ const char* Get(Id id) {
         case Id::RouteJoinSeparator:   return ", ";
         case Id::RouteOneTransition:   return "Ein \xDC" "bergang";          // ?bergang
         case Id::RouteNoTransition:    return "Kein \xDC" "bergang";         // ?bergang
-        case Id::FmtBeaconNextSegment: return "Weiter %d Meter %s";
 
         case Id::FmtInteractTalk:      return "Sprich mit %s";
         case Id::FmtInteractOpen:      return "\xD6" "ffne %s";                 // ?ffne
@@ -188,6 +186,7 @@ const char* Get(Id id) {
 
         case Id::ViewModeOn:           return "Umsehen-Modus an";
         case Id::ViewModeOff:          return "Umsehen-Modus aus";
+        case Id::ViewModeWall:         return "Wand";
 
         case Id::FmtSaveLoadRow:       return "%s, %s, %s, %d von %d";
         case Id::FmtSaveLoadRowNoLoc:  return "%s, %d von %d";
@@ -354,6 +353,7 @@ const char* Get(Id id) {
         case Id::MapNextNote:                return "N\xE4""chster Hinweis";  // N?chster
 
         case Id::MapCursorUnexplored:        return "Nebel des Krieges";
+        case Id::MapCursorEdge:              return "Kartenrand";
         case Id::MapCursorWaypointPOI:       return "Punkt von Interesse";
         case Id::MapCursorJunction:          return "Kreuzung";
         case Id::FmtMapCursorDeadEnd:        return "Sackgasse, %s";
@@ -571,16 +571,6 @@ const char* Get(Id id) {
 
         case Id::ModSettingAudioGlossary:           return "Audio-Glossar";
         case Id::ModSettingsAudioGlossaryOpened:    return "Audio-Glossar ge\xf6""ffnet";
-        case Id::GlossaryEntryDoorOpen:             return "T\xfc""r offen";
-        case Id::GlossaryEntryDoorClosedMetal:      return "Metallt\xfc""r geschlossen";
-        case Id::GlossaryEntryDoorClosedWood:       return "Holzt\xfc""r geschlossen";
-        case Id::GlossaryEntryDoorClosedStone:      return "Steint\xfc""r geschlossen";
-        case Id::GlossaryEntryWall:                 return "Wand";
-        case Id::GlossaryEntryHazard:               return "Gefahr";
-        case Id::GlossaryEntryCollision:            return "Kollision";
-        case Id::GlossaryEntryBeaconActive:         return "Wegweiser aktiv";
-        case Id::GlossaryEntryBeaconWaypoint:       return "Wegpunkt erreicht";
-        case Id::GlossaryEntryBeaconDestination:    return "Ziel erreicht";
         case Id::GlossaryEntrySwoopAccelpadBoost:   return "Swoop-Beschleunigerfeld";
         case Id::GlossaryEntrySwoopObstacleWarn:    return "Swoop-Hinderniswarnung";
         case Id::GlossaryEntrySwoopWallImpact:      return "Swoop-Wandaufprall";
@@ -636,14 +626,14 @@ const char* Get(Id id) {
         case Id::HelpKeySelfStatus:     return "H: eigene Gesundheit, Effekte und Waffe ansagen";
         case Id::HelpKeyAnnounceFocus:  return "Minus: das fokussierte Objekt ansagen";
         case Id::HelpKeyWalkToFocus:    return "Umschalt und Minus: zum fokussierten Objekt gehen";
-        case Id::HelpKeyBeacon:         return "Strg und Minus: Wegweiser zum fokussierten Objekt starten";
+        case Id::HelpKeyRoute:          return "Strg und Minus: den Weg zum fokussierten Objekt Schritt f\xFCr Schritt beschreiben";
         case Id::HelpKeyDialogRepeat:   return "R: die aktuelle gesprochene Zeile wiederholen";
 
         case Id::HelpKeyCycleObjects:   return "Komma und Punkt: bereits entdeckte Objekte der aktuellen Kategorie durchschalten, die du noch erreichen kannst. Leere Beh\xe4lter und dekorative T\xfcren werden ausgelassen";
         case Id::HelpKeyCycleCategory:  return "Umschalt und Komma oder Punkt: vorherige oder n\xE4""chste Kategorie";
         case Id::HelpKeyCycleEnds:      return "Strg und Komma oder Punkt: zum n\xE4""chsten oder entferntesten Objekt springen";
         case Id::HelpKeyHeading:        return "Rechte Alt-Taste: Blickrichtung und aktuellen Bereich ansagen";
-        case Id::HelpKeyCameraOrient:   return "N: Kamera zum n\xE4""chsten Ausgang drehen, dann im Uhrzeigersinn weiter, oder zum n\xE4""chsten Wegpunkt ausrichten";
+        case Id::HelpKeyCameraOrient:   return "N: Kamera zum n\xE4""chsten Ausgang drehen, dann im Uhrzeigersinn weiter";
         case Id::HelpKeyDropMarker:     return "Umschalt und N: eine Kartenmarkierung an deiner Position setzen";
 
         case Id::FmtHelpNumberActions:   return "1 bis 7: die zuletzt benutzte Aktion einer Kategorie einsetzen. 1 %s, 2 %s, 3 %s, 4 %s, 5 %s, 6 %s, 7 %s";
@@ -684,9 +674,10 @@ const char* Get(Id id) {
         case Id::HelpKeyPadSelfStatus:       return "Linker Trigger mit X: dein eigener Status";
         case Id::HelpKeyPadActionQueue:      return "Linker Trigger mit B: die Aktionswarteschlange. Steuerkreuz hoch und runter geht durch die Eintr\xE4ge, A entfernt den zuletzt eingereihten, Y leert die ganze Warteschlange, B schlie\xDFt";
         case Id::HelpKeyPadWalkToFocus:      return "Rechter Trigger mit rechter Schultertaste: zum fokussierten Objekt laufen";
-        case Id::HelpKeyPadBeacon:           return "Linker Trigger mit linker Schultertaste: Audio-Bake zum fokussierten Objekt";
+        case Id::HelpKeyPadRoute:            return "Linker Trigger mit linker Schultertaste: Weg zum fokussierten Objekt beschreiben";
         case Id::HelpKeyPadDegrees:          return "Rechter Trigger: Blickrichtung und aktuellen Bereich ansagen";
-        case Id::HelpKeyPadCameraOrient:     return "Rechten Stick dr\xFC" "cken: Kamera zum n\xE4" "chsten Wegpunkt der Bake drehen, sonst zum n\xE4" "chsten Ausgang, dann im Uhrzeigersinn weiter";
+        case Id::HelpKeyPadCameraOrient:
+            return "Rechten Stick dr\xFC""cken: Kamera zum n\xE4""chsten Ausgang drehen, dann im Uhrzeigersinn weiter";
         case Id::HelpKeyPadHelp:             return "Beide Trigger: Tasten f\xFCr diesen Bildschirm. Der Eintrag Hilfe im Schnellmen\xFC \xF6" "ffnet diese Liste";
         case Id::HelpKeyPadQuickMenu:        return "Y: Schnellmen\xFC";
         case Id::HelpKeyPadCycleTargets:     return "Linke und rechte Schultertaste: Ziele durchschalten";
@@ -823,7 +814,7 @@ const char* Get(Id id) {
         case Id::KbNameAnnounceFocus:       return "Fokus ansagen";
         case Id::KbNamePathfindFocus:       return "Zum Fokus gehen";
         case Id::KbNamePathfindFocusForce:  return "Zum Fokus gehen erzwingen";
-        case Id::KbNameBeaconFocus:         return "Beacon zum Fokus";
+        case Id::KbNameRouteFocus:          return "Weg zum Fokus";
         case Id::KbNameAnnounceDegrees:     return "Blickrichtung";
         case Id::KbNamePartyLeaderAnnounce: return "Gruppenanf\xFChrer ansagen";
         case Id::KbNameCameraOrient:        return "Kamera ausrichten";
@@ -899,9 +890,9 @@ const char* Get(Id id) {
         case Id::TutHintAttackAuto:
             return "Denke daran: Ein einziger Druck auf die Eingabetaste greift jede Runde automatisch an. Erst ein neues Ziel \xE4ndert das.";
         case Id::TutHintMovement:
-            return "Dr\xFC""cke jederzeit F1 f\xFCr die Tastenhilfe, eine Liste aller Tasten, und Strg und F1 f\xFCr die Tasten des aktuellen Bildschirms. Zum Bewegen dr\xFC""ckst du W und S f\xFCr vorw\xE4rts und r\xFC""ckw\xE4rts, mit A und D trittst du zur Seite nach links und rechts, und mit Y und C drehst du dich nach links und rechts. Y und C drehen die Kamera und damit zugleich deine Laufrichtung, die immer in dieselbe Richtung zeigen. T\xF6ne warnen dich, wenn du dich einer Wand n\xE4herst, und w\xE4hrend du gehst, wird die Form des Raums um dich herum beschrieben. Mit der rechten Alt-Taste wiederholst du deine Blickrichtung und den aktuellen Raum.";
+            return "Dr\xFC""cke jederzeit F1 f\xFCr die Tastenhilfe, eine Liste aller Tasten, und Strg und F1 f\xFCr die Tasten des aktuellen Bildschirms. Zum Bewegen dr\xFC""ckst du W und S f\xFCr vorw\xE4rts und r\xFC""ckw\xE4rts, mit A und D trittst du zur Seite nach links und rechts, und mit Y und C drehst du dich nach links und rechts. Y und C drehen die Kamera und damit zugleich deine Laufrichtung, die immer in dieselbe Richtung zeigen. W\xE4hrend du gehst, wird die Form des Raums um dich herum beschrieben. Mit der rechten Alt-Taste wiederholst du deine Blickrichtung und den aktuellen Raum.";
         case Id::TutHintMapScreen:
-            return "Auf der Karte sind alle erforschten Gebiete eines Levels eingezeichnet. Wichtige Bereiche werden markiert. Einige Gebiete, zum Beispiel St\xE4""dte, sind bereits kartografiert, bevor du sie erforschst. Mit W, A, S und D bewegst du dich auf der Karte. Mit Komma und Punkt wechselst du zwischen den Kartenhinweisen. Mit Umschalt und N setzt du an deiner Position einen eigenen Kartenhinweis. Mit Strg und Minus startest du einen Wegweiser, der dich per Ton zum Kartenhinweis f\xFChrt, mit Umschalt und Minus gehst du automatisch zum ausgew\xE4hlten Kartenhinweis.";
+            return "Auf der Karte sind alle erforschten Gebiete eines Levels eingezeichnet. Wichtige Bereiche werden markiert. Einige Gebiete, zum Beispiel St\xE4""dte, sind bereits kartografiert, bevor du sie erforschst. Mit W, A, S und D bewegst du dich auf der Karte. Mit Komma und Punkt wechselst du zwischen den Kartenhinweisen. Mit Umschalt und N setzt du an deiner Position einen eigenen Kartenhinweis. Mit Strg und Minus h\xF6rst du den Weg zum ausgew\xE4hlten Kartenhinweis, mit Umschalt und Minus gehst du automatisch dorthin.";
         case Id::TutHintJournal:
             return "Im Auftragsbildschirm findest du Informationen \xFC""ber deine Fortschritte und Tipps zur weiteren Vorgehensweise. \xD6""ffne ihn mit L. W\xE4hle einen Eintrag mit den Pfeiltasten und lies seine Einzelheiten mit Umschalt und einer Pfeiltaste.";
         case Id::TutHintInventory:
@@ -1043,9 +1034,9 @@ const char* Get(Id id) {
         case Id::TutHintAttackAutoPad:
             return "Denk daran: ein Druck auf A greift jede Runde automatisch an. Nur ein neues Ziel \xE4ndert das.";
         case Id::TutHintMovementPad:
-            return "Ziehe jederzeit beide Trigger zusammen f\xFCr die Tasten des aktuellen Bildschirms, und dr\xFC" "cke Y f\xFCr das Schnellmen\xFC, Eintrag Hilfe, f\xFCr die vollst\xE4ndige Liste. Zum Gehen dr\xFC" "ckst du den linken Stick in eine beliebige Richtung. Mit dem rechten Stick nach links oder rechts drehst du die Kamera und damit auch deine Laufrichtung, sodass beide immer gleich zeigen. T\xF6ne warnen dich, wenn du dich einer Wand n\xE4herst, und w\xE4hrend du dich bewegst, wird die Form des Raumes um dich beschrieben. Ziehe den rechten Trigger, um Blickrichtung und aktuellen Raum zu wiederholen.";
+            return "Ziehe jederzeit beide Trigger zusammen f\xFCr die Tasten des aktuellen Bildschirms, und dr\xFC""cke Y f\xFCr das Schnellmen\xFC, Eintrag Hilfe, f\xFCr die vollst\xE4ndige Liste. Zum Gehen dr\xFC""ckst du den linken Stick in eine beliebige Richtung. Mit dem rechten Stick nach links oder rechts drehst du die Kamera und damit auch deine Laufrichtung, sodass beide immer gleich zeigen. W\xE4hrend du dich bewegst, wird die Form des Raumes um dich beschrieben. Ziehe den rechten Trigger, um Blickrichtung und aktuellen Raum zu wiederholen.";
         case Id::TutHintMapScreenPad:
-            return "Die Karte zeigt jeden erkundeten Bereich einer Ebene. Wichtige Bereiche sind markiert, und manche Gebiete, etwa St\xE4" "dte, sind schon vor der Erkundung eingezeichnet. Bewege dich mit dem linken Stick \xFC" "ber die Karte. Mit dem Steuerkreuz links und rechts wechselst du zwischen den Kartenhinweisen. Ziehe den linken Trigger zusammen mit der linken Schultertaste f\xFCr eine Bake, die dich per Ton zum Hinweis f\xFChrt, oder den rechten Trigger mit der rechten Schultertaste, um automatisch dorthin zu laufen.";
+            return "Die Karte zeigt jeden erkundeten Bereich einer Ebene. Wichtige Bereiche sind markiert, und manche Gebiete, etwa St\xE4""dte, sind schon vor der Erkundung eingezeichnet. Bewege dich mit dem linken Stick \xFC""ber die Karte. Mit dem Steuerkreuz links und rechts wechselst du zwischen den Kartenhinweisen. Ziehe den linken Trigger zusammen mit der linken Schultertaste, um den Weg zum Hinweis zu h\xF6ren, oder den rechten Trigger mit der rechten Schultertaste, um automatisch dorthin zu laufen.";
         case Id::TutHintJournalPad:
             return "Der Questbildschirm zeigt deinen Fortschritt und Hinweise, was als N\xE4" "chstes zu tun ist. \xD6" "ffne ihn \xFC" "ber das Schnellmen\xFC auf Y, Eintrag Men\xFCs, und wechsle mit den Schultertasten dorthin. W\xE4hle einen Eintrag mit dem Steuerkreuz und lies die Details, indem du Y h\xE4ltst und das Steuerkreuz hoch oder runter dr\xFC" "ckst.";
         case Id::TutHintMessagesPad:

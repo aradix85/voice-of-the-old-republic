@@ -141,7 +141,7 @@ Verdict TranslateManagerEvent(int& code, int& value);
 
 // The same seam for the in-world client route (OnClientHandleInputEvent).
 // Returns true when the pad has claimed the event and the caller must consume
-// it — the engine must not also act, or a beacon chord would additionally
+// it — the engine must not also act, or a route chord would additionally
 // cycle the target and a stick press would additionally flip the camera.
 //
 // No Verdict here: nothing on this route needs rewriting into a logical code,
@@ -190,7 +190,7 @@ bool IsPhysicalF1();
 //   LT alone        open the unified action menu, or close it if it is up —
 //                   the pad's Shift+Enter, and its Esc
 //   RT alone        announce the facing (the keyboard's AltGr)
-//   LT + LB         audio beacon to the focused object
+//   LT + LB         speak the route to the focused object
 //   RT + RB         walk to the focused object
 //   LT + RT         the current screen's keys (the keyboard's Ctrl+F1), or,
 //                   in a dialogue, repeat the spoken line (its R)
@@ -220,7 +220,7 @@ bool IsPhysicalF1();
 //
 // The solo job fires on RELEASE, and any chord taken during the hold cancels
 // it. That is not a timing rule and there is nothing for the user to learn —
-// it is simply what makes LT+LB a beacon instead of a beacon plus an unwanted
+// it is simply what makes LT+LB a route instead of a route plus an unwanted
 // action menu. Firing on press cannot do that, because on press we do not yet
 // know whether a chord is coming.
 

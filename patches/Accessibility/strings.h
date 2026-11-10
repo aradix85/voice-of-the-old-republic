@@ -56,8 +56,8 @@ enum class Id : int {
 
     // Map-pin activation phrases — user-placed pins fold into the Map hint
     // cycle alongside waypoints, but have no game-object semantics. Shift+-
-    // (autowalk) and Enter (interact) speak hints; Ctrl+- beacons to the
-    // pin position; Alt+- is unsupported. MapPinNoText is the fallback name
+    // (autowalk) and Enter (interact) speak hints; Ctrl+- speaks the route
+    // to the pin position; Alt+- is unsupported. MapPinNoText is the fallback name
     // when GetMapPinNoteText returns empty (shouldn't happen for user pins —
     // BuildAutoName always assigns one — but defended for safety).
     MapPinNoText,
@@ -176,17 +176,16 @@ enum class Id : int {
     // battles surface. See spectator_scene.cpp. No format args.
     SpectatorBattleDoomed,
 
-    // ---- Pillar 3 Mode B beacon (Ctrl+-).
-    //      `FmtBeaconStarted`     — opener spoken when StartBeacon arms.
+    // ---- Route description (Ctrl+-).
+    //      `FmtRouteTo`           — opener before the route description.
     //                               One `%s` (resolved destination name).
-    //      `BeaconCancelled`      — cancel-on-second-press toggle. Fixed.
-    //      `FmtBeaconNoPath`      — no route from the player's part of the
+    //      `FmtRouteNoPath`       — no route from the player's part of the
     //                               nav graph to the target's; says it may
     //                               be reachable from another side (Peragus
     //                               islands). One `%s` (destination name).
-    //      `FmtBeaconMapUnreadable` — the area's nav graph could not be
+    //      `FmtRouteMapUnreadable` — the area's nav graph could not be
     //                               read at all (mod-side fault). One `%s`.
-    //      `BeaconAlreadyAtDest`  — player is already within reach of the
+    //      `RouteAlreadyAtDest`   — player is already within reach of the
     //                               focused object; no path to describe.
     //      `FmtRouteHeader`       — assembled route description sentence.
     //                               Args: name (`%s`), total metres (`%d`),
@@ -200,23 +199,15 @@ enum class Id : int {
     //                               punctuation tweaks happen here).
     //      `RouteOneTransition`   — tail "1 Übergang" / "1 transition".
     //      `RouteNoTransition`    — tail "kein Übergang" / "no transition".
-    FmtBeaconStarted,
-    BeaconCancelled,
-    FmtBeaconNoPath,
-    FmtBeaconMapUnreadable,
-    BeaconAlreadyAtDest,
+    FmtRouteTo,
+    FmtRouteNoPath,
+    FmtRouteMapUnreadable,
+    RouteAlreadyAtDest,
     FmtRouteHeader,
     FmtRouteSegment,
     RouteJoinSeparator,
     RouteOneTransition,
     RouteNoTransition,
-    // `FmtBeaconNextSegment` — re-announced after each waypoint-reached
-    // event so the user doesn't have to keep the full multi-segment
-    // route description in working memory. Args: metres (`%d`),
-    // localised compass direction word (`%s`). Distinct phrasing from
-    // FmtRouteSegment ("Weiter X Meter Y" vs the raw "X Meter Y")
-    // marks it as an in-flight cue, not part of the opening overview.
-    FmtBeaconNextSegment,
 
     // ---- Lay-off 9b combined autowalk+interact hotkey (Enter).
     //      Per-kind pre-roll spoken when the hotkey fires on a focused
@@ -637,6 +628,8 @@ enum class Id : int {
     //      back to forcing Mouse Look ON.
     ViewModeOn,
     ViewModeOff,
+    // Spoken when the view-mode cursor runs into a wall.
+    ViewModeWall,
 
     // ---- Save / Load game panel (CSWGuiSaveLoad).
     //      `FmtSaveLoadRow`      — row navigation with location enrichment.
@@ -1212,6 +1205,9 @@ enum class Id : int {
     // that case — fog-of-war must stay spoiler-correct.
     MapCursorUnexplored,
 
+    // Spoken when the map cursor is pushed against the edge of the map.
+    MapCursorEdge,
+
     // Fallback when the cursor sits on an explicit map-note waypoint
     // (HasMapNote=1, MapNoteEnabled=1) whose localised text and TLK
     // strref are both empty. Earlier behaviour kept silent which hid
@@ -1690,26 +1686,11 @@ enum class Id : int {
     ModSettingLinkFailed,
 
     // ---- Mod-settings → Audio glossary submenu (menus_modsettings).
-    //      Nested submenu opened by Enter on the "Audio-Glossar" row.
-    //      Each row pairs a NavCue with a localised label; Enter on a
-    //      row stamps a 1 s delay then plays the cue once at 2D unity.
-    //      Door / Npc / Container / Item / Landmark / Transition reuse
-    //      the cycle Category* strings — same vocabulary the user
-    //      already associates with cycle announcements. Wall / Hazard /
-    //      Collision / Beacon* are glossary-specific because the
-    //      announce paths name them differently or not at all.
+    //      Nested submenu opened by Enter on the "Audio glossary" row.
+    //      Each row pairs a swoop-race cue with a localised label; Enter on
+    //      a row stamps a 1 s delay then plays the cue once at 2D unity.
     ModSettingAudioGlossary,
     ModSettingsAudioGlossaryOpened,
-    GlossaryEntryDoorOpen,
-    GlossaryEntryDoorClosedMetal,
-    GlossaryEntryDoorClosedWood,
-    GlossaryEntryDoorClosedStone,
-    GlossaryEntryWall,
-    GlossaryEntryHazard,
-    GlossaryEntryCollision,
-    GlossaryEntryBeaconActive,
-    GlossaryEntryBeaconWaypoint,
-    GlossaryEntryBeaconDestination,
     GlossaryEntrySwoopAccelpadBoost,
     GlossaryEntrySwoopObstacleWarn,
     GlossaryEntrySwoopWallImpact,
@@ -1813,7 +1794,7 @@ enum class Id : int {
     HelpKeySelfStatus,
     HelpKeyAnnounceFocus,
     HelpKeyWalkToFocus,
-    HelpKeyBeacon,
+    HelpKeyRoute,
     HelpKeyDialogRepeat,
     // Exploration / orientation (in-world + map).
     HelpKeyCycleObjects,
@@ -1900,7 +1881,7 @@ enum class Id : int {
     HelpKeyPadCancelCombat,
     HelpKeyPadCopyLastSpoken,
     HelpKeyPadWalkToFocus,
-    HelpKeyPadBeacon,
+    HelpKeyPadRoute,
     HelpKeyPadDegrees,
     HelpKeyPadCameraOrient,
     HelpKeyPadHelp,
@@ -2060,7 +2041,7 @@ enum class Id : int {
     KbNameAnnounceFocus,
     KbNamePathfindFocus,
     KbNamePathfindFocusForce,
-    KbNameBeaconFocus,
+    KbNameRouteFocus,
     KbNameAnnounceDegrees,
     KbNamePartyLeaderAnnounce,
     KbNameCameraOrient,

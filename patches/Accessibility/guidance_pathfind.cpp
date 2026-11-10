@@ -304,7 +304,7 @@ bool ComputePath(void* area,
 
     // String-pull pass with `start` (player position) as the implicit
     // anchor. The raw A* output is `[nearestNodeToStart, ..., goal]`,
-    // which means the first beacon target is the closest *graph* node —
+    // which means the first waypoint is the closest *graph* node —
     // which can sit behind / sideways of the player when the player is
     // mid-corridor between two nav-graph nodes. Walking the path triples
     // (anchor, B, C) and dropping B whenever anchor→C is walkmesh-clear
@@ -318,9 +318,8 @@ bool ComputePath(void* area,
     // where to go".
     //
     // Wall cache fetched above; if it isn't ready yet (rare — would mean
-    // smoothing requested before the change-detector ticked once after
-    // area enter), skip smoothing and return the raw path. Safe
-    // degradation: first beacon target is the previous behaviour.
+    // smoothing requested before the wall cache was built after area
+    // enter), skip smoothing and return the raw path.
     if (haveWalls && outWaypoints.size() >= 2) {
         acclog::Write("Pathfind", "Smooth: begin anchor=(%.2f,%.2f) "
                       "wallCount=%d raw=%zu",

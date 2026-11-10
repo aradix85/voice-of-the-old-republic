@@ -15,7 +15,6 @@
 #include "engine_offsets.h"
 #include "engine_player.h"
 #include "engine_rebase.h"    // PickGlobal — the desired-orientation request
-#include "guidance_beacon.h"
 #include "hotkeys.h"
 #include "key_inject.h"       // Send — the shared scancode injection
 #include "log.h"
@@ -606,32 +605,15 @@ void Tick() {
         return;
     }
 
-    bool beaconMode = acc::guidance::beacon::IsActive();
-    const char* mode = beaconMode ? "beacon" : "cardinal";
+    const char* mode = "cardinal";
     float targetEngineYawRad = 0.0f;
-    Vector waypoint = {0.0f, 0.0f, 0.0f};
     Vector playerPos = {0.0f, 0.0f, 0.0f};
     void* exitArea = nullptr;
     int exitCluster = acc::room_topology::kClusterIdNone;
     std::vector<ExitBearing> exits;
 
-    if (beaconMode && acc::guidance::beacon::GetCurrentTarget(waypoint)) {
-        Vector playerPos;
-        if (!acc::engine::GetPlayerPosition(playerPos)) {
-            acclog::Write("CameraOrient", "skip: beacon active but no "
-                          "player position resolved");
-            return;
-        }
-        float dx = waypoint.x - playerPos.x;
-        float dy = waypoint.y - playerPos.y;
-        if (std::fabs(dx) < 1e-4f && std::fabs(dy) < 1e-4f) {
-            acclog::Write("CameraOrient", "skip: beacon waypoint coincides "
-                          "with player position");
-            return;
-        }
-        targetEngineYawRad = std::atan2(dy, dx);
-    } else if (acc::engine::GetPlayerPosition(playerPos) &&
-               CollectExitBearings(playerPos, exitArea, exitCluster, exits)) {
+    if (acc::engine::GetPlayerPosition(playerPos) &&
+        CollectExitBearings(playerPos, exitArea, exitCluster, exits)) {
         // Face the region's exits — the real bearing from where the player
         // stands, so a press or two lines the walk up with where to go.
         const char* why = "nearest";

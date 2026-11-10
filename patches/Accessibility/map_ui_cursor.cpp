@@ -16,8 +16,6 @@
 #include <cstdio>
 #include <string>
 
-#include "audio_bus.h"
-#include "audio_cues.h"
 #include "engine_area.h"
 #include "engine_keymap.h"            // MoveAxisVks — bound move/turn keys
 #include "pad_input.h"                // StickVector — the KOTOR 2 pad's left
@@ -70,20 +68,6 @@ using acc::view_mode::kHoverPauseMs;
 // cursor centre). Tested live: 24 px was hard to pinpoint without
 // sighted feedback; 36 px lets the cursor catch landmarks reliably.
 constexpr int kHoverHitRadiusPx = 36;
-
-// Walked-into-edge cue debounce. Sustained edge-hugging would otherwise
-// emit a cue every tick.
-constexpr DWORD kEdgeCueQuietMs = 250;
-
-// Priority group for the map-edge collision cue. The map sub-screen runs
-// under the engine's menu pause (SetSoundMode), which mutes every source
-// EXCEPT priority groups 1/2/0xb — so the earlier "inaudible" symptom
-// (patch-20260512-143327.log: 28 PlayCue3D_ok=1 fires, zero output) was a
-// pause-exemption problem misread as a volume one, not a volume deficit.
-// 0xb is the GUI-sound group the engine exempts (and the audio glossary
-// uses for the same reason). See project memory
-// setsoundmode-priority-group-pause-exemption.
-constexpr uint8_t kEdgeCuePauseExemptGroup = 0x0b;
 
 // CSWSAreaMap field layout (subset). Full layout in
 // docs/navsystems-investigation.md §Q4. The module → area_map indirection
@@ -174,7 +158,7 @@ struct CursorState {
     float  py                      = 128.0f;   // (kMapPixelMaxY / 2.0f)
     Vector world                   = {0, 0, 0};
     DWORD  last_tick_ms            = 0;
-    DWORD  last_edge_cue_ms        = 0;
+    bool   at_edge                 = false;  // "Edge of the map" said for this push
 
     // Waypoint hover-pause (explicit map-note overlay — Tier 1
     // landmark-as-game-object).
@@ -557,7 +541,7 @@ void ResetSessionState() {
     g_state.active                        = false;
     g_state.announced_area_name           = false;
     g_state.last_tick_ms                  = 0;
-    g_state.last_edge_cue_ms              = 0;
+    g_state.at_edge                       = false;
     g_state.pending_note_waypoint         = nullptr;
     g_state.pending_note_started_ms       = 0;
     g_state.last_spoken_waypoint          = nullptr;
@@ -854,41 +838,16 @@ void Tick() {
     g_state.py = newPy;
     PixelToWorld(areaMap, g_state.px, g_state.py, g_state.world.z, g_state.world);
 
-    // Edge collision cue. Fires only when the user is actively pressing
-    // into the map boundary — not on idle clamp.
-    //
-    // Cue choice: NavCue::Collision (gui_invdrop), not NavCue::Wall
-    // (as_nt_wtrdrip_09). Wall is a quiet 3D ambient water-drip designed
-    // to ride underneath gameplay audio at low gain; the map UI runs in
-    // a paused sub-screen where the engine attenuates 3D audio further,
-    // and the cue silently inaudibles. gui_invdrop is the GUI-path
-    // inventory-drop sound, designed to be heard during menu interaction
-    // — fits the "UI boundary, not a worldly wall" semantics.
-    //
-    // Source position: anchor at the player so PlayCue3D's
-    // (camera - character) shift produces listener-to-source = 0,
-    // sidestepping max_distance attenuation entirely.
-    if ((clampedX || clampedY) && (vx != 0.0f || vy != 0.0f)) {
-        if (g_state.last_edge_cue_ms == 0 ||
-            now - g_state.last_edge_cue_ms > kEdgeCueQuietMs) {
-            Vector cuePos;
-            if (!acc::engine::GetPlayerPosition(cuePos)) {
-                cuePos = g_state.world;  // best-effort fallback
-            }
-            const char* cueResref =
-                acc::audio::GetNavCueResref(acc::audio::NavCue::Collision);
-            bool ok = acc::audio::PlayCue3D(cueResref, cuePos,
-                                            kEdgeCuePauseExemptGroup);
-            acclog::Write("MapCursor",
-                          "edge cue clampX=%d clampY=%d resref=%s "
-                          "cuePos=(%.2f,%.2f,%.2f) group=%u "
-                          "PlayCue3D_ok=%d",
-                          (int)clampedX, (int)clampedY, cueResref,
-                          cuePos.x, cuePos.y, cuePos.z,
-                          (unsigned)kEdgeCuePauseExemptGroup, (int)ok);
-            g_state.last_edge_cue_ms = now;
-        }
+    // Pushing into the map boundary says so once per push, not on an idle
+    // clamp and not again while the push lasts.
+    const bool pushingEdge = (clampedX || clampedY) && (vx != 0.0f || vy != 0.0f);
+    if (pushingEdge && !g_state.at_edge) {
+        acc::speech::Speak(acc::strings::Get(acc::strings::Id::MapCursorEdge),
+                           /*interrupt=*/true);
+        acclog::Write("MapCursor", "edge clampX=%d clampY=%d",
+                      (int)clampedX, (int)clampedY);
     }
+    g_state.at_edge = pushingEdge;
 
     // Hover-pause narration — three parallel scans:
     //   1) FindNearestExploredMapNote — CSWSWaypoint map-notes (engine-

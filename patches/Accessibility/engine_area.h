@@ -341,7 +341,7 @@ bool IsMapNoteEnabled(void* waypoint);
 // +0x22c on the SERVER waypoint. The engine action's follow-up client
 // message only updates CSWCMapPin quest markers (a GetMapPin miss for
 // GIT waypoints), so this field write is the complete effect for map
-// notes: the in-game map, our cycle/beacon, and save serialization all
+// notes: the in-game map, our cycle and route, and save serialization all
 // read this field. False on null / no-map-note / fault.
 bool EnableMapNote(void* waypoint);
 

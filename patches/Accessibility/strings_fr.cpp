@@ -36,7 +36,7 @@ const char* Get(Id id) {
 
         case Id::MapPinNoText:        return "Marqueur";
         case Id::MapPinAltDashUnsupported: return "Marqueur : Alt+Tiret non pris en charge";
-        case Id::MapPinInteractHint:  return "Marqueur. Ctrl+Tiret pour activer la balise.";
+        case Id::MapPinInteractHint:       return "Marqueur. Ctrl+Tiret pour l'itin\xE9raire.";
 
         case Id::FmtSavedMarkerAutoNumber:   return "Marqueur %d";
         case Id::FmtSavedMarkerAutoWithRoom: return "%s - Marqueur %d";
@@ -66,11 +66,10 @@ const char* Get(Id id) {
         case Id::SpectatorBattleDoomed: return "Les soldats de la R\xE9publique sont perdus. Vous ne pouvez plus les aider. Le chemin est bloqu\xE9. H\xE2tez-vous vers la passerelle\xA0!";
 
         // Beacon (Ctrl+-).
-        case Id::FmtBeaconStarted:     return "Balise vers %s";
-        case Id::BeaconCancelled:      return "Balise annul\xE9""e";
-        case Id::FmtBeaconNoPath:      return "Aucun chemin d'ici vers %s. Peut-\xEAtre accessible par un autre c\xF4t\xE9.";
-        case Id::FmtBeaconMapUnreadable: return "Aucun chemin vers %s : la carte de la zone est illisible.";
-        case Id::BeaconAlreadyAtDest:  return "D\xE9j\xE0 \xE0 destination";
+        case Id::FmtRouteTo:            return "Itin\xE9raire vers %s";
+        case Id::FmtRouteNoPath:      return "Aucun chemin d'ici vers %s. Peut-\xEAtre accessible par un autre c\xF4t\xE9.";
+        case Id::FmtRouteMapUnreadable: return "Aucun chemin vers %s : la carte de la zone est illisible.";
+        case Id::RouteAlreadyAtDest:  return "D\xE9j\xE0 \xE0 destination";
         // Route description.
         // Example: "Itin\xE9raire vers Porte (25 m\xE8tres) : 5 m\xE8tres Nord,
         //           4 m\xE8tres Nord-Est, 6 m\xE8tres Est. Aucune transition."
@@ -79,7 +78,6 @@ const char* Get(Id id) {
         case Id::RouteJoinSeparator:   return ", ";
         case Id::RouteOneTransition:   return "Une transition";
         case Id::RouteNoTransition:    return "Aucune transition";
-        case Id::FmtBeaconNextSegment: return "Continuer %d m\xE8tres %s";
 
         case Id::FmtInteractTalk:      return "Parler \xE0 %s";
         case Id::FmtInteractOpen:      return "Utiliser %s";
@@ -185,6 +183,7 @@ const char* Get(Id id) {
 
         case Id::ViewModeOn:           return "Mode observation activ\xE9";
         case Id::ViewModeOff:          return "Mode observation d\xE9sactiv\xE9";
+        case Id::ViewModeWall:         return "Mur";
 
         case Id::FmtSaveLoadRow:       return "%s, %s, %s, %d sur %d";
         case Id::FmtSaveLoadRowNoLoc:  return "%s, %d sur %d";
@@ -351,6 +350,7 @@ const char* Get(Id id) {
         case Id::MapNextNote:                return "Note suivante";
 
         case Id::MapCursorUnexplored:        return "Inexplor\xE9";
+        case Id::MapCursorEdge:              return "Bord de la carte";
         case Id::MapCursorWaypointPOI:       return "Point d'int\xE9r\xEAt";
         case Id::MapCursorJunction:          return "Carrefour";
         case Id::FmtMapCursorDeadEnd:        return "Cul-de-sac, %s";
@@ -554,16 +554,6 @@ const char* Get(Id id) {
 
         case Id::ModSettingAudioGlossary:           return "Glossaire audio";
         case Id::ModSettingsAudioGlossaryOpened:    return "Glossaire audio ouvert";
-        case Id::GlossaryEntryDoorOpen:             return "Porte ouverte";
-        case Id::GlossaryEntryDoorClosedMetal:      return "Porte en m\xE9tal ferm\xE9""e";
-        case Id::GlossaryEntryDoorClosedWood:       return "Porte en bois ferm\xE9""e";
-        case Id::GlossaryEntryDoorClosedStone:      return "Porte en pierre ferm\xE9""e";
-        case Id::GlossaryEntryWall:                 return "Mur";
-        case Id::GlossaryEntryHazard:               return "Danger";
-        case Id::GlossaryEntryCollision:            return "Collision";
-        case Id::GlossaryEntryBeaconActive:         return "Balise active";
-        case Id::GlossaryEntryBeaconWaypoint:       return "Point interm\xE9""diaire atteint";
-        case Id::GlossaryEntryBeaconDestination:    return "Destination atteinte";
         case Id::GlossaryEntrySwoopAccelpadBoost:   return "Plaque d'acc\xE9l\xE9ration Swoop";
         case Id::GlossaryEntrySwoopObstacleWarn:    return "Alerte d'obstacle Swoop";
         case Id::GlossaryEntrySwoopWallImpact:      return "Impact contre un mur Swoop";
@@ -616,14 +606,15 @@ const char* Get(Id id) {
         case Id::HelpKeySelfStatus:     return "H : annoncer votre sant\xE9, vos effets et votre arme";
         case Id::HelpKeyAnnounceFocus:  return "Moins : annoncer l'objet point\xE9";
         case Id::HelpKeyWalkToFocus:    return "Maj plus moins : marcher vers l'objet point\xE9";
-        case Id::HelpKeyBeacon:         return "Ctrl plus moins : lancer un guide vers l'objet point\xE9";
+        case Id::HelpKeyRoute:          return "Ctrl plus moins : d\xE9""crire pas \xE0 pas l'itin\xE9raire vers l'objet point\xE9";
         case Id::HelpKeyDialogRepeat:   return "R : r\xE9p\xE9ter la r\xE9plique en cours";
 
         case Id::HelpKeyCycleObjects:   return "Virgule et point : faire d\xe9""filer les objets d\xe9j\xe0 d\xe9""couverts de la cat\xe9gorie actuelle que vous pouvez encore atteindre. Les conteneurs vides et les portes d\xe9""coratives sont ignor\xe9s";
         case Id::HelpKeyCycleCategory:  return "Maj plus virgule ou point : cat\xE9gorie pr\xE9""c\xE9""dente ou suivante";
         case Id::HelpKeyCycleEnds:      return "Ctrl plus virgule ou point : aller \xE0 l'objet le plus proche ou le plus \xE9loign\xE9";
         case Id::HelpKeyHeading:        return "Alt droite : annoncer votre orientation et la zone o\xF9 vous \xEAtes";
-        case Id::HelpKeyCameraOrient:   return "N : tourner la cam\xE9ra vers la sortie la plus proche, puis dans le sens horaire vers la suivante, ou faire face au prochain point de passage";
+        case Id::HelpKeyCameraOrient:
+            return "N : tourner la cam\xE9ra vers la sortie la plus proche, puis dans le sens horaire vers la suivante";
         case Id::HelpKeyDropMarker:     return "Maj plus N : poser un marqueur de carte \xE0 votre position";
 
         case Id::FmtHelpNumberActions:   return "1 \xE0 7 : utiliser la derni\xE8re action d'une cat\xE9gorie. 1 %s, 2 %s, 3 %s, 4 %s, 5 %s, 6 %s, 7 %s";
@@ -664,9 +655,11 @@ const char* Get(Id id) {
         case Id::HelpKeyPadSelfStatus:       return "G\xE2" "chette gauche avec X : votre propre \xE9tat";
         case Id::HelpKeyPadActionQueue:      return "G\xE2" "chette gauche avec B : la file d'actions. La croix haut et bas parcourt les entr\xE9" "es, A retire la derni\xE8re mise en file, Y vide toute la file, B ferme";
         case Id::HelpKeyPadWalkToFocus:      return "G\xE2" "chette droite avec bouton de tranche droit : marcher jusqu'\xE0 l'objet cibl\xE9";
-        case Id::HelpKeyPadBeacon:           return "G\xE2" "chette gauche avec bouton de tranche gauche : balise sonore vers l'objet cibl\xE9";
+        case Id::HelpKeyPadRoute:
+            return "G\xE2""chette gauche avec bouton de tranche gauche : d\xE9""crire l'itin\xE9raire vers l'objet cibl\xE9";
         case Id::HelpKeyPadDegrees:          return "G\xE2" "chette droite : annoncer votre orientation et la zone o\xF9 vous \xEAtes";
-        case Id::HelpKeyPadCameraOrient:     return "Pression du stick droit : tourner la cam\xE9ra vers le prochain point de la balise, sinon vers la sortie la plus proche, puis dans le sens horaire vers la suivante";
+        case Id::HelpKeyPadCameraOrient:
+            return "Pression du stick droit : tourner la cam\xE9ra vers la sortie la plus proche, puis dans le sens horaire vers la suivante";
         case Id::HelpKeyPadHelp:             return "Les deux g\xE2" "chettes : touches de cet \xE9" "cran. L'entr\xE9" "e Aide du menu rapide ouvre cette liste";
         case Id::HelpKeyPadQuickMenu:        return "Y : menu rapide";
         case Id::HelpKeyPadCycleTargets:     return "Boutons de tranche gauche et droit : changer de cible";
@@ -802,7 +795,7 @@ const char* Get(Id id) {
         case Id::KbNameAnnounceFocus:       return "Annoncer la cible";
         case Id::KbNamePathfindFocus:       return "Aller \xE0 la cible";
         case Id::KbNamePathfindFocusForce:  return "Aller \xE0 la cible, forcer";
-        case Id::KbNameBeaconFocus:         return "Balise vers la cible";
+        case Id::KbNameRouteFocus:          return "Itin\xE9raire vers la cible";
         case Id::KbNameAnnounceDegrees:     return "Orientation";
         case Id::KbNamePartyLeaderAnnounce: return "Annoncer le chef de groupe";
         case Id::KbNameCameraOrient:        return "Orienter la cam\xE9ra";
@@ -878,9 +871,9 @@ const char* Get(Id id) {
         case Id::TutHintAttackAuto:
             return "Rappel : une seule pression sur Entr\xE9""e attaque automatiquement \xE0 chaque tour. Seule une nouvelle cible change cela.";
         case Id::TutHintMovement:
-            return "Appuyez sur F1 \xE0 tout moment pour le menu d'aide, une liste de toutes les touches, et Ctrl et F1 pour les touches de l'\xE9""cran actuel. Pour vous d\xE9placer, appuyez sur W et S pour avancer et reculer, A et D pour faire un pas de c\xF4t\xE9 \xE0 gauche et \xE0 droite, et Z et C pour tourner \xE0 gauche et \xE0 droite. Z et C font pivoter la cam\xE9ra et, avec elle, votre direction de marche, si bien que les deux pointent toujours dans la m\xEAme direction. Des sons vous avertissent quand vous approchez d'un mur, et pendant que vous vous d\xE9placez, la forme de la pi\xE8""ce autour de vous est d\xE9""crite. Appuyez sur Alt droit pour r\xE9p\xE9ter votre orientation et la pi\xE8""ce actuelle.";
+            return "Appuyez sur F1 \xE0 tout moment pour le menu d'aide, une liste de toutes les touches, et Ctrl et F1 pour les touches de l'\xE9""cran actuel. Pour vous d\xE9placer, appuyez sur W et S pour avancer et reculer, A et D pour faire un pas de c\xF4t\xE9 \xE0 gauche et \xE0 droite, et Z et C pour tourner \xE0 gauche et \xE0 droite. Z et C font pivoter la cam\xE9ra et, avec elle, votre direction de marche, si bien que les deux pointent toujours dans la m\xEAme direction. Pendant que vous vous d\xE9placez, la forme de la pi\xE8""ce autour de vous est d\xE9""crite. Appuyez sur Alt droit pour r\xE9p\xE9ter votre orientation et la pi\xE8""ce actuelle.";
         case Id::TutHintMapScreen:
-            return "La carte montre chaque zone explor\xE9""e d'un niveau. Les zones importantes sont indiqu\xE9""es, et certaines zones, comme les villes, sont cartographi\xE9""es avant que vous les exploriez. D\xE9placez-vous sur la carte avec W, A, S et D. Changez d'indice de carte avec virgule et point. Appuyez sur Maj et N pour poser votre propre indice de carte \xE0 votre position. Appuyez sur Ctrl et moins pour lancer un signal sonore qui vous guide vers l'indice de carte, ou Maj et moins pour marcher automatiquement vers l'indice s\xE9lectionn\xE9.";
+            return "La carte montre chaque zone explor\xE9""e d'un niveau. Les zones importantes sont indiqu\xE9""es, et certaines zones, comme les villes, sont cartographi\xE9""es avant que vous les exploriez. D\xE9placez-vous sur la carte avec W, A, S et D. Changez d'indice de carte avec virgule et point. Appuyez sur Maj et N pour poser votre propre indice de carte \xE0 votre position. Appuyez sur Ctrl et moins pour entendre l'itin\xE9raire vers l'indice s\xE9lectionn\xE9, ou Maj et moins pour vous y rendre automatiquement.";
         case Id::TutHintJournal:
             return "L'\xE9""cran des qu\xEAtes montre votre progression et des indices sur la suite. Ouvrez-le avec L. Choisissez une entr\xE9""e avec les fl\xE8""ches et lisez ses d\xE9tails avec Maj et une fl\xE8""che.";
         case Id::TutHintInventory:
@@ -1044,9 +1037,9 @@ const char* Get(Id id) {
         case Id::TutHintAttackAutoPad:
             return "Rappelez-vous : une pression sur A attaque automatiquement \xE0 chaque round. Seule une nouvelle cible change cela.";
         case Id::TutHintMovementPad:
-            return "Tirez les deux g\xE2" "chettes ensemble \xE0 tout moment pour les touches de l'\xE9" "cran en cours, et appuyez sur Y pour le menu rapide, entr\xE9" "e Aide, pour la liste compl\xE8te. Pour vous d\xE9placer, poussez le stick gauche dans n'importe quelle direction. Poussez le stick droit \xE0 gauche ou \xE0 droite pour tourner la cam\xE9ra et, avec elle, votre direction de marche, afin que les deux pointent toujours dans le m\xEAme sens. Des sons vous avertissent quand vous approchez d'un mur, et \xE0 mesure que vous avancez la forme de la pi\xE8" "ce autour de vous est d\xE9" "crite. Tirez la g\xE2" "chette droite pour r\xE9p\xE9ter votre orientation et la pi\xE8" "ce actuelle.";
+            return "Tirez les deux g\xE2""chettes ensemble \xE0 tout moment pour les touches de l'\xE9""cran en cours, et appuyez sur Y pour le menu rapide, entr\xE9""e Aide, pour la liste compl\xE8te. Pour vous d\xE9placer, poussez le stick gauche dans n'importe quelle direction. Poussez le stick droit \xE0 gauche ou \xE0 droite pour tourner la cam\xE9ra et, avec elle, votre direction de marche, afin que les deux pointent toujours dans le m\xEAme sens. \xC0 mesure que vous avancez, la forme de la pi\xE8""ce autour de vous est d\xE9""crite. Tirez la g\xE2""chette droite pour r\xE9p\xE9ter votre orientation et la pi\xE8""ce actuelle.";
         case Id::TutHintMapScreenPad:
-            return "La carte montre chaque zone explor\xE9" "e d'un niveau. Les endroits importants sont marqu\xE9s, et certaines zones, comme les villes, sont cartographi\xE9" "es avant m\xEAme d'\xEAtre explor\xE9" "es. D\xE9placez-vous sur la carte avec le stick gauche. Changez de rep\xE8re avec la croix gauche et droite. Tirez la g\xE2" "chette gauche avec le bouton de tranche gauche pour lancer une balise sonore qui vous y guide, ou la g\xE2" "chette droite avec le bouton de tranche droit pour vous y rendre automatiquement.";
+            return "La carte montre chaque zone explor\xE9""e d'un niveau. Les endroits importants sont marqu\xE9s, et certaines zones, comme les villes, sont cartographi\xE9""es avant m\xEAme d'\xEAtre explor\xE9""es. D\xE9placez-vous sur la carte avec le stick gauche. Changez de rep\xE8re avec la croix gauche et droite. Tirez la g\xE2""chette gauche avec le bouton de tranche gauche pour entendre l'itin\xE9raire, ou la g\xE2""chette droite avec le bouton de tranche droit pour vous y rendre automatiquement.";
         case Id::TutHintJournalPad:
             return "L'\xE9" "cran des qu\xEAtes montre votre progression et ce qu'il reste \xE0 faire. Ouvrez-le depuis le menu rapide sur Y, entr\xE9" "e Menus, puis rejoignez-le avec les boutons de tranche. Choisissez une entr\xE9" "e avec la croix et lisez ses d\xE9tails en maintenant Y et en appuyant sur la croix haut ou bas.";
         case Id::TutHintMessagesPad:

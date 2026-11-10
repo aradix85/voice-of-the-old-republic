@@ -1,8 +1,8 @@
-# audio_cues.h (96 lines)
+# audio_cues.h (58 lines)
 
 Source: `patches/Accessibility/audio_cues.h`
 
-Navigation-cue vocabulary — resref mapping for the audio slots.
+Swoop-race cue vocabulary — resref mapping for the race's sounds, shared by the race code and the audio glossary so both play the same sample.
 
 Data-only header. Consumers map enum → resref via GetNavCueResref then call audio::PlayCue / PlayCue3D.
 
@@ -12,5 +12,5 @@ Verify a resref resolves before using it: Play3DOneShotSound silently no-ops on 
 
 ## Declarations (in source order)
 
-- L19 `enum class NavCue`
-- L60 `constexpr const char* GetNavCueResref(NavCue cue)`
+- L20 `enum class NavCue`
+- L39 `constexpr const char* GetNavCueResref(NavCue cue)`

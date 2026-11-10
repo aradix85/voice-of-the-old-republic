@@ -46,7 +46,7 @@ enum class PadAction {
     ItemFirst, ItemLast,
     AnnounceFocus,   // repeat the last narrated target
     WalkToFocus,     // autowalk (second press cancels)
-    BeaconFocus,     // audio beacon (second press cancels)
+    RouteFocus,      // speak the route to the focus
 };
 bool DispatchPadAction(PadAction action);
 

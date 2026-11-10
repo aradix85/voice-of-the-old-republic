@@ -220,7 +220,7 @@ void WarpCursorToControl(void* control) {
 // Everything the K2.Focus diagnostic line needs, gathered in one SEH-guarded
 // pass. POD on purpose: the struct is declared by the SEH-free caller and a
 // pointer passed in, the C2712 pattern the project already uses
-// (map_ui_cursor / combat_special_watch).
+// (map_ui_cursor).
 struct FocusProbe {
     uint32_t vtable;
     uint32_t id;

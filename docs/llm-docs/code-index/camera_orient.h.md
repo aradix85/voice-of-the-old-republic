@@ -1,10 +1,10 @@
-# camera_orient.h (45 lines)
+# camera_orient.h (44 lines)
 
 Source: `patches/Accessibility/camera_orient.h`
 
 Camera-orient hotkey (N).
 
-- Beacon armed   → rotate to face the beacon's current heartbeat target. - Otherwise       → face an exit of the player's region (room_topology's exit points, real bearing from the player): the one nearest the camera heading, then clockwise on each further press while the player stays in the region and still faces the exit N last turned to. - No region/exits → advance one cardinal CW (N → E → S → W → N). A turn that stays inside one compass sector is silent on purpose: nothing heard means the heading was already right (user decision 2026-10-30).
+- Face an exit of the player's region (room_topology's exit points, real bearing from the player): the one nearest the camera heading, then clockwise on each further press while the player stays in the region and still faces the exit N last turned to. - No region/exits → advance one cardinal CW (N → E → S → W → N). A turn that stays inside one compass sector is silent on purpose: nothing heard means the heading was already right (user decision 2026-10-30).
 
 Drive mechanism, first choice: the snap — the free-roam camera's one-shot desired-orientation request (a yaw the camera takes on its next update and then clears; nothing in the engine writes it). Turns in a frame or two. Fallback when the active camera never takes it (combat camera) or the build has no address for it: the key-hold turn below.
 
@@ -14,5 +14,5 @@ camera_announce stays muted while IsActive() is true and announces the final dir
 
 ## Declarations (in source order)
 
-- L37 `void Tick()`: Per-tick poll + state-machine driver.
-- L42 `bool IsActive()`: True while an auto-rotation is in flight.
+- L36 `void Tick()`: Per-tick poll + state-machine driver.
+- L41 `bool IsActive()`: True while an auto-rotation is in flight.

@@ -26,7 +26,7 @@ Gamepad input — see pad_input.h for why this is one module and not a pad case 
 - L784 `void DispatchDpad(int code)`
 - L807 `void DispatchA()`
 - L827 `void DispatchB()`
-- L850 `bool DispatchShoulderChord(bool right)`: The shoulder chords: LT + LB beacons to the focused object, RT + RB walks to it.
+- L850 `bool DispatchShoulderChord(bool right)`: The shoulder chords: LT + LB speaks the route to the focused object, RT + RB walks to it.
 - L868 `void DispatchShoulder(bool right)`
 - L953 `int DpadSlotForCode(int code)`
 - L965 `bool DpadHoldSpent(int code)`: True while this direction's hold has already spent its jump.

@@ -5,8 +5,6 @@
 #include <cmath>
 #include <cstdio>
 
-#include "audio_bus.h"
-#include "audio_cues.h"
 #include "combat_query.h"   // BuildTargetCombatBrief enrichment
 #include "discovery.h"      // organic-discovery recording
 #include "engine_area.h"
@@ -84,36 +82,6 @@ QEState s_qe;
 constexpr DWORD kAutoRenarrateQuietMs = 10000;
 uint32_t s_last_auto_handle = 0u;
 DWORD    s_last_auto_tick   = 0u;
-
-// Mirrors cycle_input.cpp's mapping. If these get out of sync, lift into
-// a shared filter_objects helper.
-acc::audio::NavCue ClosedDoorCueForMaterial(void* obj) {
-    using N = acc::audio::NavCue;
-    switch (acc::engine::GetDoorMaterial(obj)) {
-        case acc::engine::DoorMaterial::Wood:  return N::DoorClosedWood;
-        case acc::engine::DoorMaterial::Stone: return N::DoorClosedStone;
-        case acc::engine::DoorMaterial::Metal: break;
-    }
-    return N::DoorClosedMetal;
-}
-
-// Door cue depends on open_state + material. Other categories ignore obj.
-acc::audio::NavCue CueForCategory(acc::filter::CycleCategory c, void* obj) {
-    using C = acc::filter::CycleCategory;
-    using N = acc::audio::NavCue;
-    switch (c) {
-        case C::Door:       return acc::engine::IsDoorOpen(obj)
-                                    ? N::DoorOpen
-                                    : ClosedDoorCueForMaterial(obj);
-        case C::Npc:        return N::NpcCreature;
-        case C::Container:  return N::ContainerPlaceable;
-        case C::Item:       return N::Item;
-        case C::Landmark:   return N::Landmark;
-        case C::Transition: return N::TransitionExit;
-        case C::Count_:     break;
-    }
-    return N::Item;  // unreachable safety net
-}
 
 // Returns Count_ for non-nav consumers (combat / dialog target).
 acc::filter::CycleCategory ClassifyForNarration(void* obj) {
@@ -211,15 +179,6 @@ bool NarrateHandle(uint32_t handle, const char* reason, bool explicitRequest) {
         name[0] == '\0') {
         std::snprintf(name, sizeof(name), "%s",
                       acc::strings::Get(acc::filter::CategoryNameId(cat)));
-    }
-
-    if (havePos && !isParty) {
-        acc::audio::NavCue cue = CueForCategory(cat, obj);
-        const char* resref = acc::audio::GetNavCueResref(cue);
-        acc::audio::PlayCue3D(resref, pos);
-        acclog::Write("PassiveNarrate",
-            "fire cue resref=%s for cat=%d obj=%p pos=(%.2f,%.2f,%.2f)",
-            resref, static_cast<int>(cat), obj, pos.x, pos.y, pos.z);
     }
 
     char enriched[320];

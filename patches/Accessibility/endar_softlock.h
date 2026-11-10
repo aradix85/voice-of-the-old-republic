@@ -6,7 +6,7 @@
 // corridor door to the bridge (tag end_door16) only unlocks once the room-5
 // fight is cleared. If that sequence stalls (e.g. a save/reload mid-cutscene),
 // the door stays locked with no reachable enemies and no in-world explanation,
-// and blind players — guided toward the bridge by the beacon — poke the door
+// and blind players — guided toward the bridge — poke the door
 // repeatedly and give up. This module:
 //   1. Speaks graduated guidance when the player keeps trying end_door16 while
 //      room 5 is uncleared (helpful first cue; reload advice after repeats).

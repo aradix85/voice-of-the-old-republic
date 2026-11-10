@@ -137,7 +137,7 @@ bool g_rtHeld = false;
 // PRESS — LT+LB would then also switch the D-Pad mode on the way in. So each
 // trigger's solo job fires on RELEASE, and any chord taken during the hold
 // cancels it. There is no timing rule and nothing for the user to learn: LT
-// switches the D-Pad, LT+LB drops a beacon, and the two never collide.
+// switches the D-Pad, LT+LB speaks the route, and the two never collide.
 bool g_ltChorded = false;
 bool g_rtChorded = false;
 
@@ -839,7 +839,7 @@ void DispatchB() {
     InjectMenuKey(kInputEsc1);
 }
 
-// The shoulder chords: LT + LB beacons to the focused object, RT + RB walks
+// The shoulder chords: LT + LB speaks the route to the focused object, RT + RB walks
 // to it. Returns true when the matching trigger is held and the chord fired —
 // the caller's signal that the bare shoulder job must not also run. Marking the
 // trigger chorded is what stops its own solo job firing on release.
@@ -850,9 +850,9 @@ void DispatchB() {
 bool DispatchShoulderChord(bool right) {
     if (!right && g_ltHeld) {
         g_ltChorded = true;
-        acclog::Write("Pad", "LT + LB -> beacon to focus");
+        acclog::Write("Pad", "LT + LB -> route to focus");
         acc::cycle_input::DispatchPadAction(
-            acc::cycle_input::PadAction::BeaconFocus);
+            acc::cycle_input::PadAction::RouteFocus);
         return true;
     }
     if (right && g_rtHeld) {
@@ -1947,7 +1947,7 @@ Verdict TranslateManagerEvent(int& code, int& value) {
         // client route too and TranslateClientEvent takes the chord there, so
         // claiming it here as well would fire it twice. On a panel this is the
         // only route — without it LT + LB on the map reached the engine as a
-        // bare LB and stepped to the next sub-screen instead of the beacon.
+        // bare LB and stepped to the next sub-screen instead of the route.
         if (!InWorldSurface() && DispatchShoulderChord(code == kPadShoulderR)) {
             return Verdict::Consumed;
         }

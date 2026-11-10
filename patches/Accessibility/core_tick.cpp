@@ -18,7 +18,6 @@
 #include "combat_diag.h"
 #include "combat_query.h"
 #include "combat_queue.h"
-#include "combat_special_watch.h"
 #include "cycle_input.h"
 #include "engine_keymap.h"  // FirstMovementKeyHeld — dead-keyboard watchdog probe
 #include "focus_guard.h"
@@ -34,7 +33,6 @@
 #include "floor_puzzle.h"
 #include "guidance_approach.h"
 #include "guidance_autowalk.h"
-#include "guidance_beacon.h"
 #include "help.h"
 #include "hotkeys.h"
 #include "interact_dispatch.h"
@@ -54,7 +52,6 @@
 #include "party_leader_announce.h"
 #include "passive_narrate.h"
 #include "minigame_pazaak.h"
-#include "probe_audio_frame.h"
 #include "probe_camera_distance.h"
 #include "probe_camera_state.h"
 #include "speech.h"
@@ -689,10 +686,6 @@ void Dispatch() {
         PHASE("probe_camera_distance", acc::probe_camera_distance::Tick());
     }
 
-    // Audio-frame probe (F10) — engine-constant-free (player position +
-    // sector math only). Both games since the K2 systems pass (2026-08-02).
-    PHASE("probe_audio_frame", acc::probe_audio_frame::PollWin32());
-
     // Both games since the K2 systems pass (2026-08-02): view_mode.cpp's
     // whole closure is resolved — its one Todo (CClientOptions bitfield)
     // was witnessed off the K2 exe (chain and mouse-look identical; the
@@ -710,9 +703,6 @@ void Dispatch() {
     // Cycle keys (`,`/`.`/`-`) and AltGr — engine drops unbound scancodes.
     PHASE("cycle_input", acc::cycle_input::PollWin32());
     PHASE("announce_facing", acc::announce_facing::PollWin32());
-
-    // Beacon driver.
-    PHASE("guidance.beacon", acc::guidance::beacon::Tick());
 
     // Restore player input once the handed-off engine action drains from
     // the queue (or a ceiling backstop fires).
@@ -871,13 +861,8 @@ void Dispatch() {
 
     // Help overlay lifecycle (self-disarm on world teardown, list state).
     // Engine-free apart from the in-world pause hold, whose engine calls are
-    // guarded — and menus never take the hold. Runs on both games, in its
-    // original slot between examine_view and special_watch.
+    // guarded — and menus never take the hold. Runs on both games.
     PHASE("help.tick", acc::help::Tick());
-
-    // Both games since Batch 4 — the special-watch chain (combat round,
-    // action struct, attack feat) is fully witnessed on KOTOR 2.
-    PHASE("combat.special_watch", acc::combat::special_watch::Tick());
 
     // Stealth distance readout — while the leader is stealthed and a
     // hostile creature is the narrated-target focus, speak the closing

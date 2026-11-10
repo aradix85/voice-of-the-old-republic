@@ -13,8 +13,6 @@
 // that needs it.
 #pragma comment(lib, "user32.lib")
 
-#include "audio_bus.h"
-#include "audio_cues.h"
 #include "cycle_state.h"
 #include "engine_area.h"
 #include "engine_compass.h"      // ClockPosition — shared clock-direction math
@@ -27,7 +25,6 @@
 #include "guidance_approach.h"  // ArmApproach / IsApproachInFlight — unified
                                 // walk-to-act tracker (way-blocked + cancel)
 #include "guidance_autowalk.h"
-#include "guidance_beacon.h"
 #include "guidance_description.h"
 #include "guidance_pathfind.h"
 #include "hotkeys.h"
@@ -72,52 +69,27 @@ bool g_engineShiftHeld = false;
 using acc::engine::ClockPosition;
 
 // Map a CycleCategory to its strings::Id pair (singular name + empty
-// message) and its 3D audio cue. Centralises the table so OnCycleItem /
-// OnCycleCategory don't each carry duplicate switches.
+// message). Centralises the table so OnCycleItem / OnCycleCategory don't
+// each carry duplicate switches.
 struct CategoryBindings {
     acc::strings::Id  name;    // singular for prefix / fallback
     acc::strings::Id  empty;   // full pre-formatted "no X in range"
-    acc::audio::NavCue cue;    // 3D positional cue played at the focused
-                               // object's world position before speech
 };
-
-// Refine a placeholder door cue against the actual server-door open_state
-// and material. BindingsFor returns DoorOpen as a category-level
-// placeholder; the real fire site needs to check open_state (open vs
-// closed) and, when closed, the door's material (metal / wood / stone)
-// to pick between gui_close and the three dr_{metal,wood,stone}_lock
-// samples. Pass-through for any other NavCue so call sites can wrap
-// PlayCue3D unconditionally.
-acc::audio::NavCue RefineDoorCue(acc::audio::NavCue cue, void* obj) {
-    if (cue != acc::audio::NavCue::DoorOpen) return cue;
-    if (acc::engine::IsDoorOpen(obj)) return acc::audio::NavCue::DoorOpen;
-    switch (acc::engine::GetDoorMaterial(obj)) {
-        case acc::engine::DoorMaterial::Wood:  return acc::audio::NavCue::DoorClosedWood;
-        case acc::engine::DoorMaterial::Stone: return acc::audio::NavCue::DoorClosedStone;
-        case acc::engine::DoorMaterial::Metal: break;
-    }
-    return acc::audio::NavCue::DoorClosedMetal;
-}
 
 CategoryBindings BindingsFor(
         acc::filter::CycleCategory c,
         acc::filter::CycleContext ctx = acc::filter::CycleContext::World) {
     using S = acc::strings::Id;
-    using N = acc::audio::NavCue;
     using C = acc::filter::CycleCategory;
     switch (c) {
         case C::Door:
-            // DoorOpen is the placeholder; callers must refine via
-            // RefineDoorCue() against the focused object's open_state
-            // before fire. Empty-state path doesn't use .cue, so the
-            // placeholder is harmless there.
-            return {S::CategoryDoor,       S::EmptyDoors,       N::DoorOpen};
+            return {S::CategoryDoor,       S::EmptyDoors};
         case C::Npc:
-            return {S::CategoryNpc,        S::EmptyNpcs,        N::NpcCreature};
+            return {S::CategoryNpc,        S::EmptyNpcs};
         case C::Container:
-            return {S::CategoryContainer,  S::EmptyContainers,  N::ContainerPlaceable};
+            return {S::CategoryContainer,  S::EmptyContainers};
         case C::Item:
-            return {S::CategoryItem,       S::EmptyItems,       N::Item};
+            return {S::CategoryItem,       S::EmptyItems};
         case C::Landmark:
             // Map context renames to "Map hint" / "Hinweis" — matches the
             // engine's own GetNext/PrevMapNote terminology so the spoken
@@ -125,15 +97,15 @@ CategoryBindings BindingsFor(
             // InGameMap up/down buttons. World context keeps the broader
             // "Landmark" wording for the unrestricted has_map_note set.
             if (ctx == acc::filter::CycleContext::Map) {
-                return {S::CategoryMapHint, S::EmptyMapHints, N::Landmark};
+                return {S::CategoryMapHint, S::EmptyMapHints};
             }
-            return {S::CategoryLandmark,   S::EmptyLandmarks,   N::Landmark};
+            return {S::CategoryLandmark,   S::EmptyLandmarks};
         case C::Transition:
-            return {S::CategoryTransition, S::EmptyTransitions, N::TransitionExit};
+            return {S::CategoryTransition, S::EmptyTransitions};
         case C::Count_:
             break;
     }
-    return {S::CategoryItem, S::EmptyAll, N::Item};  // unreachable safety net
+    return {S::CategoryItem, S::EmptyAll};  // unreachable safety net
 }
 
 // Format the "{name}, {clock} o'clock, {metres} metres" payload (or the
@@ -263,8 +235,7 @@ void AnnounceCurrent(const acc::cycle::CategoryListing& listing,
         s.focusedIndex >= listing.count) {
         // Empty state — speak the localized "no X in range" phrase. The
         // category-prefix wrapper is intentionally NOT applied here:
-        // EmptyDoors etc. are full sentences, not item names. No 3D cue
-        // either, since there's no object to localise spatially.
+        // EmptyDoors etc. are full sentences, not item names.
         const char* msg = acc::strings::Get(bindings.empty);
         acc::speech::Speak(msg, /*interrupt=*/true);
         acclog::Write("Cycle", "-> [%s] (ctx=%s)", msg,
@@ -272,16 +243,7 @@ void AnnounceCurrent(const acc::cycle::CategoryListing& listing,
         return;
     }
 
-    // 3D positional cue at the focused object's world position. Per the
-    // cross-pillar audio vocabulary in audio_cues.h, each Pillar 4
-    // category has a designated short cue; the engine's Miles 3D pipeline
-    // pans + attenuates it relative to the camera-anchored listener (Q8 +
-    // Phase 1 lay-off 4 gate verification). Fired before TTS so the user
-    // hears spatial direction first, then the localized name + clock +
-    // distance reinforcement.
     const Vector& objPos = listing.positions[s.focusedIndex];
-    acc::audio::NavCue cue = RefineDoorCue(bindings.cue, s.focusedObj);
-    acc::audio::PlayCue3D(acc::audio::GetNavCueResref(cue), objPos);
 
     char name[128] = "";
     // Four name-resolution paths share the "Map hint" announce:
@@ -486,7 +448,7 @@ void OnCycleCategory(bool prev, acc::filter::CycleContext ctx) {
 
 // Classify a stamped object the same way cycle keys do. Returns Count_
 // when the object falls outside the six locked nav categories — callers
-// fall back to a generic vocabulary (default-open verb, Item cue) since
+// fall back to a generic vocabulary (default-open verb) since
 // passive_narrate would already have filtered any non-nav classification
 // before stamping, so we shouldn't see Count_ in practice.
 acc::filter::CycleCategory ClassifyForCycle(void* obj) {
@@ -532,7 +494,7 @@ bool ResolveNarratedActivation(NarratedActivation& out) {
         out.obj      = slot.obj;
         out.handle   = 0;
         out.pos      = slot.pos;
-        out.category = acc::filter::CycleCategory::Landmark;  // for cue
+        out.category = acc::filter::CycleCategory::Landmark;
         out.isMapPin = true;
         bool named = acc::map_shipped_hints::IsShippedHint(slot.obj)
             ? acc::map_shipped_hints::GetLabel(slot.obj, out.name,
@@ -578,17 +540,6 @@ bool TryResolveOrAnnounceNoFocus(NarratedActivation& a, const char* logTag) {
     return false;
 }
 
-// Per-category 3D cue at the target — spatial confirmation of WHERE the
-// action is aimed. Every activation path (`-`, Shift+-, Ctrl+-, Alt+-) plays
-// it before any speech so the user hears cue → opener → description in
-// audible order. RefineDoorCue is a no-op for map pins, which are never
-// doors. All four call sites used to spell this out identically.
-void PlayActivationCue(const NarratedActivation& a) {
-    auto bindings = BindingsFor(a.category);
-    acc::audio::NavCue cue = RefineDoorCue(bindings.cue, a.obj);
-    acc::audio::PlayCue3D(acc::audio::GetNavCueResref(cue), a.pos);
-}
-
 // `-` repeats the last narrated target with fresh distance + clock. Reads
 // the unified narrated_target slot rather than cycle_state directly — so
 // `-` after a passive-narrate announcement re-announces the passive
@@ -598,8 +549,6 @@ void PlayActivationCue(const NarratedActivation& a) {
 void OnAnnounceFocus() {
     NarratedActivation a;
     if (!TryResolveOrAnnounceNoFocus(a, "- (repeat)")) return;
-
-    PlayActivationCue(a);
 
     // Position and yaw are read separately because they gate different
     // halves of the line: metres needs only the viewpoint position, the
@@ -676,12 +625,12 @@ acc::strings::Id GuidancePreRollFor(acc::filter::CycleCategory c) {
 // Win32 poll) and both gate only on "is there a world", so this is the choke
 // point — the dispatchers, not the routers.
 //
-// The Map sub-screen is exempt on purpose: auto-walking (and beaconing) to a
+// The Map sub-screen is exempt on purpose: auto-walking to a
 // map pin from the map screen is a shipped feature, and the map always reads
 // as blocked because it drills under the InGameMenu strip.
 //
-// Narration-only members of the family (`,` / `.` cycling, bare `-`, Ctrl+-
-// beacon) are deliberately NOT gated — they queue nothing, and reading the
+// Narration-only members of the family (`,` / `.` cycling, bare `-`, the
+// Ctrl+- route) are deliberately NOT gated — they queue nothing, and reading the
 // world out from inside a screen is useful.
 bool UiOwnsKeysForWalkDispatch(const char* keyTag) {
     if (acc::engine::HasActiveMapPanel(nullptr)) return false;
@@ -750,11 +699,6 @@ void OnPathfindFocus() {
 
     NarratedActivation a;
     if (!TryResolveOrAnnounceNoFocus(a, "Shift+-")) return;
-
-    // Per-category 3D cue at the destination — spatial confirmation of WHERE
-    // we're walking, same pattern the announce path uses. (RefineDoorCue is a
-    // no-op for map pins, which are never doors.)
-    PlayActivationCue(a);
 
     char msg[192];
     std::snprintf(msg, sizeof(msg),
@@ -829,29 +773,10 @@ void OnPathfindFocus() {
     }
 }
 
-// Ctrl+- — start an audio beacon to the currently-focused Pillar 4 object
-// via our own A* over the static per-area nav graph (engine refuses to
-// plot for the leader). Speaks a turn-by-turn route description as a
-// sanity-check on the calculated path, then arms the beacon — heartbeat
-// cues at each next waypoint, reach cues on arrival.
-//
-// Toggle-cancel: when a beacon is already armed, the second press
-// cancels via `acc::guidance::beacon::CancelBeacon` and speaks the
-// localised "Beacon cancelled" phrase.
-//
-// Independent of Shift+- autowalk — the user can dispatch both in any
-// order (engine walks via UseObject, our beacon pulses cues in parallel
-// for spatial reinforcement).
-void OnBeaconFocus() {
-    if (acc::guidance::beacon::IsActive()) {
-        acc::guidance::beacon::CancelBeacon();
-        const char* msg = acc::strings::Get(
-            acc::strings::Id::BeaconCancelled);
-        acc::speech::Speak(msg, /*interrupt=*/true);
-        acclog::Write("Cycle", "Ctrl+- -> [%s] (cancel beacon)", msg);
-        return;
-    }
-
+// Ctrl+- — speak the route to the currently-focused object, turn by turn,
+// from our own A* over the static per-area nav graph (the engine refuses
+// to plot for the leader). Independent of Shift+- autowalk.
+void OnRouteFocus() {
     NarratedActivation a;
     if (!TryResolveOrAnnounceNoFocus(a, "Ctrl+-")) return;
 
@@ -868,11 +793,6 @@ void OnBeaconFocus() {
 
     void* area = acc::engine::GetCurrentArea();
 
-    // Per-category 3D cue at the destination — same spatial-confirmation
-    // pattern as Shift+-. Plays before any speech so the user hears the
-    // category cue → opener → description in audible order.
-    PlayActivationCue(a);
-
     std::vector<Vector> waypoints;
     acc::guidance::PathFailure failure = acc::guidance::PathFailure::None;
     bool pathOk = acc::guidance::ComputePath(area, playerPos, a.pos, waypoints,
@@ -885,8 +805,8 @@ void OnBeaconFocus() {
         char msg[256];
         std::snprintf(msg, sizeof(msg),
                       acc::strings::Get(unreadable
-                          ? acc::strings::Id::FmtBeaconMapUnreadable
-                          : acc::strings::Id::FmtBeaconNoPath),
+                          ? acc::strings::Id::FmtRouteMapUnreadable
+                          : acc::strings::Id::FmtRouteNoPath),
                       a.name);
         acc::speech::Speak(msg, /*interrupt=*/true);
         acclog::Write("Cycle", "Ctrl+- -> [%s] obj=%p (ComputePath failed, "
@@ -895,22 +815,20 @@ void OnBeaconFocus() {
         return;
     }
 
-    // Speak the opener ("Beacon zu {name}") first, then the turn-by-turn
+    // Speak the opener ("Route to {name}") first, then the turn-by-turn
     // route description. Two separate speech calls so screen readers can
     // queue them in order without interrupt-mid-sentence behaviour. The
     // opener uses interrupt=true (preempt any in-flight speech); the
     // description uses interrupt=false so it queues behind the opener.
     char opener[192];
     std::snprintf(opener, sizeof(opener),
-                  acc::strings::Get(acc::strings::Id::FmtBeaconStarted),
+                  acc::strings::Get(acc::strings::Id::FmtRouteTo),
                   a.name);
     acc::speech::Speak(opener, /*interrupt=*/true);
 
     bool isTransition = (a.category == acc::filter::CycleCategory::Transition);
     acc::guidance::description::Speak(playerPos, waypoints, a.name,
                                       isTransition, /*interrupt=*/false);
-
-    acc::guidance::beacon::StartBeacon(waypoints);
 
     acclog::Write("Cycle", "Ctrl+- -> [%s] obj=%p waypoints=%zu "
                   "dest=(%.2f,%.2f,%.2f) transition=%d",
@@ -920,7 +838,7 @@ void OnBeaconFocus() {
 
 // Alt+- — diagnostic alternate path that bypasses the action queue via
 // CSWSCreature::ForceMoveToPoint instead of AddMoveToPointAction. Same
-// payload semantics (cue + spoken announce); only the engine entry point
+// payload semantics (spoken announce); only the engine entry point
 // differs. Used to discriminate "queue contention" from "input-mode /
 // flag-bit" failure modes when WalkTo is silently dropped.
 //
@@ -946,8 +864,6 @@ void OnPathfindFocusForce() {
                       msg, a.obj);
         return;
     }
-
-    PlayActivationCue(a);
 
     char msg[192];
     std::snprintf(msg, sizeof(msg),
@@ -1024,7 +940,7 @@ bool TryHandleEvent(int param_1, int param_2) {
         // narrated), and the "Extended cycling" mod setting widens the same
         // keys to everything in the area. That discovery-vs-extended filter
         // lives in cycle_state::BuildCategoryListing — here we always
-        // dispatch. The `-` family (announce / autowalk / beacon) maps to
+        // dispatch. The `-` family (announce / autowalk / route) maps to
         // kInputKbAnnounce below and is unaffected.
         const bool prev = (param_1 == kInputKbComma);
         // Ctrl+, / Ctrl+. jump to the first / last item of the current
@@ -1089,14 +1005,14 @@ bool DispatchPadAction(PadAction action) {
         case PadAction::ItemLast:      OnCycleEdge(/*last=*/true,  ctx); break;
         case PadAction::AnnounceFocus: OnAnnounceFocus();      break;
         case PadAction::WalkToFocus:   OnPathfindFocus();      break;
-        case PadAction::BeaconFocus:   OnBeaconFocus();        break;
+        case PadAction::RouteFocus:    OnRouteFocus();         break;
     }
     return true;
 }
 
 void PollWin32() {
     // All bindings live in `hotkeys.cpp`. Modifier-precedence at the
-    // announce / autowalk / force / beacon key is encoded via per-Action
+    // announce / autowalk / force / route key is encoded via per-Action
     // `modsRequired` + `modsForbidden`, so each Action::* below is
     // mutually exclusive given the current keyboard state.
     namespace hk = acc::hotkeys;
@@ -1110,13 +1026,13 @@ void PollWin32() {
     bool risingAnnounce      = hk::Pressed(hk::Action::AnnounceFocus);
     bool risingPathfind      = hk::Pressed(hk::Action::PathfindFocus);
     bool risingPathfindForce = hk::Pressed(hk::Action::PathfindFocusForce);
-    bool risingBeacon        = hk::Pressed(hk::Action::BeaconFocus);
+    bool risingRoute         = hk::Pressed(hk::Action::RouteFocus);
 
     if (!risingCommaItem && !risingCommaCategory &&
         !risingPeriodItem && !risingPeriodCategory &&
         !risingCommaFirst && !risingPeriodLast &&
         !risingAnnounce && !risingPathfind &&
-        !risingPathfindForce && !risingBeacon) return;
+        !risingPathfindForce && !risingRoute) return;
 
     // Gate on in-world. In menus / chargen / pre-spawn this short-circuits
     // before any cycle effect. (Foreground gate already applied by Pressed().)
@@ -1147,11 +1063,11 @@ void PollWin32() {
 
     // Precedence: Ctrl > Alt > Shift > bare. The Action bindings encode
     // this via mutually-exclusive modifier masks, so at most one of these
-    // four can be true on a given tick. Beacon wins ties (Ctrl+Shift+-
-    // routes to beacon, not autowalk), then ForceWalkTo (Alt — diagnostic
+    // four can be true on a given tick. Route wins ties (Ctrl+Shift+-
+    // speaks the route, not autowalk), then ForceWalkTo (Alt — diagnostic
     // queue-bypass kept for future companion-NPC nudges), then autowalk
     // via UseObject (Shift), then bare repeat-announce.
-    if (risingBeacon)             OnBeaconFocus();
+    if (risingRoute)              OnRouteFocus();
     else if (risingPathfindForce) OnPathfindFocusForce();
     else if (risingPathfind)      OnPathfindFocus();
     else if (risingAnnounce)      OnAnnounceFocus();

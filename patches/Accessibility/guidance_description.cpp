@@ -115,7 +115,7 @@ bool Speak(const Vector& playerPos,
         char msg[192];
         std::snprintf(msg, sizeof(msg),
                       acc::strings::Get(
-                          acc::strings::Id::FmtBeaconNoPath),
+                          acc::strings::Id::FmtRouteNoPath),
                       nameOrFallback);
         acc::speech::Speak(msg, interrupt);
         acclog::Write("Description", "no path -> [%s]", msg);
@@ -143,7 +143,7 @@ bool Speak(const Vector& playerPos,
     // "already there" phrase.
     if (segs.empty()) {
         const char* msg = acc::strings::Get(
-            acc::strings::Id::BeaconAlreadyAtDest);
+            acc::strings::Id::RouteAlreadyAtDest);
         acc::speech::Speak(msg, interrupt);
         acclog::Write("Description", "all-sub-threshold -> [%s]", msg);
         return true;

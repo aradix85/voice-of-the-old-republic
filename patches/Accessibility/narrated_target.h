@@ -7,7 +7,7 @@
 //
 // Stamp sites — passive_narrate (engine ShowObject), cycle_input
 // (`,`/`.`/`-`), view_mode hover-pause. Non-name narration (pre-rolls,
-// empty-state phrases, heading/turn/beacon waypoints) does NOT stamp.
+// empty-state phrases, heading/turn/route lines) does NOT stamp.
 //
 // Two slot shapes: game-object (uses server handle for validation) and
 // map-pin (uses pointer membership in the client area's map_pins[]).

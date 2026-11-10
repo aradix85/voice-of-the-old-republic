@@ -194,7 +194,7 @@ constexpr Entry kEntries[] = {
     { S::HelpKeyPartyStatus,     Grp::Interaction, kWorld },
     { S::HelpKeyAnnounceFocus,   Grp::Interaction, kWorld },
     { S::HelpKeyWalkToFocus,     Grp::Interaction, 0 },
-    { S::HelpKeyBeacon,          Grp::Interaction, 0 },
+    { S::HelpKeyRoute,          Grp::Interaction, 0 },
     { S::HelpKeyDialogRepeat,    Grp::Interaction, kDialog },
 
     // ---- Exploration & orientation ----
@@ -332,11 +332,11 @@ constexpr Entry kEntries[] = {
     { S::HelpKeyPadCancelCombat,   Grp::Controller, 0,      false, Dev::Pad },
     { S::HelpKeyPadCopyLastSpoken, Grp::Controller,
       kWorld | kDialog | kMenu, false, Dev::Pad },
-    // Tagged for the map: walking and beaconing to a map hint is the point of
+    // Tagged for the map: walking to a map hint and hearing its route is the point of
     // picking one there. The degrees line is not — on the map it adds nothing
     // a player acts on, so the map's summary leaves it out.
     { S::HelpKeyPadWalkToFocus,    Grp::Controller, kMap,   false, Dev::Pad },
-    { S::HelpKeyPadBeacon,         Grp::Controller, kMap,   false, Dev::Pad },
+    { S::HelpKeyPadRoute,         Grp::Controller, kMap,   false, Dev::Pad },
     { S::HelpKeyPadDegrees,        Grp::Controller, kWorld, false, Dev::Pad },
     { S::HelpKeyPadCameraOrient,   Grp::Controller, kWorld, false, Dev::Pad },
     { S::HelpKeyPadHelp,           Grp::Controller, 0,      false, Dev::Pad },

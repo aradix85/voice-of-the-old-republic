@@ -111,7 +111,7 @@ const char* const kActionNames[static_cast<int>(Action::COUNT)] = {
     "AnnounceFocus",
     "PathfindFocus",
     "PathfindFocusForce",
-    "BeaconFocus",
+    "RouteFocus",
     "AnnounceDegrees",
     "PartyLeaderAnnounce",
     "CameraOrient",
@@ -307,8 +307,8 @@ void InitDefaults() {
     // expressed by forbidding the higher-precedence mods so each variant
     // only fires when no stronger modifier is held: AnnounceFocus forbids
     // all three; PathfindFocus (Shift) forbids Alt+Ctrl; PathfindFocusForce
-    // (Alt) forbids Ctrl; BeaconFocus (Ctrl) forbids AltGr (otherwise
-    // QWERTZ AltGr+- double-fires as beacon because Windows synthesises a
+    // (Alt) forbids Ctrl; RouteFocus (Ctrl) forbids AltGr (otherwise
+    // QWERTZ AltGr+- double-fires as route because Windows synthesises a
     // phantom Ctrl alongside RMENU).
     bind(Action::CycleItemPrev,        VK_OEM_COMMA,  0, 0,         kModShift | kModCtrl);
     bind(Action::CycleCategoryPrev,    VK_OEM_COMMA,  0, kModShift, 0);
@@ -325,7 +325,7 @@ void InitDefaults() {
                                        kModCtrl | kModAlt);
     bind(Action::PathfindFocusForce,   VK_OEM_2, VK_OEM_MINUS, kModAlt,
                                        kModCtrl);
-    bind(Action::BeaconFocus,          VK_OEM_2, VK_OEM_MINUS, kModCtrl,
+    bind(Action::RouteFocus,          VK_OEM_2, VK_OEM_MINUS, kModCtrl,
                                        kModAltGr);
 
     // ----- Orientation & party -----
@@ -334,8 +334,7 @@ void InitDefaults() {
     // the two routes distinct.
     bind(Action::AnnounceDegrees,      VK_RMENU, 0, 0, kModShift);
     bind(Action::PartyLeaderAnnounce,  VK_TAB,   0, 0, 0);
-    // N alone — camera-orient (face beacon's next waypoint when armed,
-    // else the region's exits: nearest first, then clockwise; cardinal
+    // N alone — camera-orient (face the region's exits: nearest first, then clockwise; cardinal
     // step when no exits are known). Shift forbidden so we
     // don't fight SaveMarkerAtCursor (Shift+N drops a map marker).
     bind(Action::CameraOrient,         'N', 0, 0,

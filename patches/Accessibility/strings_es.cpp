@@ -37,7 +37,7 @@ const char* Get(Id id) {
 
         case Id::MapPinNoText:        return "Marcador";
         case Id::MapPinAltDashUnsupported: return "Marcador: Alt+Gui\xF3n no soportado";
-        case Id::MapPinInteractHint:  return "Marcador. Ctrl+Gui\xF3n para baliza.";
+        case Id::MapPinInteractHint:       return "Marcador. Ctrl+Gui\xF3n para la ruta.";
 
         case Id::FmtSavedMarkerAutoNumber:   return "Marcador %d";
         case Id::FmtSavedMarkerAutoWithRoom: return "%s - Marcador %d";
@@ -67,11 +67,10 @@ const char* Get(Id id) {
         case Id::SpectatorBattleDoomed: return "Los soldados de la Rep\xFA""blica est\xE1n perdidos. Ya no puedes ayudarlos. El camino est\xE1 bloqueado. \xA1""Corre hacia el puente!";
 
         // Beacon (Ctrl+-).
-        case Id::FmtBeaconStarted:     return "Baliza hacia %s";
-        case Id::BeaconCancelled:      return "Baliza cancelada";
-        case Id::FmtBeaconNoPath:      return "No hay ruta desde aqu\xED hacia %s. Quiz\xE1 se pueda llegar desde otro lado.";
-        case Id::FmtBeaconMapUnreadable: return "No hay ruta hacia %s: no se pudo leer el mapa de la zona.";
-        case Id::BeaconAlreadyAtDest:  return "Ya en el destino";
+        case Id::FmtRouteTo:            return "Ruta hacia %s";
+        case Id::FmtRouteNoPath:      return "No hay ruta desde aqu\xED hacia %s. Quiz\xE1 se pueda llegar desde otro lado.";
+        case Id::FmtRouteMapUnreadable: return "No hay ruta hacia %s: no se pudo leer el mapa de la zona.";
+        case Id::RouteAlreadyAtDest:  return "Ya en el destino";
         // Route description.
         // Example: "Ruta hacia Puerta (25 metros): 5 metros Norte,
         //           4 metros Noreste, 6 metros Este. Sin transici\xF3n."
@@ -80,7 +79,6 @@ const char* Get(Id id) {
         case Id::RouteJoinSeparator:   return ", ";
         case Id::RouteOneTransition:   return "Una transici\xF3n";
         case Id::RouteNoTransition:    return "Sin transici\xF3n";
-        case Id::FmtBeaconNextSegment: return "Contin\xFA""a %d metros %s";
 
         case Id::FmtInteractTalk:      return "Hablar con %s";
         case Id::FmtInteractOpen:      return "Usar %s";
@@ -186,6 +184,7 @@ const char* Get(Id id) {
 
         case Id::ViewModeOn:           return "Modo observaci\xF3n activado";
         case Id::ViewModeOff:          return "Modo observaci\xF3n desactivado";
+        case Id::ViewModeWall:         return "Pared";
 
         case Id::FmtSaveLoadRow:       return "%s, %s, %s, %d de %d";
         case Id::FmtSaveLoadRowNoLoc:  return "%s, %d de %d";
@@ -352,6 +351,7 @@ const char* Get(Id id) {
         case Id::MapNextNote:                return "Nota siguiente";
 
         case Id::MapCursorUnexplored:        return "Inexplorado";
+        case Id::MapCursorEdge:              return "Borde del mapa";
         case Id::MapCursorWaypointPOI:       return "Punto de inter\xE9s";
         case Id::MapCursorJunction:          return "Cruce";
         case Id::FmtMapCursorDeadEnd:        return "Callej\xF3n sin salida, %s";
@@ -555,16 +555,6 @@ const char* Get(Id id) {
 
         case Id::ModSettingAudioGlossary:           return "Glosario de audio";
         case Id::ModSettingsAudioGlossaryOpened:    return "Glosario de audio abierto";
-        case Id::GlossaryEntryDoorOpen:             return "Puerta abierta";
-        case Id::GlossaryEntryDoorClosedMetal:      return "Puerta de metal cerrada";
-        case Id::GlossaryEntryDoorClosedWood:       return "Puerta de madera cerrada";
-        case Id::GlossaryEntryDoorClosedStone:      return "Puerta de piedra cerrada";
-        case Id::GlossaryEntryWall:                 return "Pared";
-        case Id::GlossaryEntryHazard:               return "Peligro";
-        case Id::GlossaryEntryCollision:            return "Colisi\xF3n";
-        case Id::GlossaryEntryBeaconActive:         return "Baliza activa";
-        case Id::GlossaryEntryBeaconWaypoint:       return "Punto intermedio alcanzado";
-        case Id::GlossaryEntryBeaconDestination:    return "Destino alcanzado";
         case Id::GlossaryEntrySwoopAccelpadBoost:   return "Panel acelerador Swoop";
         case Id::GlossaryEntrySwoopObstacleWarn:    return "Aviso de obst\xE1""culo Swoop";
         case Id::GlossaryEntrySwoopWallImpact:      return "Impacto contra pared Swoop";
@@ -617,14 +607,15 @@ const char* Get(Id id) {
         case Id::HelpKeySelfStatus:     return "H: anunciar tu salud, tus efectos y tu arma";
         case Id::HelpKeyAnnounceFocus:  return "Menos: anunciar el objeto resaltado";
         case Id::HelpKeyWalkToFocus:    return "May\xFAs m\xE1s menos: caminar hacia el objeto resaltado";
-        case Id::HelpKeyBeacon:         return "Ctrl m\xE1s menos: iniciar una gu\xED""a hacia el objeto resaltado";
+        case Id::HelpKeyRoute:          return "Ctrl m\xE1s menos: describir paso a paso la ruta hacia el objeto resaltado";
         case Id::HelpKeyDialogRepeat:   return "R: repetir la l\xEDnea actual";
 
         case Id::HelpKeyCycleObjects:   return "Coma y punto: recorrer los objetos ya descubiertos de la categor\xed""a actual que todav\xed""a puedes alcanzar. Se omiten los contenedores vac\xedos y las puertas decorativas";
         case Id::HelpKeyCycleCategory:  return "May\xFAs m\xE1s coma o punto: categor\xED""a anterior o siguiente";
         case Id::HelpKeyCycleEnds:      return "Ctrl m\xE1s coma o punto: ir al objeto m\xE1s cercano o m\xE1s lejano";
         case Id::HelpKeyHeading:        return "Alt derecho: anunciar tu orientaci\xF3n y la zona en la que est\xE1s";
-        case Id::HelpKeyCameraOrient:   return "N: girar la c\xE1mara hacia la salida m\xE1s cercana y luego en sentido horario a la siguiente, o mirar al siguiente punto de paso";
+        case Id::HelpKeyCameraOrient:
+            return "N: girar la c\xE1mara hacia la salida m\xE1s cercana y luego en sentido horario a la siguiente";
         case Id::HelpKeyDropMarker:     return "May\xFAs m\xE1s N: colocar un marcador de mapa en tu posici\xF3n";
 
         case Id::FmtHelpNumberActions:   return "1 a 7: usar la \xFAltima acci\xF3n de una categor\xED""a. 1 %s, 2 %s, 3 %s, 4 %s, 5 %s, 6 %s, 7 %s";
@@ -665,9 +656,11 @@ const char* Get(Id id) {
         case Id::HelpKeyPadSelfStatus:       return "Gatillo izquierdo con X: tu propio estado";
         case Id::HelpKeyPadActionQueue:      return "Gatillo izquierdo con B: la cola de acciones. La cruceta arriba y abajo recorre las entradas, A quita la \xFAltima en cola, Y vac\xED" "a toda la cola, B cierra";
         case Id::HelpKeyPadWalkToFocus:      return "Gatillo derecho con bot\xF3n superior derecho: caminar hasta el objeto enfocado";
-        case Id::HelpKeyPadBeacon:           return "Gatillo izquierdo con bot\xF3n superior izquierdo: baliza sonora hacia el objeto enfocado";
+        case Id::HelpKeyPadRoute:
+            return "Gatillo izquierdo con bot\xF3n superior izquierdo: describir la ruta hacia el objeto enfocado";
         case Id::HelpKeyPadDegrees:          return "Gatillo derecho: anunciar tu orientaci\xF3n y la zona en la que est\xE1s";
-        case Id::HelpKeyPadCameraOrient:     return "Pulsar la palanca derecha: girar la c\xE1mara hacia el siguiente punto de la baliza, o a la salida m\xE1s cercana y luego en sentido horario a la siguiente";
+        case Id::HelpKeyPadCameraOrient:
+            return "Pulsar la palanca derecha: girar la c\xE1mara hacia la salida m\xE1s cercana y luego en sentido horario a la siguiente";
         case Id::HelpKeyPadHelp:             return "Ambos gatillos: teclas de esta pantalla. La entrada Ayuda del men\xFA r\xE1pido abre esta lista";
         case Id::HelpKeyPadQuickMenu:        return "Y: men\xFA r\xE1pido";
         case Id::HelpKeyPadCycleTargets:     return "Botones superiores izquierdo y derecho: cambiar de objetivo";
@@ -803,7 +796,7 @@ const char* Get(Id id) {
         case Id::KbNameAnnounceFocus:       return "Anunciar objetivo";
         case Id::KbNamePathfindFocus:       return "Ir al objetivo";
         case Id::KbNamePathfindFocusForce:  return "Ir al objetivo, forzar";
-        case Id::KbNameBeaconFocus:         return "Baliza al objetivo";
+        case Id::KbNameRouteFocus:          return "Ruta al objetivo";
         case Id::KbNameAnnounceDegrees:     return "Orientaci\xF3n";
         case Id::KbNamePartyLeaderAnnounce: return "Anunciar l\xED""der del grupo";
         case Id::KbNameCameraOrient:        return "Orientar c\xE1mara";
@@ -879,9 +872,9 @@ const char* Get(Id id) {
         case Id::TutHintAttackAuto:
             return "Recuerda: una sola pulsaci\xF3n de Intro ataca autom\xE1ticamente cada asalto. Solo un nuevo objetivo lo cambia.";
         case Id::TutHintMovement:
-            return "Pulsa F1 en cualquier momento para el men\xFA de ayuda, una lista de todas las teclas, y Ctrl y F1 para las teclas de la pantalla actual. Para moverte, pulsa W y S para caminar adelante y atr\xE1s, A y D para desplazarte de lado a la izquierda y a la derecha, y Z y C para girar a la izquierda y a la derecha. Z y C giran la c\xE1mara y, con ella, tu direcci\xF3n de marcha, de modo que ambas apuntan siempre en la misma direcci\xF3n. Unos tonos te avisan cuando te acercas a una pared, y mientras te mueves se describe la forma de la sala a tu alrededor. Pulsa Alt derecho para repetir tu orientaci\xF3n y la sala actual.";
+            return "Pulsa F1 en cualquier momento para el men\xFA de ayuda, una lista de todas las teclas, y Ctrl y F1 para las teclas de la pantalla actual. Para moverte, pulsa W y S para caminar adelante y atr\xE1s, A y D para desplazarte de lado a la izquierda y a la derecha, y Z y C para girar a la izquierda y a la derecha. Z y C giran la c\xE1mara y, con ella, tu direcci\xF3n de marcha, de modo que ambas apuntan siempre en la misma direcci\xF3n. Mientras te mueves, se describe la forma de la sala a tu alrededor. Pulsa Alt derecho para repetir tu orientaci\xF3n y la sala actual.";
         case Id::TutHintMapScreen:
-            return "El mapa muestra todas las zonas exploradas de un nivel. Las zonas importantes est\xE1n marcadas, y algunas zonas, como las ciudades, est\xE1n cartografiadas antes de explorarlas. Mu\xE9vete por el mapa con W, A, S y D. Cambia entre las marcas del mapa con coma y punto. Pulsa May\xFAs y N para colocar tu propia marca en tu posici\xF3n. Pulsa Ctrl y menos para iniciar una gu\xED""a sonora hacia la marca del mapa, o May\xFAs y menos para caminar autom\xE1ticamente a la marca seleccionada.";
+            return "El mapa muestra todas las zonas exploradas de un nivel. Las zonas importantes est\xE1n marcadas, y algunas zonas, como las ciudades, est\xE1n cartografiadas antes de explorarlas. Mu\xE9vete por el mapa con W, A, S y D. Cambia entre las marcas del mapa con coma y punto. Pulsa May\xFAs y N para colocar tu propia marca en tu posici\xF3n. Pulsa Ctrl y menos para o\xEDr la ruta hacia la marca seleccionada, o May\xFAs y menos para caminar all\xED autom\xE1ticamente.";
         case Id::TutHintJournal:
             return "La pantalla de misiones muestra tu progreso y pistas sobre qu\xE9 hacer a continuaci\xF3n. \xC1""brela con L. Elige una entrada con las flechas y lee sus detalles con May\xFAs y una flecha.";
         case Id::TutHintInventory:
@@ -1045,9 +1038,9 @@ const char* Get(Id id) {
         case Id::TutHintAttackAutoPad:
             return "Recuerda: una pulsaci\xF3n de A ataca autom\xE1ticamente cada ronda. Solo un nuevo objetivo lo cambia.";
         case Id::TutHintMovementPad:
-            return "Tira de ambos gatillos a la vez en cualquier momento para las teclas de la pantalla actual, y pulsa Y para el men\xFA r\xE1pido, entrada Ayuda, para la lista completa. Para moverte, empuja la palanca izquierda en cualquier direcci\xF3n. Empuja la palanca derecha a izquierda o derecha para girar la c\xE1mara y, con ella, tu direcci\xF3n de marcha, de modo que ambas apunten siempre igual. Unos tonos te avisan cuando te acercas a una pared, y mientras avanzas se describe la forma de la sala a tu alrededor. Tira del gatillo derecho para repetir tu orientaci\xF3n y la sala actual.";
+            return "Tira de ambos gatillos a la vez en cualquier momento para las teclas de la pantalla actual, y pulsa Y para el men\xFA r\xE1pido, entrada Ayuda, para la lista completa. Para moverte, empuja la palanca izquierda en cualquier direcci\xF3n. Empuja la palanca derecha a izquierda o derecha para girar la c\xE1mara y, con ella, tu direcci\xF3n de marcha, de modo que ambas apunten siempre igual. Mientras avanzas, se describe la forma de la sala a tu alrededor. Tira del gatillo derecho para repetir tu orientaci\xF3n y la sala actual.";
         case Id::TutHintMapScreenPad:
-            return "El mapa muestra cada zona explorada de un nivel. Los puntos importantes est\xE1n marcados, y algunas zonas, como las ciudades, aparecen ya trazadas antes de explorarlas. Mu\xE9vete por el mapa con la palanca izquierda. Cambia de marca con la cruceta izquierda y derecha. Tira del gatillo izquierdo junto con el bot\xF3n superior izquierdo para lanzar una baliza que te gu\xED" "e hasta ella por sonido, o del gatillo derecho con el bot\xF3n superior derecho para ir all\xED autom\xE1ticamente.";
+            return "El mapa muestra cada zona explorada de un nivel. Los puntos importantes est\xE1n marcados, y algunas zonas, como las ciudades, aparecen ya trazadas antes de explorarlas. Mu\xE9vete por el mapa con la palanca izquierda. Cambia de marca con la cruceta izquierda y derecha. Tira del gatillo izquierdo junto con el bot\xF3n superior izquierdo para o\xEDr la ruta hasta ella, o del gatillo derecho con el bot\xF3n superior derecho para ir all\xED autom\xE1ticamente.";
         case Id::TutHintJournalPad:
             return "La pantalla de misiones muestra tu progreso y qu\xE9 hacer a continuaci\xF3n. \xC1" "brela desde el men\xFA r\xE1pido en Y, entrada Men\xFAs, y llega a ella con los botones superiores. Elige una entrada con la cruceta y lee sus detalles manteniendo Y y pulsando la cruceta arriba o abajo.";
         case Id::TutHintMessagesPad:

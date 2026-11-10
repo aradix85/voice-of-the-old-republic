@@ -1,4 +1,4 @@
-# passive_narrate.cpp (537 lines)
+# passive_narrate.cpp (496 lines)
 
 Source: `patches/Accessibility/passive_narrate.cpp`
 
@@ -12,15 +12,13 @@ Does NOT handle focus-loss announce (silent on sentinel transitions), the Q/E cy
 
 ## Declarations (in source order)
 
-- L90 `acc::audio::NavCue ClosedDoorCueForMaterial(void* obj)`: Mirrors cycle_input.cpp's mapping.
-- L101 `acc::audio::NavCue CueForCategory(acc::filter::CycleCategory c, void* obj)`: Door cue depends on open_state + material.
-- L119 `acc::filter::CycleCategory ClassifyForNarration(void* obj)`: Returns Count_ for non-nav consumers (combat / dialog target).
-- L134 `bool IsActivePartyMember(void* obj)`: True when obj is one of the active party followers.
-- L156 `bool NarrateHandle(uint32_t handle, const char* reason, bool explicitRequest)`: Resolve → classify → speak → stamp.
-- L298 `void OnEngineShowObject(uint32_t handle)`
-- L399 `void RequestQEReannounce(int directionCode)`
-- L413 `bool IsInSynthesizedQE()`
-- L417 `void Tick()`
-- L494 `bool NarrateExplicit(uint32_t serverHandle)`
-- L504 `void __cdecl OnShowObject(void* /*clientObject*/, int handle)`
-- L520 `void __cdecl OnShowObjectK2(void* ebp)`
+- L87 `acc::filter::CycleCategory ClassifyForNarration(void* obj)`: Returns Count_ for non-nav consumers (combat / dialog target).
+- L102 `bool IsActivePartyMember(void* obj)`: True when obj is one of the active party followers.
+- L124 `bool NarrateHandle(uint32_t handle, const char* reason, bool explicitRequest)`: Resolve → classify → speak → stamp.
+- L257 `void OnEngineShowObject(uint32_t handle)`
+- L358 `void RequestQEReannounce(int directionCode)`
+- L372 `bool IsInSynthesizedQE()`
+- L376 `void Tick()`
+- L453 `bool NarrateExplicit(uint32_t serverHandle)`
+- L463 `void __cdecl OnShowObject(void* /*clientObject*/, int handle)`
+- L479 `void __cdecl OnShowObjectK2(void* ebp)`

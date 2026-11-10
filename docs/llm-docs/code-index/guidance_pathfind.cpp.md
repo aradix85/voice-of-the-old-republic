@@ -1,10 +1,10 @@
-# guidance_pathfind.cpp (424 lines)
+# guidance_pathfind.cpp (423 lines)
 
 Source: `patches/Accessibility/guidance_pathfind.cpp`
 
 (From guidance_pathfind.h.) A* pathfinder over the per-area static nav graph.
 
-Reads CSWSArea pure data — no engine re-entry. We re-solve because the engine refuses to plot a path for the PC (project_addmovetopoint_ leader_broken). Output feeds guidance_beacon and guidance_description.
+Reads CSWSArea pure data — no engine re-entry. We re-solve because the engine refuses to plot a path for the PC (project_addmovetopoint_ leader_broken). Output feeds guidance_description and autowalk.
 
 CSWSArea nav graph (offsets at the bottom of this header):
 

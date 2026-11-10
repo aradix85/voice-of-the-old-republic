@@ -90,14 +90,14 @@ enum class Action : int {
     AnnounceFocus,         // - (QWERTZ) / / (QWERTY)
     PathfindFocus,         // Shift+-
     PathfindFocusForce,    // Alt+-
-    BeaconFocus,           // Ctrl+-
+    RouteFocus,            // Ctrl+-
 
     // ----- Orientation & party -----
     AnnounceDegrees,       // AltGr alone (Shift forbidden): facing readout.
                            // Named from its degree days; kept because saved
                            // keybinds store this name
     PartyLeaderAnnounce,   // Tab
-    CameraOrient,          // N — beacon waypoint or next cardinal CW
+    CameraOrient,          // N — nearest exit, then clockwise
     SaveMarkerAtCursor,    // Shift+N — drops marker on the map
     ExploreOverview,       // Ctrl+N — explored / nearest unexplored / loot left
     ExploreWalkUnexplored, // Ctrl+Shift+N — walk toward the nearest unexplored region

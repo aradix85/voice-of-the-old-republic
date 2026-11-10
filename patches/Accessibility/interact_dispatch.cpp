@@ -160,7 +160,7 @@ void DispatchInteractImpl(void* target, uint32_t handle, bool forceRadial);
 void OnInteract(bool forceRadial) {
     // Map-pin focus: Enter has nothing to dispatch to — pins are
     // destinations, not interactables. Speak the localized hint and
-    // redirect to Ctrl+- (beacon) instead of falling into the "no
+    // redirect to Ctrl+- (route) instead of falling into the "no
     // target" silent path. Read the slot directly here because
     // ResolveInteractTarget treats handle=0 as no-target and returns
     // nullptr.

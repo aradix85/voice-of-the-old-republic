@@ -1,7 +1,6 @@
 // Camera-orient hotkey (N).
 //
-//   - Beacon armed   → rotate to face the beacon's current heartbeat target.
-//   - Otherwise       → face an exit of the player's region (room_topology's
+//   - Face an exit of the player's region (room_topology's
 //                       exit points, real bearing from the player): the one
 //                       nearest the camera heading, then clockwise on each
 //                       further press while the player stays in the region
