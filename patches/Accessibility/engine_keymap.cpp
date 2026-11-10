@@ -8,7 +8,6 @@
 #include "engine_keymap_codes.h"
 #include "engine_game.h"  // IsKotor2 — per-game ini filename
 #include "log.h"
-                          // queries at the bottom of this file
 
 namespace acc::engine_keymap {
 
@@ -183,13 +182,8 @@ void AddGameVk(int vk) {
 // Resolve the game's config ini from acclog::PatchDir() (=<install>\patches)
 // by stripping the last path component — the same derivation
 // mod_settings_store uses. Returns false (empty out) until the patch dir is
-// known. The filename is per-game: KOTOR 2's is swkotor2.ini, with the SAME
-// [Keymapping] section and Action-number scheme inside (verified against the
-// live install 2026-08-05). The K1 name was hardcoded here until then, so on
-// K2 every load silently fell back to the vanilla defaults — the N-hotkey
-// snap-turn held A (strafe on the recommended layout) instead of the bound
-// turn key, and every other binding-aware consumer (auto-walk cancel, map
-// cursor keys) was equally blind to rebinds.
+// known. The filename is per-game: KOTOR 2's is swkotor2.ini, with the same
+// [Keymapping] section and Action-number scheme inside.
 bool ResolveIniPath(char* out, size_t cap) {
     const char* patchDir = acclog::PatchDir();
     if (!patchDir || !*patchDir) return false;
@@ -215,105 +209,86 @@ int ScancodeToVk(int scancode) {
     return static_cast<int>(vk);
 }
 
-void ReloadGameConfig() {
+namespace {
+
+// WASD in every axis bucket and primary bind, so neither is ever empty,
+// whatever happens to the ini. Configured binds layer on top.
+void SeedDefaults() {
     s_gameVkCount   = 0;
     s_actionVkCount = 0;
-    s_gameLoaded  = true;  // mark loaded even on read failure: a missing ini just
-                           // means no configurable binds to warn about (defaults
-                           // are the hardcoded set, already covered).
-    // Seed the movement/turn axis buckets with the WASD defaults BEFORE any
-    // early-out below, so the buckets are never empty even if the ini is
-    // missing/unreadable. Configured binds are layered on top during the parse.
     for (int a = 0; a < kMoveAxisCount; ++a) {
         s_axisVkCount[a] = 0;
         AddAxisVk(a, kAxisDefaultVk[a]);
-        // Same fallback contract for the single-bind view: seeded with the
-        // WASD default, overwritten below if the ini binds that axis's walk
-        // action. Never holds an arrow alternate.
         s_axisPrimaryVk[a] = kAxisDefaultVk[a];
     }
     s_turnScan[0] = 0;
     s_turnScan[1] = 0;
+}
+
+// Files one [Keymapping] entry into the tables.
+void ApplyEntry(const KeymapEntry& e) {
+    const int vk = InputIndexToVk(e.inputIndex);
+    AddGameVk(vk);
+    if (e.slot == 0) {
+        if (e.actionId > 0 && vk != 0 && s_actionVkCount < kMaxActionVks) {
+            s_actionVks[s_actionVkCount++] = {e.actionId, vk,
+                                              InputIndexToScancode(e.inputIndex)};
+        }
+        return;
+    }
+    for (const AxisContrib& c : kAxisPrimary) {
+        if (vk != 0 && c.actionId == e.actionId && c.slot == e.slot) {
+            s_axisPrimaryVk[c.axis] = vk;
+            break;
+        }
+    }
+    for (const AxisContrib& c : kAxisContribs) {
+        if (c.actionId != e.actionId || c.slot != e.slot) continue;
+        AddAxisVk(c.axis, vk);
+        // The scancode camera_orient synthesises to turn: only Action284,
+        // the in-world camera turn. Not 283 (minigame steer, always A/D)
+        // and not the arrow alternate (an extended scancode). The first
+        // configured value wins. Straight from the InputIndex, so the
+        // physical key is right on any layout (the VK route swaps Y and Z
+        // on QWERTZ).
+        if ((c.axis == 2 || c.axis == 3) && c.actionId == 284) {
+            const int di = (c.axis == 2) ? 0 : 1;
+            const int sc = InputIndexToScancode(e.inputIndex);
+            if (sc != 0 && s_turnScan[di] == 0) s_turnScan[di] = sc;
+        }
+    }
+}
+
+}  // namespace
+
+void ReloadGameConfig() {
+    SeedDefaults();
+    // Loaded even when the file cannot be read: a missing ini only means
+    // there are no configurable binds to know about.
+    s_gameLoaded = true;
     char path[MAX_PATH];
     if (!ResolveIniPath(path, sizeof(path))) {
-        s_gameLoaded = false;  // patch dir unknown yet — retry on next query
+        s_gameLoaded = false;  // patch dir unknown yet: retry on next query
         return;
     }
     FILE* f = nullptr;
     if (fopen_s(&f, path, "rb") != 0 || !f) {
-        acclog::Write("EngineKeymap", "no swkotor.ini at %s; game binds unknown",
-                      path);
+        acclog::Write("EngineKeymap", "no swkotor.ini at %s; game binds unknown", path);
         return;
     }
     bool inSection = false;
     char line[256];
     while (fgets(line, sizeof(line), f)) {
-        // Trim trailing whitespace / EOL.
         size_t n = strlen(line);
-        while (n > 0 && (line[n - 1] == '\n' || line[n - 1] == '\r' ||
-                         line[n - 1] == ' '  || line[n - 1] == '\t')) {
-            line[--n] = '\0';
-        }
-        // Skip leading whitespace.
-        char* p = line;
-        while (*p == ' ' || *p == '\t') ++p;
+        while (n > 0 && strchr("\r\n \t", line[n - 1])) line[--n] = '\0';
+        const char* p = line + strspn(line, " \t");
         if (*p == '\0' || *p == ';' || *p == '#') continue;
         if (*p == '[') {
             inSection = (_strnicmp(p, "[Keymapping]", 12) == 0);
             continue;
         }
-        if (!inSection) continue;
-        char* eq = strchr(p, '=');
-        if (!eq) continue;
-        int inputIndex = atoi(eq + 1);   // RHS = decimal InputIndices value (key_code)
-        int vk = InputIndexToVk(inputIndex);
-        AddGameVk(vk);
-
-        // LHS form "Action<digits>[A|B]" — parse the action id and slot so we
-        // can route movement/turn binds into the directional axis buckets.
-        int  actionId = 0;
-        char slot     = 0;
-        if (_strnicmp(p, "Action", 6) == 0) {
-            const char* q = p + 6;
-            while (*q >= '0' && *q <= '9') { actionId = actionId * 10 + (*q - '0'); ++q; }
-            if (q < eq && (*q == 'A' || *q == 'a')) slot = 'A';
-            else if (q < eq && (*q == 'B' || *q == 'b')) slot = 'B';
-        }
-        if (slot == 0 && actionId > 0 && vk != 0 &&
-            s_actionVkCount < kMaxActionVks) {
-            s_actionVks[s_actionVkCount].actionId = actionId;
-            s_actionVks[s_actionVkCount].vk       = vk;
-            s_actionVks[s_actionVkCount].scan     =
-                InputIndexToScancode(inputIndex);
-            ++s_actionVkCount;
-        }
-        if (slot != 0 && vk != 0) {
-            for (const AxisContrib& c : kAxisPrimary) {
-                if (c.actionId == actionId && c.slot == slot) {
-                    s_axisPrimaryVk[c.axis] = vk;
-                    break;
-                }
-            }
-        }
-        if (slot != 0) {
-            for (const AxisContrib& c : kAxisContribs) {
-                if (c.actionId != actionId || c.slot != slot) continue;
-                AddAxisVk(c.axis, vk);
-                // Capture the configured turn scancode for camera_orient's
-                // synthetic-key drive. Only Action284 = CameraRotateLeft/Right,
-                // the in-world camera turn (Y/C under our defaults, A/D vanilla)
-                // — NOT Action283 (MGActionLeft/Right = minigame steer, always
-                // A/D) and NOT the arrow alt (286, extended-scancode SendInput).
-                // First configured value wins. Convert straight from the
-                // InputIndex so the physical scancode is layout-correct (the VK
-                // path swaps Y/Z on QWERTZ).
-                if ((c.axis == 2 || c.axis == 3) && c.actionId == 284) {
-                    int di = (c.axis == 2) ? 0 : 1;
-                    int sc = InputIndexToScancode(inputIndex);
-                    if (sc != 0 && s_turnScan[di] == 0) s_turnScan[di] = sc;
-                }
-            }
-        }
+        KeymapEntry entry;
+        if (inSection && ParseKeymapEntry(p, entry)) ApplyEntry(entry);
     }
     fclose(f);
     acclog::Write("EngineKeymap",

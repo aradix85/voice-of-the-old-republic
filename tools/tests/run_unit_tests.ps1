@@ -16,6 +16,7 @@ $underTest = @(
     'camera_orient_pick.cpp',
     'dialog_speech_marker.cpp',
     'engine_compass.cpp',
+    'engine_keymap_codes.cpp',
     'floor_puzzle_plates.cpp',
     'minigame_turret_lead.cpp',
     'save_points.cpp',

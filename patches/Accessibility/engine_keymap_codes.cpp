@@ -4,6 +4,8 @@
 #include "engine_keymap_codes.h"
 
 #include <windows.h>  // VK_* constants only
+#include <cstdlib>
+#include <cstring>
 
 #include "engine_keymap.h"
 
@@ -101,6 +103,18 @@ int InputIndexToVk(int ii) {
     case 0x6d: return VK_OEM_102;      // OEM_102 (<>| key)
     default:   return 0;
     }
+}
+
+bool ParseKeymapEntry(const char* line, KeymapEntry& out) {
+    const char* eq = strchr(line, '=');
+    if (!eq) return false;
+    out = KeymapEntry{0, 0, atoi(eq + 1)};
+    if (_strnicmp(line, "Action", 6) != 0) return true;
+    const char* q = line + 6;
+    for (; *q >= '0' && *q <= '9'; ++q) out.actionId = out.actionId * 10 + (*q - '0');
+    if (q < eq && (*q == 'A' || *q == 'a')) out.slot = 'A';
+    else if (q < eq && (*q == 'B' || *q == 'b')) out.slot = 'B';
+    return true;
 }
 
 }  // namespace acc::engine_keymap
