@@ -2,7 +2,7 @@
 
 Source: `patches/Accessibility/menus_chargen_skills.h`
 
-chargen "Fähigkeiten" panel (step 3 of Eigener Charakter) tweaks.
+chargen "Skills" panel (step 3 of Custom Character) tweaks.
 
 Mirror of menus_chargen_attr.{h,cpp} for CSWGuiSkillsCharGen — the engine struct shape is the same: 8 skill_buttons + 8 skill_labels + 8 plus_buttons + 8 minus_buttons + a panel-level selected_skill_index that the engine's shared OnPlusButton / OnMinusButton handlers read to pick which skill changes. Same fixes apply:
 
@@ -19,7 +19,7 @@ Differences from the Attribute panel:
 - L54 `void SyncSelectedSkillFromChainFocus()`: Mirror chain focus into the panel's selected_skill_index so the next +/- press routes OnPlusButton / OnMinusButton to the focused skill rather than the default top row.
 - L58 `void CaptureLabelsIfApplicable(void* panel)`: Capture each skill_button → its matching skill_label text into the cycle-category cache, so FromControl produces "Computer, 0" etc.
 - L64 `int RowPitchForCursorWarp(void* panel, void* control)`: Cursor-Y compensation for the chain-step click-sim when focus is a skill_button.
-- L72 `void AnnounceChainStepSuffix(void* panel, void* control)`: Speak the per-row info suffix ("Preis 1" / "Preis 2") synchronously from the chain-step input handler, right after the existing "Computer, 0" announce.
+- L72 `void AnnounceChainStepSuffix(void* panel, void* control)`: Speak the per-row info suffix ("Cost 1" / "Cost 2") synchronously from the chain-step input handler, right after the existing "Computer, 0" announce.
 - L86 `bool AnnounceChainStepDescription(void* panel, void* control)`: Speak the focused skill's description text by reading skill_descriptions[i] directly from the panel struct, bypassing the engine's hover-driven listbox population.
 - L92 `bool IsChargenSkillsDescriptionListbox(void* listBox)`: True iff `listBox` is the description_list_box of a chargen Skills panel currently in the chain.
-- L103 `bool AnnounceValueChange(void* panel, void* control)`: On a +/- press, override the default "{label}, {value}" re-announcement with "{value}, verbleibende Punkte {remaining}".
+- L103 `bool AnnounceValueChange(void* panel, void* control)`: On a +/- press, override the default "{label}, {value}" re-announcement with "{value}, remaining points {remaining}".

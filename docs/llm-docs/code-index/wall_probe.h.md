@@ -4,7 +4,7 @@ Source: `patches/Accessibility/wall_probe.h`
 
 wall probing — "is there a wall, and how far?"
 
-This is the wall system, distinct from the room-shape system that reads it. Everything here is a single-ray or multi-ray cast against the cached perimeter walls (acc::spatial::wall_surfaces::GetCachedWalls); nothing here knows about nav-graph nodes, clusters, or the Korridor / Kreuzung / Bereich vocabulary those produce.
+This is the wall system, distinct from the room-shape system that reads it. Everything here is a single-ray or multi-ray cast against the cached perimeter walls (acc::spatial::wall_surfaces::GetCachedWalls); nothing here knows about nav-graph nodes, clusters, or the corridor / junction / Area vocabulary those produce.
 
 The two systems' names got entangled during development: the probes lived in a file called wall_topology.cpp which was, in substance, room topology. The Phase-1 structure pass (refactoring candidate 12) split them by name - the probes became this file, and the rest became room_topology.* on the consumer side.
 

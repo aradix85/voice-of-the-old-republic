@@ -4,7 +4,7 @@ Source: `patches/Accessibility/same_name_suffix.h`
 
 Per-object disambiguator for same-LocName objects.
 
-Multiple objects in an area often share a localized display name (5x "Wandverkleidung" in one corridor; 3x "Sith-Soldat" in a fight). Sighted players tell them apart by position + reticle; blind players hear the same name in a row with no way to refer back.
+Multiple objects in an area often share a localized display name (5x "Wall Panel" in one corridor; 3x "Sith Soldier" in a fight). Sighted players tell them apart by position + reticle; blind players hear the same name in a row with no way to refer back.
 
 Wraps engine::GetObjectName and appends a stable numeric suffix when two or more live objects in the current area share the resolved name. Suffix is keyed by server handle, assigned on first narration, and persists for the rest of the area lifetime — surviving members keep their slot even after others die.
 

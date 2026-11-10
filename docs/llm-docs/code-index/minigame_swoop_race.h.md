@@ -8,7 +8,7 @@ Polls CSWCArea.mini_game (+0x264) once per tick. Null→non-null transition spea
 
 Detection via the engine pointer (not area-tag prefix): the engine sets mini_game when the minigame controller constructs at module-load, so the transition is one-shot and unambiguous. Tag matching would miss user-added modules and fire on dialog-only swoop screens that look like the platform but aren't the actual race.
 
-CSWMiniGame: +0x24 player, +0x28 area, +0x30 enemy_count, +0x48 obstacle_count, +0x80 type (1=swoop, 2=turret — engine- confirmed from CSWMiniGame::Load, which only ever sets type to 1 or 2; the turret/gunner game is handled by turret_game.cpp), +0xbc lateral_acceleration. CSWMiniPlayer (extends CSWTrackFollower → CSWMiniGameObject): +0x1c4 Vector offset (lateral/vertical in tunnel frame), +0x1d8/+0x1dc min/max_speed.
+CSWMiniGame: +0x24 player, +0x28 area, +0x30 enemy_count, +0x48 obstacle_count, +0x80 type (1=swoop, 2=turret — engine- confirmed from CSWMiniGame::Load, which only ever sets type to 1 or 2; the turret/gunner game is handled by minigame_turret.cpp), +0xbc lateral_acceleration. CSWMiniPlayer (extends CSWTrackFollower → CSWMiniGameObject): +0x1c4 Vector offset (lateral/vertical in tunnel frame), +0x1d8/+0x1dc min/max_speed.
 
 All reads SEH-guarded.
 

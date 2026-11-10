@@ -2,7 +2,7 @@
 
 Source: `patches/Accessibility/menus_keybinds.h`
 
-Mod keybind configurator — the "Tastenbelegung" submenu reached from Mod settings. Lets the user freely rebind every user-rebindable hotkeys::Action.
+Mod keybind configurator — the "Key bindings" submenu reached from Mod settings. Lets the user freely rebind every user-rebindable hotkeys::Action.
 
 Layer: menus/ (UI state + speech). Like the Audio glossary, this is an entirely virtual submenu (no engine panel): menus_modsettings owns an "open" flag and routes navigation keys here while it is set.
 

@@ -2,7 +2,7 @@
 
 Source: `patches/Accessibility/minigame_turret.cpp`
 
-Turret (space-combat gunner) minigame accessibility — see turret_game.h for design.
+Turret (space-combat gunner) minigame accessibility — see minigame_turret.h for design.
 
 Shares CSWMiniGame with swoop racing; distinguished by type==2 (swoop==1), read at CSWMiniGame +0x80. The aim is CSWMiniPlayer.offset (+0x1c4): offset.x = elevation°, offset.z = azimuth° — engine-confirmed from the decompile of CSWMiniPlayer::Control (it integrates offset and pushes it into the rotating gun/camera models each tick). The crosshair is the gun's bullethook0 node world direction (ReadAimLine); aim-assist WRITES offset (WriteOffset). See docs/llm-docs/turret-minigame-model.md.
 

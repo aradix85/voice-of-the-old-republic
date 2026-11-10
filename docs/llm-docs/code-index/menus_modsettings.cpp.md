@@ -28,7 +28,7 @@ See menus_modsettings.h for the design summary. This TU owns the sentinel pointe
 - L510 `void CloseGlossarySubMenu()`: Close the glossary submenu, returning the user to the root.
 - L535 `bool OpenExternalUrl(const char* url)`: Hand `url` to the default browser.
 - L550 `void ActivateLinkRow(Option opt)`: Enter on a Link row: open the URL, then speak the outcome.
-- L567 `void AdjustSlider(int delta)`: Adjust the cue-volume slider by delta (clamped to 0..100), re-announce it, and play a hint-sound cue at the new level on priority group 0xb (survives the in-game Optionen pause), reusing the glossary preview handle.
+- L567 `void AdjustSlider(int delta)`: Adjust the cue-volume slider by delta (clamped to 0..100), re-announce it, and play a hint-sound cue at the new level on priority group 0xb (survives the in-game Options pause), reusing the glossary preview handle.
 - L587 `bool HandleInputList(int keyCode)`: Input for the option list.
 - L683 `bool HandleInputGlossary(int keyCode)`
 - L728 `bool HandleInput(int keyCode)`

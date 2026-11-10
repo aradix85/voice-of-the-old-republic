@@ -242,7 +242,7 @@ void Tick() {
 
     // The delayed place line fires whenever its delay elapses, outside the
     // stability gate below, so it reliably lands ~1 s after entering.
-    TickPendingPlatz(area, pos);
+    TickPendingPlaza(area, pos);
 
     // Post-combat room refire: if a cluster change was gated during the
     // fight, describe where the player actually ended up once speech is
@@ -386,7 +386,7 @@ void Tick() {
                 info.kind == acc::room_topology::KindJunction ||
                 (!info.largeArea &&
                  (info.kind == acc::room_topology::KindRoom ||
-                  info.kind == acc::room_topology::KindPlatz));
+                  info.kind == acc::room_topology::KindPlaza));
             if (centreKind) {
                 g_pending_cluster_centre = true;
                 ArmCentreRule(clusterId, info, pos, g_pending_cluster_since_ms);

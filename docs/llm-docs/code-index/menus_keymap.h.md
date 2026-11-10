@@ -2,11 +2,11 @@
 
 Source: `patches/Accessibility/menus_keymap.h`
 
-In-game / title-screen "Tastaturbelegung" screen (CSWGuiInGameOptKeyMappings, optkeymapping.gui).
+In-game / title-screen "Keymapping" screen (CSWGuiInGameOptKeyMappings, optkeymapping.gui).
 
-Shaped like the Fähigkeiten screen (menus_abilities) — a two-level submenu so the engine's mouse-only rebind path never sees the keys as raw chain nav:
+Shaped like the Abilities screen (menus_abilities) — a two-level submenu so the engine's mouse-only rebind path never sees the keys as raw chain nav:
 
-* Tab level (where you land): Up/Down move across a single flat list of [Bewegung, Spiel, Minigames, OK, Abbrechen, Standard], clamped. Enter on a category drills into that category's binding listbox; Enter on OK / Abbrechen / Standard activates the engine button (commit / discard / reset). Esc falls through to the engine's close. * List level (after Enter on a category): Up/Down/Home/End browse the bindings, each announced as "{action}: {key}". Enter on a changeable row arms a key capture (the engine grabs the next keypress and stages it; OK persists). Esc returns to the tab level.
+* Tab level (where you land): Up/Down move across a single flat list of [Movement, Game, Minigames, OK, Cancel, Default], clamped. Enter on a category drills into that category's binding listbox; Enter on OK / Cancel / Standard activates the engine button (commit / discard / reset). Esc falls through to the engine's close. * List level (after Enter on a category): Up/Down/Home/End browse the bindings, each announced as "{action}: {key}". Enter on a changeable row arms a key capture (the engine grabs the next keypress and stages it; OK persists). Esc returns to the tab level.
 
 The engine model is decompiled in build/re/optkeymappings-keymapbutton: each row is a CSWGuiKeyMapButton whose embedded mapped_key_button holds the bound key; SetCaptureEvent arms capture; the per-frame Update applies the next key; OnAcceptClick commits to live input + swkotor.ini. We never touch persistence.
 

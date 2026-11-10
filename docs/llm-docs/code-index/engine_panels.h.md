@@ -25,7 +25,7 @@ Chain: *(CAppManager**)0x7A39FC → CAppManager → +0x4 CClientExoApp → +0x4 
 - L259 `bool HasActiveMapPanel(void** outPanel = nullptr)`: InGameMap hides under the InGameMenu strip when drilled.
 - L265 `bool HasActiveLevelUpPanel()`: True iff a CSWGuiLevelUpPanel (InGameLevelUp) sits anywhere in panels[].
 - L288 `bool LookupUpgradeSlotType(int slotCustomValue, int category, int* outUpgradeType, uint32_t* outStrRef)`: Resolve a workbench slot to its type + display strref out of the engine's slot-type table (kAddrUpgradeSlotTypeTable).
-- L299 `bool IsInGameOptionsSubScreen(void* panel)`: Heap-allocated Options sub-screen (Spieleinstellungen / Grafik / Sound / Auto-Pause / Feedback / Tastenbelegung / Mauseinstellungen).
+- L299 `bool IsInGameOptionsSubScreen(void* panel)`: Heap-allocated Options sub-screen (Gameplay / Graphics / Sound / Auto-Pause / Feedback / Keymapping / Mouse settings).
 - L305 `bool CallPrevSWInGameGui()`: CGuiInGame::PrevSWInGameGui @0x0062cdf0 — engine's "back to strip" primitive.
 - L310 `bool SetGlobalDialogState(int state)`: CGuiInGame::SetGlobalDialogState — force the engine's "conversation active" bit.
 - L318 `bool CloseInGameMenuToWorld()`: Close the in-game menu (strip + drilled sub-screen) back to the world, replicating a menu tab's own Escape exactly: HideSWInGameGui(0) followed by SetInputClass(0,1).

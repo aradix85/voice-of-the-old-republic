@@ -7,8 +7,8 @@ Rakatan temple floor-plate puzzle assist — see floor_puzzle.h for the puzzle m
 ## Declarations (in source order)
 
 - L115 `void ResetAreaState()`
-- L133 `const char* ShortName(int idx)`: Short name: the bare direction word ("Nord-West", "Mitte") used inside delta lists; kResetIndex gets the full reset-plate noun.
-- L140 `std::string FullName(int idx)`: Full name: "Platte " for grid plates, the reset noun as-is.
+- L133 `const char* ShortName(int idx)`: Short name: the bare direction word ("North-West", "Center") used inside delta lists; kResetIndex gets the full reset-plate noun.
+- L140 `std::string FullName(int idx)`: Full name: "Plate " for grid plates, the reset noun as-is.
 - L147 `bool PointInPoly(const Plate& p, float x, float y)`
 - L161 `float DistToSegment(float px, float py, const Vector& a, const Vector& b)`
 - L175 `float DistToPlate(const Plate& p, float x, float y)`: 0 when inside; else the closest XY distance to any polygon edge.
@@ -17,7 +17,7 @@ Rakatan temple floor-plate puzzle assist — see floor_puzzle.h for the puzzle m
 - L235 `int PlcSlotForTag(const char* tag)`
 - L243 `bool BuildCache(void* area)`
 - L326 `void SpeakIntro(const Vector& playerPos)`
-- L356 `std::string DeltaText(const bool* flipped, const bool* lit, int litCount)`: Itemized flip list, phrased as the TRANSITION each plate just made ("Nord-West leuchtet auf, West erlischt") + running lit count.
+- L356 `std::string DeltaText(const bool* flipped, const bool* lit, int litCount)`: Itemized flip list, phrased as the TRANSITION each plate just made ("North-West lights up, West goes dark") + running lit count.
 - L377 `std::string BoardStateText(const bool* lit, int litCount)`: Live board summary spoken on demand (R key).
 - L396 `bool GetNavPosition(Vector& out)`: Board-navigation position: the view-mode virtual cursor when view mode is active, otherwise the real party leader.
 - L407 `int ReadLiveBoard(bool* lit)`: Read the live lit/dark state off the plate placeables.

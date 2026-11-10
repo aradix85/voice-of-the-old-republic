@@ -38,7 +38,7 @@ bool CentreRuleReady(int clusterId, const Vector& pos);
 // transitions_room_speech.cpp
 void SpeakRoomChange(void* area, int clusterId, const Vector& worldPos);
 void NoteGatedClusterChange();
-void TickPendingPlatz(void* area, const Vector& playerPos);
+void TickPendingPlaza(void* area, const Vector& playerPos);
 void TickGatedClusterRefire(void* area, const Vector& playerPos);
 void ResetRoomSpeechState();
 

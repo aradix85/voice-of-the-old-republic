@@ -19,10 +19,10 @@ All entry points self-gate: they no-op on KOTOR 1 (the panel kinds only identify
 - L46 `bool ResolveRowCommit(void* panel, void* control, void** outListBox)`: If `control` is a row of the actionable item list on a K2 workbench screen (WorkbenchSelect's LB_UPGRADELIST, or the VISIBLE item list of a crafting screen), fill the owning listbox and return true.
 - L54 `void DispatchRowCommit(void* panel, void* listBox, void* row)`: Drain-side worker for the CraftRowCommit pending op: re-verify the row still sits in the listbox, write the listbox selection to its index, then FireActivate (vtable[15], event 0x27) the panel's own commit button (BTN...
 - L66 `void AnnounceChainStepSuffix(void* panel, void* control)`: Per-row price quote, spoken after the row's name on each chain step — the crafting counterpart of store::AnnounceChainStepSuffix.
-- L73 `void* ViewToggleButton(void* panel)`: The K2 crafting screen's BTN_Examine ("Inventar betrachten"), or nullptr when `panel` isn't one of the two crafting screens.
-- L81 `void* CommitButton(void* panel)`: The screen's BTN_Accept ("Objekt erstellen"), or nullptr off the crafting screens.
+- L73 `void* ViewToggleButton(void* panel)`: The K2 crafting screen's BTN_Examine ("View Inventory"), or nullptr when `panel` isn't one of the two crafting screens.
+- L81 `void* CommitButton(void* panel)`: The screen's BTN_Accept ("Create Item"), or nullptr off the crafting screens.
 - L87 `bool ToggleViewFromHotkey()`: Q / E on a K2 crafting screen: flip create <-> break down by firing the panel's own view button.
-- L101 `void SyncSelectedRowFromChainFocus()`: Mirror chain focus into the engine's own listbox selection on a K2 crafting screen, so the panel's "Objekt erstellen" button acts on the row the user is standing on.
+- L101 `void SyncSelectedRowFromChainFocus()`: Mirror chain focus into the engine's own listbox selection on a K2 crafting screen, so the panel's "Create Item" button acts on the row the user is standing on.
 - L108 `bool IsHiddenCraftingListBox(void* panel, void* listBox)`: True iff `panel` is a K2 crafting screen and `listBox` is its currently HIDDEN item list (LB_SHOPITEMS or LB_INVITEMS with the visibility bit clear).
 - L120 `bool OwnsPanelTitle(void* panel)`: True iff this module owns the panel's title speech: K2 only, for the whole workbench family (Select / Items / Upgrade / CreateItem / CreateMedical).
 - L134 `void Tick()`: Per-tick watcher over the foreground K2 workbench screens: * announces the screen's title when a workbench-family panel ARRIVES in the foreground (replaces first-sight for these panels on K2 — see OwnsPanelTitle).

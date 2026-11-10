@@ -23,7 +23,7 @@
 
 namespace acc::room_topology {
 
-// sig & 0xff = kind. Transitions defers the announce for KindPlatz (big
+// sig & 0xff = kind. Transitions defers the announce for KindPlaza (big
 // merged spaces — the player may be crossing through). KindRoom is a
 // merged small space that announces immediately. Both render the same
 // neutral "Area" label; the kind split exists only to drive that
@@ -33,7 +33,7 @@ enum Kind {
     KindCorridor    = 1,
     KindJunction    = 2,
     KindOpenArea    = 4,
-    KindPlatz       = 5,
+    KindPlaza       = 5,
     KindRoom        = 6,
 };
 

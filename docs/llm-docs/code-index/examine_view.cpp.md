@@ -2,7 +2,7 @@
 
 Source: `patches/Accessibility/examine_view.cpp`
 
-(From examine_view.h.) Ö examine list view.
+(From examine_view.h.) Examine list view.
 
 Synthetic in-DLL arrow-navigable list of pre-composed rows. KOTOR 1's CSWGuiExamine is a generic TLK message box, not a rich examine panel, so we build our own from direct field reads + engine name accessors.
 

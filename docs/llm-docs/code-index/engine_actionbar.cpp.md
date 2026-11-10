@@ -2,7 +2,7 @@
 
 Source: `patches/Accessibility/engine_actionbar.cpp`
 
-(From engine_actionbar.h.) Engine bindings for the player action bar (Aktionsmenü).
+(From engine_actionbar.h.) Engine bindings for the player action bar (action menu).
 
 Pure read + primitive layer. Mirrors engine_radial: resolve through the standard chain, per-column reads, drive engine widgets via the vtable[15] activate path. actionbar_menu wires this into a navigable Shift+4..Shift+7 submenu.
 

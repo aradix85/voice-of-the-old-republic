@@ -614,7 +614,7 @@ void PassClassifyClusters(void* area,
             case kKindDeadEnd:  ++deadEnds;  break;
             case kKindCorridor: ++corridors; break;
             case kKindJunction: ++junctions; break;
-            case kKindPlatz:    ++junctions; break;  // tally w/ junctions
+            case kKindPlaza:    ++junctions; break;  // tally w/ junctions
             case kKindRoom:     ++junctions; break;  // tally w/ junctions
             default:            ++openAreas; break;
         }

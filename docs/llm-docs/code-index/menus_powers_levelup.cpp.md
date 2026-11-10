@@ -22,7 +22,7 @@ Force-power picker input handler. See menus_powers_levelup.h for the design rati
 - L293 `void AnnounceFocused(void* panel)`
 - L344 `void NavVertical(void* panel, bool down)`
 - L368 `void NavHorizontal(void* panel, bool right)`
-- L395 `void NavJumpEnd(void* panel, bool toEnd)`: Home / End across the whole 2D surface — leftmost filled cell of the first power row, and the final button row (Abbrechen).
+- L395 `void NavJumpEnd(void* panel, bool toEnd)`: Home / End across the whole 2D surface — leftmost filled cell of the first power row, and the final button row (Cancel).
 - L424 `bool IsPowersLevelUpPanel(void* panel)`
 - L428 `const char* GetTitleOverride(void* panel)`
 - L438 `bool HandleInput(int n, void* thisPtr, void* panel, int param_1, int param_2, int& outRv)`

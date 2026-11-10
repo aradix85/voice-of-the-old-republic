@@ -4,11 +4,11 @@ Source: `patches/Accessibility/menus_modsettings.h`
 
 virtual mod-settings submenu.
 
-Layer: menus/ (UI state + speech). Reachable via a virtual "Mod Einstellungen" chain entry that we inject into both the in-game Optionen panel (PanelKind::InGameOptions) and the title-screen Optionen panel (PanelKind::MainMenuOptions).
+Layer: menus/ (UI state + speech). Reachable via a virtual "Mod settings" chain entry that we inject into both the in-game Options panel (PanelKind::InGameOptions) and the title-screen Options panel (PanelKind::MainMenuOptions).
 
 Design summary:
 
-* The chain entry is NOT backed by a real engine control. We use a static sentinel pointer (see GetRootAnchor) so we never hijack someone else's button and never touch engine-allocated controls. RebindChain inserts a virtual ChainEntry whose `virtualKind == kVirtualMod_SettingsRoot`; menus_extract::FromControl special- cases the sentinel and returns the localised "Mod Einstellungen" phrase; the Enter dispatcher in menus.cpp special-cases the virtual-kind tag and opens the submenu instead of FireActivate.
+* The chain entry is NOT backed by a real engine control. We use a static sentinel pointer (see GetRootAnchor) so we never hijack someone else's button and never touch engine-allocated controls. RebindChain inserts a virtual ChainEntry whose `virtualKind == kVirtualMod_SettingsRoot`; menus_extract::FromControl special- cases the sentinel and returns the "Mod settings" phrase; the Enter dispatcher in menus.cpp special-cases the virtual-kind tag and opens the submenu instead of FireActivate.
 
 * The submenu itself is entirely virtual — there is no second engine panel. While IsOpen() is true, the manager input hook routes navigation keys through HandleInput before the normal chain dispatcher sees them. Up/Down cycles the focused option, Space/Enter toggles, Esc closes and rebinds the parent chain.
 
@@ -21,7 +21,7 @@ Design summary:
 - L53 `enum class Option`: Per-option identifiers.
 - L74 `bool IsRootAnchor(void* control)`: True iff `control` is the mod-settings root sentinel.
 - L82 `void ForEachRootAnchor(void* panel, bool (*callback)(void* sentinel, int sortCx, int sortCy, void* userData), void* userData)`: Visit the registered virtual chain anchor for `panel`.
-- L90 `bool ExtractRootLabel(char* outBuf, size_t bufSize)`: Format the root entry's speech ("Mod Einstellungen").
+- L90 `bool ExtractRootLabel(char* outBuf, size_t bufSize)`: Format the root entry's speech ("Mod settings").
 - L94 `void OpenSubMenu(void* parentPanel)`: Open the submenu.
 - L99 `bool IsOpen()`: True while the submenu is interactive.
 - L104 `void Close()`: Close the submenu and rebind the chain on the saved parent panel.

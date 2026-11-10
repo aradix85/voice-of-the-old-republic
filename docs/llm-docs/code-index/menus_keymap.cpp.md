@@ -2,7 +2,7 @@
 
 Source: `patches/Accessibility/menus_keymap.cpp`
 
-Tastaturbelegung screen — see menus_keymap.h for the design rationale.
+Keymapping screen — see menus_keymap.h for the design rationale.
 
 ## Declarations (in source order)
 

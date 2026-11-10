@@ -14,4 +14,4 @@ The skill and feat information box: its list, the feat behind a row, the row tex
 - L129 `void SkillInfoBoxEnrichRow(void* /*panel*/, const ListBoxNavResult& r)`: Per-row enrichment: refresh the underlying CSWGuiFeatsCharGen's description_listbox via OnEnterFeat(featId), then read + speak that description.
 - L205 `bool SkillInfoBoxOnEnter(void* panel)`
 - L221 `bool SkillInfoBoxTitleIsPlaceholder(void* panel, char* outText, size_t outSize)`: Read the panel's own title label, and say whether it still holds the BioWare dev-leftover baked into skillinfo.gui ("Items Available to Place in Container and blah blah blah").
-- L237 `const char* SkillInfoBoxTitleOverride(void* panel)`: Title override: substitute the localised "Du erhÃ¤ltst diese Talente" string for the BioWare placeholder text baked into skillinfo.gui.
+- L237 `const char* SkillInfoBoxTitleOverride(void* panel)`: Title override: substitute our "You receive these feats" string for the BioWare placeholder text baked into skillinfo.gui.

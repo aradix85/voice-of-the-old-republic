@@ -12,7 +12,7 @@ Internal to the transitions module (transitions*.cpp); no other file includes it
 - L36 `bool CentreRuleReady(int clusterId, const Vector& pos)`
 - L39 `void SpeakRoomChange(void* area, int clusterId, const Vector& worldPos)`: transitions_room_speech.cpp
 - L40 `void NoteGatedClusterChange()`
-- L41 `void TickPendingPlatz(void* area, const Vector& playerPos)`
+- L41 `void TickPendingPlaza(void* area, const Vector& playerPos)`
 - L42 `void TickGatedClusterRefire(void* area, const Vector& playerPos)`
 - L43 `void ResetRoomSpeechState()`
 - L46 `void RebuildLandmarkCache(void* area)`: transitions_landmarks.cpp

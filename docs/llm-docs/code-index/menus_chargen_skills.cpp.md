@@ -2,7 +2,7 @@
 
 Source: `patches/Accessibility/menus_chargen_skills.cpp`
 
-chargen Fähigkeiten panel tweaks. See menus_chargen_skills.h for the design rationale.
+chargen Skills panel tweaks. See menus_chargen_skills.h for the design rationale.
 
 ## Declarations (in source order)
 

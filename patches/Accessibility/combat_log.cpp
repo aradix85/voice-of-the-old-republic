@@ -11,9 +11,9 @@
 // statics, and core_tick reaches the three tickers through combat.h. The
 // move is verbatim, including this file's own extra include block below.
 //
-// Parsing is anchor-based against the localized strings in
-// combat_strings.*; see project_combat_loc_en_phrase_mit_bug for why the
-// anchors are fragile and must not be "tidied".
+// Parsing is anchor-based against the engine strings in combat_strings.*;
+// the anchors are exact (spacing and punctuation included) and must not be
+// "tidied".
 
 #include "combat.h"
 
@@ -63,9 +63,9 @@ namespace {
 
 struct AttackBlock {
     bool has_summary;
-    bool has_angriff;
-    bool has_abwehr;
-    bool has_schaden;
+    bool has_attack;
+    bool has_defense;
+    bool has_damage;
     bool hit;
     bool crit_tag;       // "Critical Hit!" in summary
     bool auto_hit;       // "Automatic Hit!"
@@ -76,11 +76,11 @@ struct AttackBlock {
     int  sum_attack;
     int  sum_defense;
     int  sum_damage;
-    char angriff_hand[32];     // "Mainhand" / off hand
-    char angriff_comps[256];   // pre-formatted: "R14+Dex 2+Effect 1+..."
-    char abwehr_nums[64];      // pre-formatted: "10+3+2" (labels dropped)
-    char schaden_text[128];    // full-breakdown form: "Energy 6+Bonus 5 x2"
-    char schaden_short[128];   // short-form: "6 Energy + 5 Bonus"  (value first, " + " separator)
+    char attack_hand[32];     // "Mainhand" / off hand
+    char attack_comps[256];   // pre-formatted: "R14+Dex 2+Effect 1+..."
+    char defense_nums[64];      // pre-formatted: "10+3+2" (labels dropped)
+    char damage_text[128];    // full-breakdown form: "Energy 6+Bonus 5 x2"
+    char damage_short[128];   // short-form: "6 Energy + 5 Bonus"  (value first, " + " separator)
     char dmg_type[32];         // primary damage type label, e.g. "Energy" / "Physical"
     char status[96];           // applied status from summary tail, e.g. "stunned" ("" if none)
 };
@@ -207,26 +207,26 @@ void CopyRange(char* dst, size_t cap, const char* start, const char* end) {
 }
 
 // Numeric tail of the attack summary: the attack / defence / damage values
-// behind phrase_mit, and the crit and auto tags. `mit_at` is phrase_mit's
+// behind phrase_with, and the crit and auto tags. `with_at` is phrase_with's
 // position; the head parse finds it first, since it bounds the target.
-void ParseSummaryTail(const char* text, const char* mit_at, AttackBlock& b) {
+void ParseSummaryTail(const char* text, const char* with_at, AttackBlock& b) {
     const auto& L = acc::combat::loc::Get();
-    const char* p = mit_at + strlen(L.phrase_mit);
+    const char* p = with_at + strlen(L.phrase_with);
     b.sum_attack = atoi(p);
 
-    const char* vert_at = strstr(p, L.word_verteidigung);
-    if (vert_at) b.sum_defense = atoi(vert_at + strlen(L.word_verteidigung));
+    const char* def_at = strstr(p, L.word_defense);
+    if (def_at) b.sum_defense = atoi(def_at + strlen(L.word_defense));
 
-    const char* schaden_at = strstr(p, L.word_schaden_colon);
-    if (schaden_at) b.sum_damage = atoi(schaden_at + strlen(L.word_schaden_colon));
+    const char* damage_at = strstr(p, L.word_damage_colon);
+    if (damage_at) b.sum_damage = atoi(damage_at + strlen(L.word_damage_colon));
 
-    if (strstr(text, L.tag_krit_summary)) b.crit_tag  = true;
+    if (strstr(text, L.tag_crit_summary)) b.crit_tag  = true;
     if (strstr(text, L.tag_auto_hit))     b.auto_hit  = true;
     if (strstr(text, L.tag_auto_fail))    b.auto_fail = true;
 }
 
 // Head of the attack summary: "<actor><phrase><target>. [<feat> used.]
-// <phrase_mit>...", where the phrase between actor and target is itself the
+// <phrase_with>...", where the phrase between actor and target is itself the
 // hit/miss signal.
 bool ParseSummaryHead(const char* text, AttackBlock& b) {
     const auto& L = acc::combat::loc::Get();
@@ -238,24 +238,24 @@ bool ParseSummaryHead(const char* text, AttackBlock& b) {
     b.hit = (hit_at != nullptr);
     CopyRange(b.actor, sizeof(b.actor), text, anchor);
 
-    const char* after_auf = anchor + alen;
-    const char* mit_at = strstr(after_auf, L.phrase_mit);
-    if (!mit_at) return false;
+    const char* after_on = anchor + alen;
+    const char* with_at = strstr(after_on, L.phrase_with);
+    if (!with_at) return false;
 
-    const char* target_dot = strchr(after_auf, '.');
-    if (!target_dot || target_dot > mit_at) return false;
-    CopyRange(b.target, sizeof(b.target), after_auf, target_dot);
+    const char* target_dot = strchr(after_on, '.');
+    if (!target_dot || target_dot > with_at) return false;
+    CopyRange(b.target, sizeof(b.target), after_on, target_dot);
 
     const char* feat_start = target_dot + 1;
-    while (feat_start < mit_at && *feat_start == ' ') ++feat_start;
-    if (feat_start < mit_at) {
+    while (feat_start < with_at && *feat_start == ' ') ++feat_start;
+    if (feat_start < with_at) {
         const char* feat_end = strstr(feat_start, L.feat_marker);
-        if (feat_end && feat_end < mit_at) {
+        if (feat_end && feat_end < with_at) {
             CopyRange(b.feat, sizeof(b.feat), feat_start, feat_end);
         }
     }
 
-    ParseSummaryTail(text, mit_at, b);
+    ParseSummaryTail(text, with_at, b);
     return true;
 }
 
@@ -272,7 +272,7 @@ bool ParseSummary(const char* text, AttackBlock& b) {
     // " is "). Captures everything after to end-of-line.
     if (b.target[0]) {
         char needle[112];
-        int nn = snprintf(needle, sizeof(needle), "%s%s", b.target, L.status_ist_marker);
+        int nn = snprintf(needle, sizeof(needle), "%s%s", b.target, L.status_is_marker);
         if (nn > 0 && nn < (int)sizeof(needle)) {
             const char* st = strstr(text, needle);
             if (st) {
@@ -287,14 +287,14 @@ bool ParseSummary(const char* text, AttackBlock& b) {
     return true;
 }
 
-bool ParseAngriff(const char* text, AttackBlock& b) {
+bool ParseAttack(const char* text, AttackBlock& b) {
     const auto& L = acc::combat::loc::Get();
-    if (!MsgStartsWith(text, L.prefix_angriff)) return false;
-    const char* p = text + strlen(L.prefix_angriff);
+    if (!MsgStartsWith(text, L.prefix_attack)) return false;
+    const char* p = text + strlen(L.prefix_attack);
 
     const char* hand_end = p;
     while (*hand_end && *hand_end != ' ') ++hand_end;
-    CopyRange(b.angriff_hand, sizeof(b.angriff_hand), p, hand_end);
+    CopyRange(b.attack_hand, sizeof(b.attack_hand), p, hand_end);
     p = hand_end;
     while (*p == ' ') ++p;
 
@@ -307,10 +307,10 @@ bool ParseAngriff(const char* text, AttackBlock& b) {
 
     struct Map { const char* from; size_t flen; const char* to; size_t tlen; };
     const Map kMap[] = {
-        { L.token_wuerfel,    strlen(L.token_wuerfel),    L.short_wuerfel,    strlen(L.short_wuerfel) },
-        { L.token_gesch_mod,  strlen(L.token_gesch_mod),  L.short_gesch,      strlen(L.short_gesch) },
-        { L.token_entfernung, strlen(L.token_entfernung), L.short_reichweite, strlen(L.short_reichweite) },
-        { L.token_effekt,     strlen(L.token_effekt),     L.short_effekt,     strlen(L.short_effekt) },
+        { L.token_roll,    strlen(L.token_roll),    L.short_roll,    strlen(L.short_roll) },
+        { L.token_dex_mod,  strlen(L.token_dex_mod),  L.short_dex,      strlen(L.short_dex) },
+        { L.token_range, strlen(L.token_range), L.short_range, strlen(L.short_range) },
+        { L.token_effect,     strlen(L.token_effect),     L.short_effect,     strlen(L.short_effect) },
     };
 
     char out[256];
@@ -371,27 +371,27 @@ bool ParseAngriff(const char* text, AttackBlock& b) {
     out[out_len] = '\0';
 
     // Prepend hand label only when it isn't the default (Nebenhand etc).
-    if (b.angriff_hand[0] && strcmp(b.angriff_hand, L.hand_main) != 0) {
+    if (b.attack_hand[0] && strcmp(b.attack_hand, L.hand_main) != 0) {
         char tmp[300];
-        snprintf(tmp, sizeof(tmp), "%s %s", b.angriff_hand, out);
+        snprintf(tmp, sizeof(tmp), "%s %s", b.attack_hand, out);
         size_t n = strlen(tmp);
-        if (n >= sizeof(b.angriff_comps)) n = sizeof(b.angriff_comps) - 1;
-        memcpy(b.angriff_comps, tmp, n);
-        b.angriff_comps[n] = '\0';
+        if (n >= sizeof(b.attack_comps)) n = sizeof(b.attack_comps) - 1;
+        memcpy(b.attack_comps, tmp, n);
+        b.attack_comps[n] = '\0';
     } else {
         size_t n = out_len;
-        if (n >= sizeof(b.angriff_comps)) n = sizeof(b.angriff_comps) - 1;
-        memcpy(b.angriff_comps, out, n);
-        b.angriff_comps[n] = '\0';
+        if (n >= sizeof(b.attack_comps)) n = sizeof(b.attack_comps) - 1;
+        memcpy(b.attack_comps, out, n);
+        b.attack_comps[n] = '\0';
     }
-    b.has_angriff = true;
+    b.has_attack = true;
     return true;
 }
 
-bool ParseAbwehr(const char* text, AttackBlock& b) {
+bool ParseDefense(const char* text, AttackBlock& b) {
     const auto& L = acc::combat::loc::Get();
-    if (!MsgStartsWith(text, L.prefix_abwehr)) return false;
-    const char* p = text + strlen(L.prefix_abwehr);
+    if (!MsgStartsWith(text, L.prefix_defense)) return false;
+    const char* p = text + strlen(L.prefix_defense);
     const char* eq = strstr(p, " = ");
     if (!eq) return false;
     p = eq + 3;
@@ -421,22 +421,22 @@ bool ParseAbwehr(const char* text, AttackBlock& b) {
         p = comp_end + 2;
     }
     out[out_len] = '\0';
-    memcpy(b.abwehr_nums, out, out_len + 1);
-    b.has_abwehr = true;
+    memcpy(b.defense_nums, out, out_len + 1);
+    b.has_defense = true;
     return true;
 }
 
-bool ParseSchaden(const char* text, AttackBlock& b) {
+bool ParseDamage(const char* text, AttackBlock& b) {
     const auto& L = acc::combat::loc::Get();
-    if (!MsgStartsWith(text, L.prefix_schaden)) return false;
-    const char* p = text + strlen(L.prefix_schaden);
+    if (!MsgStartsWith(text, L.prefix_damage)) return false;
+    const char* p = text + strlen(L.prefix_damage);
 
     int mult = 0;
-    if (MsgStartsWith(p, L.krit_x_prefix)) {
-        p += strlen(L.krit_x_prefix);
+    if (MsgStartsWith(p, L.crit_x_prefix)) {
+        p += strlen(L.crit_x_prefix);
         mult = atoi(p);
-        const char* fuer = strstr(p, L.phrase_fuer);
-        if (fuer) p = fuer + strlen(L.phrase_fuer);
+        const char* for_at = strstr(p, L.phrase_for);
+        if (for_at) p = for_at + strlen(L.phrase_for);
     }
 
     const char* eq = strstr(p, " = ");
@@ -501,9 +501,9 @@ bool ParseSchaden(const char* text, AttackBlock& b) {
             type_end = (space > p) ? (space - 1) : p;
             val_start = space;
 
-            const size_t kBonusFromLen = strlen(L.token_bonusschaden);
+            const size_t kBonusFromLen = strlen(L.token_bonus_damage);
             if ((size_t)(type_end - type_start) == kBonusFromLen &&
-                memcmp(type_start, L.token_bonusschaden, kBonusFromLen) == 0) {
+                memcmp(type_start, L.token_bonus_damage, kBonusFromLen) == 0) {
                 type_replacement     = L.short_bonus;
                 type_replacement_len = strlen(L.short_bonus);
             }
@@ -546,9 +546,9 @@ bool ParseSchaden(const char* text, AttackBlock& b) {
     }
     out[out_len]            = '\0';
     shortBuf[short_len]     = '\0';
-    memcpy(b.schaden_text,  out,      out_len   + 1);
-    memcpy(b.schaden_short, shortBuf, short_len + 1);
-    b.has_schaden = true;
+    memcpy(b.damage_text,  out,      out_len   + 1);
+    memcpy(b.damage_short, shortBuf, short_len + 1);
+    b.has_damage = true;
     return true;
 }
 
@@ -566,49 +566,49 @@ void BuildCompact(const AttackBlock& b, char* out, size_t cap) {
     if (b.auto_hit)       snprintf(auto_part, sizeof(auto_part), " %s", L.word_auto_hit);
     else if (b.auto_fail) snprintf(auto_part, sizeof(auto_part), " %s", L.word_auto_fail);
 
-    if (b.has_angriff && b.has_abwehr && b.has_schaden) {
+    if (b.has_attack && b.has_defense && b.has_damage) {
         snprintf(out, cap,
                  "%s %s%s %s%s. %s %d (%s) %s %s %d (%s). %s.%s",
                  b.actor, verb, crit_part, b.target, feat_part,
-                 L.word_angriff, b.sum_attack, b.angriff_comps,
-                 L.word_gg, L.word_vert, b.sum_defense, b.abwehr_nums,
-                 b.schaden_text, auto_part);
-    } else if (b.has_angriff && b.has_abwehr) {
+                 L.word_attack, b.sum_attack, b.attack_comps,
+                 L.word_vs, L.word_def, b.sum_defense, b.defense_nums,
+                 b.damage_text, auto_part);
+    } else if (b.has_attack && b.has_defense) {
         if (b.hit) {
             snprintf(out, cap,
                      "%s %s%s %s%s. %s %d (%s) %s %s %d (%s). %s %d.%s",
                      b.actor, verb, crit_part, b.target, feat_part,
-                     L.word_angriff, b.sum_attack, b.angriff_comps,
-                     L.word_gg, L.word_vert, b.sum_defense, b.abwehr_nums,
-                     L.word_schaden, b.sum_damage, auto_part);
+                     L.word_attack, b.sum_attack, b.attack_comps,
+                     L.word_vs, L.word_def, b.sum_defense, b.defense_nums,
+                     L.word_damage, b.sum_damage, auto_part);
         } else {
             snprintf(out, cap,
                      "%s %s%s %s%s. %s %d (%s) %s %s %d (%s).%s",
                      b.actor, verb, crit_part, b.target, feat_part,
-                     L.word_angriff, b.sum_attack, b.angriff_comps,
-                     L.word_gg, L.word_vert, b.sum_defense, b.abwehr_nums,
+                     L.word_attack, b.sum_attack, b.attack_comps,
+                     L.word_vs, L.word_def, b.sum_defense, b.defense_nums,
                      auto_part);
         }
-    } else if (b.has_angriff) {
+    } else if (b.has_attack) {
         snprintf(out, cap,
                  "%s %s%s %s%s. %s %d (%s) %s %s %d.%s",
                  b.actor, verb, crit_part, b.target, feat_part,
-                 L.word_angriff, b.sum_attack, b.angriff_comps,
-                 L.word_gg, L.word_vert, b.sum_defense, auto_part);
+                 L.word_attack, b.sum_attack, b.attack_comps,
+                 L.word_vs, L.word_def, b.sum_defense, auto_part);
     } else {
         if (b.hit) {
             snprintf(out, cap,
                      "%s %s%s %s%s. %s %d %s %s %d. %s %d.%s",
                      b.actor, verb, crit_part, b.target, feat_part,
-                     L.word_angriff, b.sum_attack,
-                     L.word_gg, L.word_vert, b.sum_defense,
-                     L.word_schaden, b.sum_damage, auto_part);
+                     L.word_attack, b.sum_attack,
+                     L.word_vs, L.word_def, b.sum_defense,
+                     L.word_damage, b.sum_damage, auto_part);
         } else {
             snprintf(out, cap,
                      "%s %s%s %s%s. %s %d %s %s %d.%s",
                      b.actor, verb, crit_part, b.target, feat_part,
-                     L.word_angriff, b.sum_attack,
-                     L.word_gg, L.word_vert, b.sum_defense, auto_part);
+                     L.word_attack, b.sum_attack,
+                     L.word_vs, L.word_def, b.sum_defense, auto_part);
         }
     }
 }
@@ -670,10 +670,10 @@ void BuildIncomingLine(const AttackBlock& b, char* out, size_t cap) {
     char tail[140]; BuildResultTail(b, tail, sizeof(tail));
     if (b.dmg_type[0]) {
         snprintf(out, cap, "%s: %d %s %s %s%s",
-                 b.target, b.sum_damage, b.dmg_type, L.word_von, b.actor, tail);
+                 b.target, b.sum_damage, b.dmg_type, L.word_from, b.actor, tail);
     } else {
         snprintf(out, cap, "%s: %d %s %s%s",
-                 b.target, b.sum_damage, L.word_von, b.actor, tail);
+                 b.target, b.sum_damage, L.word_from, b.actor, tail);
     }
 }
 
@@ -688,7 +688,7 @@ bool MaybeSpeakStatusUrgent(const char* victim, const char* status) {
     if (!status || !status[0] || !IsPartyMember(victim)) return false;
     const auto& L = acc::combat::loc::Get();
     char line[160];
-    snprintf(line, sizeof(line), "%s%s%s", victim, L.status_ist_marker, status);
+    snprintf(line, sizeof(line), "%s%s%s", victim, L.status_is_marker, status);
     acc::speech::Speak(line, /*interrupt=*/true);
     acc::msg::Router::Instance().LogEmit("emit-status-urgent", line);
     return true;
@@ -745,19 +745,19 @@ bool RuleSummary(const char* text) {
     return true;
 }
 
-bool RuleAngriff(const char* text) {
+bool RuleAttack(const char* text) {
     if (!g_pending.has_summary) return false;
-    return ParseAngriff(text, g_pending);
+    return ParseAttack(text, g_pending);
 }
 
-bool RuleAbwehr(const char* text) {
+bool RuleDefense(const char* text) {
     if (!g_pending.has_summary) return false;
-    return ParseAbwehr(text, g_pending);
+    return ParseDefense(text, g_pending);
 }
 
-bool RuleSchaden(const char* text) {
+bool RuleDamage(const char* text) {
     if (!g_pending.has_summary) return false;
-    if (!ParseSchaden(text, g_pending)) return false;
+    if (!ParseDamage(text, g_pending)) return false;
     FlushPending();
     return true;
 }
@@ -769,17 +769,17 @@ bool RuleSchaden(const char* text) {
 //   * A weapon attack applied it: no slot exists; the status was already
 //     folded into the attack line from the summary tail — drop the duplicate.
 // Either way we claim the line (no raw speech).
-bool RuleAuswirkung(const char* text) {
+bool RuleEffectApplication(const char* text) {
     const auto& L = acc::combat::loc::Get();
-    if (!MsgStartsWith(text, L.prefix_auswirkung)) return false;
-    const char* p   = text + strlen(L.prefix_auswirkung);
-    const char* ist = strstr(p, L.status_ist_marker);
-    if (ist) {
+    if (!MsgStartsWith(text, L.prefix_effect_application)) return false;
+    const char* p   = text + strlen(L.prefix_effect_application);
+    const char* is_at = strstr(p, L.status_is_marker);
+    if (is_at) {
         char target[96];
-        CopyRange(target, sizeof(target), p, ist);
+        CopyRange(target, sizeof(target), p, is_at);
         EffectTarget* e = FxFind(target);
         if (e) {
-            const char* s = ist + strlen(L.status_ist_marker);
+            const char* s = is_at + strlen(L.status_is_marker);
             CopyRange(e->status, sizeof(e->status), s, s + strlen(s));
             e->last_tick = GetTickCount();
         }
@@ -897,8 +897,8 @@ void BuildEffectLine(const EffectTarget& e, char* out, size_t cap) {
         if (e.dmg_type[0]) snprintf(dmg_clause, sizeof(dmg_clause), "%d %s", e.dmg, e.dmg_type);
         else               snprintf(dmg_clause, sizeof(dmg_clause), "%d", e.dmg);
     }
-    char von_action[120] = "";   // " from <action>"
-    if (e.action[0]) snprintf(von_action, sizeof(von_action), " %s %s", L.word_von, e.action);
+    char from_action[120] = "";   // " from <action>"
+    if (e.action[0]) snprintf(from_action, sizeof(from_action), " %s %s", L.word_from, e.action);
     char action_only[110] = "";  // " <action>"
     if (e.action[0]) snprintf(action_only, sizeof(action_only), " %s", e.action);
 
@@ -914,13 +914,13 @@ void BuildEffectLine(const EffectTarget& e, char* out, size_t cap) {
         // Failed save: damage and/or status, tagged "<SaveType> failed".
         if (dmg_clause[0] && e.status[0])
             snprintf(out, cap, "%s: %s%s, %s, %s %s",
-                     e.target, dmg_clause, von_action, e.status, e.save_type, L.word_save_failed);
+                     e.target, dmg_clause, from_action, e.status, e.save_type, L.word_save_failed);
         else if (dmg_clause[0])
             snprintf(out, cap, "%s: %s%s, %s %s",
-                     e.target, dmg_clause, von_action, e.save_type, L.word_save_failed);
+                     e.target, dmg_clause, from_action, e.save_type, L.word_save_failed);
         else if (e.status[0])
             snprintf(out, cap, "%s %s%s, %s %s",
-                     e.target, e.status, von_action, e.save_type, L.word_save_failed);
+                     e.target, e.status, from_action, e.save_type, L.word_save_failed);
         else
             snprintf(out, cap, "%s%s, %s %s",
                      e.target, action_only, e.save_type, L.word_save_failed);
@@ -929,7 +929,7 @@ void BuildEffectLine(const EffectTarget& e, char* out, size_t cap) {
         char status_clause[80] = "";
         if (e.status[0]) snprintf(status_clause, sizeof(status_clause), ", %s", e.status);
         if (dmg_clause[0])
-            snprintf(out, cap, "%s: %s%s%s", e.target, dmg_clause, von_action, status_clause);
+            snprintf(out, cap, "%s: %s%s%s", e.target, dmg_clause, from_action, status_clause);
         else if (e.status[0])
             snprintf(out, cap, "%s%s%s", e.target, action_only, status_clause);
         // else: a bare save-less, damage-less, status-less line — nothing to say.
@@ -1061,10 +1061,10 @@ void FlushDeflect(DeflectSlot& s) {
 // per volley instead of one per pellet.
 bool RuleDeflect(const char* text) {
     const auto& L = acc::combat::loc::Get();
-    if (!MsgStartsWith(text, L.prefix_reflexion)) return false;
+    if (!MsgStartsWith(text, L.prefix_deflection)) return false;
 
     char actor[96] = "";
-    const char* astart = text + strlen(L.prefix_reflexion);
+    const char* astart = text + strlen(L.prefix_deflection);
     const char* mid    = strstr(astart, L.reflect_mid_marker);
     if (mid) CopyRange(actor, sizeof(actor), astart, mid);
     if (!actor[0]) return true;  // unexpected shape — still claim; the
@@ -1105,9 +1105,9 @@ bool RuleDeflect(const char* text) {
 // "Critical Hit!" tag, which the merged attack line speaks as
 // ", critical". The roll math (threat range, confirmation attack vs defense)
 // is review-log detail, so claim + suppress it instead of speaking it raw.
-bool RuleBedrohung(const char* text) {
+bool RuleThreat(const char* text) {
     const auto& L = acc::combat::loc::Get();
-    if (!MsgStartsWith(text, L.prefix_bedrohung)) return false;
+    if (!MsgStartsWith(text, L.prefix_threat)) return false;
     return true;  // claimed, no speech
 }
 
@@ -1128,7 +1128,7 @@ bool RuleKill(const char* text) {
 // line arrives that contains that mine's localized name, it is the
 // detect line, in ANY locale — no per-language anchor needed. Rewrite:
 // keep the text up to the roll-math colon (the math is review-log
-// detail, same reasoning as RuleBedrohung) and append clock direction +
+// detail, same reasoning as RuleThreat) and append clock direction +
 // distance via the shared announce format:
 //   "<detect line>, 2 o'clock, 6 metres"
 bool RuleMineDetect(const char* text) {
@@ -1196,17 +1196,17 @@ void RegisterCombatMsgRules() {
     // ...") must not fall through to the generic rules.
     r.AddRule("CombatMineDetect", RuleMineDetect);
     r.AddRule("CombatSummary",   RuleSummary);
-    r.AddRule("CombatAngriff",   RuleAngriff);
-    r.AddRule("CombatAbwehr",    RuleAbwehr);
-    r.AddRule("CombatSchaden",   RuleSchaden);
-    r.AddRule("CombatAuswirkung", RuleAuswirkung);
+    r.AddRule("CombatAngriff",   RuleAttack);
+    r.AddRule("CombatAbwehr",    RuleDefense);
+    r.AddRule("CombatSchaden",   RuleDamage);
+    r.AddRule("CombatAuswirkung", RuleEffectApplication);
     r.AddRule("CombatAbsorb",    RuleAbsorb);
     r.AddRule("CombatDeflect",   RuleDeflect);
     r.AddRule("CombatAbilityUse", RuleAbilityUse);
     r.AddRule("CombatSaveThrow", RuleSaveThrow);
     r.AddRule("CombatDirectDamage", RuleDirectDamage);
     r.AddRule("CombatKill",      RuleKill);
-    r.AddRule("CombatBedrohung", RuleBedrohung);
+    r.AddRule("CombatBedrohung", RuleThreat);
     r.AddOnUnmatched(OnUnmatched);
 }
 

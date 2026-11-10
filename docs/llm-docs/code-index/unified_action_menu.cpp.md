@@ -13,7 +13,7 @@ kInputHome/End, kInputCatFirst/Last
 - L153 `void ApplySelection(void* tam, void* mi, const Cat& c, int idx)`: Stamp the engine's per-slot selection to `idx` so reads + dispatch land on the user's chosen entry (target: field1 via SelectActionInRow; personal: the +0x1bac selected-action-id via SelectVariant).
 - L163 `void ReadLabel(void* tam, void* mi, const Cat& c, int idx, char* out, size_t n)`: Read the label of the selected entry.
 - L173 `uint32_t ReadActionId(void* tam, void* mi, const Cat& c, int idx)`
-- L184 `void AppendItemQuantity(void* tam, void* mi, const Cat& c, int idx, char* label, size_t n)`: Append ", N Stück" / ", N Ladungen" to an item entry's label, matching the inventory / store suffixes.
+- L184 `void AppendItemQuantity(void* tam, void* mi, const Cat& c, int idx, char* label, size_t n)`: Append ", N in stack" / ", N charges" to an item entry's label, matching the inventory / store suffixes.
 - L207 `bool Dispatch(void* tam, void* mi, const Cat& c)`
 - L216 `const char* CategoryName(const Cat& c)`: Localised category name, or nullptr for an unnamed category (target rows on a non-creature target — door / placeable / trigger — whose rows carry per-object actions like Security / Bash and are announced by label).
 - L249 `void BuildCategoryList(void* tam, void* mi)`
@@ -21,7 +21,7 @@ kInputHome/End, kInputCatFirst/Last
 - L283 `int FirstPopulatedTargetRow(void* tam)`
 - L302 `bool TargetRowsLookHostileCreature(void* tam)`: Decide whether the target block's three rows are the hostile-creature Attacks / Force-Powers / Items layout (→ named categories) vs a door/placeable/trigger's per-object actions (→ announce by label).
 - L315 `bool DetectCreature(void* tam, uint32_t handle)`: Combined creature signal: trust the clean vtable downcast for near targets, fall back to action-content for far / unresolvable ones.
-- L324 `void FormatCategory(void* tam, void* mi, const Cat& c, int count, int idx, char* out, size_t n)`: Build the full category announce ("Name: label, N Optionen" / "label, N Optionen" for unnamed rows) into `out`.
+- L324 `void FormatCategory(void* tam, void* mi, const Cat& c, int count, int idx, char* out, size_t n)`: Build the full category announce ("Name: label, N options" / "label, N options" for unnamed rows) into `out`.
 - L352 `void SpeakCategory(void* tam, void* mi, const char* prefix)`: Speak the current category in full.
 - L377 `void SpeakEntry(void* tam, void* mi)`: Speak only the current entry label — used after Up/Down/Home/End (the category didn't change, so its name would be redundant noise).
 - L392 `uint32_t ResolveNarratedServerHandle()`: Server-side handle of the currently narrated target, or 0 if none / map pin / stale.

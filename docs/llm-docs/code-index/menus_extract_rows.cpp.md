@@ -7,7 +7,7 @@ Rows that only exist in the mod's model of a screen (virtual rows): the characte
 ## Declarations (in source order)
 
 - L34 `void* FindWagerMaxLabel(void* panel)`: LBL_MAXIMUM / BTN_LESS / BTN_MORE all resolve through the popup's own ctor-bound members (WagerPopupPanel* in menus_internal.cpp); the two games' .gui ids for them survive only as those resolvers' GuiIdMismatch tripwi...
-- L40 `bool ExtractWagerRow(void* panel, void* maxLabel, char* outBuf, size_t bufSize)`: Format "Einsatz N.
+- L40 `bool ExtractWagerRow(void* panel, void* maxLabel, char* outBuf, size_t bufSize)`: Format "Wager N.
 - L77 `const char* GuardedRow(bool (*extract)(void*, void*, char*, size_t), void* owner, void* control, char* outBuf, size_t bufSize, const char* tag)`: One SEH-guarded call of a screen model's row extractor: `tag` (the source named in the log) when it produced text, else null.
 - L88 `const char* TryCharsheetStatRow(void* control, void* owner, char* outBuf, size_t bufSize)`: Character-sheet stat rows on InGameCharacter.
 - L102 `const char* TryCreditsRow(void* control, void* owner, char* outBuf, size_t bufSize)`: Credits row (Inventory + Store).

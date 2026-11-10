@@ -91,7 +91,7 @@ The declarations in this header are implemented in menus_internal.cpp (they live
 - L432 `void* WagerPopupPanelMaximumLabel(void* panel)`
 - L439 `void* PazaakStartPanelPlayButton(void* panel)`: CSWGuiPazaakStart (pazaaksetup / pazaaksetup_p) engine-truth resolvers — the side-deck builder.
 - L440 `void* PazaakStartPanelClearButton(void* panel)`
-- L449 `void* KeyMapPanelEventListBox(void* panel)`: CSWGuiInGameOptKeyMappings (OPTKeyMapping / OPTKeyMapping_p) engine-truth resolvers — the Tastaturbelegung screen.
+- L449 `void* KeyMapPanelEventListBox(void* panel)`: CSWGuiInGameOptKeyMappings (OPTKeyMapping / OPTKeyMapping_p) engine-truth resolvers — the Keymapping screen.
 - L450 `void* KeyMapPanelDefaultButton(void* panel)`
 - L451 `void* KeyMapPanelAcceptButton(void* panel)`
 - L452 `void* KeyMapPanelCancelButton(void* panel)`

@@ -22,16 +22,16 @@ namespace {
 // cells with the same label quiet.
 std::string g_last_spoken_room_text;
 
-// The delayed place line of a large area (kind KindPlatz at or above the
+// The delayed place line of a large area (kind KindPlaza at or above the
 // large-area size; smaller plazas take the centre rule): the announce waits
-// kPlatzDelayMs so the player is further in and the centroid-relative
+// kPlazaDelayMs so the player is further in and the centroid-relative
 // directions match what they perceive. Re-resolved at fire time, so a player
 // who crossed into another cluster meanwhile hears the new label.
-constexpr DWORD kPlatzDelayMs = 1000;
-std::string g_pending_platz_text;
-DWORD  g_pending_platz_tick  = 0;
-bool   g_pending_platz_valid = false;
-Vector g_pending_platz_pos   = {0.0f, 0.0f, 0.0f};
+constexpr DWORD kPlazaDelayMs = 1000;
+std::string g_pending_plaza_text;
+DWORD  g_pending_plaza_tick  = 0;
+bool   g_pending_plaza_valid = false;
+Vector g_pending_plaza_pos   = {0.0f, 0.0f, 0.0f};
 
 // Cluster changes during combat or a blocking UI advance state silently;
 // without a refire the player would end the fight in a region never
@@ -205,9 +205,9 @@ void SpeakPlayerRegionLabel(void* area, const std::string& label,
 // spoken one (two clusters can produce the same label string) or is the
 // return leg of a boundary flap, and speaks.
 //
-// A large area (kind KindPlatz, large-area size) defers its announce for
-// kPlatzDelayMs (smaller ones took the centre rule in Tick instead);
-// TickPendingPlatz fires it later, re-resolving at the current player
+// A large area (kind KindPlaza, large-area size) defers its announce for
+// kPlazaDelayMs (smaller ones took the centre rule in Tick instead);
+// TickPendingPlaza fires it later, re-resolving at the current player
 // position so a player who walked through does not get a stale label.
 //
 // `clusterId` is the cluster the player just entered, logged for
@@ -274,34 +274,34 @@ void SpeakRoomChange(void* area, int clusterId, const Vector& worldPos) {
     // Only a large area defers: a smaller plaza waited for the centre rule
     // in Tick, so the player is already where its words hold.
     bool peekLarge = false;
-    if (peekKind == acc::room_topology::KindPlatz) {
+    if (peekKind == acc::room_topology::KindPlaza) {
         acc::room_topology::ClusterInfo info;
         if (acc::room_topology::GetClusterInfo(area, peekCid, info))
             peekLarge = info.largeArea;
     }
 
-    if (peekKind == acc::room_topology::KindPlatz && peekLarge) {
+    if (peekKind == acc::room_topology::KindPlaza && peekLarge) {
         // Defer: stash the resolved label + context for the timer in
         // Tick to fire. Advance g_last_spoken_room_text now so further
         // cluster transitions producing the same label get text-deduped
         // out; it fires once per entry.
-        g_pending_platz_text  = speechBuf;
-        g_pending_platz_tick  = GetTickCount();
-        g_pending_platz_pos   = worldPos;
-        g_pending_platz_valid = true;
-        CommitSpokenLabel(speechBuf, worldPos, g_pending_platz_tick);
+        g_pending_plaza_text  = speechBuf;
+        g_pending_plaza_tick  = GetTickCount();
+        g_pending_plaza_pos   = worldPos;
+        g_pending_plaza_valid = true;
+        CommitSpokenLabel(speechBuf, worldPos, g_pending_plaza_tick);
         acclog::Write("Transition",
-                      "cluster -> %d '%s' src=%s room=%d — Platz, deferred "
+                      "cluster -> %d '%s' src=%s room=%d — plaza, deferred "
                       "%lums (areaPtr=%p)",
                       clusterId, speechBuf.c_str(), source, roomIndex,
-                      (unsigned long)kPlatzDelayMs, area);
+                      (unsigned long)kPlazaDelayMs, area);
         LogWallTopoComparison(area, roomIndex, worldPos, speechBuf.c_str(),
                               source);
         return;
     }
 
     // Any other shape: cancel a pending place line, it no longer applies.
-    g_pending_platz_valid = false;
+    g_pending_plaza_valid = false;
 
     SpeakPlayerRegionLabel(area, speechBuf, exits);
     CommitSpokenLabel(speechBuf, worldPos, GetTickCount());
@@ -323,10 +323,10 @@ void NoteGatedClusterChange() {
 // (or no announce, if they're now somewhere with the same label as the
 // pending one — that already got committed to last_spoken_room_text on
 // enqueue, so text-dedup eats the re-fire).
-void TickPendingPlatz(void* area, const Vector& playerPos) {
-    if (!g_pending_platz_valid) return;
+void TickPendingPlaza(void* area, const Vector& playerPos) {
+    if (!g_pending_plaza_valid) return;
     DWORD now = GetTickCount();
-    if ((now - g_pending_platz_tick) < kPlatzDelayMs) return;
+    if ((now - g_pending_plaza_tick) < kPlazaDelayMs) return;
 
     // Diagnostic roomIdx for the log; not used for resolution itself.
     int roomIdx = -1;
@@ -350,7 +350,7 @@ void TickPendingPlatz(void* area, const Vector& playerPos) {
                                          /*zTrusted=*/true) &&
             acc::exit_memory::TransitionSliverOwner(area, sliverCid,
                                                     nullptr) != sliverCid) {
-            resolvePos = g_pending_platz_pos;
+            resolvePos = g_pending_plaza_pos;
         }
     }
     bool resolved = ResolveRoomSpeech(area, resolvePos,
@@ -358,13 +358,13 @@ void TickPendingPlatz(void* area, const Vector& playerPos) {
                                       nullptr, &exits) &&
                     !fireBuf.empty();
 
-    if (resolved && fireBuf == g_pending_platz_text) {
+    if (resolved && fireBuf == g_pending_plaza_text) {
         // Same area still under the player. Fire the announce now.
         SpeakPlayerRegionLabel(area, fireBuf, exits);
         acclog::Write("Transition",
-                      "Platz announce fired after %lums: '%s' (room=%d "
+                      "Plaza announce fired after %lums: '%s' (room=%d "
                       "areaPtr=%p)",
-                      (unsigned long)(now - g_pending_platz_tick),
+                      (unsigned long)(now - g_pending_plaza_tick),
                       fireBuf.c_str(), roomIdx, area);
     } else if (resolved && fireBuf != g_last_spoken_room_text) {
         // Player has moved on to a different shape during the delay.
@@ -372,10 +372,10 @@ void TickPendingPlatz(void* area, const Vector& playerPos) {
         SpeakPlayerRegionLabel(area, fireBuf, exits);
         CommitSpokenLabel(fireBuf, playerPos, now);
         acclog::Write("Transition",
-                      "Platz announce superseded after %lums: pending='%s' "
+                      "Plaza announce superseded after %lums: pending='%s' "
                       "current='%s' src=%s (room=%d areaPtr=%p)",
-                      (unsigned long)(now - g_pending_platz_tick),
-                      g_pending_platz_text.c_str(), fireBuf.c_str(), source,
+                      (unsigned long)(now - g_pending_plaza_tick),
+                      g_pending_plaza_text.c_str(), fireBuf.c_str(), source,
                       roomIdx, area);
     } else {
         // Either resolution failed or text-dedups against the same
@@ -383,11 +383,11 @@ void TickPendingPlatz(void* area, const Vector& playerPos) {
         // pending label on enqueue, so this branch fires when
         // the player is back where they started — same label).
         acclog::Write("Transition",
-                      "Platz announce expired (no new label) pending='%s' "
+                      "Plaza announce expired (no new label) pending='%s' "
                       "(room=%d areaPtr=%p)",
-                      g_pending_platz_text.c_str(), roomIdx, area);
+                      g_pending_plaza_text.c_str(), roomIdx, area);
     }
-    g_pending_platz_valid = false;
+    g_pending_plaza_valid = false;
 }
 
 // Refire the current room label after a gated cluster change, once the
@@ -451,7 +451,7 @@ void ResetRoomSpeechState() {
     g_flap_prev_text.clear();
     g_flap_prev_ms          = 0;
     g_flap_cur_ms           = 0;
-    g_pending_platz_valid   = false;
+    g_pending_plaza_valid   = false;
     g_gated_cluster_pending = false;
     g_gate_clear_since_ms   = 0;
 }

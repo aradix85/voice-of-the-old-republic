@@ -13,7 +13,7 @@ What a region change says: the region label, the flap guard against a label spok
 - L193 `void SpeakPlayerRegionLabel(void* area, const std::string& label, const std::vector<acc::room_topology::ExitMark>& exits)`: The player's own region announce: exit_memory adds what lies behind each exit, whether it was visited, and which one leads back.
 - L216 `void SpeakRoomChange(void* area, int clusterId, const Vector& worldPos)`: Speak a perceptual-region change.
 - L315 `void NoteGatedClusterChange()`: A cluster change was committed while speech was gated.
-- L326 `void TickPendingPlatz(void* area, const Vector& playerPos)`: Fire a pending place line whose delay has elapsed.
+- L326 `void TickPendingPlaza(void* area, const Vector& playerPos)`: Fire a pending place line whose delay has elapsed.
 - L399 `void TickGatedClusterRefire(void* area, const Vector& playerPos)`: Refire the current room label after a gated cluster change, once the gate (combat / blocking UI) has stayed clear for kGatedRefireDelayMs.
 - L428 `bool IsResrefStyleRoomName(const char* name)`: Vanilla content names its rooms with the .lyt-room id (`m01aa_10`, `stunt_03_main`, `unk_m13ab`), meaningless through a screen reader, so such a name counts as none and the shape tier speaks instead; authored names ("...
 - L449 `void ResetRoomSpeechState()`: Everything this file remembers about the area: the dedup key, the flap window, the pending place line and the gated refire.

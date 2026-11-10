@@ -108,7 +108,7 @@ constexpr int kKindDeadEnd  = KindDeadEnd;
 constexpr int kKindCorridor = KindCorridor;
 constexpr int kKindJunction = KindJunction;
 constexpr int kKindOpenArea = KindOpenArea;
-constexpr int kKindPlatz    = KindPlatz;
+constexpr int kKindPlaza    = KindPlaza;
 constexpr int kKindRoom     = KindRoom;
 
 // Cached state for the current area.

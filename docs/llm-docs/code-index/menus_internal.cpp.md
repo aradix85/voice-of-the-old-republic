@@ -73,7 +73,7 @@ Nothing here changed behaviourally in the move: the definitions are verbatim, in
 - L561 `void* acc::menus::detail::WorkbenchItemsPanelUpgradeButton(void* panel)`
 - L566 `void* acc::menus::detail::WorkbenchItemsPanelBackButton(void* panel)`
 - L576 `int acc::menus::detail::UpgradeSlotIndexFromButton(void* panel, void* control)`: Workbench-upgrade slot membership via the panel's embedded button run (one contiguous array in both games — see the kUpgradePanelSlotButtons note in engine_offsets_fields.h).
-- L606 `bool acc::menus::detail::IsSaveLoadPanel(void* panel)`: Detect the CSWGuiSaveLoad panel (the "Spiel laden" / "Spiel speichern" dialog).
+- L606 `bool acc::menus::detail::IsSaveLoadPanel(void* panel)`: Detect the CSWGuiSaveLoad panel (the "Load Game" / "Save Game" dialog).
 - L623 `const char* acc::menus::detail::ReadSaveLoadEntryString(void* entry, size_t fieldOffset)`: Read the user-visible text of a CExoString-style field on a control.
 - L654 `bool acc::menus::detail::DriveListBoxSelection(void* listbox, ListBoxNavOp op, short minSel, ListBoxNavResult& out)`
 - L676 `static bool DriveListBoxSelectionBody(void* listbox, acc::menus::detail::ListBoxNavOp op, short minSel, acc::menus::detail::ListBoxNavResult& out)`: The body, split out so the SEH wrapper above stays free of anything needing unwinding (MSVC C2712) — see the CLAUDE.md note on __try and objects.

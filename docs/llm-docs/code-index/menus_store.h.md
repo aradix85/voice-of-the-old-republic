@@ -21,4 +21,4 @@ We don't reshape the chain itself even though it carries rows from both lists (t
 - L70 `bool IsStoreItemRow(void* control)`: True iff `control` is a CSWGuiStoreItemEntry — a row of either the shop or inv listbox.
 - L86 `void DispatchTradeAction(void* panel, void* row)`: Drain handler for the Kind::StoreItemActivate pending op.
 - L93 `bool ToggleModeFromHotkey()`: Synthesize a click on the store's examine_button (mode toggle).
-- L98 `bool CloseFromEsc()`: Synthesize a click on the store's cancel_button (Schliess.).
+- L98 `bool CloseFromEsc()`: Synthesize a click on the store's cancel_button (Close).

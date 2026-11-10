@@ -2,7 +2,7 @@
 
 Source: `patches/Accessibility/menus_chargen_feats.cpp`
 
-chargen "Talente" main panel input handler. See menus_chargen_feats.h for the design rationale.
+chargen "Feats" main panel input handler. See menus_chargen_feats.h for the design rationale.
 
 ## Declarations (in source order)
 

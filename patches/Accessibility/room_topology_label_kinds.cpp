@@ -207,7 +207,7 @@ void ClassifyAsArea(const acc::engine::navgraph::NavGraphSnapshot& g, int n,
     } else {
         outLabel = noun;
     }
-    outKind = (areaHint == 1) ? kKindRoom : kKindPlatz;
+    outKind = (areaHint == 1) ? kKindRoom : kKindPlaza;
     outSig  = (outKind & 0xff) | ((mask & 0xff) << 8);
     return;
 }

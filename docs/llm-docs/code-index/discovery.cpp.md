@@ -14,7 +14,7 @@ Access: discovery is the DEFAULT filter for the in-world cycle. The existing "Ex
 
 ## Declarations (in source order)
 
-- L57 `bool PositionLess(const Vector& a, const Vector& b)`: North-to-south total order — mirrors cycle_input::PositionLess so the discovery ordinal matches the spoken "Nordpfad 3" numbering the player already hears.
+- L57 `bool PositionLess(const Vector& a, const Vector& b)`: North-to-south total order — mirrors cycle_input::PositionLess so the discovery ordinal matches the spoken "north path 3" numbering the player already hears.
 - L72 `acc::filter::CycleCategory Classify(void* obj)`
 - L82 `bool DeriveKey(void* obj, void* area, std::string& outKey)`: Derive the locale-independent per-area key for `obj`, or return false when the object is ineligible (item / non-nav / non-unique NPC / no tag).
 - L138 `bool Contains(const std::string& key)`

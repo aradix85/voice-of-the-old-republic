@@ -10,7 +10,7 @@ Mechanism: when the cursor hovers an in-world object, the engine's DoPassiveSele
 
 Our cycle picks targets without moving the cursor, so +0x4c8 stays tied to the last hover. We replicate the cursor setup explicitly: 1. CGuiInGame.main_interface.field1_0x64 = targetClient 2. GetDefaultActions(this) — populates +0x4c8 / +0x4cc 3. Engine click gate (last_target = last_clicked_on_target = hover_target = X) 4. HandleMouseClickInWorld(this) — engine runs the picker
 
-Engine surfaces: HandleMouseClickInWorld @0x00620350 GetDefaultActions       @0x00620620 SetMainInterfaceTarget  @0x0062b000 CSWGuiInterfaceAction layout: +0x00 CExoString label    ("Sicherheit", "Öffnen", ...) +0x08 ulong     action_id (0x404 noop, 0x3ea talk, 0x3f7 use, 0x3f5 bash, 0x3f2 door toggle, 0x3f4 disable mine, ...) +0x0c void*     action_function +0x1c ulong     target_id (client-side, with 0x80000000) +0x20 CResRef   icon
+Engine surfaces: HandleMouseClickInWorld @0x00620350 GetDefaultActions       @0x00620620 SetMainInterfaceTarget  @0x0062b000 CSWGuiInterfaceAction layout: +0x00 CExoString label    ("Security", "Open", ...) +0x08 ulong     action_id (0x404 noop, 0x3ea talk, 0x3f7 use, 0x3f5 bash, 0x3f2 door toggle, 0x3f4 disable mine, ...) +0x0c void*     action_function +0x1c ulong     target_id (client-side, with 0x80000000) +0x20 CResRef   icon
 
 ## Declarations (in source order)
 

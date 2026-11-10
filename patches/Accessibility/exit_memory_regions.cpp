@@ -153,7 +153,7 @@ std::string Destination(void* area, int target,
         case acc::room_topology::KindDeadEnd:
             return acc::strings::Get(Id::ExitAnnoToDeadEnd);
         case acc::room_topology::KindRoom:
-        case acc::room_topology::KindPlatz:
+        case acc::room_topology::KindPlaza:
         case acc::room_topology::KindOpenArea:
             return acc::strings::Get(Id::ExitAnnoToArea);
         default:

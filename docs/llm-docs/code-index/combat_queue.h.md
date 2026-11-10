@@ -4,7 +4,7 @@ Source: `patches/Accessibility/combat_queue.h`
 
 Combat action-queue submenu.
 
-While active: Open        — speaks "Aktionsschlange, N Aktionen" (or "leer"). Up/Down     — cycles entries, "Angriff Malak, 1 von 3". Enter       — removes focused entry; re-announces or closes if empty. Shift+Enter — clears all + closes. Esc         — closes.
+While active: Open        — speaks "Action queue, N actions." (or that it is empty). Up/Down     — cycles entries, "Attack Malak, 1 of 3". Enter       — removes focused entry; re-announces or closes if empty. Shift+Enter — clears all + closes. Esc         — closes.
 
 Self-disarms when controlled creature changes / combat round drops / chain faults.
 
@@ -19,8 +19,8 @@ Skeleton: positional remove is unresolved (RemoveLastAction only removes the tai
 - L72 `void ArmNoOpWatch()`: A user press that produces NO queue add — PERSONAL actions only.
 - L77 `void CancelNoOpWatch()`: Cancel a pending watch when the caller has already explained the outcome — otherwise KOTOR 1's spoken refusal reason would be followed by the generic line saying the same thing twice.
 - L81 `void TickNoOpWatch()`: Per-tick verdict for the watch above.
-- L92 `void OnEngineActionAdded(void* combatRound, void* action)`: Announce a queued action the engine just accepted (or rejected at the cap) — the authoritative "X, Platz N" / "Warteschlange voll" cue.
-- L96 `bool Open()`: True iff armed (queue had >= 1 entry — empty queue speaks "leer" and returns false).
+- L92 `void OnEngineActionAdded(void* combatRound, void* action)`: Announce a queued action the engine just accepted (or rejected at the cap) — the authoritative "X, position N" / "X, queue full" cue.
+- L96 `bool Open()`: True iff armed (queue had >= 1 entry — an empty queue says so and returns false).
 - L98 `bool IsActive()`
 - L101 `bool HandleInputEvent(int code, int value)`: Press-edge only.
 - L104 `void ForceDisarm(const char* reason)`: Engine owns the queue — no engine-side cleanup needed.

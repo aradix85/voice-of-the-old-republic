@@ -12,4 +12,4 @@ Mechanism (see scratchpad trask_popup_recipe.md / docs): * Clear the tutorial on
 - L30 `bool FirePendingAtReplyBreak()`: Called when a dialogue reply becomes navigable.
 - L35 `bool SyntheticActive()`: True while our synthetic tutorial popup is on screen — the TutorialBox speech paths (fingerprint override, listbox suppression, chain gate) route the hint and keep the mouse-worded message off the arrow-nav chain.
 - L36 `const char* SyntheticHint()`
-- L40 `void PollDismiss()`: Per-tick: detect the synthetic popup closing (Weiter/OK) and clear state + unpause.
+- L40 `void PollDismiss()`: Per-tick: detect the synthetic popup closing (OK) and clear state + unpause.

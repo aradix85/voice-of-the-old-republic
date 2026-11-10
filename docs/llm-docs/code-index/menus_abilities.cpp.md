@@ -2,7 +2,7 @@
 
 Source: `patches/Accessibility/menus_abilities.cpp`
 
-In-game Fähigkeiten screen — see menus_abilities.h for the design rationale.
+In-game Abilities screen — see menus_abilities.h for the design rationale.
 
 ## Declarations (in source order)
 

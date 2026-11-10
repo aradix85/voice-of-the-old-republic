@@ -11,7 +11,7 @@ FromControl is the ladder: it does no extraction of its own, it runs the Try* st
 - L42 `const char* LookupCycleCategory(void* control)`
 - L63 `void ApplyCycleCategoryPrefix(void* control, char* outBuf, size_t bufSize)`: Cycle value-display prefix.
 - L75 `void AppendToggleSuffix(void* control, char* outBuf, size_t bufSize)`: Append element-state suffix for toggles.
-- L112 `void AppendDisabledSuffix(void* control, void* ownerPanel, char* outBuf, size_t bufSize)`: Append "nicht verfügbar" / "unavailable" suffix when the focused button is engine-disabled.
+- L112 `void AppendDisabledSuffix(void* control, void* ownerPanel, char* outBuf, size_t bufSize)`: Append "unavailable" / "unavailable" suffix when the focused button is engine-disabled.
 - L174 `bool EmitText(char* outBuf, size_t bufSize, const char* text)`: Hand `text` back to the caller, TRUNCATING when it does not fit.
 - L209 `void* ResolveOwnerPanel(void* control, void* ownerPanel)`: Resolve the panel that owns `control`.
 - L222 `bool IsPanelDirectChild(void* panel, void* control)`: True when `control` sits directly in panel.controls[].
