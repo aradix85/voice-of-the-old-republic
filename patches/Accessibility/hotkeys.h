@@ -104,10 +104,6 @@ enum class Action : int {
     ExploreWalkLoot,       // Ctrl+L — walk to the nearest container / item left
     PartyStatusAnnounce,   // Ctrl+H — every party member's HP, who can level up
 
-    // ----- View mode -----
-    ViewModeToggle,        // B   (Shift forbidden)
-    CameraStateProbe,      // Shift+B (diagnostic)
-
     // ----- Editbox modal (text-input panels) -----
     EditboxReReadUp,       // Up   while edit-mode armed
     EditboxReReadDown,     // Down while edit-mode armed

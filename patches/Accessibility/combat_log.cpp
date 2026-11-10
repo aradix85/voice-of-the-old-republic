@@ -20,7 +20,7 @@
 #include "strfmt.h"           // Format
 #include "strings.h"
 #include "trap_watch.h"       // the fresh mine detection
-#include "view_mode.h"        // GetEffectiveViewpoint: the camera frame
+#include "viewpoint.h"
 
 namespace acc::combat {
 
@@ -78,7 +78,7 @@ bool RuleMineDetect(const char* text) {
     // creature's own facing is the wrong frame for a spoken clock.
     Vector p{};
     float  yaw = 0.0f;
-    if (acc::view_mode::GetEffectiveViewpoint(p, yaw)) {
+    if (acc::viewpoint::Get(p, yaw)) {
         int clock = acc::engine::ClockPosition(yaw, minePos.x - p.x,
                                                minePos.y - p.y);
         int m = static_cast<int>(DistXY(p, minePos) + 0.5f);

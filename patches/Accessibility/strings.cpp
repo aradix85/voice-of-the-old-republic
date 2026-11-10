@@ -49,7 +49,6 @@ const char* Get(Id id) {
         case Id::FmtGuidingTo:         return "Guiding to %s";
         case Id::FmtGuidingFailed:     return "Guidance to %s failed";
         case Id::GuidanceNoFocus:      return "No object focused";
-        case Id::GuidingToPoint:       return "Walking to point";
 
         case Id::MovementCancelled:    return "Movement cancelled";
         case Id::InteractWayBlocked:   return "Movement cancelled, way blocked";
@@ -170,9 +169,6 @@ const char* Get(Id id) {
         case Id::FmtFacingWorld:              return "Facing %s.";
 
 
-        case Id::ViewModeOn:           return "View mode on";
-        case Id::ViewModeOff:          return "View mode off";
-        case Id::ViewModeWall:         return "Wall";
 
         case Id::FmtSaveLoadRow:       return "%s, %s, %s, %d of %d";
         case Id::FmtSaveLoadRowNoLoc:  return "%s, %d of %d";
@@ -594,7 +590,6 @@ const char* Get(Id id) {
         case Id::HelpKeyCameraRotate:   return "Z and C: rotate the camera left and right";
         case Id::HelpKeyStrafe:         return "A and D: step left and right";
         case Id::HelpKeyPause:          return "Space: pause and unpause the game";
-        case Id::HelpKeyViewMode:       return "B: look-around mode, hold position while you turn the camera";
         case Id::HelpKeySwitchLeader:   return "Tab: switch the party member you control";
 
         case Id::HelpKeyCycleTargets:   return "Q and E: cycle objects currently in view, or everything within 30 metres if that is turned on in Mod settings";
@@ -721,7 +716,6 @@ const char* Get(Id id) {
         case Id::KbNamePartyLeaderAnnounce: return "Announce party leader";
         case Id::KbNameCameraOrient:        return "Orient camera";
         case Id::KbNameSaveMarkerAtCursor:  return "Drop marker";
-        case Id::KbNameViewModeToggle:      return "View mode";
         // Menus & input
         case Id::KbNameNavUp:               return "Menu up";
         case Id::KbNameNavDown:             return "Menu down";

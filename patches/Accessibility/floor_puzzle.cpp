@@ -17,7 +17,6 @@
 #include "speech.h"
 #include "strfmt.h"
 #include "strings.h"
-#include "view_mode.h"
 
 namespace acc::floor_puzzle {
 
@@ -261,19 +260,6 @@ int ReadLiveBoard(bool* lit) {
     return litCount;
 }
 
-// Board-navigation position: the view-mode virtual cursor when view mode
-// is active, otherwise the party leader. In view mode the leader is
-// frozen, so the cursor lets "Stepped on Plate X" and the nearest-plate
-// offsets track where the player is scanning. The cursor never steps on a
-// plate, so no lit/dark toggle (and thus no delta) can fire off it.
-bool GetNavPosition(Vector& out) {
-    if (acc::view_mode::IsActive() &&
-        acc::view_mode::TryGetCursorPosition(out)) {
-        return true;
-    }
-    return acc::engine::GetPlayerPosition(out);
-}
-
 // ---- Tick steps ------------------------------------------------------------
 
 // On-demand board read (R), every frame, ABOVE the scan throttle: the
@@ -368,7 +354,7 @@ struct NavScan {
 NavScan TrackNavPlate(DWORD now) {
     NavScan n{};
     n.plate = -1;
-    n.havePos = GetNavPosition(n.pos);
+    n.havePos = acc::engine::GetPlayerPosition(n.pos);
     if (!n.havePos) return n;
     for (int i = 0; i < kTrackCount; ++i) {
         if (PointInPoly(g_visit.plates[i], n.pos.x, n.pos.y)) {

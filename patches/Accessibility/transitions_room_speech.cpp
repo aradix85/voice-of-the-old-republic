@@ -161,8 +161,9 @@ bool ResolveRoomSpeech(void* area, const Vector& worldPos,
 }
 
 // Diagnostic — log room_topology's resolution at this position alongside
-// whatever the resolved speech was (room name or shape). Mirrors the announcement quad we see in MapCursor / ViewMode
-// so a single grep across categories shows every nav-graph decision.
+// whatever the resolved speech was (room name or shape). Mirrors the
+// announcement quad we see in MapCursor so a single grep across categories
+// shows every nav-graph decision.
 void LogWallTopoComparison(void* area, int roomIndex,
                            const Vector& worldPos,
                            const char* spoken,
@@ -188,13 +189,13 @@ void LogWallTopoComparison(void* area, int roomIndex,
 
 // The player's own region announce: exit_memory adds what lies behind each
 // exit, whether it was visited, and which one leads back. Falls back to the
-// plain label when there is nothing to add. View mode keeps calling
-// SpeakRegionLabel directly — these words are about the player's path.
+// plain label when there is nothing to add.
 void SpeakPlayerRegionLabel(void* area, const std::string& label,
                             const std::vector<acc::room_topology::ExitMark>& exits) {
     std::string annotated;
     const bool added = acc::exit_memory::Annotate(area, label, exits, annotated);
-    acc::transitions::SpeakRegionLabel(added ? annotated.c_str() : label.c_str());
+    acc::speech::Speak(added ? annotated.c_str() : label.c_str(),
+                       /*interrupt=*/true);
 }
 
 }  // namespace
@@ -454,10 +455,6 @@ void ResetRoomSpeechState() {
     g_pending_plaza_valid   = false;
     g_gated_cluster_pending = false;
     g_gate_clear_since_ms   = 0;
-}
-
-void SpeakRegionLabel(const char* text) {
-    acc::speech::Speak(text, /*interrupt=*/true);
 }
 
 }  // namespace acc::transitions

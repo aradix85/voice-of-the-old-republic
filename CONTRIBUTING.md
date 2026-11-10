@@ -53,7 +53,7 @@ Every push to `bridge` is built by `.github/workflows/build.yml`, which runs the
 - Match what is already in `patches/Accessibility/`. Look at neighbouring files before introducing a pattern.
 - File-name prefix groups the role: `engine_*` for read-side engine bindings, `menus_*` for per-screen GUI work, `audio_*` for audio, `combat_*`, `guidance_*`, `map_*`, `minigame_*`, `bridge_*`, etc.
 - One job per file, about 600 lines or less, with a header comment that says the job. A module's shared internals go in `<module>_internal.h`, included only by its own files.
-- Headers are kept narrow: one public namespace (`acc::interact`, `acc::view_mode`, …) per pair, public functions in the header, everything else in the `.cpp`.
+- Headers are kept narrow: one public namespace (`acc::interact`, `acc::viewpoint`, …) per pair, public functions in the header, everything else in the `.cpp`.
 - Loader-lock-safe in `DllMain` only. Anything that loads DLLs, opens files or initialises COM is deferred to the first hook fire. See `core_dllmain.cpp`.
 - Strings: never hardcode user-facing text in handler code. Add an `Id` to `strings.h` and its English text to `strings.cpp`; handlers call `strings::Get(Id)`. Log lines are English and stay out of the table.
 - Engine-free logic (parsing, geometry, graph walks) goes in files that do not include engine headers, with doctest tests in `tests/unit/`.

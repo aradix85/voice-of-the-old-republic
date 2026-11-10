@@ -26,7 +26,7 @@ Native C++17 (MSVC x86), built by `kdev build` into a `.kpatch` archive. Files a
 - **`cycle_*`, `qe_ring`, `filter_objects`, `same_name_suffix`, `narrated_target`** — the Q / E and `,` / `.` cycles and the focused-object model.
 - **`guidance_*`, `interact_dispatch`** — walking for the player (autowalk, rescue walk, sidestep), path finding over the region graph, and spoken route descriptions.
 - **`combat_*`** — combat-log narration (English anchors in `combat_strings.cpp`), the action queue, combat queries.
-- **`camera_*`, `view_mode`, `announce_facing`, `spatial_wall_surfaces`, `wall_probe`** — orientation: facing, turning to exits, view mode, the wall cache.
+- **`camera_*`, `viewpoint`, `announce_facing`, `spatial_wall_surfaces`, `wall_probe`** — orientation: facing, turning to exits, the wall cache.
 - **`map_*`** — the map screen: cursor, map notes, user markers.
 - **`party_*`** — party status (Ctrl+H), leader changes.
 - **`minigame_*`, `floor_puzzle`** — turret, swoop race, pazaak and puzzles. The swoop and turret cues are the only sounds the mod plays.

@@ -1,4 +1,4 @@
-# input_poll_router.h (32 lines)
+# input_poll_router.h (31 lines)
 
 Source: `patches/Accessibility/input_poll_router.h`
 
@@ -12,4 +12,4 @@ The routing ORDER is behaviour, not style. Each subsystem gets first refusal in 
 
 ## Declarations (in source order)
 
-- L29 `void PollHotkey()`: Runs once per tick from core_tick.
+- L28 `void PollHotkey()`: Runs once per tick from core_tick.

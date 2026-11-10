@@ -36,7 +36,7 @@ void LatchPreLoadDestinationK2(void* exoStringPtr);
 // by .lyt-room — K1's .lyt-rooms over-segment into slivers (94-98%
 // per-step flip rate); proximity scan over the flat list avoids that.
 //
-// Shared by cursors (map, view-mode, marker auto-name) and the AltGr facing readout.
+// Shared by the map cursor, marker auto-names and the AltGr facing readout.
 bool FindLandmarkNear(const Vector& pos, float rangeM,
                       char* nameOut, size_t nameBufSize,
                       Vector& posOut,
@@ -64,15 +64,11 @@ void MarkLandmarkClaimedByDoor(int landmarkIdx);
 // true for resref-style noise so callers fall through to other tiers.
 bool IsResrefStyleRoomName(const char* name);
 
-// True iff in-world ambient announces (room transitions, region cursor)
+// True iff in-world ambient announces (room transitions)
 // should stay silent this tick. Combat-active or UI-blocking panel.
 // Area-name transitions bypass the gate — the player just changed
 // module, the cue is always worth it.
 bool IsWorldSpeechGated();
-
-// Speaks a perceptual-region label (the walking announce and the view-mode
-// cursor's), interrupting the previous one.
-void SpeakRegionLabel(const char* text);
 
 // True between SetMoveToModuleString firing and the next fresh area
 // pointer surfacing. Probes that call into player/leader/area accessors

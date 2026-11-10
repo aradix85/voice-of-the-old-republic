@@ -139,18 +139,14 @@ bool GetActiveLeaderName(char* outBuf, size_t bufSize);
 // it: CSWPlayerControl.enabled at +0xc, and CSWCCreature::SwitchMode
 // (creature mode 0=AI / 1=player).
 //
-// armAutoRestore=true (autowalk shape): TickPlayerInputRestore flips
-// control back when the AI action queue drains, never enqueues (grace), or
-// stalls with no movement. No time cap while the PC is progressing, so long
-// walks finish naturally. A repeat disable while a session is active does
-// NOT re-arm (no window extension — the janicebug livelock guard).
-//
-// armAutoRestore=false (view mode shape): timer stays inert; caller
-// owns the matching SetPlayerInputEnabled(true). Missing it freezes
-// the player permanently (modulo a future disable + auto-restore).
+// A disable arms the auto-restore: TickPlayerInputRestore flips control
+// back when the AI action queue drains, never enqueues (grace), or stalls
+// with no movement. No time cap while the PC is progressing, so long walks
+// finish naturally. A repeat disable while a session is active does NOT
+// re-arm (no window extension — the janicebug livelock guard).
 //
 // Explicit SetPlayerInputEnabled(true) always clears the session.
-bool SetPlayerInputEnabled(bool enabled, bool armAutoRestore = true);
+bool SetPlayerInputEnabled(bool enabled);
 
 // Restore tick — queue-drain / ceiling driven. Cheap when idle (one flag
 // check); reads the action queue only while a disable session is active.

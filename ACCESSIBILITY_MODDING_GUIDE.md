@@ -431,7 +431,7 @@ The file-name prefix tells you the role. Add a new file under the right prefix.
   everything around the player.
 - **Minigames** — `minigame_pazaak`, `minigame_turret_*`, `minigame_swoop_*`,
   `minigame_aim`, `floor_puzzle`.
-- **Feature one-offs** — `view_mode`, `unified_action_menu`, `interact_dispatch`,
+- **Feature one-offs** — `unified_action_menu`, `interact_dispatch`,
   `examine_view`, `peek_description`, `help`, `hotkeys`, `input_pipeline`,
   `msg_router`, `party_*`, `stealth_watch`, `trap_watch`, `transitions`,
   `tutorial_*`, `intro_skip`, `dialog_speech`, plus area-specific fixes

@@ -1,4 +1,4 @@
-# hotkeys_user.cpp (118 lines)
+# hotkeys_user.cpp (117 lines)
 
 Source: `patches/Accessibility/hotkeys_user.cpp`
 

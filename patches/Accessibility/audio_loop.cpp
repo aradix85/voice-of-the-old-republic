@@ -8,7 +8,6 @@
 #include "audio_bus.h"
 #include "engine_player.h"
 #include "log.h"
-#include "view_mode.h"
 #include "engine_offsets_select.h"
 
 namespace acc::audio {
@@ -68,7 +67,6 @@ typedef void  (__thiscall* PFN_Stop)(void* this_);
 // at consistent world positions.
 Vector BiasForListener(const Vector& worldPosition) {
     Vector pos = worldPosition;
-    if (acc::view_mode::IsActive()) return pos;
     Vector charPos, camPos;
     if (acc::engine::GetPlayerPosition(charPos) &&
         acc::engine::GetCameraPosition(camPos)) {

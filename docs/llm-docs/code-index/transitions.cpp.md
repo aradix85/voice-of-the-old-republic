@@ -1,4 +1,4 @@
-# transitions.cpp (461 lines)
+# transitions.cpp (460 lines)
 
 Source: `patches/Accessibility/transitions.cpp`
 
@@ -9,4 +9,4 @@ Area and region changes, spoken: the per-tick tracker that notices a new area or
 - L77 `void ResetAreaState()`: Everything the module remembers about the current area.
 - L88 `void SpeakArea(void* area)`
 - L108 `void Tick()`
-- L454 `bool IsWorldSpeechGated()`
+- L453 `bool IsWorldSpeechGated()`

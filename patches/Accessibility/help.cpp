@@ -154,7 +154,6 @@ constexpr Entry kEntries[] = {
     { S::HelpKeyCameraRotate,    Grp::Movement, kWorld },
     { S::HelpKeyStrafe,          Grp::Movement, 0 },
     { S::HelpKeyPause,           Grp::Movement, 0 },
-    { S::HelpKeyViewMode,        Grp::Movement, 0 },
     { S::HelpKeySwitchLeader,    Grp::Movement, 0 },
 
     // ---- Targeting & interaction ----

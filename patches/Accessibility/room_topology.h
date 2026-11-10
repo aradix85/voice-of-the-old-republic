@@ -1,7 +1,7 @@
 // Single source of truth for "spoken label for the region at world
-// position P". Consumed by transitions (player), view_mode (cursor),
-// map_ui_cursor (inverse-projected). One decomposition per area; all
-// three can't disagree about corridor vs junction vs dead-end.
+// position P". Consumed by transitions (player) and map_ui_cursor
+// (inverse-projected). One decomposition per area, so both agree about
+// corridor vs junction vs dead-end.
 //
 // Algorithm: classify per-node by CSR-adjacency degree on the engine's
 // nav graph, then collapse hub clusters and straight corridor chains
@@ -103,7 +103,7 @@ void Reset();
 // transitions::Tick passes false to avoid 60fps log spam (bounded sites
 // still emit on real transitions).
 //
-// requireWallReachable: in-world adapters (walking, view mode) want LOS
+// requireWallReachable: the in-world adapter (walking) wants LOS
 // gating so they don't speak a cluster through a wall. The map UI
 // cursor passes false — cursor positions can sit just off-walkmesh with
 // a wall between cursor and road cluster, so LOS wrongly rejects every
@@ -118,7 +118,7 @@ void Reset();
 // levels (Ebon-Hawk hull: the raised spine corridor's label leaked to
 // a notch 3m below through a ledge the z=0 endpoint made invisible).
 // Callers with synthetic / possibly-stale z (map cursor inverse
-// projection, view-mode cursor) leave it false and keep pure-2D snap.
+// projection) leave it false and keep pure-2D snap.
 // NOTE: distance stays 2D in all cases — putting dz into the DISTANCE
 // against the always-zero node z is the variant that broke Taris
 // Sewers; the veto compares against per-node calibrated floor heights

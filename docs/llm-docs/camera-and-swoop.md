@@ -92,16 +92,16 @@ KOTOR's camera-on-a-stick behaves like a "soft" decoupled rig in stock play:
 - **The character "snaps" to camera yaw at the instant W or S is pressed** to commit forward motion. Character then walks in the camera-facing direction.
 - This is true regardless of Caps Lock state and regardless of the `CClientOptions.mouse_look` bit (verified 2026-05-06 with Shift+B probe).
 
-**Why:** This is the design implication that made view mode trivially achievable. View mode = freeze the W/S movement clobber so the snap-and-walk can't happen; A/D continues to pan camera natively. No Mouse Look forcing, no SendInput delta synthesis, no Free Look behavior swap needed. See `view_mode.cpp` + lay-off 3 progress entry.
+**Why:** Freezing the W/S movement clobber is enough to hold the character still while A/D keeps panning the camera natively. No Mouse Look forcing, no SendInput delta synthesis, no Free Look behavior swap needed.
 
-**Caps Lock "Toggle Free Look" appears to do nothing in K1** even though `CSWCameraFreeLook` exists in the binary (struct + ctor at 0x0063a5d0). Either cut, visual-only, or reachable through a chain we haven't located. Not pursued — not needed for view mode.
+**Caps Lock "Toggle Free Look" appears to do nothing in K1** even though `CSWCameraFreeLook` exists in the binary (struct + ctor at 0x0063a5d0). Either cut, visual-only, or reachable through a chain we haven't located. Not pursued.
 
 **How to apply:** When designing camera-side accessibility features, assume A/D = camera, W/S = "commit turn + walk". Don't synthesise mouse motion to pan the camera unless you specifically need finer-grained control than A/D provides; A/D is the engine-native primitive.
 
 ---
 
 ## mouselook_engine_behaviour
-_CClientOptions.mouse_look is the runtime gate; SendInput reaches engine; cursor not captured. Three load-bearing facts for view-mode design._
+_CClientOptions.mouse_look is the runtime gate; SendInput reaches engine; cursor not captured. Three load-bearing facts for a look-around feature._
 
 Three findings from Phase 4 lay-off 2 probe (`patches/Accessibility/probe_mouselook.{h,cpp}`, `engine_options.{h,cpp}`). Verified in-game 2026-05-06 — strong-positive user report of audible spatial-audio pan during synthetic mouse sweep.
 
@@ -109,12 +109,12 @@ Three findings from Phase 4 lay-off 2 probe (`patches/Accessibility/probe_mousel
 
 **2. `SendInput` relative-motion deltas reach the engine through Mouse Look ON.** `MOUSEEVENTF_MOVE` events from our DLL produce identical behaviour to a real mouse: camera rotates → camera-anchored listener rotates → spatial audio pans audibly. KOTOR is from 2003 and could have used DirectInput / raw HID polling that bypasses `SendInput`; it doesn't.
 
-**3. KOTOR does NOT capture the cursor in Mouse Look mode.** Unlike modern FPS games, the OS cursor remains free and moves with each `SendInput` delta. Over a +1000px sweep the cursor escapes the game window. Implication for view mode: continuous look-around input needs explicit `SetCursorPos` recentring between emits to keep the cursor anchored.
+**3. KOTOR does NOT capture the cursor in Mouse Look mode.** Unlike modern FPS games, the OS cursor remains free and moves with each `SendInput` delta. Over a +1000px sweep the cursor escapes the game window. Implication: continuous look-around input needs explicit `SetCursorPos` recentring between emits to keep the cursor anchored.
 
-**Why:** These are the load-bearing engine assumptions behind the view-mode design path. If any of them flipped (e.g. the engine ignored runtime bit-flips, or used raw HID, or captured the cursor), the chosen path "force Mouse Look ON + synthesise mouse motion from look-around keys" would break and view mode would need a virtual-cursor implementation instead.
+**Why:** These are the engine assumptions behind a "force Mouse Look ON + synthesise mouse motion from look-around keys" design. If any of them flipped (e.g. the engine ignored runtime bit-flips, or used raw HID, or captured the cursor), that design would break.
 
-**How to apply:** When building view-mode lay-offs (Phase 4 lay-off 3+):
-- Use `acc::engine::SetMouseLook(true)` on entry, restore prior state on exit. Chain walk + offsets in `engine_options.h`.
+**How to apply:** For a feature that drives the camera through Mouse Look:
+- Set the mouse_look bit on entry, restore the prior state on exit, preserving the sibling bits. Chain walk + offsets in `engine_options.h`, which has the read (`GetMouseLook`).
 - Drive look-around via `SendInput`-injected `MOUSEEVENTF_MOVE` deltas at tick rate. Magnitude per tick is the "mouse sensitivity" knob.
 - Recentre cursor (`SetCursorPos` to game-window centre) after each emit so the OS cursor stays anchored. KOTOR's input read takes the delta regardless of cursor position, so recentring doesn't confuse the engine.
 - Camera-anchored listener (Phase 1 lay-off 4 finding) gives audio feedback for free — no separate audio-listener wiring needed.

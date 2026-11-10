@@ -24,8 +24,7 @@
 
 namespace acc::input_poll {
 
-// Runs once per tick from core_tick. Self-gates on player-loaded and on
-// view mode owning Enter routing.
+// Runs once per tick from core_tick. Self-gates on player-loaded.
 void PollHotkey();
 
 }  // namespace acc::input_poll

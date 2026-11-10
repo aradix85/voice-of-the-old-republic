@@ -188,7 +188,7 @@ Both surfaces share one tagged catalog in `help.cpp` (`kEntries`): `grp` chooses
 
 ### World interaction
 
-- Enter — Interact with current target (engine click-pipeline path: SetLastClickedOnTarget + HandleMouseClickInWorld). Routes to view-mode owner if active.
+- Enter — Interact with current target (engine click-pipeline path: SetLastClickedOnTarget + HandleMouseClickInWorld).
 - Shift+Enter — Force-open radial action menu on current target instead of default action.
 - 1 / 2 / 3 — Bare announce of the target-action menu (engine fires the action; we add the speech). Not consumed.
 - 4 / 5 / 6 / 7 — Bare announce of the player action bar column (engine fires; we add the speech). Not consumed.
@@ -223,12 +223,6 @@ Both surfaces share one tagged catalog in `help.cpp` (`kEntries`): `grp` chooses
 ### Clipboard
 
 - Ctrl+R — Copy the last spoken string to the Windows clipboard (`speech_clipboard.cpp`), then speak a short confirmation. Not gated on game state: it behaves identically in dialog, in the journal, in any menu and in the world, which is the whole point of the key. "Last spoken" is literal — the capture sits in `speech.cpp` at the two points where text reaches NVDA (`Speak(wchar_t*)`, `Speak(char*)`), so a line that fired after the one you wanted is what gets copied. The confirmation is excluded from the capture via `acc::speech::SuppressNextCapture()`, so repeated presses re-copy the same text rather than "Copied to clipboard". Published as `CF_UNICODETEXT` (widened with `acc::speech::kGameCodepage`) so accented letters survive the paste; Windows synthesises `CF_TEXT` for ANSI consumers. The clipboard call runs on a short-lived worker thread and hands its result back to the next tick, which speaks the confirmation — the engine's main thread is an STA carrying the message loop and DirectInput dispatch, and `SetClipboardData` there wakes every clipboard listener on the system (NVDA, Windows 11 clipboard history). Same key family as bare R (re-speak the dialog line) and Shift+R (secondary radial). Alt and AltGr are both forbidden: AltGr on QWERTZ raises Alt plus a phantom Ctrl, which would otherwise make AltGr+R copy. Originally bound to Alt+R — see the Alt warning above for why it moved.
-
-### View mode (look-around without moving)
-
-- B — Toggle view mode (freezes character W/S, A/D pans camera natively).
-- Enter (in view mode) — Interact with hover target or autowalk to cursor point.
-- Shift+Enter (in view mode) — Force-radial on hover target.
 
 ### Map UI (only active when InGameMap panel is foreground)
 

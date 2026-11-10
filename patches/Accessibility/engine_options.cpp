@@ -7,9 +7,9 @@
 
 namespace acc::engine {
 
-// CClientExoAppInternal → CClientOptions. Distinct from
-// GetPlayerServerObject's chain (different final destination). Returns
-// nullptr at any null link or SEH fault.
+namespace {
+
+// Null at any null link or fault.
 void* GetClientOptions() {
     void* internal = GetClientAppInternal();
     if (!internal) return nullptr;
@@ -21,6 +21,8 @@ void* GetClientOptions() {
         return nullptr;
     }
 }
+
+}  // namespace
 
 bool GetMouseLook(bool& out) {
     void* options = GetClientOptions();

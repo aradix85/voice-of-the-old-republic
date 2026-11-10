@@ -1,4 +1,4 @@
-// CClientOptions helpers — currently the "Mouse Look" toggle.
+// CClientOptions reads: the "Mouse Look" and "Action Menu" auto-pause options.
 //
 // Chain: *kAddrAppManagerPtr → +0x4 CClientExoApp* → +0x4 Internal* →
 // +0x4 CClientOptions* → +0x8 int bitfield, bit 1 (mask 0x2) = mouse_look.
@@ -31,10 +31,6 @@ bool GetMouseLook(bool& out);
 // CClientOptions::SetDefaultAutopauseOptions). False on chain failure or SEH;
 // out untouched.
 bool GetActionMenuAutoPause(bool& out);
-
-// Resolved CClientOptions* for diagnostic probes. Production code uses
-// Get/Set/ToggleMouseLook.
-void* GetClientOptions();
 
 }  // namespace acc::engine
 

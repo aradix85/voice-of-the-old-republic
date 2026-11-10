@@ -27,12 +27,6 @@
 //     north/south), phrased as per-axis cardinal offsets,
 //   - reset-plate identification (its name plus the "all plates dark"
 //     delta says what it does),
-//   - view-mode (B) support: while the character is frozen and the player
-//     sweeps the virtual cursor, the entry + nearest-plate distance
-//     announcements track the CURSOR instead of the leader. The cursor
-//     never toggles a plate, so no lit/dark delta can fire in this mode —
-//     only positional lines ("Plate North-West, 1 metre north", "Stepped on
-//     Plate North-West"),
 //   - a solved announcement, after which the module goes quiet (the
 //     engine inerts the plates via the UNK_TILES global; we mirror that
 //     by observing the all-lit board).

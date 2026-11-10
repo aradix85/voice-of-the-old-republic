@@ -1,4 +1,4 @@
-# exit_memory_overview.cpp (466 lines)
+# exit_memory_overview.cpp (465 lines)
 
 Source: `patches/Accessibility/exit_memory_overview.cpp`
 
@@ -6,10 +6,10 @@ The exploration overview (Ctrl+N, the bridge's /overview), loot still to search,
 
 ## Declarations (in source order)
 
-- L54 `void CollectLoot(std::vector<LootSpot>& out)`: Loot left: containers holding items, and items on the ground, nearest first (straight line).
-- L98 `void FlushReminder()`
-- L121 `bool CollectOverview(Overview& o)`
-- L283 `std::string OverviewText(const Overview& o)`
-- L360 `void PollOverviewHotkey()`
-- L382 `void WarnIfBehindLock(void* target)`
-- L410 `void RemindLootOnLeaving(void* target)`
+- L53 `void CollectLoot(std::vector<LootSpot>& out)`: Loot left: containers holding items, and items on the ground, nearest first (straight line).
+- L97 `void FlushReminder()`
+- L120 `bool CollectOverview(Overview& o)`
+- L282 `std::string OverviewText(const Overview& o)`
+- L359 `void PollOverviewHotkey()`
+- L381 `void WarnIfBehindLock(void* target)`
+- L409 `void RemindLootOnLeaving(void* target)`

@@ -165,25 +165,6 @@ source = "esi"
 type = "pointer"
 
 [[hooks]]
-# OnSetListenerPosition -- was 0x005d5df0 (+512 bytes)
-address = 0x005d5ff0
-type = "detour"
-function = "OnSetListenerPosition"
-original_bytes = [0x8b, 0x09, 0x85, 0xc9, 0x74, 0x05]
-skip_original_bytes = true
-exclude_from_restore = ["eax"]
-# was 0x005d5dfb (+512 bytes)
-consumed_exit_address = 0x005d5ffb
-
-[[hooks.parameters]]
-source = "ecx"
-type = "pointer"
-
-[[hooks.parameters]]
-source = "esp+4"
-type = "pointer"
-
-[[hooks]]
 # OnCalculatePitchVarianceFrequency -- was 0x005db3d0 (+432 bytes)
 address = 0x005db580
 type = "detour"

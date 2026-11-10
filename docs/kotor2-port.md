@@ -631,9 +631,8 @@ weapon set. What landed:
   table (its 0x3f entry 0x004687e0 is a distance-culling loop); the
   9.3KB switch at 0x00648cc0 is the EVENT dispatcher (its 0x3f
   compares are animation ids).
-- K2 also natively binds **B = WALKMODIFY (keymap row 66, Action268)**
-  under the mod's view-mode B — untested collision, decide rebind vs
-  move in a later batch. (K1 binds row 65 to B, inert there.)
+- K2 also natively binds **B = WALKMODIFY (keymap row 66, Action268)**.
+  (K1 binds row 65 to B, inert there.)
 
 **Examine/status accessor batch (the Batch-4 "later pass") — IMPLEMENTED
 2026-08-11. Built green, applied, awaiting test.** Closes the whole
@@ -1462,8 +1461,7 @@ rounds, one kotor1 round, heavy capstone work; zero test rounds spent).
 7. **Audio cues (5):** the wall/proximity cue set should now PLAY (was
    open defect 3 — `drop-engine-fail` should disappear). Volume slider
    in mod settings still routes cues; cue pitch is stable across fires
-   (the jitter neutraliser consumes the K2 twin). View-mode cursor
-   listener override works (ListenerHook channel).
+   (the jitter neutraliser consumes the K2 twin).
 8. **KOTOR 1 regression pass:** menus + charsheet/equip/inventory/journal/
    abilities read; one fight with queue announces; pause; cues + volume
    slider; editbox typing. Shared code touched: monitors guard sweep,

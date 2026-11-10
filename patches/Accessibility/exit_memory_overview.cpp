@@ -13,7 +13,6 @@
 #include "speech.h"
 #include "same_name_suffix.h"
 #include "strings.h"
-#include "view_mode.h"         // routes are from the player, not the cursor
 
 namespace acc::exit_memory {
 
@@ -380,7 +379,7 @@ void PollOverviewHotkey() {
 }
 
 void WarnIfBehindLock(void* target) {
-    if (!target || acc::view_mode::IsActive()) return;
+    if (!target) return;
     Vector pos;
     if (!acc::engine::GetObjectPosition(target, pos)) return;
     bool behind = false;

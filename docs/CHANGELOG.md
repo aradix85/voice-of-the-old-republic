@@ -99,10 +99,11 @@ installer, as the pre-release `bridge-latest`.
   support, no SAPI or compass voice and no 3D speech.
 - The exploration sounds are gone: what they told you is said in words.
 - Ctrl+- describes the route step by step instead of starting a sound beacon.
-- The map cursor says "Edge of the map" and the view-mode cursor says "Wall".
+- The map cursor says "Edge of the map".
 - The combat heartbeat is gone.
 - The mod and the installer are English only and assume the English game.
 - Keyboard only: the mod's gamepad support is gone.
+- View mode (B) is gone.
 - Enter on an open door walks through it.
 - Endar Spire: Trask as party leader can no longer try the door that must be
   opened by your own character.
@@ -303,8 +304,7 @@ installer, as the pre-release `bridge-latest`.
   exploration entries. The minigame cues (swoop race, turret) stay.
 - Ctrl+- (Ctrl+/) describes the route to the focused object step by step;
   it used to arm a sound beacon. N turns to exits only.
-- The map cursor says "Edge of the map" once per push against the edge, and
-  the view-mode cursor says "Wall" once per contact.
+- The map cursor says "Edge of the map" once per push against the edge.
 
 <h3>Language:</h3>
 
@@ -322,6 +322,8 @@ installer, as the pre-release `bridge-latest`.
   the tutorial hints and swoop race lines, the KOTOR 1 quick menu and the
   KOTOR 2 pad action menu. KOTOR 2's own controller support is the game's and
   is unchanged.
+- View mode is gone: B does nothing, and its line in F1 and its row in the key
+  settings went with it.
 
 <h3>Help:</h3>
 

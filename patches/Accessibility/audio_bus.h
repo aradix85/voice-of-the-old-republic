@@ -74,9 +74,6 @@ bool PlayCue(const char* resref,
 // listener-to-source, producing character-relative pan/distance without
 // touching the listener (every other engine sound stays unaffected).
 //
-// During view mode the offset is skipped — the listener detour already
-// substitutes the virtual cursor, and cues there should be cursor-relative.
-//
 // baseVolume is the per-cue base (0..127); the global slider scales it.
 // priorityGroup: 0 (default) = GetCuePriorityGroup(). Pass a specific
 // group for cues that fire while the world is paused under a sub-screen's
@@ -150,9 +147,8 @@ const uintptr_t kAddrCExoSoundPlayOneShotSound = acc::addr::Pick(0x005D5E00, 0x0
 // before forwarding to the internal 0x00708510.
 const uintptr_t kAddrCExoSoundPlay3DOneShotSound = acc::addr::Pick(0x005D5E10, 0x0070BA90);
 
-// CExoSound::SetListenerPosition(Vector*) — __thiscall. Engine writes
-// this every frame from the camera; we detour rather than race that
-// from OnUpdate. Hook target for view-mode listener override.
+// CExoSound::SetListenerPosition(Vector*), __thiscall. The engine writes
+// it every frame from the camera. Not hooked.
 // K2 facade 0x0070B940: same single-Vector* forward into the internal
 // AIL-listener writer (0x007082D0 → _AIL_set_listener_3D_position).
 const uintptr_t kAddrCExoSoundSetListenerPosition = acc::addr::Pick(0x005D5DF0, 0x0070B940);

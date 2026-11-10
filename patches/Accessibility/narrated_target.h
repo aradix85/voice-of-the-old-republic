@@ -6,7 +6,7 @@
 // their own focus independently.
 //
 // Stamp sites — passive_narrate (engine ShowObject), cycle_input
-// (`,`/`.`/`-`), view_mode hover-pause. Non-name narration (pre-rolls,
+// (`,`/`.`/`-`). Non-name narration (pre-rolls,
 // empty-state phrases, heading/turn/route lines) does NOT stamp.
 //
 // Two slot shapes: game-object (uses server handle for validation) and

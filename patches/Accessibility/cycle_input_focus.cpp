@@ -17,7 +17,7 @@
 #include "narrated_target.h"
 #include "speech.h"
 #include "strings.h"
-#include "view_mode.h"
+#include "viewpoint.h"
 
 namespace acc::cycle_input {
 
@@ -150,9 +150,9 @@ void OnAnnounceFocus() {
     // clamps to.
     Vector viewPos{};
     float yaw = 0.0f;
-    bool havePos = acc::view_mode::GetEffectiveReferencePosition(viewPos);
+    bool havePos = acc::engine::GetPlayerPosition(viewPos);
     bool haveYaw = havePos &&
-                   acc::view_mode::GetEffectiveOrientationYawDegrees(yaw);
+                   acc::viewpoint::YawDegrees(yaw);
     int clock = 12;
     int metres = 0;
     if (havePos) {

@@ -113,15 +113,9 @@ enum class Id : int {
     //                         focused (e.g. user hasn't cycled yet, or the
     //                         previously-focused object dropped out of
     //                         scope).
-    //      `GuidingToPoint`   is spoken when view-mode Enter / Shift+Enter
-    //                         dispatches a raw walk-to-cursor (no hover
-    //                         target under the virtual cursor). No format
-    //                         args — the destination is the cursor's world
-    //                         position, which has no name.
     FmtGuidingTo,
     FmtGuidingFailed,
     GuidanceNoFocus,
-    GuidingToPoint,
 
     // ---- Cancel-on-second-press (Shift+- toggle behaviour). Spoken
     //      when an in-flight autowalk is cancelled via
@@ -584,19 +578,6 @@ enum class Id : int {
     FmtFacingWorld,
     FmtFacingMap,
 
-    // ---- Phase 4 lay-off 3 — view mode toggle (B). The "stop and look
-    //      around" mode: character is frozen, camera stays under the
-    //      user's control, no triggers / combat fire while active. The
-    //      skeleton lay-off captures Mouse Look state + cursor position
-    //      on enter; further input mapping (keyboard-driven camera) lands
-    //      in lay-off 4 once the camera-behavior probe (Shift+B) tells
-    //      us whether we drive the engine's native Free Look or fall
-    //      back to forcing Mouse Look ON.
-    ViewModeOn,
-    ViewModeOff,
-    // Spoken when the view-mode cursor runs into a wall.
-    ViewModeWall,
-
     // ---- Save / Load game panel (CSWGuiSaveLoad).
     //      `FmtSaveLoadRow`      — row navigation with location enrichment.
     //                              Args: row_text (`%s`), planet (`%s`),
@@ -744,8 +725,7 @@ enum class Id : int {
     // ---- Toggle (checkbox) element-state suffix. Appended (with leading
     //      ", ") to an options-screen toggle's announced label to voice its
     //      on/off state — e.g. "Subtitles, on". Read
-    //      from the control via ReadToggleState. Distinct from the full
-    //      ViewModeOn/MouseLookOn *phrases*: these are bare name-tag
+    //      from the control via ReadToggleState. Bare name-tag
     //      suffixes, same register as DisabledSuffix.
     ToggleOn,
     ToggleOff,
@@ -1742,7 +1722,6 @@ enum class Id : int {
     HelpKeyCameraRotate,
     HelpKeyStrafe,
     HelpKeyPause,
-    HelpKeyViewMode,
     HelpKeySwitchLeader,
     // Targeting & interaction (in-world).
     HelpKeyCycleTargets,
@@ -1929,7 +1908,6 @@ enum class Id : int {
     KbNamePartyLeaderAnnounce,
     KbNameCameraOrient,
     KbNameSaveMarkerAtCursor,
-    KbNameViewModeToggle,
     //      Menus & input:
     KbNameNavUp,
     KbNameNavDown,

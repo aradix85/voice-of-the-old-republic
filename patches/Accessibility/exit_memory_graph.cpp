@@ -10,7 +10,6 @@
 #include "log.h"
 #include "shortest_paths.h"
 #include "strings.h"
-#include "view_mode.h"         // routes are from the player, not the cursor
 
 namespace acc::exit_memory {
 
@@ -327,7 +326,6 @@ int TransitionSliverOwner(void* area, int region, Vector* outCentre) {
 bool UnreachableFlags(void* const* objs, const Vector* positions, int count,
                       bool* out) {
     if (!positions || !out || count <= 0) return false;
-    if (acc::view_mode::IsActive()) return false;
     Vector player;
     if (!acc::engine::GetPlayerPosition(player)) return false;
     Graph g;

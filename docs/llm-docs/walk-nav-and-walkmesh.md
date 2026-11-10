@@ -188,9 +188,7 @@ But areas are stitched together from multiple rooms via **portals / AABB structu
 **How to apply:**
 - `engine_area::BuildAreaWallCache` does post-scan **seam filtering**: for every pair of emitted edges in different rooms with coincident world-space endpoints (≤1cm), drop both. Real outer walls (emitted by ONE room only) survive; double-emitted boundary seams are dropped.
 - Observed seam rate on Endar Spire start area: 30/494 ≈ 6%. Larger hub areas (Taris, Dantooine) likely higher — they're stitched from more rooms. O(N²) filter cost stays fine at observed N.
-- Two consumers depend on this filtering being correct:
-  - **Pillar 2** view-mode virtual-cursor collision (`view_mode::SegmentCrossesWalkmesh`)
-  - **Pillar 3** path-smoothing in `guidance_pathfind::ComputePath`
+- Path-smoothing in `guidance_pathfind::ComputePath` depends on this filtering being correct.
 - Symptom of regression / breakage: smoother's `Smooth: BLOCK` log entries where the blocking edge has `material_id` for a *floor* material (e.g. 10=Metal) and is emitted from a single room but lines up suspiciously with a known walkable seam → either seam filter wasn't called or epsilon needs tuning.
 - Verified live 2026-05-12 on Endar Spire: removed SE-detour from path to Einfache Sicherheitstür, 4 waypoints → 2.
 

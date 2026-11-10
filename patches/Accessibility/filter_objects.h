@@ -26,9 +26,7 @@ enum class CycleCategory : int {
 // project rule, logs stay English and speech goes through strings::Get(Id).
 const char* CategoryName(CycleCategory c);
 
-// Localised, for speech. Lives here next to CategoryName because it is the
-// same mapping in the other direction; view_mode.cpp and passive_narrate.cpp
-// each carried a byte-identical private copy before Phase-3 B6.
+// Localised, for speech: the same mapping as CategoryName.
 acc::strings::Id CategoryNameId(CycleCategory c);
 
 // SEH-guarded via engine_area::GetObjectKind.

@@ -53,7 +53,6 @@
 #include "trap_watch.h"
 #include "minigame_turret.h"
 #include "transitions.h"
-#include "view_mode.h"
 #include "engine_game.h"
 
 // core_dllmain.cpp: the once-per-session stand-up (guards, speech, config
@@ -240,8 +239,6 @@ void Dispatch() {
         PHASE("probe_camera_distance", acc::probe_camera_distance::Tick());
     }
 
-    PHASE("view_mode.poll", acc::view_mode::PollWin32());
-
     // Cycle keys (`,` `.` `-`) and AltGr: the engine drops unbound scancodes.
     PHASE("cycle_input", acc::cycle_input::PollWin32());
     PHASE("announce_facing", acc::announce_facing::PollWin32());
@@ -271,8 +268,7 @@ void Dispatch() {
     // camera_orient reads it in the same frame for closed-loop arrival;
     // wall_surfaces rebuilds the wall cache on an area change; transitions
     // builds room_topology from that cache, so after wall_surfaces or the
-    // first tick in a new area uses the old area's walls; view_mode reads the
-    // camera yaw, the walls and the region caches.
+    // first tick in a new area uses the old area's walls.
     PHASE("camera_announce", acc::camera_announce::Tick());
     // After camera_announce so its same-sector dedup sees this frame's
     // last-spoken direction.
@@ -301,7 +297,6 @@ void Dispatch() {
 
     // Sighted-parity trap warnings off the engine's detected-by lists.
     PHASE("trap_watch", acc::trap_watch::Tick());
-    PHASE("view_mode", acc::view_mode::Tick());
     PHASE("map_ui_cursor", acc::map_ui_cursor::Tick());
 
     // Stuck detection for OnPlayFootstep.

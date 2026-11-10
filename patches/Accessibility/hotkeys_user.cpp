@@ -107,7 +107,6 @@ bool IsUserRebindable(Action a) {
     case Action::ProbeCameraDump:
     case Action::ProbeCameraDistDump:
     case Action::ProbeCameraDistClampToggle:
-    case Action::CameraStateProbe:
         return false;
     default:
         return true;

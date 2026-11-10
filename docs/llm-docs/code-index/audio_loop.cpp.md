@@ -1,4 +1,4 @@
-# audio_loop.cpp (267 lines)
+# audio_loop.cpp (265 lines)
 
 Source: `patches/Accessibility/audio_loop.cpp`
 
@@ -10,11 +10,11 @@ Lifecycle: Start → optional UpdatePosition per tick → Stop. Destructor auto-
 
 ## Declarations (in source order)
 
-- L69 `Vector BiasForListener(const Vector& worldPosition)`: Mirrors PlayCue3D's character-relative bias so loops + impacts land at consistent world positions.
-- L84 `void TeardownEngineSource(void* src, const char* whence)`: Used by Stop and the Start error path.
-- L98 `LoopSource::~LoopSource()`
-- L102 `bool LoopSource::Start(const char* resref, const Vector& worldPosition, bool looping, bool spatial, int priorityGroup, int volumeByte, float maxVolDist, float minVolDist)`
-- L191 `void LoopSource::UpdatePosition(const Vector& worldPosition)`
-- L205 `void LoopSource::UpdateVolume(int volumeByte)`
-- L220 `void LoopSource::SetPitchMultiplier(float multiplier)`
-- L250 `void LoopSource::Stop()`
+- L68 `Vector BiasForListener(const Vector& worldPosition)`: Mirrors PlayCue3D's character-relative bias so loops + impacts land at consistent world positions.
+- L82 `void TeardownEngineSource(void* src, const char* whence)`: Used by Stop and the Start error path.
+- L96 `LoopSource::~LoopSource()`
+- L100 `bool LoopSource::Start(const char* resref, const Vector& worldPosition, bool looping, bool spatial, int priorityGroup, int volumeByte, float maxVolDist, float minVolDist)`
+- L189 `void LoopSource::UpdatePosition(const Vector& worldPosition)`
+- L203 `void LoopSource::UpdateVolume(int volumeByte)`
+- L218 `void LoopSource::SetPitchMultiplier(float multiplier)`
+- L248 `void LoopSource::Stop()`

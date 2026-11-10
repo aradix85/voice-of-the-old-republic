@@ -66,8 +66,6 @@ const char* const kActionNames[] = {
     "ExploreWalkUnexplored",
     "ExploreWalkLoot",
     "PartyStatusAnnounce",
-    "ViewModeToggle",
-    "CameraStateProbe",
     "EditboxReReadUp",
     "EditboxReReadDown",
     "EditboxSubmit",

@@ -12,8 +12,6 @@
 #include "map_shipped_hints.h"
 #include "map_user_markers.h"
 #include "menus_modsettings.h"
-#include "view_mode.h"          // GetEffectiveReferencePosition —
-                                // cursor-anchored while view mode is on
 
 namespace acc::cycle {
 
@@ -96,13 +94,9 @@ bool BuildCategoryListing(acc::filter::CycleCategory category,
                           acc::filter::CycleContext ctx) {
     out.count = 0;
 
-    // Reference point for the distance sort and the spoken metres. View
-    // mode freezes the creature and gives W/S to the virtual cursor, so a
-    // player-anchored listing stops responding to the user's exploration
-    // the moment view mode is on. AnnounceCurrent measures its clock from this
-    // same viewpoint, so the two halves of one spoken line always agree.
+    // Reference point for the distance sort and the spoken metres.
     Vector refPos{};
-    if (!acc::view_mode::GetEffectiveReferencePosition(refPos)) return false;
+    if (!acc::engine::GetPlayerPosition(refPos)) return false;
 
     void* area = acc::engine::GetCurrentArea();
     if (!area) {

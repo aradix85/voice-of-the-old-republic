@@ -2,7 +2,7 @@
 
 Source: `patches/Accessibility/room_topology.h`
 
-Single source of truth for "spoken label for the region at world position P". Consumed by transitions (player), view_mode (cursor), map_ui_cursor (inverse-projected). One decomposition per area; all three can't disagree about corridor vs junction vs dead-end.
+Single source of truth for "spoken label for the region at world position P". Consumed by transitions (player) and map_ui_cursor (inverse-projected). One decomposition per area, so both agree about corridor vs junction vs dead-end.
 
 Algorithm: classify per-node by CSR-adjacency degree on the engine's nav graph, then collapse hub clusters and straight corridor chains into perceptual regions. Implementation lives in room_topology.cpp.
 

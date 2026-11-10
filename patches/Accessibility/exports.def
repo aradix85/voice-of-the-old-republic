@@ -13,7 +13,6 @@ EXPORTS
     OnSetMoveToModuleString
     OnSetMoveToModuleStringK2
     OnPlayFootstep
-    OnSetListenerPosition
     OnCalculatePitchVarianceFrequency
     OnSwitchToSWInGameGui
     OnSwitchToSWInGameGuiK2

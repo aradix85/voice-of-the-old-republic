@@ -37,9 +37,6 @@
 // region that leads toward it, how many unexplored regions sit behind
 // locked doors, and the loot containers with items and the items on the
 // ground that are left, nearest first.
-//
-// Only the player's own region announces are annotated; the view-mode
-// cursor keeps the plain label.
 
 #pragma once
 
@@ -152,7 +149,7 @@ void PollOverviewHotkey();
 //     back"), plus the way there when the door is in another region;
 //   * anything else in another region: the way there ("via Door 2 East,
 //     about 30 metres to walk", or "behind a locked door").
-// Empty when there is nothing to add (same region, no graph, view mode).
+// Empty when there is nothing to add (same region, no graph).
 // Game codepage, localized.
 std::string TargetWayInfo(void* obj, const Vector& pos);
 
@@ -165,7 +162,7 @@ void RemindLootOnLeaving(void* target);
 // For the , / . cycles: out[i] = true when positions[i] (objs[i], may be
 // null) can be reached from the player only through a locked door, or lies
 // in a region the graph has no way to. Doors count by the side the player
-// walks up to. False (out untouched) without a graph or in view mode.
+// walks up to. False (out untouched) without a graph.
 // Reads no cycle listings, so cycle_state may call it.
 bool UnreachableFlags(void* const* objs, const Vector* positions, int count,
                       bool* out);

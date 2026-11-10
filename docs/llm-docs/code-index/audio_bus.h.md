@@ -1,4 +1,4 @@
-# audio_bus.h (218 lines)
+# audio_bus.h (214 lines)
 
 Source: `patches/Accessibility/audio_bus.h`
 
@@ -13,9 +13,9 @@ CExoSound* lives at *kAddrCExoSoundPtr; can be nullptr early in DLL-attach. All 
 - L44 `int GetGlobalCueVolumePercent()`
 - L52 `uint8_t GetCuePriorityGroup()`: Priority group our one-shot cues ride.
 - L66 `bool PlayCue(const char* resref, uint8_t priorityGroup = 0, uint8_t baseVolume = kCueVolumeFull)`: 2D one-shot cue (centred, no spatial position).
-- L86 `bool PlayCue3D(const char* resref, const Vector& worldPosition, uint8_t priorityGroup = 0, uint8_t baseVolume = kCueVolumeFull)`: 3D positional one-shot.
-- L101 `bool PlayCue3DRaw(const char* resref, const Vector& listenerSpacePosition, uint8_t priorityGroup = 0, uint8_t baseVolume = kCueVolumeFull)`: Same one-shot WITHOUT the (camera - character) shift: the position is taken as already relative to the engine's own listener (the camera).
-- L112 `struct CResRef`: Engine resource-reference tag: a fixed 16-byte, NOT necessarily NUL-terminated char buffer.
-- L116 `void FillResRef(CResRef& out, const char* tag)`
+- L83 `bool PlayCue3D(const char* resref, const Vector& worldPosition, uint8_t priorityGroup = 0, uint8_t baseVolume = kCueVolumeFull)`: 3D positional one-shot.
+- L98 `bool PlayCue3DRaw(const char* resref, const Vector& listenerSpacePosition, uint8_t priorityGroup = 0, uint8_t baseVolume = kCueVolumeFull)`: Same one-shot WITHOUT the (camera - character) shift: the position is taken as already relative to the engine's own listener (the camera).
+- L109 `struct CResRef`: Engine resource-reference tag: a fixed 16-byte, NOT necessarily NUL-terminated char buffer.
+- L113 `void FillResRef(CResRef& out, const char* tag)`
 
 Also 21 constants or variables at namespace scope.

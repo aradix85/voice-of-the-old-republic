@@ -1,8 +1,8 @@
-# engine_options.cpp (54 lines)
+# engine_options.cpp (56 lines)
 
 Source: `patches/Accessibility/engine_options.cpp`
 
-(From engine_options.h.) CClientOptions helpers — currently the "Mouse Look" toggle.
+(From engine_options.h.) CClientOptions reads: the "Mouse Look" and "Action Menu" auto-pause options.
 
 Chain: *kAddrAppManagerPtr → +0x4 CClientExoApp* → +0x4 Internal* → +0x4 CClientOptions* → +0x8 int bitfield, bit 1 (mask 0x2) = mouse_look.
 
@@ -12,6 +12,6 @@ User-facing swkotor.ini "Mouse Look=N" matches CClientOptions.mouse_look exclusi
 
 ## Declarations (in source order)
 
-- L13 `void* GetClientOptions()`: CClientExoAppInternal → CClientOptions.
-- L25 `bool GetMouseLook(bool& out)`
-- L39 `bool GetActionMenuAutoPause(bool& out)`
+- L13 `void* GetClientOptions()`: Null at any null link or fault.
+- L27 `bool GetMouseLook(bool& out)`
+- L41 `bool GetActionMenuAutoPause(bool& out)`

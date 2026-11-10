@@ -1,4 +1,4 @@
-# transitions.h (96 lines)
+# transitions.h (92 lines)
 
 Source: `patches/Accessibility/transitions.h`
 
@@ -19,7 +19,6 @@ Speech uses interrupt=false — transitions don't talk over in-flight cycle / in
 - L53 `bool IterateLandmarks(void* area, int& cursor, char* nameOut, size_t nameBufSize, Vector& posOut, int& outLandmarkIdx)`: Walk the cache.
 - L60 `void MarkLandmarkClaimedByDoor(int landmarkIdx)`: room_topology embedded this landmark into a cluster label — suppress the per-tick proximity announce so the same name doesn't fire twice within a second.
 - L65 `bool IsResrefStyleRoomName(const char* name)`: Vanilla CSWSArea.room_names[] entries are .lyt-room ids ("m01aa_10", "stunt_03_main"); mods occasionally supply friendly strings.
-- L71 `bool IsWorldSpeechGated()`: True iff in-world ambient announces (room transitions, region cursor) should stay silent this tick.
-- L75 `void SpeakRegionLabel(const char* text)`: Speaks a perceptual-region label (the walking announce and the view-mode cursor's), interrupting the previous one.
-- L84 `bool IsModuleLoadPending()`: True between SetMoveToModuleString firing and the next fresh area pointer surfacing.
-- L93 `void NotifyExternalLoadStarting(const char* reason)`: Arm the module-load latch for a load path the OnSetMoveToModuleString detour doesn't see — specifically a save-game LOAD launched from the menu (the engine reconstructs the whole in-game GUI without routing through Se...
+- L71 `bool IsWorldSpeechGated()`: True iff in-world ambient announces (room transitions) should stay silent this tick.
+- L80 `bool IsModuleLoadPending()`: True between SetMoveToModuleString firing and the next fresh area pointer surfacing.
+- L89 `void NotifyExternalLoadStarting(const char* reason)`: Arm the module-load latch for a load path the OnSetMoveToModuleString detour doesn't see — specifically a save-game LOAD launched from the menu (the engine reconstructs the whole in-game GUI without routing through Se...

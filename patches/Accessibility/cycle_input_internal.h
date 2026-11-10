@@ -18,7 +18,7 @@
 namespace acc::cycle_input {
 
 // The o'clock of a target, 1..12 with 12 directly ahead (engine_compass).
-// The yaw fed in is the CAMERA's, via view_mode::GetEffectiveViewpoint —
+// The yaw fed in is the CAMERA's, via viewpoint::Get —
 // never the creature's: KOTOR's A/D orbits the camera and leaves the body
 // pointing where it was until W/S commits a step, so a body-anchored clock
 // would not move when the user turns.

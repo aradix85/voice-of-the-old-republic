@@ -1,5 +1,5 @@
 // Enter / Shift+Enter on the narrated target. DispatchInteract is the one
-// pipeline every caller shares (Enter, view mode, the bridge, door
+// pipeline every caller shares (Enter, the bridge, door
 // walk-through, exploration).
 
 #include "interact_dispatch.h"
@@ -70,7 +70,7 @@ void SpeakWithName(acc::strings::Id fmt, const char* name, char* out, size_t cap
 }
 
 // The interact target is whatever was last spoken as a target name
-// (narrated_target: passive narration, the cycle keys, view-mode hover). No
+// (narrated_target: passive narration, the cycle keys). No
 // fallback to the engine's LastTarget, which can hold something the user
 // never heard. `outHandle` gets the server-side handle.
 void* ResolveInteractTarget(uint32_t* outHandle) {

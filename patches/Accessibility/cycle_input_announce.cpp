@@ -13,7 +13,7 @@
 #include "same_name_suffix.h"
 #include "speech.h"
 #include "strings.h"
-#include "view_mode.h"
+#include "viewpoint.h"
 
 namespace acc::cycle_input {
 
@@ -227,7 +227,7 @@ void AnnounceCurrent(const acc::cycle::CategoryListing& listing,
 
     Vector viewPos{};
     float yaw = 0.0f;
-    bool haveYaw = acc::view_mode::GetEffectiveViewpoint(viewPos, yaw);
+    bool haveYaw = acc::viewpoint::Get(viewPos, yaw);
     int clock = 12;
     if (haveYaw) {
         clock = ClockPosition(yaw, objPos.x - viewPos.x,

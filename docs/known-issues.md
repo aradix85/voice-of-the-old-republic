@@ -359,10 +359,10 @@ in-world dispatch runs over a foreground panel that is not a world-level
 surface (`IsWorldLevelForegroundKind` — HUD, pause, bark, fade, Unknown). Grep
 tester bundles for `GATE GAP` before adding kinds by guesswork.
 
-Also open: three separate lists now describe "is the UI in the way" —
-`IsForegroundUiBlocking`'s blacklist, `view_mode.cpp`'s stricter copy, and the
-new world-level allow-list. They agree today (all three were updated together);
-they are a consolidation candidate, not a bug.
+Also open: two separate lists describe "is the UI in the way" —
+`IsForegroundUiBlocking`'s blacklist and the world-level allow-list. They
+agree today (both were updated together); they are a consolidation
+candidate, not a bug.
 
 ### Grass crash — worked around with `Grass=0`, root cause not fully pinned
 
@@ -385,7 +385,7 @@ Until 0.7.3 nothing published a tick timestamp. `core_tick` was built as a dispa
 Sorted by what the clock is used for:
 
 - **Deadlines** ("have N ms passed") — the large majority, and correct as-is: one quantum of error against a window of hundreds of ms. No migration needed.
-- **Integration** (`speed × dt` — `map_ui_cursor`, `view_mode` cursor stepping) — also correct, because both update their last-stamp unconditionally, so a zero-length tick contributes nothing and the next tick's dt covers the gap; the dts still sum to real elapsed time.
+- **Integration** (`speed × dt` — `map_ui_cursor` cursor stepping) — also correct, because it updates its last-stamp unconditionally, so a zero-length tick contributes nothing and the next tick's dt covers the gap; the dts still sum to real elapsed time.
 - **Differentiation** (`rate = delta / dt`) — the only unsafe pattern, because a near-zero interval does not degrade a rate, it falsifies it. Three sites: `camera_announce` (fixed in 0.7.3 — it reported 0°/s mid-turn and fired three spurious stop cues in one second), `audio_footstep_suppress` (divides over a ≥500 ms window, ~3% error, fine), and `camera_spin_guard` (per-tick yaw delta; a `dt > 0` guard prevents a divide-by-zero but a zero-length tick reports 0°/s, so the edge-spin guard can skip a correction tick — shipped behaviour, self-correcting next frame, not yet fixed).
 
 **Open question:** whether to migrate more broadly or leave the deadline sites alone. Current judgement is to leave them — they are correct, and a mass change would be a lot of untested behaviour for no benefit. Revisit if a third differentiation site appears, or if a high-refresh-rate tester reports timing-dependent oddities.

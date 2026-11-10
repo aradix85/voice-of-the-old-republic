@@ -97,7 +97,7 @@ int GetPlayerActionQueueDepth() {
     }
 }
 
-bool SetPlayerInputEnabled(bool enabled, bool armAutoRestore) {
+bool SetPlayerInputEnabled(bool enabled) {
     void* playerControl = GetPlayerControl();
     if (!playerControl) return false;
 
@@ -116,7 +116,7 @@ bool SetPlayerInputEnabled(bool enabled, bool armAutoRestore) {
         g_disableExpiresAt = 0;
         g_sawPending = false;
         g_haveProgress = false;
-    } else if (armAutoRestore) {
+    } else {
         // Arm a queue-watched session. A *fresh* disable starts the latch,
         // progress tracker and unreadable-ceiling; a repeat disable while a
         // session is already active is a no-op for our bookkeeping — the
@@ -129,14 +129,10 @@ bool SetPlayerInputEnabled(bool enabled, bool armAutoRestore) {
             g_sawPending = false;
             g_haveProgress = false;
         }
-    } else {
-        // Sustained disable — caller manages the lifecycle (view mode).
-        g_disableActive = false;
-        g_disableExpiresAt = 0;
     }
-    acclog::Write("PlayerInput", "SetEnabled(%s, armAutoRestore=%d) — was disabled=%d, "
+    acclog::Write("PlayerInput", "SetEnabled(%s) - was disabled=%d, "
         "now disabled=%d, expires=%lu",
-        enabled ? "true" : "false", armAutoRestore ? 1 : 0,
+        enabled ? "true" : "false",
         wasActive ? 1 : 0, g_disableActive ? 1 : 0,
         static_cast<unsigned long>(g_disableExpiresAt));
     return true;

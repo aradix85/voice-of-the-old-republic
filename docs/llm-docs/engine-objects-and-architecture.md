@@ -243,9 +243,7 @@ The "player-control-mode dominance" hypothesis from `docs/navsystem-progress.md`
 
 **How to apply:** Call `SetEnabled(0)` before dispatching a player-action that's expected to take multiple ticks (engine-action picker dispatch, anchor-walk dispatch). Watchdog the action to completion, call `SetEnabled(1)` to restore manual control. Permanent disable would regress `turn_announce` (server-side yaw stops updating because creature doesn't move from input) but `camera_announce` survives (camera block runs unconditionally). The natural-experiment confirmation exists in vanilla — Tab swaps active party member and uses this exact toggle path.
 
-**Two lifecycle variants on our `acc::engine::SetPlayerInputEnabled` wrapper:**
-- `armAutoRestore=true` (default) — autowalk shape: 3-second auto-restore timer arms; `TickPlayerInputRestore()` from OnUpdate flips back to enabled. Each new disable call extends the window.
-- `armAutoRestore=false` — sustained-disable shape: no timer, caller responsible for matching `SetEnabled(true)`. Used by view mode (Phase 4 lay-off 3, verified 2026-05-06) where the disable lasts until the user toggles off. The 3s timer would silently re-enable mid-session and W/S would resume walking — verified bug in `patch-20260506-113051.log`.
+Our `acc::engine::SetPlayerInputEnabled(false)` arms a 3-second auto-restore timer; `TickPlayerInputRestore()` from OnUpdate flips back to enabled. Each new disable call extends the window.
 
 No script side effects, no save-game state, no item-repository touches, no NPC-behavior changes from the engine's perspective. World identity is `CSWSCreatureStats.is_pc` at +0x6c, which `SetEnabled` doesn't touch.
 

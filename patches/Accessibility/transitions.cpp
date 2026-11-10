@@ -188,9 +188,8 @@ void Tick() {
         // when one exists.
         RebuildLandmarkCache(area);
         // Build the nav-graph region decomposition for the new area.
-        // Single source of truth shared with the map-cursor and
-        // view-mode adapters; built once on area-enter so walking,
-        // view-mode panning, and map-cursor exploration all see the
+        // Single source of truth shared with the map cursor; built once
+        // on area-enter so walking and map-cursor exploration see the
         // same labels.
         //
         // The wall-edge cache the decomposition depends on is built by

@@ -31,7 +31,6 @@
 #include "speech.h"
 #include "strings.h"
 #include "unified_action_menu.h"
-#include "view_mode.h"
 
 namespace acc::input_poll {
 
@@ -283,14 +282,6 @@ bool EnterMayActInWorld(const char* keyTag) {
 
 // Enter and Shift+Enter in the world: interact with the narrated target.
 void HandleWorldEnter(bool forceRadial) {
-    // View mode owns Enter while active, and also the Enter it handed off
-    // this tick (it left view mode before dispatching): without the second
-    // test its walk was preempted by an interact on the stale last target.
-    if (acc::view_mode::IsActive() || acc::view_mode::ConsumedEnterThisTick()) {
-        acclog::Write("Interact", "Enter rising - view mode owns this press, "
-                      "deferring to view_mode::Tick");
-        return;
-    }
     const char* keyTag = forceRadial ? "Shift+Enter" : "Enter";
     if (!EnterMayActInWorld(keyTag)) return;
 

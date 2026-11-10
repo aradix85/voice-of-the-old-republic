@@ -117,10 +117,6 @@ void InitDefaults() {
     // Ctrl+H: everyone's health.
     bind(Action::PartyStatusAnnounce,  'H', 0, kModCtrl,  kModShift | kModAlt | kModAltGr);
 
-    // ----- View mode -----
-    bind(Action::ViewModeToggle,       'B', 0, 0,         kModShift);
-    bind(Action::CameraStateProbe,     'B', 0, kModShift, 0);
-
     // ----- Editbox modal (queried only while an editbox is armed) -----
     bind(Action::EditboxReReadUp,      VK_UP,     0, 0, 0);
     bind(Action::EditboxReReadDown,    VK_DOWN,   0, 0, 0);

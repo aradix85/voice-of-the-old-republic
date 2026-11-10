@@ -111,15 +111,6 @@ The mod keeps the game's key map, with one change the installer makes on a fresh
 - Ctrl+Shift+N — Walk to the nearest unexplored place
 - Ctrl+L — Walk to the nearest container or item left to search, and open it
 
-### View mode
-
-B turns view mode on and off. In view mode the character stands still:
-
-- A / D — Turn the camera
-- W / S — Move the view cursor; it stops at walls and says "Wall"
-- Enter — Use what the camera points at, or walk to that point
-- Shift+Enter — The action menu for what the camera points at
-
 ### Map screen
 
 - Up / Down — The map's notes and landmarks
@@ -203,7 +194,6 @@ NVDA's "Speech interrupt for typed characters" (NVDA settings, Keyboard) stops t
 ### The camera no longer turns
 
 - You may have switched on the game's free look; Caps Lock toggles it by default. Press it again.
-- Or view mode is on (B), where A / D turn the camera instead of moving you. Press B again.
 
 ## Known issues
 

@@ -26,7 +26,7 @@ const char* T(S id) { return acc::strings::Get(id); }
 // ----- Catalog --------------------------------------------------------------
 // Each rebindable Action paired with its localised display name. Grouped into
 // the five configurator categories; every user-rebindable Action appears
-// exactly once (the diagnostic probes + CameraStateProbe are excluded by
+// exactly once (the diagnostic probes are excluded by
 // hotkeys::IsUserRebindable and intentionally absent here).
 struct ActionEntry { A action; S name; };
 
@@ -77,7 +77,6 @@ constexpr ActionEntry kExploration[] = {
     { A::ExploreOverview,     S::KbNameExploreOverview },
     { A::ExploreWalkUnexplored, S::KbNameExploreWalkUnexplored },
     { A::ExploreWalkLoot,     S::KbNameExploreWalkLoot },
-    { A::ViewModeToggle,      S::KbNameViewModeToggle },
 };
 
 constexpr ActionEntry kMenus[] = {

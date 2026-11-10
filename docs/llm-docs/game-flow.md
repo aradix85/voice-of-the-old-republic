@@ -130,15 +130,14 @@ The main gameplay loop. The per-tick hook is the spine of the entire mod.
   2. `menus::ValidatePanels` / `TickMonitors` / `PollHomeEndKeys`.
   3. `cycle_input::PollWin32` / `announce_facing::PollWin32` — engine
      drops unbound scancodes; we poll Win32 directly.
-  4. Probe subsystems (mouselook, pathfind, camera state,
-     view mode, etc.).
+  4. Probe subsystems (mouselook, pathfind, etc.).
   5. Autowalk watchdog.
   6. `engine::TickPlayerInputRestore` — auto-restore `SetPlayerInputEnabled`
      after guidance disables.
   7. `passive_narrate::Tick` — drain deferred Q/E re-announce.
   8. `party_leader_announce::Tick`.
   9. Order-load-bearing block: `camera_announce` → `camera_orient` →
-     `spatial::change_detector` → `swoop_race` → `transitions` → `view_mode`.
+     `spatial::change_detector` → `swoop_race` → `transitions`.
   10. `map_ui_cursor::Tick`.
   11. `audio::footstep_suppress::Tick`.
   12. `radial_menu::Tick`.
@@ -498,7 +497,7 @@ workbench-related headers).
 - Area-change announce, room transitions via room_topology regions.
 - PreLoadDestination announce via OnSetMoveToModuleString.
 - In-world per-tick: Q/E cycle, passive_narrate, camera announce,
-  spatial change detector, transitions, view mode.
+  spatial change detector, transitions.
 - Combat mode entry/exit, AppendToMsgBuffer live log narration.
 - Attack-resolution tuple poll (silent but live).
 - Dialog NPC line + reply nav (poll-based).

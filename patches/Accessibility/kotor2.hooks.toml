@@ -688,47 +688,10 @@ source = "ebp"
 type = "pointer"
 
 # ============================================================================
-# Batch 5 — Audio: listener-position override + pitch-variance neutraliser.
-# Both reuse the KOTOR 1 handlers directly — the K2 functions take the same
-# parameter shapes at their entry points.
+# Batch 5 — Audio: pitch-variance neutraliser. Reuses the KOTOR 1 handler
+# directly — the K2 function takes the same parameter shape at its entry
+# point.
 # ============================================================================
-
-# CExoSound::SetListenerPosition — K2 facade @0x0070B940 (single Vector*
-# forward into the AIL listener writer 0x007082D0; one caller, the K2
-# UpdateSoundEngine path — the same per-frame camera write K1 hooks).
-# Hooked AT ENTRY with the whole prologue as the cut; the handler always
-# returns 1 (consume) and performs the engine call itself with the possibly
-# overridden position. skip_original_bytes = false, so the wrapper EXECUTES
-# the cut (builds the EBP frame + PUSH ECX) before the consume exit —
-# consumed_exit_address must therefore be the epilogue at 0x0070B95D
-# (MOV ESP,EBP; POP EBP; RET 4), which unwinds exactly that frame. The bare
-# RET 4 at 0x0070B960 is WRONG here: it pops the cut's saved ECX (the
-# CExoSound*) as the return address and executes the sound object as code
-# (first-fire crash on world load, dump-verified 2026-08-02).
-# Params: ecx = this (CExoSound*), esp+4 = address of the Vector* slot
-# (the LEA contract the shared handler expects).
-[[hooks]]
-address = 0x0070b940
-type = "detour"
-function = "OnSetListenerPosition"
-
-# 55            PUSH EBP
-# 8b ec         MOV EBP, ESP
-# 51            PUSH ECX
-# 89 4d fc      MOV [EBP-4], ECX
-original_bytes = [0x55, 0x8b, 0xec, 0x51, 0x89, 0x4d, 0xfc]
-
-skip_original_bytes = false
-exclude_from_restore = ["eax"]
-consumed_exit_address = 0x0070b95d
-
-[[hooks.parameters]]
-source = "ecx"
-type = "pointer"
-
-[[hooks.parameters]]
-source = "esp+4"
-type = "pointer"
 
 # CExoSoundSourceInternal::CalculatePitchVarianceFrequency — K2 twin
 # @0x00710550 (the only rand() caller in the sound TU; jitters the applied

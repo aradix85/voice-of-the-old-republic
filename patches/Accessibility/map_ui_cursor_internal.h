@@ -10,13 +10,12 @@
 
 #include "log.h"
 #include "room_topology.h"
-#include "view_mode.h"
 
 namespace acc::map_ui_cursor {
 
-// The hover-pause cadence, shared with view mode so both cursors speak at
-// the same pace.
-using acc::view_mode::kHoverPauseMs;
+// How long the cursor must rest on a thing before it is spoken, so a sweep
+// across a crowded map does not start a burst of announcements.
+constexpr unsigned long kHoverPauseMs = 300;
 
 // The map-pixel bounds. The engine's own checks are `< 0x1b9` / `< 0x101`,
 // so the highest legal pixel is (440, 256).

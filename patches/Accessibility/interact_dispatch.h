@@ -22,12 +22,8 @@ namespace acc::interact {
 // "Pick up X"); Enter and the Shift+- walk speak the same verbs.
 acc::strings::Id PreRollFor(acc::filter::CycleCategory c);
 
-// Self-gates additionally on !view_mode::IsActive — view mode owns
-// Enter routing (cursor hover is the truth, not cycle/LastTarget).
-// view_mode dispatches into DispatchInteract below, so behaviour is
-// identical when a target is hovered.
-// Public so view_mode can reuse the exact dispatch path. target must
-// be the server-side CSWSObject*, handle the matching server handle
+// The one interact pipeline. target must be the server-side CSWSObject*,
+// handle the matching server handle
 // (engine::GetObjectHandle(target)). forceRadial=true → Shift+Enter
 // semantics, open the radial menu instead of dispatching default.
 void DispatchInteract(void* target, uint32_t handle, bool forceRadial);

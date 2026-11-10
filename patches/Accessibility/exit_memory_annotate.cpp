@@ -11,7 +11,6 @@
 #include "log.h"
 #include "same_name_suffix.h"
 #include "strings.h"
-#include "view_mode.h"         // routes are from the player, not the cursor
 
 namespace acc::exit_memory {
 
@@ -313,7 +312,7 @@ std::string CurrentRegionText() {
 }
 
 std::string TargetWayInfo(void* obj, const Vector& pos) {
-    if (!obj || acc::view_mode::IsActive()) return std::string();
+    if (!obj) return std::string();
     Vector player;
     if (!acc::engine::GetPlayerPosition(player)) return std::string();
     Graph g;

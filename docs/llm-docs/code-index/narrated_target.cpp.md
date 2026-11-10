@@ -6,7 +6,7 @@ Source: `patches/Accessibility/narrated_target.cpp`
 
 Whichever narration channel spoke a bare-target-name most recently owns "what the user is thinking about". Activation keys (Enter, Shift+-, Ctrl+-, Alt+-, `-`) read this single slot instead of each resolving their own focus independently.
 
-Stamp sites — passive_narrate (engine ShowObject), cycle_input (`,`/`.`/`-`), view_mode hover-pause. Non-name narration (pre-rolls, empty-state phrases, heading/turn/route lines) does NOT stamp.
+Stamp sites — passive_narrate (engine ShowObject), cycle_input (`,`/`.`/`-`). Non-name narration (pre-rolls, empty-state phrases, heading/turn/route lines) does NOT stamp.
 
 Two slot shapes: game-object (uses server handle for validation) and map-pin (uses pointer membership in the client area's map_pins[]). Map pins have no CSWSObject so the activation grammar is reduced.
 

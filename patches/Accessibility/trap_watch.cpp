@@ -14,7 +14,7 @@
                              // GetPlayerPosition (proximity trigger only —
                              // the WARNING radius is about where the body
                              // physically is, not where the user looks)
-#include "view_mode.h"       // GetEffectiveViewpoint — camera-anchored
+#include "viewpoint.h"
                              // position + facing for the spoken clock
 #include "log.h"
 #include "speech.h"
@@ -128,10 +128,10 @@ std::string WithClock(const char* label, const Vector& target) {
     // Camera-anchored viewpoint, not the creature's: KOTOR's A/D turns the
     // camera and leaves the body facing where it was, so a body-anchored
     // clock keeps announcing the direction the mine had before the user
-    // turned. GetEffectiveViewpoint also swaps in the view-mode cursor.
+    // turned.
     Vector p{};
     float  yaw = 0.0f;
-    if (acc::view_mode::GetEffectiveViewpoint(p, yaw)) {
+    if (acc::viewpoint::Get(p, yaw)) {
         int clock = acc::engine::ClockPosition(yaw, target.x - p.x,
                                                target.y - p.y);
         float dx = target.x - p.x, dy = target.y - p.y;

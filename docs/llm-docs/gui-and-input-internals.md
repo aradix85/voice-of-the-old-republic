@@ -510,7 +510,7 @@ _Engine keymap drops scancodes not in kotor.ini before CSWGuiManager::HandleInpu
 
 `CSWGuiManager::HandleInputEvent @0x40c8e0` is the right hook for **menu-side** input and for keys that ARE bound in `kotor.ini` `[Keymapping]`, but it does NOT see in-world raw scancodes for unbound keys. The engine's keymap layer drops anything not bound to a logical action before reaching the manager.
 
-**How to apply:** For new in-world keybinds (Pillar 4 cycle, Pillar 2 view-mode toggle, Pillar 3 autowalk cancel, etc.) where the keys aren't in stock kotor.ini, poll the OS keyboard state directly from `OnUpdate` via `GetAsyncKeyState(VK_*)`. Edge-detect with per-key static `prev` flags. Self-gate on:
+**How to apply:** For new in-world keybinds (Pillar 4 cycle, Pillar 3 autowalk cancel, etc.) where the keys aren't in stock kotor.ini, poll the OS keyboard state directly from `OnUpdate` via `GetAsyncKeyState(VK_*)`. Edge-detect with per-key static `prev` flags. Self-gate on:
 
 - `GetForegroundWindow()` matching our PID — otherwise we'd fire when the user types `,/./-` in another app
 - `GetPlayerPosition()` succeeding — keeps cycle keys silent in menus / chargen / mid-load
