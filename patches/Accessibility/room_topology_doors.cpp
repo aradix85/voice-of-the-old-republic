@@ -95,9 +95,7 @@ void SnapshotDoors(void* area) {
     if (savedCount > kMaxDoors) savedCount = kMaxDoors;
     for (int i = 0; i < savedCount; ++i) {
         saved[i].pos = g_graph.doors[i].pos;
-        std::strncpy(saved[i].name, g_graph.doors[i].landmarkName,
-                     sizeof(saved[i].name) - 1);
-        saved[i].name[sizeof(saved[i].name) - 1] = '\0';
+        strncpy_s(saved[i].name, g_graph.doors[i].landmarkName, _TRUNCATE);
     }
 
     g_graph.door_count = 0;
@@ -158,11 +156,7 @@ void SnapshotDoors(void* area) {
         for (int j = 0; j < savedCount; ++j) {
             if (!saved[j].name[0]) continue;
             if (DistXYZSq(saved[j].pos, g_graph.doors[i].pos) < 0.01f) {  // same door (<0.1m)
-                std::strncpy(g_graph.doors[i].landmarkName, saved[j].name,
-                             sizeof(g_graph.doors[i].landmarkName) - 1);
-                g_graph.doors[i]
-                    .landmarkName[sizeof(g_graph.doors[i].landmarkName) - 1]
-                    = '\0';
+                strncpy_s(g_graph.doors[i].landmarkName, saved[j].name, _TRUNCATE);
                 break;
             }
         }
@@ -502,10 +496,7 @@ void AttachLandmarksToDoors(void* area) {
             continue;
         }
 
-        std::strncpy(g_graph.doors[bestDoor].landmarkName, name,
-                     sizeof(g_graph.doors[bestDoor].landmarkName) - 1);
-        g_graph.doors[bestDoor]
-            .landmarkName[sizeof(g_graph.doors[bestDoor].landmarkName) - 1] = '\0';
+        strncpy_s(g_graph.doors[bestDoor].landmarkName, name, _TRUNCATE);
         acc::transitions::MarkLandmarkClaimedByDoor(landmarkIdx);
         ++matched;
         acclog::Write(

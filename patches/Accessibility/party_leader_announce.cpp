@@ -154,8 +154,7 @@ void TickLeaderChange() {
     bool recentAreaChange =
         s_areaChangeTick != 0 &&
         (GetTickCount() - s_areaChangeTick) < kAreaChangeGraceMs;
-    std::strncpy(s_lastLeader, now, sizeof(s_lastLeader) - 1);
-    s_lastLeader[sizeof(s_lastLeader) - 1] = '\0';
+    strncpy_s(s_lastLeader, now, _TRUNCATE);
 
     if (wasFirstObservation) {
         acclog::Write("Combat.PcStat", "first leader observed=[%s]; suppress",

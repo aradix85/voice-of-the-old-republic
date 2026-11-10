@@ -75,7 +75,7 @@ bool FireMedicalDirect(void* mi, const Cat& c, int sel, void* targetCre,
 // Returns true when the picker opened (the press is consumed). False = no
 // party slot resolved; the caller falls through to the plain dispatch
 // (instant self-use), so Enter is never dead.
-bool OpenMedPicker(void* mi, const Cat& c, int sel, const char* itemLabel) {
+bool OpenMedPicker(const Cat& c, int sel, const char* itemLabel) {
     g.med = MedPicker{};
     uint32_t narrated = ResolveNarratedServerHandle();
     uint32_t leaderId = acc::engine::GetObjectHandle(

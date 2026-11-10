@@ -196,8 +196,7 @@ void BuildActionLabel(void* action, char* out, size_t n) {
             verb = abilityName;
         }
     }
-    std::strncpy(out, verb, n - 1);
-    out[n - 1] = '\0';
+    strncpy_s(out, n, verb, _TRUNCATE);
 }
 
 int RawRoundCount(void* combatRound) {

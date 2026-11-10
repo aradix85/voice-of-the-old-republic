@@ -74,8 +74,7 @@ const char* Lookup(uint32_t handle) {
 void Store(uint32_t handle, const char* bark) {
     for (int i = 0; i < s_cacheCount; ++i) {
         if (s_cache[i].handle == handle) {  // refresh in place
-            std::strncpy(s_cache[i].bark, bark, sizeof(s_cache[i].bark) - 1);
-            s_cache[i].bark[sizeof(s_cache[i].bark) - 1] = '\0';
+            strncpy_s(s_cache[i].bark, bark, _TRUNCATE);
             return;
         }
     }
@@ -87,8 +86,7 @@ void Store(uint32_t handle, const char* bark) {
         s_cacheNext = (s_cacheNext + 1) % kMaxEntries;
     }
     s_cache[slot].handle = handle;
-    std::strncpy(s_cache[slot].bark, bark, sizeof(s_cache[slot].bark) - 1);
-    s_cache[slot].bark[sizeof(s_cache[slot].bark) - 1] = '\0';
+    strncpy_s(s_cache[slot].bark, bark, _TRUNCATE);
 }
 
 // Feedback-router rule. Never consumes — the generic "locked" line still speaks
@@ -110,8 +108,7 @@ bool RuleLocked(const char* text) {
 
     const char* cached = Lookup(slot.handle);
     if (cached && cached[0]) {
-        std::strncpy(s_pendingReplay, cached, sizeof(s_pendingReplay) - 1);
-        s_pendingReplay[sizeof(s_pendingReplay) - 1] = '\0';
+        strncpy_s(s_pendingReplay, cached, _TRUNCATE);
         acclog::Write("LockedRecall",
                       "repeat lock handle=0x%08x -> queue replay", slot.handle);
     } else {

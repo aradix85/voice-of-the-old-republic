@@ -15,8 +15,8 @@ namespace {
 void AppendCard(char* out, size_t n, const CardView& c, bool inHand) {
     char card[96];
     FormatCard(c, inHand, card, sizeof(card));
-    if (out[0]) strncat(out, ", ", n - strlen(out) - 1);
-    strncat(out, card, n - strlen(out) - 1);
+    if (out[0]) strncat_s(out, n, ", ", _TRUNCATE);
+    strncat_s(out, n, card, _TRUNCATE);
 }
 
 void BuildBoard(void* player, char* out, size_t n) {

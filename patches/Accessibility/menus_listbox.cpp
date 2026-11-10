@@ -76,7 +76,7 @@ bool DispatchKeyDownEdge(const ListBoxPanelSpec& spec, void* panel,
     // (minSel) / last (rowCount-1) row; Up / Down are Â±1 steps. The
     // announce + enrichment + log paths are shape-identical across all
     // four — only the ListBoxNavOp selection and the direction tag differ.
-    ListBoxNavOp op;
+    ListBoxNavOp op = ListBoxNavOp::StepUp;
     const char* dirTag = nullptr;
     if      (param_1 == kInputNavUp)   { op = ListBoxNavOp::StepUp;    dirTag = "Up";   }
     else if (param_1 == kInputNavDown) { op = ListBoxNavOp::StepDown;  dirTag = "Down"; }
@@ -110,7 +110,7 @@ bool DispatchKeyDownEdge(const ListBoxPanelSpec& spec, void* panel,
             return true;
         }
         int effMinSel = spec.minSelFn ? spec.minSelFn(panel) : spec.minSel;
-        ListBoxNavResult r;
+        ListBoxNavResult r{};
         bool moved = lb && (spec.useEngineSelect
             ? DriveListBoxSelectionEngine(lb, op,
                                           static_cast<short>(effMinSel), r)

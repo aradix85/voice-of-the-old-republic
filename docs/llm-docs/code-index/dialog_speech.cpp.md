@@ -1,4 +1,4 @@
-# dialog_speech.cpp (362 lines)
+# dialog_speech.cpp (360 lines)
 
 Source: `patches/Accessibility/dialog_speech.cpp`
 
@@ -13,6 +13,6 @@ Dialog narration, polled each tick (see dialog_speech.h).
 - L121 `bool SilenceLine(bool suppressible, bool tutorialManaged, bool voicedLine, bool forcedSpoken)`: A line stays silent when its speaker's voice-over already says it, when the tutorial popup carries it, or when it is a curated voiced line whose speaker can't be resolved (the KOTOR 2 prologue narrator); unless it is ...
 - L134 `void TickComputerRows(void* panel)`: A computer terminal's output rows, spoken as they are appended.
 - L182 `void TickDialogPanel()`: The main dialog panel: the NPC line, a terminal's output, and R to repeat the line.
-- L278 `void TickCameraFeed()`: A console's "view camera" swaps the terminal for CSWGuiDialogComputerCamera: a live picture whose one control, LBL_RETURN, holds the engine's own "press Enter to cancel the live feed and return".
-- L303 `void TickBark()`: Bark bubbles, with their own lifecycle.
-- L352 `void Tick()`
+- L277 `void TickCameraFeed()`: A console's "view camera" swaps the terminal for CSWGuiDialogComputerCamera: a live picture whose one control, LBL_RETURN, holds the engine's own "press Enter to cancel the live feed and return".
+- L302 `void TickBark()`: Bark bubbles, with their own lifecycle.
+- L350 `void Tick()`

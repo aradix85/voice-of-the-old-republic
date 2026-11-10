@@ -24,4 +24,4 @@ chargen "Feats" main panel input handler. See menus_chargen_feats.h for the desi
 - L411 `void NavHorizontal(void* panel, bool right)`
 - L444 `void NavJumpEnd(void* panel, bool toEnd)`: Home / End across the whole 2D surface, not just the current row.
 - L473 `bool IsChargenFeatsPanel(void* panel)`
-- L484 `bool HandleInput(int n, void* thisPtr, void* panel, int param_1, int param_2, int& outRv)`
+- L484 `bool HandleInput(int /*n*/, void* /*thisPtr*/, void* panel, int param_1, int param_2, int& outRv)`

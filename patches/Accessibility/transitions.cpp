@@ -295,8 +295,7 @@ void Tick() {
                                                 nameBuf, sizeof(nameBuf)) &&
                 nameBuf[0] != '\0' &&
                 !IsResrefStyleRoomName(nameBuf)) {
-                std::strncpy(friendlyBuf, nameBuf, sizeof(friendlyBuf) - 1);
-                friendlyBuf[sizeof(friendlyBuf) - 1] = '\0';
+                strncpy_s(friendlyBuf, nameBuf, _TRUNCATE);
             }
         }
     }
@@ -442,9 +441,7 @@ void Tick() {
             SpeakRoomChange(area, clusterId, labelPos);
         }
         g_prev_cluster_id = clusterId;
-        std::strncpy(g_prev_friendly_room_name, friendlyBuf,
-                     sizeof(g_prev_friendly_room_name) - 1);
-        g_prev_friendly_room_name[sizeof(g_prev_friendly_room_name) - 1] = '\0';
+        strncpy_s(g_prev_friendly_room_name, friendlyBuf, _TRUNCATE);
         g_pending_cluster_id    = acc::room_topology::kClusterIdNone;
         g_pending_cluster_count = 0;
     }

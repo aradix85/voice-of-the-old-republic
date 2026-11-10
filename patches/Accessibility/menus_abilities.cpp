@@ -401,7 +401,7 @@ bool HandleInput(int /*n*/, void* /*thisPtr*/, void* activePanel,
 
     int tab = ReadTab();
 
-    ListBoxNavOp op;
+    ListBoxNavOp op = ListBoxNavOp::StepUp;
     bool isNav = true;
     if      (param_1 == kInputNavUp)   op = ListBoxNavOp::StepUp;
     else if (param_1 == kInputNavDown) op = ListBoxNavOp::StepDown;

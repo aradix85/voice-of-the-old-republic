@@ -1,4 +1,4 @@
-# transitions_preload.cpp (203 lines)
+# transitions_preload.cpp (202 lines)
 
 Source: `patches/Accessibility/transitions_preload.cpp`
 
@@ -11,6 +11,6 @@ The destination before a module load: the SetMoveToModuleString hooks (KOTOR 1 a
 - L52 `bool IsModuleLoadPending()`
 - L56 `void NotifyExternalLoadStarting(const char* reason)`
 - L67 `void AnnouncePreLoadDestination(void* exoStringPtr)`
-- L125 `void LatchPreLoadDestinationK2(void* exoStringPtr)`
-- L162 `extern "C" void __cdecl OnSetMoveToModuleString(void* /*serverApp*/, void* arg_addr)`: CServerExoApp::SetMoveToModuleString — entry hook @0x004aecd0.
-- L188 `void __cdecl OnSetMoveToModuleStringK2(void* ebp)`
+- L124 `void LatchPreLoadDestinationK2(void* exoStringPtr)`
+- L161 `extern "C" void __cdecl OnSetMoveToModuleString(void* /*serverApp*/, void* arg_addr)`: CServerExoApp::SetMoveToModuleString — entry hook @0x004aecd0.
+- L187 `void __cdecl OnSetMoveToModuleStringK2(void* ebp)`

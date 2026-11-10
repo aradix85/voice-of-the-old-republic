@@ -1,4 +1,4 @@
-# combat_queue_engine.cpp (234 lines)
+# combat_queue_engine.cpp (233 lines)
 
 Source: `patches/Accessibility/combat_queue_engine.cpp`
 
@@ -20,5 +20,5 @@ Reading the engine's combat rounds: the queued actions, their kind and target, a
 - L133 `acc::strings::Id VerbForActionType(unsigned char actionType)`: The action types decoded by CSWGuiMainInterface::GetActionIcon (0x686fb0), the engine's own per-slot icon resolver: 1 attack (a door bash is an attack on a door), 6 equip, 7 unequip, 9 cast Force power, 10 use item, 1...
 - L145 `bool ReadActionFields(void* action, unsigned char& outType, uint32_t& outTarget)`
 - L165 `void BuildActionLabel(void* action, char* out, size_t n)`: The specific Force power, item or feat name for types 9, 10 and 11, else the generic verb.
-- L203 `int RawRoundCount(void* combatRound)`
-- L226 `int CountPlayerEntries()`: The engine's own count, placeholder included: the value AddAction's cap check (`if (3 < count)`) inspects, so "position N" and "queue full" match the engine's slots.
+- L202 `int RawRoundCount(void* combatRound)`
+- L225 `int CountPlayerEntries()`: The engine's own count, placeholder included: the value AddAction's cap check (`if (3 < count)`) inspects, so "position N" and "queue full" match the engine's slots.

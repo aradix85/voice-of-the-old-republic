@@ -102,8 +102,7 @@ void AnnouncePreLoadDestination(void* exoStringPtr) {
         (now - s_lastTick) < 2000u) {
         return;
     }
-    std::strncpy(s_lastDest, dest, sizeof(s_lastDest) - 1);
-    s_lastDest[sizeof(s_lastDest) - 1] = '\0';
+    strncpy_s(s_lastDest, dest, _TRUNCATE);
     s_lastTick = now;
 
     // A movie already on screen: no speech, for the same reason Tick() is

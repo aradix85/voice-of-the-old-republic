@@ -48,8 +48,7 @@ int GetOrCreateBucketIdx(const char* name) {
     if (idx >= 0) return idx;
     s_buckets.push_back({});
     Bucket& nb = s_buckets.back();
-    std::strncpy(nb.locName, name, sizeof(nb.locName) - 1);
-    nb.locName[sizeof(nb.locName) - 1] = '\0';
+    strncpy_s(nb.locName, name, _TRUNCATE);
     nb.size = 0;
     return static_cast<int>(s_buckets.size() - 1);
 }
@@ -90,8 +89,7 @@ void AppendSuffix(void* gameObject, char* outBuf, size_t bufSize) {
     // Use current outBuf contents as the bucket key (snapshot before
     // we mutate it).
     char rawName[64];
-    std::strncpy(rawName, outBuf, sizeof(rawName) - 1);
-    rawName[sizeof(rawName) - 1] = '\0';
+    strncpy_s(rawName, outBuf, _TRUNCATE);
 
     int bucketIdx = GetOrCreateBucketIdx(rawName);
     Entry* entry  = FindEntry(handle);
@@ -103,8 +101,7 @@ void AppendSuffix(void* gameObject, char* outBuf, size_t bufSize) {
         ne.handle    = handle;
         ne.bucketIdx = bucketIdx;
         ne.serial    = s_buckets[bucketIdx].size;
-        std::strncpy(ne.locName, rawName, sizeof(ne.locName) - 1);
-        ne.locName[sizeof(ne.locName) - 1] = '\0';
+        strncpy_s(ne.locName, rawName, _TRUNCATE);
         entry = &ne;
         acclog::Write("SameNameSuffix",
             "assign handle=0x%08x name=[%s] serial=%d bucketSize=%d",
@@ -117,8 +114,7 @@ void AppendSuffix(void* gameObject, char* outBuf, size_t bufSize) {
         s_buckets[bucketIdx].size += 1;
         entry->bucketIdx = bucketIdx;
         entry->serial    = s_buckets[bucketIdx].size;
-        std::strncpy(entry->locName, rawName, sizeof(entry->locName) - 1);
-        entry->locName[sizeof(entry->locName) - 1] = '\0';
+        strncpy_s(entry->locName, rawName, _TRUNCATE);
         acclog::Write("SameNameSuffix",
             "rekey handle=0x%08x name=[%s] serial=%d", handle, rawName,
             entry->serial);
@@ -183,8 +179,7 @@ void AppendAreaPositionOrdinal(void* gameObject,
     // renumbered every door south of it, so a corridor handed the number 1
     // to a new door each time the player opened one.
     char focusKey[128];
-    std::strncpy(focusKey, outBuf, sizeof(focusKey) - 1);
-    focusKey[sizeof(focusKey) - 1] = '\0';
+    strncpy_s(focusKey, outBuf, _TRUNCATE);
 
     // Doors that were locked when the area loaded are numbered as their own
     // sequence, so "the second locked door" stays the second locked door

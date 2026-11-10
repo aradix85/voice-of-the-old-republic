@@ -84,9 +84,8 @@ const char* TryPartyPortrait(void* control, char* outBuf, size_t bufSize,
                                              : Id::FmtPartyPortraitInTeamLocked)
                                : (selectable ? Id::FmtPartyPortraitAvailable
                                              : Id::FmtPartyPortraitUnavailable);
-            const int n = _snprintf(outBuf, bufSize, acc::strings::Get(fmt), name);
+            const int n = std::snprintf(outBuf, bufSize, acc::strings::Get(fmt), name);
             if (n > 0 && static_cast<size_t>(n) < bufSize) {
-                outBuf[n] = '\0';
                 source = "party-portrait";
             } else if (EmitText(outBuf, bufSize, name)) {
                 source = "party-portrait";  // the bare name when the format overflows

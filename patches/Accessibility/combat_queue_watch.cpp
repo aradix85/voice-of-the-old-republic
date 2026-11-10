@@ -79,7 +79,7 @@ void OnEngineActionAdded(void* combatRound, void* action) {
 
     char label[96] = "";
     BuildActionLabel(action, label, sizeof(label));
-    if (!label[0]) std::strncpy(label, "?", sizeof(label) - 1);
+    if (!label[0]) strncpy_s(label, "?", _TRUNCATE);
 
     char msg[192];
     if (preCount >= 4) {

@@ -76,8 +76,7 @@ void AddRows(void* creature, void* round, int local, const char* name) {
         r.combatRound = round;
         r.perCreatureIdx = i;
         r.perCreatureCount = local;
-        std::strncpy(r.charName, name, sizeof(r.charName) - 1);
-        r.charName[sizeof(r.charName) - 1] = '\0';
+        strncpy_s(r.charName, name, _TRUNCATE);
     }
 }
 

@@ -196,8 +196,7 @@ void RebuildLandmarkCache(void* area) {
         }
 
         Landmark& lm = g_landmarks[g_landmark_count];
-        std::strncpy(lm.name, note, sizeof(lm.name) - 1);
-        lm.name[sizeof(lm.name) - 1] = '\0';
+        strncpy_s(lm.name, note, _TRUNCATE);
         lm.pos         = pos;
         lm.doorMatched = false;
         lm.handle      = acc::engine::GetObjectHandle(obj);
@@ -378,8 +377,7 @@ bool FindLandmarkNear(const Vector& pos, float rangeM,
         }
     }
     if (best < 0) return false;
-    std::strncpy(nameOut, g_landmarks[best].name, nameBufSize - 1);
-    nameOut[nameBufSize - 1] = '\0';
+    strncpy_s(nameOut, nameBufSize, g_landmarks[best].name, _TRUNCATE);
     posOut = g_landmarks[best].pos;
     if (outLandmarkIdx) *outLandmarkIdx = best;
     return true;
@@ -405,8 +403,7 @@ bool IterateLandmarks(void* area, int& cursor,
     while (cursor < g_landmark_count) {
         int i = cursor++;
         if (g_landmarks[i].name[0] == '\0') continue;
-        std::strncpy(nameOut, g_landmarks[i].name, nameBufSize - 1);
-        nameOut[nameBufSize - 1] = '\0';
+        strncpy_s(nameOut, nameBufSize, g_landmarks[i].name, _TRUNCATE);
         posOut         = g_landmarks[i].pos;
         outLandmarkIdx = i;
         return true;

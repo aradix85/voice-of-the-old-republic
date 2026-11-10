@@ -42,7 +42,7 @@ const char* HintForTutorialRow(int row) {
     // block is shared. Rows only
     // KOTOR 2 fires — its extra rows 43+, plus rows that exist in KOTOR 1's
     // 2DA but were left unmapped there — follow in the K2-only block.
-    Id id;
+    Id id = Id::Count_;
     bool have = true;
     switch (row) {
         case 0:  id = Id::TutHintCombatFeat;       break;  // Use_Combat_Feat

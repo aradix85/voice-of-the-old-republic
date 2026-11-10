@@ -36,7 +36,7 @@ Internal to the unified_action_menu module (unified_action_menu*.cpp); no other 
 - L130 `void ApplyPostFireClosePolicy()`: unified_action_menu_fire.cpp
 - L131 `bool HandleEnter(void* tam, void* mi, const Cat& cur, int sel, bool targetChanged, bool selectionCarried)`
 - L134 `bool FireMedicalDirect(void* mi, const Cat& c, int sel, void* targetCre, const char* how)`: unified_action_menu_medpicker.cpp
-- L135 `bool OpenMedPicker(void* mi, const Cat& c, int sel, const char* itemLabel)`
+- L135 `bool OpenMedPicker(const Cat& c, int sel, const char* itemLabel)`
 - L136 `bool HandleMedPickerInput(int code)`
 
 Also 6 constants or variables at namespace scope.

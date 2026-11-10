@@ -1,4 +1,4 @@
-# party_leader_announce.cpp (178 lines)
+# party_leader_announce.cpp (177 lines)
 
 Source: `patches/Accessibility/party_leader_announce.cpp`
 

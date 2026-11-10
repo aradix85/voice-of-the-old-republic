@@ -202,7 +202,7 @@ bool HandleEnter(void* tam, void* mi, const Cat& cur, int sel,
     if (cur.kind == CatKind::Personal &&
         acc::engine_actionbar::EntryIsMedicalK2(mi, cur.slot, sel)) {
         if (!acc::hotkeys::ShiftHeld() &&
-            OpenMedPicker(mi, cur, sel, label)) {
+            OpenMedPicker(cur, sel, label)) {
             return true;
         }
         (void)FireMedicalDirect(mi, cur, sel,

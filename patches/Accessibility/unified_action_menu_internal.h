@@ -132,7 +132,7 @@ bool HandleEnter(void* tam, void* mi, const Cat& cur, int sel, bool targetChange
 
 // unified_action_menu_medpicker.cpp
 bool FireMedicalDirect(void* mi, const Cat& c, int sel, void* targetCre, const char* how);
-bool OpenMedPicker(void* mi, const Cat& c, int sel, const char* itemLabel);
+bool OpenMedPicker(const Cat& c, int sel, const char* itemLabel);
 bool HandleMedPickerInput(int code);
 
 }  // namespace acc::unified_menu

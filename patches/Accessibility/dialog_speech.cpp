@@ -248,8 +248,7 @@ void TickDialogPanel() {
                       tutorialManaged ? 1 : 0, voicedLine ? 1 : 0,
                       suppress ? 1 : 0,
                       spokeMarker ? marker : "", npc);
-        std::strncpy(s_lastNpcLine, npc, sizeof(s_lastNpcLine) - 1);
-        s_lastNpcLine[sizeof(s_lastNpcLine) - 1] = '\0';
+        strncpy_s(s_lastNpcLine, npc, _TRUNCATE);
     }
 
     if (m.kind == acc::engine::PanelKind::DialogComputer &&
@@ -341,8 +340,7 @@ void TickBark() {
                       info.appearance, info.raceEnum,
                       suppressible ? 1 : 0, tutorialManaged ? 1 : 0,
                       voicedLine ? 1 : 0, suppress ? 1 : 0, text);
-        std::strncpy(s_lastBarkText, text, sizeof(s_lastBarkText) - 1);
-        s_lastBarkText[sizeof(s_lastBarkText) - 1] = '\0';
+        strncpy_s(s_lastBarkText, text, _TRUNCATE);
     }
     s_lastBark = bark;
 }

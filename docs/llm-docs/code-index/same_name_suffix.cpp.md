@@ -1,4 +1,4 @@
-# same_name_suffix.cpp (275 lines)
+# same_name_suffix.cpp (270 lines)
 
 Source: `patches/Accessibility/same_name_suffix.cpp`
 
@@ -12,13 +12,13 @@ Wraps engine::GetObjectName and appends a stable numeric suffix when two or more
 
 - L37 `int FindBucketIdx(const char* name)`
 - L46 `int GetOrCreateBucketIdx(const char* name)`
-- L57 `Entry* FindEntry(uint32_t handle)`
-- L70 `void AppendEmptyContainerLabel(void* gameObject, char* outBuf, size_t bufSize)`: Live "empty" tag for loot containers.
-- L83 `void AppendSuffix(void* gameObject, char* outBuf, size_t bufSize)`
-- L136 `bool PositionLess(const Vector& a, const Vector& b)`
-- L142 `int NumberingClass(void* gameObject)`
-- L161 `void AppendAreaPositionOrdinal(void* gameObject, acc::filter::CycleCategory category, char* outBuf, size_t bufSize)`
-- L220 `void AppendDisambiguator(void* gameObject, acc::filter::CycleCategory category, char* outBuf, size_t bufSize)`
-- L234 `void AppendObjectQualifiers(void* gameObject, acc::filter::CycleCategory category, char* outBuf, size_t bufSize)`
-- L251 `bool GetSpokenName(void* gameObject, acc::filter::CycleCategory category, char* outBuf, size_t bufSize)`
-- L264 `void Reset()`
+- L56 `Entry* FindEntry(uint32_t handle)`
+- L69 `void AppendEmptyContainerLabel(void* gameObject, char* outBuf, size_t bufSize)`: Live "empty" tag for loot containers.
+- L82 `void AppendSuffix(void* gameObject, char* outBuf, size_t bufSize)`
+- L132 `bool PositionLess(const Vector& a, const Vector& b)`
+- L138 `int NumberingClass(void* gameObject)`
+- L157 `void AppendAreaPositionOrdinal(void* gameObject, acc::filter::CycleCategory category, char* outBuf, size_t bufSize)`
+- L215 `void AppendDisambiguator(void* gameObject, acc::filter::CycleCategory category, char* outBuf, size_t bufSize)`
+- L229 `void AppendObjectQualifiers(void* gameObject, acc::filter::CycleCategory category, char* outBuf, size_t bufSize)`
+- L246 `bool GetSpokenName(void* gameObject, acc::filter::CycleCategory category, char* outBuf, size_t bufSize)`
+- L259 `void Reset()`

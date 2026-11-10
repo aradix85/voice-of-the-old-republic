@@ -481,7 +481,7 @@ bool IsChargenFeatsPanel(void* panel) {
     return reinterpret_cast<uintptr_t>(vt) == kVtableCSWGuiFeatsCharGen;
 }
 
-bool HandleInput(int n, void* thisPtr, void* panel,
+bool HandleInput(int /*n*/, void* /*thisPtr*/, void* panel,
                  int param_1, int param_2, int& outRv)
 {
     if (!IsChargenFeatsPanel(panel)) return false;
