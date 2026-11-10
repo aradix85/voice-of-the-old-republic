@@ -1,138 +1,82 @@
 # Architecture
 
-The mental model of the Voice of the Old Republic mod. Read this before making non-trivial changes.
+The mental model of this fork of Voice of the Old Republic. Read this before making non-trivial changes.
 
-## Layered overview
+## From the outside in
 
-From the outside in:
+- **The installer** (`installer/KotorAccessibilityInstaller/`, .NET 8 WinForms, a self-contained single-file EXE) downloads `Accessibility.kpatch` from this fork's `bridge-latest` release and installs it with Lane Dibello's `KPatchCore`, together with the bundled files: the loader, the patch runtime, NVDA's controller client, the widescreen patch and, on request, the K1 Community Patch (via HoloPatcher).
+- **In the game folder**, `dinput8.dll` is a proxy loader that starts `KotorPatcher.dll` (the Kotor-Patch-Manager runtime) with the game. The runtime applies the hooks declared in our patch and loads `patches/accessibility.dll`. `nvdaControllerClient32.dll` sits next to it.
+- **Inside swkotor.exe**, our DLL hooks engine code, reads game state, speaks and brailles every line through NVDA, plays the minigame cues, and serves the local bridge.
 
-```
-                    +-------------------------------+
-   end user  --->   |  installer (WinForms .NET)    |
-                    +-------------------------------+
-                              |
-                              v
-                    +-------------------------------+
-                    |  swkotor.exe install layout   |
-                    |   + KPatchLauncher.exe        |
-                    |   + KotorPatcher.dll          |
-                    |   + patches/Accessibility/    |
-                    |   + Prism.dll, Tolk.dll, ...  |
-                    +-------------------------------+
-                              |
-                  KPatchLauncher injects KotorPatcher.dll
-                  KotorPatcher loads our patches[].dll
-                              v
-                    +-------------------------------+
-                    |  in-process: swkotor.exe      |
-                    |                               |
-                    |   our patch DLL (this repo)   |
-                    |    + hooks into engine code   |
-                    |    + reads game state         |
-                    |    + speaks via Prism         |
-                    |    + plays 3D audio cues      |
-                    +-------------------------------+
-```
-
-The dev CLI (`kdev`) sits beside this, automating the build / install / launch loop.
+The dev CLI (`kdev`) automates build, install and launch beside this. `.github/workflows/build.yml` builds the mod and the installer on every push to `bridge` and publishes them as `bridge-latest`.
 
 ## Pieces in this repo
 
 ### `patches/Accessibility/` — the patch DLL
 
-Native C++ (Visual Studio Build Tools 2022, x86). Compiled by `create-patch.bat` from the upstream Kotor-Patch-Manager checkout into a single `.kpatch` archive.
+Native C++17 (MSVC x86), built by `kdev build` into a `.kpatch` archive. Files are organised by job, not by screen; a module's shared internals live in `<module>_internal.h`, included only by its own files. The prefixes:
 
-Source files are organised by **role**, not by GUI screen. File-name prefixes group related modules:
+- **`core_*`** — DllMain and the per-tick dispatcher (`core_tick.cpp`). Loader-lock-safe: no DLL loads, file I/O or COM in `core_dllmain.cpp`.
+- **`engine_*`** — read-side bindings to engine memory: struct offsets, function-pointer wrappers, vtable downcasts. The project's "header file for the engine".
+- **`speech`, `speech_clipboard`, `strings`, `log`** — infrastructure. `speech` sends each line to NVDA (spoken and on the braille display); `strings` holds every spoken text, one English string per `Id`; `log` writes the patch log.
+- **`menus_*`** — per-screen GUI accessibility: chargen, character sheet, journal, store, equipment, save and load, level-up, workbench, party selection, mod settings. They share the listbox, chain and extraction helpers.
+- **`room_topology_*`** — cuts an area's walkmesh into regions and describes them: shape, label, exits.
+- **`exit_memory_*`** — what lies behind each door, routes between regions, the exploration overview (Ctrl+N), the explore walk (Ctrl+Shift+N), and the save variables that keep visited regions and door destinations.
+- **`discovery`, `transitions`, `door_announce`, `locked_recall`** — which objects you have found, region and area announcements, doors opening, and how a locked door or container opens.
+- **`cycle_*`, `qe_ring`, `filter_objects`, `same_name_suffix`, `narrated_target`** — the Q / E and `,` / `.` cycles and the focused-object model.
+- **`guidance_*`, `interact_dispatch`** — walking for the player (autowalk, rescue walk, sidestep), path finding over the region graph, and spoken route descriptions.
+- **`combat_*`** — combat-log narration (English anchors in `combat_strings.cpp`), the action queue, combat queries.
+- **`camera_*`, `view_mode`, `announce_facing`, `spatial_wall_surfaces`, `wall_probe`** — orientation: facing, turning to exits, view mode, the wall cache.
+- **`map_*`** — the map screen: cursor, map notes, user markers.
+- **`party_*`** — party status (Ctrl+H), leader changes.
+- **`pad_*`** — the controller driver (KOTOR 1 has no gamepad code; the mod reads XInput itself) and its action and quick menus.
+- **`minigame_*`, `floor_puzzle`** — turret, swoop race, pazaak and puzzles. The swoop and turret cues are the only sounds the mod plays.
+- **`audio_*`** — the audio bus for those cues, looping sources, pitch, and footstep suppression when the player is stuck.
+- **`bridge_*`** — the local HTTP bridge (see below).
+- **`hotkeys`, `input_*`, `key_inject`, `msg_router`, `help`, `tutorial_*`, `binding_hints`** — the input layer, key bindings, F1 help and the tutorial hints.
+- **`diag_*`, `probe_*`** — diagnostics: logging only, no behaviour.
 
-- **`core_*`** — DllMain, per-tick dispatch, runtime settings. Loader-lock-safe; no DLL loads or COM init in `core_dllmain.cpp`.
-- **`engine_*`** — pure read-side bindings to engine memory. Struct offsets, function-pointer wrappers, vtable downcasts. Mostly stateless; the project's "header file for the engine".
-- **`audio_*`** — audio bus, 3D cue player, looping sources, footstep suppression, pitch shifting. Calls the engine's own `Play3DOneShotSound` / `CExoSoundSource` APIs.
-- **`menus_*`** — per-screen GUI accessibility (chargen, character sheet, journal, store, equip, save / load, level-up, workbench, party selection). All share the listbox / chain helpers in `menus_listbox.cpp`, `menus_chain.cpp`, `menus_extract.cpp`.
-- **`combat_*`** — the combat-pillar implementation (log narration, queue submenu, attack resolution, examine, action bar).
-- **`guidance_*`** — Pillar 3 navigation helpers: autowalk (`UseObject` dispatch), beacon mode (A* over the engine's nav graph), description generation.
-- **`map_*`** — Pillar 4 map-context cycle, fog-of-war gating, user-placed pins.
-- **`announce_*`, `passive_narrate`, `camera_*`, `narrated_target`, `peek_description`, `examine_view`** — announcement pipelines and the "what is the player focused on" model.
-- **`hotkeys`, `interact_hotkey`, `view_mode`, `msg_router`** — input layer: Enter / Shift+Enter / hotkey table / view mode toggle.
-- **`cycle_*`** — Q / E / `,` / `.` target cycling. Two parallel state singletons (world cycle, map cycle); a `CycleContext` routes input to whichever is active.
-- **`spatial_change_detector`, `wall_topology`, `transitions`** — Pillar 1 (per-sector wall distance cues) and Pillar 2 (room / area announces). Reads area walkmesh + nav graph.
-- **`radial_menu`, `target_action_menu`, `actionbar_menu`** — action menus (the right-click radial, plus the player's per-portrait action bar).
-- **`prism`, `log`, `strings`, `strings_de.cpp`, `strings_en.cpp`** — infrastructure. Prism is the speech bridge; strings are localised per-id.
-- **`diag_*`, `probe_*`** — diagnostic / research code. Logging only, no behaviour. Kept around because re-running a probe is cheaper than re-deriving it.
+`hooks.toml` (and `kotor2.hooks.toml`) declare the engine functions we detour. Most hooks are mid-function with register-source arguments: the framework's stack-source path has a known LEA-vs-MOV bug (`docs/upstream-prs.md`, PR-2).
 
-`hooks.toml` declares the engine functions we detour. Most hooks are mid-function with register-source args — the upstream framework's stack-source path has a known LEA-vs-MOV bug (see `docs/upstream-prs.md`).
+### `tests/unit/` — unit tests
 
-### `tools/kdev/` — the dev CLI
+Doctest tests for the engine-free code (HTTP parsing of the bridge, shortest paths, save points, geometry and text helpers). `pwsh -File tools/tests/run_unit_tests.ps1` builds and runs them; CI runs them on every push.
 
-.NET 10 (`net10.0-windows`, x86). Wraps Lane Dibello's `KPatchCore` library and `create-patch.bat` build script. Commands live under `Commands/`:
+### `tools/`
 
-- `kdev status` — sanity-check the project + game install.
-- `kdev build` — stage source into the layout `create-patch.bat` expects, run the bat under MSVC, drop the `.kpatch` in `build/`.
-- `kdev apply` — install the patch into the configured Steam install via `KPatchCore.PatchApplicator`.
-- `kdev launch [--monitor]` — launch the game with the patch active.
-- `kdev dev` — clean + build + apply + launch in one shot (the inner loop).
-- `kdev kill` — terminate the running game.
-- `kdev logs [--follow]` — tail the patch log.
-- `kdev analyze-dump <wer.dmp>` — extract crash context from a Windows Error Reporting dump.
-- `kdev walkmesh-*` — offline analyses of the game's `.wok` walkmesh files (used during nav-system design).
-
-### `installer/KotorAccessibilityInstaller/` — end-user installer
-
-.NET 8 WinForms, self-contained single-file EXE. References `KPatchCore` directly. Bundles K1CP (via HoloPatcher), Widescreen, our `.kpatch`, and Prism + Tolk binaries. Modelled on the arena installer at `C:\Users\fabia\Dev\arena\installer\AccessibleArenaInstaller/`.
-
-`release.ps1` is the local release pipeline (build → publish installer → tag → gh release).
+- **`tools/kdev/`** — the dev CLI (.NET 10): `status`, `build`, `apply`, `launch`, `dev`, `kill`, `logs`, `analyze-dump`, and offline walkmesh analyses.
+- **`tools/analysis/`** — measures the patch source (function length and complexity, clones, include cycles), plans and performs file splits (`split_file.py`), and generates `docs/llm-docs/code-index/` (`code_index.py`).
+- **`tools/ghidra-scripts/`** — headless Ghidra scripts for decompiles and byte dumps.
 
 ### `third_party/`
 
-Read-only mirrors / vendored binaries:
-
-- `Kotor-Patch-Manager/` — Lane Dibello's hook framework. We patch local copies of upstream bugs here (see `archiev/framework-changes-backup.patch`).
-- `KotorMessageInjector/` — out-of-process attach / inject library. Demoted to research tool; not in the runtime path.
-- `prism-dist/` — Prism x86 binaries + MPL-2.0 license.
-- `tolk/` — Tolk + NVDA controller-client x86 binaries + LGPL.
+- `Kotor-Patch-Manager/` — Lane Dibello's hook framework, with local fixes (see `docs/upstream-prs.md`).
+- `nvda/` — the NVDA controller client (x86 DLL, header, LGPL-2.1 license).
+- `doctest/` — the unit-test framework.
 
 ## Key design decisions
 
 ### Hook vs. poll
 
-The default is **polling** from a per-tick dispatcher (`core_tick.cpp`). Hooks are reserved for paths where we need to consume input, mutate engine state, or catch a one-shot event with no alternative observation path (combat log line, focus change, area load).
-
-Rule of thumb captured in memory entry `feedback_hook_vs_poll_principle.md`: hooks for control flow, polling for observation.
+The default is **polling** from the per-tick dispatcher. Hooks are for paths where we must consume input, change engine state, or catch a one-shot event that cannot be observed otherwise (a combat log line, a focus change, an area load): hooks for control flow, polling for observation.
 
 ### Read engine state directly; never mirror it
 
-Struct offsets are in `engine_offsets.h`; vtable indices and downcast helpers in `engine_panels.cpp` / `engine_reads.cpp`. If you need a field the engine renders, find the offset and read it — do not maintain a parallel cache in patch state. Mirrors get out of sync; offsets do not.
+Struct offsets are in `engine_offsets*.h`; vtable indices and downcast helpers in `engine_panels.cpp` / `engine_reads*.cpp`. If you need a field the engine renders, find the offset and read it rather than keeping a parallel copy that can drift. One SEH layer, in the code that reads engine memory.
 
-### Localisation — language-agnostic by construction
+### Everything is text, through NVDA
 
-Handler code never sees a localised literal. User-facing strings are id-keyed in `strings.h`; per-locale tables (`strings_en.cpp`, `strings_de.cpp`, ...) supply the actual text. Handlers call `strings::Get(Id)` and don't know or care which locale is loaded. Adding a new locale is a new table file — no handler change. Log lines stay English so the patch log is a single language for debugging.
+Every spoken line goes through `acc::speech::Speak(text, interrupt)`: NVDA speaks it and shows it on the braille display. There is one speech path, no voice priorities and no positional audio; without NVDA the mod is silent. What the original mod told with sounds (walls, doors, objects, beacons) is said in words. Spoken text lives in `strings.cpp` (English, Windows-1252, like the English game's own strings), so handler code never holds a literal. Log lines are English and stay out of the table.
 
-### Speech priority
+### The bridge answers on request
 
-Most speech is queued (`prism::Speak(text)`). Urgent cues (compass-cardinal turn cue, map-cursor region cue) route through `prism::SpeakUrgent` with the SAPI backend — NVDA's typed-character cancel ignores priority, so SAPI is the only escape hatch.
+The bridge (`bridge_*`) listens on 127.0.0.1 with a per-session token written to `bridge.json` next to `swkotor.exe`. A request is queued and answered on the game thread within the next ticks; nothing is read from the game while no tool asks. `bridge_http.*` (parsing, JSON) is engine-free and unit-tested. The endpoints are listed in `bridge.h`.
 
-### Audio bus
+### Framework changes stay local and recorded
 
-3D cues go through `audio_bus.cpp` → engine's `Play3DOneShotSound`. The engine's listener follows the camera, so for character-relative cues we shift source positions by `(camera − character)`. Looping sources (e.g. swoop accelerator-pad pings) use `audio_loop.cpp` over `CExoSoundSource` directly.
-
-### Memory as design notes
-
-The author keeps decisions, gotchas, and reverse-engineering findings in `~/.claude/projects/.../memory/` (referenced by `MEMORY.md` index). When the code does something surprising, there's usually a memory entry explaining why. The corresponding mental model for an outside contributor is: read the relevant header comment; if it points to a `project_*` memory entry, ask for it.
-
-### Don't reach for upstream fixes silently
-
-If you need the patch framework to behave differently, document the design need in `docs/upstream-prs.md` first, then either work around it locally or patch the vendored copy in `third_party/Kotor-Patch-Manager/`. Local edits are tracked in `archiev/framework-changes-backup.patch`.
-
-## Pillars (conceptual)
-
-The accessibility model the in-world part of the mod is built on:
-
-- **Pillar 1 — Spatial awareness.** Continuous low-volume audio cues for nearby walls (per-cardinal-sector) and notable objects. Implemented in `spatial_change_detector.cpp` + `wall_topology.cpp`.
-- **Pillar 2 — Medium-scale navigation.** Room and area announcements on transitions; pre-load destination announce. Implemented in `transitions.cpp`.
-- **Pillar 3 — Target cycle + autowalk.** Q / E cycles in-world targets via the engine's `SelectNearestObject`; `-` autowalks to the cycled target via `UseObject`; `Ctrl+-` runs A* beacon mode. `,` / `.` cycle a parallel object list; `Shift+,` / `Shift+.` are sub-cycles within a category.
-- **Pillar 4 — Map cycle.** Same cycle vocabulary as Pillar 3, but the data source is the engine's area map (doors / landmarks / transitions / quest pins). Fog-of-war gated. User-placed pins added via Shift+N.
+If the patch framework must behave differently, work around it in our code or patch the vendored copy in `third_party/Kotor-Patch-Manager/`, and record the defect and the fix in `docs/upstream-prs.md`. No pull requests are sent from this fork.
 
 ## What this codebase is not
 
-- Not a content mod. It does not edit `.dlg`, `.utc`, `.uti`, `.2da`, `.nss`, or `dialog.tlk`. All access goes through reading game state and inserting accessibility-only signals.
-- Not a runtime-options or configuration UI. Mod-side settings exist (`core_settings.h` + `menus_modsettings.cpp`) but are minimal and not user-facing yet (Phase 7 planned, deferred).
-- Not a cross-engine port. We target the original Odyssey binary specifically. Open-source rebuilds (reone, KotOR.js) are tracked as long-horizon options; the design knowledge is portable but the code is not.
+- Not a content mod. It does not edit `.dlg`, `.utc`, `.uti`, `.2da`, `.nss` or `dialog.tlk`; it reads game state and adds accessibility on top.
+- Not a cross-engine port. It targets the original Odyssey binaries: KOTOR 1 1.0.3 (Steam and GOG, English) and, partly, Aspyr's KOTOR 2.

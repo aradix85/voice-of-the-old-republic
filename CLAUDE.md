@@ -1,7 +1,7 @@
 # Voice of the Old Republic — KOTOR 1 Accessibility Mod
 
 ## Purpose
-Accessibility mod/contribution for **Star Wars: Knights of the Old Republic** (KOTOR 1, BioWare 2003, Steam release) enabling blind and visually impaired players to play using screen readers (NVDA/JAWS/Narrator).
+Accessibility mod for **Star Wars: Knights of the Old Republic** (KOTOR 1, BioWare 2003) enabling blind players to play with NVDA (speech and braille, through the NVDA Controller Client). This is Anouk's fork (aradix85, branch `bridge`) of JeanStiletto's Voice of the Old Republic: NVDA only, English only, text instead of exploration sounds. The refactoring plan and its decisions are in `docs/refactoring/STATE.md`.
 
 ## Developer accessibility
 The developer of this mod is blind. Any workflow you propose has to be doable with a screen reader and keyboard alone. Things to avoid unless there is no alternative:
@@ -48,7 +48,7 @@ Example - instead of tables, format like this:
 - The same applies to infrastructure: check whether a mechanism exists before proposing to build one. `acclog` already has `Trace` (line dedup), `BlockLog` (block dedup), `Once` and `Edge`
 
 ## Non-obvious constraints
-- **MSVC C2712: a function using `__try` cannot contain anything needing unwinding** — no objects with destructors, and no function-local `static` (its thread-safe init guard counts). Engine-reading code here is SEH-heavy by convention, so RAII and lazily-cached constants are unavailable across much of the patch. Workaround when you need an object anyway: declare it in an SEH-free CALLER and pass a pointer in — a pointer is trivially destructible, so the constraint never fires and the SEH code needs no restructuring (see `map_ui_cursor.cpp` / `combat_special_watch.cpp` passing `acclog::BlockLog*`)
+- **MSVC C2712: a function using `__try` cannot contain anything needing unwinding** — no objects with destructors, and no function-local `static` (its thread-safe init guard counts). Engine-reading code here is SEH-heavy by convention, so RAII and lazily-cached constants are unavailable across much of the patch. Workaround when you need an object anyway: declare it in an SEH-free CALLER and pass a pointer in — a pointer is trivially destructible, so the constraint never fires and the SEH code needs no restructuring (see `map_ui_cursor.cpp` passing `acclog::BlockLog*`)
 
 ## Bash Tool on Windows
 - Bash tool runs through bash shell (Git Bash), NOT CMD or PowerShell
@@ -61,18 +61,19 @@ Example - instead of tables, format like this:
 ## Project Reference
 
 ### Game install
-- **Steam path:** `C:\Program Files (x86)\Steam\steamapps\common\swkotor`
+- **Steam path:** `C:\steam\steamapps\common\swkotor` (Anouk's machine; `kdev.toml` holds it)
 - **Executable:** `swkotor.exe`
 - **Config:** `swkotor.ini` (in install root; `[Alias]` section defines folder mapping)
 - **Engine:** BioWare Odyssey Engine (Aurora Engine derivative, also used in NWN)
 
 ### Project workspace
-- **Project root:** `C:\Users\fabia\Dev\kotor`
+- **Project root:** `C:\Users\radix\Documents\KOTOR-toegankelijkheid\voice-of-the-old-republic`
 - **`tools/kdev/`** — internal dev CLI (.NET 10), drives the full build → install → launch loop for our patch
 - **`patches/Accessibility/`** — our patch source (hooks, menus, narration, audio, guidance, and engine-interface modules)
 - **`installer/KotorAccessibilityInstaller/`** — end-user installer (.NET 8 WinForms, self-contained single-file EXE). References KPatchCore directly; modelled on the arena installer (`AccessibleArenaInstaller/IMPLEMENTATION.md` in the sibling arena project) — read that first if touching this code.
-- **`installer/release.ps1`** — local release pipeline (kdev build → publish installer → extract changelog notes → tag → gh release)
-- **`third_party/`** — vendored dependencies: `Kotor-Patch-Manager`, `KotorMessageInjector`, `KotOR_IO`, `prism`/`prism-dist`, `dsoal`, `tolk`, and others. See the directory for the current set.
+- **`.github/workflows/build.yml`** — on every push to `bridge`: builds the mod and the installer, runs the unit tests, and publishes both as the pre-release `bridge-latest`, which the installer downloads the mod from
+- **`tests/unit/`** — doctest unit tests for the engine-free code; run with `pwsh -File tools/tests/run_unit_tests.ps1`
+- **`third_party/`** — vendored dependencies: `Kotor-Patch-Manager`, `nvda` (the controller client), `doctest`, `KeyMouseAccessibilityTest`.
 - **`docs/`** — see Documentation below
 - **`build/`, `logs/`** — generated; gitignored
 - **`kdev.toml`** — project-level config consumed by `kdev`
@@ -84,12 +85,11 @@ Always read these before diving into work — they capture decisions and current
 - **`docs/kdev-design.md`** — kdev's design decisions, project layout, subcommand contracts, exit codes, completion status.
 - **`docs/controls-and-input.md`** — canonical KOTOR 1 keyboard/mouse control survey + accessibility-gap backlog.
 - **`docs/installer.md`** — end-user installer design, bundled-mods plan, beta-prep notes.
-- **`docs/upstream-prs.md`** — tracking of fixes/features we plan to send back to upstream (mostly KPatchManager).
 - **`docs/kotor2-controller-plan.md`** — controller support for KOTOR 2: the phased work plan, the confirmed pad→InputIndex code table, and the defects one live test round exposed. Written to be executed cold. Engine reference is `docs/llm-docs/k2-controller-support.md`.
 - **`docs/kotor1-controller-port.md`** — the same support backported to KOTOR 1, whose engine has no gamepad path at all (decompile evidence inside). Records what differs — the mod is the pad driver there — the shared binding set, and the combined test round.
 - **`docs/known-issues.md`** — five-bucket status tracker (Bugs / Planned / Monitor / Polish / Beta Preparations).
-- **`docs/CHANGELOG.md`** — versioned release notes. `installer/release.ps1` reads the top-most `## vX.Y.Z` heading to pick the version and uses the bullets under it as the GitHub release body. Add an entry (or rename `## Unreleased`) before tagging.
-- **`docs/llm-docs/`** — LLM-targeted reference material. See `docs/llm-docs/CLAUDE.md` for the index. Start with `game-flow.md` for lifecycle context, `accessibility-map.md` for pillar-by-pillar hook candidates, and `sarif-cookbook.md` for querying Lane's RE database.
+- **`docs/CHANGELOG.md`** — release notes. The top section (`v0.9.1+bridge`) is this fork's; add every change there, in its overview and its topic subsection.
+- **`docs/llm-docs/`** — LLM-targeted reference material. See `docs/llm-docs/CLAUDE.md` for the index. `docs/llm-docs/code-index/` is generated from the source comments: `python tools/analysis/code_index.py`. Start with `game-flow.md` for lifecycle context, `accessibility-map.md` for pillar-by-pillar hook candidates, and `sarif-cookbook.md` for querying Lane's RE database.
 - **`archiev/`** — historical investigation, design, and progress docs (session-by-session retrospectives). Search here if a code comment references a `docs/*-investigation.md` or `docs/navsystem-*.md` that no longer exists in `docs/`.
 
 ### Game folders that matter for modding
@@ -127,8 +127,8 @@ Always read these before diving into work — they capture decisions and current
 
 ### Build/run
 - **Inner dev loop:** use `kdev` from the project root. Common: `kdev status`, `kdev dev` (clean → build → apply → launch), `kdev kill`, `kdev logs --follow`.
-- **`kdev` build:** `dotnet build tools/kdev/kdev.csproj` from the project root (output at `tools/kdev/bin/Debug/net10.0/win-x64/kdev.exe`).
-- **Mod build pipeline:** `kdev build` compiles `patches/Accessibility/` **incrementally** — per-TU object cache in `build/objcache/` with header dependencies tracked via `/showIncludes`, so only changed translation units (and TUs that include a changed header) recompile — then links and packages the `.kpatch` in `build/`. Compile/link flags mirror the upstream `create-patch.bat`. `kdev build --clean` wipes the cache and recompiles everything; `kdev build --bat` falls back to the legacy full `create-patch.bat` path. First build (cold cache) recompiles all ~110 TUs; subsequent single-file edits build in seconds.
+- **`kdev` build:** `dotnet build tools/kdev/kdev.csproj -c Release` from the project root (output at `tools/kdev/bin/Release/net10.0/win-x64/kdev.exe`).
+- **Mod build pipeline:** `kdev build` compiles `patches/Accessibility/` **incrementally** — per-TU object cache in `build/objcache/` with header dependencies tracked via `/showIncludes`, so only changed translation units (and TUs that include a changed header) recompile — then links and packages the `.kpatch` in `build/`. Compile/link flags mirror the upstream `create-patch.bat`. `kdev build --clean` wipes the cache and recompiles everything; `kdev build --bat` falls back to the legacy full `create-patch.bat` path. A cold build recompiles every TU; a single-file edit builds in seconds, a change to `strings.h` in about two minutes. A build must end with 0 warnings.
 - **Long jobs in the background:** a cold `kdev build`, `kdev dev`, and `kdev launch --monitor` can run for minutes. Prefer launching them with `run_in_background` so they don't block the turn; read the task output file on completion.
 - **Mod install:** `kdev apply` calls `KPatchCore.PatchApplicator.InstallPatches` against the configured Steam install.
 - **Mod launch:** `kdev launch [--monitor]` calls `Process.Start("swkotor.exe")` directly; the `dinput8.dll` proxy (`kdev apply` drops it into the install root) auto-loads KotorPatcher. `--monitor` blocks on the game process and reports its real exit code.
