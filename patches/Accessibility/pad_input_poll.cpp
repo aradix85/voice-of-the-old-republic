@@ -65,16 +65,15 @@ constexpr ULONGLONG kDpadHoldJumpMs = 1000;
 void PollButtons() {
     const WORD now  = g_btnNow;
     const WORD last = g_btnLast;
-    // Update the edge baseline BEFORE any gate below can return: a button held
-    // across an alt-tab must not read as a fresh press on the way back — and,
-    // now, so that a press made while the engine-pad question was still open
-    // does not read as a fresh one the moment it is settled.
+    // Update the edge baseline BEFORE any gate below can return, so a button
+    // held across an alt-tab, or across the open engine-pad question, does not
+    // read as a fresh press.
     g_btnLast = now;
 
     // KOTOR 2's presses normally arrive as engine events at the two Translate*
     // seams, and dispatching them a second time from here would double every
     // binding. When its engine never saw the pad there are no such events, and
-    // the mod is the driver on both games — see the EnginePad notes above.
+    // the mod is the driver on both games (EnginePad, pad_input_internal.h).
     if (g_enginePad != EnginePad::Dead) return;
 
     if (!Connected()) return;
@@ -86,8 +85,8 @@ void PollButtons() {
     const ULONGLONG nowMs = GetTickCount64();
     auto rising = [&](WORD m) { return (now & m) != 0 && (last & m) == 0; };
 
-    // D-Pad first, and with repeat — it is the pad's primary surface in both
-    // of its modes and in every menu.
+    // D-Pad first, and with repeat: it is the pad's primary surface in the
+    // world and in every menu.
     for (int i = 0; i < 4; ++i) {
         const WORD m = kDpadBits[i].mask;
         if (!(now & m)) {
@@ -189,10 +188,9 @@ void PollButtons() {
 bool PeekModifierHeld() { return Connected() && g_yHeld; }
 
 void PollXInputButtons() {
-    // Both games — see the header for why the engine's own L3 event cannot
-    // carry this binding. Own edge baseline, updated BEFORE any gate below can
-    // return: a button held across an alt-tab must not read as a fresh press on
-    // the way back.
+    // Both games. Own edge baseline, updated BEFORE any gate below can return:
+    // a button held across an alt-tab must not read as a fresh press on the
+    // way back.
     const WORD now  = g_btnNow;
     const WORD last = g_xiBtnLast;
     g_xiBtnLast = now;
@@ -263,14 +261,12 @@ void PollXInputButtons() {
         DispatchDpadHold(kDpadBits[i].code);
     }
 
-    // Press the right stick on the map screen — drop a marker at the cursor,
-    // the keyboard's Shift + N. In the world that press is the camera orient,
-    // and both of those are "point me at something": one turns the camera to
-    // the next waypoint, the other plants the waypoint. Claimed from XInput
-    // because neither game delivers a stick press on a menu surface at all —
-    // KOTOR 1's own R3 handling sits behind a world-only gate and KOTOR 2's
-    // arrives on the in-world client route, so there is nothing to collide
-    // with here.
+    // Press the right stick on the map screen: drop a marker at the cursor,
+    // the keyboard's Shift + N (in the world the same press turns the camera
+    // to the next exit). Claimed from XInput because neither game delivers a
+    // stick press on a menu surface: KOTOR 1's own R3 handling sits behind a
+    // world-only gate and KOTOR 2's arrives on the in-world client route, so
+    // there is nothing to collide with here.
     if ((now & kBtnThumbR) != 0 && (last & kBtnThumbR) == 0 &&
         acc::engine::HasActiveMapPanel()) {
         acclog::Write("Pad", "press right stick on the map -> drop marker");
@@ -305,8 +301,8 @@ void PollXInputButtons() {
     // a menu and the engine delivers nothing, so the log stays silent and
     // "which button did I just press" is unanswerable from it — which is
     // precisely the question that has to be settled when a binding moves. XInput
-    // sees every button on every screen, so one line here closes that gap for
-    // good. Bounded by construction: rising edges only.
+    // sees every button on every screen, so one line here closes that gap.
+    // Bounded by construction: rising edges only.
     //
     // What it CANNOT see is the Series pad's Share button: Windows keeps that
     // one for the Game Bar capture and reports it through no input API we have.

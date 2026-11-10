@@ -21,78 +21,12 @@ namespace acc::pad {
 
 namespace {
 
-// ---------------------------------------------------------------------------
-// The face-button chord grid
-// ---------------------------------------------------------------------------
-// A trigger held turns each of the four face buttons into a second binding.
-// That is eight slots, and they are what closed the last of the gaps between
-// what a keyboard player can reach and what a pad player can:
-//
-//   LT + A   announce the focused object (the minus key)
-//   LT + B   open the action queue       (Shift+H)
-//   LT + X   your own status             (H)
-//   LT + Y   cancel combat               (F)
-//   RT + A   look-around mode            (B)
-//   RT + B   copy the last spoken text   (Ctrl+R)
-//   RT + X   — free —
-//   RT + Y   the level-up screen         (Shift+L)
-//
-// The grid is the point: "hold a trigger and press a face button" is one thing
-// to remember instead of eight.
-//
-// What decides which half a binding lands in is ERGONOMICS, not category. The
-// left trigger is the comfortable side — left index finger, right thumb, two
-// hands working independently — so the bindings reached for often live there.
-// The right trigger is the same-hand stretch: index tensed on the trigger while
-// the thumb travels, which is fine for A and increasingly awkward toward X and
-// Y. So the right half carries only what is rare and unhurried, and RT + X is
-// deliberately left empty rather than filled with something that would then be
-// hard to press.
-//
-// The queue's clear-all used to sit at LT + A. It is a bare Y inside the queue
-// overlay now (ClaimQueueClearAll above), which freed the grid's single best
-// slot for the readout a player uses most.
-//
-// Read from XInput on BOTH games rather than from the engine's own button
-// events, because a chord has to be decided from the TRIGGER STATE and only
-// XInput reports that (the engine never reads the trigger axis at all) — and
-// because these have to answer on every screen, including the ones a given
-// button's engine event does not reach. On KOTOR 2 the matching engine event is
-// consumed while a trigger is held so the button's bare job does not also run.
-//
-// Every binding is routed as a synthetic press of the keyboard action it
-// mirrors, never as a call into a handler: the world gate, the combat gate and
-// the announcement each stay in the one place they already live.
-//
-// Returns true when a chord fired, which is also the caller's signal that the
-// button's BARE job must not run. Marks the trigger chorded so its own solo job
-// — the action menu on LT, the degrees announcement on RT — does not also fire
-// when the player lets go.
 // Cancel Combat is the engine's own [Keymapping] action, not a mod hotkey, so
 // it is fired the way the quick menu fires its entries: synthesise whatever key
 // the player has bound to it. Row 40 + 200; the ini's Action240 carries
 // InputIndex 56, which is the letter F — the default this falls back to.
 constexpr int kActCancelCombat = 240;
 constexpr int kDikF            = 0x21;
-
-// ---------------------------------------------------------------------------
-// The D-Pad, and what it is for
-// ---------------------------------------------------------------------------
-// The D-Pad is not free in the world — it drives the engine's own
-// CSWGuiActionMenuIos, whose level 1 (category) is D-Pad left/right and whose
-// level 2 (entry) is D-Pad up/down, with A confirming. The earlier reading
-// that it was inert was a blind test round watching a silent, purely visual
-// highlight move; every round since has consumed the codes outright, which is
-// why Pad.ActionMenu never logged a line.
-//
-// So the four codes are ours, and in the world they are the object cycle:
-// left/right steps the object, up/down the category. That is the D-Pad's ONE
-// job. It used to have two, switched by the left trigger — cycle and a
-// permanently-open "live" action menu — and the second one ate the A button:
-// with the mode on, A always belonged to the menu, so interacting with
-// anything meant switching the mode back first. The action menu is a menu the
-// player OPENS now (the left trigger, below), and while it is up it is an
-// overlay, so RouteToOverlay claims the D-Pad before this function is reached.
 
 // Open the unified action menu on whatever is focused — the pad's Shift+Enter.
 // Returns true when it is up afterwards.
@@ -174,15 +108,9 @@ void ToggleActionMenu() {
 //
 // The keyboard clears the whole queue with Shift+Enter, and the queue's own
 // handler tells that press from a plain Enter by reading the physical Shift. A
-// pad holds no Shift, so the gesture has to be claimed here and call the queue
-// directly.
-//
-// It used to be LT + A, which spent one of the eight trigger chords on a
-// binding that could only ever fire on a single screen. The queue overlay is
-// its own surface with its own vocabulary, and Y does nothing there — so Y is
-// free, and taking it costs only the quick menu while the queue happens to be
-// up. The result reads better too: inside the queue, A removes the entry you
-// are on and Y removes them all.
+// pad holds no Shift, so the gesture is claimed here and calls the queue
+// directly. Y does nothing else inside the queue: A removes the entry you are
+// on and Y removes them all.
 //
 // Returns true when it fired and the caller must consume; off the queue it
 // declines instantly and Y keeps its ordinary job.
@@ -193,20 +121,75 @@ bool ClaimQueueClearAll() {
     return true;
 }
 
+// A: the overlay's activate, or in the world an interaction with what the
+// player was last TOLD about, not the engine's last-clicked target (the
+// promise keyboard Enter makes). The action menu, when it is up, is an
+// overlay and takes the press first. Returns false off the world with no
+// overlay up: the caller then makes A the menu's Enter.
+bool ClaimA() {
+    NoteNavPress();
+    if (RouteToOverlay(kInputEnter1)) {
+        acclog::Write("Pad", "A -> overlay activate");
+        return true;
+    }
+    if (!InWorldSurface()) return false;
+    acclog::Write("Pad", "A -> interact with narrated target");
+    acc::interact::InteractNarratedTarget(/*forceRadial=*/false);
+    return true;
+}
+
+// ---------------------------------------------------------------------------
+// The face-button chord grid
+// ---------------------------------------------------------------------------
+// A trigger held turns each of the four face buttons into a second binding:
+//
+//   LT + A   announce the focused object (the minus key)
+//   LT + B   open the action queue       (Shift+H)
+//   LT + X   your own status             (H)
+//   LT + Y   cancel combat               (F)
+//   RT + A   look-around mode            (B)
+//   RT + B   copy the last spoken text   (Ctrl+R)
+//   RT + X   — free —
+//   RT + Y   the level-up screen         (Shift+L)
+//
+// "Hold a trigger and press a face button" is one thing to remember instead
+// of eight. Which half a binding lands in is decided by ERGONOMICS, not
+// category. The left trigger is the comfortable side (left index finger,
+// right thumb, two hands working independently), so the bindings reached for
+// often live there. The right trigger is the same-hand stretch: index tensed
+// on the trigger while the thumb travels, fine for A and increasingly awkward
+// toward X and Y. So the right half carries only what is rare and unhurried,
+// and RT + X is left empty rather than given something hard to press.
+//
+// Read from XInput on BOTH games rather than from the engine's own button
+// events, because a chord has to be decided from the TRIGGER STATE and only
+// XInput reports that (the engine never reads the trigger axis at all), and
+// because these have to answer on every screen, including the ones a given
+// button's engine event does not reach. On KOTOR 2 the matching engine event is
+// consumed while a trigger is held so the button's bare job does not also run.
+//
+// Every binding is routed as a synthetic press of the keyboard action it
+// mirrors, never as a call into a handler: the world gate, the combat gate and
+// the announcement each stay in the one place they already live.
+//
+// Returns true when a chord fired, which is also the caller's signal that the
+// button's BARE job must not run. Marks the trigger chorded so its own solo job
+// (the action menu on LT, the facing on RT) does not also fire when the player
+// lets go.
 bool DispatchFaceChord(WORD button) {
     using A = acc::hotkeys::Action;
     const bool lt = g_ltHeld;
-    const bool rt = g_rtHeld;
-    if (!lt && !rt) return false;
-
+    if (!lt && !g_rtHeld) return false;
+    if (button != kBtnA && button != kBtnB && button != kBtnX &&
+        button != kBtnY) {
+        return false;
+    }
     // One place decides which trigger is being held, so a chord can never mark
     // the wrong one and leave a stray solo job armed.
-    bool& chorded = lt ? g_ltChorded : g_rtChorded;
-    const char* side = lt ? "LT" : "RT";
+    (lt ? g_ltChorded : g_rtChorded) = true;
 
     switch (button) {
         case kBtnA:
-            chorded = true;
             if (lt) {
                 acclog::Write("Pad", "LT + A -> announce the focused object");
                 acc::cycle_input::DispatchPadAction(
@@ -218,7 +201,6 @@ bool DispatchFaceChord(WORD button) {
             return true;
 
         case kBtnB:
-            chorded = true;
             if (lt) {
                 acclog::Write("Pad", "LT + B -> the action queue");
                 acc::hotkeys::PadPress(A::CombatQueueOpen);
@@ -229,23 +211,18 @@ bool DispatchFaceChord(WORD button) {
             return true;
 
         case kBtnX:
-            // RT + X is deliberately empty — the grid's hardest reach, kept in
-            // reserve rather than given a binding nobody would want there. It
-            // is still claimed, so the engine cannot switch the party leader
-            // under a held trigger.
-            if (!lt) {
-                chorded = true;
+            // RT + X is empty, but still claimed, so the engine cannot switch
+            // the party leader under a held trigger.
+            if (lt) {
+                acclog::Write("Pad", "LT + X -> own status");
+                acc::hotkeys::PadPress(A::SelfStatusAnnounce);
+            } else {
                 acclog::Trace("Pad", "RT + X is unbound — claimed so bare X "
                                      "cannot fire under the trigger");
-                return true;
             }
-            chorded = true;
-            acclog::Write("Pad", "LT + X -> own status");
-            acc::hotkeys::PadPress(A::SelfStatusAnnounce);
             return true;
 
         case kBtnY:
-            chorded = true;
             if (lt) {
                 acclog::Write("Pad", "LT + Y -> cancel combat");
                 FireGameAction(kActCancelCombat, kDikF, "LT + Y (cancel combat)");
@@ -258,9 +235,12 @@ bool DispatchFaceChord(WORD button) {
     return false;
 }
 
-// In-world D-Pad dispatch: the object cycle. The action menu never reaches
-// here — while it is up it is an overlay and RouteToOverlay claims the code
-// first. Returns true when the binding fired (the caller consumes).
+// In-world D-Pad dispatch: the object cycle, left / right the object, up / down
+// the category. The D-Pad is not free in the world: it drives the engine's own
+// CSWGuiActionMenuIos (category on left / right, entry on up / down, A
+// confirms), so the mod consumes the four codes. The unified action menu never
+// reaches here: while it is up it is an overlay and RouteToOverlay claims the
+// code first. Returns true when the binding fired (the caller consumes).
 bool DispatchWorldDpad(int code) {
     using PA = acc::cycle_input::PadAction;
 
@@ -273,25 +253,14 @@ bool DispatchWorldDpad(int code) {
     }
 }
 
-// The map screen's D-Pad.
-//
-// Every control on the map panel is filtered out of the chain (menus_chain
-// drops the close button and both note-stepper buttons), so the D-Pad had
-// nothing of ours to drive there and fell through to the engine — whose
-// InGameMap steps prev / next map note on UP and DOWN, and does nothing at all
-// with left and right. The hints were therefore on the vertical axis while the
-// world's objects are on the horizontal one, and they are all one category:
-// exactly what the horizontal axis is for everywhere else in the mod.
-//
-// So left and right step the hints through the mod's own Map cycle context —
-// which is also what the keyboard's `,` / `.` already do here (spoken name,
-// bearing and distance, with the virtual cursor panning to each).
-//
-// Up and down are NOT the category step they are in the world: the map has one
-// category, so that step only ever repeated it. They decline instead and fall
-// through to ordinary menu navigation, exactly the arrow keys' job on this
-// screen — the chain walks the panel's real buttons (party selection, return
-// to base, whatever the area offers).
+// The map screen's D-Pad. The engine's InGameMap steps map notes on up / down
+// and ignores left / right, and menus_chain filters the map's own controls out
+// of the chain. Left / right step the hints through the mod's Map cycle
+// context, as the keyboard's `,` / `.` do here (name, bearing and distance,
+// the virtual cursor panning to each): the same axis the world's objects use.
+// Up / down decline and fall through to menu navigation, the arrow keys' job
+// on this screen (the chain walks the panel's real buttons). The map has one
+// category, so a category step would only repeat it.
 //
 // Gated on HasActiveMapPanel, the same predicate DispatchPadAction uses to
 // pick Map over World context, so the two can never disagree about which
@@ -330,6 +299,27 @@ bool DispatchShoulderChord(bool right) {
         return true;
     }
     return false;
+}
+
+// The bare shoulders on the container and the store, where the engine gives
+// them nothing: the keyboard's Q / E mode toggle (take vs give, buy vs sell),
+// without which a pad player could only ever take and only ever buy. Routed as
+// a synthetic press of the SAME action the keyboard poller runs, so the
+// foreground gate, the operation-already-pending guard and the mode
+// announcement stay in their one place (menus_listbox / menus_store). Returns
+// false on any other screen.
+bool DispatchShoulderModeToggle(bool right) {
+    acc::engine::UiBlockState blk;
+    acc::engine::IsForegroundUiBlocking(&blk);
+    const bool container = (blk.fgKind == acc::engine::PanelKind::Container);
+    const bool store     = (blk.fgKind == acc::engine::PanelKind::Store);
+    if (!container && !store) return false;
+    NoteNavPress();
+    acclog::Write("Pad", "%s -> %s mode toggle", right ? "RB" : "LB",
+                  container ? "container" : "store");
+    acc::hotkeys::PadPress(container ? acc::hotkeys::Action::ContainerGiveMode
+                                     : acc::hotkeys::Action::StoreModeToggle);
+    return true;
 }
 
 }  // namespace acc::pad

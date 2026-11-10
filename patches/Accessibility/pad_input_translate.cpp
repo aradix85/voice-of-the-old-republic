@@ -6,9 +6,7 @@
 
 #include "engine_game.h"
 #include "engine_input.h"
-#include "engine_panels.h"
 #include "hotkeys.h"         // PadPress — reuse the keyboard actions' pollers
-#include "interact_dispatch.h"
 #include "log.h"
 #include "map_ui_cursor.h"   // IsActive — the map screen owns the left stick
 #include "minigame_pazaak.h" // TryHandlePadAction — the board owns Y and X
@@ -262,7 +260,6 @@ Verdict TranslateManagerEvent(int& code, int& value) {
     // is dispatched from the XInput sample — the only reader that can see a
     // trigger at all. All this route has to do is stop the engine, and the bare
     // handlers below, acting on the same press.
-    //
     if (value != 0 && (g_ltHeld || g_rtHeld) &&
         (code == kPadButtonA || code == kPadButtonB ||
          code == kPadButtonX || code == kPadButtonY)) {
@@ -274,23 +271,9 @@ Verdict TranslateManagerEvent(int& code, int& value) {
     // ---- A ----------------------------------------------------------------
     if (code == kPadButtonA) {
         if (value == 0) return Verdict::NotPad;
-        NoteNavPress();
-        if (RouteToOverlay(kInputEnter1)) {
-            acclog::Write("Pad", "A -> overlay activate");
-            return Verdict::Consumed;
-        }
-        if (InWorldSurface()) {
-            // In the world A always interacts. The action menu, when it is up,
-            // is an overlay and took this press at RouteToOverlay above.
-            //
-            // Interact with what the player was last TOLD about, not with the
-            // engine's last-clicked target — the same promise keyboard Enter
-            // makes. Consumed so the engine's own default action can't also
-            // fire on a stale target.
-            acclog::Write("Pad", "A -> interact with narrated target");
-            acc::interact::InteractNarratedTarget(/*forceRadial=*/false);
-            return Verdict::Consumed;
-        }
+        // Consumed when claimed, so the engine's own default action cannot
+        // also fire on a stale target.
+        if (ClaimA()) return Verdict::Consumed;
         code = kInputEnter1;
         acclog::Write("Pad", "A -> logical Enter");
         return Verdict::Rewritten;
@@ -318,16 +301,8 @@ Verdict TranslateManagerEvent(int& code, int& value) {
     // ---- LB / RB ----------------------------------------------------------
     // The bare shoulders are the engine's nearly everywhere: in the world they
     // cycle targets, and on the in-game menu strip they step between the
-    // sub-screens — that is how the pad reaches the map at all. Two panels are
-    // the exception. On the container and the store the engine gives them
-    // nothing, while the keyboard's Q / E carry the mode toggle there (take vs
-    // give, buy vs sell), so without this a pad player can only ever take and
-    // only ever buy.
-    //
-    // Routed as a synthetic press of the SAME action the keyboard poller runs,
-    // not as a reach into the panels: the foreground gate, the
-    // operation-already-pending guard and the mode announcement then all stay
-    // in their one place (menus_listbox / menus_store).
+    // sub-screens, which is how the pad reaches the map at all. The container
+    // and the store are the exception (DispatchShoulderModeToggle).
     if (code == kPadShoulderL || code == kPadShoulderR) {
         if (value == 0) return Verdict::NotPad;
         // The Pazaak board's two readers, same as KOTOR 1's.
@@ -339,25 +314,14 @@ Verdict TranslateManagerEvent(int& code, int& value) {
         // The chords, off the world. In the world the shoulder arrives on the
         // client route too and TranslateClientEvent takes the chord there, so
         // claiming it here as well would fire it twice. On a panel this is the
-        // only route — without it LT + LB on the map reached the engine as a
-        // bare LB and stepped to the next sub-screen instead of the route.
+        // only route; without it LT + LB on the map would reach the engine as
+        // a bare LB and step to the next sub-screen.
         if (!InWorldSurface() && DispatchShoulderChord(code == kPadShoulderR)) {
             return Verdict::Consumed;
         }
-        acc::engine::UiBlockState blk;
-        acc::engine::IsForegroundUiBlocking(&blk);
-        const bool container =
-            (blk.fgKind == acc::engine::PanelKind::Container);
-        const bool store = (blk.fgKind == acc::engine::PanelKind::Store);
-        if (!container && !store) return Verdict::NotPad;
-        NoteNavPress();
-        acclog::Write("Pad", "%s -> %s mode toggle",
-                      code == kPadShoulderL ? "LB" : "RB",
-                      container ? "container" : "store");
-        acc::hotkeys::PadPress(container
-                                   ? acc::hotkeys::Action::ContainerGiveMode
-                                   : acc::hotkeys::Action::StoreModeToggle);
-        return Verdict::Consumed;
+        return DispatchShoulderModeToggle(code == kPadShoulderR)
+                   ? Verdict::Consumed
+                   : Verdict::NotPad;
     }
 
     // ---- Y ----------------------------------------------------------------
@@ -383,24 +347,17 @@ Verdict TranslateManagerEvent(int& code, int& value) {
     }
 
     // ---- X -----------------------------------------------------------------
-    // Bare X stays the engine's Switch Party Leader. With a trigger held it is
-    // the mod's H key — dispatched from the XInput sample (PollXInputButtons,
-    // which is the only reader that can see a trigger at all), so all this
-    // branch has to do is stop the engine acting on the same press.
-    // On the Pazaak board bare X is End turn. Switching the party leader there
-    // is meaningless — the board is the whole game while it is up.
+    // On the Pazaak board bare X is End turn; switching the party leader there
+    // is meaningless, the board is the whole game while it is up. Everywhere
+    // else bare X stays the engine's Switch Party Leader.
     if (code == kPadButtonX && value != 0 &&
         acc::pazaak::TryHandlePadAction(acc::pazaak::PadAction::EndTurn)) {
         return Verdict::Consumed;
     }
 
-    // Everything else (X bare, Back) keeps its engine meaning. X is
-    // Switch Party Leader and stays the engine's: it briefly hosted the mod's
-    // action menu, which the left trigger carries now — a menu wants a button
-    // that does nothing else, and X already had a job.
-    //
-    // They are still flagged as pad events so the F1 suppression in
-    // OnHandleInputEvent and the log annotation know what they are looking at.
+    // Everything else (bare X, Back) keeps its engine meaning. IsPadCode still
+    // flags them, so the F1 suppression in OnHandleInputEvent and the log
+    // annotation know what they are looking at.
     return Verdict::NotPad;
 }
 

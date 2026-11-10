@@ -1,4 +1,4 @@
-# pad_input_poll.cpp (375 lines)
+# pad_input_poll.cpp (371 lines)
 
 Source: `patches/Accessibility/pad_input_poll.cpp`
 
@@ -7,6 +7,6 @@ Gamepad entry points of the input-poll slot: edge-detect the sampled button word
 ## Declarations (in source order)
 
 - L65 `void PollButtons()`
-- L189 `bool PeekModifierHeld()`
-- L191 `void PollXInputButtons()`
-- L330 `void PollTriggers()`
+- L188 `bool PeekModifierHeld()`
+- L190 `void PollXInputButtons()`
+- L326 `void PollTriggers()`

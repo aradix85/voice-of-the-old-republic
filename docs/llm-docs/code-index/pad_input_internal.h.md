@@ -1,4 +1,4 @@
-# pad_input_internal.h (188 lines)
+# pad_input_internal.h (190 lines)
 
 Source: `patches/Accessibility/pad_input_internal.h`
 
@@ -13,17 +13,19 @@ Internal to the pad_input module (pad_input*.cpp); no other file includes it. Th
 - L169 `bool RouteToOverlay(int logical)`: pad_input_bindings.cpp
 - L170 `void ToggleActionMenu()`
 - L171 `bool ClaimQueueClearAll()`
-- L172 `bool DispatchFaceChord(WORD button)`
-- L173 `bool DispatchWorldDpad(int code)`
-- L174 `bool DispatchMapDpad(int code)`
-- L175 `bool DispatchShoulderChord(bool right)`
-- L178 `void FireGameAction(int actionId, int defaultDik, const char* what)`: pad_input_dispatch.cpp
-- L179 `int LogicalForDirection(int code)`
-- L180 `void DispatchDpad(int code)`
-- L181 `void DispatchA()`
-- L182 `void DispatchB()`
-- L183 `void DispatchShoulder(bool right)`
-- L184 `bool DpadHoldSpent(int code)`
-- L185 `void DispatchDpadHold(int code)`
+- L172 `bool ClaimA()`
+- L173 `bool DispatchFaceChord(WORD button)`
+- L174 `bool DispatchWorldDpad(int code)`
+- L175 `bool DispatchMapDpad(int code)`
+- L176 `bool DispatchShoulderChord(bool right)`
+- L177 `bool DispatchShoulderModeToggle(bool right)`
+- L180 `void FireGameAction(int actionId, int defaultDik, const char* what)`: pad_input_dispatch.cpp
+- L181 `int LogicalForDirection(int code)`
+- L182 `void DispatchDpad(int code)`
+- L183 `void DispatchA()`
+- L184 `void DispatchB()`
+- L185 `void DispatchShoulder(bool right)`
+- L186 `bool DpadHoldSpent(int code)`
+- L187 `void DispatchDpadHold(int code)`
 
 Also 52 constants or variables at namespace scope.

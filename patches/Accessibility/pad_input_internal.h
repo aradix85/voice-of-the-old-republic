@@ -12,8 +12,8 @@
 
 namespace acc::pad {
 
-// XInput's own button bits. Mirrored rather than included for the same reason
-// the structures above are.
+// XInput's own button bits. Mirrored rather than included, like the XInput
+// structures in pad_input.cpp, so nothing can drag in a static import.
 constexpr WORD kBtnDpadUp    = 0x0001;
 constexpr WORD kBtnDpadDown  = 0x0002;
 constexpr WORD kBtnDpadLeft  = 0x0004;
@@ -111,17 +111,17 @@ extern WORD g_btnLast;
 extern bool g_yHeld;
 
 // ---------------------------------------------------------------------------
-// KOTOR 1 — making the ENGINE act
+// Making the ENGINE act (pad_input_dispatch.cpp)
 // ---------------------------------------------------------------------------
-// Everything above this point is game-agnostic: it drives the MOD. What
-// follows is the K1-only other half — the presses whose whole job is something
-// only the engine can do (navigate one of its panels, cycle a target, switch
-// party leader, pause). K2 gets those for free because the engine binds the
-// pad itself; K1 has to be given the player's own key.
+// The presses whose whole job is something only the engine can do (navigate
+// one of its panels, cycle a target, switch party leader, pause). A live
+// KOTOR 2 engine pad gets those for free because the engine binds the pad
+// itself; KOTOR 1, and KOTOR 2 when its engine never saw the pad, have to be
+// given the player's own key.
 //
 // The key goes in as a DirectInput scancode, which is all the engine's
 // keyboard layer can see (a plain-VK SendInput is invisible to it). Every
-// caller here is already behind the foreground gate in PollButtons.
+// caller is already behind the foreground gate in PollButtons.
 //
 // [Keymapping] action ids are keymap.2da row + 200. The defaults below are
 // that file's own key for the row, used when the ini has no line for it — or
@@ -169,10 +169,12 @@ void NoteNavPress();
 bool RouteToOverlay(int logical);
 void ToggleActionMenu();
 bool ClaimQueueClearAll();
+bool ClaimA();
 bool DispatchFaceChord(WORD button);
 bool DispatchWorldDpad(int code);
 bool DispatchMapDpad(int code);
 bool DispatchShoulderChord(bool right);
+bool DispatchShoulderModeToggle(bool right);
 
 // pad_input_dispatch.cpp
 void FireGameAction(int actionId, int defaultDik, const char* what);

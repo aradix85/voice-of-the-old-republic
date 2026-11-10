@@ -10,8 +10,6 @@
 #include "engine_keymap.h"   // GameActionScancode — KOTOR 1 fires engine
                              // actions by synthesising the player's own bind
 #include "engine_panels.h"
-#include "hotkeys.h"         // PadPress — reuse the keyboard actions' pollers
-#include "interact_dispatch.h"
 #include "key_inject.h"      // Send / Tap — the scancode route into the engine
 #include "log.h"
 #include "minigame_pazaak.h" // TryHandlePadAction — the board owns Y and X
@@ -78,12 +76,12 @@ int LogicalForDirection(int code) {
 }
 
 // ---------------------------------------------------------------------------
-// KOTOR 1 — one press, dispatched
+// One press, dispatched by the mod
 // ---------------------------------------------------------------------------
-// Each of these is the K1 twin of a branch in TranslateManagerEvent, in the
-// same order of refusal, calling the same helpers. What differs is only the
-// tail: where K2 rewrites the code and lets the engine's own dispatch carry it
-// on, K1 synthesises the key the keyboard would have sent.
+// Each of these is the twin of a branch in TranslateManagerEvent, in the same
+// order of refusal, calling the same helpers. What differs is only the tail:
+// where a live KOTOR 2 engine pad rewrites the code and lets the engine's own
+// dispatch carry it on, these synthesise the key the keyboard would have sent.
 
 void DispatchDpad(int code) {
     const int logical = LogicalForDirection(code);
@@ -109,23 +107,7 @@ void DispatchDpad(int code) {
 }
 
 void DispatchA() {
-    NoteNavPress();
-    if (RouteToOverlay(kInputEnter1)) {
-        acclog::Write("Pad", "A -> overlay activate");
-        return;
-    }
-    if (InWorldSurface()) {
-        // In the world A always interacts. The action menu, when it is up, is
-        // an overlay and took this press at RouteToOverlay above — so A never
-        // has to be read as "which mode am I in".
-        //
-        // Interact with what the player was last TOLD about, not the engine's
-        // last-clicked target — the promise keyboard Enter makes.
-        acclog::Write("Pad", "A -> interact with narrated target");
-        acc::interact::InteractNarratedTarget(/*forceRadial=*/false);
-        return;
-    }
-    InjectMenuKey(kInputEnter1);
+    if (!ClaimA()) InjectMenuKey(kInputEnter1);
 }
 
 void DispatchB() {
@@ -156,23 +138,7 @@ void DispatchShoulder(bool right) {
     // chord, never the sub-screen step or the target cycle.
     if (DispatchShoulderChord(right)) return;
 
-    // On the container and the store the keyboard's Q / E carry the mode
-    // toggle (take vs give, buy vs sell). Same routing as KOTOR 2: a synthetic
-    // press of the action the keyboard poller runs, so the foreground gate,
-    // the pending-operation guard and the mode announcement stay in one place.
-    acc::engine::UiBlockState blk;
-    acc::engine::IsForegroundUiBlocking(&blk);
-    const bool container = (blk.fgKind == acc::engine::PanelKind::Container);
-    const bool store     = (blk.fgKind == acc::engine::PanelKind::Store);
-    if (container || store) {
-        NoteNavPress();
-        acclog::Write("Pad", "%s -> %s mode toggle", right ? "RB" : "LB",
-                      container ? "container" : "store");
-        acc::hotkeys::PadPress(container
-                                   ? acc::hotkeys::Action::ContainerGiveMode
-                                   : acc::hotkeys::Action::StoreModeToggle);
-        return;
-    }
+    if (DispatchShoulderModeToggle(right)) return;
 
     // Otherwise the shoulders do what they do on KOTOR 2: cycle the target in
     // the world, and step the in-game menu's sub-screens everywhere else —

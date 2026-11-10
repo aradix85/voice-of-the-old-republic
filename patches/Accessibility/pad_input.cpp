@@ -109,11 +109,10 @@ bool      g_altSeen[4]     = {};
 //            a pad that announced itself this way stays the relevant one for
 //            the session. Sticky by necessity, not by choice.
 //
-// Connected() is the OR of the two, and it now reaches past the pad's own code:
-// it is the device signal the help and tutorial wording switches on (see
-// binding_hints.h), so "the player unplugged the pad" has to become visible,
-// and a DirectInput-only pad on KOTOR 2 — which XInput never reports at all —
-// still has to count.
+// Connected() is the OR of the two. It is the device signal the help and
+// tutorial wording switches on (binding_hints.h), so an unplugged pad has to
+// become visible, and a DirectInput-only pad on KOTOR 2, which XInput never
+// reports, still has to count.
 ULONGLONG g_xinputSeenMs = 0;   // last successful XInputGetState; 0 = never
 bool      g_padEventSeen = false;
 
@@ -140,6 +139,35 @@ float g_stickY      = 0.0f;   // normalised, +1 = up (XInput's own convention)
 bool  g_rstickActive = false;
 float g_rstickX      = 0.0f;
 float g_rstickY      = 0.0f;
+
+// One stick's sample: true past the dead zone, with the direction normalised
+// into outX / outY; zero inside it. int arithmetic, not the SHORTs: the
+// squared magnitude of two full-scale axes overflows 16 bits.
+bool SampleStick(int x, int y, float& outX, float& outY) {
+    const int magSq = x * x + y * y;
+    if (magSq <= kStickDeadZoneSq) {
+        outX = outY = 0.0f;
+        return false;
+    }
+    const float mag = std::sqrt(static_cast<float>(magSq));
+    outX = static_cast<float>(x) / mag;
+    outY = static_cast<float>(y) / mag;
+    return true;
+}
+
+// Everything the sample holds, read as released: the slot it came from is gone
+// or no longer ours. Without this pad_movement would keep a synthesised walk
+// key down, and the first read of the next slot would fire phantom edges
+// against a stale baseline.
+void ReleaseSampledState() {
+    g_ltHeld = g_rtHeld = false;
+    g_stickMoving  = false;
+    g_stickX = g_stickY = 0.0f;
+    g_rstickActive = false;
+    g_rstickX = g_rstickY = 0.0f;
+    g_btnNow  = 0;
+    g_yHeld   = false;
+}
 
 void NoteEnginePadLive(const char* why) {
     if (g_enginePad == EnginePad::Live) return;
@@ -184,8 +212,7 @@ void EnsureXInput() {
 // The idle-slot guard — see kLatchIdleMs for what it is defending against.
 // ---------------------------------------------------------------------------
 // Called only while the bound slot has stood perfectly still for the idle
-// window AND more than one device answered at bind time. Polls the slots we did
-// NOT bind and switches to any that moved since its own baseline. Two samples
+// window. Polls the slots we did NOT bind and switches to any that moved since its own baseline. Two samples
 // are needed per alternate, which is why the first sight of one only records a
 // baseline: a packet number read once says nothing about whether it is moving.
 //
@@ -215,9 +242,8 @@ bool AdoptLivelierSlot(ULONGLONG now) {
         // pad as two virtual XInput devices (both vendor Valve, both the same
         // product), feeding whichever of them it likes; each is idle exactly
         // when the other moves, so this test fires on every brief pause and
-        // the guard ping-pongs — four switches in one six-minute tester
-        // session, each one clearing the trigger and stick state below
-        // mid-gesture, which is what "the controller does random things" was.
+        // the guard would ping-pong, clearing the trigger and stick state
+        // below mid-gesture each time.
         //
         // Same vendor AND same product means one device wearing two slots, and
         // there is nothing to win by moving between them: the presses are
@@ -270,16 +296,8 @@ bool AdoptLivelierSlot(ULONGLONG now) {
         g_lastPacket    = alt.dwPacketNumber;
         g_packetMovedMs = now;
 
-        // Everything the old slot left behind describes a device we no longer
-        // read. Cleared exactly as the unplug path clears it, or the first read
-        // of the new slot fires phantom edges against a stale baseline.
-        g_ltHeld = g_rtHeld = false;
+        ReleaseSampledState();
         g_ltChorded = g_rtChorded = false;
-        g_stickMoving  = false;
-        g_rstickActive = false;
-        g_rstickX = g_rstickY = 0.0f;
-        g_btnNow  = 0;
-        g_yHeld   = false;
         for (int s = 0; s < 4; ++s) g_altSeen[s] = false;
         return true;
     }
@@ -436,16 +454,8 @@ void Tick() {
     if (g_xinputGet(static_cast<DWORD>(g_padSlot), &st) != ERROR_SUCCESS) {
         acclog::Write("Pad", "XInput slot %d stopped answering — rescanning",
                       g_padSlot);
-        g_padSlot   = -1;
-        g_ltHeld = g_rtHeld = false;
-        g_stickMoving = false;
-        // A pad that vanishes mid-hold must read as "everything released", or
-        // pad_movement would keep a synthesised walk key down forever and
-        // PollButtons would see a phantom rising edge when a pad comes back.
-        g_rstickActive = false;
-        g_rstickX = g_rstickY = 0.0f;
-        g_btnNow  = 0;
-        g_yHeld   = false;
+        g_padSlot = -1;
+        ReleaseSampledState();
         return;
     }
 
@@ -528,37 +538,17 @@ void Tick() {
 
     // Left stick = Move on the shipped binding chart, so its magnitude is the
     // "player is commanding translation" signal the drive-loop suppression and
-    // the autowalk cancel both want. int arithmetic, not the SHORTs: the
-    // squared magnitude of two full-scale axes overflows 16 bits.
-    const int lx = st.Gamepad.sThumbLX;
-    const int ly = st.Gamepad.sThumbLY;
-    const int magSq = lx * lx + ly * ly;
-    const bool moving = magSq > kStickDeadZoneSq;
-    acclog::Edge("Pad.stick", moving ? 1 : 0,
-                 "left stick moving=%d (x=%d y=%d)", moving ? 1 : 0, lx, ly);
-    g_stickMoving = moving;
-    if (moving) {
-        const float mag = std::sqrt(static_cast<float>(magSq));
-        g_stickX = static_cast<float>(lx) / mag;
-        g_stickY = static_cast<float>(ly) / mag;
-    } else {
-        g_stickX = g_stickY = 0.0f;
-    }
+    // the autowalk cancel both want.
+    g_stickMoving = SampleStick(st.Gamepad.sThumbLX, st.Gamepad.sThumbLY,
+                                g_stickX, g_stickY);
+    acclog::Edge("Pad.stick", g_stickMoving ? 1 : 0,
+                 "left stick moving=%d (x=%d y=%d)", g_stickMoving ? 1 : 0,
+                 st.Gamepad.sThumbLX, st.Gamepad.sThumbLY);
 
-    // Right stick, same dead zone and same normalisation. Unused on KOTOR 2
-    // (the engine rotates its own camera from it); on KOTOR 1 it is what
-    // pad_movement turns the camera with.
-    const int rx = st.Gamepad.sThumbRX;
-    const int ry = st.Gamepad.sThumbRY;
-    const int rmagSq = rx * rx + ry * ry;
-    g_rstickActive = rmagSq > kStickDeadZoneSq;
-    if (g_rstickActive) {
-        const float rmag = std::sqrt(static_cast<float>(rmagSq));
-        g_rstickX = static_cast<float>(rx) / rmag;
-        g_rstickY = static_cast<float>(ry) / rmag;
-    } else {
-        g_rstickX = g_rstickY = 0.0f;
-    }
+    // Right stick. Unused on KOTOR 2 (the engine rotates its own camera from
+    // it); on KOTOR 1 it is what pad_movement turns the camera with.
+    g_rstickActive = SampleStick(st.Gamepad.sThumbRX, st.Gamepad.sThumbRY,
+                                 g_rstickX, g_rstickY);
 }
 
 bool StickMoving() { return g_stickMoving; }
