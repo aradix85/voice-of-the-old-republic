@@ -109,6 +109,8 @@ patches/Accessibility/engine_keyboard_resync.cpp
 patches/Accessibility/engine_keyboard_resync.h
 patches/Accessibility/engine_keymap.cpp
 patches/Accessibility/engine_keymap.h
+patches/Accessibility/engine_keymap_codes.cpp
+patches/Accessibility/engine_keymap_codes.h
 patches/Accessibility/engine_levelup.cpp
 patches/Accessibility/engine_levelup.h
 patches/Accessibility/engine_manager.cpp
