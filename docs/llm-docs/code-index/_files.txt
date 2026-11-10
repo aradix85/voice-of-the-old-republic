@@ -324,6 +324,9 @@ patches/Accessibility/minigame_pazaak_wager.cpp
 patches/Accessibility/minigame_swoop_audio.cpp
 patches/Accessibility/minigame_swoop_audio.h
 patches/Accessibility/minigame_swoop_audio_accelpad.cpp
+patches/Accessibility/minigame_swoop_audio_accelpad_assist.cpp
+patches/Accessibility/minigame_swoop_audio_accelpad_detour.cpp
+patches/Accessibility/minigame_swoop_audio_accelpad_internal.h
 patches/Accessibility/minigame_swoop_audio_internal.h
 patches/Accessibility/minigame_swoop_audio_obstacles.cpp
 patches/Accessibility/minigame_swoop_audio_state.cpp
