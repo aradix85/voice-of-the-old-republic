@@ -205,6 +205,13 @@ menus_chain_input: Enter and Left/Right/Esc split off (c9e85ee1), lean
 Up/Down and Esc).
 hotkeys: defaults, user rebinding and names split off (66774adf), lean
 (92909f7e: UsesKey/ModsSatisfy, Index(), kAnyMod, Persist(), no state file).
+engine_input: mouse guard and acquire split off (f48930cc), lean (f5d6c509:
+ExoInput(), one SEH CallSetActive with an Ok check).
+minigame_swoop_audio_accelpad: tick in named steps (dc078509), detours and
+assist split off (cd5dc356), lean (f026304e).
+interact_dispatch: DispatchInteract in named steps (1f96b5ed), bare keys to
+interact_bare_keys.cpp (4a37be23), one PreRollFor shared with
+cycle_input_focus (2adbd326, the GuidancePreRollFor clone).
 
 Careful: never rewrite source files with PowerShell ReadAllText/WriteAllText
 (it decodes UTF-8 and writes '?' for the dashes and umlauts in comments);
@@ -266,9 +273,18 @@ prefix (menus_listbox_picker.cpp).
 - Goal (Anouk, 2026-11-10): split every file above 600 lines where that is
   possible; for files above 500 lines, judge whether a split into modules of
   things that belong together makes sense, and do it where it does.
-- Next file: engine_input.cpp (817), minigame_swoop_audio_accelpad.cpp
-  (816), interact_dispatch.cpp (778); 24 files of 600-800 lines and 17 of
-  500-600 after that (sizes of 2026-11-10 18:05, strings*.cpp excepted).
+- Next file, by size (2026-11-10 19:10, strings*.cpp excepted): examine_view
+  772, engine_reads_items 765, view_mode 752, input_pipeline 702,
+  engine_subscreen 697, menus 672, focus_guard 669, engine_area_walls 658,
+  camera_orient 654, room_topology_shape 651, tutorial_hints 643,
+  minigame_swoop_audio_obstacles 636, menus_extract_icons 635,
+  menus_crafting 634, menus_editbox 633, camera_spin_guard 633, menus_store
+  631, floor_puzzle 627, menus_dispatch 626, menus_extract_controls 625,
+  audio_footstep_suppress 622, engine_picker 609, engine_reads 607; then 21
+  files of 500-600 to judge. The catalog headers (engine_offsets_fields.h
+  2318, engine_offsets_addresses.h 1060, engine_area.h 861) stay as they are.
+- F13 WriteJmpRel32 (engine_input_mouseguard) and WriteRel32Jmp
+  (save_crash_guard) are the same four lines: one shared helper.
 - F2b: share the save-variable code of exit_memory with discovery.cpp.
 - F3 menus_chargen_feats / menus_powers_levelup: about 15 same-named
   functions, 22 cloned blocks; one chart-grid module (check K2 plans).
