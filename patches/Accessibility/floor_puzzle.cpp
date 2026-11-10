@@ -416,42 +416,32 @@ int ReadLiveBoard(bool* lit) {
     return litCount;
 }
 
-}  // namespace
+// ---- Tick steps ------------------------------------------------------------
 
-bool IsActive() { return g_isPuzzleArea && g_cacheReady; }
-
-bool IsPuzzlePlateTrigger(uint32_t handle) {
-    if (!g_isPuzzleArea || !g_cacheReady || handle == 0) return false;
-    for (const Plate& p : g_plates) {
-        if (p.trigHandle == handle) return true;
+// On-demand board read (R) — every frame, ABOVE the scan throttle.
+// The rising edge from Pressed() lives for exactly one OnUpdate tick
+// (~16ms). The 150ms scan throttle early-returns on ~8 of every 9
+// frames, so checking R inside the throttled body dropped most presses
+// (the "R often does nothing" report). Sample it here, unthrottled, and
+// read the live board on demand. In the puzzle room bare R reports the
+// board rather than a dialog line (no dialog panel here); input_pipeline
+// also swallows the engine's native R so it can't ALSO interact.
+void MaybeReadBoard() {
+    if (!g_isPuzzleArea || !g_cacheReady ||
+        !acc::hotkeys::Pressed(acc::hotkeys::Action::DialogRepeatLine)) {
+        return;
     }
-    return false;
+    bool lit[kPlateCount];
+    int  litCount = ReadLiveBoard(lit);
+    std::string board = BoardStateText(lit, litCount);
+    acc::speech::Speak(board.c_str(), /*interrupt=*/true);
+    acclog::Write("FloorPuzzle", "R board read -> [%s] (lit=%d)",
+                  board.c_str(), litCount);
 }
 
-void Tick() {
-    DWORD now = GetTickCount();
-
-    // ---- On-demand board read (R) — every frame, ABOVE the scan throttle ---
-    // The rising edge from Pressed() lives for exactly one OnUpdate tick
-    // (~16ms). The 150ms scan throttle below early-returns on ~8 of every 9
-    // frames, so checking R inside the throttled body dropped most presses
-    // (the "R often does nothing" report). Sample it here, unthrottled, and
-    // read the live board on demand. In the puzzle room bare R reports the
-    // board rather than a dialog line (no dialog panel here); input_pipeline
-    // also swallows the engine's native R so it can't ALSO interact.
-    if (g_isPuzzleArea && g_cacheReady &&
-        acc::hotkeys::Pressed(acc::hotkeys::Action::DialogRepeatLine)) {
-        bool lit[kPlateCount];
-        int  litCount = ReadLiveBoard(lit);
-        std::string board = BoardStateText(lit, litCount);
-        acc::speech::Speak(board.c_str(), /*interrupt=*/true);
-        acclog::Write("FloorPuzzle", "R board read -> [%s] (lit=%d)",
-                      board.c_str(), litCount);
-    }
-
-    if ((now - g_lastScan) < kScanIntervalMs) return;
-    g_lastScan = now;
-
+// Follows the current area and builds the plate cache inside the puzzle
+// module. True when the assist runs this scan.
+bool TrackArea() {
     void* area = acc::engine::GetCurrentArea();
     if (area != g_area) {
         g_area = area;
@@ -467,134 +457,141 @@ void Tick() {
             }
         }
     }
-    if (!area || !g_isPuzzleArea) return;
+    if (!area || !g_isPuzzleArea) return false;
+    if (!g_cacheReady) g_cacheReady = BuildCache(area);
+    return g_cacheReady;
+}
 
-    if (!g_cacheReady) {
-        g_cacheReady = BuildCache(area);
-        if (!g_cacheReady) return;
-    }
-
-    // ---- Board state ---------------------------------------------------
+// One scan of the board: the live lit state and the plates that flipped
+// since the previous scan.
+struct BoardScan {
     bool lit[kPlateCount];
-    int  litCount = ReadLiveBoard(lit);
+    bool flipped[kPlateCount];
+    int  litCount;
+    bool anyFlip;
+};
 
-    bool flipped[kPlateCount] = {};
-    bool anyFlip = false;
+BoardScan ReadBoardScan() {
+    BoardScan b{};
+    b.litCount = ReadLiveBoard(b.lit);
     if (g_haveLit) {
         for (int i = 0; i < kPlateCount; ++i) {
-            flipped[i] = (lit[i] != g_lit[i]);
-            anyFlip |= flipped[i];
+            b.flipped[i] = (b.lit[i] != g_lit[i]);
+            b.anyFlip |= b.flipped[i];
         }
     } else {
         // First read for this area visit. An already all-lit board means
         // the puzzle was solved on an earlier visit — stay quiet without
         // announcing success again.
-        if (litCount == kPlateCount) {
+        if (b.litCount == kPlateCount) {
             g_solvedQuiet = true;
             acclog::Write("FloorPuzzle",
                           "board already all-lit on entry — quiet mode");
         }
         g_haveLit = true;
     }
-    std::memcpy(g_lit, lit, sizeof(g_lit));
+    std::memcpy(g_lit, b.lit, sizeof(g_lit));
+    return b;
+}
 
-    // ---- Solved --------------------------------------------------------
-    if (!g_solvedQuiet && litCount == kPlateCount && anyFlip) {
+// Speaks the solve once; true while the module stays quiet after it.
+bool QuietAfterSolve(const BoardScan& b) {
+    if (!g_solvedQuiet && b.litCount == kPlateCount && b.anyFlip) {
         g_solvedQuiet = true;
         acc::speech::Speak(Get(Id::FloorPuzzleSolved), /*interrupt=*/true);
         acclog::Write("FloorPuzzle", "solved — module going quiet");
-        return;
     }
-    if (g_solvedQuiet) return;
+    return g_solvedQuiet;
+}
 
-    // ---- Nav position vs plates -----------------------------------------
-    // Leader while walking; the virtual cursor while view mode (B) is
-    // active, so the distance/entry stream follows what the player scans.
-    Vector pos{};
-    bool havePos = GetNavPosition(pos);
-    int newPlate = -1;
-    if (havePos) {
-        for (int i = 0; i < kTrackCount; ++i) {
-            if (PointInPoly(g_plates[i], pos.x, pos.y)) { newPlate = i; break; }
-        }
-    }
-    bool entered = havePos && newPlate != g_curPlate && newPlate >= 0;
-    if (havePos) {
-        // Reset counts too: its script darkens the board, and that delta
-        // must not read as a follower toggle when it lands a poll later.
-        if (entered) g_lastEntryAt = now;
-        // Stepping off into open floor: drop the nearest anchor so the
-        // off-plate stream re-announces the closest plate once.
-        if (newPlate < 0 && g_curPlate >= 0) g_lastNearestLine.clear();
-        g_curPlate = newPlate;
-    }
+// Where the player is this scan and the plate they stand on.
+struct NavScan {
+    Vector pos;
+    bool   havePos;
+    int    plate;     // -1 none, 0..8 plate, 9 reset
+    bool   entered;   // stepped onto a plate this scan
+};
 
-    // ---- Entry / delta speech -------------------------------------------
+// Leader while walking; the virtual cursor while view mode (B) is
+// active, so the distance/entry stream follows what the player scans.
+NavScan TrackNavPlate(DWORD now) {
+    NavScan n{};
+    n.plate = -1;
+    n.havePos = GetNavPosition(n.pos);
+    if (!n.havePos) return n;
+    for (int i = 0; i < kTrackCount; ++i) {
+        if (PointInPoly(g_plates[i], n.pos.x, n.pos.y)) { n.plate = i; break; }
+    }
+    n.entered = n.plate != g_curPlate && n.plate >= 0;
+    // Reset counts too: its script darkens the board, and that delta
+    // must not read as a follower toggle when it lands a poll later.
+    if (n.entered) g_lastEntryAt = now;
+    // Stepping off into open floor: drop the nearest anchor so the
+    // off-plate stream re-announces the closest plate once.
+    if (n.plate < 0 && g_curPlate >= 0) g_lastNearestLine.clear();
+    g_curPlate = n.plate;
+    return n;
+}
+
+// The reset plate gets no explanatory sentence: its name plus the
+// "all plates dark" delta that follows says everything.
+std::string EntryText(int plate) {
+    return acc::strfmt::Format(Get(Id::FmtPlateEntered),
+                               FullName(plate).c_str());
+}
+
+// Entry and toggle speech. True when a line was spoken.
+bool AnnounceEntryOrDelta(const BoardScan& b, const NavScan& n, DWORD now) {
     // A flip within the attribution window of the leader's own step is
     // "their" toggle; a flip outside it means a follower walked the grid.
     bool leaderCaused =
         (now - g_lastEntryAt) <= kLeaderToggleWindowMs && g_lastEntryAt != 0;
 
-    auto entryText = [&](int plate) {
-        // The reset plate gets no explanatory sentence: its name plus the
-        // "all plates dark" delta that follows says everything.
-        return acc::strfmt::Format(Get(Id::FmtPlateEntered),
-                                   FullName(plate).c_str());
-    };
-
-    if (entered) {
+    if (n.entered) {
         if (g_pendingEntry >= 0) {
             // The previous entry never saw its delta (fast crossing) —
             // speak it before the new entry claims the merge slot.
-            std::string old = entryText(g_pendingEntry);
+            std::string old = EntryText(g_pendingEntry);
             acc::speech::Speak(old.c_str(), /*interrupt=*/true);
             acclog::Write("FloorPuzzle", "announce: [%s] (pending flush)",
                           old.c_str());
         }
-        g_pendingEntry   = newPlate;
+        g_pendingEntry   = n.plate;
         g_pendingEntryAt = now;
     }
 
     std::string line;
-    if (anyFlip) {
+    if (b.anyFlip) {
         if (g_pendingEntry >= 0) {
-            line = entryText(g_pendingEntry);
+            line = EntryText(g_pendingEntry);
             line += ". ";
             g_pendingEntry = -1;
         } else if (!leaderCaused) {
             line = Get(Id::FloorPartyToggled);
             line += ": ";
         }
-        line += DeltaText(flipped, lit, litCount);
+        line += DeltaText(b.flipped, b.lit, b.litCount);
     } else if (g_pendingEntry >= 0 &&
                (now - g_pendingEntryAt) >= kEntryMergeWindowMs) {
         // No toggle followed (reset plate on an already-dark board, or a
         // timing miss) — the entry still gets spoken, just alone.
-        line = entryText(g_pendingEntry);
+        line = EntryText(g_pendingEntry);
         g_pendingEntry = -1;
     }
-    if (!line.empty()) {
-        acc::speech::Speak(line.c_str(), /*interrupt=*/true);
-        acclog::Write("FloorPuzzle",
-                      "announce: [%s] (plate=%d lit=%d leaderCaused=%d)",
-                      line.c_str(), newPlate, litCount, leaderCaused ? 1 : 0);
-        return;
-    }
+    if (line.empty()) return false;
+    acc::speech::Speak(line.c_str(), /*interrupt=*/true);
+    acclog::Write("FloorPuzzle",
+                  "announce: [%s] (plate=%d lit=%d leaderCaused=%d)",
+                  line.c_str(), n.plate, b.litCount, leaderCaused ? 1 : 0);
+    return true;
+}
 
-    if (!havePos) return;
-
-    // ---- Intro ----------------------------------------------------------
-    if (!g_introSpoken) {
-        SpeakIntro(pos);
-        if (g_introSpoken) return;
-    }
-
-    // ---- Off-plate: nearest-plate stream ---------------------------------
-    // No separate close-range warning: solve-run data (2026-07-16,
-    // patch-20260716-204901.log) showed 12 of 19 warnings were redundant
-    // with a deliberate step or fired after leaving a plate; the stream's
-    // 1-metre floor covers the rest.
-    if (g_curPlate >= 0) return;
+// Off-plate: nearest-plate stream.
+// No separate close-range warning: solve-run data (2026-07-16,
+// patch-20260716-204901.log) showed 12 of 19 warnings were redundant
+// with a deliberate step or fired after leaving a plate; the stream's
+// 1-metre floor covers the rest.
+void AnnounceNearest(const Vector& pos, DWORD now) {
     int   nearest = -1;
     float nearestDist = 1e9f;
     for (int i = 0; i < kTrackCount; ++i) {
@@ -622,6 +619,39 @@ void Tick() {
         acclog::Write("FloorPuzzle", "nearest: [%s] dist=%.2f", say.c_str(),
                       nearestDist);
     }
+}
+
+}  // namespace
+
+bool IsActive() { return g_isPuzzleArea && g_cacheReady; }
+
+bool IsPuzzlePlateTrigger(uint32_t handle) {
+    if (!g_isPuzzleArea || !g_cacheReady || handle == 0) return false;
+    for (const Plate& p : g_plates) {
+        if (p.trigHandle == handle) return true;
+    }
+    return false;
+}
+
+void Tick() {
+    DWORD now = GetTickCount();
+    MaybeReadBoard();
+
+    if ((now - g_lastScan) < kScanIntervalMs) return;
+    g_lastScan = now;
+    if (!TrackArea()) return;
+
+    BoardScan board = ReadBoardScan();
+    if (QuietAfterSolve(board)) return;
+    NavScan nav = TrackNavPlate(now);
+    if (AnnounceEntryOrDelta(board, nav, now)) return;
+    if (!nav.havePos) return;
+
+    if (!g_introSpoken) {
+        SpeakIntro(nav.pos);
+        if (g_introSpoken) return;
+    }
+    if (g_curPlate < 0) AnnounceNearest(nav.pos, now);
 }
 
 }  // namespace acc::floor_puzzle

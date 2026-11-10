@@ -1,4 +1,4 @@
-# floor_puzzle.cpp (628 lines)
+# floor_puzzle.cpp (658 lines)
 
 Source: `patches/Accessibility/floor_puzzle.cpp`
 
@@ -21,6 +21,14 @@ Rakatan temple floor-plate puzzle assist — see floor_puzzle.h for the puzzle m
 - L377 `std::string BoardStateText(const bool* lit, int litCount)`: Live board summary spoken on demand (R key).
 - L396 `bool GetNavPosition(Vector& out)`: Board-navigation position: the view-mode virtual cursor when view mode is active, otherwise the real party leader.
 - L407 `int ReadLiveBoard(bool* lit)`: Read the live lit/dark state off the plate placeables.
-- L421 `bool IsActive()`
-- L423 `bool IsPuzzlePlateTrigger(uint32_t handle)`
-- L431 `void Tick()`
+- L429 `void MaybeReadBoard()`: On-demand board read (R) — every frame, ABOVE the scan throttle.
+- L444 `bool TrackArea()`: Follows the current area and builds the plate cache inside the puzzle module.
+- L474 `BoardScan ReadBoardScan()`
+- L498 `bool QuietAfterSolve(const BoardScan& b)`: Speaks the solve once; true while the module stays quiet after it.
+- L517 `NavScan TrackNavPlate(DWORD now)`: Leader while walking; the virtual cursor while view mode (B) is active, so the distance/entry stream follows what the player scans.
+- L538 `std::string EntryText(int plate)`: The reset plate gets no explanatory sentence: its name plus the "all plates dark" delta that follows says everything.
+- L544 `bool AnnounceEntryOrDelta(const BoardScan& b, const NavScan& n, DWORD now)`: Entry and toggle speech.
+- L594 `void AnnounceNearest(const Vector& pos, DWORD now)`: Off-plate: nearest-plate stream.
+- L626 `bool IsActive()`
+- L628 `bool IsPuzzlePlateTrigger(uint32_t handle)`
+- L636 `void Tick()`
