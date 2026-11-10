@@ -13,6 +13,7 @@ $out  = Join-Path $repo 'build\unit_tests'
 # engine addresses, no Windows API.
 $underTest = @(
     'bridge_http.cpp',
+    'camera_orient_pick.cpp',
     'dialog_speech_marker.cpp',
     'engine_compass.cpp',
     'minigame_turret_lead.cpp',

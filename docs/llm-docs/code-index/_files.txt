@@ -26,6 +26,8 @@ patches/Accessibility/camera_announce.h
 patches/Accessibility/camera_orient.cpp
 patches/Accessibility/camera_orient.h
 patches/Accessibility/camera_orient_internal.h
+patches/Accessibility/camera_orient_pick.cpp
+patches/Accessibility/camera_orient_pick.h
 patches/Accessibility/camera_orient_turn.cpp
 patches/Accessibility/camera_spin_guard.cpp
 patches/Accessibility/camera_spin_guard.h
