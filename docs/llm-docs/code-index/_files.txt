@@ -65,7 +65,13 @@ patches/Accessibility/engine_app.cpp
 patches/Accessibility/engine_app.h
 patches/Accessibility/engine_area.cpp
 patches/Accessibility/engine_area.h
+patches/Accessibility/engine_area_doors.cpp
+patches/Accessibility/engine_area_internal.h
+patches/Accessibility/engine_area_kinds.cpp
+patches/Accessibility/engine_area_locks.cpp
 patches/Accessibility/engine_area_map.cpp
+patches/Accessibility/engine_area_names.cpp
+patches/Accessibility/engine_area_passive.cpp
 patches/Accessibility/engine_area_walls.cpp
 patches/Accessibility/engine_compass.cpp
 patches/Accessibility/engine_compass.h
