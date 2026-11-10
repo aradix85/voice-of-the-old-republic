@@ -42,7 +42,10 @@ patches/Accessibility/combat_query.cpp
 patches/Accessibility/combat_query.h
 patches/Accessibility/combat_queue.cpp
 patches/Accessibility/combat_queue.h
+patches/Accessibility/combat_queue_engine.cpp
 patches/Accessibility/combat_queue_hooks.cpp
+patches/Accessibility/combat_queue_internal.h
+patches/Accessibility/combat_queue_watch.cpp
 patches/Accessibility/combat_strings.cpp
 patches/Accessibility/combat_strings.h
 patches/Accessibility/core_dllmain.cpp
