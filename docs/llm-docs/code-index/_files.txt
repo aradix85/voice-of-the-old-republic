@@ -436,6 +436,7 @@ patches/Accessibility/trap_watch.cpp
 patches/Accessibility/trap_watch.h
 patches/Accessibility/tutorial_hints.cpp
 patches/Accessibility/tutorial_hints.h
+patches/Accessibility/tutorial_hints_dialog.cpp
 patches/Accessibility/tutorial_popup.cpp
 patches/Accessibility/tutorial_popup.h
 patches/Accessibility/unified_action_menu.cpp

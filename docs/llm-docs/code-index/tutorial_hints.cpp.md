@@ -1,4 +1,4 @@
-# tutorial_hints.cpp (644 lines)
+# tutorial_hints.cpp (258 lines)
 
 Source: `patches/Accessibility/tutorial_hints.cpp`
 
@@ -12,17 +12,8 @@ Both paths are pure polls — no engine hooks, no dialog.tlk edits, no installer
 
 ## Declarations (in source order)
 
-- L137 `inline const DialogHint* ActiveDialogHints(int* count)`: The running game's table.
-- L161 `void BuildResolvedIfNeeded()`
-- L189 `int ReadTutorialRow(void* panel)`
-- L199 `const char* HintForTutorialRow(int row)`
-- L361 `inline const MouseMsg* ActiveMouseMsgs(int* count)`
-- L378 `void BuildMouseTextIfNeeded()`
-- L398 `const char* HintForMouseText(const char* text)`
-- L433 `void BuildForcedTextIfNeeded()`
-- L450 `const char* HintForDialogLine(const char* renderedLine, uint32_t* outStrref)`
-- L470 `bool IsForcedSpokenDialogLine(const char* renderedLine)`
-- L552 `void BuildVoicedTextIfNeeded()`
-- L570 `const char* FindSegment(const char* hay, const char* needle, size_t n)`: memcmp-based strstr for a length-bounded needle segment.
-- L586 `bool MatchesWithTokens(const char* rendered, const char* stored)`: EqualsTrimmed, extended for lines the engine token-substitutes at render time ( and friends, e.g.
-- L627 `bool IsVoicedSuppressedLine(const char* renderedLine)`
+- L33 `int ReadTutorialRow(void* panel)`
+- L43 `const char* HintForTutorialRow(int row)`
+- L205 `inline const MouseMsg* ActiveMouseMsgs(int* count)`
+- L222 `void BuildMouseTextIfNeeded()`
+- L242 `const char* HintForMouseText(const char* text)`
