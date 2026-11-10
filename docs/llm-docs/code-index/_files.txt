@@ -169,6 +169,9 @@ patches/Accessibility/floor_puzzle.cpp
 patches/Accessibility/floor_puzzle.h
 patches/Accessibility/focus_guard.cpp
 patches/Accessibility/focus_guard.h
+patches/Accessibility/focus_guard_bigpicture.cpp
+patches/Accessibility/focus_guard_internal.h
+patches/Accessibility/focus_guard_movie.cpp
 patches/Accessibility/gui_forward_guard_k2.cpp
 patches/Accessibility/guidance_approach.cpp
 patches/Accessibility/guidance_approach.h

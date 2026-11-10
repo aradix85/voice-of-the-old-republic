@@ -1,4 +1,4 @@
-#include "focus_guard.h"
+#include "focus_guard_internal.h"
 
 #include <windows.h>
 #include <atomic>
@@ -11,8 +11,9 @@
 #include "speech.h"
 #include "strings.h"
 
-
 namespace acc::focus_guard {
+
+std::atomic<HWND> g_liveRenderWindow{nullptr};
 
 namespace {
 
@@ -44,8 +45,6 @@ constexpr int kMaxSubclassedWindows = 64;
 SubclassedWindow         g_subclassed[kMaxSubclassedWindows] = {};
 std::atomic<int>         g_subclassedCount{0};
 std::atomic<HANDLE>      g_pollThread{nullptr};
-
-std::atomic<HWND>  g_liveRenderWindow{nullptr};  // newest visible "Render Window"
 
 const SubclassedWindow* FindSubclassed(HWND hwnd) {
     int n = g_subclassedCount.load(std::memory_order_acquire);
@@ -375,211 +374,6 @@ BOOL CALLBACK ScanProc(HWND hwnd, LPARAM lp) {
     return TRUE;
 }
 
-// Pull `target` to the foreground from a thread that doesn't own it. The
-// AttachThreadInput dance is the standard way around the Win32 foreground
-// lock without injecting a synthetic ALT keypress (which a screen-reader
-// user would not want). SEH-guarded — every call here is a Win32 boundary.
-void ForceForeground(HWND target, HWND fg) {
-    __try {
-        DWORD myTid = GetCurrentThreadId();
-        DWORD fgTid = fg ? GetWindowThreadProcessId(fg, nullptr) : 0;
-        BOOL attached = FALSE;
-        if (fgTid && fgTid != myTid) {
-            attached = AttachThreadInput(myTid, fgTid, TRUE);
-        }
-        BringWindowToTop(target);
-        SetForegroundWindow(target);
-        if (attached) {
-            AttachThreadInput(myTid, fgTid, FALSE);
-        }
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        // Reclaim is best-effort; swallow any Win32-boundary fault.
-    }
-}
-
-// --- Movie-end foreground guard (cutscene leaves the game with no foreground) ---
-//
-// The Peragus docking stunt (GOG K2, patch-20260905-075831) ended with the
-// engine's movie player handing focus back, and then GetForegroundWindow()
-// returning NULL — no window in the system owned the foreground. The engine
-// auto-paused on the focus loss and never woke: from a blind player's chair the
-// game said "Paused." and then answered nothing, indistinguishable from a
-// crash. The vanilla GOG build is fragile to foreground loss generally; here
-// the trigger was its own movie handoff.
-//
-// This guard arms for a short window each time a movie window disappears, and
-// reclaims the render window ONLY when the foreground is genuinely orphaned
-// (GetForegroundWindow() == NULL). That is the precise stuck state and nothing
-// else:
-//   * a foreign app holding the foreground means the user alt-tabbed away on
-//     purpose — never trap them back (this was the original reason the startup
-//     guard is bounded);
-//   * our own window holding it (render live, or a movie segment still
-//     transitioning) means nothing is wrong;
-//   * a NEW movie segment starting inside the window means the cutscene resumed
-//     — we skip, because forcing focus mid-playback can abort the engine's
-//     movie queue and close the game (see bringup_announce IsMoviePlaying).
-//
-// Bounded hard: kMovieReclaimWindowMs total (a second or two, per the design
-// ask) and kMovieReclaimMax attempts, so a persistently orphaned foreground
-// cannot drag us into a focus war.
-constexpr DWORD kMovieReclaimWindowMs = 2000;
-constexpr int   kMovieReclaimMax      = 3;
-
-std::atomic<DWORD> g_movieReclaimDeadline{0};  // GetTickCount() deadline; 0 = disarmed
-std::atomic<int>   g_movieReclaims{0};
-
-void MaybeReclaimAfterMovie() {
-    DWORD deadline = g_movieReclaimDeadline.load(std::memory_order_acquire);
-    if (deadline == 0) return;  // disarmed
-
-    DWORD now = GetTickCount();
-    if (static_cast<int>(now - deadline) >= 0) {  // wrap-safe elapsed check
-        g_movieReclaimDeadline.store(0, std::memory_order_release);
-        acclog::Write("Focus",
-            "MovieEndForegroundGuard: window elapsed; disarmed (reclaims=%d)",
-            g_movieReclaims.load(std::memory_order_relaxed));
-        return;
-    }
-
-    // A new movie segment resumed — let the movie player keep focus; forcing it
-    // away mid-playback can abort the queue.
-    if (acc::bringup_announce::IsMoviePlaying()) return;
-
-    HWND render = g_liveRenderWindow.load(std::memory_order_acquire);
-    if (!render || !IsWindow(render)) return;
-
-    // Only act on a genuinely orphaned foreground. A foreign owner is a
-    // deliberate alt-tab; our own owner means nothing is wrong.
-    HWND fg = GetForegroundWindow();
-    if (fg != nullptr) return;
-
-    int n = g_movieReclaims.load(std::memory_order_relaxed);
-    if (n >= kMovieReclaimMax) {
-        g_movieReclaimDeadline.store(0, std::memory_order_release);
-        acclog::Write("Focus",
-            "MovieEndForegroundGuard: reclaim cap (%d) reached; giving up",
-            kMovieReclaimMax);
-        return;
-    }
-    g_movieReclaims.store(n + 1, std::memory_order_relaxed);
-
-    acclog::Write("Focus",
-        "MovieEndForegroundGuard: foreground orphaned (NULL) after movie; "
-        "reclaiming render %p (attempt %d/%d)", render, n + 1, kMovieReclaimMax);
-    ForceForeground(render, nullptr);
-}
-
-// --- Input-blocked warning: Steam Big Picture foreground theft ---
-//
-// When KOTOR runs windowed and Steam Big Picture Mode holds the foreground,
-// the user's keystrokes route to Big Picture, not the game — our engine input
-// hook never sees them, so menus look dead (zero Menus.Input events across
-// kenny's patch-20260612-150316.log while Big Picture repeatedly stole focus).
-// Because the keypress never reaches the engine, the poll thread samples
-// GetAsyncKeyState directly and raises a one-shot spoken warning on the next
-// tick. We deliberately do NOT reclaim the foreground here — that would trap a
-// user who actually wants Big Picture (cf. the bounded startup guard above).
-//
-// Throttle: at most one warning per kWarnCooldownMs, and only on a fresh key
-// edge. Focus flickers sub-second under Big Picture, so a per-steal warning
-// would spam; gating on an actual keypress means we only speak when the user
-// is genuinely trying to interact.
-constexpr DWORD kWarnCooldownMs = 20000;
-
-std::atomic<bool>  g_warnPending{false};   // poll thread -> main tick drain
-std::atomic<DWORD> g_lastWarnTick{0};      // GetTickCount of last warn; 0=never
-bool               g_interactionKeyDownPrev = false;  // poll-thread only
-
-// Case-insensitive substring test (ASCII). Avoids a shlwapi dependency for
-// the one "Big Picture" title match below.
-bool ContainsNoCase(const char* hay, const char* needle) {
-    if (!hay || !needle || !*needle) return false;
-    for (; *hay; ++hay) {
-        const char* h = hay;
-        const char* n = needle;
-        while (*h && *n && ((*h | 0x20) == (*n | 0x20))) { ++h; ++n; }
-        if (!*n) return true;
-    }
-    return false;
-}
-
-// True while any "the user is trying to interact" key is physically down:
-// arrows / Enter / Space / Esc / Tab / Backspace / digits / letters / F-keys.
-// Pure modifiers (Shift/Ctrl/Alt/Caps) are excluded so a held modifier alone
-// doesn't read as intent. GetAsyncKeyState reports physical state regardless
-// of focus and needs no message loop — exactly right for an unfocused window.
-bool AnyInteractionKeyDown() {
-    static const int kKeys[] = {
-        VK_RETURN, VK_SPACE, VK_ESCAPE, VK_TAB, VK_BACK,
-        VK_LEFT, VK_RIGHT, VK_UP, VK_DOWN,
-    };
-    for (int vk : kKeys) {
-        if (GetAsyncKeyState(vk) & 0x8000) return true;
-    }
-    for (int vk = '0'; vk <= '9'; ++vk) {
-        if (GetAsyncKeyState(vk) & 0x8000) return true;
-    }
-    for (int vk = 'A'; vk <= 'Z'; ++vk) {
-        if (GetAsyncKeyState(vk) & 0x8000) return true;
-    }
-    for (int vk = VK_F1; vk <= VK_F12; ++vk) {
-        if (GetAsyncKeyState(vk) & 0x8000) return true;
-    }
-    return false;
-}
-
-// Is the current foreground window Steam Big Picture? steamwebhelper.exe also
-// backs the normal Steam client UI, so we additionally require the window
-// title to name Big Picture. (kenny is en-US; broaden if a localized title
-// ever surfaces.) False for our own process and every other app.
-bool ForegroundIsBigPicture() {
-    HWND fg = GetForegroundWindow();
-    if (!fg) return false;
-    DWORD pid = 0;
-    GetWindowThreadProcessId(fg, &pid);
-    if (pid == 0 || pid == GetCurrentProcessId()) return false;
-
-    HANDLE h = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, pid);
-    if (!h) return false;
-    char exe[MAX_PATH] = {};
-    DWORD sz = sizeof(exe);
-    bool isSteamHelper = false;
-    if (QueryFullProcessImageNameA(h, 0, exe, &sz)) {
-        const char* slash = strrchr(exe, '\\');
-        const char* name = slash ? slash + 1 : exe;
-        isSteamHelper = _stricmp(name, "steamwebhelper.exe") == 0;
-    }
-    CloseHandle(h);
-    if (!isSteamHelper) return false;
-
-    char title[128] = {};
-    GetWindowTextA(fg, title, sizeof(title));
-    return ContainsNoCase(title, "Big Picture");
-}
-
-// Poll-thread step: if the user pressed an interaction key while Steam Big
-// Picture holds the foreground, queue a spoken warning for the main tick to
-// drain. Edge- and cooldown-gated (see kWarnCooldownMs).
-void MaybeFlagInputBlockedWarning() {
-    bool keyDown = AnyInteractionKeyDown();
-    bool risingEdge = keyDown && !g_interactionKeyDownPrev;
-    g_interactionKeyDownPrev = keyDown;
-    if (!risingEdge) return;
-    if (!ForegroundIsBigPicture()) return;
-
-    DWORD now = GetTickCount();
-    DWORD last = g_lastWarnTick.load(std::memory_order_relaxed);
-    if (last != 0 && (now - last) < kWarnCooldownMs) return;
-    g_lastWarnTick.store(now ? now : 1, std::memory_order_relaxed);
-
-    g_warnPending.store(true, std::memory_order_release);
-    acclog::Write("Focus",
-        "InputBlockedWarning: Steam Big Picture holds foreground and an "
-        "interaction key was pressed; queuing spoken warning (cooldown %lums)",
-        kWarnCooldownMs);
-}
-
 DWORD WINAPI PollProc(LPVOID) {
     acclog::Write("Focus",
         "FocusPoll: thread started (pid=%lu, tid=%lu); scanning every 100ms",
@@ -656,14 +450,6 @@ void StartFocusProbe() {
     ResumeThread(created);
     acclog::Write("Focus",
         "StartFocusProbe: polling thread launched (handle=%p)", created);
-}
-
-void DrainInputBlockedWarning() {
-    if (!g_warnPending.exchange(false, std::memory_order_acquire)) return;
-    acclog::Write("Focus",
-        "InputBlockedWarning: speaking Big Picture focus-theft warning");
-    // Spoken on the main tick (COM-safe), not the poll thread.
-    acc::speech::Speak(acc::strings::Get(acc::strings::Id::InputBlockedBigPicture), /*interrupt=*/true);
 }
 
 }  // namespace acc::focus_guard
