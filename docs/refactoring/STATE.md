@@ -166,7 +166,10 @@ interact_hotkey's PreRollFor). menus.cpp made lean without a split
 (8cf60b1, 1018 to 672 lines). menus_internal: namespace prep (94b0f40),
 split into four (6d535b5), lean (37135ce5: one listbox drive with one
 clamp, unused equip slot-button ids and the empty internal header gone,
-menus_internal.h resolver comments shared).
+menus_internal.h resolver comments shared). core_tick: keyboard recovery
+split off (3f1af1cf; split_file.py now reads multi-line macros, 20141701,
+but still parks an #undef next to its #define: move it back by hand),
+lean (fe6e1108, comments only, phase order checked unchanged).
 
 Careful: never rewrite source files with PowerShell ReadAllText/WriteAllText
 (it decodes UTF-8 and writes '?' for the dashes and umlauts in comments);
@@ -225,7 +228,7 @@ prefix (menus_listbox_picker.cpp).
   EngineYawToCompass/CompassToSector/SectorString. One helper in
   engine_compass (bearing of a vector, and its compass word). kRadToDeg is
   defined in many files: one constant with it.
-- Next file: core_tick.cpp (931), dialog_speech.cpp (894), engine_radial.cpp (894),
+- Next file: dialog_speech.cpp (894), engine_radial.cpp (894),
   engine_panels.cpp (887), combat_queue.cpp (871), minigame_turret_peg.cpp
   (860), guidance_approach.cpp (840), peek_description.cpp (839),
   menus_modsettings.cpp (828), menus_chain_input.cpp (824) (sizes of
