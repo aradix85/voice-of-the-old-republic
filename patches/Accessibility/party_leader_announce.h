@@ -14,4 +14,9 @@ namespace acc::party_leader_announce {
 // Foreground + player-loaded gates inside.
 void Tick();
 
+// Polls the active leader's name and speaks it on change. Silent on the
+// first observation and shortly after an area change, when the engine is
+// wiring up the party.
+void TickLeaderChange();
+
 }  // namespace acc::party_leader_announce

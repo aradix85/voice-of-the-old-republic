@@ -3,7 +3,6 @@
 // player loaded.
 //
 // Surfaces:
-//   - Leader-change auto-announce.
 //   - Cycle/passive-narrate enrichment for Creature-kind targets.
 //   - Bare H self-status (HP + effects + equipped weapons).
 
@@ -13,9 +12,6 @@
 #include <cstdint>
 
 namespace acc::combat::query {
-
-// Polls active leader name; speaks it on change.
-void TickLeaderChangeAutoAnnounce();
 
 // Append HP/AC/faction suffix to outBuf. True iff target is a Creature
 // kind and resolved cleanly. targetServerObject is already resolved by

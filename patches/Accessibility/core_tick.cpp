@@ -12,7 +12,6 @@
 #include "camera_spin_guard.h"
 #include "combat.h"
 #include "combat_diag.h"
-#include "combat_query.h"
 #include "combat_queue.h"
 #include "cycle_input.h"
 #include "focus_guard.h"
@@ -309,8 +308,7 @@ void Dispatch() {
     PHASE("combat.effects", acc::combat::TickCombatEffects());
     // One-shot audio-path report once the sound system is up.
     PHASE("audio_path", acc::diag::settings::LogAudioPathOnce());
-    PHASE("combat.leaderChange",
-          acc::combat::query::TickLeaderChangeAutoAnnounce());
+    PHASE("party_leader.change", acc::party_leader_announce::TickLeaderChange());
     PHASE("combat.queue", acc::combat::queue::Tick());
     PHASE("combat_diag", acc::combat_diag::Tick());
     PHASE("examine_view", acc::examine_view::Tick());

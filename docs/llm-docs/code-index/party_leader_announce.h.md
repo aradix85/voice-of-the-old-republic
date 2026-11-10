@@ -1,4 +1,4 @@
-# party_leader_announce.h (18 lines)
+# party_leader_announce.h (23 lines)
 
 Source: `patches/Accessibility/party_leader_announce.h`
 
@@ -11,3 +11,4 @@ Fires in panels too — engine strip panels re-bind to the new leader, so the an
 ## Declarations (in source order)
 
 - L15 `void Tick()`: Foreground + player-loaded gates inside.
+- L20 `void TickLeaderChange()`: Polls the active leader's name and speaks it on change.

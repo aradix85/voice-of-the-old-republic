@@ -1,4 +1,4 @@
-# party_leader_announce.cpp (100 lines)
+# party_leader_announce.cpp (178 lines)
 
 Source: `patches/Accessibility/party_leader_announce.cpp`
 
@@ -6,5 +6,6 @@ GetActiveLeaderName
 
 ## Declarations (in source order)
 
-- L39 `void Speak()`
-- L51 `void Tick()`
+- L44 `void Speak()`
+- L56 `void Tick()`
+- L104 `void TickLeaderChange()`

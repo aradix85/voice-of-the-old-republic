@@ -1,4 +1,4 @@
-# combat_query.cpp (586 lines)
+# combat_query.cpp (513 lines)
 
 Source: `patches/Accessibility/combat_query.cpp`
 
@@ -14,7 +14,6 @@ transient (engine LYT loader use-after-free)
 - L202 `int BuildEffectIconSummary(void* serverObject, char* outBuf, size_t outBufSize)`: Read the creature's effect-icon row (CSWSCreature.effect_icons — the exact icon list the sighted portrait renders; see engine_offsets.h) and join the localized icon names.
 - L254 `bool BuildEffectsSummary(void* serverObject, char* outBuf, size_t outBufSize)`: Produce a comma-joined effects string for the brief / self status.
 - L303 `acc::strings::Id DamageLevelStringIdFor(int level)`
-- L318 `void TickLeaderChangeAutoAnnounce()`
-- L395 `bool BuildTargetCombatBrief(void* targetServerObject, const char* targetName, char* outBuf, size_t outBufSize)`
-- L484 `void SpeakSelfStatus()`
-- L559 `void PollWin32SelfStatusHotkey()`
+- L322 `bool BuildTargetCombatBrief(void* targetServerObject, const char* targetName, char* outBuf, size_t outBufSize)`
+- L411 `void SpeakSelfStatus()`
+- L486 `void PollWin32SelfStatusHotkey()`
