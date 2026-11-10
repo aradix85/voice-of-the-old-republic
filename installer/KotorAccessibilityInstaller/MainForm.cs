@@ -16,7 +16,6 @@ namespace KotorAccessibilityInstaller
         private string _gamePath;
         private readonly GameTarget _target;
         private readonly bool _updateOnly;
-        private readonly bool _headless;
         private readonly ModSelection _modSelection;
         private readonly string _localKpatchPath;
         private bool _installFinished;
@@ -34,33 +33,17 @@ namespace KotorAccessibilityInstaller
         private CheckBox _launchCheckBox;
         private CheckBox _readmeCheckBox;
 
-        public MainForm(GameTarget target, string detectedGamePath, bool updateOnly = false, ModSelection modSelection = null, string localKpatchPath = null, bool headless = false)
+        public MainForm(GameTarget target, string detectedGamePath, bool updateOnly = false, ModSelection modSelection = null, string localKpatchPath = null)
         {
             _target = target;
             _gamePath = detectedGamePath;
             _updateOnly = updateOnly;
-            _headless = headless;
             // Null modSelection happens on the update-only path (we don't re-prompt for
             // optional mods on a kpatch update). Treat as "skip optional installs".
             _modSelection = modSelection;
             _localKpatchPath = localKpatchPath;
             InitializeComponents();
-            Logger.Info($"MainForm initialized (game: {target.Id}, updateOnly: {updateOnly}, headless: {headless}, modSelection: {modSelection?.ToString() ?? "none"}, localKpatch: {localKpatchPath ?? "none"})");
-        }
-
-        // In headless mode (--auto-update from the in-game updater), auto-trigger
-        // the install on Shown so the user doesn't need to click anything. The
-        // game-relaunch path is owned by the calling batch script, so the readme
-        // / launch checkboxes are forced off in InitializeComponents and the
-        // confirm + success dialogs are skipped in InstallButton_Click.
-        protected override void OnShown(EventArgs e)
-        {
-            base.OnShown(e);
-            if (_headless)
-            {
-                Logger.Info("Headless mode active — auto-triggering install");
-                BeginInvoke(new Action(() => InstallButton_Click(this, EventArgs.Empty)));
-            }
+            Logger.Info($"MainForm initialized (game: {target.Id}, updateOnly: {updateOnly}, modSelection: {modSelection?.ToString() ?? "none"}, localKpatch: {localKpatchPath ?? "none"})");
         }
 
         private void InitializeComponents()
@@ -146,9 +129,6 @@ namespace KotorAccessibilityInstaller
                 Text = InstallerLocale.Get("Main_LaunchCheckBox"),
                 Location = new Point(20, 378),
                 Size = new Size(300, 25),
-                // Headless = invoked by in-game updater; the calling batch
-                // script relaunches the game, so this checkbox would race
-                // against it. Force off.
                 Checked = false
             };
 
@@ -157,9 +137,7 @@ namespace KotorAccessibilityInstaller
                 Text = InstallerLocale.Get("Main_ReadmeCheckBox"),
                 Location = new Point(20, 403),
                 Size = new Size(400, 25),
-                // Headless = unattended; don't pop a browser tab during what
-                // the user is treating as a transparent restart.
-                Checked = !_headless
+                Checked = true
             };
 
             _installButton = new Button
@@ -192,9 +170,6 @@ namespace KotorAccessibilityInstaller
 
             FormClosing += (s, e) =>
             {
-                // Headless = no user to confirm; let close fall through. Errors
-                // already MessageBox'd before close, so no info is being lost.
-                if (_headless) return;
                 if (!_installFinished && !CancelConfirm.ConfirmCancel(this))
                 {
                     e.Cancel = true;
@@ -274,18 +249,13 @@ namespace KotorAccessibilityInstaller
         {
             _gamePath = _pathTextBox.Text;
 
-            // Headless = invoked by in-game updater; user already confirmed by
-            // pressing F5 in-game and accepting the UAC prompt. Skip the dialog.
-            if (!_headless)
-            {
-                string confirmMessage = InstallerLocale.Format(
-                    _updateOnly ? "Main_ConfirmUpdate_Format" : "Main_ConfirmInstall_Format", _gamePath);
-                string confirmTitle = InstallerLocale.Get(
-                    _updateOnly ? "Main_ConfirmUpdate_Title" : "Main_ConfirmInstall_Title");
+            string confirmMessage = InstallerLocale.Format(
+                _updateOnly ? "Main_ConfirmUpdate_Format" : "Main_ConfirmInstall_Format", _gamePath);
+            string confirmTitle = InstallerLocale.Get(
+                _updateOnly ? "Main_ConfirmUpdate_Title" : "Main_ConfirmInstall_Title");
 
-                var result = MessageBox.Show(confirmMessage, confirmTitle, MessageBoxButtons.YesNo, MessageBoxIcon.Question);
-                if (result != DialogResult.Yes) return;
-            }
+            var result = MessageBox.Show(confirmMessage, confirmTitle, MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+            if (result != DialogResult.Yes) return;
 
             SetControlsEnabled(false);
             _progressBar.Visible = true;
@@ -549,27 +519,16 @@ namespace KotorAccessibilityInstaller
                     completionMessage += summary.ToString();
                 }
 
-                // Headless = the in-game updater is waiting for our exit code,
-                // not for the user to read a dialog. Flush logs silently and
-                // close without the success MessageBox / readme / launch
-                // prompts; the calling batch script handles game relaunch.
-                if (_headless)
-                {
-                    Logger.Flush();
-                }
-                else
-                {
-                    MessageBox.Show(
-                        completionMessage,
-                        InstallerLocale.Get(_updateOnly ? "Main_CompleteUpdate_Title" : "Main_CompleteInstall_Title"),
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Information);
+                MessageBox.Show(
+                    completionMessage,
+                    InstallerLocale.Get(_updateOnly ? "Main_CompleteUpdate_Title" : "Main_CompleteInstall_Title"),
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
 
-                    Logger.AskAndSave();
+                Logger.AskAndSave();
 
-                    if (_readmeCheckBox.Checked) OpenReadme();
-                    if (_launchCheckBox.Checked) LaunchGame();
-                }
+                if (_readmeCheckBox.Checked) OpenReadme();
+                if (_launchCheckBox.Checked) LaunchGame();
 
                 _installFinished = true;
                 Close();
@@ -599,23 +558,10 @@ namespace KotorAccessibilityInstaller
                         MessageBoxIcon.Error);
                 }
 
-                if (_headless)
-                {
-                    // Surface failure to the calling batch + flush log without
-                    // prompting (no user is in front of the screen — the batch
-                    // is what catches the exit code).
-                    Environment.ExitCode = 1;
-                    Logger.Flush();
-                    _installFinished = true;
-                    Close();
-                }
-                else
-                {
-                    if (Logger.AskAndSave(alwaysAsk: true)) Logger.OpenLogFile();
+                if (Logger.AskAndSave(alwaysAsk: true)) Logger.OpenLogFile();
 
-                    SetControlsEnabled(true);
-                    _progressBar.Visible = false;
-                }
+                SetControlsEnabled(true);
+                _progressBar.Visible = false;
             }
             finally
             {

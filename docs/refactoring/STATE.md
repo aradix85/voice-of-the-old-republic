@@ -137,8 +137,10 @@ prefix (menus_listbox_picker.cpp).
      names still carry German examples and words. Docs that still point
      at translations (ACCESSIBILITY_MODDING_GUIDE, kotor2-port-
      feasibility, kdev-design, llm-docs/action-menu-and-combat) go in E.
-     Open question for the docs/installer: Config.cs downloads the
-     release from the original mod's GitHub, not from this fork.
+  I. Installer source (Anouk, 2026-11-10): the installer downloads the
+     mod from this fork (the bridge-latest pre-release that build.yml
+     publishes on every push), not from the original mod's GitHub, and
+     no longer self-updates from there. Before E.
   E. Docs pass: every current doc that still names Prism, Tolk,
      SAPI, the urgent or compass voice, positional/3D speech, the Windows
      voices option, the in-game updater, the removed exploration sounds or

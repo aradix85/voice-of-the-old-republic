@@ -81,13 +81,8 @@ namespace KotorAccessibilityInstaller
 
             bool uninstallMode = false;
             bool quietMode = false;
-            bool autoUpdateMode = false;
             string pathArg = null;
             string localKpatchPath = null;
-            // DEV only (--dev-self-update-from): the version this run claims to
-            // be when the self-update check compares itself against the
-            // published one. Null in every real run.
-            string selfUpdateFromVersion = null;
             // Which game the maintenance modes act on. Absent means KOTOR 1,
             // which keeps every uninstall entry written before this flag existed
             // working unchanged.
@@ -98,18 +93,7 @@ namespace KotorAccessibilityInstaller
                 string arg = args[i].ToLowerInvariant();
                 if (arg == "/uninstall" || arg == "-uninstall" || arg == "--uninstall") uninstallMode = true;
                 else if (arg == "/quiet" || arg == "-quiet" || arg == "--quiet" || arg == "/q" || arg == "-q") quietMode = true;
-                else if (arg == "/auto-update" || arg == "-auto-update" || arg == "--auto-update") autoUpdateMode = true;
                 else if (arg == "--local-kpatch" && i + 1 < args.Length) localKpatchPath = args[++i];
-                else if (arg == "--dev-self-update-from" && i + 1 < args.Length)
-                {
-                    // DEV: pose as an older installer so the self-update path
-                    // can actually be walked. A freshly built EXE always sorts
-                    // above every published release, so the branch that matters
-                    // — an update IS offered, downloaded, verified and started —
-                    // is otherwise unreachable outside a real release day.
-                    selfUpdateFromVersion = args[++i];
-                    Logger.Info($"DEV: --dev-self-update-from active — posing as installer version {selfUpdateFromVersion}");
-                }
                 else if (arg == "--dev-gog-only")
                 {
                     GamePathDetector.SimulateGogOnly = true;
@@ -132,49 +116,6 @@ namespace KotorAccessibilityInstaller
                     }
                 }
                 else if (!arg.StartsWith("/") && !arg.StartsWith("-")) pathArg = args[i];
-            }
-
-            // Keep the installer itself current, before anything else happens.
-            //
-            // First, because a self-update ends in a restart: asking later would
-            // mean discarding choices the user had already made, and a window
-            // that disappears and comes back mid-install is exactly the sort of
-            // thing that cannot be followed by ear.
-            //
-            // Every branch here falls through to a normal run. Offline, no
-            // version file published, hash mismatch, user says no: the installer
-            // carries on with the EXE that is already here and can still install
-            // the mod. See SelfUpdater for why this matters more here than for a
-            // downloader — the bundled payload rides in this EXE.
-            SelfUpdater.CleanUp(args);
-
-            if (SelfUpdater.PostUpdateNotice != null && !quietMode)
-            {
-                // A restart the user did not ask for needs saying out loud. The
-                // screens that follow are the ordinary ones and carry no trace
-                // of what just happened, so this box is the only explanation on
-                // offer — and unlike an announcement it can be re-read.
-                MessageBox.Show(
-                    SelfUpdater.PostUpdateNotice,
-                    InstallerLocale.Get("SelfUpdate_DoneTitle"),
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Information);
-            }
-
-            if (SelfUpdater.ShouldCheck(args, uninstallMode, autoUpdateMode, quietMode))
-            {
-                var offer = SelfUpdater.Check(selfUpdateFromVersion);
-                if (offer != null)
-                {
-                    var selfPrompt = new SelfUpdatePromptForm(offer);
-                    Application.Run(selfPrompt);
-
-                    if (selfPrompt.Choice == SelfUpdateChoice.Restart)
-                    {
-                        SelfUpdater.ReplaceAndLaunch(selfPrompt.StagedExe, args);
-                        return;
-                    }
-                }
             }
 
             GameTarget maintenanceTarget = argTarget ?? GameTarget.Kotor1;
@@ -228,9 +169,8 @@ namespace KotorAccessibilityInstaller
 
             // Install mode.
             //
-            // Which game the headless and fresh-install paths act on: an
-            // explicit --game wins (that is how the in-game updater says which
-            // copy called it), otherwise the first game that already has the
+            // Which game the fresh-install path acts on: an explicit --game
+            // wins, otherwise the first game that already has the
             // mod. Without that second rule a KOTOR-2-only player was invisible
             // to the installer — it looked only at KOTOR 1, found nothing, and
             // offered a fresh install every single time. Falls back to KOTOR 1
@@ -242,41 +182,6 @@ namespace KotorAccessibilityInstaller
 
             string detectedGamePath = pathArg ?? GamePathDetector.Detect(modeTarget)
                 ?? (modeTarget == GameTarget.Kotor1 ? GamePathDetector.DefaultGamePath : null);
-            bool modExists = detectedGamePath != null && IsModInstalledAt(detectedGamePath);
-
-            // --auto-update: in-game F5 updater handoff. Skips every Welcome /
-            // ModSelection / UpdateAvailable / InstalledOptions dialog and runs
-            // MainForm directly in headless update-only mode. Exit code is 0 on
-            // success, 1 on failure (the caller batch reads it). This path
-            // assumes the mod is already installed; the install-only path is
-            // out of scope here because the in-game updater only fires when an
-            // existing patch DLL has loaded.
-            //
-            // Single-game by design, and correctly so: the handoff batch passes
-            // --game for the copy the player pressed F5 in, and updating the
-            // other game behind their back while they wait to be put back into
-            // this one is not what they asked for.
-            if (autoUpdateMode)
-            {
-                Logger.Info($"Auto-update mode active — running headless update ({modeTarget.DisplayName})");
-                if (!modExists)
-                {
-                    Logger.Error("--auto-update invoked but no installed mod found at " +
-                                 (detectedGamePath ?? "(no game path)"));
-                    Environment.ExitCode = 1;
-                    return;
-                }
-                // Re-apply install-time settings the running installer ships
-                // with. Without this any installer-side config change between
-                // versions (WER dump flags, registry tweaks, future helpers)
-                // would only land on a manual reinstall, since the auto-update
-                // skips the welcome / mod-selection path that normally calls
-                // these. Idempotent + best-effort — failure does not block the
-                // update.
-                WerLocalDumps.Enable();
-                Application.Run(new MainForm(modeTarget, detectedGamePath, updateOnly: true, localKpatchPath: localKpatchPath, headless: true));
-                return;
-            }
 
             string latestVersion = null;
 

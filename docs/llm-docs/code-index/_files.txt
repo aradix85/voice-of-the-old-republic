@@ -424,8 +424,6 @@ installer/KotorAccessibilityInstaller/PriorityGroup2da.cs
 installer/KotorAccessibilityInstaller/Program.cs
 installer/KotorAccessibilityInstaller/RegistryManager.cs
 installer/KotorAccessibilityInstaller/ScreenReaderAnnouncer.cs
-installer/KotorAccessibilityInstaller/SelfUpdatePromptForm.cs
-installer/KotorAccessibilityInstaller/SelfUpdater.cs
 installer/KotorAccessibilityInstaller/SourcePins.cs
 installer/KotorAccessibilityInstaller/SpatialAudioManager.cs
 installer/KotorAccessibilityInstaller/SwkotorIniTweaker.cs
