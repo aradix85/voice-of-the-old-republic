@@ -1,4 +1,4 @@
-# speech.cpp (149 lines)
+# speech.cpp (145 lines)
 
 Source: `patches/Accessibility/speech.cpp`
 
@@ -17,4 +17,3 @@ Speech and braille through the NVDA controller client: every line goes to NVDA a
 - L134 `void Silence()`
 - L140 `const char* LastSpoken()`
 - L142 `void SuppressNextCapture()`
-- L144 `void Shutdown()`

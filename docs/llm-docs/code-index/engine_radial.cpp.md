@@ -1,4 +1,4 @@
-# engine_radial.cpp (938 lines)
+# engine_radial.cpp (903 lines)
 
 Source: `patches/Accessibility/engine_radial.cpp`
 
@@ -21,14 +21,11 @@ kButtonTextOffset, kLabelGuiStringPtrOffset, kLabelTextOffset, kAurGuiStringCStr
 - L470 `void ReadResRefLocal(void* base, size_t offset, char* outBuf, size_t bufSize)`: Read a CResRef (fixed 16-byte string) into outBuf, treating the buffer as NUL-terminated within the 16-byte window.
 - L495 `void ReadButtonText(void* button, char* outBuf, size_t bufSize)`: Read a CSWGuiButton's text via every path we know about (gui_string -> inline CExoString) into outBuf.
 - L505 `void LogStateWide(void* tam, const char* tag)`
-- L587 `bool SelectNextActionInRow(void* tam, int row)`
-- L599 `bool SelectPrevActionInRow(void* tam, int row)`
-- L611 `bool DispatchRowAction(void* tam, int row)`
-- L623 `bool SelectActionInRow(void* tam, int row, int index)`
-- L653 `uint32_t ReadRowActionIdAtIndex(void* tam, int row, int index)`
-- L670 `int FindRowIndexByActionId(void* tam, int row, uint32_t actionId)`
-- L691 `int RetargetRowActions(void* tam, int row, uint32_t targetClientHandle)`
-- L721 `void* GetRowActionButton(void* tam, int row)`
-- L736 `void* CallVtableAsClass(void* gameObject, size_t vtableOffset)`: Call vtable->AsSWCxxx(gameObject) at the given vtable byte-offset.
-- L755 `void LogTargetDiag(uint32_t targetClient, const char* tag)`
-- L919 `bool IsCreatureClientTarget(uint32_t handle)`
+- L587 `bool DispatchRowAction(void* tam, int row)`
+- L599 `bool SelectActionInRow(void* tam, int row, int index)`
+- L629 `uint32_t ReadRowActionIdAtIndex(void* tam, int row, int index)`
+- L646 `int FindRowIndexByActionId(void* tam, int row, uint32_t actionId)`
+- L667 `int RetargetRowActions(void* tam, int row, uint32_t targetClientHandle)`
+- L701 `void* CallVtableAsClass(void* gameObject, size_t vtableOffset)`: Call vtable->AsSWCxxx(gameObject) at the given vtable byte-offset.
+- L720 `void LogTargetDiag(uint32_t targetClient, const char* tag)`
+- L884 `bool IsCreatureClientTarget(uint32_t handle)`

@@ -95,15 +95,6 @@ bool GetObjectPosition(void* gameObject, Vector& out);
 // room_names[]. nullptr outside any room.
 void* GetRoomAtIndexed(void* area, const Vector& pos, int& outIndex);
 
-// Centroid of the middle face in world space. Input for per-room
-// walkmesh probes (terrain shape classification etc.).
-//
-// outFailReason codes: 0=ok, 1=bad args, 2=roomIdx≥roomCount,
-// 3=rooms ptr null, 4=surface_mesh null ("void" rooms — skybox/
-// placeholders without walkmesh), 5=vertices/faces empty, 6=SEH.
-bool GetRoomRepresentativeWorld(void* area, int roomIdx, Vector& outWorld,
-                                int* outFailReason = nullptr);
-
 // CSWSArea.name CExoLocString @+0x150 (inline → TLK strref @+0x154);
 // falls back to CSWSArea.tag CExoString @+0x158 (modder-assigned).
 bool GetAreaDisplayName(void* area, char* outBuf, size_t bufSize);
@@ -328,9 +319,6 @@ bool MaybeDrivePassiveSelection();
 // don't set soundapptype; classified by label keyword. Metal is the
 // fallback for unknown indices.
 enum class DoorMaterial { Metal, Wood, Stone };
-
-// Metal on null / fault / out-of-range.
-DoorMaterial GetDoorMaterial(void* serverDoor);
 
 // CSWSWaypoint.map_note_enabled +0x22c. Engine's fog-of-war gate for
 // map-note text — disabled until the player discovers via map-pin trigger.

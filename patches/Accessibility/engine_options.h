@@ -36,11 +36,6 @@ bool GetActionMenuAutoPause(bool& out);
 // Get/Set/ToggleMouseLook.
 void* GetClientOptions();
 
-bool SetMouseLook(bool enabled);
-
-// Read-modify-write. False on either failure; on success outNew = new value.
-bool ToggleMouseLook(bool& outNew);
-
 }  // namespace acc::engine
 
 // K2 witnessed 2026-08-02 off the exe bytes: CClientExoApp::GetOptions twin

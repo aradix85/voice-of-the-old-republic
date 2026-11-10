@@ -473,51 +473,6 @@ void WriteHex(const char* tag, const char* label, const void* bytes, size_t len)
     }
 }
 
-void RegisterPtr(const void* ptr, const char* name) {
-    if (!ptr || !name || !*name) return;
-    Locker l;
-    for (int i = 0; i < g_ptrNameCount; ++i) {
-        if (g_ptrNames[i].ptr == ptr) {
-            strncpy_s(g_ptrNames[i].name, name, _TRUNCATE);
-            return;
-        }
-    }
-    if (g_ptrNameCount >= kMaxPtrNames) return;
-    g_ptrNames[g_ptrNameCount].ptr = ptr;
-    strncpy_s(g_ptrNames[g_ptrNameCount].name, name, _TRUNCATE);
-    g_ptrNameCount++;
-}
-
-const char* FmtPtr(const void* ptr) {
-    // Rotating buffer so multiple FmtPtr calls in one snprintf coexist.
-    static char buffers[8][32];
-    static int  next = 0;
-    {
-        Locker l;
-        for (int i = 0; i < g_ptrNameCount; ++i) {
-            if (g_ptrNames[i].ptr == ptr) return g_ptrNames[i].name;
-        }
-    }
-    char* b = buffers[next];
-    next = (next + 1) % 8;
-    snprintf(b, sizeof(buffers[0]), "%p", ptr);
-    return b;
-}
-
-void FlushAll() {
-    if (!g_lockInited) return;
-    EnterCriticalSection(&g_lock);
-    for (int i = 0; i < g_keyCount; ++i) {
-        if (g_keys[i].suppressed > 0) FlushTraceLocked(&g_keys[i]);
-        if (g_keys[i].stateHeld  > 0) FlushEdgeHoldLocked(&g_keys[i]);
-    }
-    for (int i = 0; i < g_blockCount; ++i) {
-        if (g_blocks[i].repeated > 0) FlushBlockLocked(&g_blocks[i]);
-    }
-    if (g_logFile) fflush(g_logFile);
-    LeaveCriticalSection(&g_lock);
-}
-
 // --- BlockLog --------------------------------------------------------------
 
 BlockLog::BlockLog(const char* tag)

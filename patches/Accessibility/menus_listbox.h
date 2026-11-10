@@ -83,7 +83,6 @@ const char* GetTitleOverride(void* panel);
 // rises — KOTOR 2 pops its "no items for this slot" modal instead) can
 // still name the item that stays equipped in that slot.
 bool  IsEquipPickerArmed();
-void* EquipPickerPanel();
 void  ArmEquipPicker(void* panel, void* slotBtn);
 void  ClearEquipPickerArmLatch();
 

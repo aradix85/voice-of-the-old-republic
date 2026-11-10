@@ -434,30 +434,6 @@ void RebuildForArea(void* area) {
     }
 }
 
-const acc::engine::WallEdge* GetWallBuffer() {
-    return g_wall_count > 0 ? g_walls : nullptr;
-}
-
-const int* GetEdgeSurfaceIdBuffer() {
-    return g_wall_count > 0 ? g_edge_surface_id : nullptr;
-}
-
-int GetWallCount() {
-    return g_wall_count;
-}
-
-int GetSurfaceCount() {
-    return g_surface_count;
-}
-
-bool GetSurfaceDesc(int idx, WallSurfaceDesc& outDesc) {
-    if (idx < 0 || idx >= g_surface_count) return false;
-    const WallSurfaceDesc& d = g_surface_descriptors[idx];
-    if (d.edge_count <= 0) return false;
-    outDesc = d;
-    return true;
-}
-
 bool SegmentCrossesSurface(const Vector& a, const Vector& b,
                            Vector& outHitPoint) {
     // Movement direction in 2D. If both deltas are ~0 the segment isn't

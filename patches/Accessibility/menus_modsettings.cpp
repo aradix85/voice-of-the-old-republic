@@ -366,10 +366,6 @@ bool ForegroundDivergedFromParent() {
 
 }  // namespace
 
-void* GetRootAnchor() {
-    return &s_rootSentinel;
-}
-
 bool IsRootAnchor(void* control) {
     return control == &s_rootSentinel;
 }

@@ -304,13 +304,6 @@ bool IsInGameOptionsSubScreen(void* panel);
 // (reorders panels[] without popping).
 bool CallPrevSWInGameGui();
 
-// CGuiInGame::HideSWInGameGui @0x0062cba0. The engine's "close current
-// sub-screen" primitive, used internally by Esc on the save/load menu.
-// That path produces a full unpause + audio resync; the MessageBoxModal
-// close path (Alt+F4 quit-confirm) skips it and leaves the world
-// half-paused. SEH-wrapped.
-bool CallHideSWInGameGui(int param_1);
-
 // CGuiInGame::SetGlobalDialogState — force the engine's "conversation active"
 // bit. Pass 0 to clear dialog-pending limbo after cancelling a blocked
 // walk-to-talk approach (ActionInitiateDialog set it to 1 before the walk).

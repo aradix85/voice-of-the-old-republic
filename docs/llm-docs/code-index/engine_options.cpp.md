@@ -1,4 +1,4 @@
-# engine_options.cpp (97 lines)
+# engine_options.cpp (73 lines)
 
 Source: `patches/Accessibility/engine_options.cpp`
 
@@ -16,5 +16,3 @@ User-facing swkotor.ini "Mouse Look=N" matches CClientOptions.mouse_look exclusi
 - L25 `bool GetMouseLook(bool& out)`
 - L39 `bool GetActionMenuAutoPause(bool& out)`
 - L55 `bool WriteMouseLook(void* options, bool enabled)`
-- L72 `bool SetMouseLook(bool enabled)`
-- L78 `bool ToggleMouseLook(bool& outNew)`

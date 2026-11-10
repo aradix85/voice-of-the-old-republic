@@ -88,11 +88,6 @@ int InputIndexToVk(int inputIndex);
 // each axis is always seeded with its WASD default so it is never empty.
 enum class MoveAxis { Forward = 0, Backward = 1, TurnLeft = 2, TurnRight = 3 };
 
-// Fill `out` with up to `cap` distinct VKs bound to the given movement/turn
-// direction (default key + any [Keymapping] binds on that direction's slots).
-// Returns the count written. Auto-loads the config on first use.
-int MoveAxisVks(MoveAxis axis, int* out, int cap);
-
 // The single VK a consumer should treat as "the" key for this direction, when
 // reacting to every bound key would be wrong.
 //

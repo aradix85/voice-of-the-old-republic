@@ -125,11 +125,6 @@ bool IsEquipPickerArmed() {
     return s_equipArmPending == panel;
 }
 
-void* EquipPickerPanel() {
-    return IsEquipPickerArmed() ? FindPanelByKind(PanelKind::InGameEquip)
-                                : nullptr;
-}
-
 void ArmEquipPicker(void* panel, void* slotBtn) {
     s_equipArmPending  = panel;
     s_equipArmSlotBtn  = slotBtn;

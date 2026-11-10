@@ -584,30 +584,6 @@ void LogStateWide(void* tam, const char* tag) {
     }
 }
 
-bool SelectNextActionInRow(void* tam, int row) {
-    if (!tam || row < 0 || row >= kRowCount) return false;
-    __try {
-        auto fn = reinterpret_cast<PFN_RowOp>(kAddrSelectNextAction);
-        fn(tam, row);
-        return true;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        acclog::Write("Radial", "SelectNextActionInRow SEH-FAULT row=%d", row);
-        return false;
-    }
-}
-
-bool SelectPrevActionInRow(void* tam, int row) {
-    if (!tam || row < 0 || row >= kRowCount) return false;
-    __try {
-        auto fn = reinterpret_cast<PFN_RowOp>(kAddrSelectPrevAction);
-        fn(tam, row);
-        return true;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        acclog::Write("Radial", "SelectPrevActionInRow SEH-FAULT row=%d", row);
-        return false;
-    }
-}
-
 bool DispatchRowAction(void* tam, int row) {
     if (!tam || row < 0 || row >= kRowCount) return false;
     __try {
@@ -716,17 +692,6 @@ int RetargetRowActions(void* tam, int row, uint32_t targetClientHandle) {
         acclog::Write("Radial", "RetargetRowActions SEH-FAULT row=%d", row);
         return -1;
     }
-}
-
-void* GetRowActionButton(void* tam, int row) {
-    if (!tam || row < 0 || row >= kRowCount) return nullptr;
-    // target_actions[row].action_button. action_button is at offset 0
-    // within CSWGuiMainInterfaceAction so its address equals the
-    // array-entry address.
-    return reinterpret_cast<unsigned char*>(tam) +
-           kTamTargetActionsOffset +
-           static_cast<size_t>(row) * kTargetActionStride +
-           kRowActionButtonOffset;
 }
 
 namespace {

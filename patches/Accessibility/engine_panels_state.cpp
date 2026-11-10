@@ -102,31 +102,6 @@ bool CallPrevSWInGameGui() {
 static const uintptr_t kAddrHideSWInGameGui = acc::addr::Pick(0x0062cba0, 0x007CA060);
 typedef int (__thiscall* PFN_HideSWInGameGui)(void* gui, int param_1);
 
-bool CallHideSWInGameGui(int param_1) {
-    if (!acc::addr::Ok(kAddrHideSWInGameGui)) {
-        acclog::Write("HideSWInGameGui", "skipped: address unresolved on build %s",
-                      acc::addr::ActiveBuildName());
-        return false;
-    }
-    void* gui = ResolveGuiInGame();
-    if (!gui) {
-        acclog::Write("HideSWInGameGui",
-                      "skipped: CGuiInGame not resolvable yet");
-        return false;
-    }
-    auto fn = reinterpret_cast<PFN_HideSWInGameGui>(kAddrHideSWInGameGui);
-    __try {
-        fn(gui, param_1);
-        acclog::Write("HideSWInGameGui",
-                      "dispatched gui=%p param_1=%d", gui, param_1);
-        return true;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        acclog::Write("HideSWInGameGui",
-                      "fault dispatching gui=%p param_1=%d", gui, param_1);
-        return false;
-    }
-}
-
 // CGuiInGame::SetGlobalDialogState @ 0x0062ec60. __thiscall(this, int). The
 // engine sets this to 1 when a conversation is starting and back to 0 when it
 // ends or aborts. ActionInitiateDialog sets it to 1 *before* the walk-to-talk;

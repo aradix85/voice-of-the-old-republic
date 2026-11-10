@@ -98,14 +98,6 @@ private:
     char        buf_[kCap];
 };
 
-// Symbolic names for known pointers (e.g. "$mgr"). Unknown pointers fall
-// through to hex in a rotating static buffer so multiple FmtPtr calls in
-// one log line stay valid simultaneously.
-void RegisterPtr(const void* ptr, const char* name);
-const char* FmtPtr(const void* ptr);
-
-void FlushAll();
-
 // Record a milestone in the bringup timeline. First call (typically
 // "dll_attach") captures the baseline; subsequent calls emit a single
 // "Bringup: <name> t+<ms>ms" line measured from that baseline. Lets us

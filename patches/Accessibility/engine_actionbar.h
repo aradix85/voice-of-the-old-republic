@@ -67,11 +67,6 @@ uint32_t ReadVariantActionId(void* mainInterface, int slot, int index);
 bool VariantRefusal(void* mainInterface, int slot, int index,
                     uint32_t* outStrRef);
 
-// field45_0x771c[slot].action_button — safe to pass to acc::engine::
-// ReadControlTooltip / ReadGuiString (CSWGuiButton embeds CSWGuiControl
-// at offset 0).
-void* GetColumnActionButton(void* mainInterface, int slot);
-
 // Stamps *(mi + 0x1bac + slot*4) = descriptor[index].action_id, then
 // DoPersonalAction reads that field and searches for matching id.
 //

@@ -185,14 +185,6 @@ struct ItemDescriptionBlocks {
 // are deliberately leaked (CRT-mismatch — same rule as ReadItemPropertyDescription).
 bool BuildItemDescriptionBlocks(void* item, ItemDescriptionBlocks* out);
 
-// The "Spezielle Eigenschaften: …" block for just the properties on `item`
-// whose slot-key byte matches `key` (CSWSItem::GetKeyedPropertyString). Used to
-// surface a workbench upgrade slot's keyed bonus line — the gameplay text that
-// GetPropertyDescription omits for crystals. Same heap-leak rule. False on
-// fault / empty result.
-bool ReadItemKeyedPropertyString(void* item, uint8_t key,
-                                 char* outBuf, size_t bufSize);
-
 // Workbench upgrade slot → installed-mod item. Given the CSWGuiUpgrade panel
 // and a slot button control (upgrade.gui IDs 12..18), reads the slot button's
 // custom_value and returns the installed mod CSWSItem* at

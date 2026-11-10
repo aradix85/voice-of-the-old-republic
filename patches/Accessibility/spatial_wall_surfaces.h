@@ -68,28 +68,6 @@ void RebuildForArea(void* area);
 // subsequent accessor reads return false / empty.
 void Clear();
 
-// Borrowed pointer into static storage, valid until the next
-// RebuildForArea or Clear. Don't retain across area transitions.
-// Returns nullptr before first RebuildForArea.
-const acc::engine::WallEdge* GetWallBuffer();
-
-// Parallel array to GetWallBuffer(): element i is the surface index for
-// wall edge i. -1 if pre-clustering or kMaxWallSurfaces overflowed and
-// the edge ended up in the degraded bucket. nullptr before first
-// RebuildForArea.
-const int* GetEdgeSurfaceIdBuffer();
-
-// 0 before first RebuildForArea.
-int GetWallCount();
-
-// 0 before first RebuildForArea.
-int GetSurfaceCount();
-
-// False on out-of-range, before clustering runs, or for surfaces that
-// couldn't reduce to a single straight segment (closed-loop / branching
-// edge cases flagged with edge_count == 0).
-bool GetSurfaceDesc(int idx, WallSurfaceDesc& outDesc);
-
 // 2D segment-vs-surface intersection. Portal-seam phantoms absorbed by
 // clustering are invisible here, so a cursor stops at real walls, not on
 // absorbed fragments.

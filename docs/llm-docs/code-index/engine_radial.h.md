@@ -1,4 +1,4 @@
-# engine_radial.h (150 lines)
+# engine_radial.h (141 lines)
 
 Source: `patches/Accessibility/engine_radial.h`
 
@@ -24,16 +24,13 @@ Engine entry points (all __thiscall, ECX = TAM*, single int row arg): SelectNext
 - L71 `bool ReadTargetName(void* tam, char* outBuf, size_t bufSize)`: name_label at TAM+0x15CC — sanity check (always populated post- PopulateMenus via SetNameLabel @0x00685af0).
 - L74 `void LogState(void* tam, const char* tag)`: Hex dump + parsed action_lists + per-row is_action / button text.
 - L79 `void LogStateWide(void* tam, const char* tag)`: LogState + field1[12] + per-row embedded buttons (action/label/up/down) + action_lists[r].data[0] peek even when size==0 (engine may buffer without committing size).
-- L84 `bool SelectNextActionInRow(void* tam, int row)`: Each: SEH-wrapped, false on null TAM / out-of-range / fault.
-- L85 `bool SelectPrevActionInRow(void* tam, int row)`
-- L86 `bool DispatchRowAction (void* tam, int row)`
-- L93 `bool SelectActionInRow(void* tam, int row, int index)`: Stamps field1[target_type*3 + row] = action_lists[row].data[index] .action_id.
-- L101 `uint32_t ReadRowActionIdAtIndex(void* tam, int row, int index)`: action_lists[row].data[index].action_id — by POSITION, unlike ReadSelectedRowActionId which goes through the engine's field1 selection tracking.
-- L105 `int FindRowIndexByActionId(void* tam, int row, uint32_t actionId)`: Index of the descriptor in action_lists[row] whose action_id matches, -1 when absent (or actionId == 0 / fault).
-- L118 `int RetargetRowActions(void* tam, int row, uint32_t targetClientHandle)`: Overwrites the creature_id (+0x1c) of EVERY descriptor in action_lists[row] with targetClientHandle.
-- L122 `void* GetRowActionButton(void* tam, int row)`: target_actions[row].action_button.
-- L132 `uint32_t ReadSelectedRowActionId(void* tam, int row)`: action_id of the descriptor currently shown for target_actions[row].
-- L138 `void LogTargetDiag(uint32_t targetClient, const char* tag)`: Resolves targetClient via GetGameObject, downcasts, logs per-class fields GetTargetActions checks (doors: cannot_bash/can_use_actions/ is_hostile/state).
-- L147 `bool IsCreatureClientTarget(uint32_t handle)`: True iff `handle` resolves to a CSWCCreature (hostile creature).
+- L81 `bool DispatchRowAction (void* tam, int row)`
+- L88 `bool SelectActionInRow(void* tam, int row, int index)`: Stamps field1[target_type*3 + row] = action_lists[row].data[index] .action_id.
+- L96 `uint32_t ReadRowActionIdAtIndex(void* tam, int row, int index)`: action_lists[row].data[index].action_id — by POSITION, unlike ReadSelectedRowActionId which goes through the engine's field1 selection tracking.
+- L100 `int FindRowIndexByActionId(void* tam, int row, uint32_t actionId)`: Index of the descriptor in action_lists[row] whose action_id matches, -1 when absent (or actionId == 0 / fault).
+- L113 `int RetargetRowActions(void* tam, int row, uint32_t targetClientHandle)`: Overwrites the creature_id (+0x1c) of EVERY descriptor in action_lists[row] with targetClientHandle.
+- L123 `uint32_t ReadSelectedRowActionId(void* tam, int row)`: action_id of the descriptor currently shown for target_actions[row].
+- L129 `void LogTargetDiag(uint32_t targetClient, const char* tag)`: Resolves targetClient via GetGameObject, downcasts, logs per-class fields GetTargetActions checks (doors: cannot_bash/can_use_actions/ is_hostile/state).
+- L138 `bool IsCreatureClientTarget(uint32_t handle)`: True iff `handle` resolves to a CSWCCreature (hostile creature).
 
 Also 1 constants or variables at namespace scope.

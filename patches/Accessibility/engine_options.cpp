@@ -69,28 +69,4 @@ bool WriteMouseLook(void* options, bool enabled) {
 
 }  // namespace
 
-bool SetMouseLook(bool enabled) {
-    void* options = GetClientOptions();
-    if (!options) return false;
-    return WriteMouseLook(options, enabled);
-}
-
-bool ToggleMouseLook(bool& outNew) {
-    void* options = GetClientOptions();
-    if (!options) return false;
-    bool current = false;
-    __try {
-        unsigned int bits = *reinterpret_cast<unsigned int*>(
-            reinterpret_cast<unsigned char*>(options) +
-            kClientOptionsBitFieldOffset);
-        current = (bits & kClientOptionsMouseLookMask) != 0;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return false;
-    }
-    bool target = !current;
-    if (!WriteMouseLook(options, target)) return false;
-    outNew = target;
-    return true;
-}
-
 }  // namespace acc::engine

@@ -437,29 +437,6 @@ typedef CExoString* (__thiscall* PFN_GetKeyedPropertyString)(void* this_,
                                                              CExoString* out,
                                                              uint8_t key);
 
-bool ReadItemKeyedPropertyString(void* item, uint8_t key,
-                                 char* outBuf, size_t bufSize) {
-    if (!item || !outBuf || bufSize < 2) return false;
-    CExoString tmp = {nullptr, 0};
-    bool ok = false;
-    __try {
-        auto fn = reinterpret_cast<PFN_GetKeyedPropertyString>(
-            kAddrCSWSItemGetKeyedPropertyString);
-        fn(item, &tmp, key);
-        if (tmp.c_string && tmp.length > 0 && tmp.length < bufSize) {
-            memcpy(outBuf, tmp.c_string, tmp.length);
-            outBuf[tmp.length] = '\0';
-            ok = true;
-        }
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        acclog::Write("Engine.Reads",
-                      "GetKeyedPropertyString SEH for item=%p key=%u",
-                      item, (unsigned)key);
-        ok = false;
-    }
-    return ok;
-}
-
 namespace {
 
 typedef void* (__thiscall* PFN_GetBaseItem)(void* item);

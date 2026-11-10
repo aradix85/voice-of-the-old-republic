@@ -1,4 +1,4 @@
-# engine_keymap.cpp (548 lines)
+# engine_keymap.cpp (537 lines)
 
 Source: `patches/Accessibility/engine_keymap.cpp`
 
@@ -21,9 +21,8 @@ queries at the bottom of this file
 - L450 `void Rebuild()`
 - L466 `int VksForCode(int code, int* out, int cap)`
 - L480 `int CodeForVk(int vk)`
-- L488 `int MoveAxisVks(MoveAxis axis, int* out, int cap)`
-- L499 `int MoveAxisPrimaryVk(MoveAxis axis)`
-- L506 `int TurnScancode(bool left)`
-- L513 `bool ForwardBackwardKeyHeld()`
-- L525 `int FirstMovementKeyHeld()`
-- L543 `bool AnyMovementKeyHeld()`
+- L488 `int MoveAxisPrimaryVk(MoveAxis axis)`
+- L495 `int TurnScancode(bool left)`
+- L502 `bool ForwardBackwardKeyHeld()`
+- L514 `int FirstMovementKeyHeld()`
+- L532 `bool AnyMovementKeyHeld()`

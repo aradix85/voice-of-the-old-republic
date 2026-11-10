@@ -141,8 +141,4 @@ const char* LastSpoken() { return s_lastSpoken; }
 
 void SuppressNextCapture() { s_suppressNextCapture = true; }
 
-void Shutdown() {
-    g_ready = false;
-}
-
 }  // namespace acc::speech

@@ -1,4 +1,4 @@
-# engine_rebase.h (128 lines)
+# engine_rebase.h (124 lines)
 
 Source: `patches/Accessibility/engine_rebase.h`
 
@@ -19,11 +19,10 @@ KOTOR 2 returns 0 for EVERY address, because every constant here is a KOTOR 1 ad
 ## Declarations (in source order)
 
 - L52 `uintptr_t R(uintptr_t referenceVa)`: Map a reference-build address to the running build.
-- L56 `bool IsRebased()`: True when the running executable is not the reference build, i.e.
-- L62 `const char* ActiveBuildName()`: Short name of the detected build, for logs: "reference", "relink-2004-03-05", or "unknown".
-- L67 `inline bool Ok(uintptr_t va)`: Guard for addresses that may be unresolved on a rebased build.
-- L93 `uintptr_t Pick(uintptr_t referenceVa, uintptr_t kotor2Va)`: .text / .rdata address whose KOTOR 2 value is known.
-- L101 `uintptr_t PickGlobal(uintptr_t kotor1Va, uintptr_t kotor2Va)`: .data global pointer whose KOTOR 2 value is known.
-- L110 `uintptr_t Kotor1Only(uintptr_t referenceVa)`: The address belongs to a class or subsystem KOTOR 2 does not have, so there is no K2 value to find.
-- L116 `uintptr_t Kotor2Only(uintptr_t kotor2Va)`: Mirror of Kotor1Only: an address for engine machinery KOTOR 1 does not have (K2-only builders, K2-only panels).
-- L125 `uintptr_t TodoGlobal(uintptr_t kotor1Va)`: .data global pointer whose KOTOR 2 value is NOT yet known.
+- L58 `const char* ActiveBuildName()`: Short name of the detected build, for logs: "reference", "relink-2004-03-05", or "unknown".
+- L63 `inline bool Ok(uintptr_t va)`: Guard for addresses that may be unresolved on a rebased build.
+- L89 `uintptr_t Pick(uintptr_t referenceVa, uintptr_t kotor2Va)`: .text / .rdata address whose KOTOR 2 value is known.
+- L97 `uintptr_t PickGlobal(uintptr_t kotor1Va, uintptr_t kotor2Va)`: .data global pointer whose KOTOR 2 value is known.
+- L106 `uintptr_t Kotor1Only(uintptr_t referenceVa)`: The address belongs to a class or subsystem KOTOR 2 does not have, so there is no K2 value to find.
+- L112 `uintptr_t Kotor2Only(uintptr_t kotor2Va)`: Mirror of Kotor1Only: an address for engine machinery KOTOR 1 does not have (K2-only builders, K2-only panels).
+- L121 `uintptr_t TodoGlobal(uintptr_t kotor1Va)`: .data global pointer whose KOTOR 2 value is NOT yet known.

@@ -194,80 +194,6 @@ void* GetRoomAtIndexed(void* area, const Vector& pos, int& outIndex) {
     }
 }
 
-bool GetRoomRepresentativeWorld(void* area, int roomIdx, Vector& outWorld,
-                                int* outFailReason) {
-    if (outFailReason) *outFailReason = 0;
-    auto fail = [&](int code) -> bool {
-        if (outFailReason) *outFailReason = code;
-        return false;
-    };
-    if (!area || roomIdx < 0) return fail(1);
-    __try {
-        auto* base = reinterpret_cast<unsigned char*>(area);
-        int roomCount = static_cast<int>(*reinterpret_cast<uint32_t*>(
-            base + kAreaRoomCountOffset));
-        if (roomIdx >= roomCount) return fail(2);
-
-        // kAreaRoomsOffset holds a POINTER to the inline-stride rooms
-        // buffer, not the rooms themselves. (Header comment was
-        // misleading — see BuildAreaWallCache for the canonical access
-        // pattern.)
-        void* rooms = *reinterpret_cast<void**>(base + kAreaRoomsOffset);
-        if (!rooms) return fail(3);
-        auto* roomBase = reinterpret_cast<unsigned char*>(rooms);
-        void* room = roomBase +
-                     static_cast<size_t>(roomIdx) * kRoomStride;
-        void* mesh = *reinterpret_cast<void**>(
-            reinterpret_cast<unsigned char*>(room) + kRoomSurfaceMeshOffset);
-        if (!mesh) return fail(4);
-
-        auto* meshBytes = reinterpret_cast<unsigned char*>(mesh);
-        Vector* vertices = *reinterpret_cast<Vector**>(
-            meshBytes + kCollisionMeshVerticesOffset);
-        uint32_t faceCount = *reinterpret_cast<uint32_t*>(
-            meshBytes + kCollisionMeshFaceCountOffset);
-        void* faceIndices = *reinterpret_cast<void**>(
-            meshBytes + kCollisionMeshFacesOffset);
-        if (!vertices || !faceIndices || faceCount == 0) return fail(5);
-
-        // Middle face — less likely to sit on the room boundary than
-        // face 0 (which often corresponds to a corner triangle in
-        // walkmesh authoring tools).
-        uint32_t f = faceCount / 2;
-        auto* face = reinterpret_cast<uint32_t*>(
-            reinterpret_cast<unsigned char*>(faceIndices) +
-            static_cast<size_t>(f) * kWalkmeshFaceStride);
-        uint32_t v0 = face[0], v1 = face[1], v2 = face[2];
-        Vector a = vertices[v0];
-        Vector b = vertices[v1];
-        Vector c = vertices[v2];
-        Vector localCentroid;
-        localCentroid.x = (a.x + b.x + c.x) / 3.0f;
-        localCentroid.y = (a.y + b.y + c.y) / 3.0f;
-        localCentroid.z = (a.z + b.z + c.z) / 3.0f;
-
-        Vector worldCentroid = localCentroid;
-        // The anonymous-namespace PFN_CollisionMeshLocalToWorld lives
-        // later in this TU; redeclare locally rather than reorder.
-        typedef void (__thiscall* PFN_L2W)(void* this_,
-                                           Vector* output,
-                                           Vector* localPoint);
-        auto fnL2W = reinterpret_cast<PFN_L2W>(
-            kAddrCollisionMeshLocalToWorld);
-        __try {
-            fnL2W(mesh, &worldCentroid, &localCentroid);
-        } __except (EXCEPTION_EXECUTE_HANDLER) {
-            // Best-effort: fall back to the local copy (correct when
-            // world_coords=1, common runtime case for room walkmeshes).
-            worldCentroid = localCentroid;
-        }
-        outWorld = worldCentroid;
-        return true;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return fail(6);
-    }
-}
-
 bool GetAreaDisplayName(void* area, char* outBuf, size_t bufSize) {
     if (!area || !outBuf || bufSize < 2) return false;
     outBuf[0] = '\0';
@@ -1397,19 +1323,6 @@ constexpr M kDoorMaterialTable[kDoorMaterialTableSize] = {
     /* 64 YavinDoor1    */ M::Metal,
 };
 }  // namespace
-
-DoorMaterial GetDoorMaterial(void* serverDoor) {
-    if (!serverDoor) return DoorMaterial::Metal;
-    uint8_t generic_type = 0;
-    __try {
-        generic_type = *(reinterpret_cast<unsigned char*>(serverDoor) +
-                         kDoorGenericTypeOffset);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return DoorMaterial::Metal;
-    }
-    if (generic_type >= kDoorMaterialTableSize) return DoorMaterial::Metal;
-    return kDoorMaterialTable[generic_type];
-}
 
 
 

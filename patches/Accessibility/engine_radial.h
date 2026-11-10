@@ -78,11 +78,6 @@ void LogState(void* tam, const char* tag);
 // without committing size). One-shot deep diagnostic.
 void LogStateWide(void* tam, const char* tag);
 
-// Each: SEH-wrapped, false on null TAM / out-of-range / fault.
-// True only means the engine call dispatched; observable effects show
-// up via subsequent reads.
-bool SelectNextActionInRow(void* tam, int row);
-bool SelectPrevActionInRow(void* tam, int row);
 bool DispatchRowAction   (void* tam, int row);
 
 // Stamps field1[target_type*3 + row] = action_lists[row].data[index]
@@ -116,10 +111,6 @@ int FindRowIndexByActionId(void* tam, int row, uint32_t actionId);
 // stale-target line when the stored creature_id differed. Returns the
 // number of entries stamped; -1 on null TAM / empty row / fault.
 int RetargetRowActions(void* tam, int row, uint32_t targetClientHandle);
-
-// target_actions[row].action_button. Coincides with the array entry's
-// start (action_button is field 0).
-void* GetRowActionButton(void* tam, int row);
 
 // action_id of the descriptor currently shown for target_actions[row].
 // Resolves via the engine's own selection-tracking field

@@ -239,21 +239,6 @@ uintptr_t TodoGlobal(uintptr_t kotor1Va) {
     return acc::game::IsKotor2() ? 0 : kotor1Va;
 }
 
-// "R() is not the identity function" — true for the relinks (which remap) and
-// for KOTOR 2 (where R() resolves everything to 0). All of these mean a raw
-// reference address is not safe to use without checking. The reference build
-// and an unrecognised build both pass values through, so both are false.
-bool IsRebased() {
-    switch (acc::game::CurrentBuild()) {
-        case acc::game::Build::Kotor1Relink2004:
-        case acc::game::Build::Kotor2Aspyr2015:
-        case acc::game::Build::Kotor2Relink2021:
-            return true;
-        default:
-            return false;
-    }
-}
-
 const char* ActiveBuildName() { return acc::game::BuildName(); }
 
 }  // namespace acc::addr

@@ -485,17 +485,6 @@ int CodeForVk(int vk) {
     return 0;
 }
 
-int MoveAxisVks(MoveAxis axis, int* out, int cap) {
-    if (!s_gameLoaded) ReloadGameConfig();  // populates axis buckets
-    int a = static_cast<int>(axis);
-    if (a < 0 || a >= kMoveAxisCount || !out || cap <= 0) return 0;
-    int n = 0;
-    for (int i = 0; i < s_axisVkCount[a] && n < cap; ++i) {
-        out[n++] = s_axisVks[a][i];
-    }
-    return n;
-}
-
 int MoveAxisPrimaryVk(MoveAxis axis) {
     if (!s_gameLoaded) ReloadGameConfig();  // populates the primary binds
     int a = static_cast<int>(axis);

@@ -1,4 +1,4 @@
-# spatial_wall_surfaces.h (114 lines)
+# spatial_wall_surfaces.h (92 lines)
 
 Source: `patches/Accessibility/spatial_wall_surfaces.h`
 
@@ -17,12 +17,7 @@ Each clustered surface is also reduced to a single straight segment (two extreme
 - L59 `bool GetCachedWalls(const acc::engine::WallEdge*& outBuf, int& outCount)`: The cached perimeter edges, portal seams filtered.
 - L65 `void RebuildForArea(void* area)`: Rebuild for this area.
 - L69 `void Clear()`: Reset to "no area" state.
-- L74 `const acc::engine::WallEdge* GetWallBuffer()`: Borrowed pointer into static storage, valid until the next RebuildForArea or Clear.
-- L80 `const int* GetEdgeSurfaceIdBuffer()`: Parallel array to GetWallBuffer(): element i is the surface index for wall edge i.
-- L83 `int GetWallCount()`: 0 before first RebuildForArea.
-- L86 `int GetSurfaceCount()`: 0 before first RebuildForArea.
-- L91 `bool GetSurfaceDesc(int idx, WallSurfaceDesc& outDesc)`: False on out-of-range, before clustering runs, or for surfaces that couldn't reduce to a single straight segment (closed-loop / branching edge cases flagged with edge_count == 0).
-- L96 `bool SegmentCrossesSurface(const Vector& a, const Vector& b, Vector& outHitPoint)`: 2D segment-vs-surface intersection.
-- L111 `int FloorZCandidatesAt(float x, float y, float* outZ, int maxOut)`: Floor heights of the walkmesh triangles containing (x,y), one entry per stacked storey (bridge over tunnel), exact on ramps via plane interpolation.
+- L74 `bool SegmentCrossesSurface(const Vector& a, const Vector& b, Vector& outHitPoint)`: 2D segment-vs-surface intersection.
+- L89 `int FloorZCandidatesAt(float x, float y, float* outZ, int maxOut)`: Floor heights of the walkmesh triangles containing (x,y), one entry per stacked storey (bridge over tunnel), exact on ramps via plane interpolation.
 
 Also 3 constants or variables at namespace scope.

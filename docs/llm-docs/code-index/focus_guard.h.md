@@ -1,4 +1,4 @@
-# focus_guard.h (53 lines)
+# focus_guard.h (39 lines)
 
 Source: `patches/Accessibility/focus_guard.h`
 
@@ -11,6 +11,5 @@ Idempotent — repeat calls are no-ops. Safe to call from OnRulesInit (early, be
 ## Declarations (in source order)
 
 - L21 `void StartFocusProbe()`: Start the focus-probe polling thread.
-- L35 `void ArmStartupForegroundGuard()`: Arm the cold-start foreground guard.
-- L42 `bool GameOwnsForeground()`: True when the foreground window belongs to our process — i.e.
-- L50 `void DrainInputBlockedWarning()`: Drain a pending "input blocked by Steam Big Picture" warning and speak it (no-op if none queued).
+- L28 `bool GameOwnsForeground()`: True when the foreground window belongs to our process — i.e.
+- L36 `void DrainInputBlockedWarning()`: Drain a pending "input blocked by Steam Big Picture" warning and speak it (no-op if none queued).

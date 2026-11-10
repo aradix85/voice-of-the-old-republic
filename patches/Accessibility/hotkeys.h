@@ -195,8 +195,6 @@ void ClaimRisingEdge(Action a);
 // Direct OS-level modifier reads — no edge, no foreground gate.
 bool ShiftHeld();
 bool CtrlHeld();
-bool AltHeld();
-bool AltGrHeld();
 
 // Current OS modifier mask (kMod* bits) — the same read BeginTick uses for
 // edge matching. No edge, no foreground gate.
@@ -217,10 +215,6 @@ bool IsForegroundGame();
 Binding  Get(Action a);
 void     Set(Action a, Binding b);
 bool     IsUserRebindable(Action a);
-
-// Factory default for an action (the binding before any user override). The
-// configurator's reset path reads this.
-Binding  GetDefault(Action a);
 
 // Apply a user rebind: update the live binding AND persist it to
 // acc_settings.ini so it survives a relaunch. Resets the action's edge state.

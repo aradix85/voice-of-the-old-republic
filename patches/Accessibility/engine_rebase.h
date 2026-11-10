@@ -51,10 +51,6 @@ namespace acc::addr {
 // not in its table.
 uintptr_t R(uintptr_t referenceVa);
 
-// True when the running executable is not the reference build, i.e. R() is
-// actually remapping. Cheap after the first call.
-bool IsRebased();
-
 // Short name of the detected build, for logs: "reference", "relink-2004-03-05",
 // or "unknown". Stable for the process lifetime. The two distributions sharing
 // the relink are not told apart here — they are the same code, and which

@@ -1,4 +1,4 @@
-# engine_area.cpp (1448 lines)
+# engine_area.cpp (1361 lines)
 
 Source: `patches/Accessibility/engine_area.cpp`
 
@@ -26,44 +26,42 @@ game_objects[] is an array of handles, not pointers. Initial code treated entrie
 - L149 `void* ResolveClientObjectHandle(uint32_t handle)`
 - L164 `bool GetObjectPosition(void* gameObject, Vector& out)`
 - L176 `void* GetRoomAtIndexed(void* area, const Vector& pos, int& outIndex)`
-- L197 `bool GetRoomRepresentativeWorld(void* area, int roomIdx, Vector& outWorld, int* outFailReason)`
-- L271 `bool GetAreaDisplayName(void* area, char* outBuf, size_t bufSize)`
-- L290 `bool GetObjectTag(void* gameObject, char* outBuf, size_t bufSize)`
-- L300 `bool GetAreaTag(void* area, char* outBuf, size_t bufSize)`
-- L310 `bool GetRoomDisplayName(void* area, int roomIndex, char* outBuf, size_t bufSize)`
-- L330 `AreaObjectIterator::AreaObjectIterator(void* area) : handles_(nullptr), size_(0), index_(0), objectArray_(nullptr)`
-- L355 `void SubstitutePlayerNameToken(char* buf, size_t bufSize)`: → the PC's name.
-- L393 `bool TryReadLocString(void* base, size_t locStringOffset, char* outBuf, size_t bufSize)`: Resolve a CExoLocString by treating its 8 bytes as the same shape as CExoString (char* + uint32 length); fall back to TLK strref at +4.
-- L401 `bool TryReadTag(void* obj, char* outBuf, size_t bufSize)`: Last-resort: speak the modder-assigned tag instead of an empty name.
-- L426 `void CleanAuthoredName(char* buf, size_t bufSize)`: Strip the two kinds of authoring residue KOTOR 2's object names carry into speech.
-- L446 `void AppendCommaSeparated(char* outBuf, size_t bufSize, const char* text)`: Append ", " to outBuf if there's room.
-- L465 `bool ReadDoorFlags(void* serverDoor, uint32_t& locked, uint8_t& openState)`: One SEH-guarded read of the two live door state fields.
-- L488 `void BuildDoorLockSnapshot(void* area)`
-- L519 `void AppendLockNeed(void* obj, char* outBuf, size_t bufSize)`: ", opens only through the story" / ", needs a key" / ", Security 15" after the "locked" word, so the player knows whether to bring a key, a slicer, or nothing at all (KOTOR 1; see ReadLockNeed).
-- L564 `void BuildDoorSuffix(void* serverDoor, char* outBuf, size_t bufSize)`: Build the comma-prefixed suffix for a CSWSDoor — state + transition destination + description.
-- L633 `static bool TryResolveDisplayNameOnce(void* clientApp, uint32_t handle, char* outBuf, size_t bufSize)`: Inner: one engine call with the exact handle we got.
-- L658 `bool GetObjectDisplayNameByHandle(uint32_t handle, char* outBuf, size_t bufSize)`
-- L691 `bool WasDoorLockedAtAreaLoad(void* serverDoor)`
-- L716 `void ResetDoorLockSnapshot()`
-- L721 `void AppendObjectStateSuffix(void* gameObject, char* outBuf, size_t bufSize)`
-- L742 `bool GetObjectName(void* gameObject, char* outBuf, size_t bufSize)`
-- L748 `bool GetObjectBaseName(void* gameObject, char* outBuf, size_t bufSize)`
-- L874 `bool IsUsablePlaceable(void* placeable)`
-- L886 `bool IsEmptyContainer(void* gameObject)`
-- L916 `bool IsLandmarkWaypoint(void* waypoint)`
-- L926 `bool IsTransitionTrigger(void* trigger)`
-- L964 `int GetTriggerGeometry(void* trigger, Vector* out, int maxVerts)`
-- L983 `bool GetObjectLocalBoolean(void* gameObject, int index)`
-- L995 `bool TrapDetectedByAnyOf(void* gameObject, const uint32_t* ids, int idCount)`
-- L1026 `bool IsDoorOpen(void* serverDoor)`
-- L1036 `bool IsDoorLocked(void* serverDoor)`
-- L1046 `bool DoorHasTransitionDest(void* serverDoor)`
-- L1067 `bool ReadLockFieldsRaw(void* obj, size_t lockedOff, size_t keyReqOff, size_t dcOff, bool dcIsShort, LockFields& out)`: One SEH-guarded read of an object's lock fields.
-- L1083 `void LogLockOnce(void* obj, int kind, const LockFields& f, const char* key, LockNeed need, const char* failScript = "")`: One log line per object (recent handles remembered), so the raw values can be checked against the object's UTD / UTP template.
-- L1104 `LockNeed ReadLockNeed(void* gameObject, int& outDc, bool* outLocked)`
-- L1172 `int GetContainerItemCount(void* gameObject)`
-- L1193 `bool IsDoorStatic(void* serverDoor)`
-- L1204 `bool IsDoorCosmetic(void* serverDoor)`
-- L1238 `bool MaybeDrivePassiveSelection()`: Root-cause fix (2026-07-19, rev 2): the Endar Spire opening HOLDS the global fade panel at alpha=1.0 for a long scripted stretch *after* the fade animation finishes (IsFadeDone), while the player still has full world ...
-- L1401 `DoorMaterial GetDoorMaterial(void* serverDoor)`
-- L1416 `void* AreaObjectIterator::Next()`
+- L197 `bool GetAreaDisplayName(void* area, char* outBuf, size_t bufSize)`
+- L216 `bool GetObjectTag(void* gameObject, char* outBuf, size_t bufSize)`
+- L226 `bool GetAreaTag(void* area, char* outBuf, size_t bufSize)`
+- L236 `bool GetRoomDisplayName(void* area, int roomIndex, char* outBuf, size_t bufSize)`
+- L256 `AreaObjectIterator::AreaObjectIterator(void* area) : handles_(nullptr), size_(0), index_(0), objectArray_(nullptr)`
+- L281 `void SubstitutePlayerNameToken(char* buf, size_t bufSize)`: → the PC's name.
+- L319 `bool TryReadLocString(void* base, size_t locStringOffset, char* outBuf, size_t bufSize)`: Resolve a CExoLocString by treating its 8 bytes as the same shape as CExoString (char* + uint32 length); fall back to TLK strref at +4.
+- L327 `bool TryReadTag(void* obj, char* outBuf, size_t bufSize)`: Last-resort: speak the modder-assigned tag instead of an empty name.
+- L352 `void CleanAuthoredName(char* buf, size_t bufSize)`: Strip the two kinds of authoring residue KOTOR 2's object names carry into speech.
+- L372 `void AppendCommaSeparated(char* outBuf, size_t bufSize, const char* text)`: Append ", " to outBuf if there's room.
+- L391 `bool ReadDoorFlags(void* serverDoor, uint32_t& locked, uint8_t& openState)`: One SEH-guarded read of the two live door state fields.
+- L414 `void BuildDoorLockSnapshot(void* area)`
+- L445 `void AppendLockNeed(void* obj, char* outBuf, size_t bufSize)`: ", opens only through the story" / ", needs a key" / ", Security 15" after the "locked" word, so the player knows whether to bring a key, a slicer, or nothing at all (KOTOR 1; see ReadLockNeed).
+- L490 `void BuildDoorSuffix(void* serverDoor, char* outBuf, size_t bufSize)`: Build the comma-prefixed suffix for a CSWSDoor — state + transition destination + description.
+- L559 `static bool TryResolveDisplayNameOnce(void* clientApp, uint32_t handle, char* outBuf, size_t bufSize)`: Inner: one engine call with the exact handle we got.
+- L584 `bool GetObjectDisplayNameByHandle(uint32_t handle, char* outBuf, size_t bufSize)`
+- L617 `bool WasDoorLockedAtAreaLoad(void* serverDoor)`
+- L642 `void ResetDoorLockSnapshot()`
+- L647 `void AppendObjectStateSuffix(void* gameObject, char* outBuf, size_t bufSize)`
+- L668 `bool GetObjectName(void* gameObject, char* outBuf, size_t bufSize)`
+- L674 `bool GetObjectBaseName(void* gameObject, char* outBuf, size_t bufSize)`
+- L800 `bool IsUsablePlaceable(void* placeable)`
+- L812 `bool IsEmptyContainer(void* gameObject)`
+- L842 `bool IsLandmarkWaypoint(void* waypoint)`
+- L852 `bool IsTransitionTrigger(void* trigger)`
+- L890 `int GetTriggerGeometry(void* trigger, Vector* out, int maxVerts)`
+- L909 `bool GetObjectLocalBoolean(void* gameObject, int index)`
+- L921 `bool TrapDetectedByAnyOf(void* gameObject, const uint32_t* ids, int idCount)`
+- L952 `bool IsDoorOpen(void* serverDoor)`
+- L962 `bool IsDoorLocked(void* serverDoor)`
+- L972 `bool DoorHasTransitionDest(void* serverDoor)`
+- L993 `bool ReadLockFieldsRaw(void* obj, size_t lockedOff, size_t keyReqOff, size_t dcOff, bool dcIsShort, LockFields& out)`: One SEH-guarded read of an object's lock fields.
+- L1009 `void LogLockOnce(void* obj, int kind, const LockFields& f, const char* key, LockNeed need, const char* failScript = "")`: One log line per object (recent handles remembered), so the raw values can be checked against the object's UTD / UTP template.
+- L1030 `LockNeed ReadLockNeed(void* gameObject, int& outDc, bool* outLocked)`
+- L1098 `int GetContainerItemCount(void* gameObject)`
+- L1119 `bool IsDoorStatic(void* serverDoor)`
+- L1130 `bool IsDoorCosmetic(void* serverDoor)`
+- L1164 `bool MaybeDrivePassiveSelection()`: Root-cause fix (2026-07-19, rev 2): the Endar Spire opening HOLDS the global fade panel at alpha=1.0 for a long scripted stretch *after* the fade animation finishes (IsFadeDone), while the player still has full world ...
+- L1329 `void* AreaObjectIterator::Next()`

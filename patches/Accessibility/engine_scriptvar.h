@@ -20,16 +20,6 @@
 
 namespace acc::engine {
 
-// Read a named int var. Returns `fallback` (default 0) when the var is absent,
-// no creature is loaded, or any fault. Absent and stored-zero are
-// indistinguishable (engine GetInt yields 0 for both) — use a string var or a
-// sentinel value if you must tell them apart.
-int  GetPlayerVarInt(const char* name, int fallback = 0);
-
-// Write a named int var. True on success; false when no creature is loaded or
-// any accessor faults.
-bool SetPlayerVarInt(const char* name, int value);
-
 // Read a named string var into outBuf (always NUL-terminated on entry).
 // Returns true iff a non-empty value was read; false on absent/empty, no
 // creature, or fault. An absent var reads as the empty string (engine

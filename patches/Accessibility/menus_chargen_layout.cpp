@@ -172,28 +172,6 @@ void LogBindingWord(const PanelDesc& d, void* panel, const char* when) {
                   stats, statsRead ? "" : " <not read>");
 }
 
-bool IsBindingReady(const PanelDesc& d, void* panel) {
-    if (d.creatureOffset == 0) return true;   // panel has no probe
-    if (!panel) return false;
-    auto* base = reinterpret_cast<unsigned char*>(panel);
-    // Mirror the engine's own three reads (see the header). Reading them
-    // under SEH is the whole point: a survivable read here is proof the
-    // engine's identical read will survive too.
-    __try {
-        void* creature = *reinterpret_cast<void**>(base + d.creatureOffset);
-        if (!creature) return false;
-        void* stats = *reinterpret_cast<void**>(
-            reinterpret_cast<unsigned char*>(creature) + d.creatureStatsOffset);
-        if (!stats) return false;
-        volatile unsigned char classCount = *(reinterpret_cast<unsigned char*>(
-            stats) + kLevelUpStatsClassCountOffset);
-        (void)classCount;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return false;
-    }
-    return true;
-}
-
 bool AnnounceDescription(const PanelDesc& d, void* panel, void* control) {
     int idx = IndexFromButton(d, panel, control);
     if (idx < 0) return false;

@@ -16,22 +16,6 @@ const char* InputIndexName(int code);
 // Unknown codes pass through.
 int ManagerTranslateCode(int code);
 
-// Cold-start DirectInput wake-up. The engine acquires its keyboard/mouse
-// DirectInput devices only on a CExoInput::SetActive(1) transition, which it
-// drives from game-state events (HideLoadScreen, end-of-movie, dialog/pause
-// resume) rather than purely from the window's WM_ACTIVATE. On a cold launch
-// the final render window is created without that activation ever reaching
-// the live input object, so CExoRawInputInternal::active stays 0 — and
-// GetKeyboardBuffer returns zero input while active==0, leaving the menu
-// keyboard-dead until the user alt-tabs (which forces a real
-// SetActive(0)->SetActive(1) cycle). This replicates the activate half
-// exactly: read the engine's own global ExoInput pointer and call
-// CExoInput::SetActive(ExoInput, 1) — byte-for-byte what HideLoadScreen does.
-// Idempotent by engine design (the inner SetActive guards on a state change),
-// so a redundant call when already active is a harmless no-op. Returns true
-// if the call was dispatched (ExoInput non-null), false otherwise.
-bool EnsureInputAcquired();
-
 // Force a real SetActive(0)->SetActive(1) edge to re-Acquire the DirectInput
 // devices unconditionally — the software equivalent of an alt-tab.
 //
@@ -139,13 +123,6 @@ void InstallDirectInputMouseGuard();
 // self-verifying: a site is only rewritten when its rel32 really does resolve
 // to ShutDownDirectInput, so a wrong address patches nothing and says so.
 void InstallMouseTeardownBlock();
-
-// True once a mouse-device bring-up has failed this session. Set by the
-// handler above; read by the mouse guard's trampoline (as a byte in memory) to
-// answer the engine's per-frame lazy re-init immediately, so a machine with no
-// mouse does not run a doomed CreateDevice on every frame for the whole
-// session.
-bool MouseDeviceUnavailable();
 
 // ---- DirectInput state probe --------------------------------------------
 //

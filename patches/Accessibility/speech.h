@@ -43,7 +43,4 @@ const char* LastSpoken();
 // the speak call so exactly that call consumes it.
 void SuppressNextCapture();
 
-// No more speech for the rest of the process (DLL detach).
-void Shutdown();
-
 }  // namespace acc::speech

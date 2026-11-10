@@ -1,4 +1,4 @@
-# speech.h (50 lines)
+# speech.h (47 lines)
 
 Source: `patches/Accessibility/speech.h`
 
@@ -14,6 +14,5 @@ Init MUST NOT run inside DllMain (LoadLibrary under the loader lock).
 - L27 `void Silence()`: Cancel what NVDA is saying.
 - L38 `const char* LastSpoken()`: ---- Last-utterance capture -------------------------------------------- Every Speak records its text here, so a hotkey can act on "the thing I just heard" without each subsystem keeping its own copy.
 - L44 `void SuppressNextCapture()`: One-shot: the next Speak call does not overwrite LastSpoken().
-- L47 `void Shutdown()`: No more speech for the rest of the process (DLL detach).
 
 Also 1 constants or variables at namespace scope.

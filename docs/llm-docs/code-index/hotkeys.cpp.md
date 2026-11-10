@@ -1,4 +1,4 @@
-# hotkeys.cpp (841 lines)
+# hotkeys.cpp (826 lines)
 
 Source: `patches/Accessibility/hotkeys.cpp`
 
@@ -24,17 +24,14 @@ central hotkey registry implementation. See hotkeys.h for the design rationale +
 - L596 `void ClaimRisingEdge(Action a)`
 - L603 `bool ShiftHeld()`
 - L607 `bool CtrlHeld()`
-- L611 `bool AltHeld()`
-- L615 `bool AltGrHeld()`
-- L619 `uint32_t CurrentModifiers()`
-- L623 `bool ModifiedComboOwns(int vk)`
-- L651 `Binding Get(Action a)`
-- L658 `void Set(Action a, Binding b)`
-- L670 `Binding GetDefault(Action a)`
-- L677 `void SetUserBinding(Action a, Binding b)`
-- L688 `void ResetUserBindings()`
-- L704 `Action FindConflict(Action self, int vk, uint32_t mods)`
-- L724 `bool IsUserRebindable(Action a)`
-- L742 `const char* Name(Action a)`
-- L748 `const char* VkLabel(int vk)`
-- L812 `const char* Describe(Action a)`
+- L611 `uint32_t CurrentModifiers()`
+- L615 `bool ModifiedComboOwns(int vk)`
+- L643 `Binding Get(Action a)`
+- L650 `void Set(Action a, Binding b)`
+- L662 `void SetUserBinding(Action a, Binding b)`
+- L673 `void ResetUserBindings()`
+- L689 `Action FindConflict(Action self, int vk, uint32_t mods)`
+- L709 `bool IsUserRebindable(Action a)`
+- L727 `const char* Name(Action a)`
+- L733 `const char* VkLabel(int vk)`
+- L797 `const char* Describe(Action a)`

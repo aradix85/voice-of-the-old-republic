@@ -88,33 +88,6 @@ void* PlayerVarTable() {
 
 }  // namespace
 
-int GetPlayerVarInt(const char* name, int fallback) {
-    void* table = PlayerVarTable();
-    if (!table || !name) return fallback;
-    __try {
-        ExoStr n; ExoInit(&n, name);
-        int v = reinterpret_cast<PFN_GetInt>(kAddrGetInt)(table, &n);
-        ExoFree(&n);
-        return v;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return fallback;
-    }
-}
-
-bool SetPlayerVarInt(const char* name, int value) {
-    void* table = PlayerVarTable();
-    if (!table || !name) return false;
-    __try {
-        ExoStr n; ExoInit(&n, name);
-        // journalArg is ignored for non-"NW_JOURNAL" names; pass 0.
-        reinterpret_cast<PFN_SetInt>(kAddrSetInt)(table, &n, value, 0);
-        ExoFree(&n);
-        return true;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return false;
-    }
-}
-
 bool GetPlayerVarString(const char* name, char* outBuf, size_t bufSize) {
     if (outBuf && bufSize > 0) outBuf[0] = '\0';
     void* table = PlayerVarTable();

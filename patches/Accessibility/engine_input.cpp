@@ -597,10 +597,6 @@ void InstallMouseTeardownBlock() {
         acc::game::TitleName(), patched);
 }
 
-bool MouseDeviceUnavailable() {
-    return g_mouseUnavailable != 0;
-}
-
 namespace {
 
 // Everything the probe reports, in one POD so the SEH reader can fill it and
@@ -678,28 +674,6 @@ void LogDirectInputStateIfChanged() {
             "re-acquire a device that no longer exists; warning the player");
         acc::speech::Speak(
             acc::strings::Get(acc::strings::Id::InputKeyboardLost), /*interrupt=*/true);
-    }
-}
-
-bool EnsureInputAcquired() {
-    __try {
-        void* exoInput = *reinterpret_cast<void**>(kAddrExoInputGlobal);
-        if (!exoInput) {
-            acclog::Write("EngineInput",
-                "EnsureInputAcquired: ExoInput global is null; skipped");
-            return false;
-        }
-        auto setActive = reinterpret_cast<PFN_CExoInputSetActive>(
-            kAddrCExoInputSetActive);
-        setActive(exoInput, 1);
-        acclog::Write("EngineInput",
-            "EnsureInputAcquired: CExoInput::SetActive(%p, 1) dispatched "
-            "(cold-start DirectInput wake)", exoInput);
-        return true;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        acclog::Write("EngineInput",
-            "EnsureInputAcquired: exception during SetActive; skipped");
-        return false;
     }
 }
 

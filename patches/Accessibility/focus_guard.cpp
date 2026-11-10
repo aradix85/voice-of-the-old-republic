@@ -730,14 +730,4 @@ void DrainInputBlockedWarning() {
     acc::speech::Speak(acc::strings::Get(acc::strings::Id::InputBlockedBigPicture), /*interrupt=*/true);
 }
 
-void ArmStartupForegroundGuard() {
-    g_guardReclaims.store(0, std::memory_order_relaxed);
-    DWORD deadline = GetTickCount() + kGuardWindowMs;
-    if (deadline == 0) deadline = 1;  // 0 is the disarmed sentinel
-    g_guardDeadlineTick.store(deadline, std::memory_order_release);
-    acclog::Write("Focus",
-        "StartupForegroundGuard: armed for %lu ms (watching for overlay "
-        "focus-theft, e.g. Game Bar)", kGuardWindowMs);
-}
-
 }  // namespace acc::focus_guard

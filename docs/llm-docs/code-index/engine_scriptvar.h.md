@@ -1,4 +1,4 @@
-# engine_scriptvar.h (44 lines)
+# engine_scriptvar.h (34 lines)
 
 Source: `patches/Accessibility/engine_scriptvar.h`
 
@@ -10,7 +10,5 @@ Variable identity: keyed by (name AND type) together. An int "FOO" and a string 
 
 ## Declarations (in source order)
 
-- L27 `int GetPlayerVarInt(const char* name, int fallback = 0)`: Read a named int var.
-- L31 `bool SetPlayerVarInt(const char* name, int value)`: Write a named int var.
-- L37 `bool GetPlayerVarString(const char* name, char* outBuf, size_t bufSize)`: Read a named string var into outBuf (always NUL-terminated on entry).
-- L41 `bool SetPlayerVarString(const char* name, const char* value)`: Write a named string var (copied into the table-owned CExoString).
+- L27 `bool GetPlayerVarString(const char* name, char* outBuf, size_t bufSize)`: Read a named string var into outBuf (always NUL-terminated on entry).
+- L31 `bool SetPlayerVarString(const char* name, const char* value)`: Write a named string var (copied into the table-owned CExoString).

@@ -1,4 +1,4 @@
-# engine_panels.h (394 lines)
+# engine_panels.h (387 lines)
 
 Source: `patches/Accessibility/engine_panels.h`
 
@@ -27,13 +27,12 @@ Chain: *(CAppManager**)0x7A39FC → CAppManager → +0x4 CClientExoApp → +0x4 
 - L288 `bool LookupUpgradeSlotType(int slotCustomValue, int category, int* outUpgradeType, uint32_t* outStrRef)`: Resolve a workbench slot to its type + display strref out of the engine's slot-type table (kAddrUpgradeSlotTypeTable).
 - L299 `bool IsInGameOptionsSubScreen(void* panel)`: Heap-allocated Options sub-screen (Spieleinstellungen / Grafik / Sound / Auto-Pause / Feedback / Tastenbelegung / Mauseinstellungen).
 - L305 `bool CallPrevSWInGameGui()`: CGuiInGame::PrevSWInGameGui @0x0062cdf0 — engine's "back to strip" primitive.
-- L312 `bool CallHideSWInGameGui(int param_1)`: CGuiInGame::HideSWInGameGui @0x0062cba0.
-- L317 `bool SetGlobalDialogState(int state)`: CGuiInGame::SetGlobalDialogState — force the engine's "conversation active" bit.
-- L325 `bool CloseInGameMenuToWorld()`: Close the in-game menu (strip + drilled sub-screen) back to the world, replicating a menu tab's own Escape exactly: HideSWInGameGui(0) followed by SetInputClass(0,1).
-- L328 `int GetInputClass()`: Read the live client input_class (0/4 = in-world, 2 = menu/GUI owns input).
-- L333 `bool SetGuiInputClass(int klass)`: Set the client input class via the engine setter.
-- L344 `enum class UiBlockReason`: True iff foreground UI is capturing input.
-- L351 `struct UiBlockState`
-- L359 `bool IsForegroundUiBlocking(UiBlockState* outState = nullptr)`: outState (optional) carries diagnostic detail for the log line.
-- L372 `bool IsWorldLevelForegroundKind(PanelKind k)`: True for the handful of foreground kinds that coexist with normal in-world play — the HUD, the pause overlay, a bark bubble, a fade, and the unclassified Unknown.
-- L391 `bool HasVtable(void* obj, uintptr_t expected)`: Verify an object's vtable pointer matches `expected`.
+- L310 `bool SetGlobalDialogState(int state)`: CGuiInGame::SetGlobalDialogState — force the engine's "conversation active" bit.
+- L318 `bool CloseInGameMenuToWorld()`: Close the in-game menu (strip + drilled sub-screen) back to the world, replicating a menu tab's own Escape exactly: HideSWInGameGui(0) followed by SetInputClass(0,1).
+- L321 `int GetInputClass()`: Read the live client input_class (0/4 = in-world, 2 = menu/GUI owns input).
+- L326 `bool SetGuiInputClass(int klass)`: Set the client input class via the engine setter.
+- L337 `enum class UiBlockReason`: True iff foreground UI is capturing input.
+- L344 `struct UiBlockState`
+- L352 `bool IsForegroundUiBlocking(UiBlockState* outState = nullptr)`: outState (optional) carries diagnostic detail for the log line.
+- L365 `bool IsWorldLevelForegroundKind(PanelKind k)`: True for the handful of foreground kinds that coexist with normal in-world play — the HUD, the pause overlay, a bark bubble, a fade, and the unclassified Unknown.
+- L384 `bool HasVtable(void* obj, uintptr_t expected)`: Verify an object's vtable pointer matches `expected`.

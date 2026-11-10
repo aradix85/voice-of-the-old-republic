@@ -1,4 +1,4 @@
-# menus_modsettings.h (141 lines)
+# menus_modsettings.h (135 lines)
 
 Source: `patches/Accessibility/menus_modsettings.h`
 
@@ -19,13 +19,12 @@ Design summary:
 ## Declarations (in source order)
 
 - L53 `enum class Option`: Per-option identifiers.
-- L74 `void* GetRootAnchor()`: Sentinel pointer used as the `control` field of the virtual chain entry.
-- L80 `bool IsRootAnchor(void* control)`: True iff `control` is the mod-settings root sentinel.
-- L88 `void ForEachRootAnchor(void* panel, bool (*callback)(void* sentinel, int sortCx, int sortCy, void* userData), void* userData)`: Visit the registered virtual chain anchor for `panel`.
-- L96 `bool ExtractRootLabel(char* outBuf, size_t bufSize)`: Format the root entry's speech ("Mod Einstellungen").
-- L100 `void OpenSubMenu(void* parentPanel)`: Open the submenu.
-- L105 `bool IsOpen()`: True while the submenu is interactive.
-- L110 `void Close()`: Close the submenu and rebind the chain on the saved parent panel.
-- L124 `bool HandleInput(int keyCode)`: Input-press handler.
-- L131 `bool GetToggle(Option option)`: Read the current state of a toggle option.
-- L138 `void Tick()`: Per-tick poll.
+- L74 `bool IsRootAnchor(void* control)`: True iff `control` is the mod-settings root sentinel.
+- L82 `void ForEachRootAnchor(void* panel, bool (*callback)(void* sentinel, int sortCx, int sortCy, void* userData), void* userData)`: Visit the registered virtual chain anchor for `panel`.
+- L90 `bool ExtractRootLabel(char* outBuf, size_t bufSize)`: Format the root entry's speech ("Mod Einstellungen").
+- L94 `void OpenSubMenu(void* parentPanel)`: Open the submenu.
+- L99 `bool IsOpen()`: True while the submenu is interactive.
+- L104 `void Close()`: Close the submenu and rebind the chain on the saved parent panel.
+- L118 `bool HandleInput(int keyCode)`: Input-press handler.
+- L125 `bool GetToggle(Option option)`: Read the current state of a toggle option.
+- L132 `void Tick()`: Per-tick poll.

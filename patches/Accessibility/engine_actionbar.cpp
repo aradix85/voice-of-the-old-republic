@@ -360,19 +360,6 @@ bool SendUseItemRequestK2(uint32_t actionId, void* targetClientCreature) {
     }
 }
 
-void* GetColumnActionButton(void* mi, int slot) {
-    if (!mi || slot < 0 || slot >= kColumnCount) return nullptr;
-    // CSWGuiMainInterface.field45_0x771c[6], stride 0x71C. action_button
-    // is the first member of CSWGuiMainInterfaceAction so its address
-    // equals the array-entry address. K2 values listing-witnessed in the
-    // K2 PopulateMenus (0x0074CFE0): every Show/SetIcon receiver is
-    // `this + i*0x750 + 0x733c`.
-    const size_t kFieldArrayBase = acc::off::Pick(0x771c, 0x733c);
-    const size_t kColumnStride   = acc::off::Pick(0x71C, 0x750);
-    return reinterpret_cast<unsigned char*>(mi) +
-           kFieldArrayBase + static_cast<size_t>(slot) * kColumnStride;
-}
-
 bool SelectVariant(void* mi, int slot, int index) {
     if (!mi || slot < 0 || slot >= kColumnCount) return false;
     uint32_t actionId = ReadVariantActionId(mi, slot, index);

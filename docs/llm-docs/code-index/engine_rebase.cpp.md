@@ -1,4 +1,4 @@
-# engine_rebase.cpp (260 lines)
+# engine_rebase.cpp (245 lines)
 
 Source: `patches/Accessibility/engine_rebase.cpp`
 
@@ -26,5 +26,4 @@ KOTOR 2 returns 0 for EVERY address, because every constant here is a KOTOR 1 ad
 - L224 `uintptr_t Kotor2Only(uintptr_t kotor2Va)`
 - L231 `uintptr_t Kotor1Only(uintptr_t referenceVa)`
 - L238 `uintptr_t TodoGlobal(uintptr_t kotor1Va)`
-- L246 `bool IsRebased()`: "R() is not the identity function" — true for the relinks (which remap) and for KOTOR 2 (where R() resolves everything to 0).
-- L257 `const char* ActiveBuildName()`
+- L242 `const char* ActiveBuildName()`

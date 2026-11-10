@@ -67,12 +67,6 @@ enum class Option {
     Count
 };
 
-// Sentinel pointer used as the `control` field of the virtual chain
-// entry. Address of a static char in the .cpp; never dereferenced,
-// never compared against any real engine control. Stable for the
-// lifetime of the DLL.
-void* GetRootAnchor();
-
 // True iff `control` is the mod-settings root sentinel. Used by
 // menus_extract::FromControl to override the speech text and by the
 // Enter dispatcher to route Enter through OpenSubMenu instead of

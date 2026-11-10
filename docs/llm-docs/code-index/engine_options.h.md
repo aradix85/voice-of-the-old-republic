@@ -1,4 +1,4 @@
-# engine_options.h (64 lines)
+# engine_options.h (59 lines)
 
 Source: `patches/Accessibility/engine_options.h`
 
@@ -15,7 +15,5 @@ User-facing swkotor.ini "Mouse Look=N" matches CClientOptions.mouse_look exclusi
 - L24 `bool GetMouseLook(bool& out)`: False on chain failure or SEH; out untouched.
 - L33 `bool GetActionMenuAutoPause(bool& out)`: "Action Menu" auto-pause option (AutoPause options screen).
 - L37 `void* GetClientOptions()`: Resolved CClientOptions* for diagnostic probes.
-- L39 `bool SetMouseLook(bool enabled)`
-- L42 `bool ToggleMouseLook(bool& outNew)`: Read-modify-write.
 
 Also 5 constants or variables at namespace scope.

@@ -608,14 +608,6 @@ bool CtrlHeld() {
     return IsDownVk(VK_CONTROL) || IsDownVk(VK_LCONTROL) || IsDownVk(VK_RCONTROL);
 }
 
-bool AltHeld() {
-    return IsDownVk(VK_MENU) || IsDownVk(VK_LMENU) || IsDownVk(VK_RMENU);
-}
-
-bool AltGrHeld() {
-    return IsDownVk(VK_RMENU);
-}
-
 uint32_t CurrentModifiers() {
     return ReadModifiers();
 }
@@ -665,13 +657,6 @@ void Set(Action a, Binding b) {
     g_edge[idx].now     = false;
     g_edge[idx].last    = false;
     g_edge[idx].claimed = false;
-}
-
-Binding GetDefault(Action a) {
-    InitDefaults();
-    int idx = static_cast<int>(a);
-    if (idx < 0 || idx >= static_cast<int>(Action::COUNT)) return {};
-    return g_defaults[idx];
 }
 
 void SetUserBinding(Action a, Binding b) {
