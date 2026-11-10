@@ -74,7 +74,7 @@ typedef float(__thiscall* PFN_CExoInputPollInput)(void* this_, int code,
 // UpdateCamera feeds to AcclTurnCamera ahead of the edge test (camera-and-
 // swoop.md "KOTOR 2 twin"). Loops the DirectInput controllers enumerated at
 // start; with none the body never runs and both outputs stay 0. KOTOR 1 has
-// no joystick path at all (kotor1-controller-port.md).
+// no joystick path at all.
 const uintptr_t kAddrCExoInputReadStickAxes =
     acc::addr::Kotor2Only(0x0072fde0);
 typedef void(__thiscall* PFN_CExoInputReadStickAxes)(void* this_, float* x,

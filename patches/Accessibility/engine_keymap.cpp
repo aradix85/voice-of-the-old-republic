@@ -67,11 +67,6 @@ int s_axisVkCount[kMoveAxisCount] = {0, 0, 0, 0};
 // reads keyboard via DirectInput, which sees scancodes only.
 int s_turnScan[2] = {0, 0};
 
-// The same shape for Action283 (MGActionLeft/Right), the minigame steer the
-// swoop race polls — [0]=left [1]=right, 0 = no ini line → the A/D fallback in
-// MinigameSteerScancode(). The pad's stick steers the race by holding these.
-int s_mgSteerScan[2] = {0, 0};
-
 // Default VK per axis (WASD) — always seeded so the buckets are never empty,
 // even before the ini is read or if it is missing. Index matches MoveAxis.
 constexpr int kAxisDefaultVk[kMoveAxisCount] = {'W', 'S', 'A', 'D'};
@@ -113,16 +108,6 @@ constexpr AxisContrib kAxisPrimary[] = {
     {3, 281, 'B'},   // Right    : D (mod layout) / C (vanilla)
 };
 int s_axisPrimaryVk[kMoveAxisCount] = {0, 0, 0, 0};
-
-// The same four binds as scancodes, for the KOTOR 1 pad's movement driver
-// (pad_movement.cpp), which has to PRESS them rather than test them. 0 = the
-// ini had no line for that slot; MoveAxisScancode falls back to the WASD DIK
-// below, exactly as MoveAxisPrimaryVk falls back to kAxisDefaultVk.
-int s_axisPrimaryScan[kMoveAxisCount] = {0, 0, 0, 0};
-
-// DIK for W / S / A / D — the fallback when the ini is missing or unreadable.
-// Index matches MoveAxis, same as kAxisDefaultVk.
-constexpr int kAxisDefaultScan[kMoveAxisCount] = {0x11, 0x1F, 0x1E, 0x20};
 
 bool IsDownVk(int vk) {
     return vk != 0 && (GetAsyncKeyState(vk) & 0x8000) != 0;
@@ -344,8 +329,6 @@ void ReloadGameConfig() {
     }
     s_turnScan[0] = 0;
     s_turnScan[1] = 0;
-    s_mgSteerScan[0] = 0;
-    s_mgSteerScan[1] = 0;
     char path[MAX_PATH];
     if (!ResolveIniPath(path, sizeof(path))) {
         s_gameLoaded = false;  // patch dir unknown yet — retry on next query
@@ -402,8 +385,7 @@ void ReloadGameConfig() {
         if (slot != 0 && vk != 0) {
             for (const AxisContrib& c : kAxisPrimary) {
                 if (c.actionId == actionId && c.slot == slot) {
-                    s_axisPrimaryVk[c.axis]   = vk;
-                    s_axisPrimaryScan[c.axis] = InputIndexToScancode(inputIndex);
+                    s_axisPrimaryVk[c.axis] = vk;
                     break;
                 }
             }
@@ -424,11 +406,6 @@ void ReloadGameConfig() {
                     int di = (c.axis == 2) ? 0 : 1;
                     int sc = InputIndexToScancode(inputIndex);
                     if (sc != 0 && s_turnScan[di] == 0) s_turnScan[di] = sc;
-                }
-                if ((c.axis == 2 || c.axis == 3) && c.actionId == 283) {
-                    int di = (c.axis == 2) ? 0 : 1;
-                    int sc = InputIndexToScancode(inputIndex);
-                    if (sc != 0 && s_mgSteerScan[di] == 0) s_mgSteerScan[di] = sc;
                 }
             }
         }
@@ -470,14 +447,6 @@ int GameActionScancode(int actionId) {
         if (s_actionVks[i].actionId == actionId) return s_actionVks[i].scan;
     }
     return 0;
-}
-
-int MoveAxisScancode(MoveAxis axis) {
-    if (!s_gameLoaded) ReloadGameConfig();
-    const int a = static_cast<int>(axis);
-    if (a < 0 || a >= kMoveAxisCount) return 0;
-    if (s_axisPrimaryScan[a] != 0) return s_axisPrimaryScan[a];
-    return kAxisDefaultScan[a];
 }
 
 void Rebuild() {
@@ -541,13 +510,6 @@ int TurnScancode(bool left) {
     int idx = left ? 0 : 1;
     if (s_turnScan[idx] != 0) return s_turnScan[idx];
     return left ? 0x1E : 0x20;  // DIK A / D fallback (vanilla / ini unreadable)
-}
-
-int MinigameSteerScancode(bool left) {
-    if (!s_gameLoaded) ReloadGameConfig();
-    int idx = left ? 0 : 1;
-    if (s_mgSteerScan[idx] != 0) return s_mgSteerScan[idx];
-    return left ? 0x1E : 0x20;  // DIK A / D — keymap.2da's MGActionLeft/Right
 }
 
 bool ForwardBackwardKeyHeld() {

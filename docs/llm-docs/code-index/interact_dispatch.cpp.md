@@ -1,4 +1,4 @@
-# interact_dispatch.cpp (788 lines)
+# interact_dispatch.cpp (779 lines)
 
 Source: `patches/Accessibility/interact_dispatch.cpp`
 
@@ -16,4 +16,3 @@ overlay Esc-close so the engine-event consume guard wins the poll-vs-event race
 - L636 `void AnnounceBarePersonalKey(int slot)`
 - L723 `void AnnounceBareTargetKey(int row)`
 - L774 `void DispatchInteract(void* target, uint32_t handle, bool forceRadial)`: Public seam introduced 2026-05-06 (lay-off 5).
-- L783 `void InteractNarratedTarget(bool forceRadial)`: Public seam for non-keyboard input sources (the KOTOR 2 gamepad's A / X buttons).

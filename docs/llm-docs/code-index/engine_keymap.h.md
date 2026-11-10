@@ -1,4 +1,4 @@
-# engine_keymap.h (159 lines)
+# engine_keymap.h (145 lines)
 
 Source: `patches/Accessibility/engine_keymap.h`
 
@@ -22,9 +22,7 @@ Namespace note -------------- The codes here are the engine's internal "quick ac
 - L90 `enum class MoveAxis`: ---- Movement / turn axis queries ------------------------------------------ The player's bound movement + turn keys, so the mod can react to "the player is moving / turning" and steer the map cursor by the same keys ...
 - L95 `int MoveAxisVks(MoveAxis axis, int* out, int cap)`: Fill `out` with up to `cap` distinct VKs bound to the given movement/turn direction (default key + any [Keymapping] binds on that direction's slots).
 - L116 `int MoveAxisPrimaryVk(MoveAxis axis)`: The single VK a consumer should treat as "the" key for this direction, when reacting to every bound key would be wrong.
-- L123 `int MoveAxisScancode(MoveAxis axis)`: The same primary bind as a DIK scancode.
-- L131 `int TurnScancode(bool left)`: DIK scancode to synthesise (via SendInput KEYEVENTF_SCANCODE) to drive the engine's camera-turn axis in the given direction — resolved from the player's configured primary turn bind (Action283/284), so it follows a re...
-- L138 `int MinigameSteerScancode(bool left)`: DIK scancode of the minigame steer bind (Action283 MGActionLeft/Right), the input the swoop race polls to steer.
-- L143 `bool AnyMovementKeyHeld()`: True iff any bound movement/turn key is currently held down.
-- L149 `int FirstMovementKeyHeld()`: Same scan, but returns the VK that answered (0 when none).
-- L156 `bool ForwardBackwardKeyHeld()`: True iff a bound forward/backward key is currently held (the walk axes, including the arrow alternates) — deliberately EXCLUDING the turn/strafe buckets.
+- L124 `int TurnScancode(bool left)`: DIK scancode to synthesise (via SendInput KEYEVENTF_SCANCODE) to drive the engine's camera-turn axis in the given direction — resolved from the player's configured primary turn bind (Action283/284), so it follows a re...
+- L129 `bool AnyMovementKeyHeld()`: True iff any bound movement/turn key is currently held down.
+- L135 `int FirstMovementKeyHeld()`: Same scan, but returns the VK that answered (0 when none).
+- L142 `bool ForwardBackwardKeyHeld()`: True iff a bound forward/backward key is currently held (the walk axes, including the arrow alternates) — deliberately EXCLUDING the turn/strafe buckets.
