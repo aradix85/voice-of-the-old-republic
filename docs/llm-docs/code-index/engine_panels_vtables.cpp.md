@@ -1,26 +1,10 @@
-# engine_panels_vtables.cpp (313 lines)
+# engine_panels_vtables.cpp (109 lines)
 
 Source: `patches/Accessibility/engine_panels_vtables.cpp`
 
-The heap-allocated panels with no CGuiInGame slot, identified by their vtable.
+The heap-allocated panels with no CGuiInGame slot, identified by their vtable: each is a single class written by its constructor, a per-exe constant that no .gui file can change. K1 values are symbol-table or live-probe captures, K2 values come from the RTTI census (docs/llm-docs/re/k2/k2-vtables.csv).
 
 ## Declarations (in source order)
 
-- L178 `bool HasVtable(void* obj, uintptr_t expected)`: Declared in engine_panels.h.
-- L200 `bool IsSaveLoadStructural(void* panel)`
-- L204 `bool IsWorkbenchUpgradeStructural(void* panel)`
-- L208 `bool IsInGameMessagesStructural(void* panel)`
-- L213 `bool IsWorkbenchItemsStructural(void* panel)`
-- L217 `bool IsWorkbenchSelectStructural(void* panel)`
-- L221 `bool IsWorkbenchCreateItemStructural(void* panel)`
-- L232 `bool IsWorkbenchCreateMedicalStructural(void* panel)`
-- L243 `bool IsLevelUpStructural(void* panel)`
-- L247 `bool IsCharGenStructural(void* panel)`
-- L258 `bool IsMainMenuOptionsStructural(void* panel)`
-- L262 `bool IsMainMenuStructural(void* panel)`
-- L266 `bool IsPazaakStartStructural(void* panel)`
-- L270 `bool IsPazaakWagerStructural(void* panel)`
-- L274 `bool IsQuestItemStructural(void* panel)`
-- L278 `bool IsScriptSelectStructural(void* panel)`
-- L292 `bool IsPowersLevelUpStructural(void* panel)`: CSWGuiPowersLevelUp picker (pwrlvlup.gui).
-- L300 `PanelKind IdentifyOptionsSubScreen(void* panel)`: Returns the specific sub-screen kind, or Unknown if `panel`'s vtable isn't one of the nine.
+- L14 `bool HasVtable(void* obj, uintptr_t expected)`
+- L94 `PanelKind IdentifyByVtable(void* panel)`

@@ -1,20 +1,19 @@
-# engine_panels.cpp (475 lines)
+# engine_panels.cpp (334 lines)
 
 Source: `patches/Accessibility/engine_panels.cpp`
 
-(From engine_panels.h.) In-game panel identity registry. Classifies CSWGuiPanel pointers against named CGuiInGame slots so menu code can branch on semantic kind instead of layout.
-
-Chain: *(CAppManager**)0x7A39FC → CAppManager → +0x4 CClientExoApp → +0x4 Internal → +0x40 CGuiInGame*. Re-resolved on every call so module transitions don't strand stale pointers.
+Panel identity: the CGuiInGame slot table, IdentifyPanel and the probe that logs a panel nothing recognises.
 
 ## Declarations (in source order)
 
-- L193 `bool IsVtableAlreadyDumped(uintptr_t vt)`
-- L200 `void RememberDumpedVtable(uintptr_t vt)`
-- L210 `void LogUnknownPanelDiagnostics(void* panel)`
-- L287 `int SlotTableLookup(void* panel)`: The CGuiInGame slot walk, hoisted out of IdentifyPanel so the __try owns no unwinding objects (C2712) and returns the matching table index, or -1.
-- L307 `const char* PanelKindName(PanelKind k)`
-- L315 `PanelKind IdentifyPanel(void* panel)`
-- L426 `bool IsPanelKindInGameMenu(void* panel)`
-- L430 `void* FindPanelByKind(PanelKind kind)`
-- L442 `bool IsMainMenuOptionsSubScreen(PanelKind k)`
-- L459 `bool IsModalPopupPanel(PanelKind k)`
+- L136 `void LogIdentifiedOnce(void* panel, PanelKind kind)`
+- L160 `bool IsVtableAlreadyDumped(uintptr_t vt)`
+- L167 `void RememberDumpedVtable(uintptr_t vt)`
+- L177 `void LogUnknownPanelDiagnostics(void* panel)`
+- L243 `int SlotTableLookup(void* panel)`: The CGuiInGame slot walk: the matching table index, or -1.
+- L263 `const char* PanelKindName(PanelKind k)`
+- L271 `PanelKind IdentifyPanel(void* panel)`
+- L285 `bool IsPanelKindInGameMenu(void* panel)`
+- L289 `void* FindPanelByKind(PanelKind kind)`
+- L301 `bool IsMainMenuOptionsSubScreen(PanelKind k)`
+- L318 `bool IsModalPopupPanel(PanelKind k)`

@@ -1,11 +1,11 @@
-// Engine reads beside the panel registry: the CGuiInGame and main-interface pointers, the dialog
-// replies, and the workbench upgrade-slot table.
+// Engine reads beside the panel registry: the CGuiInGame and main-interface
+// pointers, the dialog replies, and the workbench upgrade-slot table.
 
 #include "engine_panels_internal.h"
 
-#include "engine_game.h"     // IsKotor1 — the CGuiInGame slot walk is K1-only
-#include "engine_offsets.h"  // CExoArrayList, kPanelControlsOffset, kVtableListBox
-#include "engine_reads.h"    // ReadGuiString
+#include "engine_game.h"
+#include "engine_offsets.h"
+#include "engine_reads.h"
 
 namespace acc::engine {
 
@@ -55,8 +55,6 @@ bool LookupUpgradeSlotType(int slotCustomValue, int category,
 void* ResolveGuiInGame() {
     void* internal = GetClientAppInternal();
     if (!internal) return nullptr;
-    // The walk itself is guarded inside GetClientAppInternal(); this last hop
-    // was previously unguarded along with the rest of the chain.
     __try {
         return *reinterpret_cast<void**>(
             reinterpret_cast<unsigned char*>(internal) + kClientExoAppGuiInGameOff);

@@ -72,11 +72,8 @@ const uintptr_t kVtableListBox = acc::addr::Pick(0x0073E840, 0x00987D3C);
 // BTN_DELETE / BTN_BACK / BTN_SAVELOAD, the equipment screen's slot
 // buttons, the chargen class icons, the InGameMenu strip icons, the
 // workbench upgrade-slot buttons (BTN_UPGRADE3X/4X), and most other
-// CSWGuiButton instances in the engine. Identity-by-vtable matters for
-// structural panel detectors that need to distinguish a Button child
-// from a Label/LabelHilight child sharing the same .gui-time ID (the
-// SaveLoad-vs-Workbench-upgrade collision at ID 11 is the canonical
-// case — see IsSaveLoadStructural).
+// CSWGuiButton instances in the engine. Identity by vtable tells a Button
+// child from a Label/LabelHilight child that shares its .gui id.
 const uintptr_t kVtableCSWGuiButton = acc::addr::Pick(0x0073E658, 0x00987A1C);
 
 // CSWGuiKeyMapButton vtable - the keyboard-mapping screen's row control. The
