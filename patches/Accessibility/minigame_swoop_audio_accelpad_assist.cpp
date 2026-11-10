@@ -3,7 +3,7 @@
 #include "minigame_swoop_audio_accelpad_internal.h"
 
 #include "audio_bus.h"
-#include "engine_area.h"      // ReadGlobalNumber: MIN_RACE_GEAR gates the magnet
+#include "engine_area.h"  // ReadGlobalNumber: MIN_RACE_GEAR
 #include "engine_game.h"
 #include "log.h"
 
@@ -11,87 +11,52 @@ namespace acc::swoop_race {
 
 namespace {
 
-// ----- The assist gap: the ONE difficulty knob ------------------
-//
-// Accessibility intent (the player's call): keep the SAME challenge a sighted
-// player has — the assist must fill only the gap the player cannot close by ear,
-// never drive for them. So there is a single lateral tolerance, in lane-units,
-// that means BOTH:
-//   * the magnet's engage radius — it only pulls once you are within this, and
-//   * the cue's release band — the directional cue goes quiet ("you're close
-//     enough") here, because this is roughly the precision sound can give you.
-// The player steers by ear until inside the gap; the magnet quietly closes the
-// rest. That literally "calculates the magnetism into" the cue: you are never
-// told to steer for error the magnet will absorb, so steering eases off at the
-// end instead of demanding a dead-center read.
-//
-// ONE knob for difficulty: smaller → the player must steer more precisely by ear
-// and fails more (closer to the sighted challenge); larger → the magnet covers
-// more. 16u: a logged 28.5 s run had five near-miss gates at 9-14u that the
-// player reached by ear but the magnet (weak at its outer edge) couldn't finish. 16u
-// pulls those inside reach while the 16-23u medium gates still demand a real
-// swing, so challenge stays. Still well inside the ±20 lane. Drop toward ~8 for
-// more bite. (The hit itself is still the engine's swept sphere test — this is
-// only how much lateral slack the assist forgives.)
-constexpr float       kSwoopAssistGapU = 16.0f;
-// KOTOR 2 gets its own, smaller gap. Its tracks lay the pads in three fixed
-// lanes 11 units apart (Citadel: x -11 / 0 / +11, forward gaps 200-300 u), so
-// with the Taris-tuned 16 u the next pad was ALWAYS inside the engage gap the
-// moment the previous one was passed: the magnet made every lane change, the
-// guide tone rested ~90 % of the race and 23 of 23 pads were caught with the
-// player only shifting and jumping (round 5). The magnet also walked the bike into every mine and half-bar on a pad lane. At
-// 6 u a one-lane hop needs the player to swing ≥ 5 u toward it by ear before
-// the pull engages; the magnet still lands the last stretch (K2's catch
-// radius is 4 u — player 2 + pad 2 — against K1's 6). Same knob, per game.
-constexpr float       kSwoopAssistGapK2U = 6.0f;
+// The magnet engages only within this lateral error of the guide line: the one
+// difficulty knob. The aim is the sighted player's challenge: the player closes
+// the lane by ear down to this gap, and only then does the magnet finish it.
+// Smaller asks more precision by ear, larger lets the magnet cover more. On
+// Taris 16 u pulls in the near misses at 9-14 u while the 16-23 u swings still
+// need the player. KOTOR 2 lays its pads in three lanes 11 u apart, so 16 u put
+// every next pad inside the gap and the magnet made every lane change (and
+// walked the bike into mines and half-bars); at 6 u a one-lane hop first needs
+// a 5 u swing by ear. The hit itself stays the engine's sphere test.
+constexpr float kSwoopAssistGapU   = 16.0f;
+constexpr float kSwoopAssistGapK2U = 6.0f;
 
-inline float WallLeadTicks() {
-    return acc::game::IsKotor2() ? kWallLeadTicksK2 : kWallLeadTicks;
-}
+// The pull, sized for the vanilla 5 u hit radius: gentle at the engage edge,
+// sticky on the line.
+constexpr float kSwoopMagnetGainFar  = 0.15f;
+constexpr float kSwoopMagnetGainNear = 0.50f;
+// Per-tick cap, just above the player's own peak bank (~4.7 u/tick at the
+// ~18 Hz tick): enough to arrest an overshoot against a held steer key, while
+// the player's bank (+-10/tick) still overrides it everywhere else.
+constexpr float kSwoopMagnetMaxStepU = 5.0f;
+// Velocity brake lead, in ticks: enough to anticipate an overshoot, not so
+// much that the bike stops short.
+constexpr float kSwoopMagnetBrakeTicks = 1.5f;
+// The last stretch before a gate (~6 ticks) in which the pull goes fully
+// sticky; seconds, so it is the same in every gear.
+constexpr float kSwoopMagnetHoldSec = 0.35f;
 
-inline float WallEdgeOffsetU() {
-    return acc::game::IsKotor2() ? kWallEdgeOffsetK2U : kWallEdgeOffsetU;
-}
-
-inline float AssistGapU() {
+float MagnetEngageU() {
     return acc::game::IsKotor2() ? kSwoopAssistGapK2U : kSwoopAssistGapU;
 }
 
-// ----- Lateral steering magnetism -------
-//
-// The console-style "sticky aim" from the shipped turret assist, applied to the
-// swoop bike's ONE steering axis. The three advisory-cue models (object-in-
-// world, ideal-line, co-pilot) all plateaued at ~34% gates because they left
-// the PLAYER as the controller of a sub-second full-lane swing; informing
-// better can't beat a too-small time budget. Magnetism instead WRITES the
-// control field (offset.x at +0x1c4, the bike's lateral lane coord) toward the
-// next gate's lane: gentle far, sticky near, capped per tick, BLENDED on top of
-// the player's own steering. The cap is well below the player's bank authority
-// (±10/tick), so holding a key still overrides — this closes the last units of a
-// near-miss, it does not drive the bike. (No full lock-on / autoplay variant —
-// that stays turret-only, per the user.)
-//
-// Grounding: offset.x maps 1:1 to world-X (camera-and-swoop.md), so the
-// corrective step is the world lateral error (padErr) directly and the
-// offset→world sign is a known +1 (no calibration needed, unlike the turret's
-// rotated gun aim). Mid-lane lateral inertia is ~nil (the ±10 bank is not a
-// momentum accumulator; real post-release coast ~1 u — see swoop_steering
-// notes), so a written offset.x lands cleanly without an inertia model. The
-// throttled SwoopAssist log reports offsetX before/after and bikeX.
-//
-// kSwoopMagnetEngageU — engage only when the next gate is within this lateral
-//   error (lane is ±20; gates jump up to ~40 apart). Beyond it, no pull — the
-//   player initiates the swing, as with the turret's engage angle. Bound to the
-//   shared assist gap, so the magnet is a final-approach gap-filler: the player must close the lane down to the
-//   gap by ear, and only then does the magnet quietly finish it. This is THE
-//   loosening lever — see kSwoopAssistGapU. (Tune the gap, not this.)
-inline float MagnetEngageU() { return AssistGapU(); }  // lane-units; magnetism engages within
+float WallLeadTicks() {
+    return acc::game::IsKotor2() ? kWallLeadTicksK2 : kWallLeadTicks;
+}
+
+float WallEdgeOffsetU() {
+    return acc::game::IsKotor2() ? kWallEdgeOffsetK2U : kWallEdgeOffsetU;
+}
 
 }  // namespace
 
-// Lateral steering magnetism: nudge the bike's lane (offset.x, +0x1c4) toward
-// the guide line, gentle far, sticky near, capped per tick, on top of the
-// player's own steering. offset.x maps 1:1 to world X, so the step is the
+// Lateral steering magnetism. Cues that only inform plateaued at a third of
+// the gates, because a full-lane swing in under a second is too little time;
+// the magnet writes the bike's lane (offset.x, +0x1c4) toward the guide line,
+// gentle far, sticky near, capped per tick, on top of the player's own
+// steering. offset.x maps 1:1 to world X, so the step is the
 // world error, sign +1. No pull in gear 0: after a KOTOR 2 collision the bike
 // waits there in front of what it hit, and the magnet dragged every relaunch
 // back into the same bar; both games' scripts keep MIN_RACE_GEAR.

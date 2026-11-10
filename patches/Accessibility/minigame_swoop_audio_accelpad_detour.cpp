@@ -98,9 +98,13 @@ void ApplyBarDetour(void* miniGame, PadTick& t) {
                                       (bar.y0 - t.aheadPos.y) < kBarAfterPadLeadSec * vWorld;
             const bool timingOk     = padBehindBar || padTooClose;
             bool engage = false;
-            if (sticky || parked)  { engage = true;              barWhy = sticky ? "sticky" : "parked"; }
-            else if (airborne)     { engage = crosses;           barWhy = "landing short"; }
-            else if (crosses && timingOk) {
+            if (sticky || parked) {
+                engage = true;
+                barWhy = sticky ? "sticky" : "parked";
+            } else if (airborne) {
+                engage = crosses;
+                barWhy = "landing short";
+            } else if (crosses && timingOk) {
                 // Ground: only a pair (a bar within pair distance either way)
                 // justifies leaving the pad line; an isolated half-bar keeps
                 // the beep and the pad behind it.
@@ -131,7 +135,8 @@ void ApplyBarDetour(void* miniGame, PadTick& t) {
                           bar_detour_slot, t.guidePos.x, barWhy, t.aheadSlot, t.aheadPos.x,
                           t.aheadPos.y, t.bikePos.x, barY, airborne ? 1 : 0, groundedY, t.fwdGap);
         } else {
-            acclog::Write("SwoopRace", "bar detour: clear (pad slot=%d bikeX=%.1f airborne=%d groundY=%.0f)",
+            acclog::Write("SwoopRace",
+                          "bar detour: clear (pad slot=%d bikeX=%.1f airborne=%d groundY=%.0f)",
                           t.aheadSlot, t.bikePos.x, airborne ? 1 : 0, groundedY);
         }
         g_state.bar_detour_slot = bar_detour_slot;
@@ -176,7 +181,8 @@ void ApplyMineDetour(PadTick& t) {
     if (detour_slot != g_state.detour_slot) {
         if (detour_slot >= 0) {
             acclog::Write("SwoopRace",
-                          "detour: mine slot=%d guideX=%.1f (line x=%.1f y=%.0f pad slot=%d padX=%.1f bikeX=%.1f fwdGap=%.0f)",
+                          "detour: mine slot=%d guideX=%.1f (line x=%.1f y=%.0f pad slot=%d "
+                          "padX=%.1f bikeX=%.1f fwdGap=%.0f)",
                           detour_slot, t.guidePos.x, line_x, line_y, t.aheadSlot, t.aheadPos.x,
                           t.bikePos.x, t.fwdGap);
         } else {

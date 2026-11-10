@@ -1,88 +1,53 @@
-// Accelerator pad cues of the swoop race: steering onto the next pad, the
-// wall warning, the assist gap and release band, per tick.
+// The accelerator-pad cues of the swoop race, per tick: the panned guide tone
+// toward the next pad (or a detour point), the "aligned" blip on reaching it,
+// and the crossing score. The detours and the magnet and wall cues live in
+// minigame_swoop_audio_accelpad_detour.cpp and _assist.cpp.
+//
+// The guide is our own acc_boost tone, not the bike's hum: the swoop Player's
+// <Engine> resref is empty in every area, so player+0x144 holds no source we
+// could pan. It aims straight at the next pad's lane, since the pads are
+// scattered gates rather than a racing line. The pan keeps the target's true X
+// and Z but a fixed forward depth (kSwoopGuidePanForwardRefM), so it encodes
+// the lane offset alone; loudness rises as the target nears. The tone rests
+// within about the catch radius (kSwoopGuideSilenceU), where the magnet
+// finishes: the player positions coarsely by ear and never has to null the pan.
 
 #include "minigame_swoop_audio_accelpad_internal.h"
 
 #include "audio_bus.h"
 #include "engine_game.h"
-#include "engine_player.h"    // listener: the camera; the engine swaps the
-                              //     player creature during the race
+#include "engine_player.h"  // the listener is the camera: the engine swaps the
+                            // player creature during the race
 #include "log.h"
 
 namespace acc::swoop_race {
 
 namespace {
 
-// ----- Accelerator-pad (CSWMiniEnemy) loop cue -----
-//
-// Custom resref backed by a trimmed WAV (Override\acc_boost.wav).
-// Source: first 0.3 s of mgs_basethrust03 — the engine "base thrust"
-// surge with the descending tail removed. The vanilla sample's
-// closing half-second slopes down in pitch (reads as the bike
-// powering DOWN, opposite of the cue's intent: "boost incoming");
-// looping a tail-trimmed version preserves only the rising/sustained
-// portion. 0.3 s also fits cleanly inside the per-pad listening
-// window (the nearest-only hand-off keeps a cue on each pad ~1-2 s
-// before the next pad takes over — see kAccelpadConcurrentLoops).
-//
-// File ships in Override\ rather than as a renamed engine resource
-// so it doesn't collide with any vanilla use of mgs_basethrust03.
-// Engine ResLoader checks Override → BIF, so a bare "acc_boost"
-// resref resolves to our trimmed sample. (mgs_thrustloop01 is a 5+ s drone
-// whose quiet attack is all that plays in the 1-2 s window: inaudible.)
+// acc_boost (Override\acc_boost.wav): the first 0.3 s of mgs_basethrust03,
+// without the falling tail that sounds like the bike powering down. Under its
+// own name so it cannot collide with a vanilla use of the original.
 constexpr const char* kAccelpadLoopResref =
     acc::audio::GetNavCueResref(acc::audio::NavCue::SwoopAccelpadBoost);
 
-// Same 300 m horizon as obstacles (200 m left too little time to settle on
-// the pan at gear 3). Reaction time (first-audible lead) at 300 m:
-//   gear 1 (max 70 u/s):  ~4.3 s
-//   gear 2 (max 120 u/s): ~2.5 s
-//   gear 3 (max 190 u/s): ~1.6 s
-// NOTE: kForwardCompression is tied to this — it maps this range onto
-// the band floor (kSwoopCueMinVolDistM). Change both together.
-constexpr float       kAccelpadCueRangeM        = 300.0f;
+// The obstacles' 300 m horizon: first heard ~4.3 s ahead in gear 1, ~1.6 s in
+// gear 3. kForwardCompression maps this range onto the band floor
+// (kSwoopCueMinVolDistM); change both together.
+constexpr float kAccelpadCueRangeM = 300.0f;
 
-// ----- Steering guide ------------------------
-//
-// The guide is a panned acc_boost tone (kAccelpadLoopResref) aimed at the next
-// gate, or at the mine / bar detour point when one is active.
-//
-// Why not the game's own engine hum (the SpaghettiKart design): it is not a
-// reachable engine-owned source. The bike's engine loop
-// would live at player+0x144 (CSWTrackFollower "Engine" slot, SetSoundName/
-// Set3D), BUT the swoop Player's <Engine> resref is EMPTY in all three area
-// GFFs (m03/m17/m26 — only the pads carry a Death sound), so SetSoundName makes
-// no source and player+0x144 is always null (confirmed live: src=0/playing=-1
-// across a whole race). The hum you hear is a
-// model-attached sound the engine moves with the bike, not a follower source
-// we can address — so we keep panning our own acc_boost tone instead.
-// The pads are scattered GATES (they alternate nearly full-lane: 112→81→119→
-// 97…), not a smooth racing line — so we aim straight at the next pad's lane,
-// not at an interpolated line between pads (that points at the mid-lane, the
-// WRONG way).
-//
-// The tone does not predict around the bike's motion (predicting off a noisy
-// velocity pulled the bike off pads it had reached); the velocity brake lives
-// in the magnet (kSwoopMagnetBrakeTicks).
-//
-// EMA on the noisy per-tick velocity. Light smoothing: heavier smoothing's
-// ~3-tick lag hurts responsiveness more than the noise does.
-constexpr float kSteerVelSmooth  = 0.50f;
-constexpr float kSteerVelClamp   = 8.0f;   // reject one-tick bike-X glitches
-// Clamp on the steer error (the panned magnitude) and on how far a pad may sit
-// laterally from the bike to count as real. The lane is only ~±20 wide, so a
-// pad more than 60 u to the side is a junk read (one came back at X=1933 and
-// poisoned the smoothed pan to 1695 for ~12 ticks). Both are hard guards.
-constexpr float kMaxPadLateral   = 60.0f;
+// Light smoothing of the noisy per-tick velocity (heavier lags ~3 ticks), and
+// a clamp that rejects one-tick bike-X glitches.
+constexpr float kSteerVelSmooth = 0.50f;
+constexpr float kSteerVelClamp  = 8.0f;
+// The lane is about +-20 wide: a pad more than 60 u to the side is a junk read.
+constexpr float kMaxPadLateral  = 60.0f;
 
-// The on-pad "aligned" blip is centred (no pan), so it needs real forward depth
-// to clear the near-field dead zone (cues closer than ~5 m attenuate oddly; 3 m
-// was inaudible); 7 m keeps it audible and within range.
+// The centred "aligned" blip needs forward depth to clear the near-field dead
+// zone (3 m was inaudible).
 constexpr float       kSteerAlignedFwdM = 7.0f;
 constexpr const char* kSteerAlignedResref =
     acc::audio::GetNavCueResref(acc::audio::NavCue::SwoopSteerAligned);
-// Base volume (0..127) of the hot synthesised tone (RMS ~44-48%), set by the
-// player's request; the global cue slider still scales it.
+// Base volume (0..127) of the hot synthesised tone; the cue slider scales it.
 constexpr uint8_t     kSteerCueVolume = 54;
 
 // The listener (the camera, else the player) and the bike's readings. The
@@ -253,7 +218,8 @@ void ChooseTarget(PadTick& t) {
     t.guideErr = t.padErr;
 }
 
-// The panned steering tone (see the block above); returns whether it sounds.
+// The panned steering tone (see the top of the file); returns whether it
+// sounds.
 // When it goes from sounding to rest, one centred "aligned" blip says the bike
 // is on the line and steering can stop.
 bool UpdateGuideTone(const PadTick& t) {

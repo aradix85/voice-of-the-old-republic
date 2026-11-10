@@ -264,7 +264,8 @@ prefix (menus_listbox_picker.cpp).
   engine_compass (bearing of a vector, and its compass word). kRadToDeg is
   defined in many files: one constant with it.
 - Goal (Anouk, 2026-11-10): split every file above 600 lines where that is
-  possible; files of 500-600 lines only when a split clearly helps.
+  possible; for files above 500 lines, judge whether a split into modules of
+  things that belong together makes sense, and do it where it does.
 - Next file: engine_input.cpp (817), minigame_swoop_audio_accelpad.cpp
   (816), interact_dispatch.cpp (778); 24 files of 600-800 lines and 17 of
   500-600 after that (sizes of 2026-11-10 18:05, strings*.cpp excepted).

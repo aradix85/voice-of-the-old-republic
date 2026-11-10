@@ -1,4 +1,4 @@
-# minigame_swoop_audio_accelpad_internal.h (113 lines)
+# minigame_swoop_audio_accelpad_internal.h (60 lines)
 
 Source: `patches/Accessibility/minigame_swoop_audio_accelpad_internal.h`
 
@@ -6,11 +6,11 @@ Internal to the accelerator-pad cues (minigame_swoop_audio_accelpad*.cpp); no ot
 
 ## Declarations (in source order)
 
-- L69 `struct PadTick`: Accelerator-pad STEERING GUIDE — continuous panned tone.
-- L104 `void ApplyBarDetour(void* miniGame, PadTick& t)`: minigame_swoop_audio_accelpad_detour.cpp
-- L105 `void ApplyMineDetour(PadTick& t)`
-- L108 `void ApplyMagnet(PadTick& t)`: minigame_swoop_audio_accelpad_assist.cpp
-- L109 `void PredictWallCue(const PadTick& t)`
-- L110 `void UpdateWallLoop(const PadTick& t)`
+- L16 `struct PadTick`: One tick of the pad cues: the readings, the nearest pad ahead, and the line the guide tone and the magnet steer to.
+- L51 `void ApplyBarDetour(void* miniGame, PadTick& t)`: minigame_swoop_audio_accelpad_detour.cpp
+- L52 `void ApplyMineDetour(PadTick& t)`
+- L55 `void ApplyMagnet(PadTick& t)`: minigame_swoop_audio_accelpad_assist.cpp
+- L56 `void PredictWallCue(const PadTick& t)`
+- L57 `void UpdateWallLoop(const PadTick& t)`
 
-Also 6 constants or variables at namespace scope.
+Also 1 constants or variables at namespace scope.
