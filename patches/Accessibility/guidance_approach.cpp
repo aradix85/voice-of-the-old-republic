@@ -1,12 +1,15 @@
+// The unified walk-to-act approach tracker: arming it, the per-tick verdict
+// (a conversation, panel or bark proved the act; the walk arrived; it
+// stalled), cancelling it, and the queries.
 
 #include "guidance_approach_internal.h"
 
-#include "engine_area.h"      // GetObjectPosition / GetObjectName
-#include "engine_compass.h"   // EngineYawToCompass / CompassToSector / SectorString
-#include "engine_panels.h"    // HasActiveDialogPanel / IsForegroundUiBlocking / SetGlobalDialogState
-#include "engine_player.h"    // GetPlayerPosition / SetPlayerInputEnabled
-#include "engine_subscreen.h" // WorldIsPaused — a paused world is not a blocked way
-#include "guidance_autowalk.h"// CancelMovement
+#include "engine_area.h"
+#include "engine_compass.h"
+#include "engine_panels.h"
+#include "engine_player.h"
+#include "engine_subscreen.h"
+#include "guidance_autowalk.h"
 #include "log.h"
 #include "speech.h"
 #include "strings.h"
@@ -15,6 +18,21 @@ namespace acc::guidance {
 
 namespace {
 
+// Generous on purpose: a false "way blocked" is worse than a silent retry.
+constexpr DWORD kStallMs        = 1800;    // sustained no-movement = settled/blocked
+constexpr DWORD kCeilingMs      = 12000;   // hard backstop (unreadable state)
+constexpr float kProgressEpsSq  = 0.25f;   // (0.5m)^2 — moved threshold
+// Reach tolerances at a stall (see TickApproach): 6 m after a walk that ran,
+// 2.5 m when the PC never took a step.
+constexpr float kReachedMSq     = 36.0f;
+constexpr float kStoodStillMSq  = 6.25f;
+constexpr DWORD kPauseHintMs    = 1000;    // paused this long after a walk
+                                           // request: say why nothing moves
+// The movement-key cancel ignores the first 300 ms after a dispatch: a key
+// still held from before the walk, and the engine's enqueue ramp-up.
+constexpr DWORD kCancelGraceMs  = 300;
+constexpr float kStepArrivedM   = 0.6f;    // close enough to a sidestep point
+
 // Outcome of the last approach that ended, and the serial of the latest arm
 // (see LastApproachOutcome).
 uint32_t        g_armSerial = 0;
@@ -22,13 +40,13 @@ ApproachOutcome g_outcome   = ApproachOutcome::None;
 
 }  // namespace
 
+ApproachState g_st;
+
 void EndApproach(ApproachOutcome outcome) {
     g_st.active = false;
     g_outcome   = outcome;
 }
 
-// Live target position when the object is readable, else the stamped fallback.
-// Returns false when neither is available.
 bool ResolveTargetPos(Vector& out) {
     if (g_st.targetObj &&
         acc::engine::GetObjectPosition(g_st.targetObj, out)) {
@@ -41,15 +59,25 @@ bool ResolveTargetPos(Vector& out) {
     return false;
 }
 
-// Planar player→target gap, in metres.
-float GapTo(const Vector& tgt, const Vector& pos) {
-    return DistXY(tgt, pos);
-}
-
 void MarkWalkStart() {
     Vector pc;
     g_st.haveWalkStart = acc::engine::GetPlayerPosition(pc);
     if (g_st.haveWalkStart) g_st.walkStartPos = pc;
+}
+
+void RestartStallWindow() {
+    g_st.haveProgress = false;
+    g_st.progressAt   = GetTickCount();
+}
+
+void ReleaseApproach() {
+    acc::guidance::CancelMovement();
+    if (g_st.inputDisabled) {
+        acc::engine::SetPlayerInputEnabled(true);
+    }
+    if (g_st.isDialog) {
+        acc::engine::SetGlobalDialogState(0);
+    }
 }
 
 void ArmApproach(const ApproachArm& arm) {
@@ -132,11 +160,10 @@ void TickApproach() {
         return;
     }
 
-    // A paused world moves nobody, so nothing here is blocked: hold the stall
-    // and ceiling clocks (the queued walk resumes by itself on unpause) and
-    // say once why the walk is not happening. Before this, the engine's
-    // enemy-sighted auto-pause turned every walk into "way blocked" and the
-    // player had no way to tell (2026-11-08, Endar Spire battle corridor).
+    // A paused world (Space, or the engine's auto-pause when an enemy comes
+    // into view) moves nobody, so nothing is blocked: hold the stall and
+    // ceiling clocks (the queued walk resumes on unpause) and say once why
+    // the walk is not happening.
     if (acc::engine::WorldIsPaused()) {
         if (g_st.pausedSince == 0) g_st.pausedSince = now;
         g_st.progressAt = now;
@@ -165,7 +192,7 @@ void TickApproach() {
     }
 
     // A sidestep that reached its point hands straight back to the target walk.
-    if (g_st.stepping && GapTo(g_st.stepPos, pos) <= kStepArrivedM) {
+    if (g_st.stepping && DistXY(g_st.stepPos, pos) <= kStepArrivedM) {
         ResumeAfterSidestep();
         return;
     }
@@ -173,7 +200,7 @@ void TickApproach() {
     // Movement liveness. lastPos updates only when the PC has moved ≥0.5 m, so a
     // normal sub-threshold stride still registers progress every few ticks and
     // keeps resetting the stall timer — a long cross-terrain walk is never cut
-    // off. Grace covers the post-dispatch ramp-up before the engine enqueues.
+    // off. The stall window outlasts the engine's start latency.
     if (!g_st.haveProgress) {
         g_st.lastPos      = pos;
         g_st.progressAt   = now;
@@ -186,10 +213,7 @@ void TickApproach() {
         g_st.movedSinceArm = true;
         return;
     }
-    if (now - g_st.progressAt < kStallMs) return;          // brief pause / still
-                                                           // ramping up (the
-                                                           // stall window > any
-                                                           // engine start latency)
+    if (now - g_st.progressAt < kStallMs) return;
 
     // A sidestep stalled short of its point: if it moved at all, try the
     // target again from here; if it never moved, try another direction.
@@ -205,20 +229,11 @@ void TickApproach() {
         return;
     }
 
-    // Stalled with no success surfaced. Either it effectively arrived (a no-panel
-    // act — door/bash/mine — or a near-miss left it close: don't nag), or it
-    // never got near the target (genuinely blocked). Distinguish by the live gap.
-    //
-    // First: if we can't resolve the target position at all, we cannot prove the
-    // PC is out of range — so we must NOT cancel the (possibly still-running)
-    // interaction or announce a false "way blocked". The pre-unify watchdog hit
-    // exactly this: a wrong-namespace targetObj faulted GetObjectPosition and the
-    // (0,0,0) fallback pos read as "miles away" → bogus "Movement cancelled"
-    // mid-open (patch-20260618-223250.log, a stale build). The unify already
-    // snapshots a real pos at arm so the common path resolves; this keeps the
-    // blocked verdict honest for any caller whose target can't be positioned —
-    // disarm quietly and let engine_player's queue-watched restore re-enable
-    // input. (Mirrors the bark branch: when in doubt the interaction fired.)
+    // Stalled with no success surfaced: either it effectively arrived (a
+    // no-panel act such as a door, bash or mine, or a near miss) or it never
+    // got near the target. Without a target position the PC can't be proved
+    // out of range, so it disarms quietly instead of cancelling a possibly
+    // running interaction or announcing a false "way blocked".
     Vector tgt;
     if (!ResolveTargetPos(tgt)) {
         acclog::Write("Approach", "stalled but target position unresolvable — "
@@ -226,24 +241,13 @@ void TickApproach() {
         EndApproach(ApproachOutcome::Other);
         return;
     }
-    // Reach tolerance depends on whether the walk ever physically ran — two very
-    // different stalls otherwise wear the same distance.
-    //
-    // Walk RAN, then stalled: the engine got the PC moving and parked it wherever
-    // the walkmesh allowed. Six metres of slack is right — the act very likely
-    // fired (door/bash/mine open no panel) and nagging is worse than silence.
-    //
-    // Walk NEVER RAN (not one step since the arm): six metres is a lie. Observed
-    // on the Telos comm console (patch-20260816-095834.log): nine Enter presses
-    // from 4.5–5.5m out, every dispatch accepted, every one driving the engine's
-    // 5↔6 re-plan churn with the PC rooted — and every one silently absorbed here
-    // as "within reach" because it sat inside the 6m radius. The retry below
-    // never got a turn and the player got no cue at all. At a standstill the only
-    // honest reading of a small gap is "we were already at it and the act fired in
-    // place", which is a use-range distance, not six metres. Keeping this branch
-    // tight also protects those in-place acts: bashing a door at arm's length must
-    // stay a quiet disarm and never be torn down by the retry's CancelMovement.
-    const float gap     = GapTo(tgt, pos);
+    // A walk that RAN and then stalled was parked wherever the walkmesh
+    // allowed; the act very likely fired, and six metres of slack beats
+    // nagging. A walk that NEVER RAN only counts as arrived at use range: at a
+    // standstill a small gap means the act fired in place (a door bashed at
+    // arm's length must stay a quiet disarm), and six metres would swallow
+    // every rooted press without a cue.
+    const float gap     = DistXY(tgt, pos);
     const float reachSq = g_st.movedSinceArm ? kReachedMSq : kStoodStillMSq;
     if (gap * gap <= reachSq) {
         // Arrived after a coordinate-walk retry — the use it displaced still
@@ -256,11 +260,8 @@ void TickApproach() {
         EndApproach(ApproachOutcome::Arrived);
         return;
     }
-    // Out of reach and stalled. Before calling it blocked, check whether the
-    // walk ever actually started: a use dispatch the engine accepted but never
-    // turned into motion leaves the PC rooted where it stood, and announcing
-    // "way blocked" there tells the player no route exists when the coordinate
-    // A* would have walked them straight to it.
+    // Out of reach and stalled. A walk that never started gets a coordinate
+    // retry and then sidesteps before anything calls it blocked.
     if (TryCoordinateWalkRetry(tgt)) return;
     if (TrySidestep(tgt)) return;
 
@@ -290,18 +291,9 @@ bool IsAnyModApproachInFlight() {
 
 bool CancelByMovement() {
     if (!g_st.active) return false;
-    // Arm grace: a movement key still down from before the dispatch (or the
-    // engine's post-dispatch enqueue ramp-up) must not cancel the walk before
-    // it has a chance to start.
     if (GetTickCount() - g_st.armedAt < kCancelGraceMs) return false;
 
-    acc::guidance::CancelMovement();
-    if (g_st.inputDisabled) {
-        acc::engine::SetPlayerInputEnabled(true);
-    }
-    if (g_st.isDialog) {
-        acc::engine::SetGlobalDialogState(0);
-    }
+    ReleaseApproach();
     const char* msg = acc::strings::Get(acc::strings::Id::MovementCancelled);
     acc::speech::Speak(msg, /*interrupt=*/true);
     acclog::Write("Approach", "movement-cancel — owner=%d isDialog=%d "

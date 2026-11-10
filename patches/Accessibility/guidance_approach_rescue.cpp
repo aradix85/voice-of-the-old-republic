@@ -1,30 +1,62 @@
-// Rescuing a stalled approach: the coordinate retry, the sidestep round creatures in the way, the
-// re-issued use, and the "way blocked" message.
+// Rescuing a stalled approach: the coordinate retry, the sidestep round
+// creatures in the way, the re-issued use, and the "way blocked" message.
 
 #include "guidance_approach_internal.h"
 
-#include "engine_area.h"      // GetObjectPosition / GetObjectName
-#include "engine_compass.h"   // EngineYawToCompass / CompassToSector / SectorString
-#include "engine_panels.h"    // HasActiveDialogPanel / IsForegroundUiBlocking / SetGlobalDialogState
-#include "engine_player.h"    // GetPlayerPosition / SetPlayerInputEnabled
-#include "examine_view.h"     // IsCreatureDead — corpses are not obstacles
-#include "guidance_autowalk.h"// CancelMovement
-#include "interact_dispatch.h" // DispatchInteract — re-fire a talk after a rescue walk
+#include "engine_area.h"
+#include "engine_compass.h"
+#include "engine_panels.h"
+#include "engine_player.h"
+#include "examine_view.h"
+#include "guidance_autowalk.h"
+#include "interact_dispatch.h"
 #include "log.h"
 #include "speech.h"
-#include "spectator_scene.h" // Endar Spire scripted spectator-battle cue
+#include "spectator_scene.h"
 #include "strings.h"
 
 namespace acc::guidance {
 
 namespace {
 
+// A retried walk that settles within 4 m is at the object: re-fire the use
+// it displaced. Generous because the walk targets the object's centre while
+// the walkmesh can stop the PC a metre or two short.
+constexpr float kReissueUseMSq = 16.0f;
+
+// Sidestep rescue. When even the coordinate retry leaves the PC rooted, the
+// usual cause is creatures packed around it (the beaten duelists round Ajuur
+// in the Taris cantina): the engine's planner will not start a path that
+// begins inside their collision, and a short step aside frees it.
+constexpr float kSidestepDist   = 2.0f;  // metres per sidestep
+constexpr float kObstacleRadius = 3.5f;  // creatures this close shape the step
+constexpr float kInTheWayRadius = 2.5f;  // named in the final blocked line
+constexpr int   kMaxObstacles   = 24;
+constexpr float kRootedMaxM     = 1.5f;  // moved less than this = still rooted
+constexpr float kFrontOfTargetM = 1.8f;  // rescue walks stop this far in front
+                                         // of a creature or placeable
+constexpr DWORD kRefireGuardMs  = 20000; // one talk re-fire per target per 20 s
+
+// The last talk re-fired after a rescue walk, so a target that still cannot
+// be reached does not loop dialog -> retry -> re-fire.
+uint32_t g_refireHandle = 0;
+DWORD    g_refireAt     = 0;
+
+// Clears the failed plan and hands input back: WalkTo manages its own AI
+// level and needs manual input left enabled. The flag drops so a later
+// OnBlocked can't restore twice.
+void StopForRescueWalk() {
+    acc::guidance::CancelMovement();
+    if (g_st.inputDisabled) {
+        acc::engine::SetPlayerInputEnabled(true);
+        g_st.inputDisabled = false;
+    }
+}
+
 // Where a rescue walk should go. A creature or placeable often stands where
-// the walkmesh cannot reach: a shopkeeper behind a counter (2026-11-09, Janice
-// Nall in the Taris droid shop: the walk to her exact spot never started,
-// three sidesteps later still "way blocked"). Aim for a point in front of it
-// on the player's side instead; from there the engine's talk or use resolves.
-// Waypoints and coordinates keep their exact position.
+// the walkmesh cannot reach (a shopkeeper behind a counter), so aim for a
+// point in front of it on the player's side; from there the engine's talk or
+// use resolves. Waypoints and coordinates keep their exact position.
 Vector RescueDestination(const Vector& tgt) {
     if (!g_st.targetObj) return tgt;
     const int kind = acc::engine::GetObjectKind(g_st.targetObj);
@@ -61,7 +93,7 @@ int NearbyCreatures(const Vector& pc, float radius, Vector* outPos,
         if (acc::examine_view::IsCreatureDead(obj)) continue;
         Vector p;
         if (!acc::engine::GetObjectPosition(obj, p)) continue;
-        if (GapTo(p, pc) > radius) continue;
+        if (DistXY(p, pc) > radius) continue;
         outPos[n] = p;
         if (outObj) outObj[n] = obj;
         ++n;
@@ -95,7 +127,7 @@ bool ChooseSidestep(const Vector& pc, const Vector& tgt, Vector& out,
                  pc.y + std::sin(a) * kSidestepDist, pc.z};
         float nearest = 99.0f;
         for (int i = 0; i < n; ++i) {
-            const float d = GapTo(obs[i], c);
+            const float d = DistXY(obs[i], c);
             if (d < nearest) nearest = d;
         }
         if (nearest < 1.2f) continue;               // steps into someone
@@ -122,7 +154,7 @@ bool CreatureInTheWay(char* name, size_t nameSize) {
     int   bestI = -1;
     float bestD = 99.0f;
     for (int i = 0; i < n; ++i) {
-        const float d = GapTo(pos[i], pc);
+        const float d = DistXY(pos[i], pc);
         if (d < bestD) { bestD = d; bestI = i; }
     }
     if (bestI < 0) return false;
@@ -136,13 +168,12 @@ bool CreatureInTheWay(char* name, size_t nameSize) {
 }
 
 // A party member standing at the target, closer to it than the player and
-// within a few metres: the walk cannot get past them to the use point.
-// 2026-11-08: Trask stood on the Bridge door's use point, every Enter ended
-// in "way blocked" and the player could not know why. Fills `name`.
+// within a few metres: the walk cannot get past them to the use point (Trask
+// on the Endar Spire bridge door). Fills `name`.
 bool CompanionInTheWay(const Vector& tgt, char* name, size_t nameSize) {
     Vector pc;
     if (!acc::engine::GetPlayerPosition(pc)) return false;
-    const float pcGap = GapTo(tgt, pc);
+    const float pcGap = DistXY(tgt, pc);
     void* leader = acc::engine::GetPlayerServerCreature();
     uint32_t handles[12] = {};
     const int count = acc::engine::GetPartyMembers(handles, 12);
@@ -151,7 +182,7 @@ bool CompanionInTheWay(const Vector& tgt, char* name, size_t nameSize) {
         if (!obj || obj == leader) continue;
         Vector p;
         if (!acc::engine::GetObjectPosition(obj, p)) continue;
-        const float gap = GapTo(tgt, p);
+        const float gap = DistXY(tgt, p);
         if (gap > 3.0f || gap >= pcGap) continue;
         name[0] = '\0';
         if (acc::engine::GetObjectName(obj, name, nameSize) && name[0]) {
@@ -175,19 +206,7 @@ bool CompanionInTheWay(const Vector& tgt, char* name, size_t nameSize) {
 bool TryCoordinateWalkRetry(const Vector& tgt) {
     if (g_st.movedSinceArm || g_st.coordRetried) return false;
 
-    // Clear the failed plan first. In the re-plan-loop case the engine is still
-    // churning actions that would fight the coordinate walk; in the discarded
-    // case the queue is already empty and this is a no-op.
-    acc::guidance::CancelMovement();
-
-    // WalkTo manages its own AI level and needs manual input left enabled — the
-    // same reason cycle_input's map-pin branch never disables it. Hand input
-    // back first and drop the flag so a later OnBlocked can't restore twice.
-    if (g_st.inputDisabled) {
-        acc::engine::SetPlayerInputEnabled(true);
-        g_st.inputDisabled = false;
-    }
-
+    StopForRescueWalk();
     g_st.coordRetried = true;
     const Vector dest = RescueDestination(tgt);
     MarkWalkStart();
@@ -197,8 +216,7 @@ bool TryCoordinateWalkRetry(const Vector& tgt) {
         return false;
     }
 
-    g_st.haveProgress = false;          // restart the stall window clean
-    g_st.progressAt   = GetTickCount();
+    RestartStallWindow();
     acclog::Write("Approach", "walk never started (PC has not moved since arm) "
         "— retrying as coordinate walk to (%.2f,%.2f,%.2f)%s name=[%s]",
         dest.x, dest.y, dest.z,
@@ -214,13 +232,11 @@ bool TrySidestep(const Vector& tgt) {
     if (g_st.sidestepTries >= kSidestepMax) return false;
     Vector pc;
     if (!acc::engine::GetPlayerPosition(pc)) return false;
-    if (g_st.haveWalkStart && GapTo(pc, g_st.walkStartPos) > kRootedMaxM) {
+    if (g_st.haveWalkStart && DistXY(pc, g_st.walkStartPos) > kRootedMaxM) {
         return false;                   // the walk ran; not a crowd problem
     }
     // Only a crowd is worth stepping around. With nobody beside the PC the
-    // block is the walkmesh or a closed door, and a sidestep only wastes time
-    // (2026-11-09: three sidesteps at the North Apartments door and at the
-    // droid shop counter, the nearest creature 3.6 m and more away).
+    // block is the walkmesh or a closed door, and a sidestep only wastes time.
     {
         Vector beside[kMaxObstacles];
         if (NearbyCreatures(pc, kInTheWayRadius, beside, nullptr,
@@ -237,11 +253,7 @@ bool TrySidestep(const Vector& tgt) {
             "name=[%s]", g_st.name);
         return false;
     }
-    acc::guidance::CancelMovement();
-    if (g_st.inputDisabled) {
-        acc::engine::SetPlayerInputEnabled(true);
-        g_st.inputDisabled = false;
-    }
+    StopForRescueWalk();
     if (!acc::guidance::WalkTo(step)) {
         acclog::Write("Approach", "sidestep: WalkTo refused name=[%s]",
                       g_st.name);
@@ -251,8 +263,7 @@ bool TrySidestep(const Vector& tgt) {
     ++g_st.sidestepTries;
     g_st.stepping     = true;
     g_st.stepPos      = step;
-    g_st.haveProgress = false;
-    g_st.progressAt   = GetTickCount();
+    RestartStallWindow();
     acclog::Write("Approach", "sidestep %d/%d: rooted, stepping %.1fm to "
         "(%.2f,%.2f) (nearest creature there %.1fm) name=[%s]",
         g_st.sidestepTries, kSidestepMax, kSidestepDist, step.x, step.y,
@@ -273,18 +284,14 @@ void ResumeAfterSidestep() {
         return;
     }
     g_st.movedSinceArm = false;
-    g_st.haveProgress  = false;
-    g_st.progressAt    = GetTickCount();
+    RestartStallWindow();
     acclog::Write("Approach", "sidestep done — walking to target again "
         "(%.2f,%.2f) name=[%s]", tgt.x, tgt.y, g_st.name);
 }
 
-// The coordinate-walk retry only walks. It has to clear the failed plan to free
-// the pathfinder, so the use action it replaced is gone by the time the PC
-// arrives — leaving the player standing at the object needing a second press
-// (patch-20260816-105520.log: the retry lands at 1.19m, and Enter from there
-// opens the console instantly). Re-fire the use once on arrival so the rescue
-// completes in one press.
+// The coordinate-walk retry only walks: it clears the failed plan to free the
+// pathfinder, so the use it replaced is gone by the time the PC arrives. Re-fire
+// the use once on arrival so the rescue completes in one press.
 //
 // Scoped to the retry path. A settle that never needed a retry already ran its
 // action — a door bashed at arm's length — and re-firing there would act twice.
@@ -334,27 +341,17 @@ bool TryReissueUse(float gap) {
     }
     g_st.inputDisabled = disabled;
 
-    // Give the re-fired use a full stall window to open its panel before any
-    // further verdict.
-    g_st.haveProgress = false;
-    g_st.progressAt   = GetTickCount();
+    RestartStallWindow();
     acclog::Write("Approach", "arrived after coordinate-walk retry (gap %.2fm) — "
         "re-firing use handle=0x%08x name=[%s]", gap, g_st.useHandle, g_st.name);
     return true;
 }
 
-// Break a blocked approach: cancel the bouncing walk, restore input if the
-// caller disabled it (explicit, so engine_player's queue-watched restore and
-// this tracker never fight), clear dialog-pending limbo (talk only), and
-// announce "way blocked" when the arm asked for it. Disarms.
+// Breaks a blocked approach and announces "way blocked" when the arm asked
+// for it, naming a companion at the target or a creature beside the PC when
+// one is the reason. Disarms.
 void OnBlocked(DWORD stalledMs) {
-    acc::guidance::CancelMovement();
-    if (g_st.inputDisabled) {
-        acc::engine::SetPlayerInputEnabled(true);
-    }
-    if (g_st.isDialog) {
-        acc::engine::SetGlobalDialogState(0);
-    }
+    ReleaseApproach();
 
     if (g_st.speakBlocked) {
         // Scoped Endar Spire spectator battle: a walk toward one of the
