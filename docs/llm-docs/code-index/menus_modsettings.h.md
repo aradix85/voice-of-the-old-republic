@@ -1,30 +1,20 @@
-# menus_modsettings.h (135 lines)
+# menus_modsettings.h (71 lines)
 
 Source: `patches/Accessibility/menus_modsettings.h`
 
-virtual mod-settings submenu.
+The virtual "Mod settings" submenu, reached through an entry the chain adds to the in-game and the title-screen Options panels.
 
-Layer: menus/ (UI state + speech). Reachable via a virtual "Mod settings" chain entry that we inject into both the in-game Options panel (PanelKind::InGameOptions) and the title-screen Options panel (PanelKind::MainMenuOptions).
-
-Design summary:
-
-* The chain entry is NOT backed by a real engine control. We use a static sentinel pointer (see GetRootAnchor) so we never hijack someone else's button and never touch engine-allocated controls. RebindChain inserts a virtual ChainEntry whose `virtualKind == kVirtualMod_SettingsRoot`; menus_extract::FromControl special- cases the sentinel and returns the "Mod settings" phrase; the Enter dispatcher in menus.cpp special-cases the virtual-kind tag and opens the submenu instead of FireActivate.
-
-* The submenu itself is entirely virtual — there is no second engine panel. While IsOpen() is true, the manager input hook routes navigation keys through HandleInput before the normal chain dispatcher sees them. Up/Down cycles the focused option, Space/Enter toggles, Esc closes and rebinds the parent chain.
-
-* The audio glossary and the keybind configurator are nested views with their own row model; Esc inside one returns to the list.
-
-* Three dummy toggle options ship as scaffolding: extended cycling, room shape descriptions, wall sounds. The toggle bits live in this TU (in-memory only — persistence is a follow-up). Real consumers will read GetToggle(option) once those features are wired.
+The entry is not an engine control: its `control` is a sentinel pointer (IsRootAnchor), which menus_extract speaks as "Mod settings" and the Enter dispatcher opens with OpenSubMenu. The submenu has no engine panel either; while IsOpen(), the input hook routes keys through HandleInput first. The audio glossary and the keybind configurator are nested views; Esc inside one returns to the list.
 
 ## Declarations (in source order)
 
-- L53 `enum class Option`: Per-option identifiers.
-- L74 `bool IsRootAnchor(void* control)`: True iff `control` is the mod-settings root sentinel.
-- L82 `void ForEachRootAnchor(void* panel, bool (*callback)(void* sentinel, int sortCx, int sortCy, void* userData), void* userData)`: Visit the registered virtual chain anchor for `panel`.
-- L90 `bool ExtractRootLabel(char* outBuf, size_t bufSize)`: Format the root entry's speech ("Mod settings").
-- L94 `void OpenSubMenu(void* parentPanel)`: Open the submenu.
-- L99 `bool IsOpen()`: True while the submenu is interactive.
-- L104 `void Close()`: Close the submenu and rebind the chain on the saved parent panel.
-- L118 `bool HandleInput(int keyCode)`: Input-press handler.
-- L125 `bool GetToggle(Option option)`: Read the current state of a toggle option.
-- L132 `void Tick()`: Per-tick poll.
+- L20 `enum class Option`: A row's stable identity (persistence keys, GetToggle callers), not its place on screen.
+- L37 `bool IsRootAnchor(void* control)`: True iff `control` is the root entry's sentinel.
+- L42 `void ForEachRootAnchor(void* panel, bool (*callback)(void* sentinel, int sortCx, int sortCy, void* userData), void* userData)`: Calls `callback` once with the root sentinel and its sort position on InGameOptions and MainMenuOptions (the last stop of the chain); nothing for other panels.
+- L48 `bool ExtractRootLabel(char* outBuf, size_t bufSize)`: The root entry's speech ("Mod settings"); false only for a degenerate buffer.
+- L51 `void OpenSubMenu(void* parentPanel)`: Opens the submenu over `parentPanel` and speaks the title and first row.
+- L53 `bool IsOpen()`
+- L57 `void Close()`: Closes the submenu and rebinds the chain on the parent panel; no-op when closed.
+- L61 `bool HandleInput(int keyCode)`: Press edges only.
+- L64 `bool GetToggle(Option option)`: The state of a toggle option; false for out-of-range and non-toggle rows.
+- L68 `void Tick()`: Per-frame: the keybind configurator's capture poll and the glossary's delayed audition.

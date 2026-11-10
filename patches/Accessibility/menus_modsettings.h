@@ -1,35 +1,12 @@
-// virtual mod-settings submenu.
+// The virtual "Mod settings" submenu, reached through an entry the chain adds
+// to the in-game and the title-screen Options panels.
 //
-// Layer: menus/ (UI state + speech). Reachable via a virtual "Mod
-// settings" chain entry that we inject into both the in-game
-// Options panel (PanelKind::InGameOptions) and the title-screen
-// Options panel (PanelKind::MainMenuOptions).
-//
-// Design summary:
-//
-//   * The chain entry is NOT backed by a real engine control. We use a
-//     static sentinel pointer (see GetRootAnchor) so we never hijack
-//     someone else's button and never touch engine-allocated controls.
-//     RebindChain inserts a virtual ChainEntry whose `virtualKind ==
-//     kVirtualMod_SettingsRoot`; menus_extract::FromControl special-
-//     cases the sentinel and returns the "Mod settings"
-//     phrase; the Enter dispatcher in menus.cpp special-cases the
-//     virtual-kind tag and opens the submenu instead of FireActivate.
-//
-//   * The submenu itself is entirely virtual — there is no second
-//     engine panel. While IsOpen() is true, the manager input hook
-//     routes navigation keys through HandleInput before the normal
-//     chain dispatcher sees them. Up/Down cycles the focused option,
-//     Space/Enter toggles, Esc closes and rebinds the parent chain.
-//
-//   * The audio glossary and the keybind configurator are nested views
-//     with their own row model; Esc inside one returns to the list.
-//
-//   * Three dummy toggle options ship as scaffolding: extended cycling,
-//     room shape descriptions, wall sounds. The toggle bits live in
-//     this TU (in-memory only — persistence is a follow-up). Real
-//     consumers will read GetToggle(option) once those features are
-//     wired.
+// The entry is not an engine control: its `control` is a sentinel pointer
+// (IsRootAnchor), which menus_extract speaks as "Mod settings" and the Enter
+// dispatcher opens with OpenSubMenu. The submenu has no engine panel either;
+// while IsOpen(), the input hook routes keys through HandleInput first. The
+// audio glossary and the keybind configurator are nested views; Esc inside one
+// returns to the list.
 
 #pragma once
 
@@ -37,98 +14,57 @@
 
 namespace acc::menus::modsettings {
 
-// Per-option identifiers. Add a new option = add an enum row, a label
-// strings::Id, a row in the option table inside the .cpp, and an entry in
-// whichever display table the row should appear in.
-//
-// This enum is a row's stable IDENTITY (persistence keys, GetToggle callers),
-// not its position on screen: the .cpp's display table decides where a row is
-// seen.
-//
-// ExtendedCycling / RoomShapes and the other toggles flip with Enter (state
-// spoken as "Name: on/off"). Keybindings and AudioGlossary are submenu pivots (Enter opens a nested view) and have no
-// toggle state; GetToggle() returns false for them. SupportModder /
-// LatestChanges / OpenReadme are link rows — Enter hands a URL to the default
-// browser; they hold no state either.
+// A row's stable identity (persistence keys, GetToggle callers), not its place
+// on screen. A new option needs an enumerator, a label, a row in the option
+// table and a place in the list (menus_modsettings_internal.h).
 enum class Option {
     ExtendedCycling = 0,
     RoomShapes,
     HumanSubtitles,
-    QEAllAround,         // Q/E cycle everything around the player, not only the
-                         // camera's view (qe_ring; off by default)
-    TurretAutoAim,     // easy-mode cheat — turret auto-tracks the locked fighter (off by default)
-    SkipIntros,        // filesystem-backed — state is biologo.bik vs biologo.bik.disabled
-    CueVolume,         // slider — global hint-sound volume (audio_bus owns the value)
-    Keybindings,       // submenu pivot — the mod keybind configurator (menus_keybinds)
-    AudioGlossary,
-    SupportModder,     // link row — opens the Ko-fi page in the default browser
-    LatestChanges,     // link row — opens the latest release page
-    OpenReadme,        // link row — opens the readme in the mod's active language
+    QEAllAround,      // Q/E cycle everything around the player (qe_ring)
+    TurretAutoAim,    // the turret auto-tracks the selected fighter
+    SkipIntros,       // state is biologo.bik vs biologo.bik.disabled
+    CueVolume,        // slider; audio_bus owns the value
+    Keybindings,      // submenu: the keybind configurator (menus_keybinds)
+    AudioGlossary,    // submenu
+    SupportModder,    // link rows: open a page in the default browser
+    LatestChanges,
+    OpenReadme,
     Count
 };
 
-// True iff `control` is the mod-settings root sentinel. Used by
-// menus_extract::FromControl to override the speech text and by the
-// Enter dispatcher to route Enter through OpenSubMenu instead of
-// FireActivate.
+// True iff `control` is the root entry's sentinel.
 bool IsRootAnchor(void* control);
 
-// Visit the registered virtual chain anchor for `panel`. Fires exactly
-// once on InGameOptions / MainMenuOptions; no-op for every other panel
-// kind. Mirrors the credits / stat-row callback shape — sortCy is the
-// synthetic y-coordinate the chain should use when sorting (we place
-// the entry just above the Close button so it lands as the last
-// stop on a top-to-bottom arrow walk).
+// Calls `callback` once with the root sentinel and its sort position on
+// InGameOptions and MainMenuOptions (the last stop of the chain); nothing for
+// other panels.
 void ForEachRootAnchor(void* panel,
                        bool (*callback)(void* sentinel, int sortCx, int sortCy,
                                         void* userData),
                        void* userData);
 
-// Format the root entry's speech ("Mod settings"). Returns true on
-// success with `outBuf` filled. False only if the buffer is degenerate;
-// the phrase itself is a constant localised string and never empty.
+// The root entry's speech ("Mod settings"); false only for a degenerate buffer.
 bool ExtractRootLabel(char* outBuf, size_t bufSize);
 
-// Open the submenu. Saves the parent panel pointer (so we can rebind
-// the chain on close) and announces the title + first option.
+// Opens the submenu over `parentPanel` and speaks the title and first row.
 void OpenSubMenu(void* parentPanel);
 
-// True while the submenu is interactive. While IsOpen the input hook
-// in menus.cpp routes arrow / Space / Enter / Esc presses through
-// HandleInput before the chain dispatcher.
 bool IsOpen();
 
-// Close the submenu and rebind the chain on the saved parent panel.
-// No-op if not open. Speaks the parent context so the user knows
-// they're back.
+// Closes the submenu and rebinds the chain on the parent panel; no-op when
+// closed.
 void Close();
 
-// Input-press handler. Returns true iff the press was consumed by the
-// submenu (caller must suppress the engine + chain dispatch for that
-// key). Called only for press edges (param_2 != 0); release edges and
-// non-matching keys return false. Safe to call when IsOpen() is false
-// — returns false immediately.
-//
-// `keyCode` is the engine's kInput* value (kInputNavUp/Down/Enter/Esc
-// /Space). Match list intentionally narrow: keys not in the list fall
-// through to the engine so the user can still e.g. interact with the
-// world while a settings menu is "logically open" (defensive — the
-// submenu also blocks the parent panel from receiving input so this
-// case shouldn't fire in practice).
+// Press edges only. True when the submenu consumed the key; false when it is
+// closed, or for keys it leaves to the engine (the global hotkeys).
 bool HandleInput(int keyCode);
 
-// Read the current state of a toggle option. Stable accessor for
-// downstream feature wiring (extended_cycling, etc.) — they call this
-// instead of reaching into the module's internals. Out-of-range
-// `option` returns false. AudioGlossary is a submenu pivot, not a
-// toggle; GetToggle returns false for it.
+// The state of a toggle option; false for out-of-range and non-toggle rows.
 bool GetToggle(Option option);
 
-// Per-tick poll. Drives the Audio glossary's delayed-playback timer:
-// Enter on a glossary row stamps "fire at now + 1 s" without speaking;
-// this Tick() fires PlayCue when the deadline elapses. Always cheap
-// (single comparison) when no playback is pending. Safe to call from
-// the core OnUpdate chain regardless of whether either submenu is open.
+// Per-frame: the keybind configurator's capture poll and the glossary's
+// delayed audition. Cheap when neither is active.
 void Tick();
 
 }  // namespace acc::menus::modsettings

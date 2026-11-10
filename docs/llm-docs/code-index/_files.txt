@@ -278,7 +278,6 @@ patches/Accessibility/menus_modsettings.h
 patches/Accessibility/menus_modsettings_glossary.cpp
 patches/Accessibility/menus_modsettings_internal.h
 patches/Accessibility/menus_modsettings_list.cpp
-patches/Accessibility/menus_modsettings_state.cpp
 patches/Accessibility/menus_monitors.cpp
 patches/Accessibility/menus_monitors.h
 patches/Accessibility/menus_monitors_content.cpp

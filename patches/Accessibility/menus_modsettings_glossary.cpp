@@ -1,67 +1,57 @@
-// The Audio glossary submenu: one row per swoop-race cue, auditioned a moment after Enter.
+// The Audio glossary submenu: one row per swoop-race cue, auditioned a moment
+// after Enter.
 
 #include "menus_modsettings_internal.h"
 
+#include "audio_cues.h"
 #include "engine_input.h"
 #include "log.h"
-#include "menus_nav.h"       // ClampedCursorStep — shared Up/Down/Home/End ladder
 #include "speech.h"
+
+#include <windows.h>
+
+#include <cstdint>
 
 namespace acc::menus::modsettings {
 
+bool s_glossaryOpen = false;
+acc::audio::LoopSource s_preview;
+
 namespace {
 
-// Glossary entries — one row per swoop-race cue, in audio_cues.h order.
 struct GlossaryEntry {
-    acc::audio::NavCue  cue;
-    acc::strings::Id    label;
+    acc::audio::NavCue cue;
+    Id                 label;
 };
 
+// In audio_cues.h order.
 constexpr GlossaryEntry k_glossary[] = {
-    { acc::audio::NavCue::SwoopAccelpadBoost,       acc::strings::Id::GlossaryEntrySwoopAccelpadBoost },
-    { acc::audio::NavCue::SwoopObstacleWarn,        acc::strings::Id::GlossaryEntrySwoopObstacleWarn  },
-    { acc::audio::NavCue::SwoopWallImpact,          acc::strings::Id::GlossaryEntrySwoopWallImpact    },
-    { acc::audio::NavCue::SwoopSteerAligned,        acc::strings::Id::GlossaryEntrySwoopAligned       },
-    { acc::audio::NavCue::SwoopShiftReady,          acc::strings::Id::GlossaryEntrySwoopShiftReady    },
-    { acc::audio::NavCue::SwoopJumpNow,             acc::strings::Id::GlossaryEntrySwoopJumpNow       },
+    { acc::audio::NavCue::SwoopAccelpadBoost, Id::GlossaryEntrySwoopAccelpadBoost },
+    { acc::audio::NavCue::SwoopObstacleWarn,  Id::GlossaryEntrySwoopObstacleWarn },
+    { acc::audio::NavCue::SwoopWallImpact,    Id::GlossaryEntrySwoopWallImpact },
+    { acc::audio::NavCue::SwoopSteerAligned,  Id::GlossaryEntrySwoopAligned },
+    { acc::audio::NavCue::SwoopShiftReady,    Id::GlossaryEntrySwoopShiftReady },
+    { acc::audio::NavCue::SwoopJumpNow,       Id::GlossaryEntrySwoopJumpNow },
 };
-constexpr int k_glossaryCount = static_cast<int>(
-    sizeof(k_glossary) / sizeof(k_glossary[0]));
+constexpr int k_glossaryCount = static_cast<int>(sizeof(k_glossary) / sizeof(k_glossary[0]));
 
-// Speak the current focused glossary entry — just the localised name.
-// State / cue resref aren't spoken; the user hears the cue itself one
-// second after Enter, which is the meaningful signal.
+int s_glossaryFocused = 0;  // apart from the list's cursor, which stays on this row
+
+// Enter arms the audition and Tick plays it once the row name has been spoken,
+// so speech and sample don't overlap. Another Enter moves the deadline.
+bool               s_pendingValid   = false;
+DWORD              s_pendingFireAt  = 0;
+acc::audio::NavCue s_pendingCue     = acc::audio::NavCue::SwoopShiftReady;
+constexpr DWORD    kGlossaryDelayMs = 750;
+
 void SpeakFocusedGlossaryEntry() {
-    if (s_glossaryFocused < 0 || s_glossaryFocused >= k_glossaryCount) return;
-    const char* name =
-        acc::strings::Get(k_glossary[s_glossaryFocused].label);
+    const char* name = acc::strings::Get(k_glossary[s_glossaryFocused].label);
     acc::speech::Speak(name, /*interrupt=*/true);
     acclog::Write("ModSettings", "glossary speak focused idx=%d \"%s\"",
                   s_glossaryFocused, name);
 }
 
-// Close the glossary submenu, returning the user to the root. Speaks
-// the root row they came from so they have an audible anchor after the
-// nested Esc.
-void CloseGlossarySubMenu() {
-    if (!s_glossaryOpen) return;
-    acclog::Write("ModSettings", "glossary closed");
-    s_glossaryOpen    = false;
-    s_glossaryFocused = 0;
-    CancelPendingGlossaryCue();
-    s_glossaryPreview.Stop();  // silence any in-flight audition on close
-    // Re-announce the root focus (the AudioGlossary row) so the user
-    // knows they're back at the outer level. The root focus is
-    // unchanged from before — it was the AudioGlossary row that was
-    // Enter'd in the first place.
-    SpeakFocusedOption();
-}
-
-}  // namespace
-
-// Cancel any pending delayed glossary playback. Called from every
-// glossary navigation / close path so a queued cue doesn't fire after
-// the user has moved on.
+// So a queued cue does not play after the user has moved on.
 void CancelPendingGlossaryCue() {
     if (!s_pendingValid) return;
     acclog::Write("ModSettings", "glossary cancel pending cue=%d",
@@ -70,65 +60,65 @@ void CancelPendingGlossaryCue() {
     s_pendingFireAt = 0;
 }
 
-// Open the nested Audio glossary submenu and announce its title + first
-// row. Called from HandleInput when the user presses Enter on the
-// AudioGlossary row in the root submenu.
+void CloseGlossarySubMenu() {
+    if (!s_glossaryOpen) return;
+    acclog::Write("ModSettings", "glossary closed");
+    ResetGlossary();
+    s_preview.Stop();
+    SpeakFocusedOption();  // back on the Audio glossary row
+}
+
+}  // namespace
+
 void OpenGlossarySubMenu() {
     s_glossaryOpen    = true;
     s_glossaryFocused = 0;
     CancelPendingGlossaryCue();
     acclog::Write("ModSettings", "glossary opened");
-    acc::speech::Speak(
-        acc::strings::Get(acc::strings::Id::ModSettingsAudioGlossaryOpened),
-        /*interrupt=*/true);
-    if (k_glossaryCount > 0) {
-        acc::speech::Speak(
-            acc::strings::Get(k_glossary[s_glossaryFocused].label),
-            /*interrupt=*/false);
-    }
+    acc::speech::Speak(acc::strings::Get(Id::ModSettingsAudioGlossaryOpened),
+                       /*interrupt=*/true);
+    acc::speech::Speak(acc::strings::Get(k_glossary[0].label), /*interrupt=*/false);
+}
+
+void ResetGlossary() {
+    s_glossaryOpen    = false;
+    s_glossaryFocused = 0;
+    CancelPendingGlossaryCue();
 }
 
 bool HandleInputGlossary(int keyCode) {
-    // Same clamped ladder as the root list — Home / End jump to the first /
-    // last cue entry.
-    {
-        const bool up   = (keyCode == kInputNavUp);
-        const bool down = (keyCode == kInputNavDown);
-        const bool home = (keyCode == kInputHome);
-        const bool end  = (keyCode == kInputEnd);
-        if (up || down || home || end) {
-            if (k_glossaryCount <= 0) return true;
-            s_glossaryFocused = acc::menus::nav::ClampedCursorStep(
-                s_glossaryFocused, k_glossaryCount, up, down, home, end);
-            CancelPendingGlossaryCue();
-            SpeakFocusedGlossaryEntry();
-            return true;
-        }
+    if (StepListCursor(keyCode, k_glossaryCount, &s_glossaryFocused)) {
+        CancelPendingGlossaryCue();
+        SpeakFocusedGlossaryEntry();
+        return true;
     }
-    // Enter: arm the 1 s delayed playback. Re-pressing Enter replaces
-    // the pending deadline so a held / re-mashed key just shifts the
-    // fire-at forward; the user always hears the cue exactly once,
-    // 1 s after the most recent Enter.
     if (keyCode == kInputEnter1 || keyCode == kInputEnter2) {
-        if (s_glossaryFocused < 0 || s_glossaryFocused >= k_glossaryCount) {
-            return true;
-        }
         s_pendingCue    = k_glossary[s_glossaryFocused].cue;
         s_pendingFireAt = GetTickCount() + kGlossaryDelayMs;
         s_pendingValid  = true;
-        acclog::Write("ModSettings",
-                      "glossary armed cue=%d delay=%lums (idx=%d)",
-                      static_cast<int>(s_pendingCue),
-                      (unsigned long)kGlossaryDelayMs,
+        acclog::Write("ModSettings", "glossary armed cue=%d delay=%lums (idx=%d)",
+                      static_cast<int>(s_pendingCue), (unsigned long)kGlossaryDelayMs,
                       s_glossaryFocused);
         return true;
     }
-    // Esc: return to the root submenu (NOT the parent panel).
     if (keyCode == kInputEsc1 || keyCode == kInputEsc2) {
-        CloseGlossarySubMenu();
+        CloseGlossarySubMenu();  // back to the list, not the parent panel
         return true;
     }
     return false;
+}
+
+void TickGlossary() {
+    if (!s_pendingValid) return;
+    if (static_cast<int32_t>(GetTickCount() - s_pendingFireAt) < 0) return;  // wrap-safe
+    s_pendingValid = false;
+    const char* resref = acc::audio::GetNavCueResref(s_pendingCue);
+    // 2D, and not gated on the cue's own toggle: the user auditions the sound.
+    const Vector kCentre = { 0.0f, 0.0f, 0.0f };
+    const bool ok = s_preview.Start(resref, kCentre, /*looping=*/false, /*spatial=*/false,
+                                    /*priorityGroup=*/kGuiPriorityGroup);
+    acclog::Write("ModSettings", "glossary fire cue=%d resref=\"%s\" played=%d",
+                  static_cast<int>(s_pendingCue), resref, ok ? 1 : 0);
 }
 
 }  // namespace acc::menus::modsettings
