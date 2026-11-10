@@ -90,7 +90,15 @@ each panel's spec defined in its file and declared extern, then lean
 lean (8837b88): dead probe and co-pilot code out; the retired steering
 ticks and the forwarding GetNavCueResrefForGame removed (8c1b675).
 TickAccelpadCues and TickObstacleCues stay whole: P5 candidates, only
-with an in-game test of the swoop race.
+with an in-game test of the swoop race. bridge reviewed with kotor_kaart:
+split into six files (1531ef0) and made lean (a37835f): one route table,
+/state built on request instead of every 250 ms, engine-free bridge_http
+with unit tests (exact token header, no NUL from a bad %XX), creatures and
+tags in /objects; kotor-tools 98ad341 matches by tag and shows where
+people are now. The two cooperate correctly: same frame (+X east, +Y
+north), doors and placeables match on position, room kinds as kotor_kaart
+expects. No resref: the engine has no template-resref reader and the tag
+is enough.
 
 Careful: never rewrite source files with PowerShell ReadAllText/WriteAllText
 (it decodes UTF-8 and writes '?' for the dashes and umlauts in comments);
@@ -114,11 +122,6 @@ prefix (menus_listbox_picker.cpp).
      WallSounds toggle, view_mode/cycle_input/map_ui_cursor/passive_narrate
      cues): check each for a text equivalent first. Minigame audio
      (audio_bus, audio_loop, swoop, turret) stays.
-  Now (Anouk asked, 2026-11-10): review bridge.cpp together with
-  kotor-tools/kotor_kaart.py (does the live /objects + /rooms data match
-  the map from the game files?), lean/split bridge.cpp, add tag and resref
-  to /objects for the match, creatures in /objects, tests for the match;
-  the live check waits for the game (bridge test script).
   E. Docs pass after D: README.md and docs/README.*.md (settings rows,
      voices, 3D speech, sounds), controls-and-input, installer.md, tools.md,
      known-issues, llm-docs (audio-internals, action-menu-and-combat,
@@ -138,7 +141,7 @@ prefix (menus_listbox_picker.cpp).
   defined in many files: one constant with it.
 - Stale file names in comments (swoop_race.cpp, swoop_spatial_audio.h,
   turret_game.cpp and others from before the minigame_ prefix): one pass.
-- Next file after the bridge review: pad_input.cpp, then transitions.cpp.
+- Next file: pad_input.cpp, then transitions.cpp.
 - F2b: share the save-variable code of exit_memory with discovery.cpp.
 - F3 menus_chargen_feats / menus_powers_levelup: about 15 same-named
   functions, 22 cloned blocks; one chart-grid module (check K2 plans).
@@ -153,9 +156,10 @@ prefix (menus_listbox_picker.cpp).
 - F8 chargen: AnnounceChainStepSuffix (4 files), AnnounceValueChange,
   RowPitchForCursorWarp (3 files).
 - F9 minigames: HandleEnter/HandleExit/AnnounceEntry.
-- Bridge: creatures in /objects; a party/equipment/inventory path;
-  tag/resref in /objects for kotor_kaart matching; check what K2 needs;
-  bridge test script (needs the game running).
+- Bridge: a party/equipment/inventory path; check what K2 needs (all
+  but /health, /spoken, /state, /menu, say and key are KOTOR 1 only);
+  live check of /objects with creatures and kotor.py kaart --personen
+  (needs the game running with the new DLL).
 - Static analysis pass; clean-build warning baseline (`kdev build --clean`).
 - End: in-game checks (main menu without the updater, F5 does nothing; the
   untested features in brief.md), end report against the baseline, delete
