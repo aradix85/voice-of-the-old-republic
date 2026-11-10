@@ -264,190 +264,131 @@ bool CameraDrivenByNonPlayer() {
            acc::camera_orient::IsActive();
 }
 
-}  // namespace
+// One tick's readings: the three yaw witnesses and the cursor against the
+// edge band.
+struct Sample {
+    float    quatYawDeg     = -1.0f;  // orientation quaternion; -1 = unreadable
+    float    posYawDeg      = -1.0f;  // camera->player bearing; -1 = unreadable
+    float    camDistM       = -1.0f;
+    float    rateDegPerSec  = 0.0f;
+    bool     haveRate       = false;
+    float    quatStepDeg    = 0.0f;   // signed rotation since the last sample
+    float    posStepDeg     = 0.0f;
+    float    posRateDps     = 0.0f;
+    bool     havePosStep    = false;
+    float    playerYawDeg   = -1.0f;
+    float    playerStepDeg  = 0.0f;
+    float    playerRateDps  = 0.0f;
+    bool     havePlayerStep = false;
+    void*    gui            = nullptr;
+    uint32_t mouseX         = 0;
+    uint32_t mouseY         = 0;
+    int16_t  vpW            = 0;
+    int      bandPx         = 0;
+    bool     edgeNow        = false;
+    const char* edge        = "none";
+};
 
-void Tick() {
-    DWORD now = acc::tick::NowMs();
+// A yaw witness's step since its last sample. A zero-length interval HOLDS
+// the previous sample: a tick is one rendered frame, shorter than the clock
+// can always resolve, and a measurement not yet taken is not a measurement
+// of zero (that once made the guard skip a correction on a spinning frame).
+// The tick clock (QPC-backed) times it.
+bool StepWitness(float yawDeg, DWORD now, bool& have, float& prevYaw, DWORD& prevMs,
+                 float& stepDeg, float& rateDps) {
+    bool step = false;
+    const DWORD dt = now - prevMs;
+    if (have && dt > 0) {
+        stepDeg = AngularDelta(yawDeg, prevYaw);
+        rateDps = stepDeg * 1000.0f / static_cast<float>(dt);
+        step = true;
+    }
+    if (step || !have) {
+        prevYaw = yawDeg;
+        prevMs  = now;
+        have    = true;
+    }
+    return step;
+}
 
-    // In-world gate: player position resolvable. Resets the rate sample
-    // when we leave the world so we don't log a bogus jump on re-entry, and
-    // closes out any open episode (e.g. an area transition mid-spin).
-    Vector playerPos;
-    if (!acc::engine::GetPlayerPosition(playerPos)) {
-        g_state.have    = false;
-        g_state.havePos = false;
-        g_state.havePlayer = false;
-        g_anomalySinceMs = 0;
-        EndSpinWatch(now, "left the world");
-        if (g_ep.active) EndEpisode(now, g_ep.startYaw);
-        return;
+// The three witnesses. The bearing also orbits during an edge-turn, so a
+// dead quaternion read cannot hide a spin; it is tracked independently of
+// the quaternion sample for exactly that reason. The player's own facing
+// separates a creature turning under the chase cam (player rate matches the
+// camera's: a server-side driver such as facing snaps, AI, pushing) from the
+// camera's own turn path (player rate near zero), which the two camera
+// witnesses alone cannot tell apart.
+void SampleYaws(DWORD now, const Vector& playerPos, Sample& s) {
+    float r = 0.0f;
+    if (acc::engine::GetCameraYawRadians(r)) s.quatYawDeg = NormDeg(r * kRadToDeg);
+    Vector camPos;
+    if (acc::engine::GetCameraPosition(camPos)) {
+        const float dx = playerPos.x - camPos.x;
+        const float dy = playerPos.y - camPos.y;
+        s.camDistM = std::sqrt(dx * dx + dy * dy);
+        if (s.camDistM >= 0.1f) s.posYawDeg = NormDeg(std::atan2(dy, dx) * kRadToDeg);
     }
+    if (s.quatYawDeg >= 0.0f) {
+        s.haveRate = StepWitness(s.quatYawDeg, now, g_state.have, g_state.prevYaw, g_state.prevMs,
+                                 s.quatStepDeg, s.rateDegPerSec);
+    }
+    if (s.posYawDeg >= 0.0f) {
+        s.havePosStep = StepWitness(s.posYawDeg, now, g_state.havePos, g_state.prevPosYaw,
+                                    g_state.prevPosMs, s.posStepDeg, s.posRateDps);
+    }
+    float y = 0.0f;
+    if (acc::engine::GetPlayerYawDegrees(y)) s.playerYawDeg = NormDeg(y);
+    if (s.playerYawDeg >= 0.0f) {
+        s.havePlayerStep = StepWitness(s.playerYawDeg, now, g_state.havePlayer,
+                                       g_state.prevPlayerYaw, g_state.prevPlayerMs,
+                                       s.playerStepDeg, s.playerRateDps);
+    }
+}
 
-    // --- Quaternion-derived yaw (the fix under test) ---
-    float quatYawDeg = -1.0f;
-    {
-        float r = 0.0f;
-        if (acc::engine::GetCameraYawRadians(r)) quatYawDeg = NormDeg(r * kRadToDeg);
-    }
-
-    // --- Position-derived yaw (independent cross-check) ---
-    // Also an independent SPIN witness: an edge-turn orbits the camera around
-    // the player, so this bearing sweeps too. Reading rotation from both means
-    // a dead quaternion read cannot hide a spin from the watch below — which
-    // matters, because the guard's own rotation test reads only the quaternion.
-    float posYawDeg = -1.0f;
-    float camDistM  = -1.0f;
-    {
-        Vector camPos;
-        if (acc::engine::GetCameraPosition(camPos)) {
-            float dx = playerPos.x - camPos.x;
-            float dy = playerPos.y - camPos.y;
-            camDistM = std::sqrt(dx * dx + dy * dy);
-            if (camDistM >= 0.1f) {
-                posYawDeg = NormDeg(std::atan2(dy, dx) * kRadToDeg);
-            }
-        }
-    }
-
-    // --- Rotation rate from the quaternion yaw ---
-    //
-    // A tick is one rendered frame, so this divides by an interval shorter
-    // than GetTickCount can resolve (~15.6 ms against ~16.7 ms at 60 Hz vsync,
-    // ~6.9 ms at 144 Hz). Two ticks in one quantum give dt == 0, and on the
-    // old clock that silently reported 0 deg/s — below kGuardRateThresh, so
-    // the guard skipped a correction on a frame the camera really was spinning.
-    // Self-correcting on the next frame, but it is the same defect that made
-    // camera_announce speak three false stop cues in one second.
-    //
-    // Timing now comes from the tick clock (QPC-backed, sampled once before
-    // the fan-out), and a zero-length interval HOLDS the previous sample
-    // rather than replacing it: a measurement we do not have yet is not a
-    // measurement of zero, and keeping the old sample lets the next tick
-    // measure across a real interval.
-    float rateDegPerSec = 0.0f;
-    bool  haveRate      = false;
-    float quatStepDeg   = 0.0f;   // signed rotation since the last sample
-    if (g_state.have && quatYawDeg >= 0.0f) {
-        DWORD dt = now - g_state.prevMs;
-        if (dt > 0) {
-            quatStepDeg = AngularDelta(quatYawDeg, g_state.prevYaw);
-            rateDegPerSec = quatStepDeg * 1000.0f / (float)dt;
-            haveRate = true;
-        }
-    }
-    if (quatYawDeg >= 0.0f && (haveRate || !g_state.have)) {
-        g_state.prevYaw = quatYawDeg;
-        g_state.prevMs  = now;
-        g_state.have    = true;
-    }
-    // The bearing sample is tracked INDEPENDENTLY of the quaternion one, not
-    // gated on haveRate: the whole point of the second witness is that it keeps
-    // working when the first stops. Gating it on the first would make a dead
-    // quaternion read freeze this sample too and hide exactly the case it
-    // exists to catch.
-    float posStepDeg  = 0.0f;
-    float posRateDps  = 0.0f;
-    bool  havePosStep = false;
-    if (posYawDeg >= 0.0f) {
-        DWORD dt = now - g_state.prevPosMs;
-        if (g_state.havePos && dt > 0) {
-            posStepDeg  = AngularDelta(posYawDeg, g_state.prevPosYaw);
-            posRateDps  = posStepDeg * 1000.0f / (float)dt;
-            havePosStep = true;
-        }
-        if (havePosStep || !g_state.havePos) {
-            g_state.prevPosYaw = posYawDeg;
-            g_state.prevPosMs  = now;
-            g_state.havePos    = true;
-        }
-    }
-
-    // --- Player creature facing (third witness) ---
-    //
-    // The chase camera sits behind the player's facing, so a creature rotating
-    // in place sweeps BOTH camera witnesses above exactly like a camera turn
-    // does: at follow distance the two cases are indistinguishable from the
-    // camera alone. This sample separates them. A spin whose playerRate matches
-    // the camera rate is the creature turning with the camera following (a
-    // server-side driver: facing snaps, AI, pushing); one with playerRate near
-    // zero is the camera's own turn path. Added after patch-20260914-122504.log
-    // (K2), where every input UpdateCamera reads was excluded by the log and
-    // this was the question left open. Server-object facing via
-    // GetPlayerYawDegrees.
-    float playerYawDeg   = -1.0f;
-    float playerStepDeg  = 0.0f;
-    float playerRateDps  = 0.0f;
-    bool  havePlayerStep = false;
-    {
-        float y = 0.0f;
-        if (acc::engine::GetPlayerYawDegrees(y)) playerYawDeg = NormDeg(y);
-    }
-    if (playerYawDeg >= 0.0f) {
-        DWORD dt = now - g_state.prevPlayerMs;
-        if (g_state.havePlayer && dt > 0) {
-            playerStepDeg  = AngularDelta(playerYawDeg, g_state.prevPlayerYaw);
-            playerRateDps  = playerStepDeg * 1000.0f / (float)dt;
-            havePlayerStep = true;
-        }
-        if (havePlayerStep || !g_state.havePlayer) {
-            g_state.prevPlayerYaw = playerYawDeg;
-            g_state.prevPlayerMs  = now;
-            g_state.havePlayer    = true;
-        }
-    }
-
-    // --- Cursor / edge-band state (the suspected driver) ---
-    void* gui = SafeRead<void*>(kAddrGuiManagerPtr, nullptr);
-    uint32_t mouseX = SafeReadOff<uint32_t>(gui, kGuiMouseXOffset, 0);
-    uint32_t mouseY = SafeReadOff<uint32_t>(gui, kGuiMouseYOffset, 0);
-    // Width source is per-game: K1 keeps it on the GuiManager, K2 on the
-    // viewport object at [internal+0x274] (see the constant's witness note).
-    void* vpObj = gui;
+// The cursor against the edge band. The width lives on the GuiManager in K1
+// and on the viewport object at [client internal + 0x274] in K2.
+void SampleCursor(Sample& s) {
+    s.gui = SafeRead<void*>(kAddrGuiManagerPtr, nullptr);
+    s.mouseX = SafeReadOff<uint32_t>(s.gui, kGuiMouseXOffset, 0);
+    s.mouseY = SafeReadOff<uint32_t>(s.gui, kGuiMouseYOffset, 0);
+    void* vpObj = s.gui;
     if (acc::game::IsKotor2()) {
         vpObj = SafeReadOff<void*>(acc::engine::GetClientAppInternal(),
                                    kK2InternalViewportObjOffset, nullptr);
     }
-    int16_t  vpW    = SafeReadOff<int16_t>(vpObj, kGuiViewportWidthOffset, 0);
-    float pct       = SafeRead<float>(kAddrScreenFramePercent, 0.0f);
-    // Floor the detection band well above what the config arithmetic gives. At
-    // an 800px viewport with the default screenFramePercentage (0.001) that is
-    // 0.8px, and the old 1px floor proved too tight: a cursor parked at x=2 spun
-    // the camera for the rest of the session in patch-20260724-230031.log while
-    // this guard never fired once. So the engine's real turn band is wider than
-    // screenFramePercentage suggests, and under-detecting here costs the player
-    // an unrecoverable spin. Over-detecting costs nothing — the guard below also
-    // requires live rotation, foreground, and in-world, so a wider band cannot
-    // misfire on a paused menu with the cursor resting near an edge.
-    // Cursor parks must stay clear of this; see kDialogParkX in
-    // menus_monitors.cpp.
+    s.vpW = SafeReadOff<int16_t>(vpObj, kGuiViewportWidthOffset, 0);
+    const float pct = SafeRead<float>(kAddrScreenFramePercent, 0.0f);
+    // The engine's real turn band is wider than screenFramePercentage says
+    // (0.8 px at 800 px wide): a cursor parked at x=2 spun the camera for a
+    // whole session past a 1 px floor. Over-detecting costs nothing, as the
+    // guard also needs live rotation, the foreground and the world. Cursor
+    // parks must stay clear of this (kDialogParkX in menus_monitors.cpp).
     constexpr int kMinBandPx = 6;
-    int bandPx = (int)((float)vpW * pct);
-    if (bandPx < kMinBandPx) bandPx = kMinBandPx;
-    bool leftEdge  = vpW > 0 && (int)mouseX <= bandPx;
-    bool rightEdge = vpW > 0 && (int)mouseX >= (int)vpW - bandPx;
-    const char* edge = leftEdge ? "LEFT" : rightEdge ? "RIGHT" : "none";
+    s.bandPx = static_cast<int>(static_cast<float>(s.vpW) * pct);
+    if (s.bandPx < kMinBandPx) s.bandPx = kMinBandPx;
+    const int x = static_cast<int>(s.mouseX);
+    const bool left  = s.vpW > 0 && x <= s.bandPx;
+    const bool right = s.vpW > 0 && x >= static_cast<int>(s.vpW) - s.bandPx;
+    s.edge = left ? "LEFT" : right ? "RIGHT" : "none";
+    s.edgeNow = left || right;
+}
 
-    bool edgeNow = leftEdge || rightEdge;
-
-    // --- Cursor-edge guard (Option A, the fix) ---
-    // The engine edge-turn (UpdateCamera @0x5f5e10) spins the camera while
-    // the cursor sits in the edge band. Fire only on an actual spin:
-    // in-world (gated above), foreground, cursor in band, and rotating.
-    // Tying it to live rotation means it can't disturb a paused menu (no
-    // rotation there). Write the engine cursor position straight to viewport
-    // centre — the post-load pipeline ignores injected motion, but a direct
-    // field write isn't subject to that.
-    bool guardFired = false;
-    if (edgeNow &&
-        std::fabs(rateDegPerSec) >= kGuardRateThresh &&
-        acc::hotkeys::IsForegroundGame() && gui && vpW > 0) {
-        guardFired = SafeWriteOff<uint32_t>(
-            gui, kGuiMouseXOffset, (uint32_t)(vpW / 2));
+// The fix: UpdateCamera's edge-turn (0x5f5e10) spins the camera while the
+// cursor sits in the band. Only on a live spin (in-world, foreground, in the
+// band, rotating), so a paused menu is never touched: the cursor is written
+// straight to the viewport centre, as the post-load pipeline ignores
+// injected motion.
+bool ApplyEdgeGuard(const Sample& s) {
+    if (!s.edgeNow || std::fabs(s.rateDegPerSec) < kGuardRateThresh ||
+        !acc::hotkeys::IsForegroundGame() || !s.gui || s.vpW <= 0) {
+        return false;
     }
+    return SafeWriteOff<uint32_t>(s.gui, kGuiMouseXOffset, static_cast<uint32_t>(s.vpW / 2));
+}
 
-    // --- Episode-based logging (START + END summary, not per frame) ---
-    if (guardFired && !g_ep.active) {
-        int rightClick = SafeRead<int>(kAddrRightClickHeld, 0);
+void TrackEpisode(DWORD now, const Sample& s, bool fired) {
+    if (fired && !g_ep.active) {
+        const int rightClick = SafeRead<int>(kAddrRightClickHeld, 0);
         bool mouseLook = false;
         acc::engine::GetMouseLook(mouseLook);
         g_ep.active      = true;
@@ -455,179 +396,173 @@ void Tick() {
         g_ep.corrections = 0;
         g_ep.edgeFrames  = 0;
         g_ep.maxRate     = 0.0f;
-        g_ep.startYaw    = quatYawDeg >= 0.0f ? quatYawDeg : 0.0f;
+        g_ep.startYaw    = s.quatYawDeg >= 0.0f ? s.quatYawDeg : 0.0f;
         acclog::Write("CameraSpinDiag",
             "edge-guard START: mouseX=%u/%d edge=%s rate=%.0f deg/s "
             "rightClick=%d mouseLook=%d",
-            mouseX, (int)vpW, edge, rateDegPerSec,
+            s.mouseX, static_cast<int>(s.vpW), s.edge, s.rateDegPerSec,
             rightClick, mouseLook ? 1 : 0);
     }
-    if (g_ep.active) {
-        if (guardFired) g_ep.corrections++;
-        if (edgeNow) { g_ep.edgeFrames++; g_ep.lastEdgeMs = now; }
-        if (std::fabs(rateDegPerSec) > g_ep.maxRate)
-            g_ep.maxRate = std::fabs(rateDegPerSec);
-        if (now - g_ep.lastEdgeMs >= kEpisodeQuietMs)
-            EndEpisode(now, quatYawDeg >= 0.0f ? quatYawDeg : g_ep.startYaw);
+    if (!g_ep.active) return;
+    if (fired) g_ep.corrections++;
+    if (s.edgeNow) { g_ep.edgeFrames++; g_ep.lastEdgeMs = now; }
+    if (std::fabs(s.rateDegPerSec) > g_ep.maxRate) g_ep.maxRate = std::fabs(s.rateDegPerSec);
+    if (now - g_ep.lastEdgeMs >= kEpisodeQuietMs) {
+        EndEpisode(now, s.quatYawDeg >= 0.0f ? s.quatYawDeg : g_ep.startYaw);
     }
+}
 
-    // --- Uncommanded-rotation watch (cause-agnostic spin detector) ---
-    //
-    // The edge guard above knows one cause. This knows none: it watches for the
-    // SYMPTOM — the camera turning while the player commands nothing — so a
-    // spin from a stuck mouse axis, a latched mouse-look, or anything else we
-    // have not thought of still leaves a diagnosable record instead of the
-    // nothing we had for the field report that prompted this.
-    //
-    // Log-only by design. Correcting an unknown cause blind risks fighting the
-    // engine over a camera that is doing something legitimate we failed to
-    // gate; naming the cause comes first.
-    //
-    // 2026-09-14: the cause behind the KOTOR 2 field report was named — a
-    // turn-key release the engine discarded (its buffered keyboard model,
-    // gui-and-input-internals.md "keyboard_transition_stream") — and is fixed
-    // at the ingest point by engine_keyboard_resync.cpp, which re-delivers a
-    // lost release within two frames. A spin this watch reports from now on
-    // should therefore end on its own inside a fraction of a second and be
-    // accompanied by a "KeyboardResync: synthesised release" line; one that
-    // runs longer is a different cause again.
-    //
-    // Both queries below scan (panel stack / key state), so resolve once per
-    // tick — the tripwire further down wants the same two answers.
-    //
-    // Caveat worth knowing when reading a report: "commanding" covers keys,
-    // not a right-drag camera rotation, which holds no key. A mouse
-    // user could therefore turn the camera and have it read as uncommanded —
-    // hence the cursor position and right-click state in the report line. Not
-    // gated on here because the only mouse state we can read reliably across
-    // both games is the cursor, and a full uncommanded revolution is worth a
-    // line even when a mouse is involved.
-    bool playerCommanding = acc::engine_keymap::AnyMovementKeyHeld();
-    bool cameraNotOurs    = CameraDrivenByNonPlayer();
-    bool watchEligible = !cameraNotOurs && !playerCommanding &&
-                         acc::hotkeys::IsForegroundGame();
-    if (!watchEligible) {
-        EndSpinWatch(now, playerCommanding ? "player input"
-                                           : "camera handed over");
-    } else {
-        float absRate = std::fabs(rateDegPerSec);
-        // Either witness may be the live one; take whichever sees motion, on
-        // the same deg/s threshold so a dead quaternion read cannot make the
-        // bearing witness stricter than intended.
-        bool rotating = (haveRate && absRate >= kSpinRateThresh) ||
-                        (havePosStep &&
-                         std::fabs(posRateDps) >= kSpinRateThresh);
-        if (!rotating) {
-            EndSpinWatch(now, "rotation stopped");
-        } else {
-            if (!g_spin.active) {
-                g_spin.active    = true;
-                g_spin.startMs   = now;
-            }
-            ++g_spin.frames;
-            if (haveRate)       g_spin.accumQuat   += quatStepDeg;
-            if (havePosStep)    g_spin.accumPos    += posStepDeg;
-            if (havePlayerStep) g_spin.accumPlayer += playerStepDeg;
-            if (absRate > g_spin.maxRate) g_spin.maxRate = absRate;
-
-            // Report per full turn. A player-controlled camera has no
-            // legitimate reason to make a whole revolution on its own.
-            float turns = std::fabs(g_spin.accumQuat);
-            if (std::fabs(g_spin.accumPos) > turns) turns = std::fabs(g_spin.accumPos);
-            int due = (int)(turns / kSpinReportDeg);
-            if (due > g_spin.reports && g_spin.reports < kSpinMaxReports) {
-                g_spin.reports = due;
-                int  rightClick = SafeRead<int>(kAddrRightClickHeld, 0);
-                bool mouseLook  = false;
-                acc::engine::GetMouseLook(mouseLook);
-                // K2-only witnesses of the camera's own turn path (see the
-                // constants). -1 / -1 on K1 and when the module is not up.
-                float acclMirror = -1.0f;
-                int   turnedFlag = -1;
-                if (acc::game::IsKotor2()) {
-                    void* mod = acc::engine::GetClientModule();
-                    acclMirror = SafeReadOff<float>(mod, kK2ModuleAcclMirrorOffset, -1.0f);
-                    turnedFlag = SafeReadOff<int>(mod, kK2ModuleTurnedFlagOffset, -1);
-                }
-                // The two inputs UpdateCamera itself turns on, read the way it
-                // reads them. turnAxis is the engine's held-turn-key view (a
-                // stranded flag shows here even when the re-sync sees nothing);
-                // stickX is K2's native right stick, "n/a" where there is none.
-                float turnAxis = 0.0f;
-                bool  haveTurnAxis = acc::engine::PollTurnAxis(&turnAxis);
-                float stickX = 0.0f, stickY = 0.0f;
-                bool  haveStick = acc::engine::ReadNativeStickAxes(&stickX, &stickY);
-                char turnAxisBuf[16];
-                char stickBuf[16];
-                if (haveTurnAxis) _snprintf_s(turnAxisBuf, sizeof(turnAxisBuf), _TRUNCATE, "%.2f", turnAxis);
-                else              _snprintf_s(turnAxisBuf, sizeof(turnAxisBuf), _TRUNCATE, "n/a");
-                if (haveStick)    _snprintf_s(stickBuf, sizeof(stickBuf), _TRUNCATE, "%.2f", stickX);
-                else              _snprintf_s(stickBuf, sizeof(stickBuf), _TRUNCATE, "n/a");
-                acclog::Write("CameraSpinDiag",
-                    "UNCOMMANDED ROTATION x%d: quatTurn=%.0f deg posTurn=%.0f deg "
-                    "rate=%.0f deg/s duration=%ums frames=%d | mouseX=%u/%d "
-                    "mouseY=%u band=%dpx edge=%s mouseLook=%d rightClick=%d "
-                    "heldMoveVk=0x%02x camDist=%.1fm quatYaw=%.1f posYaw=%.1f "
-                    "| playerYaw=%.1f playerRate=%.0f deg/s playerTurn=%.0f deg "
-                    "turnAxis=%s stickX=%s acclMirror=%.2f turnedFlag=%d",
-                    due, g_spin.accumQuat, g_spin.accumPos, rateDegPerSec,
-                    now - g_spin.startMs, g_spin.frames, mouseX, (int)vpW,
-                    mouseY, bandPx, edge, mouseLook ? 1 : 0, rightClick,
-                    acc::engine_keymap::FirstMovementKeyHeld(),
-                    camDistM, quatYawDeg, posYawDeg,
-                    playerYawDeg, playerRateDps, g_spin.accumPlayer,
-                    turnAxisBuf, stickBuf, acclMirror, turnedFlag);
-                if (due >= kSpinMaxReports) {
-                    acclog::Write("CameraSpinDiag",
-                        "uncommanded-rotation: report cap reached (%d turns) — "
-                        "further turns this episode not logged",
-                        kSpinMaxReports);
-                }
-            }
-        }
+// One line per full uncommanded turn, with every input UpdateCamera turns on.
+void ReportSpinTurn(DWORD now, const Sample& s, int due) {
+    const int rightClick = SafeRead<int>(kAddrRightClickHeld, 0);
+    bool mouseLook = false;
+    acc::engine::GetMouseLook(mouseLook);
+    // K2-only witnesses of the camera's own turn path; -1 on K1 or without
+    // a module.
+    float acclMirror = -1.0f;
+    int   turnedFlag = -1;
+    if (acc::game::IsKotor2()) {
+        void* mod = acc::engine::GetClientModule();
+        acclMirror = SafeReadOff<float>(mod, kK2ModuleAcclMirrorOffset, -1.0f);
+        turnedFlag = SafeReadOff<int>(mod, kK2ModuleTurnedFlagOffset, -1);
     }
+    // The engine's held-turn-key view (a stranded flag shows here even when
+    // the re-sync sees nothing) and K2's native right stick.
+    float turnAxis = 0.0f;
+    const bool haveTurnAxis = acc::engine::PollTurnAxis(&turnAxis);
+    float stickX = 0.0f, stickY = 0.0f;
+    const bool haveStick = acc::engine::ReadNativeStickAxes(&stickX, &stickY);
+    char turnAxisBuf[16];
+    char stickBuf[16];
+    if (haveTurnAxis) _snprintf_s(turnAxisBuf, sizeof(turnAxisBuf), _TRUNCATE, "%.2f", turnAxis);
+    else              _snprintf_s(turnAxisBuf, sizeof(turnAxisBuf), _TRUNCATE, "n/a");
+    if (haveStick)    _snprintf_s(stickBuf, sizeof(stickBuf), _TRUNCATE, "%.2f", stickX);
+    else              _snprintf_s(stickBuf, sizeof(stickBuf), _TRUNCATE, "n/a");
+    acclog::Write("CameraSpinDiag",
+        "UNCOMMANDED ROTATION x%d: quatTurn=%.0f deg posTurn=%.0f deg "
+        "rate=%.0f deg/s duration=%ums frames=%d | mouseX=%u/%d "
+        "mouseY=%u band=%dpx edge=%s mouseLook=%d rightClick=%d "
+        "heldMoveVk=0x%02x camDist=%.1fm quatYaw=%.1f posYaw=%.1f "
+        "| playerYaw=%.1f playerRate=%.0f deg/s playerTurn=%.0f deg "
+        "turnAxis=%s stickX=%s acclMirror=%.2f turnedFlag=%d",
+        due, g_spin.accumQuat, g_spin.accumPos, s.rateDegPerSec,
+        now - g_spin.startMs, g_spin.frames, s.mouseX, static_cast<int>(s.vpW),
+        s.mouseY, s.bandPx, s.edge, mouseLook ? 1 : 0, rightClick,
+        acc::engine_keymap::FirstMovementKeyHeld(),
+        s.camDistM, s.quatYawDeg, s.posYawDeg,
+        s.playerYawDeg, s.playerRateDps, g_spin.accumPlayer,
+        turnAxisBuf, stickBuf, acclMirror, turnedFlag);
+    if (due >= kSpinMaxReports) {
+        acclog::Write("CameraSpinDiag",
+            "uncommanded-rotation: report cap reached (%d turns) — "
+            "further turns this episode not logged", kSpinMaxReports);
+    }
+}
 
-    // --- Camera-read sanity tripwire (fix #1 regression guard) ---
-    //
-    // Gated hard, because the two yaws are only comparable while the camera is
-    // in its ordinary follow pose behind the player: no cinematic or blocking
-    // screen driving it, no snap-turn of ours, no player turn input (the camera
-    // legitimately lags a turn by tens of degrees), and a plausible follow
-    // distance. Ungated this was pure noise — see kReadAnomalyDeg. On top of
-    // the gates the divergence must PERSIST, which is what separates a real
-    // regression from a transient the gates did not happen to catch.
-    bool crossCheckMeaningful =
-        quatYawDeg >= 0.0f && posYawDeg >= 0.0f &&
-        camDistM >= kFollowDistMinM && camDistM <= kFollowDistMaxM &&
-        !cameraNotOurs && !playerCommanding;
-    if (!crossCheckMeaningful) {
+// The cause-agnostic spin detector: the camera turning while the player
+// commands nothing leaves a record whatever drove it. Log-only on purpose:
+// correcting an unknown cause blind risks fighting a legitimate camera.
+// The K2 field report's cause (a turn-key release the engine discarded) is
+// fixed by engine_keyboard_resync.cpp, so a spin from now on should end
+// within a fraction of a second beside a "KeyboardResync: synthesised
+// release" line; a longer one is another cause. "Commanding" covers keys,
+// not a right-drag, hence the cursor and right-click in the report.
+void WatchUncommandedRotation(DWORD now, const Sample& s, bool commanding, bool notOurs) {
+    if (notOurs || commanding || !acc::hotkeys::IsForegroundGame()) {
+        EndSpinWatch(now, commanding ? "player input" : "camera handed over");
+        return;
+    }
+    // Either camera witness may be the live one, on the same threshold.
+    const float absRate = std::fabs(s.rateDegPerSec);
+    const bool rotating = (s.haveRate && absRate >= kSpinRateThresh) ||
+                          (s.havePosStep && std::fabs(s.posRateDps) >= kSpinRateThresh);
+    if (!rotating) {
+        EndSpinWatch(now, "rotation stopped");
+        return;
+    }
+    if (!g_spin.active) {
+        g_spin.active  = true;
+        g_spin.startMs = now;
+    }
+    ++g_spin.frames;
+    if (s.haveRate)       g_spin.accumQuat   += s.quatStepDeg;
+    if (s.havePosStep)    g_spin.accumPos    += s.posStepDeg;
+    if (s.havePlayerStep) g_spin.accumPlayer += s.playerStepDeg;
+    if (absRate > g_spin.maxRate) g_spin.maxRate = absRate;
+    // No legitimate engine behaviour turns a player camera a whole
+    // revolution on its own.
+    float turns = std::fabs(g_spin.accumQuat);
+    if (std::fabs(g_spin.accumPos) > turns) turns = std::fabs(g_spin.accumPos);
+    const int due = static_cast<int>(turns / kSpinReportDeg);
+    if (due > g_spin.reports && g_spin.reports < kSpinMaxReports) {
+        g_spin.reports = due;
+        ReportSpinTurn(now, s, due);
+    }
+}
+
+// The quaternion and bearing yaws are only comparable in the ordinary follow
+// pose (no cinematic, screen or snap-turn of ours, no turn input, a
+// plausible distance), and a regression persists where a transient does not.
+void CheckReadAnomaly(DWORD now, const Sample& s, bool commanding, bool notOurs) {
+    const bool meaningful = s.quatYawDeg >= 0.0f && s.posYawDeg >= 0.0f &&
+                            s.camDistM >= kFollowDistMinM && s.camDistM <= kFollowDistMaxM &&
+                            !notOurs && !commanding;
+    if (!meaningful) {
         g_anomalySinceMs = 0;
-    } else {
-        float d = AngularDelta(quatYawDeg, posYawDeg);
-        if (std::fabs(d) <= kReadAnomalyDeg) {
-            if (g_anomalyOpen) {
-                acclog::Write("CameraSpinDiag",
-                    "read-anomaly cleared: quatYaw=%.1f posYaw=%.1f diff=%.1f",
-                    quatYawDeg, posYawDeg, d);
-                g_anomalyOpen = false;
-            }
-            g_anomalySinceMs = 0;
-        } else {
-            if (g_anomalySinceMs == 0) g_anomalySinceMs = now;
-            DWORD held = now - g_anomalySinceMs;
-            if (held >= kAnomalyPersistMs &&
-                (!g_anomalyOpen || now - g_lastAnomalyMs >= kAnomalyRepeatMs)) {
-                acclog::Write("CameraSpinDiag",
-                    "READ ANOMALY (held %ums): quatYaw=%.1f posYaw=%.1f "
-                    "diff=%.1f camDist=%.1fm mouseX=%u/%d — the quaternion yaw "
-                    "read may have regressed; the edge guard's rotation test "
-                    "depends on it",
-                    held, quatYawDeg, posYawDeg, d, camDistM, mouseX, (int)vpW);
-                g_lastAnomalyMs = now;
-                g_anomalyOpen   = true;
-            }
-        }
+        return;
     }
+    const float d = AngularDelta(s.quatYawDeg, s.posYawDeg);
+    if (std::fabs(d) <= kReadAnomalyDeg) {
+        if (g_anomalyOpen) {
+            acclog::Write("CameraSpinDiag",
+                "read-anomaly cleared: quatYaw=%.1f posYaw=%.1f diff=%.1f",
+                s.quatYawDeg, s.posYawDeg, d);
+            g_anomalyOpen = false;
+        }
+        g_anomalySinceMs = 0;
+        return;
+    }
+    if (g_anomalySinceMs == 0) g_anomalySinceMs = now;
+    const DWORD held = now - g_anomalySinceMs;
+    if (held >= kAnomalyPersistMs &&
+        (!g_anomalyOpen || now - g_lastAnomalyMs >= kAnomalyRepeatMs)) {
+        acclog::Write("CameraSpinDiag",
+            "READ ANOMALY (held %ums): quatYaw=%.1f posYaw=%.1f "
+            "diff=%.1f camDist=%.1fm mouseX=%u/%d — the quaternion yaw "
+            "read may have regressed; the edge guard's rotation test "
+            "depends on it",
+            held, s.quatYawDeg, s.posYawDeg, d, s.camDistM, s.mouseX, static_cast<int>(s.vpW));
+        g_lastAnomalyMs = now;
+        g_anomalyOpen   = true;
+    }
+}
+
+}  // namespace
+
+void Tick() {
+    const DWORD now = acc::tick::NowMs();
+    // Out of the world: drop the rate samples (no bogus jump on re-entry)
+    // and close what is open (an area transition mid-spin).
+    Vector playerPos;
+    if (!acc::engine::GetPlayerPosition(playerPos)) {
+        g_state.have = false;
+        g_state.havePos = false;
+        g_state.havePlayer = false;
+        g_anomalySinceMs = 0;
+        EndSpinWatch(now, "left the world");
+        if (g_ep.active) EndEpisode(now, g_ep.startYaw);
+        return;
+    }
+    Sample s;
+    SampleYaws(now, playerPos, s);
+    SampleCursor(s);
+    TrackEpisode(now, s, ApplyEdgeGuard(s));
+
+    // Both scan (panel stack, key state): resolved once for both checks.
+    const bool commanding = acc::engine_keymap::AnyMovementKeyHeld();
+    const bool notOurs = CameraDrivenByNonPlayer();
+    WatchUncommandedRotation(now, s, commanding, notOurs);
+    CheckReadAnomaly(now, s, commanding, notOurs);
 }
 
 }  // namespace acc::camera_spin_guard
