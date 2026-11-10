@@ -11,6 +11,7 @@
 #include "guidance_autowalk.h"
 #include "guidance_description.h"
 #include "guidance_pathfind.h"
+#include "interact_dispatch.h"
 #include "log.h"
 #include "map_shipped_hints.h"
 #include "narrated_target.h"
@@ -114,25 +115,6 @@ bool TryResolveOrAnnounceNoFocus(NarratedActivation& a, const char* logTag) {
     acc::speech::Speak(msg, /*interrupt=*/true);
     acclog::Write("Cycle", "%s -> [%s] (no narrated target)", logTag, msg);
     return false;
-}
-
-// Per-kind pre-roll Id picker. Mirrors interact_hotkey's PreRollFor (kept
-// local because that one's in an anon namespace) — the Shift+- autowalk
-// speech uses the same vocabulary as Enter ("Talk to X", "Open X",
-// "Pick up X") so users hear consistent verbs across the two paths.
-acc::strings::Id GuidancePreRollFor(acc::filter::CycleCategory c) {
-    using C = acc::filter::CycleCategory;
-    using S = acc::strings::Id;
-    switch (c) {
-        case C::Door:       return S::FmtInteractOpen;
-        case C::Npc:        return S::FmtInteractTalk;
-        case C::Container:  return S::FmtInteractOpen;
-        case C::Item:       return S::FmtInteractTake;
-        case C::Landmark:   return S::FmtInteractOpen;
-        case C::Transition: return S::FmtInteractOpen;
-        case C::Count_:     break;
-    }
-    return S::FmtInteractOpen;
 }
 
 // True when a screen or popup owns the keyboard, so queueing a walk on the
@@ -274,7 +256,7 @@ void OnPathfindFocus() {
 
     char msg[192];
     std::snprintf(msg, sizeof(msg),
-                  acc::strings::Get(GuidancePreRollFor(a.category)),
+                  acc::strings::Get(acc::interact::PreRollFor(a.category)),
                   a.name);
 
     // Dispatch. Map pins and handle-less targets have no object to "use" —

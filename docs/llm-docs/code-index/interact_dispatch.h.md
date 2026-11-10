@@ -1,4 +1,4 @@
-# interact_dispatch.h (26 lines)
+# interact_dispatch.h (36 lines)
 
 Source: `patches/Accessibility/interact_dispatch.h`
 
@@ -10,4 +10,5 @@ Self-gates on player loaded so menus + chargen pass Enter through.
 
 ## Declarations (in source order)
 
-- L23 `void DispatchInteract(void* target, uint32_t handle, bool forceRadial)`: Self-gates additionally on !view_mode::IsActive — view mode owns Enter routing (cursor hover is the truth, not cycle/LastTarget).
+- L23 `acc::strings::Id PreRollFor(acc::filter::CycleCategory c)`: The verb before a target's name for its kind ("Open X", "Talk to X", "Pick up X"); Enter and the Shift+- walk speak the same verbs.
+- L33 `void DispatchInteract(void* target, uint32_t handle, bool forceRadial)`: Self-gates additionally on !view_mode::IsActive — view mode owns Enter routing (cursor hover is the truth, not cycle/LastTarget).

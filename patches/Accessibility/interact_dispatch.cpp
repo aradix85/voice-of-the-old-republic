@@ -56,22 +56,6 @@ void ArmInteractApproach(const char* name, void* target, bool inputDisabled,
     acc::guidance::ArmApproach(arm);
 }
 
-// The action verb that goes before the target name, per kind.
-acc::strings::Id PreRollFor(acc::filter::CycleCategory c) {
-    using C = acc::filter::CycleCategory;
-    using S = acc::strings::Id;
-    switch (c) {
-        case C::Door:       return S::FmtInteractOpen;
-        case C::Npc:        return S::FmtInteractTalk;
-        case C::Container:  return S::FmtInteractOpen;
-        case C::Item:       return S::FmtInteractTake;
-        case C::Landmark:   return S::FmtInteractOpen;  // landmark = waypoint
-        case C::Transition: return S::FmtInteractOpen;  // transition = doorway
-        case C::Count_:     break;
-    }
-    return S::FmtInteractOpen;
-}
-
 // First matching category, like passive_narrate; Count_ when none matches
 // (the interact still runs, without a localised pre-roll).
 acc::filter::CycleCategory ClassifyForInteract(void* obj) {
@@ -274,6 +258,21 @@ bool DispatchVerb(acc::picker::ActionSnapshot& snap, uint32_t dispatchHandle,
 }
 
 }  // namespace
+
+acc::strings::Id PreRollFor(acc::filter::CycleCategory c) {
+    using C = acc::filter::CycleCategory;
+    using S = acc::strings::Id;
+    switch (c) {
+        case C::Door:       return S::FmtInteractOpen;
+        case C::Npc:        return S::FmtInteractTalk;
+        case C::Container:  return S::FmtInteractOpen;
+        case C::Item:       return S::FmtInteractTake;
+        case C::Landmark:   return S::FmtInteractOpen;  // landmark = waypoint
+        case C::Transition: return S::FmtInteractOpen;  // transition = doorway
+        case C::Count_:     break;
+    }
+    return S::FmtInteractOpen;
+}
 
 // The in-game menu (Escape menu and its tabs, which keep the InGameMenu strip
 // in the foreground) is the only blocker the action-menu openers switch out

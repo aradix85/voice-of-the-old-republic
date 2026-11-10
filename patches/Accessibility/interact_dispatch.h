@@ -10,8 +10,18 @@
 //
 // Self-gates on player loaded so menus + chargen pass Enter through.
 #pragma once
+
+#include "filter_objects.h"
+#include "strings.h"
+
 #include <cstdint>
+
 namespace acc::interact {
+
+// The verb before a target's name for its kind ("Open X", "Talk to X",
+// "Pick up X"); Enter and the Shift+- walk speak the same verbs.
+acc::strings::Id PreRollFor(acc::filter::CycleCategory c);
+
 // Self-gates additionally on !view_mode::IsActive — view mode owns
 // Enter routing (cursor hover is the truth, not cycle/LastTarget).
 // view_mode dispatches into DispatchInteract below, so behaviour is
