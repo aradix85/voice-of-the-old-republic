@@ -1,24 +1,16 @@
 # Changelog
 
-All notable changes to the Voice of the Old Republic mod.
+All notable changes to Voice of the Old Republic. The top section is this fork
+(aradix85, branch bridge); the sections below it are the original mod's
+releases, kept as history.
 
-Versioned releases below. The release script (`installer/release.ps1`) reads the
-topmost `<h2>vX.Y.Z</h2>` heading to determine the version it ships (legacy
-`## vX.Y.Z` is still recognised for older sections), and uses the bullets under
-that heading as the GitHub release body. When preparing a release, rename the
-`Unreleased` section to the new version and add the relevant bullets, grouped
-under short topic subheadings (`<h3>Installer:</h3>`, `<h3>Bug fixes:</h3>`,
-etc.). Subsection headings use HTML tags so GitHub renders them as proper
-headings in the release body (markdown `**Installer:**` only renders as bold).
-
-Every version section opens with an `<h3>Overview:</h3>` subsection listing
-**every** change in the release, one bullet each, **one short sentence** — the
-user-facing consequence only (what works now, the new hotkey, the problem
-fixed). No mechanism, no cause, no before/after. Most readers read only the
-overview and should come away knowing everything that changed; the topic
-subsections below it carry the full story for those who want it. Keep the
-overview in the same order as the subsections that follow, and fold log-only
-changes into a single trailing "Log only:" bullet.
+Every section opens with an `<h3>Overview:</h3>` subsection listing **every**
+change, one bullet each, **one short sentence** — the user-facing consequence
+only (what works now, the new hotkey, the problem fixed). No mechanism, no
+cause, no before/after. Most readers read only the overview and should come
+away knowing everything that changed; the topic subsections below it carry the
+full story. Keep the overview in the same order as the subsections that
+follow, and fold log-only changes into a single trailing "Log only:" bullet.
 
 Bullet rules (these govern the topic subsections, not the overview):
 
@@ -34,19 +26,11 @@ Bullet rules (these govern the topic subsections, not the overview):
 - **Never document unchanged behaviour** ("X is unaffected", "still works as
   before"); omit it. One fix per bullet — split conflated changes.
 
-Write examples in **English**, not the German in-game labels. The release
-notes are English-only and most readers are English-speaking, so quote UI
-elements in English — "Force Powers" not "Machtkräfte", "Strength" not
-"Stärke", "in the party" not "im Team". (The mod itself still speaks the
-player's installed language in-game; this only governs how we *describe* it
-here.) Where naming the exact spoken string matters, give the English term
-and add the German in parentheses if it genuinely aids clarity.
-
 <h2>v0.9.1+bridge (fork aradix85, branch bridge)</h2>
 
 Changes on top of v0.9.1 in this fork. Not part of an upstream release; each
-push to the branch is built by GitHub Actions and published as the pre-release
-`bridge-latest`.
+push to the branch is built by GitHub Actions and published, with the
+installer, as the pre-release `bridge-latest`.
 
 <h3>Overview:</h3>
 
@@ -111,16 +95,25 @@ push to the branch is built by GitHub Actions and published as the pre-release
 - The game's map notes, such as "Duel Organizer", are always in the , / .
   landmark list, also before you have been there.
 - A bystander's remark is no longer cut off by the automatic target line.
-- New setting: everything is spoken by the screen reader (no SAPI or compass
-  voice, no 3D speech).
+- Speech and braille go through NVDA only; there is no other screen reader
+  support, no SAPI or compass voice and no 3D speech.
+- The exploration sounds are gone: what they told you is said in words.
+- Ctrl+- describes the route step by step instead of starting a sound beacon.
+- The map cursor says "Edge of the map" and the view-mode cursor says "Wall".
+- The combat heartbeat is gone.
+- The mod and the installer are English only and assume the English game.
 - Enter on an open door walks through it.
 - Endar Spire: Trask as party leader can no longer try the door that must be
   opened by your own character.
-- F1 help and the README list the new keys.
+- F1 help lists the new keys.
+- The README is rewritten for this fork.
 - A local bridge lets an external helper read the game state and act in the
   game.
 - The in-game updater is gone: F5 on the main menu no longer checks for or
   installs the maker's releases.
+- The installer installs NVDA's controller client, downloads the mod from
+  this fork, and no longer updates itself.
+- Every build publishes the installer next to the mod.
 - The code is being reorganised into smaller parts with less duplication,
   and has unit tests; play is meant to stay the same.
 - Log only: the patch log can be read while the game runs; lock lines name a
@@ -295,18 +288,42 @@ push to the branch is built by GitHub Actions and published as the pre-release
   to try is refused with a spoken explanation (trying it as Trask ended in a
   black screen). The "Sealed" line waits 15 seconds after his scene.
 
-<h3>Speech:</h3>
+<h3>Speech and sound:</h3>
 
-- Setting "All via screen reader": no SAPI or compass voice and no 3D speech;
-  everything goes to the screen reader.
+- Speech and braille go through the NVDA Controller Client
+  (`third_party/nvda`, `nvdaControllerClient32.dll` in the patches folder):
+  every line is spoken and sent to the braille display. Prism, Tolk, the SAPI
+  voices (urgent and compass), positional 3D speech and the "All via screen
+  reader" and Windows voices settings are gone. Without NVDA the mod is
+  silent.
+- The exploration sounds are gone: wall proximity, door, object and
+  collision cues, the cycling and Q/E cues, the audio-frame probe and the
+  combat heartbeat, with the Wall sounds setting and the glossary's
+  exploration entries. The minigame cues (swoop race, turret) stay.
+- Ctrl+- (Ctrl+/) describes the route to the focused object step by step;
+  it used to arm a sound beacon. N turns to exits only.
+- The map cursor says "Edge of the map" once per push against the edge, and
+  the view-mode cursor says "Wall" once per contact.
+
+<h3>Language:</h3>
+
+- The mod speaks English only: the German, French, Italian, Spanish, Polish
+  and Russian tables, the language detection from `dialog.tlk` and the
+  per-language combat-log anchors and effect names are gone. The mod assumes
+  the English game; on another language the combat lines are not shortened.
+- The installer is English only and no longer handles other game languages
+  (localized TSLRCM editions, K1CP translation overlays).
 
 <h3>Help:</h3>
 
 - F1 lists Ctrl+N, Ctrl+Shift+N, Ctrl+L and Ctrl+H; the Q/E, , / . and Ctrl+N
   descriptions match the new behaviour, and the Ctrl+Shift+N line mentions the
-  door attempt. The README (all seven languages) lists
-  the new keys and what a region announcement says. The new keys have no
-  controller rows yet.
+  door attempt. The new keys have no controller rows yet.
+- The README is rewritten for this fork: how it differs from the original,
+  installing from `bridge-latest`, finding your way, keys, settings, the
+  bridge and troubleshooting. The translated READMEs are gone.
+- The mod's "Open the guide" and "Latest changes" links open this fork's
+  README and changelog.
 
 <h3>Bridge:</h3>
 
@@ -318,11 +335,28 @@ push to the branch is built by GitHub Actions and published as the pre-release
 - No world reads happen before the player exists, so a new game no longer
   sticks on the load screen.
 - Party entries in `/state` carry their handle.
+- `/state` is built when it is asked for instead of every 250 ms, so the
+  bridge reads nothing from the game while no tool asks.
+- `/objects` includes people (with dead and hostile) and each object's tag.
+- The token header must match exactly, and a bad `%XX` in a request no
+  longer turns into a NUL.
+
+<h3>Installer:</h3>
+
+- Installs `nvdaControllerClient32.dll` with its license and removes
+  `prism.dll` and `Tolk.dll` on upgrade; the Windows voices option is gone.
+- Downloads `Accessibility.kpatch` from this fork's `bridge-latest`. A build
+  is named by its commit ("bridge-6d24c11"); an update is offered when the
+  published build differs from the installed one.
+- No self-update, no `--auto-update` mode for the removed in-game updater,
+  no language choice. The Readme link and the uninstall entry's help link
+  open this fork's README.
 
 <h3>Build:</h3>
 
-- GitHub Actions builds `accessibility.dll` on every push to `bridge` and
-  publishes it as the pre-release `bridge-latest`.
+- GitHub Actions builds `accessibility.dll` and the installer on every push
+  to `bridge` and publishes them as the pre-release `bridge-latest`.
+  `installer/release.ps1`, the original mod's release script, is gone.
 - The in-game updater (`update_checker`, F5 on the main menu) is removed. In
   this fork it would have replaced the fork's DLL with the maker's release;
   the fork takes upstream changes over by hand instead. Its strings, keybind
@@ -330,10 +364,13 @@ push to the branch is built by GitHub Actions and published as the pre-release
 - `tools/analysis/`: scripts that measure the patch source (function length
   and complexity with lizard, clones, include cycles, single-use functions,
   same-named helpers across files), plan a split, and generate the code index.
-- Refactoring (in progress): large files split into one job per file
-  (exit_memory and room_topology so far, with `tools/analysis/split_file.py`), duplicated helpers merged (door lookup, distances,
-  case folding), unused functions removed. Unit tests (doctest, `tests/unit`,
-  `tools/tests/run_unit_tests.ps1`) run on every build.
+- Refactoring (in progress): large files split into one job per file with
+  `tools/analysis/split_file.py` (exit_memory, room_topology, menus_extract,
+  menus_listbox, the turret and swoop minigames, speech, the bridge),
+  duplicated helpers merged (door lookup, distances, case folding), unused
+  functions removed. Unit tests (doctest, `tests/unit`,
+  `tools/tests/run_unit_tests.ps1`) run on every build. `kdev
+  combat-strings-extract` is gone with the other languages.
 - Log only: the patch log is opened shared for reading, so it can be followed
   while the game runs.
 
