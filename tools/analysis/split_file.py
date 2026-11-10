@@ -216,14 +216,17 @@ def main() -> None:
 
     # Statements and declared names per chunk.
     for ch in chunks:
-        stmt, d = [], 0
+        stmt, d, pp = [], 0, False
         for k in ch.lines:
             s = C(k).strip()
-            if not s:
+            if not s and not pp:
                 continue
             stmt.append(k)
-            if s.startswith("#"):
-                ch.stmts.append({"lines": stmt}); stmt = []  # noqa: E702
+            if pp or s.startswith("#"):
+                # A preprocessor line, with its backslash continuations.
+                pp = s.endswith("\\")
+                if not pp:
+                    ch.stmts.append({"lines": stmt}); stmt = []  # noqa: E702
                 continue
             d += s.count("{") - s.count("}")
             if d == 0 and (s.endswith(";") or s.endswith("}")):
