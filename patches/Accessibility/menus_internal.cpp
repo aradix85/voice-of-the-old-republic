@@ -29,6 +29,8 @@
 
 using namespace acc::engine;
 
+namespace acc::menus::detail {
+
 // CSWGuiSaveLoad control ids from saveload.gui / K2 saveload_p.gui
 // (verified against chain logs: patch-20260505-160124.log lines 45-65;
 // K2 witnessed live in patch-20260813-212757 — K2 re-authored the screen
@@ -56,7 +58,7 @@ inline int SaveLoadBtnSaveLoadId() { return 14; }
 constexpr int kKotor2GuiAuthoringWidth = 800;
 
 // See menus_internal.h for why this exists and when it is a no-op.
-int acc::menus::detail::ScaleGuiThresholdPx(int guiPx) {
+int ScaleGuiThresholdPx(int guiPx) {
     if (!acc::game::IsKotor2()) return guiPx;
     HWND hwnd = GetActiveWindow();
     if (!hwnd) return guiPx;
@@ -80,7 +82,7 @@ int acc::menus::detail::ScaleGuiThresholdPx(int guiPx) {
 // passed and the read faulted. Same failure class as the FocusProbe and
 // TryPartyPortrait crashes: engine reads here are guarded by convention, and
 // this one was the exception.
-bool acc::menus::detail::GetControlCenter(void* control, int& outCx, int& outCy) {
+bool GetControlCenter(void* control, int& outCx, int& outCy) {
     if (!control) return false;
     __try {
         auto* ext = reinterpret_cast<int*>(
@@ -115,7 +117,7 @@ bool acc::menus::detail::GetControlCenter(void* control, int& outCx, int& outCy)
 //
 // Long-term: replace with a proper CSWGuiControl::GetIsSelectable call
 // (vtable lookup at 0x4189d0) to also include editbox / listbox / etc.
-bool acc::menus::detail::IsChainNavigable(void* control) {
+bool IsChainNavigable(void* control) {
     if (!control) return false;
     if (CallDowncast(control, kVtableAsButton)        != nullptr) return true;
     if (CallDowncast(control, kVtableAsButtonToggle)  != nullptr) return true;
@@ -131,7 +133,7 @@ bool acc::menus::detail::IsChainNavigable(void* control) {
 // Step 4 of the refactor lifted the listbox-driven panel handlers
 // (Container / SaveLoad / EquipPicker) into menus_listbox.cpp; this helper
 // now spans both TUs via menus_internal.h.
-void* acc::menus::detail::FindControlById(void* panel, int id) {
+void* FindControlById(void* panel, int id) {
     if (!panel) return nullptr;
     // SEH: the panel may be freed, and the controls array can carry a
     // non-null garbage tail entry (the chargen TryPartyPortrait crash).
@@ -173,13 +175,13 @@ int SlotIndexInEmbeddedArray(void* panel, void* control,
 }
 }  // namespace
 
-int acc::menus::detail::EquipSlotIndexFromButton(void* panel, void* control) {
+int EquipSlotIndexFromButton(void* panel, void* control) {
     return SlotIndexInEmbeddedArray(panel, control,
                                     kEquipPanelSlotButtonsOffset,
                                     kEquipPanelSlotButtonStride);
 }
 
-int acc::menus::detail::EquipSlotIndexFromControl(void* panel, void* control) {
+int EquipSlotIndexFromControl(void* panel, void* control) {
     int idx = EquipSlotIndexFromButton(panel, control);
     if (idx >= 0) return idx;
     return SlotIndexInEmbeddedArray(panel, control,
@@ -212,28 +214,28 @@ void* PanelMemberWithTripwire(void* panel, size_t memberOff, int guiId,
 }
 }  // namespace
 
-void* acc::menus::detail::EquipPanelItemsListBox(void* panel) {
+void* EquipPanelItemsListBox(void* panel) {
     return PanelMemberWithTripwire(panel, kEquipPanelItemsListBoxOffset,
                                    kEquipLbItemsId, "Equip.LB_ITEMS");
 }
 
-void* acc::menus::detail::EquipPanelEquipButton(void* panel) {
+void* EquipPanelEquipButton(void* panel) {
     return PanelMemberWithTripwire(panel, kEquipPanelEquipButtonOffset,
                                    kEquipBtnEquipId, "Equip.BTN_EQUIP");
 }
 
-void* acc::menus::detail::EquipPanelBackButton(void* panel) {
+void* EquipPanelBackButton(void* panel) {
     return PanelMemberWithTripwire(panel, kEquipPanelBackButtonOffset,
                                    kEquipBtnBackId, "Equip.BTN_BACK");
 }
 
-void* acc::menus::detail::UpgradePanelItemsListBox(void* panel) {
+void* UpgradePanelItemsListBox(void* panel) {
     return PanelMemberWithTripwire(panel, kUpgradePanelItemsListBoxOffset,
                                    kWorkbenchUpgradeLbItemsId,
                                    "Upgrade.LB_ITEMS");
 }
 
-void* acc::menus::detail::UpgradePanelAssembleButton(void* panel) {
+void* UpgradePanelAssembleButton(void* panel) {
     // No id tripwire: the historical id 24 is a K2 slot-button id too, so
     // an id lookup is ambiguous there by construction.
     return PanelMemberWithTripwire(panel, kUpgradePanelAssembleButtonOffset,
@@ -241,7 +243,7 @@ void* acc::menus::detail::UpgradePanelAssembleButton(void* panel) {
                                    "Upgrade.BTN_ASSEMBLE");
 }
 
-void* acc::menus::detail::UpgradePanelBackButton(void* panel) {
+void* UpgradePanelBackButton(void* panel) {
     return PanelMemberWithTripwire(panel, kUpgradePanelBackButtonOffset,
                                    kWorkbenchUpgradeBtnBackId,
                                    "Upgrade.BTN_BACK");
@@ -251,18 +253,18 @@ void* acc::menus::detail::UpgradePanelBackButton(void* panel) {
 // games' ctors, see kSaveLoadPanel*Offset). Callers should have vetted the
 // panel with IsSaveLoadPanel first; the member address is pure pointer
 // arithmetic either way.
-void* acc::menus::detail::SaveLoadPanelGamesListBox(void* panel) {
+void* SaveLoadPanelGamesListBox(void* panel) {
     return PanelMemberWithTripwire(panel, kSaveLoadPanelGamesListBoxOffset,
                                    SaveLoadLbGamesId(), "SaveLoad.LB_GAMES");
 }
 
-void* acc::menus::detail::SaveLoadPanelActionButton(void* panel) {
+void* SaveLoadPanelActionButton(void* panel) {
     return PanelMemberWithTripwire(panel, kSaveLoadPanelActionButtonOffset,
                                    SaveLoadBtnSaveLoadId(),
                                    "SaveLoad.BTN_SAVELOAD");
 }
 
-void* acc::menus::detail::SaveLoadPanelBackButton(void* panel) {
+void* SaveLoadPanelBackButton(void* panel) {
     return PanelMemberWithTripwire(panel, kSaveLoadPanelBackButtonOffset,
                                    SaveLoadBtnBackId(), "SaveLoad.BTN_BACK");
 }
@@ -290,42 +292,42 @@ void* CraftMemberWithTripwire(void* panel, size_t componentOff,
 }
 }  // namespace
 
-void* acc::menus::detail::UpgradeSelPanelListBox(void* panel) {
+void* UpgradeSelPanelListBox(void* panel) {
     return PanelMemberWithTripwire(panel, kUpgradeSelPanelListBoxOffset,
                                    /*LB_UPGRADELIST=*/9,
                                    "UpgradeSel.LB_UPGRADELIST");
 }
 
-void* acc::menus::detail::UpgradeSelPanelUpgradeButton(void* panel) {
+void* UpgradeSelPanelUpgradeButton(void* panel) {
     return PanelMemberWithTripwire(panel, kUpgradeSelPanelUpgradeButtonOffset,
                                    /*BTN_UPGRADEITEMS=*/5,
                                    "UpgradeSel.BTN_UPGRADEITEMS");
 }
 
-void* acc::menus::detail::UpgradeSelPanelTitleLabel(void* panel) {
+void* UpgradeSelPanelTitleLabel(void* panel) {
     return PanelMemberWithTripwire(panel, kUpgradeSelPanelTitleLabelOffset,
                                    /*LBL_TITLE=*/4, "UpgradeSel.LBL_TITLE");
 }
 
-void* acc::menus::detail::CraftPanelShopListBox(void* panel) {
+void* CraftPanelShopListBox(void* panel) {
     return CraftMemberWithTripwire(panel, kCraftComponentShopListBoxOffset,
                                    kCraftChemicalShopListBoxOffset,
                                    /*LB_SHOPITEMS=*/4, "Craft.LB_SHOPITEMS");
 }
 
-void* acc::menus::detail::CraftPanelInvListBox(void* panel) {
+void* CraftPanelInvListBox(void* panel) {
     return CraftMemberWithTripwire(panel, kCraftComponentInvListBoxOffset,
                                    kCraftChemicalInvListBoxOffset,
                                    /*LB_INVITEMS=*/5, "Craft.LB_INVITEMS");
 }
 
-void* acc::menus::detail::CraftPanelAcceptButton(void* panel) {
+void* CraftPanelAcceptButton(void* panel) {
     return CraftMemberWithTripwire(panel, kCraftComponentAcceptButtonOffset,
                                    kCraftChemicalAcceptButtonOffset,
                                    /*BTN_Accept=*/12, "Craft.BTN_Accept");
 }
 
-void* acc::menus::detail::CraftPanelExamineButton(void* panel) {
+void* CraftPanelExamineButton(void* panel) {
     bool medical = acc::engine::IdentifyPanel(panel) ==
                    acc::engine::PanelKind::WorkbenchCreateMedical;
     return CraftMemberWithTripwire(panel, kCraftComponentExamineButtonOffset,
@@ -334,7 +336,7 @@ void* acc::menus::detail::CraftPanelExamineButton(void* panel) {
                                    "Craft.BTN_Examine");
 }
 
-void* acc::menus::detail::CraftPanelTitleLabel(void* panel) {
+void* CraftPanelTitleLabel(void* panel) {
     bool medical = acc::engine::IdentifyPanel(panel) ==
                    acc::engine::PanelKind::WorkbenchCreateMedical;
     return CraftMemberWithTripwire(panel, kCraftComponentTitleLabelOffset,
@@ -348,43 +350,43 @@ void* acc::menus::detail::CraftPanelTitleLabel(void* panel) {
 // the two games re-number pwrlvlup's controls AND collide (K1 id 6 is
 // LB_POWERS while K2 id 6 is a label; K1 id 12 is BTN_BACK while K2 id 12
 // is LB_POWERS), which is exactly the fragility this audit removes.
-void* acc::menus::detail::PowersPanelPowersListBox(void* panel) {
+void* PowersPanelPowersListBox(void* panel) {
     return PanelMemberWithTripwire(panel, kPowersPanelPowersListBoxOffset,
                                    acc::game::IsKotor2() ? 12 : 6,
                                    "Powers.LB_POWERS");
 }
 
-void* acc::menus::detail::PowersPanelDescListBox(void* panel) {
+void* PowersPanelDescListBox(void* panel) {
     return PanelMemberWithTripwire(panel, kPowersPanelDescListBoxOffset,
                                    acc::game::IsKotor2() ? 3 : 7,
                                    "Powers.LB_DESC");
 }
 
-void* acc::menus::detail::PowersPanelPowerLabel(void* panel) {
+void* PowersPanelPowerLabel(void* panel) {
     return PanelMemberWithTripwire(panel, kPowersPanelPowerLabelOffset,
                                    acc::game::IsKotor2() ? 4 : 8,
                                    "Powers.LBL_POWER");
 }
 
-void* acc::menus::detail::PowersPanelSubTitleLabel(void* panel) {
+void* PowersPanelSubTitleLabel(void* panel) {
     return PanelMemberWithTripwire(panel, kPowersPanelSubTitleLabelOffset,
                                    /*SUB_TITLE_LBL, both games*/ 1,
                                    "Powers.SUB_TITLE_LBL");
 }
 
-void* acc::menus::detail::PowersPanelRecommendedButton(void* panel) {
+void* PowersPanelRecommendedButton(void* panel) {
     return PanelMemberWithTripwire(panel, kPowersPanelRecommendedButtonOffset,
                                    acc::game::IsKotor2() ? 11 : 9,
                                    "Powers.RECOMMENDED_BTN");
 }
 
-void* acc::menus::detail::PowersPanelAcceptButton(void* panel) {
+void* PowersPanelAcceptButton(void* panel) {
     return PanelMemberWithTripwire(panel, kPowersPanelAcceptButtonOffset,
                                    acc::game::IsKotor2() ? 10 : 11,
                                    "Powers.ACCEPT_BTN");
 }
 
-void* acc::menus::detail::PowersPanelBackButton(void* panel) {
+void* PowersPanelBackButton(void* panel) {
     return PanelMemberWithTripwire(panel, kPowersPanelBackButtonOffset,
                                    acc::game::IsKotor2() ? 9 : 12,
                                    "Powers.BACK_BTN");
@@ -393,22 +395,22 @@ void* acc::menus::detail::PowersPanelBackButton(void* panel) {
 // CSWGuiContainer resolvers (see menus_internal.h). container.gui and
 // container_p.gui number these identically, so one tripwire id per
 // control covers both games.
-void* acc::menus::detail::ContainerPanelItemsListBox(void* panel) {
+void* ContainerPanelItemsListBox(void* panel) {
     return PanelMemberWithTripwire(panel, kContainerPanelItemsListBoxOffset,
                                    /*LB_ITEMS=*/2, "Container.LB_ITEMS");
 }
 
-void* acc::menus::detail::ContainerPanelOkButton(void* panel) {
+void* ContainerPanelOkButton(void* panel) {
     return PanelMemberWithTripwire(panel, kContainerPanelOkButtonOffset,
                                    /*BTN_OK=*/3, "Container.BTN_OK");
 }
 
-void* acc::menus::detail::ContainerPanelCancelButton(void* panel) {
+void* ContainerPanelCancelButton(void* panel) {
     return PanelMemberWithTripwire(panel, kContainerPanelCancelButtonOffset,
                                    /*BTN_CANCEL=*/5, "Container.BTN_CANCEL");
 }
 
-void* acc::menus::detail::ContainerPanelGiveItemsButton(void* panel) {
+void* ContainerPanelGiveItemsButton(void* panel) {
     return PanelMemberWithTripwire(panel, kContainerPanelGiveItemsButtonOffset,
                                    /*BTN_GIVEITEMS=*/4,
                                    "Container.BTN_GIVEITEMS");
@@ -421,19 +423,19 @@ void* acc::menus::detail::ContainerPanelGiveItemsButton(void* panel) {
 // old id table mis-fire on KOTOR 2 (patch-20260803-011930.log: reading a
 // listbox as a button spoke a stray str_ref and Enter activated the
 // listbox instead of Cancel).
-void* acc::menus::detail::FeatsPanelAcceptButton(void* panel) {
+void* FeatsPanelAcceptButton(void* panel) {
     return PanelMemberWithTripwire(panel, kFeatsCharGenAcceptButtonOffset,
                                    acc::game::IsKotor2() ? 10 : 11,
                                    "Feats.BTN_ACCEPT");
 }
 
-void* acc::menus::detail::FeatsPanelBackButton(void* panel) {
+void* FeatsPanelBackButton(void* panel) {
     return PanelMemberWithTripwire(panel, kFeatsCharGenBackButtonOffset,
                                    acc::game::IsKotor2() ? 9 : 12,
                                    "Feats.BTN_BACK");
 }
 
-void* acc::menus::detail::FeatsPanelRecommendedButton(void* panel) {
+void* FeatsPanelRecommendedButton(void* panel) {
     return PanelMemberWithTripwire(panel, kFeatsCharGenRecommendedButtonOffset,
                                    acc::game::IsKotor2() ? 11 : 9,
                                    "Feats.BTN_RECOMMENDED");
@@ -441,17 +443,17 @@ void* acc::menus::detail::FeatsPanelRecommendedButton(void* panel) {
 
 // CSWGuiSkillInfoBox resolvers (see menus_internal.h). skillinfo.gui and
 // skillinfo_p.gui agree on the ids, so the same tripwire serves both games.
-void* acc::menus::detail::SkillInfoBoxPanelSkillsListBox(void* panel) {
+void* SkillInfoBoxPanelSkillsListBox(void* panel) {
     return PanelMemberWithTripwire(panel, kSkillInfoBoxPanelSkillsListBoxOffset,
                                    2, "SkillInfoBox.LB_SKILLS");
 }
 
-void* acc::menus::detail::SkillInfoBoxPanelMessageLabel(void* panel) {
+void* SkillInfoBoxPanelMessageLabel(void* panel) {
     return PanelMemberWithTripwire(panel, kSkillInfoBoxPanelMessageLabelOffset,
                                    0, "SkillInfoBox.LBL_MESSAGE");
 }
 
-void* acc::menus::detail::SkillInfoBoxPanelOkButton(void* panel) {
+void* SkillInfoBoxPanelOkButton(void* panel) {
     return PanelMemberWithTripwire(panel, kSkillInfoBoxPanelOkButtonOffset,
                                    4, "SkillInfoBox.BTN_OK");
 }
@@ -459,49 +461,49 @@ void* acc::menus::detail::SkillInfoBoxPanelOkButton(void* panel) {
 // CSWGuiScriptSelect resolvers (see menus_internal.h). KOTOR 1 only — the
 // offsets poison on KOTOR 2 and acc::off::Ptr answers nullptr there, which
 // is the same answer the vtable-gated callers already expect.
-void* acc::menus::detail::ScriptSelectPanelAiStateListBox(void* panel) {
+void* ScriptSelectPanelAiStateListBox(void* panel) {
     return PanelMemberWithTripwire(panel, kScriptSelectPanelAiStateListBoxOffset,
                                    0, "ScriptSelect.LST_AIState");
 }
 
-void* acc::menus::detail::ScriptSelectPanelAcceptButton(void* panel) {
+void* ScriptSelectPanelAcceptButton(void* panel) {
     return PanelMemberWithTripwire(panel, kScriptSelectPanelAcceptButtonOffset,
                                    4, "ScriptSelect.BTN_Accept");
 }
 
-void* acc::menus::detail::ScriptSelectPanelBackButton(void* panel) {
+void* ScriptSelectPanelBackButton(void* panel) {
     return PanelMemberWithTripwire(panel, kScriptSelectPanelBackButtonOffset,
                                    3, "ScriptSelect.BTN_Back");
 }
 
 // CSWGuiWagerPopup resolvers (see menus_internal.h). The two games number
 // this .gui differently, so each tripwire id is per game.
-void* acc::menus::detail::WagerPopupPanelLessButton(void* panel) {
+void* WagerPopupPanelLessButton(void* panel) {
     return PanelMemberWithTripwire(panel, kWagerPopupPanelLessButtonOffset,
                                    acc::game::IsKotor2() ? 6 : 4,
                                    "Wager.BTN_LESS");
 }
 
-void* acc::menus::detail::WagerPopupPanelMoreButton(void* panel) {
+void* WagerPopupPanelMoreButton(void* panel) {
     return PanelMemberWithTripwire(panel, kWagerPopupPanelMoreButtonOffset,
                                    acc::game::IsKotor2() ? 7 : 5,
                                    "Wager.BTN_MORE");
 }
 
-void* acc::menus::detail::WagerPopupPanelMaximumLabel(void* panel) {
+void* WagerPopupPanelMaximumLabel(void* panel) {
     return PanelMemberWithTripwire(panel, kWagerPopupPanelMaximumLabelOffset,
                                    acc::game::IsKotor2() ? 2 : 3,
                                    "Wager.LBL_MAXIMUM");
 }
 
 // CSWGuiPazaakStart resolvers (see menus_internal.h).
-void* acc::menus::detail::PazaakStartPanelPlayButton(void* panel) {
+void* PazaakStartPanelPlayButton(void* panel) {
     return PanelMemberWithTripwire(panel, kPazaakStartPanelPlayButtonOffset,
                                    acc::game::IsKotor2() ? 95 : 78,
                                    "PazaakDeck.BTN_ATEXT");
 }
 
-void* acc::menus::detail::PazaakStartPanelClearButton(void* panel) {
+void* PazaakStartPanelClearButton(void* panel) {
     // KOTOR 1's pazaaksetup.gui has no clear-deck button; the offset poisons
     // there and Ptr answers nullptr, so the caller's row simply loses that
     // entry (which is how the id -1 behaved before).
@@ -514,27 +516,27 @@ void* acc::menus::detail::PazaakStartPanelClearButton(void* panel) {
 // tripwire ids are optkeymapping.gui's; KOTOR 2's file was never mined, so
 // if optkeymapping_p renumbers, the mismatch lines are the report of that
 // rather than a broken screen — the member path is unaffected either way.
-void* acc::menus::detail::KeyMapPanelEventListBox(void* panel) {
+void* KeyMapPanelEventListBox(void* panel) {
     return PanelMemberWithTripwire(panel, kKeyMapPanelEventListBoxOffset,
                                    0, "KeyMap.LST_EventList");
 }
 
-void* acc::menus::detail::KeyMapPanelDefaultButton(void* panel) {
+void* KeyMapPanelDefaultButton(void* panel) {
     return PanelMemberWithTripwire(panel, kKeyMapPanelDefaultButtonOffset,
                                    2, "KeyMap.BTN_Default");
 }
 
-void* acc::menus::detail::KeyMapPanelAcceptButton(void* panel) {
+void* KeyMapPanelAcceptButton(void* panel) {
     return PanelMemberWithTripwire(panel, kKeyMapPanelAcceptButtonOffset,
                                    3, "KeyMap.BTN_Accept");
 }
 
-void* acc::menus::detail::KeyMapPanelCancelButton(void* panel) {
+void* KeyMapPanelCancelButton(void* panel) {
     return PanelMemberWithTripwire(panel, kKeyMapPanelCancelButtonOffset,
                                    4, "KeyMap.BTN_Cancel");
 }
 
-void* acc::menus::detail::KeyMapPanelFilterButton(void* panel, int filterIndex) {
+void* KeyMapPanelFilterButton(void* panel, int filterIndex) {
     if (filterIndex < 0 || filterIndex > 2) return nullptr;
     if (!acc::off::Ok(kKeyMapPanelFilterButtonsOffset) ||
         !acc::off::Ok(kKeyMapPanelFilterButtonStride)) {
@@ -553,17 +555,17 @@ void* acc::menus::detail::KeyMapPanelFilterButton(void* panel, int filterIndex) 
 // CSWGuiUpgradeItemSelect resolvers (see menus_internal.h). upgradeitems.gui
 // and upgradeitems_p.gui agree on the ids (LB_ITEMS 0, BTN_UPGRADEITEM 4,
 // BTN_BACK 5), so one tripwire id serves both games.
-void* acc::menus::detail::WorkbenchItemsPanelItemsListBox(void* panel) {
+void* WorkbenchItemsPanelItemsListBox(void* panel) {
     return PanelMemberWithTripwire(panel, kWorkbenchItemsPanelItemsListBoxOffset,
                                    0, "WorkbenchItems.LB_ITEMS");
 }
 
-void* acc::menus::detail::WorkbenchItemsPanelUpgradeButton(void* panel) {
+void* WorkbenchItemsPanelUpgradeButton(void* panel) {
     return PanelMemberWithTripwire(panel, kWorkbenchItemsPanelUpgradeButtonOffset,
                                    4, "WorkbenchItems.BTN_UPGRADEITEM");
 }
 
-void* acc::menus::detail::WorkbenchItemsPanelBackButton(void* panel) {
+void* WorkbenchItemsPanelBackButton(void* panel) {
     return PanelMemberWithTripwire(panel, kWorkbenchItemsPanelBackButtonOffset,
                                    5, "WorkbenchItems.BTN_BACK");
 }
@@ -573,7 +575,7 @@ void* acc::menus::detail::WorkbenchItemsPanelBackButton(void* panel) {
 // note in engine_offsets_fields.h). Returns the ARRAY index (identity /
 // membership only): the engine's slot semantics live in the button's
 // custom_value, which is per-bank, so callers keep reading that.
-int acc::menus::detail::UpgradeSlotIndexFromButton(void* panel,
+int UpgradeSlotIndexFromButton(void* panel,
                                                    void* control) {
     if (!panel || !control) return -1;
     if (!acc::off::Ok(kUpgradePanelSlotButtonsOffset) ||
@@ -603,7 +605,7 @@ int acc::menus::detail::UpgradeSlotIndexFromButton(void* panel,
 // saveload.gui. HasVtable is SEH-guarded, which this call path needs
 // anyway: the save-popup teardown can leave a freed SaveLoad panel
 // pointer in the chain for a tick (see menus_chain.cpp).
-bool acc::menus::detail::IsSaveLoadPanel(void* panel) {
+bool IsSaveLoadPanel(void* panel) {
     return acc::engine::HasVtable(panel, kVtableCSWGuiSaveLoad);
 }
 
@@ -620,7 +622,7 @@ bool acc::menus::detail::IsSaveLoadPanel(void* panel) {
 // then dereference far outside the mapping and take the process down instead of
 // falling back to the plain row text. Found by tools/re-scripts/
 // handler_chain_audit.py while clearing the KOTOR 2 handler gates.
-const char* acc::menus::detail::ReadSaveLoadEntryString(void* entry, size_t fieldOffset) {
+const char* ReadSaveLoadEntryString(void* entry, size_t fieldOffset) {
     if (!entry) return nullptr;
     __try {
         auto* base = reinterpret_cast<unsigned char*>(entry);
@@ -651,7 +653,7 @@ static bool DriveListBoxSelectionBody(void* listbox,
                                       short minSel,
                                       acc::menus::detail::ListBoxNavResult& out);
 
-bool acc::menus::detail::DriveListBoxSelection(void* listbox, ListBoxNavOp op,
+bool DriveListBoxSelection(void* listbox, ListBoxNavOp op,
                                                short minSel,
                                                ListBoxNavResult& out)
 {
@@ -739,7 +741,7 @@ static bool DriveListBoxSelectionEngineBody(
     void* listbox, acc::menus::detail::ListBoxNavOp op, short minSel,
     acc::menus::detail::ListBoxNavResult& out);
 
-bool acc::menus::detail::DriveListBoxSelectionEngine(void* listbox,
+bool DriveListBoxSelectionEngine(void* listbox,
                                                      ListBoxNavOp op,
                                                      short minSel,
                                                      ListBoxNavResult& out)
@@ -825,7 +827,7 @@ static bool DriveListBoxSelectionEngineBody(
 //
 // `logPrefix` is used in the diagnostic log line — pass something like
 // "Container: Enter -> BTN_OK".
-bool acc::menus::detail::QueueControlActivate(void* target,
+bool QueueControlActivate(void* target,
                                               const char* logPrefix)
 {
     if (acc::menus::pending::IsPending()) {
@@ -846,7 +848,7 @@ bool acc::menus::detail::QueueControlActivate(void* target,
 // each CSWGuiClassSelChar embeds a CSWGuiButton at offset 0 — so a focused
 // class-icon control pointer lands exactly on `panel + 0x6c + i * 0x25c`
 // for some 0 ≤ i < 6.
-bool acc::menus::detail::IsClassSelectionIcon(void* panel, void* control) {
+bool IsClassSelectionIcon(void* panel, void* control) {
     if (!panel || !control) return false;
     // Guarded deref: this is the gate for menus_extract's step 9c, so it
     // runs for every control that reaches that far on EVERY panel, not just
@@ -895,7 +897,7 @@ static ClassLabelCacheEntry g_classLabelCache[kClassLabelCacheSize];
 static void* g_classDescBaselinePanel = nullptr;
 static char  g_classDescBaseline[384] = {0};
 
-void acc::menus::detail::ClassDescBaselineCapture(void* panel, const char* text) {
+void ClassDescBaselineCapture(void* panel, const char* text) {
     if (!panel) return;
     g_classDescBaselinePanel = panel;
     if (text) {
@@ -905,7 +907,7 @@ void acc::menus::detail::ClassDescBaselineCapture(void* panel, const char* text)
     }
 }
 
-bool acc::menus::detail::ClassDescIsEngineWritten(void* panel, const char* text) {
+bool ClassDescIsEngineWritten(void* panel, const char* text) {
     if (!text || text[0] == '\0') return false;
     // No snapshot for this panel: we never saw its authored state, so we
     // cannot tell content from placeholder. Stay quiet rather than risk
@@ -914,7 +916,7 @@ bool acc::menus::detail::ClassDescIsEngineWritten(void* panel, const char* text)
     return strcmp(text, g_classDescBaseline) != 0;
 }
 
-const char* acc::menus::detail::ClassLabelCacheLookup(void* panel, void* icon) {
+const char* ClassLabelCacheLookup(void* panel, void* icon) {
     for (int i = 0; i < kClassLabelCacheSize; ++i) {
         const auto& e = g_classLabelCache[i];
         if (e.panel == panel && e.icon == icon && e.text[0] != '\0') {
@@ -932,7 +934,7 @@ const char* acc::menus::detail::ClassLabelCacheLookup(void* panel, void* icon) {
 // Reading LBL_DESC has to happen at the same instant class_label is read —
 // by the time a chain step announces an icon, both labels already hold the
 // NEXT icon's text.
-void acc::menus::detail::ComposeClassAnnounce(void* panel, const char* name,
+void ComposeClassAnnounce(void* panel, const char* name,
                                               char* outBuf, size_t bufSize) {
     if (!outBuf || bufSize < 2) return;
     outBuf[0] = '\0';
@@ -954,7 +956,7 @@ void acc::menus::detail::ComposeClassAnnounce(void* panel, const char* name,
     strncpy_s(outBuf, bufSize, composed, _TRUNCATE);
 }
 
-void acc::menus::detail::ClassLabelCacheStore(void* panel, void* icon, const char* text) {
+void ClassLabelCacheStore(void* panel, void* icon, const char* text) {
     if (!panel || !icon || !text || text[0] == '\0') return;
     // First-write wins for a (panel, icon) pair: bail out if already cached.
     for (int i = 0; i < kClassLabelCacheSize; ++i) {
@@ -977,3 +979,4 @@ void acc::menus::detail::ClassLabelCacheStore(void* panel, void* icon, const cha
     strncpy_s(g_classLabelCache[slot].text, text, _TRUNCATE);
 }
 
+}  // namespace acc::menus::detail
