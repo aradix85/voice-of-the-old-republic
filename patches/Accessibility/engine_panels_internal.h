@@ -1,17 +1,14 @@
-// internal seam between engine_panels.cpp and engine_panels_state.cpp.
-//
-// This is NOT public API. engine_panels.h stays the public surface; this
-// header exists only because the Phase-1 structure pass (refactoring
-// candidate 6) split the panel-identity registry from the
-// foreground/UI-blocking + input-class state readers, and both halves walk
-// the same CGuiInGame resolution chain.
-//
-// Values are unchanged RE facts, moved verbatim from engine_panels.cpp.
+// Internal to the engine_panels module (engine_panels*.cpp); no other file includes
+// it. The public interface is engine_panels.h. Here: what the files share.
 
 #pragma once
 
+#include "engine_panels.h"
+
+#include <windows.h>  // SEH __try / __except
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 
 // The first links of the CGuiInGame chain come from engine_app.h, which owns
 // the whole AppManager walk (Phase-3 B1). This header used to carry its own
@@ -43,5 +40,26 @@ inline const size_t        kGuiInGameMainInterfaceOff = acc::off::Pick(0x90, 0x9
 // engine_panels.cpp next to the identity registry; the state readers in
 // engine_panels_state.cpp are its only callers outside that file.
 void* ResolveGuiInGame();
+
+// Helpers shared across the files, by the file that defines them.
+
+// engine_panels_vtables.cpp
+bool IsSaveLoadStructural(void* panel);
+bool IsWorkbenchUpgradeStructural(void* panel);
+bool IsInGameMessagesStructural(void* panel);
+bool IsWorkbenchItemsStructural(void* panel);
+bool IsWorkbenchSelectStructural(void* panel);
+bool IsWorkbenchCreateItemStructural(void* panel);
+bool IsWorkbenchCreateMedicalStructural(void* panel);
+bool IsLevelUpStructural(void* panel);
+bool IsCharGenStructural(void* panel);
+bool IsMainMenuOptionsStructural(void* panel);
+bool IsMainMenuStructural(void* panel);
+bool IsPazaakStartStructural(void* panel);
+bool IsPazaakWagerStructural(void* panel);
+bool IsQuestItemStructural(void* panel);
+bool IsScriptSelectStructural(void* panel);
+bool IsPowersLevelUpStructural(void* panel);
+PanelKind IdentifyOptionsSubScreen(void* panel);
 
 }  // namespace acc::engine

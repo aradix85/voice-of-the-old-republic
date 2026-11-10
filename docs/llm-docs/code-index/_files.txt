@@ -114,7 +114,9 @@ patches/Accessibility/engine_options.h
 patches/Accessibility/engine_panels.cpp
 patches/Accessibility/engine_panels.h
 patches/Accessibility/engine_panels_internal.h
+patches/Accessibility/engine_panels_reads.cpp
 patches/Accessibility/engine_panels_state.cpp
+patches/Accessibility/engine_panels_vtables.cpp
 patches/Accessibility/engine_picker.cpp
 patches/Accessibility/engine_picker.h
 patches/Accessibility/engine_player.cpp
