@@ -27,7 +27,12 @@ public static class BuildCommand
     // so /Zi would both serialise on that file and litter patches/Accessibility/.
     // /Z7 embeds the debug info in each .obj instead, which the object cache
     // then carries for free and the linker collects at link time.
-    private const string CompileFlags = "/nologo /c /O2 /MD /W3 /EHsc /std:c++17 /Z7";
+    private const string CompileFlags = "/nologo /c /O2 /MD /EHsc /std:c++17 /Z7";
+
+    // Our own sources build at warning level 4 and a warning fails the build;
+    // the vendored patch-manager sources keep the bat's /W3.
+    private const string OwnWarnFlags      = "/W4 /WX";
+    private const string VendoredWarnFlags = "/W3";
     private const string LinkFlags    = "/nologo /LD /MD";
 
     public static Command Build()
@@ -60,7 +65,8 @@ public static class BuildCommand
     //  Incremental build (default)
     // ====================================================================
 
-    private readonly record struct CompileUnit(string Src, string Obj, string Deps);
+    private readonly record struct CompileUnit(
+        string Src, string Obj, string Deps, string WarnFlags);
 
     internal static int RunIncremental(bool clean)
     {
@@ -121,7 +127,8 @@ public static class BuildCommand
         var includeArgs = $"/I\"{patchDir}\" /I\"{commonDir}\" /I\"{libDir}\"";
 
         // Invalidate the whole cache if the toolchain or flags changed.
-        var signature = string.Join("|", clExe, CompileFlags, includeArgs);
+        var signature = string.Join(
+            "|", clExe, CompileFlags, OwnWarnFlags, VendoredWarnFlags, includeArgs);
         var sigFile = Path.Combine(objCache, "build.sig");
         if (clean || !File.Exists(sigFile) || File.ReadAllText(sigFile) != signature)
         {
@@ -145,7 +152,9 @@ public static class BuildCommand
             foreach (var cpp in Directory.GetFiles(dir, "*.cpp"))
             {
                 var obj = Path.Combine(objSub, Path.GetFileNameWithoutExtension(cpp) + ".obj");
-                units.Add(new CompileUnit(cpp, obj, obj + ".deps"));
+                units.Add(new CompileUnit(
+                    cpp, obj, obj + ".deps",
+                    group == "patch" ? OwnWarnFlags : VendoredWarnFlags));
             }
         }
         if (units.Count == 0)
@@ -269,12 +278,18 @@ public static class BuildCommand
             try
             {
                 var args =
-                    $"{CompileFlags} /showIncludes {includeArgs} \"{u.Src}\" /Fo\"{u.Obj}\"";
+                    $"{CompileFlags} {u.WarnFlags} /showIncludes {includeArgs} " +
+                    $"\"{u.Src}\" /Fo\"{u.Obj}\"";
                 var (exit, stdout, stderr) = RunCl(clExe, env, args, Path.GetDirectoryName(u.Src)!);
                 if (exit == 0)
                 {
                     WriteDeps(u, stdout, projectRoot, upstream);
-                    lock (consoleLock) Console.WriteLine($"  cc {Path.GetFileName(u.Src)}");
+                    var warnings = WarningLines(stdout);
+                    lock (consoleLock)
+                    {
+                        Console.WriteLine($"  cc {Path.GetFileName(u.Src)}");
+                        Console.Write(warnings);
+                    }
                 }
                 else
                 {
@@ -317,6 +332,20 @@ public static class BuildCommand
             if (path.Length > 0 && File.Exists(path)) deps.Add(path);
         }
         File.WriteAllLines(u.Deps, deps);
+    }
+
+    // The warnings of a compile that succeeded. cl writes them to stdout
+    // between the /showIncludes notes; without this they are never seen.
+    // VSLANG=1033 keeps the word English.
+    private static string WarningLines(string clStdout)
+    {
+        var sb = new StringBuilder();
+        foreach (var line in clStdout.Split('\n'))
+        {
+            var l = line.TrimEnd('\r');
+            if (l.Contains(": warning ")) sb.AppendLine("    " + l);
+        }
+        return sb.ToString();
     }
 
     // Declutter a captured compile failure by dropping /showIncludes note lines
