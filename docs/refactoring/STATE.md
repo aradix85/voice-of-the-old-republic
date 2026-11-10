@@ -185,6 +185,11 @@ engine_panels_state.cpp, reverted), lean (bc631a99: one vtable table
 instead of seventeen detectors; CharGen got its PanelKindName row).
 combat_queue: split into three (272ada84), lean (eeed8dd2: one queue
 walker, engine_reads for the field reads, one guarded RemoveLastAction).
+minigame_turret_peg: DriveSelectedPeg as named steps (f0d58a50), aim
+assist out to minigame_turret_assist.cpp (b56066ec; split_file.py had
+written the core to minigame_turret.cpp, restored, and now keeps the
+source name and never overwrites, 19ce52cf), lead solve engine-free in
+minigame_turret_lead.cpp with five tests (79d07af0).
 
 Careful: never rewrite source files with PowerShell ReadAllText/WriteAllText
 (it decodes UTF-8 and writes '?' for the dashes and umlauts in comments);
@@ -243,11 +248,11 @@ prefix (menus_listbox_picker.cpp).
   EngineYawToCompass/CompassToSector/SectorString. One helper in
   engine_compass (bearing of a vector, and its compass word). kRadToDeg is
   defined in many files: one constant with it.
-- Next file:
-  minigame_turret_peg.cpp
-  (860), guidance_approach.cpp (840), peek_description.cpp (839),
-  menus_modsettings.cpp (828), menus_chain_input.cpp (824) (sizes of
-  2026-11-10 17:20, strings*.cpp excepted).
+- Next file: guidance_approach.cpp (840), then peek_description.cpp (839),
+  menus_modsettings.cpp (828), menus_chain_input.cpp (824), hotkeys.cpp
+  (821), engine_input.cpp (817), minigame_swoop_audio_accelpad.cpp (816),
+  interact_dispatch.cpp (778); 24 files of 600-800 lines and 17 of
+  500-600 after that (sizes of 2026-11-10 18:05, strings*.cpp excepted).
 - F2b: share the save-variable code of exit_memory with discovery.cpp.
 - F3 menus_chargen_feats / menus_powers_levelup: about 15 same-named
   functions, 22 cloned blocks; one chart-grid module (check K2 plans).
