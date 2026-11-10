@@ -75,6 +75,7 @@ class Chunk:
         self.names: set[str] = set()
         self.uses: set[str] = set()
         self.dest = ""
+        self.lead: list[int] = []   # comment blocks that stood before it
 
     def code_only(self, code):
         return [n for n in self.lines if code[n - 1].strip()]
@@ -195,6 +196,7 @@ def main() -> None:
         if pending:
             if el[0] == "chunk":
                 el[1].lines = pending + el[1].lines
+                el[1].lead = pending
             else:
                 funcs[el[1]]["start"] = pending[0]
                 funcs[el[1]]["lead"] = pending
@@ -246,7 +248,7 @@ def main() -> None:
                 mm = re.match(r"using\s+(\w+)\s*=", t) or re.match(r"using\s+[\w:]*::(\w+)\s*;", t)
                 st["kind"], st["name"] = "type", mm.group(1)
             elif t.startswith("typedef"):
-                mm = re.search(r"\(\s*(?:__\w+\s*)?\*\s*(\w+)\s*\)", t) or re.search(r"(\w+)\s*;$", t)
+                mm = re.search(r"\(\s*(?:\w+\s*)?\*\s*(\w+)\s*\)", t) or re.search(r"(\w+)\s*;$", t)
                 st["kind"], st["name"] = "type", mm.group(1)
             else:
                 paren, eq = t.find("("), t.find("=")
@@ -321,9 +323,18 @@ def main() -> None:
         declared = v["region"] == "named" and (v["method"] or
                                                re.search(rf"\b{b}\s*\(", public_text))
         v["shared"] = not declared and (bool(users - {v["file"]}) or b in header_uses)
-    for ch in chunks:  # a shared function's forward declaration becomes its prototype
-        if ch.stmts and ch.stmts[0]["kind"] == "proto" and funcs[ch.stmts[0]["name"]]["shared"]:
+    for i, el in enumerate(elements):  # a shared function's forward declaration becomes its prototype
+        ch = el[1] if el[0] == "chunk" else None
+        if ch and ch.stmts and ch.stmts[0]["kind"] == "proto" and funcs[ch.stmts[0]["name"]]["shared"]:
             ch.dest = "drop"
+            # The comment blocks that stood before the declaration move on to
+            # what follows it.
+            if ch.lead and i + 1 < len(elements):
+                nxt = elements[i + 1]
+                if nxt[0] == "chunk":
+                    nxt[1].lines = ch.lead + nxt[1].lines
+                else:
+                    funcs[nxt[1]]["extra_lead"] = ch.lead
 
     def signature(f: str) -> str:
         if f in protos_text:
@@ -386,7 +397,7 @@ def main() -> None:
 
     def fn_lines(f: str) -> list[str]:
         v = funcs[f]
-        out_lines = []
+        out_lines = [L(k) for k in v.get("extra_lead", [])]
         for k in range(v["start"], v["end"] + 1):
             line = L(k)
             if "strip_defaults" in v and v["sig"] <= k <= v["strip_defaults"]:
