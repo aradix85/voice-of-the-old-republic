@@ -250,6 +250,8 @@ patches/Accessibility/menus_charsheet.cpp
 patches/Accessibility/menus_charsheet.h
 patches/Accessibility/menus_crafting.cpp
 patches/Accessibility/menus_crafting.h
+patches/Accessibility/menus_crafting_internal.h
+patches/Accessibility/menus_crafting_rows.cpp
 patches/Accessibility/menus_credits.cpp
 patches/Accessibility/menus_credits.h
 patches/Accessibility/menus_dispatch.cpp
