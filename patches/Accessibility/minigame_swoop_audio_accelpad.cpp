@@ -222,55 +222,91 @@ inline float MagnetEngageU() { return AssistGapU(); }  // lane-units; magnetism 
 // downcast.
 // ============================================================================
 
-void TickAccelpadCues(void* miniGame) {
-    void* mgoArray = ResolveMgoArray();
-    if (!mgoArray) {
-        acclog::Trace("SwoopRace", "accelpad cues: mgo array unresolved");
-        return;
-    }
+namespace {
 
-    Vector listener_pos;
-    if (!acc::engine::GetCameraPosition(listener_pos) &&
-        !acc::engine::GetPlayerPosition(listener_pos)) {
+// One tick of the pad cues: the readings, the nearest pad ahead, and the line
+// the guide tone and the magnet steer to.
+struct PadTick {
+    Vector    listener = {0.0f, 0.0f, 0.0f};
+    void*     player = nullptr;
+    Vector    bikePos = {0.0f, 0.0f, 0.0f};
+    bool      bikeOk = false;
+    Vector    tunnel = {0.0f, 0.0f, 0.0f};  // the bike's offset Vector (+0x1c4)
+    bool      tunOk = false;
+    float     refY = 0.0f;
+    float     bikeSpeed = 0.0f;
+    float     playerRadius = 0.0f;
+    ULONGLONG now = 0;
+
+    int       slotsSeen = 0;
+    int       padsFound = 0;
+    int       padsAhead = 0;
+    int       minesFound = 0;
+    int       aheadSlot = -1;
+    Vector    aheadPos = {0.0f, 0.0f, 0.0f};
+    float     aheadRadius = 0.0f;  // all pads share one sphere_radius
+
+    bool      virtualTarget = false;
+    bool      haveTarget = false;
+    // padErr and fwdGap stay the true nearest-pad values (the crossing score
+    // relies on them); the detours move only guidePos and guideErr.
+    float     padErr = 0.0f;
+    float     fwdGap = -1.0f;
+    Vector    guidePos = {0.0f, 0.0f, 0.0f};
+    float     guideErr = 0.0f;
+    int       barDetourSlot = -1;
+    float     barY = 0.0f;
+    int       mineDetourSlot = -1;
+    bool      inGear = false;
+};
+
+// The listener (the camera, else the player) and the bike's readings. The
+// camera trails the bike, but its X tracks the bike's to ~0.04 units, so it is
+// the pan anchor; the line is evaluated at the bike's own forward Y.
+bool ReadTickInputs(void* miniGame, PadTick& t) {
+    if (!acc::engine::GetCameraPosition(t.listener) &&
+        !acc::engine::GetPlayerPosition(t.listener)) {
         acclog::Trace("SwoopRace",
                       "accelpad cues: no listener anchor available");
-        return;
+        return false;
     }
+    t.player = SafeReadPtr(miniGame, kMiniGamePlayerOffset);
+    t.bikeOk = ReadFollowerPosition(t.player, t.bikePos);
+    t.tunOk  = SafeReadVector(t.player, kMiniPlayerOffsetVectorOffset, t.tunnel);
+    t.refY   = t.bikeOk ? t.bikePos.y : t.listener.y;
+    // Forward speed gates the magnet at the start hold; sphere_radius is the
+    // player's half of the real hit radius.
+    t.bikeSpeed    = SafeReadFloat(t.player, kFollowerSpeedOffset);
+    t.playerRadius = SafeReadFloat(t.player, kFollowerSphereRadiusOffset);
+    return true;
+}
 
-    // Bike world position (player follower). The line is evaluated at the
-    // bike's own forward Y so the lateral target is "where you should be
-    // right now"; the camera (listener) sits a little behind, but its X
-    // tracks the bike's to ~0.04 units (verified), so it's the pan anchor.
-    void* player = SafeReadPtr(miniGame, kMiniGamePlayerOffset);
-    Vector bikePos;  const bool bikeOk = ReadFollowerPosition(player, bikePos);
-    Vector tunnel;   const bool tunOk  =
-        SafeReadVector(player, kMiniPlayerOffsetVectorOffset, tunnel);
-    const float refY = bikeOk ? bikePos.y : listener_pos.y;
-    // Live physics scalars: bike forward speed (gates the magnet off at the start
-    // hold) and the player's own sphere_radius (half of the real hit radius).
-    const float bikeSpeed   = SafeReadFloat(player, kFollowerSpeedOffset);
-    const float playerRadius = SafeReadFloat(player, kFollowerSphereRadiusOffset);
+// Pads and mines are both CSWMiniEnemy on KOTOR 2 (211TEL: 23 pads, 24 mines);
+// the model name tells them apart (mgf_acpad / mgf_mine01), as in the track
+// scripts.
+bool IsMineModel(const char* name) {
+    if (!name) return false;
+    for (const char* p = name; *p; ++p) {
+        if ((p[0] == 'm' || p[0] == 'M') && (p[1] == 'i' || p[1] == 'I') &&
+            (p[2] == 'n' || p[2] == 'N') && (p[3] == 'e' || p[3] == 'E')) {
+            return true;
+        }
+    }
+    return false;
+}
 
-    int slots_seen = 0;
-    int accelpads_found = 0;
-    int accelpads_ahead = 0;
-    int mines_found = 0;
+// Walk the enemy pool: cache the mines for the obstacle sweep, and find the
+// gate to aim at, the nearest pad strictly ahead whose lateral position is
+// plausible (one junk read put a pad at X=1933).
+void ScanEnemies(void* mgoArray, PadTick& t) {
     g_state.mine_count = 0;   // rebuilt every tick for the obstacle sweep
-
-    // The gate to aim at = next pad to cross: the smallest-Y pad strictly ahead
-    // whose lateral position is plausible (within kMaxPadLateral of the bike).
-    // The outlier guard drops junk reads (one pad came back at X=1933).
-    const float bikeXref = bikeOk ? bikePos.x : listener_pos.x;
-    int   ahead_slot = -1;  float ahead_y = 0.0f;  Vector ahead_pos = {0,0,0};
-    float ahead_radius = 0.0f;  // the nearest gate's sphere_radius (other half of
-                                // the real hit radius; all pads share one value).
-
+    const float bikeXref = t.bikeOk ? t.bikePos.x : t.listener.x;
     for (int i = 0; i < kMgoArraySlotCount; ++i) {
         void* obj = SafeReadPtr(mgoArray,
                                 kMgoArrayObjectsOffset +
                                 static_cast<size_t>(i) * sizeof(void*));
         if (!obj) continue;
-        ++slots_seen;
+        ++t.slotsSeen;
 
         void* enemy = CallAsCast(obj, kVtableSlotAsEnemy);
         if (!enemy) continue;
@@ -278,25 +314,10 @@ void TickAccelpadCues(void* miniGame) {
         Vector pos;
         if (!ReadFollowerPosition(enemy, pos)) continue;
 
-        // Pad or mine? Both are CSWMiniEnemy on KOTOR 2 (211TEL: 23 pads +
-        // 24 mines, models mgf_acpad / mgf_mine01); treated as pads, mines
-        // become steering targets and the bike is driven into them. The model
-        // name is the discriminator the track scripts
-        // use too (accelpad.ncs looks for "MGM" in the hit object's name).
-        void* modelGob = ReadFollowerModelGob(enemy);
-        const char* modelName = ReadAurObjectName(modelGob);
-        bool isMine = false;
-        if (modelName) {
-            for (const char* p = modelName; *p; ++p) {
-                if ((p[0] == 'm' || p[0] == 'M') && (p[1] == 'i' || p[1] == 'I') &&
-                    (p[2] == 'n' || p[2] == 'N') && (p[3] == 'e' || p[3] == 'E')) {
-                    isMine = true; break;
-                }
-            }
-        }
+        const char* modelName = ReadAurObjectName(ReadFollowerModelGob(enemy));
+        const bool isMine = IsMineModel(modelName);
 
-        // First-fire diagnostic: every enemy's slot, model and position, so
-        // the per-track inventory (and the pad/mine split) is in the log once.
+        // First fire: every enemy once in the log, for the track inventory.
         if (!g_state.accelpad_diag_emitted) {
             void* vt = SafeReadPtr(enemy, 0);
             acclog::Write("SwoopRace",
@@ -308,7 +329,7 @@ void TickAccelpadCues(void* miniGame) {
         }
 
         if (isMine) {
-            ++mines_found;
+            ++t.minesFound;
             if (g_state.mine_count < kMgoArraySlotCount) {
                 g_state.mine_slot[g_state.mine_count]   = i;
                 g_state.mine_pos[g_state.mine_count]    = pos;
@@ -318,122 +339,114 @@ void TickAccelpadCues(void* miniGame) {
             }
             continue;   // never a steering target
         }
-        ++accelpads_found;
+        ++t.padsFound;
 
-        if (pos.y < refY) continue;                          // behind us
-        if (std::fabs(pos.x - bikeXref) > kMaxPadLateral) continue;  // junk read
-        ++accelpads_ahead;
-        if (ahead_slot < 0 || pos.y < ahead_y) {
-            ahead_slot = i; ahead_y = pos.y; ahead_pos = pos;
-            ahead_radius = SafeReadFloat(enemy, kFollowerSphereRadiusOffset);
+        if (pos.y < t.refY) continue;                                  // behind us
+        if (std::fabs(pos.x - bikeXref) > kMaxPadLateral) continue;    // junk read
+        ++t.padsAhead;
+        if (t.aheadSlot < 0 || pos.y < t.aheadPos.y) {
+            t.aheadSlot   = i;
+            t.aheadPos    = pos;
+            t.aheadRadius = SafeReadFloat(enemy, kFollowerSphereRadiusOffset);
         }
     }
 
-    if (bikeOk && player && acc::game::IsKotor2() && g_state.mine_count > 0) {
-        TrackMinePasses(player, bikePos, playerRadius);
+    if (t.bikeOk && t.player && acc::game::IsKotor2() && g_state.mine_count > 0) {
+        TrackMinePasses(t.player, t.bikePos, t.playerRadius);
     }
 
-    if (!g_state.accelpad_diag_emitted && (accelpads_found + mines_found) > 0) {
+    if (!g_state.accelpad_diag_emitted && (t.padsFound + t.minesFound) > 0) {
         g_state.accelpad_diag_emitted = true;
         acclog::Write("SwoopRace", "enemy pool: accelpads=%d mines=%d",
-                      accelpads_found, mines_found);
+                      t.padsFound, t.minesFound);
     }
+}
 
-    // ----- Lateral velocity (units/tick), smoothed + clamped. -----
-    if (bikeOk) {
-        if (g_state.have_prev_bike_x) {
-            float v = bikePos.x - g_state.prev_bike_x;
-            if (v >  kSteerVelClamp) v =  kSteerVelClamp;
-            if (v < -kSteerVelClamp) v = -kSteerVelClamp;
-            g_state.smoothed_vel += (v - g_state.smoothed_vel) * kSteerVelSmooth;
-        }
-        g_state.prev_bike_x = bikePos.x;
-        g_state.have_prev_bike_x = true;
+// Lateral velocity in units per tick, clamped and smoothed.
+void UpdateLateralVelocity(const PadTick& t) {
+    if (!t.bikeOk) return;
+    if (g_state.have_prev_bike_x) {
+        float v = t.bikePos.x - g_state.prev_bike_x;
+        if (v >  kSteerVelClamp) v =  kSteerVelClamp;
+        if (v < -kSteerVelClamp) v = -kSteerVelClamp;
+        g_state.smoothed_vel += (v - g_state.smoothed_vel) * kSteerVelSmooth;
     }
+    g_state.prev_bike_x = t.bikePos.x;
+    g_state.have_prev_bike_x = true;
+}
 
-    // ----- Crossing-event log (ground-truth hit scoring). -----
-    // When the targeted gate changes, the previous gate has just passed. We have
-    // its last in-front sample (prev_ahead_fwdGap > 0, prev_ahead_padErr) and we
-    // can recompute its geometry from THIS tick's bike position (fwdGap now <= 0)
-    // — so interpolate the exact lateral miss at fwdGap=0. That is the engine's
-    // real hit test (|miss| <= ~6 on Taris).
-    if (bikeOk && g_state.have_prev_ahead &&
-        ahead_slot != g_state.prev_ahead_slot && g_state.prev_ahead_slot >= 0) {
-        const float fwdGap_now = g_state.prev_ahead_posY - refY;
-        const float padErr_now = g_state.prev_ahead_posX - bikePos.x;
-        if (g_state.prev_ahead_fwdGap > 0.0f &&
-            fwdGap_now < g_state.prev_ahead_fwdGap) {
-            float t = g_state.prev_ahead_fwdGap /
-                      (g_state.prev_ahead_fwdGap - fwdGap_now);
-            if (t < 0.0f) t = 0.0f; else if (t > 1.0f) t = 1.0f;
-            const float crossErr =
-                g_state.prev_ahead_padErr +
-                (padErr_now - g_state.prev_ahead_padErr) * t;
-            const float acrx = crossErr < 0.0f ? -crossErr : crossErr;
-            // Real hit radius, read live = player.sphere_radius + pad.sphere_radius
-            // (the engine's swept sphere-vs-sphere test). All pads share one
-            // radius, so the current nearest gate's value scores the just-crossed
-            // one. Fall back to the literal only if a read faulted (radius <= 0).
-            const float combinedRadius =
-                (playerRadius > 0.0f && ahead_radius > 0.0f)
-                    ? (playerRadius + ahead_radius)
-                    : kAccelpadHitRadiusU;
-            const bool caught = acrx <= combinedRadius;
-            acclog::Write("SwoopRace",
-                          "CROSS slot=%d padX=%.2f crossErr=%.2f abs=%.2f "
-                          "hit=%d radius=%.1f vel=%.2f",
-                          g_state.prev_ahead_slot, g_state.prev_ahead_posX,
-                          crossErr, acrx, caught ? 1 : 0,
-                          combinedRadius, g_state.smoothed_vel);
-            // Pad caught: one centred burst of the pad's own tone. Neither
-            // game's accelpad script plays a sound (both disassembled — speed
-            // ×1.05, accel ×1.1, and on KOTOR 2 +100 hit points; the "boost"
-            // animation is the only feedback, visual). With the magnet
-            // catching every pad (23 of 23 in round 5) the guide tone rests
-            // almost the whole race, so by ear nothing
-            // said a pad had been scored at all — "I rarely hear an
-            // accelpad". Same sample as the guide so the identity is obvious.
-            if (caught) acc::audio::PlayCue(kAccelpadLoopResref);
-        }
+// When the targeted gate changes, the previous one has just been passed:
+// interpolate its lateral miss at fwdGap 0 between its last sample in front and
+// this tick, and score it against the engine's real hit test.
+void ScoreCrossing(const PadTick& t) {
+    if (!t.bikeOk || !g_state.have_prev_ahead ||
+        t.aheadSlot == g_state.prev_ahead_slot || g_state.prev_ahead_slot < 0) {
+        return;
     }
-
-    // padErr/fwdGap are always the TRUE nearest-gate values: the CROSS
-    // interpolation relies on them, so the detours below must not move them.
-    // ----- Virtual target after the last pad (see kVirtualTargetAheadU):
-    // straight ahead of the bike, so the mine-aware line below keeps working
-    // to the finish. The magnet is gated off for it unless a detour is active.
-    bool virtualTarget = false;
-    if (ahead_slot < 0 && bikeOk && acc::game::IsKotor2() && bikeSpeed > kSwoopMinRaceSpeed) {
-        virtualTarget = true;
-        ahead_pos = bikePos;
-        ahead_pos.y += kVirtualTargetAheadU;
+    const float fwdGapNow = g_state.prev_ahead_posY - t.refY;
+    const float padErrNow = g_state.prev_ahead_posX - t.bikePos.x;
+    if (!(g_state.prev_ahead_fwdGap > 0.0f && fwdGapNow < g_state.prev_ahead_fwdGap)) {
+        return;
     }
-    const bool have_target = (ahead_slot >= 0 || virtualTarget) && bikeOk;
-    const float padErr = have_target ? (ahead_pos.x - bikePos.x) : 0.0f;
-    const float fwdGap = have_target ? (ahead_pos.y - refY) : -1.0f;
+    float f = g_state.prev_ahead_fwdGap / (g_state.prev_ahead_fwdGap - fwdGapNow);
+    if (f < 0.0f) f = 0.0f; else if (f > 1.0f) f = 1.0f;
+    const float crossErr =
+        g_state.prev_ahead_padErr + (padErrNow - g_state.prev_ahead_padErr) * f;
+    const float acrx = crossErr < 0.0f ? -crossErr : crossErr;
+    // The real hit radius is player.sphere_radius + pad.sphere_radius (the
+    // engine's swept sphere test); the literal only when a read faulted.
+    const float combinedRadius =
+        (t.playerRadius > 0.0f && t.aheadRadius > 0.0f)
+            ? (t.playerRadius + t.aheadRadius)
+            : kAccelpadHitRadiusU;
+    const bool caught = acrx <= combinedRadius;
+    acclog::Write("SwoopRace",
+                  "CROSS slot=%d padX=%.2f crossErr=%.2f abs=%.2f "
+                  "hit=%d radius=%.1f vel=%.2f",
+                  g_state.prev_ahead_slot, g_state.prev_ahead_posX,
+                  crossErr, acrx, caught ? 1 : 0,
+                  combinedRadius, g_state.smoothed_vel);
+    // Neither game's pad script plays a sound (the boost is visual only), and
+    // with the magnet catching the pads the guide tone rests most of the race:
+    // one centred burst of the pad's own tone says a pad was scored.
+    if (caught) acc::audio::PlayCue(kAccelpadLoopResref);
+}
 
-    Vector guide_pos = ahead_pos;   // what the tone and the magnet steer to
-    float  guideErr  = padErr;     // padErr stays the true pad error
+// The nearest pad, or after the last pad on KOTOR 2 a point straight ahead (see
+// kVirtualTargetAheadU), so the mine-aware line keeps working to the finish.
+void ChooseTarget(PadTick& t) {
+    if (t.aheadSlot < 0 && t.bikeOk && acc::game::IsKotor2() &&
+        t.bikeSpeed > kSwoopMinRaceSpeed) {
+        t.virtualTarget = true;
+        t.aheadPos = t.bikePos;
+        t.aheadPos.y += kVirtualTargetAheadU;
+    }
+    t.haveTarget = (t.aheadSlot >= 0 || t.virtualTarget) && t.bikeOk;
+    t.padErr   = t.haveTarget ? (t.aheadPos.x - t.bikePos.x) : 0.0f;
+    t.fwdGap   = t.haveTarget ? (t.aheadPos.y - t.refY) : -1.0f;
+    t.guidePos = t.aheadPos;
+    t.guideErr = t.padErr;
+}
 
-    // ----- Bar-aware line (see kBarFreeClearU and the kPostContactU block).
-    // Applied after the mine detour; when both bite the bar wins (a park costs
-    // 16-19 s, a mine 100 hp and a downshift). Reads the obstacle sweep's bar
-    // cache (with each bar's free-side strip) from last tick.
+// Bar-aware line (see kBarFreeClearU and the kPostContactU block), from the
+// obstacle sweep's bar cache of last tick. When both detours bite the bar wins
+// (a park costs 16-19 s, a mine 100 hp and a downshift).
+void ApplyBarDetour(void* miniGame, PadTick& t) {
     int   bar_detour_slot = -1;
-    const bool airborne = tunOk && tunnel.z > kAirborneZ;
+    const bool airborne = t.tunOk && t.tunnel.z > kAirborneZ;
     if (!airborne) g_state.bar_air_cleared_slot = -1;   // per-flight latch
-    if (bikeOk && !airborne) g_state.ground_z = bikePos.z;
-    float groundedY = refY;   // where the bike is next on the ground
+    if (t.bikeOk && !airborne) g_state.ground_z = t.bikePos.z;
+    float groundedY = t.refY;   // where the bike is next on the ground
     float barY      = 0.0f;
     const char* barWhy = "";
-    if (have_target && acc::game::IsKotor2() && g_state.bar_count > 0 && fwdGap > 0.0f) {
-        const float vWorld = bikeSpeed * kSpeedToWorldPerSec;   // world u/s
+    if (t.haveTarget && acc::game::IsKotor2() && g_state.bar_count > 0 && t.fwdGap > 0.0f) {
+        const float vWorld = t.bikeSpeed * kSpeedToWorldPerSec;   // world u/s
         if (airborne) {
             // Remaining flight from the arc: z + vz*t - g*t^2/2 = 0.
             const float vz   = SafeReadFloat(miniGame, kMiniGameJumpVelocityOffset);
-            const float disc = vz * vz + 2.0f * kJumpGravity * tunnel.z;
+            const float disc = vz * vz + 2.0f * kJumpGravity * t.tunnel.z;
             const float tLand = (vz + std::sqrt(disc > 0.0f ? disc : 0.0f)) / kJumpGravity;
-            groundedY = refY + tLand * vWorld;
+            groundedY = t.refY + tLand * vWorld;
         }
         float lookAhead = (airborne ? kReJumpSec : kBarDetourLeadSec) * vWorld;
         if (lookAhead < kBarDetourMinLeadU) lookAhead = kBarDetourMinLeadU;
@@ -453,7 +466,7 @@ void TickAccelpadCues(void* miniGame) {
         int best = -1;
         for (int b = 0; b < g_state.bar_count; ++b) {
             const SpatialAudioState::BarInfo& bar = g_state.bars[b];
-            if (bar.y1 + kBarLaneMarginU < refY) continue;             // behind the bike
+            if (bar.y1 + kBarLaneMarginU < t.refY) continue;           // behind the bike
             const bool sticky = bar.slot == g_state.bar_detour_slot;
             if (airborne) {
                 const float clear = (bar.slot == g_state.bar_air_cleared_slot)
@@ -490,19 +503,19 @@ void TickAccelpadCues(void* miniGame) {
             const SpatialAudioState::BarInfo& bar = g_state.bars[target];
             const bool sticky = bar.slot == g_state.bar_detour_slot;
             // Where the straight line to the pad crosses the bar's front edge.
-            float t = (bar.y0 - refY) / fwdGap;
-            if (t < 0.0f) t = 0.0f; else if (t > 1.0f) t = 1.0f;
-            const float pathX   = bikePos.x + (ahead_pos.x - bikePos.x) * t;
+            float f = (bar.y0 - t.refY) / t.fwdGap;
+            if (f < 0.0f) f = 0.0f; else if (f > 1.0f) f = 1.0f;
+            const float pathX   = t.bikePos.x + (t.aheadPos.x - t.bikePos.x) * f;
             const bool  crosses = pathX >= bar.x0 - kBarLaneMarginU &&
                                   pathX <= bar.x1 + kBarLaneMarginU;
             // Pad timing: a pad that lies before the bar is caught first,
             // unless it sits in the span too close in front of the bar to
             // move over afterwards.
-            const bool padBehindBar = ahead_pos.y > bar.y0;
-            const bool padInSpan    = ahead_pos.x >= bar.x0 - kBarLaneMarginU &&
-                                      ahead_pos.x <= bar.x1 + kBarLaneMarginU;
+            const bool padBehindBar = t.aheadPos.y > bar.y0;
+            const bool padInSpan    = t.aheadPos.x >= bar.x0 - kBarLaneMarginU &&
+                                      t.aheadPos.x <= bar.x1 + kBarLaneMarginU;
             const bool padTooClose  = !padBehindBar && padInSpan &&
-                                      (bar.y0 - ahead_pos.y) < kBarAfterPadLeadSec * vWorld;
+                                      (bar.y0 - t.aheadPos.y) < kBarAfterPadLeadSec * vWorld;
             const bool timingOk     = padBehindBar || padTooClose;
             bool engage = false;
             if (sticky || parked)  { engage = true;              barWhy = sticky ? "sticky" : "parked"; }
@@ -521,46 +534,49 @@ void TickAccelpadCues(void* miniGame) {
                 barWhy = "pair";
             }
             if (engage) {
-                guide_pos.x = bar.gap_x;
-                guideErr    = bar.gap_x - bikePos.x;
+                t.guidePos.x = bar.gap_x;
+                t.guideErr   = bar.gap_x - t.bikePos.x;
                 bar_detour_slot = bar.slot;
                 barY = bar.y0;
             }
         }
     }
+    t.barDetourSlot = bar_detour_slot;
+    t.barY          = barY;
     if (bar_detour_slot != g_state.bar_detour_slot) {
         if (bar_detour_slot >= 0) {
             acclog::Write("SwoopRace",
                           "bar detour: slot=%d guideX=%.1f why=%s (pad slot=%d padX=%.1f padY=%.0f "
                           "bikeX=%.1f barY=%.0f airborne=%d groundY=%.0f fwdGap=%.0f)",
-                          bar_detour_slot, guide_pos.x, barWhy, ahead_slot, ahead_pos.x,
-                          ahead_pos.y, bikePos.x, barY, airborne ? 1 : 0, groundedY, fwdGap);
+                          bar_detour_slot, t.guidePos.x, barWhy, t.aheadSlot, t.aheadPos.x,
+                          t.aheadPos.y, t.bikePos.x, barY, airborne ? 1 : 0, groundedY, t.fwdGap);
         } else {
             acclog::Write("SwoopRace", "bar detour: clear (pad slot=%d bikeX=%.1f airborne=%d groundY=%.0f)",
-                          ahead_slot, bikePos.x, airborne ? 1 : 0, groundedY);
+                          t.aheadSlot, t.bikePos.x, airborne ? 1 : 0, groundedY);
         }
         g_state.bar_detour_slot = bar_detour_slot;
     }
+}
 
-    // ----- Mine-aware line (see kMineClearU), on the FINAL line: the pad,
-    // or the strip the bar-aware block above chose (round 14 lost a race's
-    // best 20 s to a strip line that passed a mine at 4 u unchecked).
+// Mine-aware line (see kMineClearU), checked on the final line: the pad, or the
+// strip the bar detour chose (a strip line once passed a mine at 4 u).
+void ApplyMineDetour(PadTick& t) {
     int    detour_slot = -1;
-    const float line_x   = guide_pos.x;
-    const float line_y   = (bar_detour_slot >= 0) ? barY : ahead_pos.y;
-    const float lineGap  = have_target ? (line_y - refY) : -1.0f;
-    if (have_target && acc::game::IsKotor2() && lineGap > 0.0f) {
+    const float line_x   = t.guidePos.x;
+    const float line_y   = (t.barDetourSlot >= 0) ? t.barY : t.aheadPos.y;
+    const float lineGap  = t.haveTarget ? (line_y - t.refY) : -1.0f;
+    if (t.haveTarget && acc::game::IsKotor2() && lineGap > 0.0f) {
         float  bestDy = 1e9f;
         Vector mine   = {0.0f, 0.0f, 0.0f};
         for (int m = 0; m < g_state.mine_count; ++m) {
             const Vector& mpos = g_state.mine_pos[m];
-            const float dy = mpos.y - refY;
+            const float dy = mpos.y - t.refY;
             if (dy < -kMineBehindU || dy > lineGap) continue;   // behind, or beyond the line's end
-            const float t = dy <= 0.0f ? 0.0f : dy / lineGap;
-            const float pathX = bikePos.x + (line_x - bikePos.x) * t;
+            const float f = dy <= 0.0f ? 0.0f : dy / lineGap;
+            const float pathX = t.bikePos.x + (line_x - t.bikePos.x) * f;
             // Hysteresis: the mine already being detoured stays a detour
             // until it is behind (the detour itself moves the path off it,
-            // which flipped the decision every tick in round 10).
+            // which would flip the decision every tick).
             const bool sticky = g_state.mine_slot[m] == g_state.detour_slot;
             if (!sticky && std::fabs(mpos.x - pathX) >= kMineClearU) continue;
             if (dy < bestDy) { bestDy = dy; mine = mpos; detour_slot = g_state.mine_slot[m]; }
@@ -572,181 +588,166 @@ void TickAccelpadCues(void* miniGame) {
             else                                    side = (line_x < mine.x) ? -1.0f : +1.0f;
             float gx = mine.x + side * kMineClearU;
             if (std::fabs(gx) > kMineDetourMaxU) gx = mine.x - side * kMineClearU;
-            guide_pos.x = gx;
-            guideErr    = gx - bikePos.x;
+            t.guidePos.x = gx;
+            t.guideErr   = gx - t.bikePos.x;
         }
     }
+    t.mineDetourSlot = detour_slot;
     if (detour_slot != g_state.detour_slot) {
         if (detour_slot >= 0) {
             acclog::Write("SwoopRace",
                           "detour: mine slot=%d guideX=%.1f (line x=%.1f y=%.0f pad slot=%d padX=%.1f bikeX=%.1f fwdGap=%.0f)",
-                          detour_slot, guide_pos.x, line_x, line_y, ahead_slot, ahead_pos.x, bikePos.x, fwdGap);
+                          detour_slot, t.guidePos.x, line_x, line_y, t.aheadSlot, t.aheadPos.x,
+                          t.bikePos.x, t.fwdGap);
         } else {
-            acclog::Write("SwoopRace", "detour: clear (pad slot=%d)", ahead_slot);
+            acclog::Write("SwoopRace", "detour: clear (pad slot=%d)", t.aheadSlot);
         }
         g_state.detour_slot = detour_slot;
     }
+}
 
-    const ULONGLONG now = GetTickCount64();
+// Lateral steering magnetism: nudge the bike's lane (offset.x, +0x1c4) toward
+// the guide line, gentle far, sticky near, capped per tick, on top of the
+// player's own steering. offset.x maps 1:1 to world X, so the step is the
+// world error, sign +1. No pull in gear 0: after a KOTOR 2 collision the bike
+// waits there in front of what it hit, and the magnet dragged every relaunch
+// back into the same bar; both games' scripts keep MIN_RACE_GEAR.
+void ApplyMagnet(PadTick& t) {
+    t.inGear = acc::engine::ReadGlobalNumber("MIN_RACE_GEAR") >= 1;
+    if (!t.haveTarget || !t.bikeOk || !t.tunOk || !t.player || !t.inGear) return;
+    if (t.virtualTarget && t.mineDetourSlot < 0) return;
+    if (!(t.bikeSpeed > kSwoopMinRaceSpeed)) return;
+    if (!(std::fabs(t.guideErr) <= MagnetEngageU())) return;
 
-    // ----- Lateral steering magnetism (shared aim-assist facility). -----
-    // Nudge the bike's lane (offset.x at +0x1c4) toward the next gate's lane:
-    // gentle far, sticky near, capped per tick, blended on top of the player's
-    // own steering. offset.x maps 1:1 to world-X, so the corrective step is the
-    // world lateral error (padErr) directly, sign +1 (no calibration). See the
-    // constants block for the engine grounding.
-    // `tunnel` IS the offset Vector (+0x1c4) read above; we replace only its x.
-    // Gear gate: no pull in gear 0. After a KOTOR 2 collision the bike sits in
-    // gear 0 in front of whatever it hit, and the first K2 round showed the
-    // magnet dragging every relaunch back into the same bar (bike steered to
-    // x=-10, magnet returned it to x=0 within the relaunch second, hit again).
-    // The player must be free to steer clear before the pull resumes; the
-    // gear global is 0 exactly then (and before the first launch, where the
-    // speed gate already held). Both games' scripts maintain the global.
-    const bool inGear = acc::engine::ReadGlobalNumber("MIN_RACE_GEAR") >= 1;
-    if (have_target && bikeOk && tunOk && player && inGear &&
-        (!virtualTarget || detour_slot >= 0) &&
-        bikeSpeed > kSwoopMinRaceSpeed &&
-        std::fabs(guideErr) <= MagnetEngageU()) {
-        const acc::minigame::MagnetParams mp{
-            kSwoopMagnetGainFar, kSwoopMagnetGainNear, kSwoopMagnetMaxStepU};
-        float t = 1.0f - std::fabs(guideErr) / MagnetEngageU();
-        if (t < 0.0f) t = 0.0f;
-        // Hold-through-crossing: in the last kSwoopMagnetHoldSec before
-        // this gate's forward position is reached, ramp the pull to fully sticky
-        // (t->1) regardless of lateral error, so anticipatory drift toward the
-        // NEXT gate can't peel the bike off this one before it scores. Speed-
-        // scaled (time-to-cross) so the window is the same in every gear. Targets
-        // the "dead-on then drifted out" + "engaged but didn't finish" misses
-        // (22 of 31 misses in one traced run).
-        if (fwdGap > 0.0f && bikeSpeed > 1.0f) {
-            const float ttc = fwdGap / bikeSpeed;                  // seconds to crossing
-            if (ttc < kSwoopMagnetHoldSec) {
-                const float hold = 1.0f - ttc / kSwoopMagnetHoldSec;  // 0 far -> 1 at crossing
-                t += (1.0f - t) * hold;
-            }
-        }
-        const float gain = acc::minigame::MagnetGain(t, mp);
-        // Velocity brake: aim at where you'll coast to (padErr − brakeTicks·vel),
-        // not the raw pad, so when you're closing fast this goes negative before
-        // you arrive and the magnet counter-pulls, bleeding overshoot momentum.
-        // smoothed_vel is bike-X velocity (+ = right); padErr = padX − bikeX (+ =
-        // pad to the right), so subtracting the velocity lead damps inward motion
-        // on either side. mappedErr = −(target error).
-        const float brakedErr = guideErr - kSwoopMagnetBrakeTicks * g_state.smoothed_vel;
-        const float newOffX =
-            acc::minigame::MagnetStep(tunnel.x, -brakedErr, gain, mp);
-        Vector newOff = tunnel;
-        newOff.x = newOffX;
-        acc::minigame::WriteOffsetVector(player, newOff);
-
-        if (now - g_state.last_magnet_log_ms >= 1000) {
-            g_state.last_magnet_log_ms = now;
-            acclog::Write("SwoopAssist",
-                          "magnet slot=%d padErr=%.2f vel=%.2f brakedErr=%.2f "
-                          "gain=%.2f offX %.2f->%.2f bikeX=%.2f padX=%.2f fwdGap=%.1f",
-                          ahead_slot, padErr, g_state.smoothed_vel, brakedErr,
-                          gain, tunnel.x, newOffX,
-                          bikePos.x, ahead_pos.x, fwdGap);
+    const acc::minigame::MagnetParams mp{
+        kSwoopMagnetGainFar, kSwoopMagnetGainNear, kSwoopMagnetMaxStepU};
+    float s = 1.0f - std::fabs(t.guideErr) / MagnetEngageU();
+    if (s < 0.0f) s = 0.0f;
+    // Hold through the crossing: in the last kSwoopMagnetHoldSec before the
+    // gate the pull ramps to fully sticky, so drift toward the next gate cannot
+    // peel the bike off this one before it scores. Time-based, so it is the same
+    // in every gear.
+    if (t.fwdGap > 0.0f && t.bikeSpeed > 1.0f) {
+        const float ttc = t.fwdGap / t.bikeSpeed;                  // seconds to crossing
+        if (ttc < kSwoopMagnetHoldSec) {
+            const float hold = 1.0f - ttc / kSwoopMagnetHoldSec;  // 0 far -> 1 at crossing
+            s += (1.0f - s) * hold;
         }
     }
+    const float gain = acc::minigame::MagnetGain(s, mp);
+    // Velocity brake: aim at where the bike will coast to, so closing fast
+    // eases or counter-pulls before arrival and bleeds the overshoot.
+    // smoothed_vel is bike-X velocity (+ right) and the error is target minus
+    // bike (+ target right), so the lead damps inward motion on either side.
+    const float brakedErr = t.guideErr - kSwoopMagnetBrakeTicks * g_state.smoothed_vel;
+    const float newOffX = acc::minigame::MagnetStep(t.tunnel.x, -brakedErr, gain, mp);
+    Vector newOff = t.tunnel;
+    newOff.x = newOffX;
+    acc::minigame::WriteOffsetVector(t.player, newOff);
 
-    // ----- Predictive overshoot / wall cue. -----
-    // Fire the wall-impact sound ~kWallLeadTicks before the bike pins instead of
-    // on contact, so re-steering starts sooner. Guard: only on a genuine
-    // OVERSHOOT — projected to cross the lane edge AND moving away from the
-    // target pad (vel and padErr opposite signs) — so it stays silent when you're
-    // correctly racing toward a pad that sits near the edge. tunnel.x is the lane
-    // offset (±kWallEdgeOffsetU = wall); smoothed_vel is the lateral velocity
-    // (world-X delta, same units as the offset delta).
-    if (have_target && tunOk) {
-        const float vel       = g_state.smoothed_vel;
-        const float projected = tunnel.x + vel * WallLeadTicks();
-        const bool  toward_wall  = std::fabs(projected) >= WallEdgeOffsetU() &&
-                                   std::fabs(tunnel.x)  <  WallEdgeOffsetU();
-        const bool  overshooting = vel * padErr < 0.0f;  // moving away from pad
-        if (toward_wall && overshooting && std::fabs(vel) > kWallMinVel &&
-            now - g_state.last_wall_cue_ms >= kWallCueDebounceMs) {
-            const int side = (vel > 0.0f) ? +1 : -1;
-            Vector cue = listener_pos;
-            cue.x += (side > 0) ? +kWallCuePanM : -kWallCuePanM;
-            acc::audio::PlayCue3DRaw(kWallCueResref, cue);
-            g_state.last_wall_cue_ms = now;
+    if (t.now - g_state.last_magnet_log_ms >= 1000) {
+        g_state.last_magnet_log_ms = t.now;
+        acclog::Write("SwoopAssist",
+                      "magnet slot=%d padErr=%.2f vel=%.2f brakedErr=%.2f "
+                      "gain=%.2f offX %.2f->%.2f bikeX=%.2f padX=%.2f fwdGap=%.1f",
+                      t.aheadSlot, t.padErr, g_state.smoothed_vel, brakedErr,
+                      gain, t.tunnel.x, newOffX,
+                      t.bikePos.x, t.aheadPos.x, t.fwdGap);
+    }
+}
+
+// The wall sound ~WallLeadTicks before the bike pins, so re-steering starts
+// sooner. Only on a real overshoot: projected across the lane edge and moving
+// away from the pad, so it stays quiet while racing toward a pad by the edge.
+void PredictWallCue(const PadTick& t) {
+    if (!t.haveTarget || !t.tunOk) return;
+    const float vel       = g_state.smoothed_vel;
+    const float projected = t.tunnel.x + vel * WallLeadTicks();
+    const bool  toward_wall  = std::fabs(projected) >= WallEdgeOffsetU() &&
+                               std::fabs(t.tunnel.x) < WallEdgeOffsetU();
+    const bool  overshooting = vel * t.padErr < 0.0f;  // moving away from pad
+    if (!toward_wall || !overshooting || !(std::fabs(vel) > kWallMinVel) ||
+        t.now - g_state.last_wall_cue_ms < kWallCueDebounceMs) {
+        return;
+    }
+    const int side = (vel > 0.0f) ? +1 : -1;
+    Vector cue = t.listener;
+    cue.x += (side > 0) ? +kWallCuePanM : -kWallCuePanM;
+    acc::audio::PlayCue3DRaw(kWallCueResref, cue);
+    g_state.last_wall_cue_ms = t.now;
+    acclog::Write("SwoopRace",
+                  "wall predict side=%s tunnelX=%.1f vel=%.2f "
+                  "proj=%.1f padErr=%.1f",
+                  side > 0 ? "right" : "left", t.tunnel.x, vel,
+                  projected, t.padErr);
+}
+
+// KOTOR 2 wall loop (see kWallBandU): in the band, or projected across the
+// edge on a real overshoot, in any gear, with hysteresis at the band edge.
+void UpdateWallLoop(const PadTick& t) {
+    if (!acc::game::IsKotor2() || !t.tunOk) return;
+    // The projection counts only when moving away from the guide target (or
+    // with none): firing on every fast swing toward a side-lane pad trained
+    // the ear to ignore it.
+    const float vel  = g_state.smoothed_vel;
+    const float proj = t.tunnel.x + vel * WallLeadTicks();
+    const bool  overshoot = !t.haveTarget || vel * t.guideErr < 0.0f;
+    // The band is unconditional, except while the guide itself leads into it: a
+    // half-bar's strip beside the posts (MGC03 at x -12.4, MGC06 at -13.1)
+    // would otherwise ride under a permanent wall thump.
+    const bool guideInBand = t.haveTarget && t.barDetourSlot >= 0 &&
+                             std::fabs(t.guidePos.x) >= kWallBandU - kWallBandHystU;
+    const bool projOk = overshoot && (!guideInBand || std::fabs(vel) >= kWallLoopBandMinVel);
+    int side = 0;
+    if ((!guideInBand && t.tunnel.x >= kWallBandU) || (projOk && proj >= kWallEdgeOffsetK2U)) {
+        side = +1;
+    } else if ((!guideInBand && t.tunnel.x <= -kWallBandU) ||
+               (projOk && proj <= -kWallEdgeOffsetK2U)) {
+        side = -1;
+    }
+    if (side == 0 && !guideInBand && g_state.wall_loop_side != 0 &&
+        t.tunnel.x * g_state.wall_loop_side > kWallBandU - kWallBandHystU) {
+        side = g_state.wall_loop_side;   // still in the hysteresis band
+    }
+    if (side != 0) {
+        Vector cue = t.listener;
+        cue.x += side * kWallLoopPanM;
+        cue.y += kWallLoopFwdM;
+        if (g_state.wall_loop.IsActive()) {
+            g_state.wall_loop.UpdatePosition(cue);
+        } else {
+            g_state.wall_loop.Start(
+                kWallCueResref, cue, /*looping=*/true, /*spatial=*/true,
+                /*priorityGroup=*/-1, /*volumeByte=*/kSwoopVolNearByte,
+                /*maxVolDist=*/kSwoopFlatBandMaxM,
+                /*minVolDist=*/kSwoopFlatBandMinM);
+        }
+        if (side != g_state.wall_loop_side) {
             acclog::Write("SwoopRace",
-                          "wall predict side=%s tunnelX=%.1f vel=%.2f "
-                          "proj=%.1f padErr=%.1f",
-                          side > 0 ? "right" : "left", tunnel.x, vel,
-                          projected, padErr);
+                          "wall loop: side=%s tunnelX=%.1f vel=%.2f proj=%.1f gear=%d overshoot=%d",
+                          side > 0 ? "right" : "left", t.tunnel.x,
+                          vel, proj, t.inGear ? 1 : 0, overshoot ? 1 : 0);
         }
+    } else if (g_state.wall_loop.IsActive()) {
+        g_state.wall_loop.Stop();
+        acclog::Write("SwoopRace", "wall loop: stop tunnelX=%.1f", t.tunnel.x);
     }
+    g_state.wall_loop_side = side;
+}
 
-    // ----- KOTOR 2 wall loop (see kWallBandU). Band OR projected crossing,
-    // any gear, with hysteresis so it does not chatter at the band edge.
-    if (acc::game::IsKotor2() && tunOk) {
-        // The projection counts only on a true overshoot — moving AWAY from
-        // the guide target (or with no target). Round 9 showed it firing on
-        // every fast swing toward a side-lane pad (proj crosses 16 from x 6
-        // while the magnet is about to catch the pad at 11), which trains
-        // the ear to ignore it. The band itself is unconditional.
-        const float vel  = g_state.smoothed_vel;
-        const float proj = tunnel.x + vel * WallLeadTicks();
-        const bool  overshoot = !have_target || vel * guideErr < 0.0f;
-        // The band is unconditional — except while the guide itself asks for
-        // it: a half-bar's strip beside the posts (MGC03 at x −12.4, MGC06 at
-        // −13.1) would otherwise ride under a permanent wall thump. The
-        // projected post crossing still warns there.
-        const bool guideInBand = have_target && bar_detour_slot >= 0 &&
-                                 std::fabs(guide_pos.x) >= kWallBandU - kWallBandHystU;
-        const bool projOk = overshoot && (!guideInBand || std::fabs(vel) >= kWallLoopBandMinVel);
-        int side = 0;
-        if ((!guideInBand && tunnel.x >= kWallBandU) || (projOk && proj >= kWallEdgeOffsetK2U))       side = +1;
-        else if ((!guideInBand && tunnel.x <= -kWallBandU) || (projOk && proj <= -kWallEdgeOffsetK2U)) side = -1;
-        if (side == 0 && !guideInBand && g_state.wall_loop_side != 0 &&
-            tunnel.x * g_state.wall_loop_side > kWallBandU - kWallBandHystU) {
-            side = g_state.wall_loop_side;   // still in the hysteresis band
-        }
-        if (side != 0) {
-            Vector cue = listener_pos;
-            cue.x += side * kWallLoopPanM;
-            cue.y += kWallLoopFwdM;
-            if (g_state.wall_loop.IsActive()) {
-                g_state.wall_loop.UpdatePosition(cue);
-            } else {
-                g_state.wall_loop.Start(
-                    kWallCueResref, cue, /*looping=*/true, /*spatial=*/true,
-                    /*priorityGroup=*/-1, /*volumeByte=*/kSwoopVolNearByte,
-                    /*maxVolDist=*/kSwoopFlatBandMaxM,
-                    /*minVolDist=*/kSwoopFlatBandMinM);
-            }
-            if (side != g_state.wall_loop_side) {
-                acclog::Write("SwoopRace",
-                              "wall loop: side=%s tunnelX=%.1f vel=%.2f proj=%.1f gear=%d overshoot=%d",
-                              side > 0 ? "right" : "left", tunnel.x,
-                              vel, proj, inGear ? 1 : 0, overshoot ? 1 : 0);
-            }
-        } else if (g_state.wall_loop.IsActive()) {
-            g_state.wall_loop.Stop();
-            acclog::Write("SwoopRace", "wall loop: stop tunnelX=%.1f", tunnel.x);
-        }
-        g_state.wall_loop_side = side;
-    }
-
-    // ----- Continuous panned steering guide (see the function header). -----
-    // Pan = next gate's lateral offset (decoupled: true X/Z, forward pinned to a
-    // fixed depth → pan encodes lane offset only). Loudness = real approach
-    // distance (urgency), floored so it stays audible. Rests (silent) only when
-    // you're within ~the catch radius of the pad — the magnet finishes from there.
+// The panned steering tone (see the block above); returns whether it sounds.
+// When it goes from sounding to rest, one centred "aligned" blip says the bike
+// is on the line and steering can stop.
+bool UpdateGuideTone(const PadTick& t) {
+    // Rest radius: the catch radius for a pad; a strip target is only 5 u past
+    // the bar's end, so resting that far short left the bike on the bar with
+    // nothing to hear.
+    const float restU = (t.barDetourSlot >= 0) ? kBarStripRestU : kSwoopGuideSilenceU;
     bool guide_active = false;
-    // Rest radius: the pad's catch radius for a pad, but a strip target is
-    // only 5 u past the bar's end, so resting 5 u short of it leaves the bike
-    // still touching the bar with nothing to hear — round 17 sat 2.5 u off
-    // the MGC04 strip, inside the span, with "follow the tone" spoken and the
-    // tone silent.
-    const float restU = (bar_detour_slot >= 0) ? kBarStripRestU : kSwoopGuideSilenceU;
-    if (have_target && bikeOk && std::fabs(guideErr) > restU) {
-        const float dist = std::sqrt(DistXYZSq(guide_pos, listener_pos));
-        Vector cue_pos = guide_pos;
-        cue_pos.y = listener_pos.y + kSwoopGuidePanForwardRefM;
+    if (t.haveTarget && t.bikeOk && std::fabs(t.guideErr) > restU) {
+        const float dist = std::sqrt(DistXYZSq(t.guidePos, t.listener));
+        Vector cue_pos = t.guidePos;
+        cue_pos.y = t.listener.y + kSwoopGuidePanForwardRefM;
         int vol_byte = SwoopVolumeByte(dist, kAccelpadCueRangeM);
         if (vol_byte < kSwoopGuideMinVolByte) vol_byte = kSwoopGuideMinVolByte;
         if (g_state.accelpad_line_loop.IsActive()) {
@@ -765,52 +766,70 @@ void TickAccelpadCues(void* miniGame) {
         g_state.accelpad_line_loop.Stop();  // within the rest zone / no target
     }
 
-    // On-pad confirmation: when the tone just went from sounding (steering) to
-    // rest (you reached the catch radius), play one centred "aligned" blip —
-    // "you're on track, you can stop steering." The panned tone's silence alone
-    // was ambiguous (off? blended out? actually locked?); this makes the rest
-    // state a positive cue. Fires once per approach (on the transition), re-arms
-    // when you steer off again.
-    if (have_target && g_state.guide_was_active && !guide_active) {
-        Vector cue = listener_pos;                      // centred — no pan
-        cue.y = listener_pos.y + kSteerAlignedFwdM;
+    if (t.haveTarget && g_state.guide_was_active && !guide_active) {
+        Vector cue = t.listener;                        // centred — no pan
+        cue.y = t.listener.y + kSteerAlignedFwdM;
         acc::audio::PlayCue3DRaw(kSteerAlignedResref, cue,
                               /*priorityGroup=*/0, kSteerCueVolume);
         acclog::Trace("SwoopRace", "guide aligned: padErr=%.2f slot=%d",
-                      padErr, ahead_slot);
+                      t.padErr, t.aheadSlot);
     }
     g_state.guide_was_active = guide_active;
+    return guide_active;
+}
 
-    // ----- Steering-guide diagnostic -----
-    // guide=1 when the panned tone is sounding, 0 when it rests (on the pad /
-    // no target).
-    if (have_target) {
+void TraceTick(const PadTick& t, bool guideActive) {
+    if (t.haveTarget) {
         acclog::Trace("SwoopRace",
                       "guide: padX=%.2f bikeX=%.2f padErr=%.2f vel=%.2f "
                       "guide=%d fwdGap=%.1f tunnelX=%s%.2f",
-                      ahead_pos.x, bikePos.x, padErr, g_state.smoothed_vel,
-                      guide_active ? 1 : 0, fwdGap,
-                      tunOk ? "" : "FAULT:", tunOk ? tunnel.x : 0.0f);
+                      t.aheadPos.x, t.bikePos.x, t.padErr, g_state.smoothed_vel,
+                      guideActive ? 1 : 0, t.fwdGap,
+                      t.tunOk ? "" : "FAULT:", t.tunOk ? t.tunnel.x : 0.0f);
     }
-
     acclog::Trace("SwoopRace",
                   "accelpad scan: slots=%d accelpads=%d ahead=%d aheadSlot=%d "
                   "refY=%.1f",
-                  slots_seen, accelpads_found, accelpads_ahead, ahead_slot,
-                  refY);
+                  t.slotsSeen, t.padsFound, t.padsAhead, t.aheadSlot, t.refY);
+}
 
-    // Remember this tick's targeted gate for next tick's crossing interpolation.
-    if (have_target) {
-        g_state.prev_ahead_slot   = ahead_slot;
-        g_state.prev_ahead_posX   = ahead_pos.x;
-        g_state.prev_ahead_posY   = ahead_pos.y;
-        g_state.prev_ahead_padErr = padErr;
-        g_state.prev_ahead_fwdGap = fwdGap;
+// This tick's gate, for next tick's crossing interpolation.
+void RememberTarget(const PadTick& t) {
+    if (t.haveTarget) {
+        g_state.prev_ahead_slot   = t.aheadSlot;
+        g_state.prev_ahead_posX   = t.aheadPos.x;
+        g_state.prev_ahead_posY   = t.aheadPos.y;
+        g_state.prev_ahead_padErr = t.padErr;
+        g_state.prev_ahead_fwdGap = t.fwdGap;
         g_state.have_prev_ahead   = true;
     } else {
         g_state.have_prev_ahead   = false;
         g_state.prev_ahead_slot   = -1;
     }
+}
+
+}  // namespace
+
+void TickAccelpadCues(void* miniGame) {
+    void* mgoArray = ResolveMgoArray();
+    if (!mgoArray) {
+        acclog::Trace("SwoopRace", "accelpad cues: mgo array unresolved");
+        return;
+    }
+    PadTick t;
+    if (!ReadTickInputs(miniGame, t)) return;
+    ScanEnemies(mgoArray, t);
+    UpdateLateralVelocity(t);
+    ScoreCrossing(t);
+    ChooseTarget(t);
+    ApplyBarDetour(miniGame, t);
+    ApplyMineDetour(t);
+    t.now = GetTickCount64();
+    ApplyMagnet(t);
+    PredictWallCue(t);
+    UpdateWallLoop(t);
+    TraceTick(t, UpdateGuideTone(t));
+    RememberTarget(t);
 }
 
 }  // namespace acc::swoop_race
