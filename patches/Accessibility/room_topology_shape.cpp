@@ -321,331 +321,300 @@ int AxisOctantMask(acc::strings::Id axisId) {
 }
 
 // ===== Pass 3: per-cluster classification =====
-// For each cluster root (the
-// smallest node id in its union-find class), compute the centroid,
-// collect external neighbours (dedup by node id), classify via
-// ClassifyCluster, and write the result to every member.
+
+namespace {
+
+// A cluster's members measured together: centroid, shape flags, mean
+// calibrated floor z, and the member-node bounding box.
+struct ClusterGeom {
+    Vector centroid = {0.0f, 0.0f, 0.0f};
+    int    size     = 0;
+    bool   hasOpen  = false;
+    bool   hasRoom  = false;
+    float  floorZ   = 0.0f;
+    float  minX = 1e30f, minY = 1e30f, maxX = -1e30f, maxY = -1e30f;
+    // Longer and shorter bounding-box side. Node positions, not walls, so
+    // it under-reads the true area, but a sprawling open cluster (~160 m)
+    // and a normal merged room (~20-30 m) are far apart. Single-node
+    // clusters have zero extent and can never be "large"; the shorter side
+    // feeds the zone-scale rule (a run is long AND narrow).
+    float  extent   = 0.0f;
+    float  minSide  = 0.0f;
+};
+
+ClusterGeom MeasureCluster(const acc::engine::navgraph::NavGraphSnapshot& g, int n, int root,
+                           const BuildPasses& bp) {
+    ClusterGeom c;
+    float floorZSum = 0.0f;
+    for (int m = 0; m < n; ++m) {
+        if (UFFind(m) != root) continue;
+        const Vector& p = g.nodes[m].pos;
+        c.centroid.x += p.x;
+        c.centroid.y += p.y;
+        c.centroid.z += p.z;
+        if (p.x < c.minX) c.minX = p.x;
+        if (p.x > c.maxX) c.maxX = p.x;
+        if (p.y < c.minY) c.minY = p.y;
+        if (p.y > c.maxY) c.maxY = p.y;
+        if (bp.nodeOpen[m]) c.hasOpen = true;
+        if (bp.nodeRoom[m]) c.hasRoom = true;
+        floorZSum += bp.nodeFloorZ[m];
+        ++c.size;
+    }
+    if (c.size > 0) {
+        c.centroid.x /= c.size;
+        c.centroid.y /= c.size;
+        c.centroid.z /= c.size;
+        c.floorZ = floorZSum / c.size;
+        const float w = c.maxX - c.minX;
+        const float h = c.maxY - c.minY;
+        c.extent  = (w > h) ? w : h;
+        c.minSide = (w > h) ? h : w;
+    }
+    return c;
+}
+
+// Per-axis extent of the cluster = median over its members' own 8-ray
+// extents. Feeds the elongation verdict (ComputeCentroidAxis explains why
+// one centroid probe is not enough). Median, not mean: a member sitting on
+// a crossing corridor reads tens of metres along that corridor and must not
+// drag the verdict. False without per-node data.
+bool MedianAxisExtents(int n, int root, const BuildPasses& bp, float axisExt[4]) {
+    if (!bp.haveGW) return false;
+    bool have = false;
+    float extTmp[kMaxNodes];
+    for (int a = 0; a < 4; ++a) {
+        int cnt = 0;
+        for (int m = 0; m < n; ++m) {
+            if (UFFind(m) != root) continue;
+            extTmp[cnt++] = bp.nodeAxisExt[m][a];
+        }
+        if (cnt <= 0) break;
+        std::nth_element(extTmp, extTmp + cnt / 2, extTmp + cnt);
+        axisExt[a] = extTmp[cnt / 2];
+        have = true;
+    }
+    return have;
+}
+
+// External neighbours: edges from any member to a non-member, deduped by
+// node id. The source member is kept with each so ClassifyCluster's
+// door-on-edge test uses the ACTUAL graph edge (member -> nb) rather than
+// the centroid -> nb blur: a plaza centroid is a synthesized midpoint, and
+// testing from it matched doors on no real edge (the Upper-City plaza lit
+// up "Door North, Door East, Door South, Door West" at once). Each edge
+// runs through ClassifyEdge: a blocked edge drops (the walkmesh says it
+// crosses a wall); door verdicts are cached so ClassifyCluster needs no
+// second door query.
+constexpr int kMaxExternal = 16;
+
+struct ClusterExits {
+    int nbs[kMaxExternal];
+    int srcs[kMaxExternal];     // the cluster member that owns the edge
+    int doorIdx[kMaxExternal];
+    int count = 0;
+};
+
+void CollectExternalExits(void* area, const acc::engine::navgraph::NavGraphSnapshot& g, int n,
+                          int root, ClusterExits& ex) {
+    for (int m = 0; m < n; ++m) {
+        if (UFFind(m) != root) continue;
+        int lo = 0, hi = 0;
+        acc::engine::navgraph::NeighbourRange(g, m, lo, hi);
+        for (int e = lo; e < hi; ++e) {
+            const int nb = static_cast<int>(g.conns[e]);
+            if (nb < 0 || nb >= n) continue;
+            if (UFFind(nb) == root) continue;  // internal edge
+            const EdgeResult er = ClassifyEdge(area, g.nodes[m].pos, g.nodes[nb].pos, "ext-edge");
+            if (er.kind == kEdgeBlocked) {
+                acclog::Write(
+                    "WallTopo",
+                    "  external BLOCKED: cluster=%d member[%d] (%.1f,%.1f) "
+                    "-> nb[%d] (%.1f,%.1f) — segment crosses wall, "
+                    "dropping from neighbour list",
+                    root, m, g.nodes[m].pos.x, g.nodes[m].pos.y,
+                    nb, g.nodes[nb].pos.x, g.nodes[nb].pos.y);
+                continue;
+            }
+            bool seen = false;
+            for (int k = 0; k < ex.count; ++k) {
+                if (ex.nbs[k] != nb) continue;
+                // A later edge to the same neighbour may find the door the
+                // first one missed.
+                if (ex.doorIdx[k] < 0 && er.kind == kEdgeDoor) ex.doorIdx[k] = er.doorIdx;
+                seen = true;
+                break;
+            }
+            if (seen) continue;
+            if (ex.count < kMaxExternal) {
+                ex.nbs[ex.count]     = nb;
+                ex.srcs[ex.count]    = m;
+                ex.doorIdx[ex.count] = (er.kind == kEdgeDoor) ? er.doorIdx : -1;
+                ++ex.count;
+            } else {
+                // This exit will not be voiced: logged so an under-reported
+                // plaza shows in the harvest (raise kMaxExternal if real).
+                acclog::Write(
+                    "WallTopo",
+                    "  external CAP: cluster=%d already has "
+                    "kMaxExternal=%d neighbours — dropping exit to "
+                    "nb[%d] (%.1f,%.1f); this exit will be missing "
+                    "from the label",
+                    root, kMaxExternal, nb, g.nodes[nb].pos.x, g.nodes[nb].pos.y);
+            }
+        }
+    }
+}
+
+// How the cluster announces: 0 = by its exit topology (junction, corridor,
+// dead end), 1 = room, 2 = big area. A cluster is an area only when the
+// clearance probe says it is a PLACE: an open-class member, a multi-node
+// room cluster, or an isolated cluster with no exits. A merged hub with no
+// open or room geometry stays a junction, a degree-2 run a corridor.
+//
+// The zone-scale rule then makes any cluster whose member footprint is
+// zone-scale a place, as the crossing / run / cul-de-sac words promise
+// something a few steps wide: with 3+ exits whatever its shape (Lehon
+// Southern Strand, 46 m, re-announced as a new crossing from every fringe
+// channel); with 1-2 exits only when wide too, since a real corridor is
+// long and narrow (the Ebon-Hawk port deck, a 34-node field with one ramp
+// out, read as a dead end).
+int AreaHint(const ClusterGeom& c, int externalCount, int root) {
+    int hint = 0;
+    if (externalCount == 0 || c.hasOpen || (c.size > 1 && c.hasRoom)) {
+        hint = (c.hasRoom && !c.hasOpen) ? 1 : 2;
+    }
+    if (hint == 0 && c.extent >= kJunctionZoneExtentMeters &&
+        (externalCount >= 3 || c.minSide >= kZoneMinWidthM)) {
+        hint = 2;
+        acclog::Write("WallTopo",
+                      "  zone-scale: cluster=%d size=%d extent=%.1fm "
+                      "minside=%.1fm exits=%d (>= %.1fm, and 3+ exits "
+                      "or >= %.1fm wide) — rendered as Bereich",
+                      root, c.size, c.extent, c.minSide,
+                      externalCount, kJunctionZoneExtentMeters,
+                      kZoneMinWidthM);
+    }
+    return hint;
+}
+
+// Transition triggers whose nearest nav node is a member become named exits.
+constexpr int kMaxClusterTransitions = 4;
+
+int CollectTransitions(int n, int root, int trigIdxs[kMaxClusterTransitions]) {
+    int count = 0;
+    for (int t = 0; t < g_graph.transition_count && count < kMaxClusterTransitions; ++t) {
+        const int nn = g_graph.transitions[t].nearestNode;
+        if (nn >= 0 && nn < n && UFFind(nn) == root) trigIdxs[count++] = t;
+    }
+    return count;
+}
+
+// The dead-end verdict for the cluster, from its degree-1 members (where a
+// terminal wall would be), not the centroid, which for a multi-node run
+// sits mid-corridor. One confirming terminal is enough; a cluster with no
+// degree-1 member cannot be judged and is not filtered.
+bool TerminalDeadEndAgrees(const acc::engine::navgraph::NavGraphSnapshot& g, int n, int root,
+                           const BuildPasses& bp) {
+    bool sawTerminal = false;
+    for (int m = 0; m < n; ++m) {
+        if (UFFind(m) != root || Degree(g, m) != 1) continue;
+        if (bp.nodeDeadEnd[m]) return true;
+        sawTerminal = true;
+    }
+    return !sawTerminal;
+}
+
+// The floor footprint for announce timing (ClusterInfo::footprintM). Node
+// spread reads a single-node crossing as zero metres wide; the narrowest
+// wall-to-wall axis through the members is its real width (a Taris
+// apartment-hall T junction: about 11 m, node spread 0).
+float Footprint(float extent, const float* axisExt) {
+    float footprint = extent;
+    if (axisExt) {
+        float narrowest = axisExt[0];
+        for (int a = 1; a < 4; ++a) {
+            if (axisExt[a] < narrowest) narrowest = axisExt[a];
+        }
+        if (narrowest > footprint) footprint = narrowest;
+    }
+    return footprint;
+}
+
+void Tally(int kind, BuildPasses& bp) {
+    switch (kind) {
+        case kKindDeadEnd:  ++bp.deadEnds;  break;
+        case kKindCorridor: ++bp.corridors; break;
+        case kKindJunction:
+        case kKindPlaza:
+        case kKindRoom:     ++bp.junctions; break;  // plazas and rooms tally as junctions
+        default:            ++bp.openAreas; break;
+    }
+}
+
+}  // namespace
+
+// For each cluster root (the smallest node id in its union-find class):
+// measure it, collect its external exits, classify it via ClassifyCluster,
+// and write the result to every member.
 void PassClassifyClusters(void* area,
                           const acc::engine::navgraph::NavGraphSnapshot& g,
                           int n, BuildPasses& bp) {
-    const bool*  nodeOpen   = bp.nodeOpen;
-    const bool*  nodeRoom   = bp.nodeRoom;
-    const float* nodeFloorZ = bp.nodeFloorZ;
-
-    int clusters = 0, multiNodeClusters = 0;
-    int deadEnds = 0, corridors = 0, junctions = 0, openAreas = 0;
+    bp.clusters = bp.multiNodeClusters = 0;
+    bp.deadEnds = bp.corridors = bp.junctions = bp.openAreas = 0;
     for (int root = 0; root < n; ++root) {
         if (UFFind(root) != root) continue;
-        ++clusters;
+        ++bp.clusters;
 
-        // Centroid of all members. Also tally member shape flags + the
-        // calibrated floor z (averaged) so we can decide whether this
-        // cluster is a probe-owned area and feed the axis probe.
-        Vector centroid = {0.0f, 0.0f, 0.0f};
-        int size = 0;
-        bool hasOpen = false, hasRoom = false;
-        float floorZSum = 0.0f;
-        // Member-node bounding box (X/Y) → footprint extent for the
-        // large-area label swap. Node positions, not walls, so it under-
-        // reads true area, but the relative gap between a sprawling open
-        // cluster (~160 m) and a normal merged room (~20-30 m) is huge,
-        // so a coarse threshold separates them cleanly.
-        float minX =  1e30f, minY =  1e30f;
-        float maxX = -1e30f, maxY = -1e30f;
-        for (int m = 0; m < n; ++m) {
-            if (UFFind(m) != root) continue;
-            centroid.x += g.nodes[m].pos.x;
-            centroid.y += g.nodes[m].pos.y;
-            centroid.z += g.nodes[m].pos.z;
-            if (g.nodes[m].pos.x < minX) minX = g.nodes[m].pos.x;
-            if (g.nodes[m].pos.x > maxX) maxX = g.nodes[m].pos.x;
-            if (g.nodes[m].pos.y < minY) minY = g.nodes[m].pos.y;
-            if (g.nodes[m].pos.y > maxY) maxY = g.nodes[m].pos.y;
-            if (nodeOpen[m]) hasOpen = true;
-            if (nodeRoom[m]) hasRoom = true;
-            floorZSum += nodeFloorZ[m];
-            ++size;
-        }
-        if (size > 0) {
-            centroid.x /= size;
-            centroid.y /= size;
-            centroid.z /= size;
-        }
-        float centroidFloorZ = (size > 0) ? floorZSum / size : 0.0f;
-        if (size > 1) ++multiNodeClusters;
-
-        // Longer bounding-box side = footprint extent. Single-node
-        // clusters have zero extent and can never be "large". The
-        // shorter side feeds the corridor-zone demotion (a run is long
-        // AND narrow; a place is big both ways).
-        float bboxExtent  = 0.0f;
-        float bboxMinSide = 0.0f;
-        if (size > 0) {
-            float w = maxX - minX;
-            float h = maxY - minY;
-            bboxExtent  = (w > h) ? w : h;
-            bboxMinSide = (w > h) ? h : w;
-        }
-        bool isLargeArea = bboxExtent >= kLargeAreaExtentMeters;
-
-        // Per-axis extent of the cluster = median over its members' own
-        // 8-ray extents. Feeds the elongation verdict (ComputeCentroidAxis
-        // explains why one centroid probe is not enough). Median, not
-        // mean: a member sitting on a crossing corridor reads tens of
-        // metres along that corridor and must not drag the verdict.
+        const ClusterGeom c = MeasureCluster(g, n, root, bp);
+        if (c.size > 1) ++bp.multiNodeClusters;
+        const bool isLargeArea = c.extent >= kLargeAreaExtentMeters;
         float axisExt[4] = {0.0f, 0.0f, 0.0f, 0.0f};
-        bool haveAxisExt = false;
-        if (size > 0 && bp.haveGW) {
-            float extTmp[kMaxNodes];
-            for (int a = 0; a < 4; ++a) {
-                int cnt = 0;
-                for (int m = 0; m < n; ++m) {
-                    if (UFFind(m) != root) continue;
-                    extTmp[cnt++] = bp.nodeAxisExt[m][a];
-                }
-                if (cnt <= 0) break;
-                std::nth_element(extTmp, extTmp + cnt / 2, extTmp + cnt);
-                axisExt[a] = extTmp[cnt / 2];
-                haveAxisExt = true;
-            }
-        }
+        const bool haveAxisExt = c.size > 0 && MedianAxisExtents(n, root, bp, axisExt);
 
-        // External neighbours: edges from any member to a non-member.
-        // Dedup by node id so multi-edge connections to the same
-        // outside node only register once. Capture the source cluster
-        // member alongside the nb so ClassifyCluster's door-on-edge
-        // test can use the ACTUAL graph edge (member.pos → nb.pos)
-        // rather than the centroid → nb.pos blur. For multi-node plaza
-        // clusters the centroid is a synthesized midpoint between
-        // members; testing perpendicular distance from that midpoint
-        // matches doors that aren't on any real graph edge, which is
-        // why the Upper-City plaza was lighting up with "Door North, Door
-        // East, Door South, Door West" all at once.
-        //
-        // Edge-class filtering: each member→nb graph edge runs through
-        // ClassifyEdge (the unified wall + door primitive). Blocked
-        // edges drop entirely — the graph offered an exit, but the
-        // walkmesh says it crosses a wall, so the cluster simply
-        // doesn't see that neighbour. Door verdicts are cached in
-        // externalDoorIdx[] so ClassifyCluster doesn't run a second
-        // door query per neighbour.
-        constexpr int kMaxExternal = 16;
-        int externalNbs[kMaxExternal];
-        int externalSrcs[kMaxExternal];   // cluster member that owns this edge
-        int externalDoorIdx[kMaxExternal];
-        int externalCount = 0;
-        for (int m = 0; m < n; ++m) {
-            if (UFFind(m) != root) continue;
-            int lo = 0, hi = 0;
-            acc::engine::navgraph::NeighbourRange(g, m, lo, hi);
-            for (int e = lo; e < hi; ++e) {
-                int nb = static_cast<int>(g.conns[e]);
-                if (nb < 0 || nb >= n) continue;
-                if (UFFind(nb) == root) continue;  // internal edge
-                EdgeResult er = ClassifyEdge(area,
-                                             g.nodes[m].pos, g.nodes[nb].pos,
-                                             "ext-edge");
-                if (er.kind == kEdgeBlocked) {
-                    acclog::Write(
-                        "WallTopo",
-                        "  external BLOCKED: cluster=%d member[%d] (%.1f,%.1f) "
-                        "-> nb[%d] (%.1f,%.1f) — segment crosses wall, "
-                        "dropping from neighbour list",
-                        root, m, g.nodes[m].pos.x, g.nodes[m].pos.y,
-                        nb, g.nodes[nb].pos.x, g.nodes[nb].pos.y);
-                    continue;
-                }
-                bool seen = false;
-                for (int k = 0; k < externalCount; ++k) {
-                    if (externalNbs[k] == nb) {
-                        // Upgrade -1 doorIdx if a later edge to the same
-                        // neighbour found a door the first didn't.
-                        if (externalDoorIdx[k] < 0 &&
-                            er.kind == kEdgeDoor) {
-                            externalDoorIdx[k] = er.doorIdx;
-                        }
-                        seen = true;
-                        break;
-                    }
-                }
-                if (!seen) {
-                    if (externalCount < kMaxExternal) {
-                        externalNbs    [externalCount] = nb;
-                        externalSrcs   [externalCount] = m;
-                        externalDoorIdx[externalCount] =
-                            (er.kind == kEdgeDoor) ? er.doorIdx : -1;
-                        ++externalCount;
-                    } else {
-                        // Cap hit — this exit won't be voiced. Log it rather
-                        // than drop silently so an under-reported plaza is
-                        // visible in the harvest (raise kMaxExternal if real).
-                        acclog::Write(
-                            "WallTopo",
-                            "  external CAP: cluster=%d already has "
-                            "kMaxExternal=%d neighbours — dropping exit to "
-                            "nb[%d] (%.1f,%.1f); this exit will be missing "
-                            "from the label",
-                            root, kMaxExternal, nb,
-                            g.nodes[nb].pos.x, g.nodes[nb].pos.y);
-                    }
-                }
-            }
-        }
-
-        // Announce decision — now independent of how the cluster merged.
-        // A cluster speaks as "Area" only when the clearance probe says
-        // it is a PLACE: any open-class member, a multi-node room cluster,
-        // or an isolated cluster with no exits. Everything else takes the
-        // graph path and is voiced by its exit topology — a tight merged
-        // hub with no open/room geometry reads as "junction", a degree-2
-        // run as "corridor", a single exit as "dead end". This is what
-        // keeps junctions sounding like junctions and corridors like
-        // corridors even though they merge by the same space rule.
-        //
-        // The old "size>1 && externalCount>=3 → area" clause was dropped on
-        // purpose: a merged corridor-junction hub (space-class by degree
-        // alone) must stay a junction, not become a Area.
-        //   - any open-class member       → big area (delayed)
-        //   - multi-node room cluster      → room  (immediate)
-        //   - isolated cluster (no exits)  → area (open/room by flag)
-        int areaHint = 0;  // 0 none, 1 room, 2 big
-        bool isArea = (externalCount == 0) || hasOpen ||
-                      (size > 1 && hasRoom);
-        if (isArea) areaHint = (hasRoom && !hasOpen) ? 1 : 2;
-
-        // Zone-scale refinement of that dropped clause: a junction web
-        // whose footprint exceeds kJunctionZoneExtentMeters is a place,
-        // not a crossing — render it as a Area (see the constant's
-        // comment for the Lehon evidence). externalCount >= 3 keeps
-        // long merged corridor CHAINS (2 exits, routinely >15m) and
-        // dead-end runs out of the override; small merged hubs stay
-        // junction per the original decision.
-        // Zone-scale rule, one statement for every exit count: a cluster
-        // whose member footprint is zone-scale is a PLACE, and renders
-        // through the area path ("Area [axis]. exits: …") rather
-        // than the crossing / run / cul-de-sac vocabulary, which all
-        // promise something a few steps wide.
-        //
-        // Two ways to qualify, and the difference is only about what
-        // protects long hallways:
-        //   - 3+ exits: a junction web that big is a plaza whatever its
-        //     shape (Lehon Southern Strand, 46m, re-announced as a new
-        //     crossing from every fringe channel).
-        //   - 1-2 exits: must be big in BOTH dimensions, because a real
-        //     corridor is long and NARROW (2.5-3m in vanilla content) —
-        //     the min-side test is what keeps hallways sounding like
-        //     hallways. Covers the one-exit case too: the Ebon-Hawk
-        //     port deck is a 34-node field with a single ramp out,
-        //     and calling that "dead end" hid a space you walk around
-        //     in — you have to cross it to reach the Protonenraketen.
-        if (areaHint == 0 && bboxExtent >= kJunctionZoneExtentMeters &&
-            (externalCount >= 3 || bboxMinSide >= kZoneMinWidthM)) {
-            areaHint = 2;
-            acclog::Write("WallTopo",
-                          "  zone-scale: cluster=%d size=%d extent=%.1fm "
-                          "minside=%.1fm exits=%d (>= %.1fm, and 3+ exits "
-                          "or >= %.1fm wide) — rendered as Bereich",
-                          root, size, bboxExtent, bboxMinSide,
-                          externalCount, kJunctionZoneExtentMeters,
-                          kZoneMinWidthM);
-        }
-
-        // Transition triggers whose nearest nav node is a member of this
-        // cluster become named exits in its label.
-        constexpr int kMaxClusterTransitions = 4;
+        ClusterExits ex;
+        CollectExternalExits(area, g, n, root, ex);
+        const int areaHint = AreaHint(c, ex.count, root);
         int trigIdxs[kMaxClusterTransitions];
-        int trigCount = 0;
-        for (int t = 0; t < g_graph.transition_count &&
-                        trigCount < kMaxClusterTransitions; ++t) {
-            int nn = g_graph.transitions[t].nearestNode;
-            if (nn >= 0 && nn < n && UFFind(nn) == root) {
-                trigIdxs[trigCount++] = t;
-            }
-        }
-
-        // Dead-end verdict for THIS cluster, resolved from its terminal
-        // members (the degree-1 ones — where a terminal wall would be)
-        // rather than from the centroid, which for a multi-node run
-        // sits mid-corridor. Any confirming terminal is enough; a
-        // cluster with no degree-1 member at all can't be judged, so it
-        // is not filtered.
-        bool terminalDeadEndAgrees = true;
-        {
-            bool sawTerminal = false, anyAgrees = false;
-            for (int m = 0; m < n; ++m) {
-                if (UFFind(m) != root) continue;
-                if (Degree(g, m) != 1) continue;
-                sawTerminal = true;
-                if (bp.nodeDeadEnd[m]) { anyAgrees = true; break; }
-            }
-            if (sawTerminal) terminalDeadEndAgrees = anyAgrees;
-        }
-
-        // Floor footprint for announce timing (ClusterInfo::footprintM).
-        // Node spread alone reads a single-node crossing as zero metres
-        // wide; the narrowest wall-to-wall axis through the members is
-        // the crossing's real width (an apartment-hall T junction on
-        // Taris: ~11 m, node spread 0).
-        float footprint = bboxExtent;
-        if (haveAxisExt) {
-            float narrowest = axisExt[0];
-            for (int a = 1; a < 4; ++a)
-                if (axisExt[a] < narrowest) narrowest = axisExt[a];
-            if (narrowest > footprint) footprint = narrowest;
-        }
+        const int trigCount = CollectTransitions(n, root, trigIdxs);
 
         std::string label;
         int kind = kKindOpenArea, sig = 0;
         bool filtered = false;
-        float bboxXY[4] = {minX, minY, maxX, maxY};
+        float bboxXY[4] = {c.minX, c.minY, c.maxX, c.maxY};
         std::vector<ExitMark> exits;
         g_exit_sink = &exits;
-        ClassifyCluster(g, centroid, externalNbs, externalSrcs,
-                        externalDoorIdx, externalCount,
+        ClassifyCluster(g, c.centroid, ex.nbs, ex.srcs, ex.doorIdx, ex.count,
                         trigIdxs, trigCount,
-                        areaHint, centroidFloorZ, isLargeArea,
-                        (size > 0) ? bboxXY : nullptr,
+                        areaHint, c.floorZ, isLargeArea,
+                        (c.size > 0) ? bboxXY : nullptr,
                         haveAxisExt ? axisExt : nullptr,
-                        bp.nodeDeadEnd, terminalDeadEndAgrees,
+                        bp.nodeDeadEnd, TerminalDeadEndAgrees(g, n, root, bp),
                         label, kind, sig, filtered);
         g_exit_sink = nullptr;
-
-        switch (kind) {
-            case kKindDeadEnd:  ++deadEnds;  break;
-            case kKindCorridor: ++corridors; break;
-            case kKindJunction: ++junctions; break;
-            case kKindPlaza:    ++junctions; break;  // tally w/ junctions
-            case kKindRoom:     ++junctions; break;  // tally w/ junctions
-            default:            ++openAreas; break;
-        }
+        Tally(kind, bp);
 
         if (isLargeArea) {
             acclog::Write("WallTopo",
                           "  large-area: cluster=%d size=%d extent=%.1fm "
                           "(>= %.1fm) -> '%s'",
-                          root, size, bboxExtent, kLargeAreaExtentMeters,
+                          root, c.size, c.extent, kLargeAreaExtentMeters,
                           label.c_str());
         }
 
-        // Write to every cluster member.
+        const float footprint = Footprint(c.extent, haveAxisExt ? axisExt : nullptr);
         for (int m = 0; m < n; ++m) {
             if (UFFind(m) != root) continue;
-            g_graph.node_label[m]    = label;
-            g_graph.node_exits[m]    = exits;
-            g_graph.node_kind[m]     = kind;
-            g_graph.node_sig[m]      = sig;
-            g_graph.node_filtered[m] = filtered;
-            g_graph.node_extent[m]   = bboxExtent;
-            g_graph.node_centre[m]   = centroid;
+            g_graph.node_label[m]     = label;
+            g_graph.node_exits[m]     = exits;
+            g_graph.node_kind[m]      = kind;
+            g_graph.node_sig[m]       = sig;
+            g_graph.node_filtered[m]  = filtered;
+            g_graph.node_extent[m]    = c.extent;
+            g_graph.node_centre[m]    = c.centroid;
             g_graph.node_footprint[m] = footprint;
         }
     }
-    bp.clusters          = clusters;
-    bp.multiNodeClusters = multiNodeClusters;
-    bp.deadEnds          = deadEnds;
-    bp.corridors         = corridors;
-    bp.junctions         = junctions;
-    bp.openAreas         = openAreas;
 }
 
 }  // namespace acc::room_topology
