@@ -42,6 +42,11 @@ rejections are advice only, Anouk decides.
 - Input (Anouk, 2026-11-10 13:33): keyboard only. Everything about the
   mod's gamepad support goes, code and docs; KOTOR 2's own controller
   support (the game's) stays untouched.
+- Leftovers (Anouk, 2026-11-10 14:12): clean them up right away rather
+  than later. Installing tools is fine, test and analysis tools too.
+- Comments (Anouk, 2026-11-10 14:20): only where they really add
+  something, as long as Claude understands the code. The full trim of
+  comments that restate the code happens per module during its lean.
 
 ## Rules
 
@@ -53,6 +58,9 @@ rejections are advice only, Anouk decides.
 5. Record rejected changes below with the reason.
 6. The repo's CLAUDE.md still applies (SEH constraint C2712, search for an
    existing helper before adding one).
+7. Unused constants in the engine_offsets_*.h catalogs, the engine API
+   addresses in audio_bus.h and documented struct layouts stay: verified
+   engine knowledge, not dead code.
 
 ## Method per file
 
@@ -115,6 +123,18 @@ InteractNarratedTarget; this commit also carries the deletion of the
 three controller docs), 660dd26 (docs), 0b2ca8d (comments, OpenPersonal,
 ClearAllAndClose). The pad_input split and lean done just before
 (9aaf284, 981529f, 2eb952e) went with it.
+Cleanup round (cppcheck 2.22 and LLVM clang-cl installed): 32 header
+functions without a caller and their leftovers out (e2c6366), unused
+constants, types and globals (29795a3), cppcheck findings (ef19a74),
+a real bug: the Swoop shift key name fell through to "Key help"
+(e3dea96), clang -Wunused findings (9163413), EnsureSpeechInitialized
+declared once in speech.h (5cab43f). Comments: current file names
+(c76d646), English examples and terms instead of the maker's German
+ones (93ed6f0). German identifiers renamed (bf2cadd: combat_strings
+fields, combat_log rules, KindPlatz -> KindPlaza). English-only code
+leftovers (5df2a82: German close/cancel words, multilingual skill-check
+roots, German fallback captions, VK_OEM_3 named "Ö", "Talents" for
+feats); "metres" in every string (the commit after).
 
 Careful: never rewrite source files with PowerShell ReadAllText/WriteAllText
 (it decodes UTF-8 and writes '?' for the dashes and umlauts in comments);
@@ -144,11 +164,8 @@ prefix (menus_listbox_picker.cpp).
      codepage speech::kGameCodepage); installer texts and readme links
      to the fork (ed2d156); installer assumes the English game, no
      localized TSLRCM or K1CP overlays (8c2dc36); translation docs and
-     kdev combat-strings-extract out (the commit after). Later, with the
-     comment pass: strings.h, combat_log.cpp and the combat_strings field
-     names still carry German examples and words. Docs that still point
-     at translations (ACCESSIBILITY_MODDING_GUIDE, kotor2-port-
-     feasibility, kdev-design, llm-docs/action-menu-and-combat) go in E.
+     kdev combat-strings-extract out (the commit after); German in
+     comments and names out in the cleanup round.
   I. Installer source (Anouk, 2026-11-10), done: no self-update, no
      --auto-update handoff, release.ps1 gone (9321977); the mod comes
      from this fork's bridge-latest, builds are named "bridge-<sha7>" and
@@ -176,24 +193,8 @@ prefix (menus_listbox_picker.cpp).
   EngineYawToCompass/CompassToSector/SectorString. One helper in
   engine_compass (bearing of a vector, and its compass word). kRadToDeg is
   defined in many files: one constant with it.
-- Stale file names in comments (swoop_race.cpp, swoop_spatial_audio.h,
-  turret_game.cpp and others from before the minigame_ prefix): one pass.
 - Next file: engine_area.cpp, then unified_action_menu.cpp, combat_log.cpp
   and down the size list.
-- Header functions without a caller (dead_decls.py in the temp scripts,
-  2026-11-10): bridge RecordSpoken, engine_area GetDoorMaterial /
-  GetRoomRepresentativeWorld, engine_input EnsureInputAcquired /
-  MouseDeviceUnavailable, engine_keymap MoveAxisVks, engine_options
-  Set/ToggleMouseLook, engine_panels CallHideSWInGameGui, engine_radial
-  GetRowActionButton / Select*ActionInRow, engine_actionbar
-  GetColumnActionButton, engine_reads ReadItemKeyedPropertyString,
-  engine_rebase IsRebased, engine_scriptvar Get/SetPlayerVarInt,
-  focus_guard ArmStartupForegroundGuard, hotkeys AltGrHeld / AltHeld /
-  GetDefault, log FlushAll / FmtPtr / RegisterPtr, menus_chargen_layout
-  IsBindingReady, menus_listbox EquipPickerPanel, menus_modsettings
-  GetRootAnchor, mod_settings_store GetBool, spatial_wall_surfaces
-  Get*Buffer / Get*Count / GetSurfaceDesc. Check each (some may be kept
-  for the bridge or tests) in the static analysis pass.
 - F2b: share the save-variable code of exit_memory with discovery.cpp.
 - F3 menus_chargen_feats / menus_powers_levelup: about 15 same-named
   functions, 22 cloned blocks; one chart-grid module (check K2 plans).
@@ -212,7 +213,14 @@ prefix (menus_listbox_picker.cpp).
   but /health, /spoken, /state, /menu, say and key are KOTOR 1 only);
   live check of /objects with creatures and kotor.py kaart --personen
   (needs the game running with the new DLL).
-- Static analysis pass. (Clean build after D: 0 warnings.)
+- Static analysis, left: cppcheck's 86 knownConditionTrueFalse findings
+  (possible redundant guards) are not reviewed yet; take them per module
+  during its lean. Command: cppcheck --enable=unusedFunction,style,
+  warning,performance --platform=win32W -D_WIN32 -D_MSC_VER=1930
+  --std=c++17 --language=c++ -I patches/Accessibility (plus
+  --inline-suppr and the missingInclude suppressions) on
+  patches/Accessibility; clang-cl -fsyntax-only -Wno-everything
+  -Wunused-* per file.
 - End: in-game checks (main menu without the updater, F5 does nothing; the
   untested features in brief.md), end report against the baseline, delete
   this file, short changelog note.
@@ -226,4 +234,12 @@ room_topology; the compiler catches a miss).
 
 ## Rejected
 
-- (none yet)
+- cppcheck style findings left as they are: constVariablePointer and
+  friends (noise in engine-pointer code), useStlAlgorithm (loops read
+  better), uninitMemberVarNoCtor (POD structs filled by the engine),
+  badBitmaskCheck on `kKindDeadEnd & 0xff |` (written that way to show
+  the layout), view_mode shadow/duplicateAssign, and the false positives
+  (bridge_describe containerOutOfBounds, cycle_state and skillinfo
+  uninitvar).
+- BTN_WAEHLEN / BTN_ABBRECHEN stay in a comment: they are .gui control
+  tags, not prose.
