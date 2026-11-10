@@ -228,409 +228,423 @@ void TrackMinePasses(void* player, const Vector& bikePos, float playerRadius) {
     }
 }
 
+namespace {
+
+// The bike, the listener and this tick's collections, shared by the steps
+// of TickObstacleCues. POD apart from the initialisers: this file is
+// SEH-heavy by convention (see CLAUDE.md).
+struct ObstacleTick {
+    bool   k2           = false;
+    Vector bikePos      = {0, 0, 0};
+    bool   bikeOk       = false;
+    float  bikeSpeed    = 0.0f;
+    float  playerRadius = 0.0f;
+    bool   justLanded   = false;
+    bool   parked       = false;
+    Vector listener     = {0, 0, 0};
+
+    // In-range warn-loop hazards, before the nearest-N cut.
+    struct Candidate {
+        int         slot;
+        float       dist;
+        Vector      pos;
+        const char* name;
+    };
+    Candidate candidates[kMgoArraySlotCount];
+    int candidateCount = 0;
+
+    // This tick's bars (K2), published to g_state after the sweep so the pair
+    // lookup inside it reads a consistent (last tick's) list.
+    SpatialAudioState::BarInfo newBars[kMgoArraySlotCount];
+    int newBarCount = 0;
+
+    int slotsSeen = 0, obstaclesFound = 0, ahead = 0, inRange = 0;
+    int postsSkipped = 0, scenerySkipped = 0, barsSeen = 0, minesInRange = 0;
+};
+
+// Bike state for the K2 bar logic (lane, forward position, speed, the
+// airborne edge for the "jump again" repeat) and the listener; false without
+// a listener anchor.
+bool ReadObstacleTick(void* miniGame, ObstacleTick& t) {
+    t.k2 = acc::game::IsKotor2();
+    void* player = SafeReadPtr(miniGame, kMiniGamePlayerOffset);
+    t.bikeOk = ReadFollowerPosition(player, t.bikePos);
+    t.bikeSpeed = SafeReadFloat(player, kFollowerSpeedOffset);
+    t.playerRadius = SafeReadFloat(player, kFollowerSphereRadiusOffset);
+    Vector tunnel = {0, 0, 0};
+    const bool tunOk = SafeReadVector(player, kMiniPlayerOffsetVectorOffset, tunnel);
+    const bool airborne = tunOk && tunnel.z > kAirborneZ;
+    t.justLanded = g_state.was_airborne && !airborne;
+    g_state.was_airborne = airborne;
+    // Parked (gear 0 after a hit): every bar's beep re-arms, so each relaunch
+    // in front of a bar gets the beep again, on the free side. Round 9 lost
+    // seven hits in five seconds relaunching into MGC03 with no cue at all
+    // (the two beeps per pass had been spent before the hit).
+    t.parked = t.k2 && acc::engine::ReadGlobalNumber("MIN_RACE_GEAR") == 0;
+
+    // During the race the engine swaps the controlled creature (PartyLeader
+    // goes handle=0xffffffff), so GetPlayerPosition is unreliable; the camera
+    // follows the bike and is the right listener.
+    if (!acc::engine::GetCameraPosition(t.listener) &&
+        !acc::engine::GetPlayerPosition(t.listener)) {
+        acclog::Trace("SwoopRace", "obstacle cues: no listener anchor available");
+        return false;
+    }
+    return true;
+}
+
+// One obstacle as the steps see it. K2 boxes are unrotated on straight +Y
+// tracks (the axis probe has asserted +Y), so the world box is the origin
+// plus the local box.
+struct ObstacleView {
+    void*       obstacle  = nullptr;
+    Vector      pos       = {0, 0, 0};
+    const char* name      = nullptr;
+    bool        haveBox   = false;
+    float       x0 = 0.0f, x1 = 0.0f, y0 = 0.0f, y1 = 0.0f, z0 = 0.0f;
+    bool        scenery   = false;
+    bool        post      = false;
+    // Where the hazard really is: box centre laterally (clamped to the
+    // lane), leading edge forward, base height.
+    Vector      hazardPos = {0, 0, 0};
+};
+
+bool ReadObstacle(void* mgoArray, int i, ObstacleTick& t, ObstacleView& v) {
+    void* obj =
+        SafeReadPtr(mgoArray, kMgoArrayObjectsOffset + static_cast<size_t>(i) * sizeof(void*));
+    if (!obj) return false;
+    ++t.slotsSeen;
+    // AsObstacle (vtable[8]) returns the object itself for a CSWMGObstacle,
+    // null otherwise: the engine's own type check.
+    v.obstacle = CallAsCast(obj, kVtableSlotAsObstacle);
+    if (!v.obstacle) return false;
+    ++t.obstaclesFound;
+    void* aur = SafeReadPtr(v.obstacle, kObstacleAurObjectOffset);
+    if (!aur || !SafeReadVector(aur, kAurObjectPositionOffset, v.pos)) return false;
+    // For the inventory log and the K2 classification (rocks and accelpads
+    // are in different engine pools).
+    v.name = ReadAurObjectName(aur);
+
+    HazardInfo& hz = g_state.hazards[i];
+    if (t.k2 && hz.state == kHazardUntried) ResolveHazardBox(aur, v.name, hz);
+    v.haveBox = t.k2 && hz.state == kHazardOk;
+    v.x0 = v.haveBox ? v.pos.x + hz.mn.x : v.pos.x;
+    v.x1 = v.haveBox ? v.pos.x + hz.mx.x : v.pos.x;
+    v.y0 = v.haveBox ? v.pos.y + hz.mn.y : v.pos.y;
+    v.y1 = v.haveBox ? v.pos.y + hz.mx.y : v.pos.y;
+    v.z0 = v.haveBox ? v.pos.z + hz.mn.z : v.pos.z;
+    v.scenery = v.haveBox && hz.cls == kHazardScenery;
+    v.post = v.haveBox && !v.scenery && (v.x0 >= kLaneEdgeSkipU || v.x1 <= -kLaneEdgeSkipU);
+    v.hazardPos = v.pos;
+    if (v.haveBox) {
+        float cx = 0.5f * (v.x0 + v.x1);
+        if (cx >  kLaneHalfWidthU) cx =  kLaneHalfWidthU;
+        if (cx < -kLaneHalfWidthU) cx = -kLaneHalfWidthU;
+        v.hazardPos.x = cx;
+        v.hazardPos.y = v.y0;
+        v.hazardPos.z = v.z0;
+    }
+    return true;
+}
+
+// First sweep only: every obstacle's slot and name (and the K2 box and
+// class), so the per-track inventory is in the log once.
+void LogObstacleInventory(int i, const ObstacleView& v, const HazardInfo& hz, bool k2) {
+    void* vt = SafeReadPtr(v.obstacle, 0);
+    if (v.haveBox) {
+        acclog::Write("SwoopRace",
+                      "obstacle slot=%d ptr=%p vtable=%p name=[%s] "
+                      "pos=(%.2f,%.2f,%.2f) box=%s x[%.1f..%.1f] "
+                      "y[%.1f..%.1f] z[%.1f..%.1f] class=%s",
+                      i, v.obstacle, vt, v.name ? v.name : "(null)",
+                      v.pos.x, v.pos.y, v.pos.z,
+                      hz.from_part ? "hitbump" : "gob",
+                      v.x0, v.x1, v.y0, v.y1, v.z0, v.pos.z + hz.mx.z,
+                      v.scenery ? "scenery" : v.post ? "post"
+                      : (hz.cls == kHazardBar ? "bar" : "block"));
+    } else {
+        acclog::Write("SwoopRace",
+                      "obstacle slot=%d ptr=%p vtable=%p name=[%s] "
+                      "pos=(%.2f,%.2f,%.2f)%s",
+                      i, v.obstacle, vt, v.name ? v.name : "(null)",
+                      v.pos.x, v.pos.y, v.pos.z,
+                      (k2 && hz.state == kHazardFailed) ? " box=FAILED" : "");
+    }
+}
+
+// Parked right in front of this bar, inside its span: classify the escape
+// (see ParkedBar in the header) for the stuck hint, and, off the wall with
+// no strip, play the centred beep once per park: "jump first, then W". At
+// the wall the beep stays silent (a jump there hits the pillar; rounds 15/16
+// lost 7 and 11 relaunches that way) and the wall loop is the cue.
+void HandleParkedBar(int i, const ObstacleView& v, HazardInfo& hz,
+                     const SpatialAudioState::BarInfo& cur, float gap, float bikeX) {
+    if (gap <= -kBarLaneMarginU || gap > kParkedBarAheadU ||
+        g_state.parked_bar != ParkedBar::None) {
+        return;
+    }
+    if (bikeX >= kParkedWallU) {
+        g_state.parked_bar = ParkedBar::WallRight;
+    } else if (bikeX <= -kParkedWallU) {
+        g_state.parked_bar = ParkedBar::WallLeft;
+    } else if (cur.has_gap) {
+        g_state.parked_bar = ParkedBar::Strip;
+    } else {
+        g_state.parked_bar = ParkedBar::MustJump;
+        if (!hz.park_cued) {
+            hz.park_cued = 1;
+            acc::audio::PlayCue(kJumpNowCueResref);
+            acclog::Write("SwoopRace",
+                          "parked beep: slot=%d name=[%s] bar y=%.1f gap=%.1f bikeX=%.2f",
+                          i, v.name ? v.name : "(null)", v.y0, gap, bikeX);
+        }
+    }
+}
+
+// The jump lead: the single-bar constant, or, when the next bar behind this
+// one is close enough that one jump clears both at this speed with a press
+// window of at least kPairMinWindowSec, the later "pair" lead that centres
+// the usual reaction in that window (see kJumpReactionSec). The bar list is
+// last tick's.
+float JumpLead(int slot, float y0, float vWorld, bool& pair) {
+    pair = false;
+    float nextY0 = 0.0f, nextY1 = 0.0f;
+    bool haveNext = false;
+    for (int b = 0; b < g_state.bar_count; ++b) {
+        const SpatialAudioState::BarInfo& nb = g_state.bars[b];
+        if (nb.slot == slot || nb.y0 <= y0) continue;
+        if (!haveNext || nb.y0 < nextY0) {
+            nextY0 = nb.y0;
+            nextY1 = nb.y1;
+            haveNext = true;
+        }
+    }
+    if (!haveNext) return kJumpCueLeadSec;
+    const float reach  = (nextY1 + kBarLaneMarginU - y0) / vWorld;
+    const float window = kJumpOverBarUntilSec - reach - kJumpOverBarFromSec;
+    if (window < kPairMinWindowSec) return kJumpCueLeadSec;
+    pair = true;
+    return kJumpOverBarFromSec + 0.5f * window + kJumpReactionSec;
+}
+
+// First beep: "press now". Second beep: the bike was airborne from an
+// earlier press and has just landed with the bar still ahead inside the
+// window: press again.
+void MaybeJumpCue(int i, const ObstacleView& v, HazardInfo& hz,
+                  const SpatialAudioState::BarInfo& cur, float gap, float bikeX,
+                  const ObstacleTick& t) {
+    const float vWorld = t.bikeSpeed * kSpeedToWorldPerSec;  // world u/s
+    const float ttc    = gap / vWorld;                       // real seconds
+    bool pair = false;
+    const float lead = JumpLead(i, v.y0, vWorld, pair);
+    const bool first  = hz.jump_cued == 0 && ttc <= lead;
+    const bool repeat = hz.jump_cued == 1 && t.justLanded &&
+                        ttc <= lead && ttc >= kJumpCueMinLeadSec;
+    if (!first && !repeat) return;
+    ++hz.jump_cued;
+    // Free side = the surviving strip (posts and mines removed). With a strip
+    // the beep sits at the strip's real lateral offset, placed like the guide
+    // tone (world x, kSwoopGuidePanForwardRefM ahead), so its angle reads as
+    // distance in the vocabulary of the pad lanes: narrow is "four units,
+    // lean", wide "twelve, jump unless already moving". No strip: centred,
+    // "you must jump".
+    const int side = cur.has_gap ? cur.gap_side : 0;
+    if (side == 0) {
+        acc::audio::PlayCue(kJumpNowCueResref);
+    } else {
+        Vector cue = t.listener;
+        cue.x  = cur.gap_x;
+        cue.y += kSwoopGuidePanForwardRefM;
+        acc::audio::PlayCue3DRaw(kJumpNowCueResref, cue);
+    }
+    acclog::Write("SwoopRace",
+                  "jump cue%s: slot=%d name=[%s] bar y=%.1f x[%.1f..%.1f] "
+                  "gap=%.1f speed=%.1f ttc=%.2fs lead=%.2fs pair=%d bikeX=%.2f side=%s "
+                  "stripX=%.1f offset=%.1f",
+                  repeat ? " (again)" : "", i, v.name ? v.name : "(null)",
+                  v.y0, v.x0, v.x1, gap, t.bikeSpeed, ttc, lead, pair ? 1 : 0, bikeX,
+                  side == 0 ? "centre" : side < 0 ? "left" : "right",
+                  side == 0 ? 0.0f : cur.gap_x,
+                  side == 0 ? 0.0f : cur.gap_x - bikeX);
+}
+
+// A low bar (K2): the jump-now cue, never the warn loop.
+void HandleBar(int i, const ObstacleView& v, HazardInfo& hz, ObstacleTick& t) {
+    ++t.barsSeen;
+    SpatialAudioState::BarInfo cur;
+    cur.slot = i; cur.x0 = v.x0; cur.x1 = v.x1; cur.y0 = v.y0; cur.y1 = v.y1;
+    ComputeBarGap(cur, g_state.ground_z, t.playerRadius);
+    if (t.newBarCount < kMgoArraySlotCount) t.newBars[t.newBarCount++] = cur;
+    if (!g_state.bar_gap_diag_emitted && g_state.mine_count > 0) {
+        acclog::Write("SwoopRace",
+                      "bar strip: slot=%d name=[%s] y=%.0f x[%.1f..%.1f] gap=%d side=%s "
+                      "target=%.1f (bikeZ=%.1f bikeR=%.2f)",
+                      i, v.name ? v.name : "(null)", v.y0, v.x0, v.x1, cur.has_gap ? 1 : 0,
+                      cur.gap_side < 0 ? "left" : cur.gap_side > 0 ? "right" : "none",
+                      cur.gap_x, g_state.ground_z, t.playerRadius);
+    }
+    const float gap = v.y0 - (t.bikeOk ? t.bikePos.y : t.listener.y);
+    if (gap < -kObstacleForwardMargin || gap > kObstacleCueRangeM) {
+        hz.jump_cued = 0;   // passed or far: re-arm
+        hz.park_cued = 0;
+        return;
+    }
+    const float bikeX = t.bikeOk ? t.bikePos.x : t.listener.x;
+    const bool inSpan = bikeX >= v.x0 - kBarLaneMarginU && bikeX <= v.x1 + kBarLaneMarginU;
+    if (t.parked) {
+        hz.jump_cued = 0;   // re-arm for the relaunch
+        if (inSpan) HandleParkedBar(i, v, hz, cur, gap, bikeX);
+        return;
+    }
+    hz.park_cued = 0;
+    if (!inSpan || t.bikeSpeed <= 1.0f || gap <= 0.0f) return;
+    MaybeJumpCue(i, v, hz, cur, gap, bikeX, t);
+}
+
+// A hazard that warns through the loop (K1 rocks, K2 blocks and mines):
+// ahead of the listener within the margin, and inside range. Track Y is the
+// forward axis (low to high), confirmed live on K1 and asserted per race on
+// K2 by the axis probe.
+bool Admit(ObstacleTick& t, int slot, const Vector& hazardPos, const char* name) {
+    if (hazardPos.y < t.listener.y - kObstacleForwardMargin) return false;
+    ++t.ahead;
+    const float distSq = DistXYZSq(hazardPos, t.listener);
+    if (distSq > kObstacleCueRangeM * kObstacleCueRangeM) return false;
+    ++t.inRange;
+    ObstacleTick::Candidate& c = t.candidates[t.candidateCount++];
+    c.slot = slot;
+    c.dist = (distSq > 0.0f) ? std::sqrt(distSq) : 0.0f;
+    c.pos  = hazardPos;
+    c.name = name;
+    return true;
+}
+
+// Nearest first, cut to the loop budget: a partial selection sort (single
+// digits on K2; on K1 the budget is the whole array). Returns how many sound.
+int SelectNearest(ObstacleTick& t) {
+    const int sounding = (t.candidateCount < ObstacleLoopBudget()) ? t.candidateCount
+                                                                    : ObstacleLoopBudget();
+    for (int a = 0; a < sounding; ++a) {
+        int best = a;
+        for (int b = a + 1; b < t.candidateCount; ++b) {
+            if (t.candidates[b].dist < t.candidates[best].dist) best = b;
+        }
+        if (best != a) {
+            const ObstacleTick::Candidate tmp = t.candidates[a];
+            t.candidates[a] = t.candidates[best];
+            t.candidates[best] = tmp;
+        }
+    }
+    return sounding;
+}
+
+// The decoupled cue: lateral and vertical true, forward pinned to a fixed
+// reference depth, so the pan says lane error only; loudness follows our
+// own curve on the real 3D distance. Returns the loops started.
+int SoundWarnLoops(const ObstacleTick& t, int sounding, bool active[kMgoArraySlotCount]) {
+    int started = 0;
+    for (int c = 0; c < sounding; ++c) {
+        const ObstacleTick::Candidate& cand = t.candidates[c];
+        const int i = cand.slot;
+        Vector cuePos = cand.pos;
+        cuePos.y = t.listener.y + kSwoopPanForwardRefM;
+        const int volByte = SwoopVolumeByte(cand.dist, kObstacleCueRangeM);
+        active[i] = true;
+        if (g_state.obstacle_loops[i].IsActive()) {
+            g_state.obstacle_loops[i].UpdatePosition(cuePos);
+            g_state.obstacle_loops[i].UpdateVolume(volByte);
+            continue;
+        }
+        // The flat band, so only our own volume shapes the loudness.
+        if (g_state.obstacle_loops[i].Start(
+                kObstacleWarnLoopResref, cuePos, /*looping=*/true, /*spatial=*/true,
+                /*priorityGroup=*/-1, /*volumeByte=*/volByte,
+                /*maxVolDist=*/kSwoopFlatBandMaxM,
+                /*minVolDist=*/kSwoopFlatBandMinM)) {
+            ++started;
+            acclog::Trace("SwoopRace",
+                          "loop start slot=%d name=[%s] "
+                          "obstaclePos=(%.1f,%.1f,%.1f) "
+                          "cuePos=(%.1f,%.1f,%.1f) dist=%.1f res=%s",
+                          i, cand.name ? cand.name : "(null)",
+                          cand.pos.x, cand.pos.y, cand.pos.z,
+                          cuePos.x, cuePos.y, cuePos.z,
+                          cand.dist, kObstacleWarnLoopResref);
+        }
+    }
+    return started;
+}
+
+// Loops whose obstacle left range (passed, or its reads failed this tick);
+// Stop is idempotent. Returns the loops stopped.
+int StopStaleLoops(const bool active[kMgoArraySlotCount]) {
+    int stopped = 0;
+    for (int i = 0; i < kMgoArraySlotCount; ++i) {
+        if (active[i] || !g_state.obstacle_loops[i].IsActive()) continue;
+        g_state.obstacle_loops[i].Stop();
+        ++stopped;
+        acclog::Trace("SwoopRace", "loop stop slot=%d (out of range / unresolved)", i);
+    }
+    return stopped;
+}
+
+}  // namespace
+
 void TickObstacleCues(void* miniGame) {
     void* mgoArray = ResolveMgoArray();
     if (!mgoArray) {
         acclog::Trace("SwoopRace", "obstacle cues: mgo array unresolved");
         return;
     }
-
-    // Bike state for the K2 bar logic: lane position, forward position, speed,
-    // and the airborne edge (offset.z) for the "jump again" repeat.
-    const bool k2 = acc::game::IsKotor2();
-    void*  player   = SafeReadPtr(miniGame, kMiniGamePlayerOffset);
-    Vector bikePos  = {0, 0, 0};
-    const bool bikeOk = ReadFollowerPosition(player, bikePos);
-    const float bikeSpeed = SafeReadFloat(player, kFollowerSpeedOffset);
-    const float playerRadius = SafeReadFloat(player, kFollowerSphereRadiusOffset);
-    Vector tunnel = {0, 0, 0};
-    const bool tunOk = SafeReadVector(player, kMiniPlayerOffsetVectorOffset, tunnel);
-    const bool airborne = tunOk && tunnel.z > kAirborneZ;
-    const bool justLanded = g_state.was_airborne && !airborne;
-    g_state.was_airborne = airborne;
-    // Parked (gear 0 after a hit): every bar's beep re-arms, so each relaunch
-    // in front of a bar gets the beep again, on the free side. Round 9 lost
-    // seven hits in five seconds relaunching into MGC03 with no cue at all
-    // (the two beeps per pass had been spent before the hit).
-    const bool parked = k2 && acc::engine::ReadGlobalNumber("MIN_RACE_GEAR") == 0;
-
-    // Listener anchor. During the race the engine swaps the controlled
-    // creature (PartyLeader log goes handle=0xffffffff), so
-    // GetPlayerPosition is unreliable. Camera follows the bike, so
-    // it's the correct listener.
-    Vector listener_pos;
-    if (!acc::engine::GetCameraPosition(listener_pos) &&
-        !acc::engine::GetPlayerPosition(listener_pos)) {
-        acclog::Trace("SwoopRace",
-                      "obstacle cues: no listener anchor available");
-        return;
-    }
-
-    int slots_seen = 0;
-    int obstacles_found = 0;
-    int obstacles_ahead = 0;
-    int obstacles_in_range = 0;
-    int obstacles_dropped = 0;   // in range but over the concurrency budget
-    int loops_started_this_tick = 0;
-    int loops_stopped_this_tick = 0;
-
-    // In-range obstacles collected this tick, before the nearest-N cut. POD, so
-    // no destructors — this file is SEH-heavy by convention (see CLAUDE.md).
-    struct ObstacleCandidate {
-        int         slot;
-        float       dist;
-        Vector      pos;
-        const char* name;
-    };
-    ObstacleCandidate candidates[kMgoArraySlotCount];
-    int candidate_count = 0;
-
-    // Shared admission test for a hazard that warns through the warn loop
-    // (K1 rocks, K2 blocks, K2 mines): ahead of the listener (within the
-    // margin), inside range. Appends to `candidates`; returns false if not.
-    auto admit = [&](int slot, const Vector& hazardPos, const char* name,
-                     int& aheadCount, int& inRangeCount) -> bool {
-        if (hazardPos.y < listener_pos.y - kObstacleForwardMargin) return false;
-        ++aheadCount;
-        const float distSq = DistXYZSq(hazardPos, listener_pos);
-        if (distSq > kObstacleCueRangeM * kObstacleCueRangeM) return false;
-        ++inRangeCount;
-        candidates[candidate_count].slot = slot;
-        candidates[candidate_count].dist = (distSq > 0.0f) ? std::sqrt(distSq) : 0.0f;
-        candidates[candidate_count].pos  = hazardPos;
-        candidates[candidate_count].name = name;
-        ++candidate_count;
-        return true;
-    };
-    int posts_skipped = 0, scenery_skipped = 0, bars_seen = 0, mines_in_range = 0;
-
-    // Per-tick "still in range" flag. Slots flipped true here are
-    // either Started (loop wasn't active) or just UpdatePosition'd
-    // (loop already running). At end of tick, any slot whose loop is
-    // active but flag is false has gone out of range and gets Stop'd.
-    bool active_this_tick[kMgoArraySlotCount] = {};
-
-    // This tick's bars (K2), published to g_state after the sweep so the
-    // pair lookup inside it reads a consistent (last tick's) list.
-    SpatialAudioState::BarInfo newBars[kMgoArraySlotCount];
-    int newBarCount = 0;
-    g_state.parked_bar = ParkedBar::None;   // re-classified by the bar branch each tick
+    ObstacleTick t;
+    if (!ReadObstacleTick(miniGame, t)) return;
+    g_state.parked_bar = ParkedBar::None;   // re-classified by the bar step each tick
 
     for (int i = 0; i < kMgoArraySlotCount; ++i) {
-        // mgoArray->objects[i]
-        void* obj = SafeReadPtr(mgoArray,
-                                kMgoArrayObjectsOffset +
-                                static_cast<size_t>(i) * sizeof(void*));
-        if (!obj) continue;
-        ++slots_seen;
-
-        // AsObstacle vtable[8] returns the same pointer if `obj` is a
-        // CSWMGObstacle, null otherwise. That's the engine's own
-        // type-check pattern.
-        void* obstacle = CallAsCast(obj, kVtableSlotAsObstacle);
-        if (!obstacle) continue;
-        ++obstacles_found;
-
-        // Position via CSWMGObstacle +0x60 -> CAurObject +0x78.
-        void* aur = SafeReadPtr(obstacle, kObstacleAurObjectOffset);
-        if (!aur) continue;
-        Vector pos;
-        if (!SafeReadVector(aur, kAurObjectPositionOffset, pos)) continue;
-
-        // The obstacle's name, for the first-fire inventory log and the K2
-        // classification (rocks and accelpads are in different engine pools).
-        const char* name = ReadAurObjectName(aur);
-
-        // ---- KOTOR 2: classify by collision box (see the constants block). ----
+        ObstacleView v;
+        if (!ReadObstacle(mgoArray, i, t, v)) continue;
         HazardInfo& hz = g_state.hazards[i];
-        if (k2 && hz.state == kHazardUntried) ResolveHazardBox(aur, name, hz);
-        const bool haveBox = k2 && hz.state == kHazardOk;
-        // World box (origin + local; these objects are unrotated on straight
-        // +Y tracks — the axis probe has already asserted +Y).
-        const float wx0 = haveBox ? pos.x + hz.mn.x : pos.x;
-        const float wx1 = haveBox ? pos.x + hz.mx.x : pos.x;
-        const float wy0 = haveBox ? pos.y + hz.mn.y : pos.y;
-        const float wy1 = haveBox ? pos.y + hz.mx.y : pos.y;
-        const float wz0 = haveBox ? pos.z + hz.mn.z : pos.z;
-        const bool  isScenery = haveBox && hz.cls == kHazardScenery;
-        const bool  isPost = haveBox && !isScenery &&
-                             (wx0 >= kLaneEdgeSkipU || wx1 <= -kLaneEdgeSkipU);
-        // Where the hazard really is: box centre laterally (clamped to the
-        // lane), leading edge forward, base height.
-        Vector hazardPos = pos;
-        if (haveBox) {
-            float cx = 0.5f * (wx0 + wx1);
-            if (cx >  kLaneHalfWidthU) cx =  kLaneHalfWidthU;
-            if (cx < -kLaneHalfWidthU) cx = -kLaneHalfWidthU;
-            hazardPos.x = cx; hazardPos.y = wy0; hazardPos.z = wz0;
-        }
-
-        // First-fire diagnostic: log EVERY obstacle's slot + name (+ the K2
-        // box and class) so the per-track inventory is in the log once.
-        if (!g_state.obstacle_diag_emitted) {
-            void* vt = SafeReadPtr(obstacle, 0);
-            if (haveBox) {
-                acclog::Write("SwoopRace",
-                              "obstacle slot=%d ptr=%p vtable=%p name=[%s] "
-                              "pos=(%.2f,%.2f,%.2f) box=%s x[%.1f..%.1f] "
-                              "y[%.1f..%.1f] z[%.1f..%.1f] class=%s",
-                              i, obstacle, vt, name ? name : "(null)",
-                              pos.x, pos.y, pos.z,
-                              hz.from_part ? "hitbump" : "gob",
-                              wx0, wx1, wy0, wy1, wz0, pos.z + hz.mx.z,
-                              isScenery ? "scenery" : isPost ? "post"
-                              : (hz.cls == kHazardBar ? "bar" : "block"));
-            } else {
-                acclog::Write("SwoopRace",
-                              "obstacle slot=%d ptr=%p vtable=%p name=[%s] "
-                              "pos=(%.2f,%.2f,%.2f)%s",
-                              i, obstacle, vt, name ? name : "(null)",
-                              pos.x, pos.y, pos.z,
-                              (k2 && hz.state == kHazardFailed) ? " box=FAILED" : "");
-            }
-        }
-
-        if (isPost)    { ++posts_skipped;   continue; }  // wall cue covers these
-        if (isScenery) { ++scenery_skipped; continue; }  // phantom boxes, never hit
-
-        if (haveBox && hz.cls == kHazardBar) {
-            // ---- Low bar: the jump-now cue; never the warn loop.
-            ++bars_seen;
-            SpatialAudioState::BarInfo cur;
-            cur.slot = i; cur.x0 = wx0; cur.x1 = wx1; cur.y0 = wy0; cur.y1 = wy1;
-            ComputeBarGap(cur, g_state.ground_z, playerRadius);
-            if (newBarCount < kMgoArraySlotCount) newBars[newBarCount++] = cur;
-            if (!g_state.bar_gap_diag_emitted && g_state.mine_count > 0) {
-                acclog::Write("SwoopRace",
-                              "bar strip: slot=%d name=[%s] y=%.0f x[%.1f..%.1f] gap=%d side=%s "
-                              "target=%.1f (bikeZ=%.1f bikeR=%.2f)",
-                              i, name ? name : "(null)", wy0, wx0, wx1, cur.has_gap ? 1 : 0,
-                              cur.gap_side < 0 ? "left" : cur.gap_side > 0 ? "right" : "none",
-                              cur.gap_x, g_state.ground_z, playerRadius);
-            }
-            const float gap = wy0 - (bikeOk ? bikePos.y : listener_pos.y);
-            if (gap < -kObstacleForwardMargin || gap > kObstacleCueRangeM) {
-                hz.jump_cued = 0;   // passed / far: re-arm
-                hz.park_cued = 0;
-                continue;
-            }
-            const float bikeX = bikeOk ? bikePos.x : listener_pos.x;
-            const bool inSpan = bikeX >= wx0 - kBarLaneMarginU &&
-                                bikeX <= wx1 + kBarLaneMarginU;
-            if (parked) {
-                hz.jump_cued = 0;   // re-arm for the relaunch
-                // Parked right in front of this bar, inside its span: classify
-                // the escape (see ParkedBar in the header) for the stuck hint,
-                // and — off the wall, no strip — play the centred beep once per
-                // park: "jump first, then W". At the wall the beep stays
-                // silent (a jump there hits the pillar; rounds 15/16 lost 7 and
-                // 11 relaunches that way) and the wall loop is the cue.
-                if (inSpan && gap > -kBarLaneMarginU && gap <= kParkedBarAheadU &&
-                    g_state.parked_bar == ParkedBar::None) {
-                    if (bikeX >= kParkedWallU)       g_state.parked_bar = ParkedBar::WallRight;
-                    else if (bikeX <= -kParkedWallU) g_state.parked_bar = ParkedBar::WallLeft;
-                    else if (cur.has_gap)            g_state.parked_bar = ParkedBar::Strip;
-                    else {
-                        g_state.parked_bar = ParkedBar::MustJump;
-                        if (!hz.park_cued) {
-                            hz.park_cued = 1;
-                            acc::audio::PlayCue(kJumpNowCueResref);
-                            acclog::Write("SwoopRace",
-                                          "parked beep: slot=%d name=[%s] bar y=%.1f gap=%.1f bikeX=%.2f",
-                                          i, name ? name : "(null)", wy0, gap, bikeX);
-                        }
-                    }
-                }
-                continue;
-            }
-            hz.park_cued = 0;
-            if (!inSpan || bikeSpeed <= 1.0f || gap <= 0.0f) continue;
-            const float vWorld = bikeSpeed * kSpeedToWorldPerSec;   // world u/s
-            const float ttc    = gap / vWorld;                       // real seconds
-            // Lead: the single-bar constant, or — when the next bar behind
-            // this one is close enough that one jump clears both at this
-            // speed with a press window of at least kPairMinWindowSec — the
-            // later "pair" lead that centres the usual reaction in that
-            // window (see kJumpReactionSec). The bar list is last tick's.
-            float lead = kJumpCueLeadSec;
-            bool  pair = false;
-            {
-                float nextY0 = 0.0f, nextY1 = 0.0f;  bool haveNext = false;
-                for (int b = 0; b < g_state.bar_count; ++b) {
-                    const SpatialAudioState::BarInfo& nb = g_state.bars[b];
-                    if (nb.slot == i || nb.y0 <= wy0) continue;
-                    if (!haveNext || nb.y0 < nextY0) {
-                        nextY0 = nb.y0; nextY1 = nb.y1; haveNext = true;
-                    }
-                }
-                if (haveNext) {
-                    const float reach  = (nextY1 + kBarLaneMarginU - wy0) / vWorld;
-                    const float window = kJumpOverBarUntilSec - reach - kJumpOverBarFromSec;
-                    if (window >= kPairMinWindowSec) {
-                        lead = kJumpOverBarFromSec + 0.5f * window + kJumpReactionSec;
-                        pair = true;
-                    }
-                }
-            }
-            // First beep: "press now". Second beep: the bike was airborne from
-            // an earlier press and has just landed with the bar still ahead
-            // inside the window — press again.
-            const bool first  = hz.jump_cued == 0 && ttc <= lead;
-            const bool repeat = hz.jump_cued == 1 && justLanded &&
-                                ttc <= lead && ttc >= kJumpCueMinLeadSec;
-            if (first || repeat) {
-                ++hz.jump_cued;
-                // Free side = the surviving strip (posts and mines removed);
-                // none = centred, "you must jump".
-                const int  side = cur.has_gap ? cur.gap_side : 0;
-                // Half-bar with a strip: the beep sits at the strip's REAL
-                // lateral offset, placed exactly like the guide tone (world
-                // x, kSwoopGuidePanForwardRefM ahead), so its angle reads as
-                // distance in the vocabulary the player already uses for pad
-                // lanes — a narrow angle is "four units, lean", a wide one
-                // "twelve, jump unless already moving". No strip: centred,
-                // "you must jump". (Was a fixed ±5 u hard pan, which said the
-                // side but never how far — asked for by the player after
-                // round 14.)
-                if (side == 0) {
-                    acc::audio::PlayCue(kJumpNowCueResref);
-                } else {
-                    Vector cue = listener_pos;
-                    cue.x  = cur.gap_x;
-                    cue.y += kSwoopGuidePanForwardRefM;
-                    acc::audio::PlayCue3DRaw(kJumpNowCueResref, cue);
-                }
-                acclog::Write("SwoopRace",
-                              "jump cue%s: slot=%d name=[%s] bar y=%.1f x[%.1f..%.1f] "
-                              "gap=%.1f speed=%.1f ttc=%.2fs lead=%.2fs pair=%d bikeX=%.2f side=%s "
-                              "stripX=%.1f offset=%.1f",
-                              repeat ? " (again)" : "", i, name ? name : "(null)",
-                              wy0, wx0, wx1, gap, bikeSpeed, ttc, lead, pair ? 1 : 0, bikeX,
-                              side == 0 ? "centre" : side < 0 ? "left" : "right",
-                              side == 0 ? 0.0f : cur.gap_x,
-                              side == 0 ? 0.0f : cur.gap_x - bikeX);
-            }
+        if (!g_state.obstacle_diag_emitted) LogObstacleInventory(i, v, hz, t.k2);
+        if (v.post)    { ++t.postsSkipped;   continue; }  // the wall cue covers these
+        if (v.scenery) { ++t.scenerySkipped; continue; }  // phantom boxes, never hit
+        if (v.haveBox && hz.cls == kHazardBar) {
+            HandleBar(i, v, hz, t);
             continue;
         }
-
-        // ---- Block (K2) / rock (K1): the panned warn loop, admitted by the
-        // forward filter + range on the hazard's REAL position. Track Y is the
-        // forward axis (low → high), confirmed live on K1 (listener heartbeat
-        // reaching Y≈4000 at race-end while the farthest obstacle sits at
-        // Y=3742) and asserted per race on K2 by the axis probe.
-        admit(i, hazardPos, name, obstacles_ahead, obstacles_in_range);
+        Admit(t, i, v.hazardPos, v.name);
     }
-    for (int b = 0; b < newBarCount; ++b) g_state.bars[b] = newBars[b];
-    g_state.bar_count = newBarCount;
+    for (int b = 0; b < t.newBarCount; ++b) g_state.bars[b] = t.newBars[b];
+    g_state.bar_count = t.newBarCount;
 
-    // ---- KOTOR 2 mines (collected by the pad sweep this tick): blocks. ----
+    // K2 mines, collected by this tick's pad sweep, warn like blocks.
     for (int m = 0; m < g_state.mine_count; ++m) {
-        if (admit(g_state.mine_slot[m], g_state.mine_pos[m], "mine",
-                  obstacles_ahead, obstacles_in_range)) {
-            ++mines_in_range;
-        }
+        if (Admit(t, g_state.mine_slot[m], g_state.mine_pos[m], "mine")) ++t.minesInRange;
     }
 
-    // Nearest-first selection. A straight partial selection sort: the budget is
-    // single digits on KOTOR 2 and the whole array on KOTOR 1 (where the loop
-    // exits immediately because there is nothing to reorder beyond the count).
-    const int budget = ObstacleLoopBudget();
-    const int sounding = (candidate_count < budget) ? candidate_count : budget;
-    for (int a = 0; a < sounding; ++a) {
-        int best = a;
-        for (int b = a + 1; b < candidate_count; ++b) {
-            if (candidates[b].dist < candidates[best].dist) best = b;
-        }
-        if (best != a) {
-            ObstacleCandidate tmp = candidates[a];
-            candidates[a] = candidates[best];
-            candidates[best] = tmp;
-        }
-    }
-    obstacles_dropped = candidate_count - sounding;
+    const int sounding = SelectNearest(t);
+    bool active[kMgoArraySlotCount] = {};
+    const int started = SoundWarnLoops(t, sounding, active);
+    const int stopped = StopStaleLoops(active);
 
-    for (int c = 0; c < sounding; ++c) {
-        const int i = candidates[c].slot;
-        const char* resref = kObstacleWarnLoopResref;
-
-        // Decoupled cue: lateral (X) + vertical (Z) true, forward (Y)
-        // pinned to a FIXED reference depth → pan encodes lane error only,
-        // stable. Loudness comes from our manual curve on the REAL 3D
-        // distance. See the design comment above.
-        const Vector pos = candidates[c].pos;
-        const float dist = candidates[c].dist;
-        Vector cue_pos = pos;
-        cue_pos.y = listener_pos.y + kSwoopPanForwardRefM;
-        const int vol_byte = SwoopVolumeByte(dist, kObstacleCueRangeM);
-
-        active_this_tick[i] = true;
-        if (g_state.obstacle_loops[i].IsActive()) {
-            // Existing loop — move it and re-assert the distance volume.
-            g_state.obstacle_loops[i].UpdatePosition(cue_pos);
-            g_state.obstacle_loops[i].UpdateVolume(vol_byte);
-        } else {
-            // First in-range tick for this obstacle — Start the loop with
-            // the flat band so only our manual volume modulates loudness.
-            if (g_state.obstacle_loops[i].Start(
-                    resref, cue_pos, /*looping=*/true, /*spatial=*/true,
-                    /*priorityGroup=*/-1, /*volumeByte=*/vol_byte,
-                    /*maxVolDist=*/kSwoopFlatBandMaxM,
-                    /*minVolDist=*/kSwoopFlatBandMinM)) {
-                ++loops_started_this_tick;
-                acclog::Trace("SwoopRace",
-                              "loop start slot=%d name=[%s] "
-                              "obstaclePos=(%.1f,%.1f,%.1f) "
-                              "cuePos=(%.1f,%.1f,%.1f) dist=%.1f res=%s",
-                              i, candidates[c].name ? candidates[c].name : "(null)",
-                              pos.x, pos.y, pos.z,
-                              cue_pos.x, cue_pos.y, cue_pos.z,
-                              dist, resref);
-            }
-        }
-    }
-
-    // Stop any loops whose slot wasn't in-range this tick. Covers two
-    // cases: obstacle passed > kObstacleForwardMargin behind us; or
-    // (rarer) obstacle obj/aur/pos read failed this tick after having
-    // succeeded last tick. Either way, Stop is idempotent so it's
-    // safe to call.
-    for (int i = 0; i < kMgoArraySlotCount; ++i) {
-        if (!active_this_tick[i] && g_state.obstacle_loops[i].IsActive()) {
-            g_state.obstacle_loops[i].Stop();
-            ++loops_stopped_this_tick;
-            acclog::Trace("SwoopRace",
-                          "loop stop slot=%d (out of range / unresolved)", i);
-        }
-    }
-
-    // Mark diagnostic done AFTER the full sweep, so we get all 22
-    // obstacles' names in the log on the first iteration (not just
-    // the first one).
-    if (!g_state.obstacle_diag_emitted && obstacles_found > 0) {
+    // Only after the whole sweep, so the first one logs every obstacle.
+    if (!g_state.obstacle_diag_emitted && t.obstaclesFound > 0) {
         g_state.obstacle_diag_emitted = true;
     }
-    if (!g_state.bar_gap_diag_emitted && g_state.mine_count > 0 && newBarCount > 0) {
+    if (!g_state.bar_gap_diag_emitted && g_state.mine_count > 0 && t.newBarCount > 0) {
         g_state.bar_gap_diag_emitted = true;
     }
-
-    // Single rolling-state line. inRange = obstacles that triggered
-    // a loop Start or UpdatePosition this tick; started/stopped count
-    // edge transitions. At steady-state in a long stretch of nearby
-    // obstacles, started and stopped should both be small or zero
-    // each tick — non-zero values mark transitions.
-    if (k2) {
+    if (t.k2) {
         acclog::Trace("SwoopRace",
                       "hazards: posts=%d scenery=%d bars=%d mines=%d/%d inRange",
-                      posts_skipped, scenery_skipped, bars_seen, mines_in_range,
+                      t.postsSkipped, t.scenerySkipped, t.barsSeen, t.minesInRange,
                       g_state.mine_count);
     }
     acclog::Trace("SwoopRace",
                   "scan: slots=%d obstacles=%d ahead=%d inRange=%d (%.0fm) "
                   "overBudget=%d started=%d stopped=%d listenerY=%.1f",
-                  slots_seen, obstacles_found, obstacles_ahead,
-                  obstacles_in_range, kObstacleCueRangeM, obstacles_dropped,
-                  loops_started_this_tick, loops_stopped_this_tick,
-                  listener_pos.y);
+                  t.slotsSeen, t.obstaclesFound, t.ahead,
+                  t.inRange, kObstacleCueRangeM, t.candidateCount - sounding,
+                  started, stopped, t.listener.y);
 }
 
 }  // namespace acc::swoop_race
