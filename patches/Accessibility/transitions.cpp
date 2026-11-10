@@ -25,68 +25,65 @@ namespace acc::transitions {
 
 namespace {
 
-// Minor-cluster dwell gate (2026-07-16, Südlicher Strand). Outdoor
-// organic walkmesh (rock paths on the Lehon beaches) fragments into
-// clusters of 3-8m extent — crossed in one to three seconds, announced
-// as bare compass lists. Over ~40 min on the Strand the four dominant
-// micro-labels fired 100+ times while the map's one meaningful region
-// ("Großer Bereich") fired 3 times. A region smaller than the player's
-// stride is sub-perceptual: hearing it mid-stride is noise, and worse,
-// crossing it resets the "current region" so re-entering the big
-// neighbour re-announces.
+// The area last seen; nullptr until the first, so the first tick with an
+// area announces it: the orientation line on game load.
+void* g_prev_area = nullptr;
+
+// Last friendly room name observed at the player position. Tracked so
+// we ALSO fire on friendly-name change inside a single cluster — covers
+// the TSL case where two adjacent .lyt-rooms share a cluster but have
+// distinct human-readable names. K1 never trips this path in vanilla
+// content (every room name is resref-style and filtered out by
+// IsResrefStyleRoomName); the cost is a strcmp per tick.
+char g_prev_friendly_room_name[64] = {0};
+
+// Stability dedup for the cluster trigger. Cluster boundaries flicker
+// far less than .lyt-room boundaries (the player needs ~2-3m of motion
+// to cross a real cluster boundary vs ~0.3m for some rooms), but a
+// short stability window still smooths the rare snap-flip at a
+// boundary. ~80ms at 60fps — too short to feel laggy, long enough to
+// absorb a single-tick boundary glitch.
+constexpr int kClusterStabilityTicks = 5;
+int g_pending_cluster_id    = acc::room_topology::kClusterIdNone;
+int g_pending_cluster_count = 0;
+
+// The pending cluster waits for the centre rule (transitions_centre.cpp).
+bool g_pending_cluster_centre = false;
+
+// Minor-cluster dwell gate. Outdoor organic walkmesh (the rock paths of
+// the Lehon beaches) fragments into clusters of 3-8 m, crossed in one to
+// three seconds. A region smaller than the player's stride is noise
+// mid-stride, and crossing it resets the current region, so re-entering
+// the big neighbour would re-announce. So a cluster below
+// kMinorClusterExtentM announces only after the player has STAYED in it
+// for kMinorClusterDwellMs; passing through keeps the previous region
+// committed. Friendly-name changes bypass the gate. It covers corridors
+// and dead ends (and the rare exit-less open fallback); clusters whose
+// exit words are measured from a centre take the centre rule instead.
 //
-// Gate: a cluster whose footprint extent is below kMinorClusterExtentM
-// only announces after the player has actually STAYED in it for
-// kMinorClusterDwellMs. Passing through keeps the previous region
-// committed (no announce, no re-announce of the neighbour on exit).
-// Stop anywhere and the local label still arrives within ~1s, and the
-// on-demand facing+region query is unaffected.
-//
-// Unlike the retired 2026-05-13 coordinate hysteresis this can't
-// permanently silence a new label — the gate is purely "linger vs
-// pass-through", keyed to time inside the cluster, not displacement.
-// Friendly-name changes (authored content) bypass the gate entirely.
-//
-// Dwell tuning: 1800ms (original, sized against Lehon beach noise)
-// swallowed real indoor shapes — at walk speed it spans 3.4m, longer
-// than most corridor pieces and every single-node Kreuzung, so the
-// Peragus Minenschächte west Kreuzung was crossed three times in one
-// session without speaking, and borderline clusters flickered between
-// spoken and silent with pace (2026-08-11). 1000ms ≈ 2m: shapes from
-// ~3m up announce reliably in stride; corner-clips and sub-stride
-// slivers stay silent. If outdoor fragment noise returns at this
-// setting, fix the clustering — don't re-lengthen the gate.
-// 500ms (2026-09-17, K2 Citadel Station): single-node Kreuzungen have
-// extent 0 and a ~2m snap footprint, so at 1000ms the TSF-Station
-// crossing spoke only when the player stalled on it — passing through
-// swallowed it and the player stutter-stepped back to find it. Hearing
-// the label at all, even cut off by the next one, is what lets the
-// player turn back; a missed crossing costs far more than a clipped one.
-// Since 2026-10-28 the dwell gate only covers corridors and dead ends (and
-// the rare exit-less open fallback): clusters whose exit words are
-// measured from a centre take the centre rule below instead.
+// 500 ms: a single-node junction has extent 0 and a ~2 m snap footprint,
+// and a longer dwell swallowed junctions crossed in stride. Hearing a label
+// cut off by the next is what lets the player turn back; a missed crossing
+// costs far more than a clipped one. If outdoor fragment noise returns,
+// fix the clustering rather than lengthen the gate.
 constexpr float kMinorClusterExtentM = 12.0f;
 constexpr DWORD kMinorClusterDwellMs = 500;
 DWORD g_pending_cluster_since_ms = 0;
 bool  g_pending_cluster_minor    = false;
 
-// Heuristic: vanilla KOTOR content stores room names as the .lyt-room
-// identifier (`m01aa_10`, `stunt_03_main`, `unk_m13ab`) — pronounceable
-// but meaningless, and they read as letter-soup noise through a screen
-// reader. We match anything that looks like a resref token and fall
-// back to a synthesised "Raum N" label for those cases. Custom mods
-// that supply human-readable names ("Bridge", "Cargo Hold") fall
-// through the heuristic and read normally.
-//
-// Heuristic rules — all of these flag the name as resref-style:
-//   - Starts with `m\d`, `M\d`, `stunt`, or `Stunt`.
-//   - Contains an underscore.
-//
-// The underscore rule is the catch-all: KOTOR room ids universally
-// contain `_`, while real English / German room names don't.
-//
-// Definition moved out of the anonymous namespace (below) so the
-// map-cursor can reuse the same filter for its ambient announce.
+// Everything the module remembers about the current area. Called on every
+// area change, and when the player is lost (a load), so the next area
+// starts clean either way.
+void ResetAreaState() {
+    g_prev_cluster_id            = acc::room_topology::kClusterIdNone;
+    g_pending_cluster_id         = acc::room_topology::kClusterIdNone;
+    g_pending_cluster_count      = 0;
+    g_pending_cluster_centre     = false;
+    g_prev_friendly_room_name[0] = '\0';
+    ResetMotion();
+    ResetRoomSpeechState();
+    ResetLandmarkProximityState();
+}
 
 void SpeakArea(void* area) {
     char nameBuf[128] = {0};
@@ -108,25 +105,15 @@ void SpeakArea(void* area) {
 
 }  // namespace
 
-// Forward declaration of the public predicate (defined at file scope
-// below namespace). Used internally by Tick before going through the
-// indirection.
-bool IsWorldSpeechGatedImpl() {
-    if (acc::combat::IsCombatActive()) return true;
-    acc::engine::UiBlockState ui;
-    if (acc::engine::IsForegroundUiBlocking(&ui)) return true;
-    return false;
-}
-
 void Tick() {
     // Stay completely silent + hands-off while an engine movie owns the
     // foreground (intro logos, stunt cutscene movies like 03.bik at the
     // Leviathan capture). KOTOR's movie player aborts its play queue if
     // windows/focus churn during playback, which surfaces as the game
-    // closing instead of starting the next queued movie. We touch NO state and don't advance g_prev_area,
-    // so the area-change branch below re-fires cleanly on the first tick
-    // after the movie ends — the "Bereich: …" announce is deferred, not
-    // dropped. The main loop is usually frozen during playback anyway;
+    // closing instead of starting the next queued movie. We touch NO state
+    // and don't advance g_prev_area, so the area-change branch below re-fires
+    // cleanly on the first tick after the movie ends: the area announce is
+    // deferred, not dropped. The main loop is usually frozen during playback anyway;
     // this guards the boundary ticks where it isn't.
     if (acc::bringup_announce::IsMoviePlaying()) {
         return;
@@ -137,17 +124,8 @@ void Tick() {
         // Reset state on player loss so the next in-game tick re-anchors
         // cleanly (matches camera_announce's reset-on-gate-failure
         // discipline).
-        g_prev_area       = nullptr;
-        g_prev_cluster_id = acc::room_topology::kClusterIdNone;
-        g_pending_cluster_id    = acc::room_topology::kClusterIdNone;
-        g_pending_cluster_count = 0;
-        g_prev_friendly_room_name[0] = '\0';
-        g_last_spoken_room_text.clear();
-        g_last_spoken_pos_valid      = false;
-        g_lm_prox_pending_idx        = -1;
-        g_lm_prox_pending_count      = 0;
-        g_lm_prox_last_spoken_idx    = -1;
-        g_pending_platz_valid        = false;
+        g_prev_area = nullptr;
+        ResetAreaState();
         acc::room_topology::Reset();
         acc::narration::Reset();
         // Door numbering classes are frozen per area visit; drop the old
@@ -233,10 +211,7 @@ void Tick() {
         acc::room_topology::BuildForArea(area);
         acc::exit_memory::OnAreaEntered(area);
         g_prev_area = area;
-        ResetRoomSpeechState();
-        ResetLandmarkProximityState();
-        ResetPendingPlatzState();
-        ResetGatedRefireState();
+        ResetAreaState();
     } else if (!acc::room_topology::HasGraphForArea(area)) {
         // Same area as last tick but the graph still isn't built —
         // wall cache wasn't ready when the area-change branch fired.
@@ -253,14 +228,10 @@ void Tick() {
     // set commits or until the graph itself is built.
     acc::room_topology::MaybeRefreshDoors(area);
 
-    // Proximity-based landmark scan runs every tick, independent of
-    // .lyt-room crossings. Fires when the player enters within 8m of
-    // any landmark waypoint, with stability + exit-hysteresis. Must
-    // run BEFORE the room-transition early-returns so it isn't gated
-    // by the player standing still in one .lyt-room.
-    // Staleness recheck must run BEFORE the proximity scan so a note the
-    // engine just enabled becomes proximity-eligible on the same tick the
-    // player is already standing next to it.
+    // Landmarks, every tick and before the region gates below, so standing
+    // still in one region does not stop them. The staleness recheck runs
+    // first, so a note the engine just enabled is proximity-eligible on the
+    // same tick the player is already standing next to it.
     TickLandmarkCacheRecheck(area, pos);
 
     TickProximityLandmarks(pos);
@@ -269,11 +240,8 @@ void Tick() {
     // pending (the centre rule's lead).
     TrackMotion(pos);
 
-    // Pending Platz announce: fires whenever its delay elapses,
-    // regardless of whether a new .lyt-room transition triggered this
-    // tick. Lives outside the room-stability gate below so the
-    // deferred speech reliably lands ~1s after entering a Platz
-    // cluster.
+    // The delayed place line fires whenever its delay elapses, outside the
+    // stability gate below, so it reliably lands ~1 s after entering.
     TickPendingPlatz(area, pos);
 
     // Post-combat room refire: if a cluster change was gated during the
@@ -281,24 +249,19 @@ void Tick() {
     // allowed again.
     TickGatedClusterRefire(area, pos);
 
-    // Cluster-based trigger (replaces .lyt-room change 2026-05-22).
-    //
-    // We probe room_topology at the player position each tick — this is
-    // the canonical "what perceptual region am I in" signal. cluster_id
-    // is stable across .lyt-room flicker (the 94-98% per-step room flips
-    // collapse to ~one flip per genuine region entry).
+    // Cluster-based trigger. We probe room_topology at the player position
+    // each tick: the canonical "what perceptual region am I in" signal,
+    // stable across .lyt-room flicker.
     //
     // Sentinel handling:
     //   kClusterIdNone     — graph not built yet / outside snap radius
     //                        with no candidates. Don't trigger; keep
     //                        prev state so the next valid cluster
     //                        compares correctly.
-    //   kClusterIdOpenArea — LookupAt synthesised "Offene Fläche". This
-    //                        is a STABLE id, so leaving labelled
-    //                        terrain fires exactly one announcement
-    //                        and re-entering a labelled cluster fires
-    //                        again. Prevents the silent-Offene-Fläche
-    //                        regression flagged in the plan review.
+    //   kClusterIdOpenArea — LookupAt's synthesised open-area fallback.
+    //                        A STABLE id, so leaving labelled terrain
+    //                        fires exactly one announcement and
+    //                        re-entering a labelled cluster fires again.
     //
     // We ALSO track friendly room-name change as a secondary trigger so
     // TSL content (where two .lyt-rooms inside one cluster can have
@@ -353,9 +316,8 @@ void Tick() {
     // clusters that is almost never "genuinely open" — it's a thin
     // coverage seam *between* two regions (the Kashyyyk Great Walkway has
     // a ~15 m band between cluster 4 and cluster 12 where neither node is
-    // in range). Announcing the bare "Bereich" there and re-acquiring the
-    // real cluster on the far side produces boundary thrash (observed:
-    // cluster 4 -> -2 -> cluster 12 -> -2 over tens of seconds of pacing).
+    // in range). Announcing the bare fallback there and re-acquiring the
+    // real cluster on the far side produces boundary thrash.
     // Hold the last real cluster across the seam by collapsing the
     // fallback to the previous id, so it reads as "still in that region."
     // A genuinely open area still announces the fallback once: there the
@@ -427,18 +389,7 @@ void Tick() {
                   info.kind == acc::room_topology::KindPlatz));
             if (centreKind) {
                 g_pending_cluster_centre = true;
-                g_pending_centre_pos     = info.centre;
-                g_pending_centre_radius  = info.footprintM *
-                                           kCentreRadiusFraction;
-                g_pending_centre_best    = CentreDistance(pos);
-                g_pending_centre_best_ms = g_pending_cluster_since_ms;
-                acclog::Write("Transition",
-                              "cluster -> %d centre rule (kind=%d "
-                              "extent=%.1fm footprint=%.1fm radius=%.1fm "
-                              "dist=%.1fm)",
-                              clusterId, info.kind, info.extentM,
-                              info.footprintM, g_pending_centre_radius,
-                              g_pending_centre_best);
+                ArmCentreRule(clusterId, info, pos, g_pending_cluster_since_ms);
             } else if (info.extentM < kMinorClusterExtentM) {
                 g_pending_cluster_minor = true;
                 acclog::Write("Transition",
@@ -483,12 +434,11 @@ void Tick() {
         // Exit memory follows the committed region whether or not the
         // announce is gated, so "visited" and "back" stay true.
         acc::exit_memory::OnClusterCommitted(g_prev_cluster_id, clusterId);
-        if (IsWorldSpeechGatedImpl()) {
+        if (IsWorldSpeechGated()) {
             acclog::Write("Transition",
                           "cluster -> %d gated (combat / blocking UI), "
                           "state advanced silently", clusterId);
-            g_gated_cluster_pending = true;
-            g_gate_clear_since_ms   = 0;
+            NoteGatedClusterChange();
         } else {
             SpeakRoomChange(area, clusterId, labelPos);
         }
@@ -502,7 +452,9 @@ void Tick() {
 }
 
 bool IsWorldSpeechGated() {
-    return IsWorldSpeechGatedImpl();
+    acc::engine::UiBlockState ui;
+    return acc::combat::IsCombatActive() ||
+           acc::engine::IsForegroundUiBlocking(&ui);
 }
 
 }  // namespace acc::transitions

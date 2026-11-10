@@ -17,13 +17,10 @@ namespace {
 
 // Flat landmark cache. Built once on each area change by scanning
 // every CSWSWaypoint with has_map_note != 0 AND map_note_enabled != 0
-// and recording its world position + map_note CExoLocString text. The
-// cache is intentionally NOT keyed by .lyt-room — that's what this
-// module used to do (`g_room_landmark[roomIdx]`) and the keying broke
-// on K1's sliver-shaped rooms: a player / cursor / marker inside one
-// sliver routinely failed to surface a landmark stored under the
-// adjacent sliver. Lookups are proximity-based instead, via
-// `FindLandmarkNear`.
+// and recording its world position + map_note CExoLocString text. Not
+// keyed by .lyt-room: on K1's sliver-shaped rooms a player, cursor or
+// marker inside one sliver would miss a landmark stored under the
+// adjacent one. Lookups are proximity-based, via `FindLandmarkNear`.
 //
 // Fog-of-war respect: filtering on map_note_enabled prevents spoiling
 // locations the player hasn't yet discovered on the in-game map. When
@@ -34,8 +31,8 @@ namespace {
 // `doorMatched` is set by room_topology::AttachLandmarksToDoors when
 // this landmark's name has been embedded in a cluster label.
 // TickProximityLandmarks skips matched entries so the player doesn't
-// hear "Kreuzung, Ost, Tür Süd, Zur Oberstadt" followed by a redundant
-// standalone "Zur Oberstadt" a second later.
+// hear the name inside the region announce and then again standalone a
+// second later.
 //
 // Sized at kMaxLandmarks=128 — vanilla KOTOR areas have <50 landmark
 // waypoints each. Cache is invalidated (zeroed) on every area change.
@@ -55,24 +52,41 @@ int      g_landmark_count = 0;
 //
 // This exists so the landmark→door matching pass can PROVE the cache is
 // the one it wants instead of assuming it. AttachLandmarksToDoors is only
-// correct if RebuildLandmarkCache already ran for the same area; both call
-// sites get that right by construction, and nothing enforced it. A wrong
-// ordering used to present as a silent "0 landmarks matched" — a result
-// indistinguishable from an area that genuinely has no landmark waypoints.
+// correct if RebuildLandmarkCache already ran for the same area; without
+// the check a wrong ordering would read as "0 landmarks matched",
+// indistinguishable from an area without landmark waypoints.
 void* g_landmark_area = nullptr;
 
 // Landmark-cache staleness tracking. Map notes can be script-enabled long
-// after area entry (Shyrack-Höhle 2026-07-15: the 'Abtrünniger Sith'
-// note was disabled at the 14:31 entry scan and enabled ~35 min later;
-// the stale cache made it invisible to proximity announce + discovery
-// for the whole visit). g_landmark_enabled_at_scan records the enabled
-// count seen by the last RebuildLandmarkCache; TickLandmarkCacheRecheck
-// re-counts periodically and rebuilds on drift.
+// after area entry; a cache from the entry scan would keep such a note
+// out of the proximity announce and discovery for the whole visit.
+// g_landmark_enabled_at_scan records the enabled count seen by the last
+// RebuildLandmarkCache; TickLandmarkCacheRecheck re-counts periodically
+// and rebuilds on drift.
 int g_landmark_enabled_at_scan = 0;
 
-// Defined below the landmark-proximity state block (which owns the
-// range globals); rebuild triggers a per-area range recompute.
-void RecomputeLandmarkRanges();
+// Landmark proximity, decoupled from .lyt-room crossings: a landmark in a
+// thin sliver room around a door would otherwise never fire. Each tick the
+// nearest landmark within the enter range speaks once it has been stable
+// for kLandmarkStabilityTicks and is not the last spoken one; leaving
+// beyond the exit range re-arms it.
+//
+// The ranges scale per area with the fog-of-war cell size, so the mod
+// reveals a landmark about when the sighted map does (UpdateMapData
+// explores the party member's cell + 4 neighbours each tick; see
+// ingame-screens-reference.md, fog_of_war_exploration_model). A flat 8 m
+// fits interiors (Jedi Enclave cell 7.8 m) but falls far short on open
+// maps (Dune Sea cell 44-48 m). The floor keeps 8 m / 12 m as the minimum;
+// the exit range keeps the 1.5x hysteresis.
+constexpr float kLandmarkEnterRangeFloorM = 8.0f;
+constexpr float kLandmarkFogCellScale     = 1.5f;
+constexpr float kLandmarkExitRatio        = 1.5f;
+float g_lm_enter_range_m = kLandmarkEnterRangeFloorM;
+float g_lm_exit_range_m  = kLandmarkEnterRangeFloorM * kLandmarkExitRatio;
+constexpr int kLandmarkStabilityTicks = 5;
+int g_lm_prox_pending_idx     = -1;
+int g_lm_prox_pending_count   = 0;
+int g_lm_prox_last_spoken_idx = -1;
 
 // False while the last recompute ran without a live area map (early
 // area-change tick); TickLandmarkCacheRecheck retries on its 1s cadence
@@ -87,19 +101,17 @@ DWORD g_landmark_recheck_last_ms  = 0;
 
 // Proximity auto-discovery for script-gated map notes. Vanilla enables
 // these via thin OnEnter tripwire triggers that assume centre-of-
-// corridor walking: the Tempeleingang note (unk_m41ad, 2026-07-16) is
-// enabled by a ~1.5m-wide strip with a ~3m walkable gap along the north
-// wall — the wall-following navigation style threads that gap every
-// pass, and the player stood 10m from the note without ever discovering
-// it. The Unknown World gates roughly half its notes this way (all
-// other planets author notes enabled from module entry). When the
-// leader is physically standing at the spot, enable the note ourselves
-// — same engine write the tripwire script performs, one-way. Radius is
-// deliberately tighter than the vanilla tripwires and below the
-// landmark enter-range floor, so the proximity announce fires on the
-// same recheck tick that surfaces the note. Kept flat on purpose (user
-// decision 2026-07-17): it substitutes for stepping on a tripwire, not
-// for seeing the map, so it does not scale with the fog cell size.
+// corridor walking: the temple entrance note in unk_m41ad is enabled by
+// a ~1.5 m strip with a ~3 m walkable gap along the north wall, which a
+// wall-following walk threads every pass. The Unknown World gates about
+// half its notes this way (the other planets enable theirs from module
+// entry). When the leader is standing at the spot, enable the note
+// ourselves: the same engine write the tripwire script performs,
+// one-way. The radius is tighter than the vanilla tripwires and below
+// the landmark enter-range floor, so the proximity announce fires on
+// the same recheck tick that surfaces the note. Flat on purpose: it
+// stands in for stepping on a tripwire, not for seeing the map, so it
+// does not scale with the fog cell size.
 constexpr float kMapNoteAutoDiscoverRangeM = 5.0f;
 
 void RecomputeLandmarkRanges() {
@@ -146,15 +158,7 @@ bool TryAutoDiscoverMapNote(void* waypoint, const Vector& playerPos) {
 }  // namespace
 
 void RebuildLandmarkCache(void* area) {
-    // Reset cache. Use the index loop instead of memset so the Vector
-    // member alignment guarantees survive any future struct refactor;
-    // cheap (128 small entries).
-    for (int i = 0; i < kMaxLandmarks; ++i) {
-        g_landmarks[i].name[0]     = '\0';
-        g_landmarks[i].pos         = {0, 0, 0};
-        g_landmarks[i].doorMatched = false;
-        g_landmarks[i].handle      = 0;
-    }
+    // Every entry below the count is written whole on insertion.
     g_landmark_count = 0;
     g_landmark_area  = area;
 
@@ -264,19 +268,15 @@ void TickLandmarkCacheRecheck(void* area, const Vector& playerPos) {
     g_lm_prox_last_spoken_idx = -1;
 }
 
-// Per-tick scan over the landmark cache. Decoupled from .lyt-room
-// crossings so landmarks whose room is a thin sliver still announce
-// when the player walks close to the waypoint. Three-state machine
-// mirroring turn_announce: pending idx + pending count for stability,
-// last-spoken idx for "already announced this approach" suppression;
-// last-spoken resets when the player walks past the per-area exit
-// range so a return visit re-announces.
+// Per-tick scan over the landmark cache (the proximity note above). State:
+// pending idx + pending count for stability, last-spoken idx for "already
+// announced this approach".
 void TickProximityLandmarks(const Vector& playerPos) {
     // Re-arm: if the last-spoken landmark is now beyond exit range,
     // clear it so we can re-announce on a future approach.
     if (g_lm_prox_last_spoken_idx >= 0) {
         int i = g_lm_prox_last_spoken_idx;
-        if (i >= 0 && i < g_landmark_count) {
+        if (i < g_landmark_count) {
             float d2 = DistXYSq(playerPos, g_landmarks[i].pos);
             if (d2 > g_lm_exit_range_m * g_lm_exit_range_m) {
                 acclog::Write("Transition",
@@ -295,8 +295,7 @@ void TickProximityLandmarks(const Vector& playerPos) {
     // landmark room_topology already embedded in a cluster label — the
     // player heard the name as part of the room-shape announce on
     // cluster entry, and a redundant standalone fire would talk over
-    // the next legitimate cue (see project memory on the
-    // cluster-vs-landmark double-announce regression).
+    // the next legitimate cue.
     int   nearest = -1;
     float bestD2  = g_lm_enter_range_m * g_lm_enter_range_m;
     for (int i = 0; i < g_landmark_count; ++i) {
@@ -335,7 +334,7 @@ void TickProximityLandmarks(const Vector& playerPos) {
     // Fire — unless gated by combat / blocking UI. We still advance
     // last-spoken so the gate releasing doesn't trigger a burst of
     // stale landmarks for a player who stood still during combat.
-    if (IsWorldSpeechGatedImpl()) {
+    if (IsWorldSpeechGated()) {
         acclog::Write("Transition",
                       "landmark proximity -> '%s' (idx=%d dist=%.2fm) "
                       "gated, state advanced silently",
@@ -390,13 +389,12 @@ bool IterateLandmarks(void* area, int& cursor,
                       char* nameOut, size_t nameBufSize,
                       Vector& posOut, int& outLandmarkIdx) {
     if (!nameOut || nameBufSize == 0) return false;
-    // Ordering contract, now checked rather than assumed. On a mismatch we
-    // yield nothing — the same outcome as before — but it is logged instead
-    // of looking like an area with no landmarks. Returning false on the
-    // first call also means the caller's walk loop exits immediately, so
-    // this logs once per attempt, not once per landmark.
+    // The cache must belong to this area. On a mismatch yield nothing,
+    // logged so it does not look like an area without landmarks; the
+    // caller's walk loop exits on the first false, so this logs once per
+    // walk.
     if (area != g_landmark_area) {
-        acclog::Write("Transitions",
+        acclog::Write("Transition",
                       "IterateLandmarks: cache belongs to area=%p but caller "
                       "asked for area=%p — RebuildLandmarkCache has not run "
                       "for this area; yielding no landmarks",

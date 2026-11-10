@@ -16,18 +16,40 @@ namespace acc::transitions {
 
 namespace {
 
-// Boundary flap dedup (2026-07-15, Shyrack-Höhle). A small-catchment
-// cluster next to a large one flips the nearest-node winner with half
-// a step near the seam: the log shows 'Nord-Süd' ↔ 'Nord-West, Süd'
-// alternating four times in 16 s at one spot, and a Kreuzung ↔ Bereich
-// pair re-announcing 11 s apart from the same walkmesh room. Suppress
-// only the RETURN leg: a label is skipped when it was itself spoken
-// within kFlapWindowMs AND the player is still within kFlapRadiusM of
-// where they heard it. First-time sequences through distinct regions
-// (Korridor → Kreuzung → Bereich) stay fast and untouched, and a real
-// revisit (walked away and back) re-announces. Unlike the retired
-// 2026-05-13 coordinate hysteresis this can never silence a NEW label —
-// it only ever eats the exact label heard seconds ago at the same spot.
+// Last spoken region label, the text-equality dedup key. The .lyt-room
+// partition over-segments areas (the Endar Spire bridge is six indices that
+// all classify as one junction), so comparing labels keeps a walk through
+// cells with the same label quiet.
+std::string g_last_spoken_room_text;
+
+// The delayed place line of a large area (kind KindPlatz at or above the
+// large-area size; smaller plazas take the centre rule): the announce waits
+// kPlatzDelayMs so the player is further in and the centroid-relative
+// directions match what they perceive. Re-resolved at fire time, so a player
+// who crossed into another cluster meanwhile hears the new label.
+constexpr DWORD kPlatzDelayMs = 1000;
+std::string g_pending_platz_text;
+DWORD  g_pending_platz_tick  = 0;
+bool   g_pending_platz_valid = false;
+Vector g_pending_platz_pos   = {0.0f, 0.0f, 0.0f};
+
+// Cluster changes during combat or a blocking UI advance state silently;
+// without a refire the player would end the fight in a region never
+// described. Once the gate has stayed clear for kGatedRefireDelayMs (so it
+// does not talk over the combat-end line) the CURRENT region is spoken;
+// SpeakRoomChange's text dedup makes that a no-op when the player is back in
+// the last spoken region.
+constexpr DWORD kGatedRefireDelayMs = 1500;
+bool  g_gated_cluster_pending = false;
+DWORD g_gate_clear_since_ms   = 0;
+
+// Boundary flap guard. A small-catchment cluster next to a large one flips
+// the nearest-node winner with half a step near the seam, so two labels
+// alternate at one spot. Suppress only the RETURN leg: a label is skipped
+// when it was itself spoken within kFlapWindowMs AND the player is still
+// within kFlapRadiusM of where they heard it. A first pass through distinct
+// regions stays untouched, a real revisit (walked away and back)
+// re-announces, and a NEW label is never silenced.
 constexpr DWORD kFlapWindowMs = 15000;
 constexpr float kFlapRadiusM  = 4.0f;
 // Label spoken one before the current g_last_spoken_room_text, with
@@ -48,7 +70,7 @@ bool IsFlapRepeat(const std::string& text, const Vector& pos, DWORD now) {
 }
 
 // Rotate the two-deep spoken-label history. Call wherever a label is
-// committed as spoken (or Platz-enqueued, which commits the text).
+// committed as spoken (or deferred as a place line, which commits the text).
 void CommitSpokenLabel(const std::string& text, const Vector& pos,
                        DWORD now) {
     g_flap_prev_text = g_last_spoken_room_text;
@@ -70,13 +92,6 @@ void CommitSpokenLabel(const std::string& text, const Vector& pos,
 // false (and leaves outBuf empty) when no tier resolves. Vanilla
 // resref-style rooms with no shape classification stay silent rather
 // than announce a meaningless engine-internal id.
-//
-// Transition / doorway composition was removed 2026-05-13 after
-// empirical evidence (Oberstadt 40m east-west street labelled
-// "Türschwelle" 14 times in a row) showed K1's .lyt-room boundaries
-// don't correspond to doorways. The Path 3 classifier now treats every
-// degree-2 node as a corridor; real doorway detection would need
-// wall-geometry constriction sensing.
 // outExitsOpt receives the shape label's exits for exit_memory (empty for a
 // friendly room name).
 bool ResolveRoomSpeech(void* area, const Vector& worldPos,
@@ -88,11 +103,6 @@ bool ResolveRoomSpeech(void* area, const Vector& worldPos,
     if (outExitsOpt) outExitsOpt->clear();
     outSource = "none";
     if (outClusterIdOpt) *outClusterIdOpt = acc::room_topology::kClusterIdNone;
-
-    // Landmark tier removed from the room-transition path 2026-05-13.
-    // Landmarks now fire via TickProximityLandmarks below, which scans
-    // every waypoint each tick and triggers on geometric proximity to
-    // the waypoint position — not on .lyt-room crossing.
 
     int roomIndex = -1;
     acc::engine::GetRoomAtIndexed(area, worldPos, roomIndex);
@@ -123,9 +133,9 @@ bool ResolveRoomSpeech(void* area, const Vector& worldPos,
     // Mod Settings → Room shape descriptions: when OFF, skip the
     // room_topology shape tier entirely. Friendly room names (tier 1)
     // still announce because they're authored content, not synthesised
-    // corridor / junction / Platz vocabulary. Cluster-id stays at None
-    // so SpeakRoomChange's caller logs "unresolved" and the Platz
-    // delay-enqueue path never arms.
+    // corridor / junction / plaza vocabulary. Cluster-id stays at None
+    // so SpeakRoomChange's caller logs "unresolved" and the delayed
+    // place line never arms.
     if (!acc::menus::modsettings::GetToggle(
             acc::menus::modsettings::Option::RoomShapes)) {
         return false;
@@ -151,8 +161,7 @@ bool ResolveRoomSpeech(void* area, const Vector& worldPos,
 }
 
 // Diagnostic — log room_topology's resolution at this position alongside
-// whatever the resolved speech was (room name, shape, or transition
-// compose). Mirrors the announcement quad we see in MapCursor / ViewMode
+// whatever the resolved speech was (room name or shape). Mirrors the announcement quad we see in MapCursor / ViewMode
 // so a single grep across categories shows every nav-graph decision.
 void LogWallTopoComparison(void* area, int roomIndex,
                            const Vector& worldPos,
@@ -177,24 +186,6 @@ void LogWallTopoComparison(void* area, int roomIndex,
                   path3Kind, path3Sig, path3Cid);
 }
 
-// Speak a perceptual-region change. The caller (Tick) decides whether
-// to invoke us based on cluster_id transitions; this function resolves
-// the label, applies text-equality dedup against `g_last_spoken_room_text`
-// as a belt-and-braces filter (rare case: two clusters generating the
-// exact same label string), and speaks. Gated by the caller via
-// combat / UI-blocking checks.
-//
-// Platz delay: when the resolved label is a multi-node Path 3 cluster
-// (kind == KindPlatz) of Großer-Bereich size, defer the announce for
-// kPlatzDelayMs (smaller ones take the centre rule in Tick instead). The
-// label + position are stashed; `TickPendingPlatz` fires the announce
-// later, re-resolving at the current player position so a player who
-// walked through doesn't get a stale label.
-//
-// `clusterId` is the cluster the player just entered, captured by the
-// caller via LookupAt. We log it for diagnostics; resolution itself
-// goes through ResolveRoomSpeech so the friendly-name tier wins when
-// available (TSL coverage).
 // The player's own region announce: exit_memory adds what lies behind each
 // exit, whether it was visited, and which one leads back. Falls back to the
 // plain label when there is nothing to add. View mode keeps calling
@@ -208,6 +199,20 @@ void SpeakPlayerRegionLabel(void* area, const std::string& label,
 
 }  // namespace
 
+// Speak a perceptual-region change. The caller (Tick) decides whether to
+// invoke us based on cluster_id transitions and gates it on combat / a
+// blocking UI; this resolves the label, drops it when it equals the last
+// spoken one (two clusters can produce the same label string) or is the
+// return leg of a boundary flap, and speaks.
+//
+// A large area (kind KindPlatz, large-area size) defers its announce for
+// kPlatzDelayMs (smaller ones took the centre rule in Tick instead);
+// TickPendingPlatz fires it later, re-resolving at the current player
+// position so a player who walked through does not get a stale label.
+//
+// `clusterId` is the cluster the player just entered, logged for
+// diagnostics; resolution goes through ResolveRoomSpeech so the
+// friendly-name tier wins when available (TSL coverage).
 void SpeakRoomChange(void* area, int clusterId, const Vector& worldPos) {
     std::string speechBuf;
     std::vector<acc::room_topology::ExitMark> exits;
@@ -252,7 +257,7 @@ void SpeakRoomChange(void* area, int clusterId, const Vector& worldPos) {
     }
 
     // Peek at the Path 3 kind to decide between immediate announce and
-    // Platz-delay path. Re-runs LookupAt — cheap (linear scan over ~50
+    // the delayed place line. Re-runs LookupAt — cheap (linear scan over ~50
     // nodes); avoids threading the sig back through ResolveRoomSpeech.
     std::string peekBuf;
     int    peekSig      = 0;
@@ -266,8 +271,8 @@ void SpeakRoomChange(void* area, int clusterId, const Vector& worldPos) {
                                      /*zTrusted=*/true)) {
         peekKind = peekSig & 0xff;
     }
-    // Only Großer Bereich still defers: a smaller Platz waited for the
-    // centre rule in Tick, so the player is already where its words hold.
+    // Only a large area defers: a smaller plaza waited for the centre rule
+    // in Tick, so the player is already where its words hold.
     bool peekLarge = false;
     if (peekKind == acc::room_topology::KindPlatz) {
         acc::room_topology::ClusterInfo info;
@@ -279,10 +284,9 @@ void SpeakRoomChange(void* area, int clusterId, const Vector& worldPos) {
         // Defer: stash the resolved label + context for the timer in
         // Tick to fire. Advance g_last_spoken_room_text now so further
         // cluster transitions producing the same label get text-deduped
-        // out — we only fire once per Platz entry.
+        // out; it fires once per entry.
         g_pending_platz_text  = speechBuf;
         g_pending_platz_tick  = GetTickCount();
-        g_pending_platz_room  = roomIndex;
         g_pending_platz_pos   = worldPos;
         g_pending_platz_valid = true;
         CommitSpokenLabel(speechBuf, worldPos, g_pending_platz_tick);
@@ -296,21 +300,24 @@ void SpeakRoomChange(void* area, int clusterId, const Vector& worldPos) {
         return;
     }
 
-    // Non-Platz path. Cancel any pending Platz announce (we just entered
-    // a different shape, the deferred Platz no longer applies).
+    // Any other shape: cancel a pending place line, it no longer applies.
     g_pending_platz_valid = false;
 
     SpeakPlayerRegionLabel(area, speechBuf, exits);
     CommitSpokenLabel(speechBuf, worldPos, GetTickCount());
-    g_last_spoken_pos       = worldPos;
-    g_last_spoken_pos_valid = true;
     acclog::Write("Transition",
                   "cluster -> %d '%s' src=%s room=%d (areaPtr=%p)",
                   clusterId, speechBuf.c_str(), source, roomIndex, area);
     LogWallTopoComparison(area, roomIndex, worldPos, speechBuf.c_str(), source);
 }
 
-// Fire any pending Platz announce whose delay has elapsed. Re-resolves
+// A cluster change was committed while speech was gated.
+void NoteGatedClusterChange() {
+    g_gated_cluster_pending = true;
+    g_gate_clear_since_ms   = 0;
+}
+
+// Fire a pending place line whose delay has elapsed. Re-resolves
 // the label at the player's CURRENT position so a player who walked
 // through the cluster in <1s gets the label they actually ended up at
 // (or no announce, if they're now somewhere with the same label as the
@@ -330,7 +337,7 @@ void TickPendingPlatz(void* area, const Vector& playerPos) {
     const char* source = "none";
     // Still in the doorway sliver of an area door: the pending label belongs
     // to the region in front of it and was resolved at that region's centre
-    // (TickCluster); resolving at the player would read the sliver again.
+    // (Tick); resolving at the player would read the sliver again.
     Vector resolvePos = playerPos;
     {
         std::string sliverLabel;
@@ -352,10 +359,8 @@ void TickPendingPlatz(void* area, const Vector& playerPos) {
                     !fireBuf.empty();
 
     if (resolved && fireBuf == g_pending_platz_text) {
-        // Same Platz still under the player. Fire the announce now.
+        // Same area still under the player. Fire the announce now.
         SpeakPlayerRegionLabel(area, fireBuf, exits);
-        g_last_spoken_pos       = playerPos;
-        g_last_spoken_pos_valid = true;
         acclog::Write("Transition",
                       "Platz announce fired after %lums: '%s' (room=%d "
                       "areaPtr=%p)",
@@ -366,8 +371,6 @@ void TickPendingPlatz(void* area, const Vector& playerPos) {
         // Fire the NEW label so we don't leave them unannounced.
         SpeakPlayerRegionLabel(area, fireBuf, exits);
         CommitSpokenLabel(fireBuf, playerPos, now);
-        g_last_spoken_pos       = playerPos;
-        g_last_spoken_pos_valid = true;
         acclog::Write("Transition",
                       "Platz announce superseded after %lums: pending='%s' "
                       "current='%s' src=%s (room=%d areaPtr=%p)",
@@ -377,7 +380,7 @@ void TickPendingPlatz(void* area, const Vector& playerPos) {
     } else {
         // Either resolution failed or text-dedups against the same
         // last-spoken label (we already advanced last_spoken to the
-        // pending Platz label on enqueue, so this branch fires when
+        // pending label on enqueue, so this branch fires when
         // the player is back where they started — same label).
         acclog::Write("Transition",
                       "Platz announce expired (no new label) pending='%s' "
@@ -397,7 +400,7 @@ void TickGatedClusterRefire(void* area, const Vector& playerPos) {
     if (!g_gated_cluster_pending) return;
 
     DWORD now = GetTickCount();
-    if (IsWorldSpeechGatedImpl()) {
+    if (IsWorldSpeechGated()) {
         g_gate_clear_since_ms = 0;  // gate re-engaged — restart the clock
         return;
     }
@@ -416,16 +419,19 @@ void TickGatedClusterRefire(void* area, const Vector& playerPos) {
     SpeakRoomChange(area, g_prev_cluster_id, playerPos);
 }
 
+// Vanilla content names its rooms with the .lyt-room id (`m01aa_10`,
+// `stunt_03_main`, `unk_m13ab`), meaningless through a screen reader, so such
+// a name counts as none and the shape tier speaks instead; authored names
+// ("Bridge", "Cargo Hold") read normally. Resref-style: m/M + digit, a
+// leading digit, "stunt", or any underscore (KOTOR room ids universally
+// contain one, real room names do not).
 bool IsResrefStyleRoomName(const char* name) {
     if (!name || name[0] == '\0') return true;
     if ((name[0] == 'm' || name[0] == 'M') && name[1] >= '0' && name[1] <= '9') {
         return true;
     }
-    // KOTOR 2 rooms are "<module number><suffix>" — "106per10", "103perd".
-    // A leading digit never opens an authored display name, so it is as
-    // strong a noise signal as K1's m+digit. Without this, the first K2
-    // session with working room resolution spoke "103perd" as an area
-    // label (2026-08-05).
+    // KOTOR 2 rooms are "<module number><suffix>" ("106per10", "103perd").
+    // A leading digit never opens an authored display name.
     if (name[0] >= '0' && name[0] <= '9') return true;
     if ((name[0] == 's' || name[0] == 'S') &&
         (name[1] == 't') && (name[2] == 'u') &&
@@ -438,41 +444,14 @@ bool IsResrefStyleRoomName(const char* name) {
     return false;
 }
 
-// --- Per-group area-change resets ---------------------------------------
-//
-// Tick() used to clear all of this inline, seventeen assignments reaching
-// into four unrelated state groups. That is what made the state hard to
-// reason about (and what defeated an attempt to split this file): no
-// group owned its own lifecycle, so nothing could move without dragging
-// the reset code with it.
-//
-// Each group now clears itself. Adding a variable to a group means
-// updating exactly one function, next to the variables it clears.
-// Behaviour is identical — same variables, same values, same order.
-
-// Cluster / room-label speech, including the text-equality dedup key and
-// the flap-suppression window.
+// Everything this file remembers about the area: the dedup key, the flap
+// window, the pending place line and the gated refire.
 void ResetRoomSpeechState() {
-    g_prev_cluster_id            = acc::room_topology::kClusterIdNone;
-    g_pending_cluster_id         = acc::room_topology::kClusterIdNone;
-    g_pending_cluster_count      = 0;
-    g_pending_cluster_centre     = false;
-    ResetMotion();
-    g_prev_friendly_room_name[0] = '\0';
     g_last_spoken_room_text.clear();
-    g_last_spoken_pos_valid      = false;
     g_flap_prev_text.clear();
-    g_flap_prev_ms               = 0;
-    g_flap_cur_ms                = 0;
-}
-
-// Deferred "Platz" announcement.
-void ResetPendingPlatzState() {
-    g_pending_platz_valid = false;
-}
-
-// Post-gate cluster re-announce (combat / blocking UI swallowed a change).
-void ResetGatedRefireState() {
+    g_flap_prev_ms          = 0;
+    g_flap_cur_ms           = 0;
+    g_pending_platz_valid   = false;
     g_gated_cluster_pending = false;
     g_gate_clear_since_ms   = 0;
 }

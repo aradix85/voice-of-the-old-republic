@@ -1,4 +1,4 @@
-# transitions_state.cpp (39 lines)
+# transitions_state.cpp (12 lines)
 
 Source: `patches/Accessibility/transitions_state.cpp`
 

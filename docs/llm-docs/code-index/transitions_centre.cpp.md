@@ -1,4 +1,4 @@
-# transitions_centre.cpp (114 lines)
+# transitions_centre.cpp (169 lines)
 
 Source: `patches/Accessibility/transitions_centre.cpp`
 
@@ -6,7 +6,8 @@ When to announce a new cluster: the player's motion and the centre rule, which w
 
 ## Declarations (in source order)
 
-- L29 `void TrackMotion(const Vector& pos)`
-- L51 `void ResetMotion()`
-- L56 `float CentreDistance(const Vector& pos)`
-- L62 `bool CentreRuleReady(int clusterId, const Vector& pos)`: True once the pending centre-rule cluster may speak.
+- L68 `float CentreDistance(const Vector& pos)`
+- L74 `void TrackMotion(const Vector& pos)`
+- L96 `void ResetMotion()`
+- L102 `void ArmCentreRule(int clusterId, const acc::room_topology::ClusterInfo& info, const Vector& pos, DWORD sinceMs)`: Start the centre rule for a cluster that has just become pending.
+- L117 `bool CentreRuleReady(int clusterId, const Vector& pos)`: True once the pending centre-rule cluster may speak.

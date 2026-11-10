@@ -11,6 +11,10 @@
 #include "strings.h"
 #include "speech.h"
 
+// From core_dllmain.cpp: the KOTOR 1 hook loads speech in case a transition
+// fires before any menu or focus event has.
+void EnsureSpeechInitialized();
+
 namespace acc::transitions {
 
 namespace {
@@ -20,8 +24,7 @@ namespace {
 // wrong shape, and the two consequences of trusting it are both bad: the log
 // line stops identifying the destination (the one field a stuck-transition
 // report needs) and the "Loading: …" announce speaks binary noise at the
-// player. Every K2 fire failed this test while that hook sat on the wrong
-// function (a getter handing us an empty return buffer).
+// player.
 bool LooksLikeResref(const char* s) {
     if (!s || !s[0]) return false;
     bool sawAlnum = false;
@@ -38,11 +41,8 @@ bool LooksLikeResref(const char* s) {
 }
 
 // `base` is a CExoString* { char* c_string; uint32 length }.
-// ReadCExoString dereferences c_string unguarded, so the guard is ours (the
-// old comment here claimed otherwise; the K1 hook survived on a correct
-// argument, not on a guard).
+// ReadCExoString dereferences c_string unguarded, so the guard is ours.
 bool TryReadExoString(void* base, char* out, size_t outSize) {
-    if (!base || !out || outSize == 0) return false;
     out[0] = '\0';
     __try {
         return acc::engine::ReadCExoString(base, /*offset=*/0, out, outSize);
@@ -68,58 +68,14 @@ void NotifyExternalLoadStarting(const char* reason) {
                   reason ? reason : "?");
 }
 
-// Shared tail of both hooks: dedup, then speak + log the destination. `shape`
-// tags which reading produced it, so a future log says whether the K2 probe
-// below settled on the pointer or the by-value form.
-static void AnnouncePreLoadDest(const char* dest, const char* shape) {
-    // Dedup: the engine sometimes fires SetMoveToModuleString more than
-    // once inside the same transition (e.g. once with the raw resref,
-    // once with a normalized form). Suppress repeats of the same
-    // destination within a 2s window so the user hears the announce
-    // exactly once per transition.
-    static char  s_lastDest[128] = {0};
-    static DWORD s_lastTick      = 0;
-    DWORD now = GetTickCount();
-    if (std::strncmp(s_lastDest, dest, sizeof(s_lastDest)) == 0 &&
-        (now - s_lastTick) < 2000u) {
-        return;
-    }
-    std::strncpy(s_lastDest, dest, sizeof(s_lastDest) - 1);
-    s_lastDest[sizeof(s_lastDest) - 1] = '\0';
-    s_lastTick = now;
-
-    // If a movie is already on screen when this fires, suppress the
-    // "Lade: …" speech for the same reason Tick() goes silent during
-    // playback. The latch above is already set, so per-tick
-    // probes stay gated regardless.
-    if (acc::bringup_announce::IsMoviePlaying()) {
-        acclog::Write("Transition",
-            "pre-load -> '%s' [%s] (speech suppressed — movie foreground)",
-            dest, shape);
-        return;
-    }
-
-    char speech[160] = {0};
-    std::snprintf(speech, sizeof(speech),
-                  acc::strings::Get(acc::strings::Id::FmtTransitionLoading),
-                  dest);
-    acc::speech::Speak(speech, /*interrupt=*/false);
-    acclog::Write("Transition", "pre-load -> '%s' [%s]", dest, shape);
-}
-
 void AnnouncePreLoadDestination(void* exoStringPtr) {
     // Latch the module-load transient unconditionally on every fire.
     // Even if the dedup window below suppresses the announce, the engine
     // is still beginning a transition — gating consumers off the announce
     // path would let the second-of-a-pair fire go un-latched and the
-    // probes would resume mid-handoff.
-    //
-    // The latch is also the reason this line is worth grepping in a bug
-    // report: it is the mod's only witness that the engine ASKED for a
-    // module change. Its absence across a whole failed travel (KOTOR 2
-    // prologue, k2-patch-20260820-143622.log) is what separated "the
-    // transition was requested and then died" from "the transition was
-    // never requested at all".
+    // probes would resume mid-handoff. The latch is also the mod's only
+    // witness that the engine ASKED for a module change: in a log it tells
+    // "requested and then died" from "never requested".
     g_module_load_pending = true;
 
     if (!exoStringPtr) return;
@@ -139,7 +95,35 @@ void AnnouncePreLoadDestination(void* exoStringPtr) {
         return;
     }
 
-    AnnouncePreLoadDest(dest, "exoString*");
+    // Dedup: the engine sometimes fires SetMoveToModuleString more than
+    // once inside the same transition (once with the raw resref, once with
+    // a normalized form). Suppress repeats of the same destination within
+    // 2 s, so the announce is heard once per transition.
+    static char  s_lastDest[128] = {0};
+    static DWORD s_lastTick      = 0;
+    DWORD now = GetTickCount();
+    if (std::strncmp(s_lastDest, dest, sizeof(s_lastDest)) == 0 &&
+        (now - s_lastTick) < 2000u) {
+        return;
+    }
+    std::strncpy(s_lastDest, dest, sizeof(s_lastDest) - 1);
+    s_lastDest[sizeof(s_lastDest) - 1] = '\0';
+    s_lastTick = now;
+
+    // A movie already on screen: no speech, for the same reason Tick() is
+    // silent during playback. The latch is set regardless.
+    if (acc::bringup_announce::IsMoviePlaying()) {
+        acclog::Write("Transition",
+            "pre-load -> '%s' (speech suppressed — movie foreground)", dest);
+        return;
+    }
+
+    char speech[160] = {0};
+    std::snprintf(speech, sizeof(speech),
+                  acc::strings::Get(acc::strings::Id::FmtTransitionLoading),
+                  dest);
+    acc::speech::Speak(speech, /*interrupt=*/false);
+    acclog::Write("Transition", "pre-load -> '%s'", dest);
 }
 
 void LatchPreLoadDestinationK2(void* exoStringPtr) {
@@ -169,7 +153,7 @@ void LatchPreLoadDestinationK2(void* exoStringPtr) {
 // per area transition with the destination module's resref CExoString*. Pre-
 // load announce path; reads the resref via the dedup-and-speak helper above.
 //
-// **LEA-vs-MOV bug workaround** (memory: project_kpatchmanager_lea_bug.md).
+// **LEA-vs-MOV bug workaround** (PR-2 in docs/upstream-prs.md).
 // The wrapper emits LEA (not MOV) for `source = "esp+4"` parameters, so
 // `arg_addr` is the *address* of the original [esp+4] stack slot, not the
 // CExoString* value at that slot. Dereference once to get the actual
@@ -181,9 +165,9 @@ void LatchPreLoadDestinationK2(void* exoStringPtr) {
 // order matches the hooks.toml declaration.
 extern "C" void __cdecl OnSetMoveToModuleString(void* /*serverApp*/,
                                                 void* arg_addr) {
-    // Gate cleared for KOTOR 2 in Batch 3 — but only the KOTOR 1 hook routes
-    // here (with the LEA'd slot address); KOTOR 2 arrives through
-    // OnSetMoveToModuleStringK2 below with the CExoString* value directly.
+    // Only the KOTOR 1 hook routes here (with the LEA'd slot address);
+    // KOTOR 2 arrives through OnSetMoveToModuleStringK2 below with the
+    // CExoString* value directly.
     EnsureSpeechInitialized();
 
     void* exoStringPtr = nullptr;
