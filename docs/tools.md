@@ -244,6 +244,8 @@ On Anouk's machine; the scripts find them at these default paths.
 - **The Microsoft compiler** itself: `pwsh -File tools/analysis/msvc_check.ps1 -Mode w4` (warning level 4 without a build) and `-Mode analyze` (the `/analyze` checker); `run_unit_tests.ps1 -Mode asan` for AddressSanitizer.
 - **Python 3.12** with lizard, radon, ruff, mypy, pytest and coverage, for `tools/analysis/*.py`.
 
+- **capstone and minidump** (pip) for `python tools/analysis/call_convention.py`: it compares the argument bytes of every engine function-pointer typedef with the `ret N` of the engine function itself, read from a memory image of the running game (`--from-dump` cuts one out of a process dump). One argument too many crashed the game on 2026-11-11.
+
 Reports land in `build/analysis/`. The current baselines are in `docs/refactoring/STATE.md` while the refactoring runs.
 
 ## Conventions

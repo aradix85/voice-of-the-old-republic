@@ -406,6 +406,13 @@ prefix (menus_listbox_picker.cpp).
     and engine_keymap_codes (49%).
   - clang-cl -fsyntax-only -Wno-everything -Wunused-* per file, for
     unused code.
+  - call_convention.py: every engine function-pointer typedef against
+    the engine's own `ret N`, from a memory image of the running game
+    (build/analysis/engine_image_k1.bin, cut from a dump). KOTOR 1: 159
+    calls fit, 0 mismatches after 4c91ad0d. Run it after adding or
+    changing an engine call. Open: 30 calls whose address goes through
+    a variable or a vtable slot are not checked; KOTOR 2 needs its own
+    image (a dump of a running swkotor2.exe, then --game k2).
   Run clang_tidy.py FILE on every file a lean rewrites: it caught an
   index of -1 in the first one it was used on (room_topology_doors).
   A check for docs: every `name.cpp` / `name.h` a .md mentions should
@@ -450,17 +457,18 @@ prefix (menus_listbox_picker.cpp).
   (2) The leader stood boxed in between the crate, the holograms and
   the follower. Enter on four objects 3 m away queued the use (outer
   queue 0 -> 5, never draining), "Approach: stalled but target position
-  unresolvable - disarm quietly", and nothing was spoken. Wanted: the
-  stalled approach says so ("Cannot get there"), also when the target
-  position cannot be read; find out why it could not for a placeable.
-  Tab to the follower on the other side solved it.
-  (3) Crash: the bridge's /do use (kotor.py pak) on hologram 0x68 with
-  that boxed-in leader: c0000005 in accessibility.dll at RVA 0x001cd79d,
-  right after "UseObject dispatch target=0x00000068 ret=1". The mod's
-  own Enter (the same UseObject) did not crash before or after. Full
-  dump: %TEMP%\claude_split\crash_0014_holo.dmp. To do: find the
-  function (a d875083 build with a map file, or the dump), then check
-  the current tree.
+  unresolvable - disarm quietly", and nothing was spoken. Tab to the
+  follower on the other side solved it. Cause: see (3).
+  (3) Crash: the bridge's /do use (kotor.py pak) on hologram 0x68:
+  c0000005 in accessibility.dll right after "UseObject dispatch".
+  Cause found in the dump and fixed in 4c91ad0d: UseObject pushed two
+  arguments to KOTOR 1's AddUseObjectAction, which pops one, so its
+  caller's EDI/ESI/EBX were garbage after every use. That is also why
+  (2) could not read the target: "Approach: armed ... targetObj=
+  00000068" is the handle where the object pointer should be. After
+  the fix, check in game: Enter on something out of reach should now
+  say that the way is blocked; if it still says nothing, (2) stays.
+  The installed build d875083 still has the bug: no kotor.py pak there.
 - Tab: on a leader swap both party_leader_announce's Tab window and
   TickLeaderChange speak the new name. Check in game whether it is heard
   twice; if so the Tab path only needs the no-swap case.
