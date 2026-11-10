@@ -1,23 +1,25 @@
-// The content monitor: a text fingerprint of each monitored panel, and speaking the segments that are new since the last tick.
+// The content monitor: a text fingerprint of each monitored panel, and
+// speaking the segments that are new since the last tick.
 
 #include "menus_monitors_internal.h"
 
 #include "engine_offsets.h"
 #include "engine_reads.h"
-#include "menus.h"            // SetDrilledIntoSubScreen — sole drill-arm site
+#include "menus.h"
 #include "menus_chain.h"
 #include "menus_extract.h"
 #include "speech.h"
-#include "tutorial_hints.h"  // TutorialBox keyboard-hint substitution (Surface 1)
-#include "tutorial_popup.h"  // synthetic Trask-line tutorial popup (Surface 2)
+#include "tutorial_hints.h"
+#include "tutorial_popup.h"
 
 namespace acc::menus::monitors {
 
 namespace {
 
-// ============================================================================
-// Content fingerprint monitor.
-// ============================================================================
+// Between the controls' texts in a fingerprint.
+constexpr char   kSegSep[]  = " | ";
+constexpr size_t kSegSepLen = sizeof(kSegSep) - 1;
+
 struct ContentSnapshot {
     void* panel;
     char  text[8192];
@@ -33,17 +35,14 @@ bool IsContentMonitored(PanelKind k) {
     // It reads message_label, replies count, computer-terminal lines,
     // and bark text — and gates the NPC + bark line speech through the
     // HumanSubtitles toggle. Letting this generic content fingerprint
-    // also speak the dialog text caused a duplicate-speech race
-    // (verified 2026-05-30 — user heard Carth's lines via this path
-    // even after dialog_speech suppressed them).
+    // also speak the dialog text spoke the NPC lines a second time, even
+    // with dialog_speech holding them back.
     //
     // InGameMessages (combat log) and Container (loot panels) are owned
     // by the ListBoxPanelSpec paths in menus_listbox.cpp — each focused
-    // row is announced once on Up/Down nav (verified live 2026-05-30
-    // for Container). The fingerprint path was re-speaking the same
-    // rows as generic controls; removing it eliminates the duplicate
-    // without losing coverage.
-    // InGameInventory and InGameEquip removed 2026-05-30 — the engine
+    // row is announced once on Up/Down nav. The fingerprint path
+    // re-spoke the same rows as generic controls.
+    // InGameInventory and InGameEquip stay out: the engine
     // populates the stat sidebar one tick AFTER the panel first appears
     // (placeholder header labels "VIT" / "DEF" / ... flip into real
     // values "6/6" / "15" / "Attack 0" etc.), which the fingerprint
@@ -55,8 +54,7 @@ bool IsContentMonitored(PanelKind k) {
     // journal-entry notices, skill-check results, "you received X"). Its body
     // is a cluster of per-notification labels plus a lone OK button, but it
     // was never content-monitored, so only the chain's OK button got read on
-    // nav and the body text was silent (observed live 2026-06-03, StatusSummary
-    // popup after entering Taris Southern Upper City). It has no
+    // nav and the body text was silent. It has no
     // InGameSubScreenSpec, so first-sight speaks the body once. BuildContent
     // Fingerprint filters to the visible row(s) below — see that note.
     case PanelKind::StatusSummary:
@@ -66,7 +64,7 @@ bool IsContentMonitored(PanelKind k) {
     case PanelKind::InGameJournal:
     case PanelKind::InGameCharacter:
         return true;
-    // InGameAbilities removed 2026-06-03: the dedicated handler in
+    // InGameAbilities stays out: the dedicated handler in
     // menus_abilities.cpp owns every announcement on this screen now, so the
     // content fingerprint only double-spoke (the skill stats after a nav) and
     // re-spoke the new tab's first entry over the tab-name announce on a tab
@@ -84,10 +82,7 @@ bool IsContentMonitored(PanelKind k) {
 // row is already reachable and labelled, so speaking the diff on top only
 // duplicates, or worse, dumps raw label text with no context.
 //
-// The monitored list has been shrinking that way for a while (Inventory +
-// Equipment dropped 2026-05-30, Abilities 2026-06-03, Container and
-// Messages before them). These two are the same case, but they cannot
-// simply leave the list:
+// These two are such screens, but they cannot leave the monitored list:
 //
 //   * InGameCharacter — a content change is what rebinds the chain when Tab
 //     swaps the displayed party member and the Force-points row appears or
@@ -95,7 +90,7 @@ bool IsContentMonitored(PanelKind k) {
 //     MonitorPanelContents). Its twelve stat rows are arrow-reachable as
 //     composed phrases ("Strength 14, +2"), whereas the fingerprint read the
 //     value labels generically and spoke bare context-free numbers — "14",
-//     "120000" — verified across the shipped logs.
+//     "120000".
 //   * InGameJournal — menus_journal.cpp speaks each entry and its
 //     description on navigation; the fingerprint re-spoke whole quest
 //     bodies plus the entire entry list as one run-on line.
@@ -144,23 +139,13 @@ void BuildContentFingerprint(void* panel, char* out, size_t outSize) {
         const char* src = acc::menus::extract::FromControl(c, text, sizeof(text), panel);
         if (!src) continue;
         size_t tlen = strnlen(text, sizeof(text));
-        if (tlen == 0) continue;
+        if (strspn(text, " \t\n\r") == tlen) continue;   // empty or blank
 
-        bool allWs = true;
-        for (size_t k = 0; k < tlen; ++k) {
-            char ch = text[k];
-            if (ch != ' ' && ch != '\t' && ch != '\n' && ch != '\r') {
-                allWs = false; break;
-            }
-        }
-        if (allWs) continue;
-
-        size_t needed = (off > 0 ? 3 : 0) + tlen;
+        size_t needed = (off > 0 ? kSegSepLen : 0) + tlen;
         if (off + needed + 1 >= outSize) break;
         if (off > 0) {
-            out[off++] = ' ';
-            out[off++] = '|';
-            out[off++] = ' ';
+            memcpy(out + off, kSegSep, kSegSepLen);
+            off += kSegSepLen;
         }
         memcpy(out + off, text, tlen);
         off += tlen;
@@ -171,30 +156,23 @@ void BuildContentFingerprint(void* panel, char* out, size_t outSize) {
 bool FingerprintContainsSegment(const char* hay, size_t hayLen,
                                 const char* seg, size_t segLen) {
     if (segLen == 0 || segLen > hayLen) return false;
-    const char* sep = " | ";
-    const size_t sepLen = 3;
-    size_t i = 0;
-    while (i + segLen <= hayLen) {
-        if (memcmp(hay + i, seg, segLen) == 0) {
-            bool startOk = (i == 0) ||
-                (i >= sepLen && memcmp(hay + i - sepLen, sep, sepLen) == 0);
-            bool endOk = (i + segLen == hayLen) ||
-                (i + segLen + sepLen <= hayLen &&
-                 memcmp(hay + i + segLen, sep, sepLen) == 0);
-            if (startOk && endOk) return true;
-        }
-        ++i;
+    for (size_t i = 0; i + segLen <= hayLen; ++i) {
+        if (memcmp(hay + i, seg, segLen) != 0) continue;
+        const bool startOk = i == 0 ||
+            (i >= kSegSepLen && memcmp(hay + i - kSegSepLen, kSegSep, kSegSepLen) == 0);
+        const bool endOk = i + segLen == hayLen ||
+            (i + segLen + kSegSepLen <= hayLen &&
+             memcmp(hay + i + segLen, kSegSep, kSegSepLen) == 0);
+        if (startOk && endOk) return true;
     }
     return false;
 }
 
 void SpeakNewSegments(const char* prev, const char* curr) {
-    const char* sep = " | ";
-    const size_t sepLen = 3;
     size_t prevLen = strlen(prev);
     const char* p = curr;
     while (*p) {
-        const char* end = strstr(p, sep);
+        const char* end = strstr(p, kSegSep);
         size_t segLen = end ? (size_t)(end - p) : strlen(p);
         if (segLen > 0 &&
             !FingerprintContainsSegment(prev, prevLen, p, segLen)) {
@@ -219,7 +197,7 @@ void SpeakNewSegments(const char* prev, const char* curr) {
             }
         }
         if (!end) break;
-        p = end + sepLen;
+        p = end + kSegSepLen;
     }
 }
 
@@ -296,7 +274,7 @@ void MonitorPanelContents() {
         bool firstSight = (last[0] == '\0');
         bool suppressFirstSight =
             firstSight &&
-            (k == PanelKind::Container || FindSpec(k) != nullptr);
+            (k == PanelKind::Container || IsInGameSubScreenKind(k));
         if (suppressFirstSight) {
             strncpy_s(last, sizeof(s_contentSnapshots[0].text),
                       fingerprint, _TRUNCATE);

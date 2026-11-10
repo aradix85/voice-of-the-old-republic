@@ -1,4 +1,4 @@
-# menus_internal.cpp (997 lines)
+# menus_internal.cpp (980 lines)
 
 Source: `patches/Accessibility/menus_internal.cpp`
 
@@ -86,4 +86,3 @@ Nothing here changed behaviourally in the move: the definitions are verbatim, in
 - L917 `const char* acc::menus::detail::ClassLabelCacheLookup(void* panel, void* icon)`
 - L935 `void acc::menus::detail::ComposeClassAnnounce(void* panel, const char* name, char* outBuf, size_t bufSize)`: Compose what the user hears for one class icon: the class name, followed by the blurb the engine renders beneath it, when there is one.
 - L957 `void acc::menus::detail::ClassLabelCacheStore(void* panel, void* icon, const char* text)`
-- L984 `void* acc::menus::detail::FindListBoxChild(void* panel)`: Find the first CSWGuiListBox child in a panel's controls.

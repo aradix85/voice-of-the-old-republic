@@ -1,25 +1,21 @@
-// general per-tick monitors.
-//
-// Post-Step-5 cleanup. See menus_monitors.h for the rationale and
-// public surface. Function bodies are unchanged from the inline
-// originals in menus.cpp; only namespacing and linkage changed.
+// The general per-tick menu monitors: TickGeneralMonitors, the focus
+// monitor and AnnounceControl, which keeps the focus monitor's last-seen
+// state in sync when it speaks. Also the cursor park the keyboard-driven
+// listbox screens share.
 
 #include "menus_monitors_internal.h"
 
 #include "engine_offsets.h"
 #include "engine_reads.h"
-#include "menus.h"            // SetDrilledIntoSubScreen — sole drill-arm site
+#include "menus.h"
 #include "menus_chargen_attr.h"
 #include "menus_chargen_skills.h"
 #include "menus_chain.h"
 #include "menus_extract.h"
-#include "menus_listbox.h"   // IsEquipPickerArmed — mute the slot re-read during preview
+#include "menus_listbox.h"
 #include "speech.h"
-#include "tutorial_hints.h"  // TutorialBox keyboard-hint substitution (Surface 1)
-#include "tutorial_popup.h"  // synthetic Trask-line tutorial popup (Surface 2)
-
-// g_currentPanel still owns its definition in menus.cpp (set by
-// OnSetActiveControl). Read via extern from menus_internal.h.
+#include "tutorial_hints.h"
+#include "tutorial_popup.h"
 
 // ---------------------------------------------------------------------------
 // Cursor park — shared by every keyboard-driven listbox screen.
@@ -52,18 +48,18 @@
 // The park must clear the engine's screen-edge camera-turn band. A cursor left
 // sitting in that band makes UpdateCamera accumulate-turn every frame once world
 // control returns, so the camera spins endlessly with no input and no cure but
-// restarting. This originally parked at x=2 and did exactly that after every
-// conversation (patch-20260724-230031.log: continuous 100-222 deg/s spin from
-// the moment a Bandon dialogue closed, while camera_spin_diag's guard — whose
-// band bottoms out at kMinBandPx — never fired because x=2 sat just outside it).
-// Keep kCursorParkX comfortably above that floor; y stays at the very top.
+// restarting. x=2 did exactly that after every conversation, just outside
+// camera_spin_diag's guard band (kMinBandPx); keep kCursorParkX comfortably
+// above that floor. y stays at the very top.
+namespace acc::menus::detail {
+
 namespace {
 constexpr int kCursorParkX = 24;
 constexpr int kCursorParkY = 2;
 }  // namespace
 
-bool acc::menus::detail::ParkCursorToCorner(const char* tag) {
-    void* gm = *reinterpret_cast<void**>(kAddrGuiManagerPtr);
+bool ParkCursorToCorner(const char* tag) {
+    void* gm = GetGuiManager();
     if (!gm) return false;
     reinterpret_cast<PFN_MoveMouseToPosition>(kAddrMoveMouseToPosition)(
         gm, kCursorParkX, kCursorParkY);
@@ -73,6 +69,8 @@ bool acc::menus::detail::ParkCursorToCorner(const char* tag) {
                   kCursorParkX, kCursorParkY);
     return true;
 }
+
+}  // namespace acc::menus::detail
 
 namespace acc::menus::monitors {
 
@@ -105,7 +103,7 @@ void MonitorFocusedControl() {
     // tick. PortraitCharGen was the first of these found; Abilities and
     // Skills joined it from the KOTOR 2 chargen round (their index-0 row —
     // Strength / Computer Use — was silent on open).
-    if (void* mgr = *reinterpret_cast<void**>(kAddrGuiManagerPtr)) {
+    if (void* mgr = GetGuiManager()) {
         void* fg = GetForegroundPanel(mgr);
         if (fg && fg != acc::menus::chain::g_chainPanel) {
             void* vt = nullptr;  // guarded: fg may already be torn down
@@ -133,9 +131,7 @@ void MonitorFocusedControl() {
         // straight out of the parent step-list's button handler. The gate
         // then suppressed the text-change re-announce for the entire visit:
         // on KOTOR 2 that is why Left/Right on an attribute or skill
-        // silently changed the value (patch-20260803-095222.log — twelve
-        // Menus.Cycle dispatches, twelve FireActivate calls, zero
-        // AnnounceValueChange lines).
+        // silently changed the value.
         //
         // The real invariant the old PortraitCharGen special-case was
         // approximating: the chain is authoritative when it is bound to the
@@ -144,7 +140,7 @@ void MonitorFocusedControl() {
         // chain panel from — instead of naming one vtable.
         void* chainPanel = acc::menus::chain::g_chainPanel;
         if (!chainPanel) return;
-        void* mgr = *reinterpret_cast<void**>(kAddrGuiManagerPtr);
+        void* mgr = GetGuiManager();
         if (!mgr || GetForegroundPanel(mgr) != chainPanel) return;
     }
     void* focused = acc::menus::chain::g_chain[acc::menus::chain::g_chainIndex].control;
@@ -194,8 +190,7 @@ void MonitorFocusedControl() {
             // directly). So arrowing down one row produced two lines: the
             // picker's own "Quarterstaff, 2 of 48" and then this monitor's
             // "Right Weapon, Quarterstaff", sometimes three when the swap flashed
-            // through an empty slot first (patch-20260817-074321.log). The
-            // second line repeats an item name the user has just been told and
+            // through an empty slot first. The second line repeats an item name the user has just been told and
             // describes a state that is not committed yet.
             //
             // Suppress the speech but keep updating the snapshot, so the diff
@@ -221,7 +216,7 @@ void MonitorFocusedControl() {
         // one of the others already said this line, saying it again is a
         // double-announce.
         //
-        // That is the chargen class-icon case. Step 9c's per-icon cache
+        // That is the chargen class-icon case. The per-icon label cache
         // starts cold, so on a first visit AnnounceControl's FromControl
         // returns nullptr on the nav itself (SetActive src=none) and it
         // exits via its class-icon early-out — without speaking, and without
@@ -258,10 +253,10 @@ void AnnounceControl(void* control) {
     // dialog text in a single row) DO need to speak — FromControl
     // returns the row text and we fall through to the success path.
     //
-    // The "never silence the fallback" rule in MEMORY.md applies to
-    // user-driven navigation events where missing the announce makes
-    // focus feel frozen; engine-driven panel-open auto-focus on a
-    // container is a different class of event.
+    // The rule that a fallback is never silenced is about user-driven
+    // navigation, where a missing announce makes focus feel frozen;
+    // engine-driven panel-open auto-focus on a container is a different
+    // class of event.
     const bool isListBoxContainer = IsListBox(control);
     if (isListBoxContainer) {
         auto* lb = reinterpret_cast<CExoArrayList*>(
@@ -305,7 +300,7 @@ void AnnounceControl(void* control) {
         return;
     }
     void* livePanel = CurrentPanelIfLive();
-    if (livePanel && IsClassSelectionIcon(livePanel, control)) {
+    if (livePanel && acc::menus::detail::IsClassSelectionIcon(livePanel, control)) {
         return;
     }
     // A listbox container with no extractable text is the engine's panel-open
@@ -331,10 +326,6 @@ void AnnounceControl(void* control) {
     snprintf(placeholder, sizeof(placeholder), "control %d", static_cast<int>(id));
     acc::speech::Speak(placeholder, /*interrupt=*/false);
 }
-
-// ============================================================================
-// Public surface.
-// ============================================================================
 
 void TickGeneralMonitors() {
     // First: drain the pending-announce slot. Multiple SetActive events

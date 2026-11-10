@@ -1,4 +1,4 @@
-# menus_monitors_dialog.cpp (277 lines)
+# menus_monitors_dialog.cpp (254 lines)
 
 Source: `patches/Accessibility/menus_monitors_dialog.cpp`
 

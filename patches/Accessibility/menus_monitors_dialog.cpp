@@ -1,4 +1,6 @@
-// The dialogue reply monitor: speaking the selected reply with its position, on navigation and when the engine swaps in the next node's replies.
+// The dialogue reply monitor: speaking the selected reply with its
+// position, on navigation and when the engine swaps in the next node's
+// replies.
 
 #include "menus_monitors_internal.h"
 
@@ -7,15 +9,12 @@
 #include "menus_extract.h"
 #include "strings.h"
 #include "speech.h"
-#include "tutorial_popup.h"  // synthetic Trask-line tutorial popup (Surface 2)
+#include "tutorial_popup.h"
 
 namespace acc::menus::monitors {
 
 namespace {
 
-// ============================================================================
-// Dialog reply selection monitor.
-// ============================================================================
 struct DialogReplyState {
     void*    listBox;
     short    lastSelection;
@@ -25,7 +24,8 @@ struct DialogReplyState {
     // replies" — see ComputeReplySetSignature.
     unsigned lastSetSignature;
 };
-DialogReplyState s_dialogReplyState = { nullptr, -1, 0 };
+constexpr DialogReplyState kNoReplyState = { nullptr, -1, 0 };
+DialogReplyState s_dialogReplyState = kNoReplyState;
 
 // One-shot "park the cursor off the reply list" latch, armed when a dialog
 // reply panel first appears and cleared once the park is issued (or on disarm).
@@ -98,9 +98,7 @@ void MonitorDialogReplies() {
     if (!dialogPanel) {
         if (s_dialogReplyState.listBox) {
             acclog::Write("Menus.DialogReply", "monitor disarmed: no dialog panel in stack");
-            s_dialogReplyState.listBox = nullptr;
-            s_dialogReplyState.lastSelection = -1;
-            s_dialogReplyState.lastSetSignature = 0;
+            s_dialogReplyState = kNoReplyState;
             s_dialogReplyParkPending = false;
         }
         return;
@@ -109,7 +107,7 @@ void MonitorDialogReplies() {
     // The reply listbox is a FIXED member of CSWGuiDialog at +0x19c4 in every
     // dialogue variant (cinematic / cinematic-copy / computer / computer-camera),
     // set by the exe's struct layout — NOT by the .gui. We must NOT locate it by
-    // "first listbox in controls[]" (FindListBoxChild): the computer/droid panel
+    // "first listbox in controls[]": the computer/droid panel
     // (CSWGuiDialogComputer) carries a SECOND listbox — the terminal-output
     // LB_MESSAGE — and CSWGuiPanel::InitControl slots controls into controls[] by
     // their .gui layout id, not registration order. On the stock computer.gui the
@@ -119,13 +117,11 @@ void MonitorDialogReplies() {
     // below LB_REPLIES makes the scan return the terminal listbox instead of the
     // replies — the droid/computer menu then tracks the wrong selection index and
     // reads garbage / only one option. Addressing by struct offset is immune to
-    // any layout renumbering. (Verified via decompiled InitControl + the shipped
-    // .gui control ids, 2026-07-18.)
+    // any layout renumbering (decompiled InitControl + the shipped .gui control
+    // ids).
     void* lb = reinterpret_cast<unsigned char*>(dialogPanel) +
                kDialogRepliesListBoxOffset;
     if (!acc::engine::IsListBox(lb)) return;
-    PanelKind k = dialogKind;
-    void* fg = dialogPanel;
 
     uint16_t selRaw = 0;  // guarded: the dialog panel can close mid-tick
     if (!acc::engine::TryReadU16(lb, kListBoxSelectionIndexOffset, &selRaw))
@@ -137,25 +133,9 @@ void MonitorDialogReplies() {
         s_dialogReplyState.lastSelection = selIdx;
         s_dialogReplyState.lastSetSignature = 0;
         s_dialogReplyParkPending = true;
-        // Diagnostic: log what the OLD first-listbox scan WOULD have returned and
-        // its offset within the panel. If scanOff != 0x19c4 the reporter is on a
-        // renumbered .gui (UI mod) and the pre-fix build was reading the wrong
-        // listbox — the root-cause confirmation for the droid/computer menu bug.
-        // replyCount shows whether the authoritative reply store is populated.
-        void* scanLb = FindListBoxChild(dialogPanel);
-        char  scanOff[24];
-        if (scanLb) {
-            snprintf(scanOff, sizeof(scanOff), "0x%lx",
-                     static_cast<unsigned long>(
-                         reinterpret_cast<unsigned char*>(scanLb) -
-                         reinterpret_cast<unsigned char*>(dialogPanel)));
-        } else {
-            std::strcpy(scanOff, "none");
-        }
         acclog::Write("Menus.DialogReply", "monitor armed: panel=%p kind=%s listbox=%p "
-                      "(fixed off=0x%x) scanListbox=%p scanOff=%s replyCount=%d "
-                      "initialSel=%d", fg, PanelKindName(k), lb,
-                      (unsigned)kDialogRepliesListBoxOffset, scanLb, scanOff,
+                      "replyCount=%d initialSel=%d", dialogPanel,
+                      PanelKindName(dialogKind), lb,
                       acc::engine::ReadDialogReplyCount(), selIdx);
         return;
     }
@@ -168,7 +148,7 @@ void MonitorDialogReplies() {
     // selection (see ParkDialogCursorOffReplies). Deferred to here (Update tick)
     // rather than the arm branch so it fires after the rows exist; runs before
     // the selection-change dedup so a stale hover-snap doesn't gate it.
-    if (s_dialogReplyParkPending && lbList && lbList->data && lbList->size > 0) {
+    if (s_dialogReplyParkPending && lbList->data && lbList->size > 0) {
         if (ParkDialogCursorOffReplies(lb)) {
             s_dialogReplyParkPending = false;
         }
@@ -183,8 +163,7 @@ void MonitorDialogReplies() {
     // announced at all (the player only learns a choice is pending by pressing
     // Enter). Treat a change of the reply SET as an announce event too.
     int replyCount = acc::engine::ReadDialogReplyCount();
-    unsigned setSig = ComputeReplySetSignature(
-        replyCount, (lbList ? lbList->size : 0));
+    unsigned setSig = ComputeReplySetSignature(replyCount, lbList->size);
     bool newSet = setSig != 0 && setSig != s_dialogReplyState.lastSetSignature;
     if (setSig != 0) {
         // Consume the event immediately: whatever the announce path below does
@@ -196,11 +175,9 @@ void MonitorDialogReplies() {
         // Re-park on every new reply set, not just on dialogue open: the engine
         // can put the cursor back over the reply list between nodes, and a
         // resting cursor pins the selection to its row via hover-select — every
-        // keyboard move snaps straight back before it can be spoken. Seen on
-        // the Peragus work assignment console: from the second node on, the
-        // selection arrived pinned to "Log out" and Up/Down/Home were all
-        // reverted within a tick (userlogs/078multioptionconsole, 17:17:06+).
-        // The park lands on the next monitor tick, same deferred path as the
+        // keyboard move snaps straight back before it can be spoken (the
+        // Peragus work assignment console, from its second node on). The park
+        // lands on the next monitor tick, same deferred path as the
         // open-time park above.
         s_dialogReplyParkPending = true;
     }
@@ -215,10 +192,9 @@ void MonitorDialogReplies() {
         return;
     }
 
-    if (!lbList || !lbList->data || selIdx >= lbList->size) {
+    if (!lbList->data || selIdx >= lbList->size) {
         acclog::Write("Menus.DialogReply", "selection out of range: listbox=%p sel=%d "
-                      "size=%d", lb, selIdx,
-                      (lbList ? lbList->size : -1));
+                      "size=%d", lb, selIdx, lbList->size);
         return;
     }
 
@@ -247,7 +223,8 @@ void MonitorDialogReplies() {
         acclog::Write("Menus.DialogReply", "selected: panel=%p kind=%s listbox=%p "
                       "sel=%d (was %d) src=%s size=%d replyCount=%d newSet=%d "
                       "text=\"%s\"",
-                      fg, PanelKindName(k), lb, selIdx, prev, src, lbList->size,
+                      dialogPanel, PanelKindName(dialogKind), lb, selIdx, prev, src,
+                      lbList->size,
                       replyCount, newSet ? 1 : 0, text);
         // A reply is now readable/navigable — the entry's VO has ended and the
         // player can choose. This is the moment to pop the pending tutorial
@@ -269,7 +246,7 @@ void MonitorDialogReplies() {
         if (row) DumpControlVtable(row, vtbl, sizeof(vtbl));
         else     snprintf(vtbl, sizeof(vtbl), "row=NULL");
         acclog::Write("Menus.DialogReply", "selected (src=none): panel=%p listbox=%p "
-                      "sel=%d row=%p %s", fg, lb, selIdx, row, vtbl);
+                      "sel=%d row=%p %s", dialogPanel, lb, selIdx, row, vtbl);
     }
 }
 

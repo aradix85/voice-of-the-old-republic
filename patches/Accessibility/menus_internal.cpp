@@ -977,20 +977,3 @@ void acc::menus::detail::ClassLabelCacheStore(void* panel, void* icon, const cha
     strncpy_s(g_classLabelCache[slot].text, text, _TRUNCATE);
 }
 
-// Find the first CSWGuiListBox child in a panel's controls. Returns
-// nullptr if none. CSWGuiDialog::replies_listbox is at child[1] in
-// observed panels (preceded by the message_label at child[0]); first-
-// match on IsListBox is robust enough for the dialog case.
-void* acc::menus::detail::FindListBoxChild(void* panel) {
-    if (!panel) return nullptr;
-    auto* list = reinterpret_cast<CExoArrayList*>(
-        reinterpret_cast<unsigned char*>(panel) + kPanelControlsOffset);
-    if (!list->data || list->size <= 0) return nullptr;
-    int n = list->size > 32 ? 32 : list->size;
-    for (int i = 0; i < n; ++i) {
-        void* c = list->data[i];
-        if (c && IsListBox(c)) return c;
-    }
-    return nullptr;
-}
-

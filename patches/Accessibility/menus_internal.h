@@ -117,11 +117,6 @@ bool GetControlCenter(void* control, int& outCx, int& outCy);
 // callbacks for Container/SaveLoad/EquipPicker).
 void* FindControlById(void* panel, int id);
 
-// Find the first CSWGuiListBox among panel.controls. Container's input
-// handler + the dialog/container monitors use it; the spec dispatcher in
-// menus_listbox.cpp's Container entry calls it on every Up/Down step.
-void* FindListBoxChild(void* panel);
-
 // Detect the CSWGuiSaveLoad panel by its vtable (kVtableCSWGuiSaveLoad) —
 // the ctor-written identity of this dynamically allocated panel, immune
 // to .gui renumbering. Used by the SaveLoad spec entry's `matches`

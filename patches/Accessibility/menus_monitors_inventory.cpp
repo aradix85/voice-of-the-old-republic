@@ -1,18 +1,16 @@
-// Repairing the inventory's lazily filled item list: when the list is still empty with the screen in front, run the engine's repopulate once.
+// Repairing the inventory's lazily filled item list: when the list is still
+// empty with the screen in front, run the engine's repopulate once.
 
 #include "menus_monitors_internal.h"
 
 #include "engine_offsets.h"
 #include "menus_chain.h"
-#include "menus_inventory.h"  // ForceRepopulate - lazy item-list repair
+#include "menus_inventory.h"
 
 namespace acc::menus::monitors {
 
 namespace {
 
-// ============================================================================
-// Inventory item-list population repair.
-// ============================================================================
 // The inventory's item listbox is filled LAZILY: the engine rebuilds it from
 // CSWGuiInGameInventory::Draw a frame after the screen appears, and after
 // anything changes what the party carries the visit can start with the list
@@ -21,12 +19,9 @@ namespace {
 // filter strip for the rest of the visit, because nothing invalidates the
 // chain afterwards.
 //
-// The KOTOR 2 tester who reported "inventory broken" sat in exactly that
-// state: two items in the pack, fourteen seconds of cycling All / Datapads /
-// Weapons with no way to reach either, and the items appeared only when a
-// filter was activated — because the filter path already forces a
-// repopulate (userlogs/daninventoryequipmentbroken077: chain count=7 at
-// 13:50:03, count=9 the moment "All" was pressed at 13:50:17).
+// On KOTOR 2 that left two items in the pack unreachable while the filters
+// cycled, until a filter was activated — the filter path already forces a
+// repopulate.
 //
 // So run that same repopulate the moment the screen is in front of the user
 // with an empty list, instead of waiting for a keypress to do it by accident.
@@ -57,7 +52,7 @@ int InventoryItemRowCount(void* panel) {
 }  // namespace
 
 void MonitorInventoryListPopulation() {
-    void* mgr = *reinterpret_cast<void**>(kAddrGuiManagerPtr);
+    void* mgr = GetGuiManager();
     if (!mgr) { g_inventoryEmptyLatch = nullptr; return; }
     void* fg = GetForegroundPanel(mgr);
     if (!fg || IdentifyPanel(fg) != PanelKind::InGameInventory) {
