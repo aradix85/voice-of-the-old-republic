@@ -1,4 +1,4 @@
-# strfmt.h (69 lines)
+# strfmt.h (81 lines)
 
 Source: `patches/Accessibility/strfmt.h`
 
@@ -14,3 +14,4 @@ Header-only; no TU. Two-pass vsnprintf: measure, then fill. Also the ASCII case 
 - L54 `inline char AsciiUpper(char c)`
 - L58 `inline std::string ToLowerAscii(std::string s)`
 - L63 `inline std::string ToUpperAscii(std::string s)`
+- L69 `inline bool ContainsNoCase(const char* hay, const char* needle)`: ASCII case-insensitive substring test; false for a null or empty needle.

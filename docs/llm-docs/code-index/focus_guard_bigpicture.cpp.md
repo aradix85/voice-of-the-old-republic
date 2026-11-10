@@ -1,4 +1,4 @@
-# focus_guard_bigpicture.cpp (96 lines)
+# focus_guard_bigpicture.cpp (86 lines)
 
 Source: `patches/Accessibility/focus_guard_bigpicture.cpp`
 
@@ -6,8 +6,7 @@ The input-blocked warning. When the game runs windowed and Steam Big Picture hol
 
 ## Declarations (in source order)
 
-- L29 `bool ContainsNoCase(const char* hay, const char* needle)`
-- L43 `bool AnyInteractionKeyDown()`: Any key that means "trying to interact" is physically down (modifiers alone do not count).
-- L56 `bool ForegroundIsBigPicture()`: steamwebhelper.exe also backs the normal Steam client, so the title must name Big Picture too.
-- L72 `void MaybeFlagInputBlockedWarning()`
-- L88 `void DrainInputBlockedWarning()`: On the main tick, where speech is COM-safe.
+- L33 `bool AnyInteractionKeyDown()`: Any key that means "trying to interact" is physically down (modifiers alone do not count).
+- L46 `bool ForegroundIsBigPicture()`: steamwebhelper.exe also backs the normal Steam client, so the title must name Big Picture too.
+- L62 `void MaybeFlagInputBlockedWarning()`
+- L78 `void DrainInputBlockedWarning()`: On the main tick, where speech is COM-safe.

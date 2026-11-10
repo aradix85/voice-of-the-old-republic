@@ -12,6 +12,7 @@
 
 #include "log.h"
 #include "speech.h"
+#include "strfmt.h"
 #include "strings.h"
 
 namespace acc::focus_guard {
@@ -25,17 +26,6 @@ constexpr DWORD kWarnCooldownMs = 20000;
 std::atomic<bool> g_warnPending{false};  // poll thread -> main tick
 DWORD g_lastWarnTick = 0;                // poll thread only; 0 = never
 bool  g_interactionKeyDownPrev = false;  // poll thread only
-
-bool ContainsNoCase(const char* hay, const char* needle) {
-    if (!hay || !needle || !*needle) return false;
-    for (; *hay; ++hay) {
-        const char* h = hay;
-        const char* n = needle;
-        while (*h && *n && ((*h | 0x20) == (*n | 0x20))) { ++h; ++n; }
-        if (!*n) return true;
-    }
-    return false;
-}
 
 // Any key that means "trying to interact" is physically down (modifiers
 // alone do not count). GetAsyncKeyState needs neither focus nor a message
@@ -64,7 +54,7 @@ bool ForegroundIsBigPicture() {
     if (!name || _stricmp(name, "steamwebhelper.exe") != 0) return false;
     char title[128] = {};
     GetWindowTextA(fg, title, sizeof(title));
-    return ContainsNoCase(title, "Big Picture");
+    return acc::strfmt::ContainsNoCase(title, "Big Picture");
 }
 
 }  // namespace

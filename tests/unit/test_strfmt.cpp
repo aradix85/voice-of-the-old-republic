@@ -6,6 +6,7 @@
 #include "strfmt.h"
 
 using acc::strfmt::AsciiLower;
+using acc::strfmt::ContainsNoCase;
 using acc::strfmt::Format;
 using acc::strfmt::ToLowerAscii;
 using acc::strfmt::ToUpperAscii;
@@ -26,4 +27,16 @@ TEST_CASE("The case folds change ASCII letters only") {
     CHECK(AsciiLower('Z') == 'z');
     CHECK(AsciiLower('[') == '[');
     CHECK(AsciiLower('@') == '@');
+}
+
+TEST_CASE("ContainsNoCase finds ASCII text in any case") {
+    CHECK(ContainsNoCase("Steam Big Picture Mode", "big picture"));
+    CHECK(ContainsNoCase("Primary Sound Driver (DirectSound)", "DIRECTSOUND"));
+    CHECK(ContainsNoCase("EAX", "eax"));
+    CHECK_FALSE(ContainsNoCase("Steam", "Big Picture"));
+    CHECK_FALSE(ContainsNoCase("Big Pictur", "Big Picture"));  // needle runs past the end
+    CHECK_FALSE(ContainsNoCase("@", "`"));  // only letters fold
+    CHECK_FALSE(ContainsNoCase("anything", ""));
+    CHECK_FALSE(ContainsNoCase(nullptr, "x"));
+    CHECK_FALSE(ContainsNoCase("x", nullptr));
 }

@@ -65,4 +65,16 @@ inline std::string ToUpperAscii(std::string s) {
     return s;
 }
 
+// ASCII case-insensitive substring test; false for a null or empty needle.
+inline bool ContainsNoCase(const char* hay, const char* needle) {
+    if (!hay || !needle || !*needle) return false;
+    for (; *hay; ++hay) {
+        const char* h = hay;
+        const char* n = needle;
+        while (*h && *n && AsciiLower(*h) == AsciiLower(*n)) { ++h; ++n; }
+        if (!*n) return true;
+    }
+    return false;
+}
+
 }  // namespace acc::strfmt

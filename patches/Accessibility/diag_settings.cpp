@@ -12,6 +12,7 @@
 #include "engine_game.h"  // IsKotor2 — per-game ini filename
 #include "engine_offsets_select.h"
 #include "log.h"
+#include "strfmt.h"
 
 namespace acc::diag::settings {
 
@@ -133,15 +134,6 @@ const size_t kSoundInternal3dProviderOff = acc::off::Todo(0xf8);
 typedef int (__stdcall* AilEnumerate3dProvidersFn)(uint32_t* next, uint32_t* provider,
                                                    char** name);
 
-bool ContainsNoCase(const char* hay, const char* needle) {
-    if (!hay || !needle) return false;
-    const size_t n = strlen(needle);
-    for (; *hay; ++hay) {
-        if (_strnicmp(hay, needle, n) == 0) return true;
-    }
-    return false;
-}
-
 // Reads the engine's provider handle and walks Miles' provider list. SEH
 // only: no objects with destructors here (C2712).
 void LogMilesProvider(void* soundInternal) {
@@ -195,7 +187,8 @@ void LogMilesProvider(void* soundInternal) {
                       "(no 3D provider open, or the offset is wrong)", opened, count);
         return;
     }
-    const bool viaDirectSound = ContainsNoCase(chosen, "DirectSound") || ContainsNoCase(chosen, "EAX");
+    const bool viaDirectSound = acc::strfmt::ContainsNoCase(chosen, "DirectSound") ||
+                                acc::strfmt::ContainsNoCase(chosen, "EAX");
     acclog::Write("Audio.Path", "provider the game opened: %s -> %s", chosen,
                   viaDirectSound
                       ? "3D sounds reach dsound.dll as 3D buffers (dsoal spatializes them when installed)"
