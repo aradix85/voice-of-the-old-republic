@@ -440,6 +440,10 @@ patches/Accessibility/unified_action_menu_speech.cpp
 patches/Accessibility/unified_action_menu_state.cpp
 patches/Accessibility/view_mode.cpp
 patches/Accessibility/view_mode.h
+patches/Accessibility/view_mode_enter.cpp
+patches/Accessibility/view_mode_internal.h
+patches/Accessibility/view_mode_narrate.cpp
+patches/Accessibility/view_mode_state.cpp
 patches/Accessibility/wall_probe.cpp
 patches/Accessibility/wall_probe.h
 patches/Accessibility/weapon_set_watch.cpp

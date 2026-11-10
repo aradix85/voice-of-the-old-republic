@@ -1,4 +1,4 @@
-# view_mode.cpp (753 lines)
+# view_mode.cpp (395 lines)
 
 Source: `patches/Accessibility/view_mode.cpp`
 
@@ -10,21 +10,15 @@ Hotkey B chosen because V is taken (Solo Mode in stock kotor.ini) and B is unbou
 
 ## Declarations (in source order)
 
-- L99 `void EnterViewMode()`
-- L140 `void ExitViewMode()`
-- L149 `void ToggleViewMode()`
-- L156 `void DumpCameraStateProbe()`: Shift+B diagnostic: snapshot CClientOptions to the log.
-- L206 `void StepCursor(float dt)`
-- L298 `bool ResolveCursorRegionLabel(void* area, const Vector& cursor, std::string& outBuf, const char*& outSource)`: Tier order matches the walking adapter: landmark → friendly room name → shape cache.
-- L352 `void AnnounceCursorRegion(void* area, const Vector& cursor)`: Per-tick region announce.
-- L401 `void NarrateNearestObject(void* area, const Vector& cursor)`
-- L490 `void PollEnter()`: Enter / Shift+Enter dispatch while view mode is active.
-- L531 `void ProcessPendingDispatch()`: Runs at the top of Tick BEFORE the IsActive() gate — by design, this fires after PollEnter exited view mode synchronously.
-- L584 `bool IsActive()`
-- L586 `bool ConsumedEnterThisTick()`
-- L592 `bool TryGetCursorPosition(Vector& out)`
-- L598 `bool GetEffectiveOrientationYawDegrees(float& out)`
-- L618 `bool GetEffectiveReferencePosition(Vector& out)`
-- L627 `bool GetEffectiveViewpoint(Vector& outPos, float& outYawDegrees)`
-- L637 `void PollWin32()`
-- L718 `void Tick()`
+- L33 `void EnterViewMode()`
+- L74 `void ExitViewMode()`
+- L83 `void ToggleViewMode()`
+- L90 `void DumpCameraStateProbe()`: Shift+B diagnostic: snapshot CClientOptions to the log.
+- L140 `void StepCursor(float dt)`
+- L232 `bool IsActive()`
+- L234 `bool TryGetCursorPosition(Vector& out)`
+- L240 `bool GetEffectiveOrientationYawDegrees(float& out)`
+- L260 `bool GetEffectiveReferencePosition(Vector& out)`
+- L269 `bool GetEffectiveViewpoint(Vector& outPos, float& outYawDegrees)`
+- L279 `void PollWin32()`
+- L360 `void Tick()`
