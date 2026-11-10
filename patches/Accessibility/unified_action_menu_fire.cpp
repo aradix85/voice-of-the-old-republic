@@ -1,13 +1,14 @@
-// Firing an action from the unified action menu: the dispatch (queued or replacing), the engine's refusal, and whether the menu closes afterwards.
+// Firing an action from the unified action menu: the dispatch (queued or
+// replacing), the engine's refusal, and whether the menu closes afterwards.
 
 #include "unified_action_menu_internal.h"
 
-#include "combat.h"             // IsPartyInCombat — out-of-combat fire-and-close
+#include "combat.h"             // IsPartyInCombat: out-of-combat fire-and-close
 #include "combat_diag.h"        // LogPreFire / LogPostFire around dispatch
-#include "combat_queue.h"       // ArmUserQueueAdd — attribute the AddAction
+#include "combat_queue.h"       // ArmUserQueueAdd: attribute the AddAction
 #include "engine_player.h"      // SetLeaderQueueModeBit (append-vs-replace)
-#include "engine_reads.h"       // ResolveActionDescriptionFromActionId
-#include "engine_subscreen.h"   // Begin/EndOverlayPause
+#include "engine_reads.h"       // LookupTlk
+#include "engine_subscreen.h"   // WorldIsPaused
 #include "hotkeys.h"            // ShiftHeld
 #include "log.h"
 #include "strings.h"
@@ -21,13 +22,11 @@ namespace {
 // matched list descriptor at PopulateMenus time — and while the
 // menu sits open the engine re-bakes the lists against its own
 // current target (combat reassert / cursor hover), so an Enter
-// seconds after arming fired at the wrong object (Machtbruch
-// meant for a captive-Jedi container hit Malak, patch-
-// 20260717-131859.log). Restamp the whole row with the menu's
-// armed target right before dispatch: raw field writes, safe
-// from this poll context (unlike RePopulate — phantom-confirm,
-// see OpenTarget). Same client-handle convention as input_
-// pipeline's PrepareBareDispatchForNarratedTarget.
+// seconds after arming fired at the wrong object. Restamp the
+// whole row with the menu's armed target right before dispatch:
+// raw field writes, safe from this poll context (unlike
+// RePopulate, see OpenTarget). Same client-handle convention as
+// input_pipeline's PrepareBareDispatchForNarratedTarget.
 void RestampTargetRowForDispatch(void* tam, const Cat& cur) {
     if (cur.kind == CatKind::Target && g.targetHandle != 0) {
         uint32_t targetClient = (g.targetHandle & 0x80000000u)
@@ -38,15 +37,6 @@ void RestampTargetRowForDispatch(void* tam, const Cat& cur) {
     }
 }
 
-// Force the engine's APPEND path. Both DoPersonalAction and
-// DoTargetAction wipe the leader's action queue before dispatching
-// unless its combat-mode bit (field200_0x440 bit 0) is set — that
-// bit is the native Shift-held "queue" flag. Our synthetic dispatch
-// bypasses the engine's shift capture, so without this every Enter
-// overwrites the previous queued action (observed 2026-06-08:
-// Force Valor then Cure left only Cure). Set it for
-// the dispatch, restore afterward so the creature's real combat
-// mode is untouched.
 // Speak the engine's own refusal, when it is about to refuse.
 //
 // Call BEFORE the dispatch (the flags are read from the descriptor the
@@ -94,6 +84,14 @@ void SpeakRefusal(uint32_t strref) {
                  /*interrupt=*/false);
 }
 
+// Force the engine's APPEND path. Both DoPersonalAction and
+// DoTargetAction wipe the leader's action queue before dispatching
+// unless its combat-mode bit (field200_0x440 bit 0) is set — that
+// bit is the native Shift-held "queue" flag. Our synthetic dispatch
+// bypasses the engine's shift capture, so without it every Enter
+// overwrites the previous queued action (Force Valor then Cure left
+// only Cure). Set for the dispatch, restored afterwards so the
+// creature's real combat mode is untouched.
 bool DispatchWithQueueAppend(void* tam, void* mi, const Cat& cur) {
     int prevQueueBit = acc::engine::SetLeaderQueueModeBit(1);
 
@@ -129,8 +127,8 @@ bool DispatchWithQueueAppend(void* tam, void* mi, const Cat& cur) {
 //   World RUNNING → fire-and-close, matching the sighted mouse
 //   radial (click an action → it runs → the radial closes).
 //   Keeping the menu open here just adds an Esc step vanilla
-//   never charges, and a lingering live surface has misfired
-//   (patch-20260617-215141.log). ForceDisarm is the same close
+//   never charges, and a lingering live surface has misfired.
+//   ForceDisarm is the same close
 //   the Esc path runs, and we are in the sanctioned
 //   input-dispatch context (HandleInputEvent), so it obeys the
 //   HARD RULE (no populate off the poll/Open path).
@@ -164,7 +162,7 @@ void ApplyPostFireClosePolicy() {
     // several actions into the engine queue (grenade → force power →
     // attack) without re-pausing between each. The world only resumes —
     // and the queue runs — on Esc (ForceDisarm → EndOverlayPause). The
-    // confirmation message ("…, Position N") is the cue that the menu
+    // confirmation message ("X, position N") is the cue that the menu
     // is still open on the same entry; press Enter again to re-queue,
     // or arrow to another category. Selection/category are preserved;
     // the next keypress's BuildCategoryList + LocateCat re-locates on
@@ -271,16 +269,8 @@ bool FirePersonal(int col) {
     Cat c{CatKind::Personal, col};
     const int count = acc::engine_actionbar::VariantCount(mi, col);
     if (count <= 0) {
-        const char* name = CategoryName(c);
         char msg[160];
-        if (name && name[0]) {
-            std::snprintf(msg, sizeof(msg),
-                acc::strings::Get(acc::strings::Id::FmtMenuCategoryEmpty), name);
-        } else {
-            std::snprintf(msg, sizeof(msg),
-                acc::strings::Get(acc::strings::Id::FmtActionBarColumnEmpty),
-                col + 1);
-        }
+        FormatEmptyColumn(col, msg, sizeof(msg));
         acc::speech::Speak(msg, /*interrupt=*/true);
         acclog::Write("UnifiedMenu", "FirePersonal col=%d empty -> [%s]",
                       col, msg);

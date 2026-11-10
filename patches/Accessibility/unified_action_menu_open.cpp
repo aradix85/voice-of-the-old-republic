@@ -1,10 +1,11 @@
-// Opening and closing the unified action menu, and keeping it on the right target while it is open.
+// Opening and closing the unified action menu, and keeping it on the right
+// target while it is open.
 
 #include "unified_action_menu_internal.h"
 
-#include "combat.h"             // IsPartyInCombat — out-of-combat fire-and-close
-#include "engine_picker.h"      // ReanchorRadial (per-press target re-anchor)
-#include "engine_subscreen.h"   // Begin/EndOverlayPause
+#include "combat.h"             // IsPartyInCombat: Esc out of combat resumes
+#include "engine_picker.h"      // ReanchorRadial
+#include "engine_subscreen.h"   // ResumeWorldIfPaused
 #include "log.h"
 #include "strings.h"
 #include "speech.h"
@@ -76,9 +77,8 @@ bool OpenTarget(int row) {
     // bare-key path in input_pipeline already re-targets + re-populates BOTH
     // blocks against this same target on the Shift+1..3 press (PopulateMenus
     // rebuilds the target rows too), in the engine's own input-dispatch
-    // context. Re-populating again from this tick context is what made the
-    // engine synthesise a phantom confirm that fired the menu's first entry
-    // (see OpenPersonal note + the 06:55 vs 10:44 logs, 2026-06-07).
+    // context. Re-populating again from this tick context made the engine
+    // synthesise a phantom confirm that fired the menu's first entry.
     void* tam = acc::engine_radial::ResolveTargetActionMenu();
     void* mi  = acc::engine_actionbar::ResolveMainInterface();
     if (!tam || acc::engine_radial::RowActionCount(tam, g.reqSlot) <= 0) {
@@ -93,10 +93,9 @@ bool OpenTarget(int row) {
         // DIFFERENT target) must not survive this refusal: it kept its old
         // categories navigable after "Column N is empty", so the user
         // browsed and fired the OLD target's menu believing it was the new
-        // one (the 13:20 Machtbruch-on-Malak in patch-20260717-131859.log).
-        // Worse, the g.targetHandle capture above had already clobbered the
-        // armed menu's target. Close it outright — matching the "all
-        // categories empty" disarms — so the refusal leaves no ghost menu.
+        // one, and the g.targetHandle capture above had already clobbered the
+        // armed menu's target. Close it outright, like the "all categories
+        // empty" disarms, so the refusal leaves no ghost menu.
         if (g.active) {
             ForceDisarm("open-empty-row");
         } else {
@@ -146,8 +145,7 @@ bool OpenPersonal(int col) {
     // the narrated target on this same Shift+number press, in the engine's own
     // input-dispatch context. Re-populating again from this tick context made
     // the engine synthesise a phantom confirm one tick later that fired the
-    // menu's first entry (verified against the 06:55 vs 10:44 logs, 2026-06-07;
-    // see the identical note in OpenTarget).
+    // menu's first entry.
     void* mi = acc::engine_actionbar::ResolveMainInterface();
 
     if (!mi) {
@@ -158,29 +156,14 @@ bool OpenPersonal(int col) {
 
     // The requested column may be empty — Shift+4 self-powers on a non-Jedi or
     // a droid, Shift+6 explosives with no grenades. Say so by name, then open
-    // anyway and land on the first populated category.
-    //
-    // Refusing outright was the old rule ("never silently jump to a different
-    // category"), and it read as a menu that would not respond: on T3-M4 every
-    // open announced "Own Force Powers: empty" and then nothing at all
-    // answered the arrow keys, because nothing had opened. The rule's real
-    // intent was don't jump SILENTLY, and this notice is what makes it not
-    // silent. It rides in as SpeakCategory's prefix rather than as its own
-    // utterance, because SpeakCategory speaks with interrupt=true and would
-    // otherwise cancel it — the user hears "<column>: empty. <where you
-    // landed>" as one line.
+    // anyway and land on the first populated category: refusing read as a
+    // menu that does not respond to the arrows. The notice rides in as
+    // SpeakCategory's prefix, not as its own utterance, because SpeakCategory
+    // interrupts: the user hears "<column>: empty. <where you landed>" as one
+    // line.
     char emptyNotice[160] = "";
     if (acc::engine_actionbar::VariantCount(mi, g.reqSlot) <= 0) {
-        Cat reqCat{CatKind::Personal, g.reqSlot};
-        const char* name = CategoryName(reqCat);
-        if (name && name[0]) {
-            std::snprintf(emptyNotice, sizeof(emptyNotice),
-                acc::strings::Get(acc::strings::Id::FmtMenuCategoryEmpty), name);
-        } else {
-            std::snprintf(emptyNotice, sizeof(emptyNotice),
-                acc::strings::Get(acc::strings::Id::FmtActionBarColumnEmpty),
-                g.reqSlot + 1);
-        }
+        FormatEmptyColumn(g.reqSlot, emptyNotice, sizeof(emptyNotice));
         acclog::Write("UnifiedMenu", "OpenPersonal col=%d empty -> landing on "
             "first populated category [%s]", g.reqSlot, emptyNotice);
     }
@@ -229,9 +212,9 @@ bool OpenPersonal(int col) {
     return true;
 }
 
-// Steps of HandleInputEvent below. They are file-local because every one of
-// them writes `g` and is only meaningful inside a single input dispatch —
-// the HARD RULE is that the menu is populated from input_pipeline and
+// The steps below run only inside HandleInputEvent
+// (unified_action_menu_input.cpp): they write `g` and mean something only
+// within one input dispatch. The menu is populated from input_pipeline and
 // nowhere else, so none of this may become reachable from OnUpdate or
 // PollHotkey.
 
@@ -243,29 +226,26 @@ bool OpenPersonal(int col) {
 // we never paused, so there is no resume cue — speak an explicit close
 // confirmation instead so the user hears the menu dismissed.
 void CloseFromEsc() {
-const bool wasPaused   = g.pausedOnOpen;
-const bool outOfCombat = !acc::combat::IsPartyInCombat();
-ForceDisarm("esc");
-if (outOfCombat) {
-    // Native sub-screens unpause the world on Esc; the unified menu now
-    // matches that out of combat. ForceDisarm already released our own
-    // overlay pause (auto-pause option on) via EndOverlayPause; if the
-    // world is STILL paused that is the player's own manual pause, so
-    // resume it here — the engine's "Unpaused" resume cue is then the
-    // close announcement. When nothing resumed (never paused, or the
-    // overlay release already unpaused silently) speak an explicit close
-    // confirmation so the close is never silent.
-    if (!acc::engine::ResumeWorldIfPaused("unified-esc")) {
+    const bool wasPaused   = g.pausedOnOpen;
+    const bool outOfCombat = !acc::combat::IsPartyInCombat();
+    ForceDisarm("esc");
+    if (outOfCombat) {
+        // Native sub-screens unpause the world on Esc, and so does this menu
+        // out of combat. ForceDisarm already released our own overlay pause;
+        // if the world is STILL paused that is the player's own pause, so
+        // resume it here: the engine's "Unpaused" cue is then the close
+        // announcement. When nothing resumed, say the menu closed so the
+        // close is never silent.
+        if (!acc::engine::ResumeWorldIfPaused("unified-esc")) {
+            acc::speech::Speak(acc::strings::Get(acc::strings::Id::ActionMenuClosed),
+                               /*interrupt=*/true);
+        }
+    } else if (!wasPaused) {
+        // In combat Esc keeps the tactical pause: ForceDisarm releases only
+        // the pause we owned, and with none there is no resume cue.
         acc::speech::Speak(acc::strings::Get(acc::strings::Id::ActionMenuClosed),
-                     /*interrupt=*/true);
+                           /*interrupt=*/true);
     }
-} else if (!wasPaused) {
-    // In combat: unchanged. Esc keeps the tactical pause exactly as
-    // before — ForceDisarm → EndOverlayPause resumes only the pause we
-    // owned; the encounter's own pause is untouched.
-    acc::speech::Speak(acc::strings::Get(acc::strings::Id::ActionMenuClosed),
-                 /*interrupt=*/true);
-}
 }
 
 // FOLLOW-CYCLING re-anchor: when the narrated target changed while the
@@ -364,11 +344,11 @@ bool UnfoldTargetBlock(void* tam, uint32_t narrated,
 // navigation (the engine's per-press re-derivation churned the rows so
 // arrows produced nothing). Instead, only re-anchor to RESTORE the menu
 // when the engine has actually drained our target rows out from under us
-// (the cursor-coupling case, project_radial_cursor_coupling). In the
-// normal paused-overlay case the rows persist, so we skip re-anchor and
-// navigate the stable snapshot — exactly like the personal-only menu.
-// Skipped when the follow-cycle re-anchor above already rebuilt this
-// press (an actionless new target legitimately has zero rows).
+// (the radial is coupled to the world cursor). In the normal paused-overlay
+// case the rows persist, so we skip re-anchor and navigate the stable
+// snapshot, like the personal-only menu. Skipped when the follow-cycle
+// re-anchor already rebuilt this press (an actionless new target
+// legitimately has zero rows).
 void MaybeRestoreDrainedRows(void*& tam, bool targetChanged) {
     if (!targetChanged && g.hasTargetBlock && g.targetHandle != 0 && tam) {
         int t = acc::engine_radial::RowActionCount(tam, 0) +

@@ -1,13 +1,13 @@
-// KOTOR 2 medical items: the party picker that chooses who gets the medpac or stim.
+// KOTOR 2 medical items: the party picker that chooses who gets the medpac or
+// stim.
 
 #include "unified_action_menu_internal.h"
 
 #include "combat_diag.h"        // LogPreFire / LogPostFire around dispatch
-#include "combat_queue.h"       // ArmUserQueueAdd — attribute the AddAction
-#include "engine_area.h"        // ResolveServerObjectHandle, kInvalidObjectId
-#include "engine_input.h"       // kInputNav*, kInputEnter*, kInputEsc*,
-                                // kInputHome/End, kInputCatFirst/Last
-#include "engine_player.h"      // SetLeaderQueueModeBit (append-vs-replace)
+#include "combat_queue.h"       // ArmUserQueueAdd: attribute the AddAction
+#include "engine_area.h"        // object handles and names
+#include "engine_input.h"       // kInputNav*, kInputEnter*, kInputEsc*, Home/End
+#include "engine_player.h"      // the leader and the K2 party slots
 #include "hotkeys.h"            // ShiftHeld
 #include "log.h"
 #include "strings.h"
@@ -17,16 +17,13 @@ namespace acc::unified_menu {
 
 namespace {
 
-// ---- KOTOR 2 medical-item party picker -----------------------------------
-//
-// Vanilla K2 medical items are two-step: the press arms a "who gets it"
-// pick that only a mouse click on a party portrait completes — the wedge
-// that killed the whole Medicine row for keyboard play (2026-08-11 flip).
-// This submenu IS that second step: Enter on a Medicine-row entry opens
-// it, Up/Down clamp through the party members (narrated member
-// preselected, else the controlled leader), Enter applies the item,
-// Shift+Enter (on the entry or in here) short-circuits to instant
-// self-use, Esc backs out to the entry. Bare key 5 never opens it —
+// Vanilla K2 medical items are two-step: the press arms a "who gets it" pick
+// that only a mouse click on a party portrait completes, which left the whole
+// Medicine row dead for keyboard play. This submenu IS that second step:
+// Enter on a Medicine-row entry opens it, Up/Down clamp through the party
+// members (narrated member preselected, else the controlled leader), Enter
+// applies the item, Shift+Enter (on the entry or in here) short-circuits to
+// instant self-use, Esc backs out to the entry. Bare key 5 never opens it:
 // instant self-use stays the one-press combat reflex.
 
 void SpeakMedPickerRow(bool withTitle) {
@@ -39,6 +36,11 @@ void SpeakMedPickerRow(bool withTitle) {
     } else {
         acc::speech::Speak(g.med.names[g.med.sel], /*interrupt=*/true);
     }
+}
+
+// The same object, whichever handle namespace (client or server) each is in.
+bool SameObject(uint32_t a, uint32_t b) {
+    return a != 0 && ((a ^ b) & ~0x80000000u) == 0;
 }
 
 }  // namespace
@@ -94,7 +96,7 @@ bool OpenMedPicker(void* mi, const Cat& c, int sel, const char* itemLabel) {
         //   1. universal display-name accessor (companions resolve here)
         //   2. server-object name via the engine's own client→server
         //      resolver (the Q/E-cycle path that reads the PC correctly)
-        //   3. leader row → GetActiveLeaderName (the shipped Tab solution)
+        //   3. leader row → GetActiveLeaderName (as the Tab announce does)
         //   4. chargen-name slot, then the bare slot number as last resort.
         char* nm = g.med.names[row];
         const size_t nmSize = sizeof(g.med.names[row]);
@@ -105,8 +107,7 @@ bool OpenMedPicker(void* mi, const Cat& c, int sel, const char* itemLabel) {
             named = srv && acc::engine::GetObjectName(srv, nm, nmSize) &&
                     nm[0];
         }
-        if (!named && leaderId != 0 &&
-            ((leaderId ^ id) & ~0x80000000u) == 0) {
+        if (!named && SameObject(leaderId, id)) {
             named = acc::engine::GetActiveLeaderName(nm, nmSize) && nm[0];
         }
         if (!named) {
@@ -115,10 +116,8 @@ bool OpenMedPicker(void* mi, const Cat& c, int sel, const char* itemLabel) {
         if (!named) {
             std::snprintf(nm, nmSize, "%d", s + 1);
         }
-        if (narrated != 0 &&
-            ((narrated ^ id) & ~0x80000000u) == 0) narratedRow = row;
-        if (leaderId != 0 &&
-            ((leaderId ^ id) & ~0x80000000u) == 0) leaderRow = row;
+        if (SameObject(narrated, id)) narratedRow = row;
+        if (SameObject(leaderId, id)) leaderRow = row;
         g.med.count++;
     }
     if (g.med.count == 0) return false;
@@ -168,9 +167,9 @@ bool HandleMedPickerInput(int code) {
             if (!mi) return true;
             // Shift+Enter = instant self (the controlled leader); plain
             // Enter re-resolves the focused row through the engine's own
-            // party-slot accessor — the PC's pseudo-handle won't resolve
-            // through the object array (the "cannot aim at the PC" round),
-            // but its slot always does. Handle resolve stays as fallback.
+            // party-slot accessor: the PC's pseudo-handle won't resolve
+            // through the object array, but its slot always does. The
+            // handle stays as fallback.
             void* cre = nullptr;
             if (acc::hotkeys::ShiftHeld()) {
                 cre = acc::engine::GetClientLeader();

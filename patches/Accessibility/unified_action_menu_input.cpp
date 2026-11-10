@@ -2,8 +2,8 @@
 
 #include "unified_action_menu_internal.h"
 
-#include "engine_input.h"       // kInputNav*, kInputEnter*, kInputEsc*,
-                                // kInputHome/End, kInputCatFirst/Last
+#include "engine_input.h"       // kInputNav*, kInputEnter*, kInputEsc*, Home/End,
+                                // kInputCatFirst/Last
 #include "hotkeys.h"            // ShiftHeld
 #include "log.h"
 #include "strings.h"
@@ -96,14 +96,13 @@ bool HandleInputEvent(int code, int value) {
         case kInputNavRight: {
             int dir = (code == kInputNavRight) ? +1 : -1;
             int nx = g.curCat + dir;
-            if (nx < 0 || nx >= g.catCount) {
-                // Clamp — re-speak the current category as the edge cue.
+            if (nx >= 0 && nx < g.catCount) {
+                g.curCat = nx;
+            } else {
+                // Clamp: the re-spoken category is the edge cue.
                 acclog::Write("UnifiedMenu", "%s at edge cat=%d/%d",
                     dir > 0 ? "Right" : "Left", g.curCat, g.catCount);
-                SpeakCategory(tam, mi, /*prefix=*/nullptr);
-                return true;
             }
-            g.curCat = nx;
             SpeakCategory(tam, mi, /*prefix=*/nullptr);
             return true;
         }

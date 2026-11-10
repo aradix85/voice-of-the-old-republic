@@ -1,5 +1,6 @@
-// Internal to the unified_action_menu module (unified_action_menu*.cpp); no other file includes
-// it. The public interface is unified_action_menu.h. Here: what the files share.
+// Internal to the unified_action_menu module (unified_action_menu*.cpp); no
+// other file includes it. The public interface is unified_action_menu.h.
+// Here: what the files share.
 
 #pragma once
 
@@ -21,7 +22,7 @@ enum class CatKind { Target, Personal };
 
 struct Cat {
     CatKind kind;
-    int     slot;   // Target: row 0..2 ; Personal: col 0..3
+    int     slot;   // Target: row 0..2; Personal: column 0..5
 };
 
 // Per-row / per-column selected-entry shadow, persisted across menu
@@ -45,8 +46,7 @@ struct MedPicker {
                                       // re-resolves through the slot, not
                                       // the handle: the PC's client handle
                                       // is a floating pseudo-id the object
-                                      // array won't look up (the "cannot
-                                      // aim at the PC" round, 2026-08-12)
+                                      // array won't look up
     char names[3][64]  = {"", "", ""};
     Cat  itemCat{};               // the Medicine-row entry to fire
     int  itemSel = 0;
@@ -71,14 +71,11 @@ struct State {
     bool     hasTargetBlock = false;// include the 3 target rows in the menu?
     int      reqSlot        = 0;    // category the open shortcut asked for
                                     // (Shift+1..3 row / Shift+4..7 column).
-                                    // Held in State, not a local: reading it
-                                    // back after the engine-call chain returned
-                                    // corrupted values (observed 2026-06-07 —
-                                    // the local logged as a pointer/handle while
-                                    // globals stayed intact, a stack imbalance
-                                    // somewhere in the engine calls). Capturing
-                                    // it before the first engine call sidesteps
-                                    // the corrupted stack slot.
+                                    // Held in State, not a local: a local read
+                                    // back after the engine-call chain came
+                                    // back corrupted (a stack imbalance in
+                                    // the engine calls) while globals stayed
+                                    // intact.
     char     targetName[64] = "";
     uint32_t unfoldDeclined = 0;    // last narrated handle whose mid-menu
                                     // target-block unfold found no populated
@@ -110,6 +107,7 @@ void ReadLabel(void* tam, void* mi, const Cat& c, int idx, char* out, size_t n);
 uint32_t ReadActionId(void* tam, void* mi, const Cat& c, int idx);
 bool Dispatch(void* tam, void* mi, const Cat& c);
 const char* CategoryName(const Cat& c);
+void FormatEmptyColumn(int col, char* out, size_t n);
 void BuildCategoryList(void* tam, void* mi);
 int LocateCat(CatKind kind, int slot);
 int FirstPopulatedTargetRow(void* tam);

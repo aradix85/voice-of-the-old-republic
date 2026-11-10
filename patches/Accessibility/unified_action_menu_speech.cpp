@@ -1,4 +1,5 @@
-// What the unified action menu says: a category with its selected entry, an entry, an item's quantity, and an entry's description.
+// What the unified action menu says: a category with its selected entry, an
+// entry, an item's quantity, and an entry's description.
 
 #include "unified_action_menu_internal.h"
 
@@ -39,8 +40,6 @@ void AppendItemQuantity(void* tam, void* mi, const Cat& c, int idx,
     size_t len = strnlen(label, n);
     if (len < n) std::snprintf(label + len, n - len, ", %s", suffix);
 }
-
-// ---- speech --------------------------------------------------------------
 
 // Build the full category announce ("Name: label, N options" / "label, N
 // options" for unnamed rows) into `out`. ApplySelection must have run.
