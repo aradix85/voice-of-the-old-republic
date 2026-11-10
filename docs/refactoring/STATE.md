@@ -54,8 +54,10 @@ rejections are advice only, Anouk decides.
 
 1. Verify a scan claim against the code before changing anything.
 2. Measure calls and shared data before a split (split_plan.py).
-3. One family of change per commit; `kdev build` with 0 warnings and green
-   unit tests after every commit; push to `fork bridge`.
+3. One family of change per commit. After every commit: `kdev build` (our
+   sources build at /W4 and a warning fails the build), green unit tests,
+   `pwsh -File tools/analysis/cppcheck.ps1` with exit 0; push to
+   `fork bridge`.
 4. Never make a failure silent: a guard that makes a failure audible stays.
 5. Record rejected changes below with the reason.
 6. The repo's CLAUDE.md still applies (SEH constraint C2712, search for an
@@ -71,8 +73,8 @@ rejections are advice only, Anouk decides.
 3. Move-only commit, line comparison against the original.
 4. Lean commit: duplicates, needless guards, restating comments; pure logic
    to engine-free files with unit tests.
-5. `pwsh -File tools/tests/run_unit_tests.ps1`, kdev build, regenerate the
-   code index (`python tools/analysis/code_index.py`).
+5. `pwsh -File tools/tests/run_unit_tests.ps1`, kdev build, cppcheck.ps1,
+   regenerate the code index (`python tools/analysis/code_index.py`).
 
 Order by size: room_topology.cpp, menus_extract.cpp, minigame_turret.cpp,
 menus_listbox.cpp, minigame_swoop_audio.cpp, prism.cpp, pad_input.cpp,
@@ -219,6 +221,10 @@ equipment reader of combat_query, engine_reads for the memory reads).
 engine_reads_items: descriptions and actions split off (f571fd25), lean
 (edf9a39e: TryRead*, GetFeatRow/GetSpellRow/ReadRowStrRefText shared with
 examine_view).
+combat_query: the leader-change poll moved to party_leader_announce
+(c90e8703); lean, 585 to 282 lines, the HP, effect-icon and effect-type
+reads in engine_reads and shared with the examine view (bef48dc3).
+strfmt: FixedText, the one bounded printf-append (c421d637).
 view_mode: narration and Enter split off (49c3e25e), lean (71ffbbfd);
 removed with its listener hook and the wall-surface clustering
 (82c9a9bf). viewpoint.h keeps what the rest asked it for: the camera
@@ -347,7 +353,7 @@ prefix (menus_listbox_picker.cpp).
   possible; for files above 500 lines, judge whether a split into modules of
   things that belong together makes sense, and do it where it does.
 - Next file, by size (2026-11-10 21:15, strings*.cpp excepted):
-  to judge: combat_query 585, room_topology_doors 574, log 563, menus_chargen_feats 561,
+  to judge: room_topology_doors 574, log 563, menus_chargen_feats 561,
   combat_diag 543, minigame_turret_peg 536,
   menus_listbox_picker 524, menus_focus_k2 520, help 520, menus_focus 510,
   menus_powers_levelup 510. The catalog headers (engine_offsets_fields.h
@@ -372,14 +378,45 @@ prefix (menus_listbox_picker.cpp).
   but /health, /spoken, /state, /menu, say and key are KOTOR 1 only);
   live check of /objects with creatures and kotor.py kaart --personen
   (needs the game running with the new DLL).
-- Static analysis, left: cppcheck's 86 knownConditionTrueFalse findings
-  (possible redundant guards) are not reviewed yet; take them per module
-  during its lean. Command: cppcheck --enable=unusedFunction,style,
-  warning,performance --platform=win32W -D_WIN32 -D_MSC_VER=1930
-  --std=c++17 --language=c++ -I patches/Accessibility (plus
-  --inline-suppr and the missingInclude suppressions) on
-  patches/Accessibility; clang-cl -fsyntax-only -Wno-everything
-  -Wunused-* per file.
+- Static analysis. Until 2026-11-10 kdev build hid the warnings of every
+  file that compiled, so "0 warnings" was never checked; it shows them
+  now and builds our sources at /W4 /WX (fc88101a; the 32 warnings that
+  surfaced are fixed, 76e89f64). The tools, all under tools/analysis
+  unless said otherwise:
+  - cppcheck.ps1: after every commit, exit 0. Suppressions with their
+    reasons in cppcheck_suppressions.txt. With -Style a report: 86
+    knownConditionTrueFalse findings (possible redundant guards) are not
+    reviewed yet; take them per module during its lean.
+  - clang_tidy.py (checks in .clang-tidy): baseline 8, all reviewed
+    false positives (audio_loop 261 logs a freed pointer's value,
+    combat_log_parse 220, cycle_state 358, engine_area_names 82,
+    guidance_autowalk 235 is read in the __except, mod_settings_store 54,
+    party_status 79, room_topology_absorb 242).
+  - msvc_check.ps1 -Mode analyze: baseline 121. 105 x C28159 (F15), 7 x
+    C6385 and 3 x C6054 reviewed false positives, 4 x C6262 (stack frames
+    over 16 KB: engine_manager 162, map_ui_cursor 181, menus_chain_input
+    125, peek_description_item 313), 2 in the Windows SDK.
+    -Mode w4 is the quick warning check without a build.
+  - tools/tests/run_unit_tests.ps1 -Mode asan (also in CI) and -Mode
+    coverage: 91% of the lines under test; low are engine_compass (61%)
+    and engine_keymap_codes (49%).
+  - clang-cl -fsyntax-only -Wno-everything -Wunused-* per file, for
+    unused code.
+  cppcheck is not in CI: the packages a runner can install are old
+  versions and would not give our results.
+- F15 GetTickCount is called directly 105 times beside acc::tick::NowMs:
+  one clock.
+- F16 metres are rounded with `(int)(x + 0.5f)` in 19 places: one helper.
+- F17 407 raw __try blocks remain outside engine_reads (the analyzer's
+  count of constant exception filters); each lean moves its module's.
+- Max HP of companions: party_status and bridge_state read it with
+  ReadCreatureMaxHitPoints (GetMaxHitPoints(1)), which the maker's notes
+  in the old combat_query say returns garbage for anyone but the PC.
+  ReadClientCreatureHitPoints is the read the character sheet uses.
+  Compare Ctrl+H or the bridge with the character sheet in game.
+- Tab: on a leader swap both party_leader_announce's Tab window and
+  TickLeaderChange speak the new name. Check in game whether it is heard
+  twice; if so the Tab path only needs the no-swap case.
 - End: in-game checks (main menu without the updater, F5 does nothing; the
   untested features in brief.md), end report against the baseline, delete
   this file, short changelog note.
