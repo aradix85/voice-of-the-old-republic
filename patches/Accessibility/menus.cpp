@@ -1,75 +1,46 @@
-// menu-side hook handlers (chain navigation, focus
-// events, input dispatch, per-tick monitors).
-//
-// Layering:
-//   log.{h,cpp}             file/debug logging primitives
-//   speech.{h,cpp}           NVDA controller client (LoadLibrary'd lazily)
-//   core_dllmain.cpp        DllMain + OnRulesInit + EnsureSpeechInitialized
-//   engine_input.{h,cpp}    InputIndices name table + manager translate
-//   engine_offsets.h        engine struct/vtable offset constants + engine structs
-//   engine_reads.{h,cpp}    SEH-guarded readers (CallDowncast, ReadGuiString, ...)
-//   engine_panels.{h,cpp}   PanelKind enum + CGuiInGame slot classification
-//   engine_manager.{h,cpp}  CSWGuiManager surface + cursor / click-sim PFNs
-//   this file               the menu-accessibility hook handlers
-//
-// Phase 0 of the long-term nav plan extracted the foundation (core_dllmain
-// + engine_*) out of the original monolithic Accessibility.cpp; the
-// remaining menu-accessibility code is what lives here under the new name.
-// Per plan, the menu-side logic is NOT decomposed further in Phase 0
-// (incremental refactor discipline) — see docs/navsystem-longterm-plan.md.
+// The menu side's own state and hooks: the speech dedup channels, the
+// focused panel, the sub-screen drill flag, the two SetActiveControl hooks
+// (panel and listbox) with the pending-announce slot they feed, and the
+// per-tick glue core_tick calls (ValidatePanels, TickMonitors,
+// PollHomeEndKeys, TickPendingOps).
 
 #include <windows.h>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
 
-#include "log.h"
+#include "bringup_announce.h"
 #include "core_tick.h"
-#include "speech.h"
-#include "menus.h"           // public surface — Step 1 mod-wide tick split
-#include "menus_chargen_attr.h" // Chargen "Attribute" panel label + selected_ability sync
-#include "menus_chargen_skills.h" // Chargen "Skills" panel — same shape as Attributes
-#include "menus_extract.h"   // Step 2B — text extraction lifted out
-#include "menus_internal.h"  // Step 2B — shared seam with menus_extract
-#include "menus_focus.h"     // first-sight / focus-capture (Phase-1 split)
-#include "menus_pending.h"   // Step 3 — deferred-op queue lifted out
-#include "menus_listbox.h"   // Step 4 — listbox-driven panel dispatcher
-#include "menus_editbox.h"   // Editbox (chargen Name) dispatcher + monitor
-#include "menus_chain.h"     // Step 5 — chain navigation lifted out
-#include "menus_monitors.h"  // Post-Step-5 — general per-tick monitors
-#include "tutorial_hints.h"  // mapped tutorial-popup gate (mouse-announce suppression)
-#include "tutorial_popup.h"  // synthetic Trask-line popup (suppress its listbox row)
-#include "menus_crafting.h"  // K2 workbench/crafting watcher — view flips + rebinds
-#include "menus_store.h"     // Store / trading panel — price+stock suffix + mode announce
-#include "menus_galaxymap.h"  // Galaxy / star-map travel screen — planet cycle
-#include "menus_keymap.h"     // dedicated Keymapping two-level handler
-#include "engine_area.h"     // IsLoadingSaveGame — gate the save-load GUI burst
+#include "engine_area.h"
 #include "engine_input.h"
 #include "engine_manager.h"
 #include "engine_offsets.h"
 #include "engine_panels.h"
 #include "engine_reads.h"
 #include "hotkeys.h"
-#include "focus_guard.h"         // WindowProc subclass for WM_ACTIVATE logging
-#include "bringup_announce.h"   // Loading-phase nag when user presses arrows too early
-#include "transitions.h"        // Phase 2 lay-off 7 — Pillar 2 area+room announce
-#include "engine_rebase.h"
-#include "engine_game.h"
+#include "log.h"
+#include "menus.h"
+#include "menus_chain.h"
+#include "menus_chargen_attr.h"
+#include "menus_chargen_skills.h"
+#include "menus_crafting.h"
+#include "menus_editbox.h"
+#include "menus_extract.h"
+#include "menus_focus.h"
+#include "menus_galaxymap.h"
+#include "menus_internal.h"
+#include "menus_keymap.h"
+#include "menus_listbox.h"
+#include "menus_monitors.h"
+#include "menus_pending.h"
+#include "menus_store.h"
+#include "speech.h"
+#include "transitions.h"
+#include "tutorial_hints.h"
+#include "tutorial_popup.h"
 
-// Engine readers + offset constants moved to engine_reads.{h,cpp} +
-// engine_offsets.h in Phase 0 lay-off 2. Pull the readers' names into the
-// menu-side TU so callsites stay as they were.
 using namespace acc::engine;
 
-// Chain seam: chain state + the panel-validation helpers live in
-// menus_chain.cpp. These using-declarations bring the names this file
-// still reads into unqualified scope, so the dense reads in
-// OnSetActiveControl / the monitors stay as they were. Writes to the
-// externs (g_chainIndex on chain-step advance) work the same way.
-//
-// The Step-2B (detail::) and Step-4 (listbox helper) seam blocks that used
-// to sit here are gone: every one of those helpers moved out with its
-// callers in the Phase-1 split, so nothing in this file referenced them.
 using acc::menus::chain::g_chain;
 using acc::menus::chain::g_chainPanel;
 using acc::menus::chain::g_chainIndex;
@@ -82,56 +53,25 @@ using acc::menus::chain::ValidateChainPanel;
 using acc::menus::chain::DetectTabsCluster;
 using acc::menus::chain::WalkChildren;
 
-// Phase-1 structure split: the first-sight / focus-capture step functions
-// moved to menus_focus.cpp. OnSetActiveControl below is their only caller
-// and reads exactly as it did before via these using-declarations.
 using acc::menus::focus::PrefillClassIconCacheOnTransition;
 using acc::menus::focus::UpdateFocusedPanelState;
 using acc::menus::focus::WalkAndCaptureOnFirstSight;
 using acc::menus::focus::SpeakPanelTitleOnFirstSight;
 using acc::menus::focus::AnnounceNewFocusedControl;
 
-// Defined in menus_dispatch.cpp (Phase-1 split). PollHomeEndKeys below
-// re-enters the GUI input pipeline through it to deliver the Home/End
-// edges the engine keymap drops.
+// Defined in menus_dispatch.cpp. PollHomeEndKeys re-enters the GUI input
+// pipeline through it to deliver the Home/End edges the engine keymap drops.
 extern "C" int __cdecl OnHandleInputEvent(void* thisPtr, int param_1, int param_2);
 
-// Forward declarations + the shared kEquipBtn* / kEquipLb* constants moved
-// to menus_internal.h in Step 2B. g_currentPanel is declared there as
-// extern; defined later in this TU.
-
-
-
-// Multi-line "blob" listbox readout. The Options-Gameplay settings list is
-// the canonical case: CSWGuiListBox.controls.size == 1, the single child is a
-// CSWGuiLabel whose CExoString contains all visible setting names joined by
-// Speak `text` only if it differs from what we last spoke on this channel.
-// Dedup is the only filter: in the first session we used interrupt=true and
-// NVDA went fully silent in chargen (every utterance got cut off mid-word
-// because focus events fire ~10/sec while panels initialize). Switching to
-// interrupt=false (queued) lets NVDA finish each line at its own pace; the
-// user can still skip forward with NVDA's own ctrl-key shortcut.
-//
-// Channels keep dedup state independent so a listbox row update doesn't
-// silence the parent panel's announcement and vice-versa:
-//   0 = panel SetActiveControl  (slot drain + voluntary AnnounceControl)
-//   1 = listbox row SetActiveControl
-//
-// Exposed publicly via menus.h so the focus-monitor's AnnounceControl can
-// MarkSpoken(0, text) after voluntary speech, which lets the slot drain
-// suppress the engine's echo of the same nav.
-// File-scope helper for the cutscene-movie suppression gate. Kept at file scope
-// (not inside acc::menus) so both SetActive handlers see it — they live in
-// separate reopened acc::menus blocks, and MSVC does not carry an anonymous-
-// namespace member across the boundary.
 namespace {
+
 // How long after a cutscene movie ends we keep suppressing the SetActive
-// rebuild burst. The engine plays some cutscenes (the Peragus docking stunt,
-// patch-20260905-075831) as several movie segments and destroys the movie
-// window between them; the burst leaked in a sub-second gap where
-// IsMoviePlaying() read false. Two seconds covers those gaps and the tail
-// while the world rebuilds after the final segment — "a second or two", not
-// long enough to swallow anything the player would open themselves.
+// rebuild burst. The engine plays some cutscenes (the Peragus docking stunt)
+// as several movie segments and destroys the movie window between them; the
+// burst leaked in a sub-second gap where IsMoviePlaying() read false. Two
+// seconds covers those gaps and the tail while the world rebuilds after the
+// final segment — not long enough to swallow anything the player would open
+// themselves.
 constexpr unsigned kMovieBurstTailMs = 2000;
 
 // True while the engine-GUI SetActive rebuild burst must stay silent because a
@@ -147,8 +87,54 @@ bool InMovieBurstWindow() {
     return acc::bringup_announce::IsInputPumpLive() &&
            acc::bringup_announce::MovieRecentlyPlaying(kMovieBurstTailMs);
 }
+
+// Why both SetActiveControl hooks stay silent right now, or nullptr.
+//
+// During a cutscene-load and on any save-game or module load the engine
+// constructs and activates a storm of GUI panels — in-game HUD, store,
+// options strip, equip screens, rebuilt listboxes — firing SetActiveControl
+// on each. Announcing them talks over the movie or the loading screen AND
+// would mark those panels first-seen, so they'd stay silent on the player's
+// first real visit. The engine re-fires SetActiveControl on genuine
+// interaction afterwards, so first-sight and focus speech resume cleanly.
+//
+// The load has two signals: IsModuleLoadPending covers module/door
+// transitions (set by the SetMoveToModuleString detour); IsLoadingSaveGame
+// is the engine's own load_from_savegame flag, true across any save-game
+// restore — crucially the IN-GAME load, where the old world is still live
+// so the module latch never armed.
+const char* BurstSuppression() {
+    if (InMovieBurstWindow()) return "movie foreground";
+    if (acc::transitions::IsModuleLoadPending() || acc::engine::IsLoadingSaveGame()) {
+        return "save-load / module load";
+    }
+    return nullptr;
+}
+
+int ListBoxRowCount(void* listBox) {
+    auto* rows = reinterpret_cast<CExoArrayList*>(
+        reinterpret_cast<unsigned char*>(listBox) + kListBoxControlsOffset);
+    return rows->size;
+}
+
 }  // namespace
 
+// ---------------------------------------------------------------------------
+// Speech dedup channels.
+//
+// Speak `text` only if it differs from what we last spoke on this channel.
+// Dedup is the only filter: speech is queued (interrupt=false), because focus
+// events fire ~10/sec while panels initialize and interrupting cut every line
+// off mid-word; NVDA finishes each line at its own pace and the user can skip
+// with NVDA's own key.
+//
+// Channels keep dedup state independent so a listbox row update doesn't
+// silence the parent panel's announcement and vice-versa:
+//   0 = panel SetActiveControl  (slot drain + voluntary AnnounceControl)
+//   1 = listbox row SetActiveControl
+//
+// The focus monitor's AnnounceControl calls MarkSpoken(0, text) after it
+// speaks, so the slot drain suppresses the engine's echo of the same nav.
 namespace acc::menus {
 
 namespace {
@@ -192,47 +178,16 @@ bool AlreadySpokenOnAnyChannel(const char* text) {
 }  // namespace acc::menus
 
 using acc::menus::SpeakIfChanged;
-using acc::menus::MarkSpoken;
 
-// ============================================================================
-// Unified-cursor menu navigation (Phase 1+2 — see docs/menu-nav-design.md).
-// ============================================================================
+bool acc::menus::detail::IsMultiRowListBox(void* control) {
+    if (!IsListBox(control)) return false;
+    auto* rows = reinterpret_cast<CExoArrayList*>(
+        reinterpret_cast<unsigned char*>(control) + kListBoxControlsOffset);
+    return rows->data && rows->size > 1;
+}
 
-// CSWGuiManager / cursor / click-sim surfaces moved to engine_manager.{h,cpp}
-// in Phase 0 lay-off 4: kAddrGuiManagerPtr, kMgr*Offset, MoveMouseToPosition
-// + click-sim PFN typedefs and addresses, FindOwningPanel, GetForegroundPanel,
-// LogManagerStack.
-
-// CSWGuiPanel::SetActiveControl @ 0x40a630 — committing selection to a panel.
-// MoveMouseToPosition only updates hover state; panel.activeControl lags
-// behind the cursor unless we explicitly set it. Enter / F1 activates
-// panel.activeControl, so without this call the engine activates the
-// previously-clicked button instead of the cursor target.
-// The "fire activate" primitive (vtable[15].HandleInputEvent(0x27, 1)) used
-// to live here as `FireActivate(control)`. It moved with the deferred-op
-// queue in Step 3 of the refactor — the only caller was the Activate-op
-// drain, which now lives inline in menus_pending.cpp.
-
-// Logical input codes (kInputNav*, kInputEnter1/2, kInputEsc1/2,
-// kInputActivate) are defined in engine_input.h. They're the codes
-// CSWGuiManager::HandleInputEvent receives pre-translation; see
-// ManagerTranslateCode for what each maps to post-translation.
-//
-// Up/Down (0xb6/0xb7) and Left/Right (0xb8/0xb9) are the engine's nav-prev/
-// nav-next and horizontal-axis equivalents — consuming Up/Down prevents the
-// engine's broken `.gui` focus-cycle from running. Left/Right are consumed
-// selectively (slider passes through, otherwise dispatched to a cycle-arrow
-// neighbour). Enter (0xb5/0xbb → KEYBOARD_F1) and Esc (0xb4/0xdf → KEYBOARD_F2)
-// route to our chain-target activation and Close-button fallback paths.
-
-// Chain state (g_chain, g_chainPanel/Index/Count, ChainEntry struct,
-// kMaxChainEntries) moved to menus_chain.cpp in Step 5; brought back into
-// unqualified scope at the top via using-declarations.
-//
-// g_currentPanel stays here — it's set by OnSetActiveControl (focus
-// tracking) and read across chain code, monitors, and extract::FromControl.
-// Default-linkage so menus_extract.cpp + menus_chain.cpp see it via the
-// extern decl in menus_internal.h.
+// The focused panel: set by OnSetActiveControl, read across chain code,
+// monitors and extract::FromControl (extern in menus_internal.h).
 void* g_currentPanel = nullptr;
 
 // See menus_internal.h for why every deref of g_currentPanel has to come
@@ -246,63 +201,36 @@ void* CurrentPanelIfLive() {
 // Sub-screen drill state. The InGameMenu icon strip is kept in foreground by
 // the engine: each icon's onClick (OnInvButtonPressed @0x624d10 etc.) jumps
 // into CGuiInGame::SwitchToSWInGameGui @0x62cf10, which calls AddPanel for the
-// new sub-screen and then SendPanelToBack on it — the strip stays on top
-// (verified via SARIF xref trace). Without intervention our chain therefore
-// keeps targeting the strip's 8 icons and the user can never reach the
-// sub-screen's content (item rows, quest rows, settings buttons).
+// new sub-screen and then SendPanelToBack on it — the strip stays on top.
+// Without intervention our chain therefore keeps targeting the strip's 8
+// icons and the user can never reach the sub-screen's content (item rows,
+// quest rows, settings buttons).
 //
-// Drill model: Enter on a strip icon arms this flag. The chain-target router
-// in OnHandleInputEvent then prefers FindActiveSubScreenPanel() over the
-// engine's foreground when fg is the strip — so arrows step through the
-// sub-screen instead. Esc clears the flag (returns to strip nav). The flag
-// also self-clears when the sub-screen leaves panels[].
+// Drill model: opening a sub-screen arms this flag (AnnounceNewSubScreens).
+// The chain-target router in OnHandleInputEvent then prefers
+// FindActiveSubScreenPanel() over the engine's foreground when fg is the
+// strip — so arrows step through the sub-screen instead. Esc clears the flag
+// (returns to strip nav). The flag also self-clears when the sub-screen
+// leaves panels[].
 //
 // Override is gated on fg-is-the-strip: while a tutorial modal or an
 // Options sub-tab is on top, fg is something else and we route to that
 // directly (no double-override). Once the modal/sub-tab closes and fg
-// returns to the strip, the override re-engages.
-// Non-static: the Esc / drill-routing gates in menus_dispatch.cpp read and
-// clear it. Declared in menus_internal.h.
+// returns to the strip, the override re-engages. The Esc / drill-routing
+// gates in menus_dispatch.cpp read and clear it (menus_internal.h).
 bool g_drilledIntoSubScreen = false;
 
-// Equipment picker zone arming state moved to menus_listbox.cpp in Step 4
-// of the refactor (state ownership follows the spec entry that primarily
-// uses it). Two outside touch sites in this file — the slot-Enter arming
-// site below and MonitorEquipPickerSelection's "panel gone, disarm"
-// cleanup — go through the acc::menus::listbox accessors.
-
-// Sub-screen tracking (InGameSubScreenSpec, FindActiveSubScreenPanel,
-// AnnounceNewSubScreens) moved to menus_monitors.cpp. The drill router
-// in OnHandleInputEvent calls acc::menus::monitors::FindActiveSubScreenPanel
-// and acc::menus::monitors::IsInGameSubScreenKind through the public
-// surface; no using-decl needed since both call sites are explicit and few.
-
-// The deferred-op queue (cursor-warp / click-at-point / activate / equip-
-// slot / equip-commit / slider-input) lives in menus_pending.{h,cpp} as of
-// Step 3. Input handlers below call `pending::Queue*`; the queue drains
-// once per tick from `TickPendingOps`.
-
-// Pending-announce slot for the panel-focus path. OnSetActiveControl writes
-// the slot on every event; DrainPendingAnnounce reads + clears it once per
-// tick from TickMonitors. Multiple intra-tick events overwrite the slot —
-// natural last-write-wins coalesce.
+// Pending-announce slot for the panel-focus path. AnnounceNewFocusedControl
+// (menus_focus.cpp) writes it on every event; DrainPendingAnnounce reads and
+// clears it once per tick. Multiple intra-tick events overwrite the slot, a
+// natural last-write-wins coalesce:
 //
-// Two reasons this beats the old "decrement a budget on every event" knob:
-//
-//   1. Triple-burst panel-open events (NULL → first child → engine's actual
-//      default focus) used to produce two utterances ("OK, Cancel" on
-//      MessageBox open). With the slot, the first two writes get overwritten
-//      by the third before the next tick reads.
-//   2. Voluntary-nav echoes (chain step + cursor warp → engine echoes a
-//      SetActive on the same control) used to need a separate suppress
-//      counter. Now AnnounceControl calls MarkSpoken(0, text) after speaking,
-//      which primes the channel-0 dedup; the slot drain sees the same text
-//      and stays silent.
-// Not in an anonymous namespace: the slot is written by
-// AnnounceNewFocusedControl (menus_focus.cpp) and drained here, so it has
-// to be visible across the two TUs. Declared in menus_internal.h; this TU
-// owns the storage because DrainPendingAnnounce / ClearPendingAnnounce
-// are the lifecycle.
+//   1. A triple-burst panel-open (NULL → first child → engine's actual
+//      default focus) would otherwise produce two utterances ("OK, Cancel"
+//      on MessageBox open); the third write lands before the next tick.
+//   2. A voluntary-nav echo (chain step + cursor warp → the engine echoes a
+//      SetActive on the same control) is silenced by the channel-0 dedup
+//      AnnounceControl primed with MarkSpoken.
 namespace acc::menus {
 void* s_pendingAnnouncePanel   = nullptr;
 void* s_pendingAnnounceControl = nullptr;
@@ -314,181 +242,30 @@ void* s_pendingAnnounceControl = nullptr;
 // matching engine-sent release, so the press-release pair tracker inside
 // OnHandleInputEvent skips its update when this flag is set — otherwise
 // a synthesised non-consumed press would clobber the tracker for a
-// previous real consumed press (Enter activations, etc.).
-//
-// Set here (PollHomeEndKeys), read in menus_dispatch.cpp
-// (OnHandleInputEvent) — declared in menus_internal.h for that reason.
+// previous real consumed press (Enter activations, etc.). Read in
+// menus_dispatch.cpp (menus_internal.h).
 bool s_synthesizedNav = false;
 }
-
-
-// Per-frame focus monitor + its last-seen state moved to
-// menus_monitors.cpp. AnnounceControl (which writes that state to keep
-// the monitor in sync with voluntary speak events) moved with it; chain
-// handlers below call it via the using-declaration at the top of this
-// file.
-
-// Tabbed-panel state (g_tabbedPanel, g_tabsStart, g_tabsCount) and the
-// three click-offset compensations (g_tabClickOffsetY,
-// g_equipSlotClickOffsetY, g_classIconClickOffsetX) moved to menus_chain.cpp
-// in Step 5. Brought back into unqualified scope via the using-declarations
-// at the top of this file. See menus_chain.h for the rationale.
-
-
-// AnnounceControl moved to menus_monitors.cpp (writes the focus monitor's
-// last-seen state to keep voluntary speech in sync). Brought back into
-// unqualified scope via the using-declaration at the top of this file.
-
-
-// DetectTabsCluster, ResetTabbedState, and ValidateTabbedPanel moved to
-// menus_chain.cpp in Step 5. Brought back into unqualified scope via the
-// using-declarations at the top of this file.
-
-// The Container loot panel's control IDs used to live here. Since the
-// gui-id audit its listbox and buttons resolve through the ctor-bound
-// member resolvers (ContainerPanel* in menus_internal.cpp) and the
-// Container flow itself lives in menus_listbox.cpp's spec entry, so
-// nothing in this TU needs them any more.
-
-
-// FindCloseButton / FindCancelButton moved to menus_chain.cpp in Step 5.
-// They're heuristic finders for the back-out / cancel buttons used by the
-// Esc handler in OnHandleInputEvent. Brought back into unqualified scope
-// via the using-declarations at the top of this file.
-
-
-
-
-
-// FindAdjacentArrow, IsTabButton, AppendChainEntry, and IsModalTextPanel
-// moved to menus_chain.cpp in Step 5. Brought back into unqualified scope
-// via the using-declarations at the top of this file. IsModalPopupPanel
-// (next function below) stays here because its only caller is the Esc
-// handler in OnHandleInputEvent.
-
-// True for engine-pushed modal popup panels that the user dismisses via a
-// close button (Close / OK / Continue). Used by the Esc handler
-// to know when to fall back to FindCloseButton on standalone modals — the
-// older "tabbed sub-dialog" gate only covers Esc inside Options sub-tabs,
-// missing the post-action info popups (StatusSummary after a skill check,
-// the engine's quit-confirm MessageBox, AreaTransition prompts, …) which
-// the engine never auto-dismisses on Esc.
-//
-// Implementation in engine_panels.cpp; pulled into unqualified scope here
-// because the Esc handler calls it inline below.
-using acc::engine::IsModalPopupPanel;
-
-// AppendChainTextOnly + RebindChain moved to menus_chain.cpp in Step 5.
-// RebindChain is the heart of chain navigation: walks panel.controls,
-// recurses into sub-dialog listboxes, sorts by visual y, squashes
-// cycle-arrow flankers, computes click-offset compensations, anchors the
-// cursor on the engine's current activeControl. Brought back into
-// unqualified scope via the using-declarations at the top of this file.
-
-// Walk a CExoArrayList<CSWGuiControl*> embedded at parent+offset and log every
-// child. Used as a diagnostic when the focused panel/listbox changes — gives us
-// the full set of widgets on the screen, not just whatever arrow keys reach.
-//
-// `label` is a short tag that prefixes every line (e.g. "Panel", "ListBox").
-// Iteration is capped at 256 entries to limit damage from a corrupt size field
-// (defensive: the SARIF datatypes are authoritative but a struct-layout
-// regression on a future engine version would otherwise spin forever).
-// WalkChildren moved to menus_chain.cpp (called from chain dispatch
-// HandleNavStep's empty-chain probe + the 3 menus.cpp sites here).
 
 // CSWGuiPanel::SetActiveControl — hooked mid-function at 0x0040a638.
 // At hook entry: EDI = this (the panel), ESI = param_1 (the new active
 // control, possibly null when the panel is deactivating selection).
 //
 // This is the canonical focus-change signal: fires once per actual change,
-// covers arrow-key nav + mouse + programmatic. Speaks the new control's
-// tooltip text or, as a placeholder, "control <id>" while we work out how
-// to extract subclass-specific labels.
-//
-// Logging policy:
-//   * Resolved events (text extracted) are throttled — they're noisy when
-//     the user is just navigating.
-//   * Unresolved events (src=none) are ALWAYS logged with the control's
-//     vtable pointer, because that's the data we need to identify which
-//     subclasses fall through (Slider, Editbox, ListBox row, etc.).
-//   * NULL newControl events are also throttled.
-
-
-
-
-
-// GATE CLEARED for KOTOR 2 on 2026-07-31 — the first handler to run on both
-// games. Its chain was the thing blocking it, not the handler:
-//
-//   * IsLoadingSaveGame dispatched through an address that resolves to 0 on
-//     KOTOR 2. It now tests acc::addr::Ok() and returns false, which is the
-//     right value to degrade to (burst suppression stays off, exactly as
-//     KOTOR 1 behaves when no load is running).
-//   * IdentifyPanel needs the CGuiInGame slot table, which is one binary's
-//     layout and is NOT ported. That turns out not to block: the slot lookup
-//     simply finds no match on KOTOR 2 and falls through to the structural /
-//     vtable identification, and every vtable it tests now has a verified
-//     KOTOR 2 value. So title screen, options, chargen, level-up, pazaak, store
-//     and workbench classify; the CGuiInGame-slot in-game screens read as
-//     Unknown until that table is ported, which is a missing feature rather
-//     than a fault.
-//   * The extractor ladder below was audited with
-//     tools/re-scripts/handler_chain_audit.py for reads through unresolved
-//     constants that sit outside any __try. Three were found and fixed; what
-//     remains degrades through SEH instead of crashing.
+// covers arrow-key nav + mouse + programmatic.
 //
 // KOTOR 2 does not hook this directly — its hook is OnSetActiveControlK2 in
 // menus_focus_k2.cpp, which does the frame arithmetic and the KOTOR 2 cursor
-// warp and then calls this.
+// warp and then calls this. On KOTOR 2 the CGuiInGame-slot in-game screens
+// classify as Unknown until that slot table is ported; IdentifyPanel falls
+// through to the structural / vtable identification for the rest.
 extern "C" void __cdecl OnSetActiveControl(void* panel, void* newControl) {
     EnsureSpeechInitialized();
     static int n = 0;
     ++n;
 
-    // Stay silent while an engine movie owns the foreground, and for a short
-    // tail after it ends. During a cutscene-load (e.g. 03.bik at the Leviathan
-    // capture) the engine constructs and activates a storm of GUI panels —
-    // in-game HUD, store, options strip, equip screens — firing
-    // SetActiveControl on each. Announcing them talks over the movie AND would
-    // mark those panels first-seen, so they'd stay silent on the player's
-    // first real visit. Skip the whole handler: the engine re-fires
-    // SetActiveControl on genuine interaction once the movie ends, so
-    // first-sight + focus speech resume cleanly then. Symmetric with
-    // transitions::Tick's movie gate (patch-20260601-220641.log line
-    // ~2110: panel-label burst one second into the cutscene movie).
-    //
-    // The tail (InMovieBurstWindow, not bare IsMoviePlaying) closes the gap
-    // the Peragus docking stunt exposed: multi-segment cutscenes destroy the
-    // movie window between segments, and this burst leaked "Build: 427" /
-    // chargen "Add Power" / the message log over the cutscene in a sub-second
-    // window where IsMoviePlaying() read false (patch-20260905-075831).
-    if (InMovieBurstWindow()) {
-        acclog::Write("Menus.SetActive",
-                      "#%d panel=%p — suppressed (movie foreground)", n, panel);
-        return;
-    }
-
-    // Same storm, no movie: a save-game load (or any module load) makes the
-    // engine reconstruct and activate every in-game GUI panel — HUD, store,
-    // abilities, options strip, message log — firing SetActiveControl on
-    // each. Narrating that burst spams build strings / panel titles /
-    // "control N" fallbacks over the loading screen, ahead of the area-name
-    // announce the player actually wants. Skip the whole handler while the
-    // load is in progress (same rationale + same first-sight-preservation
-    // benefit as the movie gate above): the engine re-fires SetActiveControl
-    // on genuine interaction once the world is live, so first-sight + focus
-    // speech resume cleanly then.
-    //
-    // Two signals: IsModuleLoadPending covers module/door transitions (set by
-    // the SetMoveToModuleString detour); IsLoadingSaveGame is the engine's own
-    // load_from_savegame flag, true across any save-game restore — crucially
-    // the IN-GAME load, where the old world is still live so the module latch
-    // never armed.
-    if (acc::transitions::IsModuleLoadPending() ||
-        acc::engine::IsLoadingSaveGame()) {
-        acclog::Write("Menus.SetActive",
-                      "#%d panel=%p — suppressed (save-load / module load)", n,
-                      panel);
+    if (const char* why = BurstSuppression()) {
+        acclog::Write("Menus.SetActive", "#%d panel=%p — suppressed (%s)", n, panel, why);
         return;
     }
 
@@ -500,8 +277,6 @@ extern "C" void __cdecl OnSetActiveControl(void* panel, void* newControl) {
     // only players: our chain navigates via synthetic mouse-over, which
     // fires no SetActiveControl. The primary, keyboard-reachable handoff is
     // the first consumed key in the manager hook (see OnHandleInputEvent).
-    // Kept as a belt-and-suspenders signal; also still useful as the
-    // "menu appeared ready but wasn't responsive" bring-up diagnostic.
     if (IdentifyPanel(panel) == PanelKind::MainMenu) {
         static int mainMenuSetActiveCount = 0;
         if (++mainMenuSetActiveCount == 2) {
@@ -514,14 +289,12 @@ extern "C" void __cdecl OnSetActiveControl(void* panel, void* newControl) {
     UpdateFocusedPanelState(panel);
     WalkAndCaptureOnFirstSight(panel);
 
-    // The InGameMenu strip is architecturally invisible: we never surface
-    // it as a navigable menu — hotkeys + Tab/Shift+Tab drill the user
-    // directly into the sub-screens it would otherwise route to. Engine
-    // still fires SetActiveControl on it (panel-open and panelIdx=7
-    // "Messages" once per first open) which previously produced spurious
-    // "Equipment" + "Messages" utterances over the actual sub-screen's
-    // title/focus speech. Diagnostic walk above stays; only speech-side
-    // paths get the gate.
+    // The InGameMenu strip is never surfaced as a navigable menu — hotkeys +
+    // Tab/Shift+Tab drill the user directly into its sub-screens. The engine
+    // still fires SetActiveControl on it (panel-open, and "Messages" once per
+    // first open), which would speak "Equipment" + "Messages" over the
+    // sub-screen's own title and focus speech. The diagnostic walk above
+    // stays; only speech is gated.
     if (IdentifyPanel(panel) == PanelKind::InGameMenu) {
         if (newControl) {
             int sid = *reinterpret_cast<int*>(
@@ -570,56 +343,29 @@ extern "C" void __cdecl OnSetActiveControl(void* panel, void* newControl) {
 // (race / class / portrait pickers in chargen, save-game list, etc.).
 extern "C" void __cdecl OnListBoxSetActiveControl(void* listBox, void* newRow,
                                                   int param2) {
-    // Cleared for KOTOR 2 (Batch 1): the chain is the listbox internals
-    // (verified +0x10 shift), the control id (verified), FromControl (menu
-    // closure, resolved) and the two load-suppression reads, both of which
-    // degrade to false on KOTOR 2.
     EnsureSpeechInitialized();
 
     static int n = 0;
     ++n;
 
-    // Same cutscene-movie gate as OnSetActiveControl. The docking-stunt leak
-    // came through here too: the abilities listbox rebuilt mid-cutscene and
-    // this handler spoke its "Add Power" row (patch-20260905-075831). The
-    // module-load latch below never armed for that scripted transition, so the
-    // movie window (present, then briefly gone between segments) is the only
-    // signal that catches it.
-    if (InMovieBurstWindow()) {
-        acclog::Write("Menus.ListBox",
-                      "SetActive #%d list=%p — suppressed (movie foreground)",
-                      n, listBox);
-        return;
-    }
-
-    // Suppress the in-game-GUI reconstruction burst on a module / save-game
-    // load — same two-signal gate as OnSetActiveControl above. The engine
-    // fires per-row SetActiveControl on every listbox it rebuilds (abilities
-    // "Add Power", party stash, options rows); narrating them spams over the
-    // loading screen.
-    if (acc::transitions::IsModuleLoadPending() ||
-        acc::engine::IsLoadingSaveGame()) {
-        acclog::Write("Menus.ListBox",
-                      "SetActive #%d list=%p — suppressed (save-load / module "
-                      "load)", n, listBox);
+    if (const char* why = BurstSuppression()) {
+        acclog::Write("Menus.ListBox", "SetActive #%d list=%p — suppressed (%s)",
+                      n, listBox, why);
         return;
     }
 
     // First event for a previously-unseen listbox: dump every row control.
-    // Tells us whether the listbox holds N separate child widgets (one per
-    // visible line) or aggregates everything into a single multi-line label
-    // — the central question for the Options Gameplay panel.
     static void* s_lastListBox = nullptr;
     if (listBox && listBox != s_lastListBox) {
         s_lastListBox = listBox;
         WalkChildren("Menus.ListBox", listBox, kListBoxControlsOffset);
     }
 
-    // Always log the listbox's internal cursor + flags state. selection_index
-    // distinguishes scroll-mode (-1, set when bit_flags & 0x200) from
-    // selection-mode (>=0). controls_size tells us how many real rows exist:
-    // for the multi-line-blob settings listbox this is 1 even though the
-    // user sees 8 visual lines.
+    // The listbox's internal cursor and flags. selection_index distinguishes
+    // scroll-mode (-1, set when bit_flags & 0x200) from selection-mode (>=0);
+    // a multi-line-blob settings listbox has 1 row though the user sees 8
+    // visual lines.
+    const int rowCount = listBox ? ListBoxRowCount(listBox) : 0;
     if (listBox) {
         auto* base = reinterpret_cast<unsigned char*>(listBox);
         short itemsPerPage = *reinterpret_cast<short*>(
@@ -630,13 +376,10 @@ extern "C" void __cdecl OnListBoxSetActiveControl(void* listBox, void* newRow,
             base + kListBoxTopVisibleIndexOffset);
         uint32_t bitFlags  = *reinterpret_cast<uint32_t*>(
             base + kListBoxBitFlagsOffset);
-        auto* ctrls = reinterpret_cast<CExoArrayList*>(
-            base + kListBoxControlsOffset);
-        int ctrlsSize = ctrls ? ctrls->size : -1;
         acclog::Write("Menus.ListBox", "cursor list=%p sel=%d top=%d perPage=%d "
                       "size=%d flags=0x%x",
                       listBox, selIdx, topVisible, itemsPerPage,
-                      ctrlsSize, bitFlags);
+                      rowCount, bitFlags);
     }
 
     if (!newRow) {
@@ -650,196 +393,132 @@ extern "C" void __cdecl OnListBoxSetActiveControl(void* listBox, void* newRow,
     char text[256];
     const char* source = acc::menus::extract::FromControl(newRow, text, sizeof(text));
 
-    if (source) {
-        acclog::Write("Menus.ListBox", "SetActive #%d list=%p row=%p id=%d "
-                      "p2=%d src=%s text=\"%s\"",
-                      n, listBox, newRow, id, param2, source, text);
-
-        // Lazy tabbed-mode detection: first listbox event after a panel
-        // change probes whether the focused panel has the Options-style
-        // listbox-at-[0] + button-cluster layout. Used by the chain-step
-        // Y-offset compensation for tab buttons; no longer drives a
-        // virtual-line cursor.
-        if (g_currentPanel && g_tabbedPanel != g_currentPanel) {
-            int tabsStart = -1, tabsCount = 0;
-            if (DetectTabsCluster(g_currentPanel, tabsStart, tabsCount)) {
-                g_tabbedPanel = g_currentPanel;
-                g_tabsStart   = tabsStart;
-                g_tabsCount   = tabsCount;
-                acclog::Write("Menus.Tabs", "detected panel=%p tabsStart=%d tabsCount=%d",
-                              g_currentPanel, tabsStart, tabsCount);
-            }
-        }
-
-        // Chargen Skills description_list_box: silence everything
-        // the engine pushes here. The hover-driven population is
-        // off-by-one on this panel (the cursor warp's hit-test
-        // resolves to skill_labels[i-1] regardless of Y compensation
-        // — labels overlap the cursor's row in a way Attribute labels
-        // don't), so any text the engine writes corresponds to the
-        // wrong row. We speak the focused row's description from the
-        // chain-step handler via skill_descriptions[i] direct read.
-        if (acc::menus::chargen_skills::IsChargenSkillsDescriptionListbox(
-                listBox)) {
-            acclog::Write("Menus.ListBox",
-                          "chargen-skills description silenced "
-                          "(handled by chain-step direct read)");
-        } else if (acc::menus::chargen_attr::IsChargenAttributesDescriptionListbox(
-                       listBox)) {
-            // Same treatment as chargen-skills: the engine's hover-driven
-            // population is resolution-dependent (cursor-warp hit-test can
-            // resolve to the neighbouring ability), so the text here may be
-            // the wrong row. We speak the focused ability's description from
-            // the chain-step handler via OnEnterPointsButton direct call.
-            acclog::Write("Menus.ListBox",
-                          "chargen-attr description silenced "
-                          "(handled by chain-step direct read)");
-        } else if (strchr(text, '\n')) {
-            // Multi-line listbox blob (Options-style: all settings concatenated
-            // by '\n' into a single CSWGuiLabel row). Always silenced — bulk
-            // enumeration is too noisy. Per-line nav was never wired up after
-            // the Options listbox turned out to be decorative; if a future
-            // panel ever needs it, that's a new feature.
-            int lines = 1;
-            for (const char* p = text; *p; ++p) if (*p == '\n') ++lines;
-            acclog::Write("Menus.ListBox", "blob silenced; lines=%d", lines);
-        } else {
-            // In-game sub-screens (InGameOptions, InGameInventory, …)
-            // pair their button chain with a single-row description
-            // listbox whose text updates each time the user changes
-            // focus. The engine fires SetActiveControl on the row on
-            // panel-open + every focus change → would announce the
-            // description on every nav. Silence here; if a future
-            // sub-screen wants the description, expose it via the
-            // chain-step extract path (like chargen-skills does).
-            auto* ctrls = reinterpret_cast<CExoArrayList*>(
-                reinterpret_cast<unsigned char*>(listBox) +
-                kListBoxControlsOffset);
-            int ctrlsSize = ctrls ? ctrls->size : 0;
-            void* livePanel = CurrentPanelIfLive();
-            if (ctrlsSize == 1 && livePanel &&
-                acc::menus::monitors::IsInGameSubScreenKind(
-                    IdentifyPanel(livePanel))) {
-                acclog::Write("Menus.ListBox",
-                              "sub-screen description listbox silenced "
-                              "(panel kind=%s)",
-                              PanelKindName(IdentifyPanel(livePanel)));
-            } else {
-                // The tutorial popup's single-row message listbox. The vanilla
-                // wording is mouse-centric, so speak the keyboard hint in its
-                // place when the row maps to one; otherwise the row's own text.
-                // Matched on text (not panel identity) because this fires before
-                // the popup registers in panels[]. See tutorial_hints.cpp.
-                // The synthetic Trask popup (SyntheticActive) shows the original
-                // mouse strref as its visible text, so its hint comes from the
-                // popup module instead of the strref map.
-                //
-                // Speaking HERE rather than deferring to the content-fingerprint
-                // monitor is deliberate. This hook already holds the text; the
-                // monitor has to re-extract it from the panel, and on KOTOR 2
-                // that extraction returns nothing for every popup after the
-                // first (the message listbox reads as src=none). The old
-                // "suppress, the monitor owns the announce" hand-off then
-                // silenced the popup outright — the monitor stored the empty
-                // fingerprint and every later popup compared equal to it and
-                // was skipped, so a whole session's tutorials went unspoken
-                // (K2 field logs, and 14 of our own sessions). Both paths now
-                // resolve the same hint string, so the announce dedup collapses
-                // them to one line instead of one path promising for the other.
-                const char* hint =
-                    acc::tutorial_popup::SyntheticActive()
-                        ? acc::tutorial_popup::SyntheticHint()
-                        : acc::tutorial_hints::HintForMouseText(text);
-                SpeakIfChanged(/*channel=*/1, (hint && hint[0]) ? hint : text);
-            }
-        }
-    } else {
+    if (!source) {
         char vtbl[160];
         DumpControlVtable(newRow, vtbl, sizeof(vtbl));
         acclog::Write("Menus.ListBox", "SetActive #%d list=%p row=%p id=%d "
                       "p2=%d src=none %s",
                       n, listBox, newRow, id, param2, vtbl);
-        // Suppress placeholder for single-row listboxes (description blobs
-        // adjacent to a chain panel — the engine fires SetActiveControl on
-        // them as the user navigates the chain, alternating between
-        // src=label with text and src=none when the description is
-        // momentarily empty). The user isn't navigating these listboxes;
-        // "row 0" repeated 5+ times per chain step is just noise.
-        //
-        // Real multi-row listboxes (save-game list, chargen pickers) keep
-        // the fallback so an extraction failure on one row still announces.
-        auto* ctrls = reinterpret_cast<CExoArrayList*>(
-            reinterpret_cast<unsigned char*>(listBox) + kListBoxControlsOffset);
-        int ctrlsSize = ctrls ? ctrls->size : 0;
-        if (ctrlsSize > 1) {
+        // No placeholder for single-row listboxes: those are description
+        // blobs next to a chain panel, which the engine re-activates as the
+        // user navigates the chain, alternating between text and none; "row
+        // 0" five times per step is noise. Real multi-row listboxes
+        // (save-game list, chargen pickers) keep the fallback so an
+        // extraction failure on one row still announces.
+        if (rowCount > 1) {
             char placeholder[64];
             snprintf(placeholder, sizeof(placeholder), "row %d", id);
             acc::speech::Speak(placeholder, /*interrupt=*/false);
         }
+        return;
     }
+
+    acclog::Write("Menus.ListBox", "SetActive #%d list=%p row=%p id=%d "
+                  "p2=%d src=%s text=\"%s\"",
+                  n, listBox, newRow, id, param2, source, text);
+
+    // Lazy tabbed-mode detection: the first listbox event after a panel
+    // change probes whether the focused panel has the Options-style
+    // listbox-at-[0] + button-cluster layout, for the chain-step Y-offset
+    // compensation of tab buttons.
+    if (g_currentPanel && g_tabbedPanel != g_currentPanel) {
+        int tabsStart = -1, tabsCount = 0;
+        if (DetectTabsCluster(g_currentPanel, tabsStart, tabsCount)) {
+            g_tabbedPanel = g_currentPanel;
+            g_tabsStart   = tabsStart;
+            g_tabsCount   = tabsCount;
+            acclog::Write("Menus.Tabs", "detected panel=%p tabsStart=%d tabsCount=%d",
+                          g_currentPanel, tabsStart, tabsCount);
+        }
+    }
+
+    if (acc::menus::chargen_skills::IsChargenSkillsDescriptionListbox(listBox)) {
+        // Chargen Skills description listbox: the engine's hover-driven
+        // population is off by one here (the cursor warp's hit-test resolves
+        // to skill_labels[i-1] whatever the Y compensation), so its text is
+        // the wrong row. The chain-step handler speaks the focused row's
+        // description from skill_descriptions[i] instead.
+        acclog::Write("Menus.ListBox",
+                      "chargen-skills description silenced "
+                      "(handled by chain-step direct read)");
+        return;
+    }
+    if (acc::menus::chargen_attr::IsChargenAttributesDescriptionListbox(listBox)) {
+        // Same for chargen attributes: the hover-driven population depends
+        // on the resolution (the hit-test can resolve to the neighbouring
+        // ability). The chain-step handler speaks the focused ability's
+        // description through a direct OnEnterPointsButton call.
+        acclog::Write("Menus.ListBox",
+                      "chargen-attr description silenced "
+                      "(handled by chain-step direct read)");
+        return;
+    }
+    if (strchr(text, '\n')) {
+        // Multi-line listbox blob (Options-style: all settings concatenated
+        // by '\n' into a single CSWGuiLabel row). Always silenced — bulk
+        // enumeration is too noisy.
+        int lines = 1;
+        for (const char* p = text; *p; ++p) if (*p == '\n') ++lines;
+        acclog::Write("Menus.ListBox", "blob silenced; lines=%d", lines);
+        return;
+    }
+    // In-game sub-screens (InGameOptions, InGameInventory, …) pair their
+    // button chain with a single-row description listbox whose text updates
+    // on every focus change, and the engine re-activates its row each time.
+    // Silenced; a sub-screen that wants its description speaks it from the
+    // chain-step extract path (like chargen skills).
+    void* livePanel = CurrentPanelIfLive();
+    if (rowCount == 1 && livePanel &&
+        acc::menus::monitors::IsInGameSubScreenKind(IdentifyPanel(livePanel))) {
+        acclog::Write("Menus.ListBox",
+                      "sub-screen description listbox silenced (panel kind=%s)",
+                      PanelKindName(IdentifyPanel(livePanel)));
+        return;
+    }
+    // The tutorial popup's single-row message listbox: the vanilla wording is
+    // mouse-centric, so the keyboard hint is spoken in its place when the row
+    // maps to one, otherwise the row's own text. Matched on text, not panel
+    // identity, because this fires before the popup registers in panels[]
+    // (tutorial_hints.cpp). The synthetic Trask popup shows the original mouse
+    // strref as its visible text, so its hint comes from the popup module.
+    //
+    // Spoken HERE rather than left to the content-fingerprint monitor: this
+    // hook holds the text, while the monitor has to re-extract it, and on
+    // KOTOR 2 that extraction returns nothing for every popup after the first
+    // (the message listbox reads as src=none). Both paths resolve the same
+    // hint string, so the announce dedup collapses them to one line.
+    const char* hint =
+        acc::tutorial_popup::SyntheticActive()
+            ? acc::tutorial_popup::SyntheticHint()
+            : acc::tutorial_hints::HintForMouseText(text);
+    SpeakIfChanged(/*channel=*/1, (hint && hint[0]) ? hint : text);
 }
-
-
-// MonitorFocusedControl + MonitorPanelContents + their helpers (content
-// fingerprint, sub-screen tracking, segment-diff speech) moved to
-// menus_monitors.cpp post-Step-5. menus.cpp's drill router calls
-// acc::menus::monitors::FindActiveSubScreenPanel /
-// IsInGameSubScreenKind through the public surface.
-
-
-// MonitorDialogReplies, MonitorContainerSelection,
-// MonitorEquipPickerSelection, PollContainerGiveModeKey, and their per-
-// monitor state structs moved out post-Step-5. Dialog-reply monitor lives
-// in menus_monitors.cpp; the three subsystem-paired monitors (Container,
-// EquipPicker, give-mode key poll) co-locate with their listbox spec
-// entries in menus_listbox.cpp.
-
-//
-//   * The OnUpdate detour entry and the per-tick fan-out across all
-//     mod subsystems now live in core_tick.cpp / core_tick.h. The
-//     hook contract (CSWGuiManager::Update @ 0x40ce76, function name
-//     "OnUpdate") is unchanged — the symbol just resolves to a
-//     different TU.
-//   * The three callables exposed below are what core_tick::Dispatch
-//     consumes from the menu-side. Internal helpers (ValidateTabbedPanel,
-//     MonitorFocusedControl, …) stay file-static; the deferred-op queue
-//     state was split out in Step 3 (menus_pending.{h,cpp}); subsequent
-//     refactor steps split listbox handlers and chain navigation further.
 
 namespace acc::menus {
 
 void ValidatePanels() {
-    // Defensive — if the engine freed the panel that DetectTabsCluster
-    // last latched onto, drop the stale pointer before any input handler
-    // can deref it.
+    // If the engine freed the panel DetectTabsCluster last latched onto,
+    // drop the stale pointer before any input handler can deref it.
     ValidateTabbedPanel();
     // Same hazard for g_chainPanel / g_chain[].control: when Esc on the
     // Main-Menu Options strip (or any other panel our Esc gate doesn't
     // catch) falls through to the engine's native handler, the engine
     // destroys the panel and its children. The chain still references the
     // freed buttons; next tick MonitorFocusedControl dereferences one and
-    // FromControl's SEH-caught AV interacts with /GS to fastfail. Confirmed
-    // by crash dump 8752 (TID 22220, ESI=0x137af76c = the Auto-Pause button
-    // last navigated to before Esc closed the parent strip). Same root
-    // cause as the InGameOptions sub-screen fix; that case routes through
-    // a queued FireActivate which already calls InvalidateChain, but the
-    // engine-handled Esc path has no such hook — guard generically here.
+    // FromControl's SEH-caught AV interacts with /GS to fastfail (a crash
+    // dump showed the freed Auto-Pause button). A queued FireActivate
+    // already invalidates the chain; the engine-handled Esc path has no
+    // such hook, so the guard is generic here.
     ValidateChainPanel();
 }
 
 void TickMonitors() {
-    // Post-Step-5 cleanup: monitors split across two TUs. General monitors
-    // (focus / panel-contents / dialog-reply) live in menus_monitors.cpp;
-    // listbox-paired monitors (Container, EquipPicker, give-mode key poll)
-    // co-locate with their spec entries in menus_listbox.cpp.
-    //
-    // Store runs FIRST so its trade-outcome speech ("Sold" /
-    // "Bought" / "Cannot …") and chain rebind land before the focus
-    // monitor's per-tick re-extract of the focused chain row. Without
-    // this ordering, a successful sell speaks the next item's name
-    // (focus monitor saw the row's text mutate when the listbox
-    // repopulated) BEFORE the outcome — sounds like the announce is
-    // about a different item than the user just sold.
+    // Store runs FIRST so its trade-outcome speech ("Sold" / "Bought" /
+    // "Cannot …") and chain rebind land before the focus monitor's per-tick
+    // re-extract of the focused chain row. Otherwise a successful sell
+    // speaks the next item's name (the focus monitor saw the row's text
+    // change as the listbox repopulated) BEFORE the outcome — as if the
+    // announce were about a different item than the one just sold.
     acc::menus::store::TickMonitorMode();
     // K2 workbench/crafting watcher — same ordering rationale as Store:
     // its view-flip speech + chain rebind land before the focus monitor's
@@ -861,7 +540,7 @@ void PollHomeEndKeys() {
     // hit both intentionally; defer End to the next press).
     int code = home ? kInputHome : kInputEnd;
 
-    void* mgr = *reinterpret_cast<void**>(kAddrGuiManagerPtr);
+    void* mgr = GetGuiManager();
     if (!mgr) {
         acclog::Write("Menus.PollHomeEnd",
                       "%s pressed but mgr=NULL; ignored",
@@ -880,17 +559,11 @@ void PollHomeEndKeys() {
     s_synthesizedNav = false;
 }
 
-// Drain the menu-side pending-op queue. Called from core_tick::Dispatch
-// after all monitors have run. The queued op was set by an input handler
-// (chain Enter, Esc, Left/Right) on this or a recent tick; dispatching
-// here keeps deep engine re-entry off the input-hook stack.
-//
-// Step 3 of the refactor: queue state + drain logic moved to
-// menus_pending.{h,cpp}. This wrapper just resolves the GuiManager
-// singleton and forwards.
+// Drain the menu-side pending-op queue (menus_pending). Called from
+// core_tick::Dispatch after all monitors have run, which keeps deep engine
+// re-entry off the input-hook stack.
 void TickPendingOps() {
-    void* gm = *reinterpret_cast<void**>(kAddrGuiManagerPtr);
-    pending::Drain(gm);
+    pending::Drain(GetGuiManager());
 }
 
 // Drain the pending-announce slot. Called early in TickMonitors so any
@@ -919,19 +592,10 @@ void DrainPendingAnnounce() {
     s_pendingAnnounceControl = nullptr;
     if (!control) return;
 
-    // Multi-row listbox guard — mirrors AnnounceControl in menus_monitors.cpp.
-    // OnSetActiveControl on a multi-row listbox container is engine-driven
-    // panel-open auto-focus, not user navigation. Speaking "control N"
-    // here was the source of the "control 3" noise on Abilities /
-    // Inventory open after the FromControl listbox-blob path was removed.
-    // Row navigation inside the listbox is owned by ListBoxPanelSpec /
-    // chain handlers.
+    // Panel-open auto-focus on a multi-row listbox container is not user
+    // navigation (same guard as AnnounceControl in menus_monitors.cpp).
     const bool isListBoxContainer = IsListBox(control);
-    if (isListBoxContainer) {
-        auto* lb = reinterpret_cast<CExoArrayList*>(
-            reinterpret_cast<unsigned char*>(control) + kListBoxControlsOffset);
-        if (lb && lb->data && lb->size > 1) return;
-    }
+    if (acc::menus::detail::IsMultiRowListBox(control)) return;
 
     if (g_chainPanel == panel && g_chainCount > 0 &&
         g_chainIndex >= 0 && g_chainIndex < g_chainCount &&
@@ -971,17 +635,12 @@ void DrainPendingAnnounce() {
     // Chargen class icon with a cold label cache. The icon's class name is
     // only readable once the panel's own OnEnterButton has written
     // class_label, which happens a beat AFTER the panel-open SetActiveControl
-    // that queued this announce — so FromControl legitimately has nothing yet.
-    // KOTOR 2 loses that race every time: entering Klassenauswahl spoke
-    // "control 11" and the anchored icon's name was never heard until the user
-    // navigated back onto it (patch-20260803-102731.log). KOTOR 1 happened to
-    // win it, which is why AnnounceControl already had this guard and the
-    // drain did not.
+    // that queued this announce — so FromControl legitimately has nothing yet
+    // (KOTOR 2 loses that race every time, KOTOR 1 happened to win it).
     //
     // Not a silenced fallback: the value arrives a tick later and the focus
-    // monitor speaks it then (it has not primed its last-seen control here),
-    // which is the queue-don't-drop behaviour the rule asks for. Keyed on the
-    // drain's own panel, not g_currentPanel.
+    // monitor speaks it then (it has not primed its last-seen control here).
+    // Keyed on the drain's own panel, not g_currentPanel.
     if (acc::menus::detail::IsClassSelectionIcon(panel, control)) {
         acclog::Write("Announce",
                       "class-icon %p deferred: label cache cold, focus "
@@ -990,10 +649,9 @@ void DrainPendingAnnounce() {
         return;
     }
 
-    // No extractable text: announce a "control N" placeholder. Bypasses
-    // SpeakIfChanged dedup deliberately (memory:
-    // feedback_never_silence_fallback_announcement) — better to hear
-    // repeated "control 11" than to silently drop a focus event.
+    // No extractable text: a "control N" placeholder, bypassing the dedup on
+    // purpose — a repeated "control 11" is better than a focus event that
+    // goes silent.
     int id = *reinterpret_cast<int*>(
         reinterpret_cast<unsigned char*>(control) + kControlIdOffset);
     char placeholder[64];
@@ -1012,7 +670,3 @@ void SetDrilledIntoSubScreen(bool drilled) {
 }
 
 }  // namespace acc::menus
-
-// DllMain + OnRulesInit + EnsureSpeechInitialized live in core_dllmain.cpp.
-// OnSetMoveToModuleString moved to transitions.cpp next to
-// AnnouncePreLoadDestination.

@@ -65,6 +65,11 @@ constexpr size_t kAnnounceTextMax = 1024;
 
 bool IsChainNavigable(void* control);
 bool IsClassSelectionIcon(void* panel, void* control);
+
+// True for a listbox container with more than one row. SetActiveControl on
+// one is the engine's panel-open auto-focus, not the user navigating: rows
+// are reached through the listbox specs and the chain. Defined in menus.cpp.
+bool IsMultiRowListBox(void* control);
 const char* ClassLabelCacheLookup(void* panel, void* icon);
 void ClassLabelCacheStore(void* panel, void* icon, const char* text);
 

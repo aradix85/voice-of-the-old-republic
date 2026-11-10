@@ -258,13 +258,7 @@ void AnnounceControl(void* control) {
     // engine-driven panel-open auto-focus on a container is a different
     // class of event.
     const bool isListBoxContainer = IsListBox(control);
-    if (isListBoxContainer) {
-        auto* lb = reinterpret_cast<CExoArrayList*>(
-            reinterpret_cast<unsigned char*>(control) + kListBoxControlsOffset);
-        if (lb && lb->data && lb->size > 1) {
-            return;
-        }
-    }
+    if (acc::menus::detail::IsMultiRowListBox(control)) return;
 
     char text[acc::menus::detail::kAnnounceTextMax];
     // Pass the chain panel so the extraction is identical to
