@@ -1,4 +1,4 @@
-# same_name_suffix.h (92 lines)
+# same_name_suffix.h (93 lines)
 
 Source: `patches/Accessibility/same_name_suffix.h`
 
@@ -15,5 +15,5 @@ Wraps engine::GetObjectName and appends a stable numeric suffix when two or more
 - L48 `void AppendDisambiguator(void* gameObject, acc::filter::CycleCategory category, char* outBuf, size_t bufSize)`: Append the disambiguating number to an already-resolved name in outBuf, using the unified policy keyed on category: - Npc (mobile "mobs"): handle-keyed encounter serial (AppendSuffix) — creatures move, so a spatial ra...
 - L56 `void AppendSuffix(void* gameObject, char* outBuf, size_t bufSize)`: Append a handle-keyed encounter serial to an already-resolved name in outBuf (combat narration paths use the engine's universal GetObjectDisplayNameByHandle).
 - L77 `void AppendAreaPositionOrdinal(void* gameObject, acc::filter::CycleCategory category, char* outBuf, size_t bufSize)`: Append a GLOBAL north-to-south positional ordinal to an already-resolved BASE name in outBuf.
-- L86 `bool PositionLess(const Vector& a, const Vector& b)`: North-to-south world ordering.
-- L89 `void Reset()`: Hooked into transitions.cpp's area-reset chain.
+- L87 `bool PositionLess(const Vector& a, const Vector& b)`: North-to-south world ordering.
+- L90 `void Reset()`: Hooked into transitions.cpp's area-reset chain.

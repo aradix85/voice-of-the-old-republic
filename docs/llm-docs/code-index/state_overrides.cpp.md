@@ -1,4 +1,4 @@
-# state_overrides.cpp (178 lines)
+# state_overrides.cpp (182 lines)
 
 Source: `patches/Accessibility/state_overrides.cpp`
 
@@ -12,6 +12,6 @@ New puzzles register here. When state lives in script local variables instead of
 
 ## Declarations (in source order)
 
-- L110 `const StateOverride* FindOverride(const char* tag)`
-- L118 `const char* PickLabel(const LabelEntry* labels, int value)`
-- L128 `bool AppendStateLabel(void* gameObject, char* outBuf, size_t bufSize)`
+- L114 `const StateOverride* FindOverride(const char* tag)`
+- L122 `const char* PickLabel(const LabelEntry* labels, int value)`
+- L132 `bool AppendStateLabel(void* gameObject, char* outBuf, size_t bufSize)`

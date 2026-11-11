@@ -39,12 +39,6 @@ constexpr size_t kMaxKeys = 400;
 // unfolded name gives one module two discovery sets.
 using acc::strfmt::ToLowerAscii;
 
-// Same order as the spoken numbering (narration::PositionLess), so the
-// discovery ordinal matches the "north path 3" the player already hears.
-bool PositionLess(const Vector& a, const Vector& b) {
-    return acc::narration::PositionLess(a, b);
-}
-
 // Eligible discovery categories (Item + generic creatures are out of scope).
 const acc::filter::CycleCategory kEligible[] = {
     acc::filter::CycleCategory::Door,
@@ -112,7 +106,9 @@ bool DeriveKey(void* obj, void* area, std::string& outKey) {
         }
         Vector op;
         if (!acc::engine::GetObjectPosition(o, op)) continue;
-        if (PositionLess(op, p)) ++rank;
+        // The order of the spoken numbering, so the ordinal in the key is the
+        // "north path 3" the player hears.
+        if (acc::narration::PositionLess(op, p)) ++rank;
     }
     char suffix[16];
     std::snprintf(suffix, sizeof(suffix), "~%d", rank);

@@ -15,10 +15,9 @@
 //   * Named NPCs   — "N~<objTag>", eligible only when the tag is UNIQUE among
 //                    creatures in the area (generic/duplicate mobs excluded).
 //   * Static (door / container / landmark / transition) — "S~<objTag>~<ord>",
-//     where <ord> is the deterministic north-to-south ordinal among area
-//     objects sharing the same category + tag (mirrors cycle_input's
-//     PositionLess). Tags repeat for static objects, so the ordinal
-//     disambiguates.
+//     where <ord> is the deterministic ordinal among area objects sharing
+//     the same category + tag, in the order of narration::PositionLess.
+//     Tags repeat for static objects, so the ordinal disambiguates.
 //   * World items + generic enemies are OUT of scope (mobile / respawn /
 //     vanish) — DeriveKey returns ineligible, so they're never recorded or
 //     surfaced in the discovery tier.
