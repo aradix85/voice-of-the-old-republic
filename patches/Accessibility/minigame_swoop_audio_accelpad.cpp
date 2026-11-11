@@ -1,7 +1,8 @@
 // The accelerator-pad cues of the swoop race, per tick: the panned guide tone
 // toward the next pad (or a detour point), the "aligned" blip on reaching it,
 // and the crossing score. The detours and the magnet and wall cues live in
-// minigame_swoop_audio_accelpad_detour.cpp and _assist.cpp.
+// minigame_swoop_audio_accelpad_detour.cpp and _assist.cpp; the automatic
+// pilot's line around the buoys in minigame_swoop_pilot.cpp.
 //
 // The guide is our own acc_boost tone, not the bike's hum: the swoop Player's
 // <Engine> resref is empty in every area, so player+0x144 holds no source we
@@ -152,17 +153,20 @@ void ScanEnemies(void* mgoArray, PadTick& t) {
     }
 }
 
-// Lateral velocity in units per tick, clamped and smoothed.
-void UpdateLateralVelocity(const PadTick& t) {
+// Lateral velocity in units per tick, clamped and smoothed, and this tick's
+// forward travel.
+void UpdateVelocity(PadTick& t) {
     if (!t.bikeOk) return;
-    if (g_state.have_prev_bike_x) {
+    if (g_state.have_prev_bike) {
         float v = t.bikePos.x - g_state.prev_bike_x;
         if (v >  kSteerVelClamp) v =  kSteerVelClamp;
         if (v < -kSteerVelClamp) v = -kSteerVelClamp;
         g_state.smoothed_vel += (v - g_state.smoothed_vel) * kSteerVelSmooth;
+        t.fwdPerTick = t.bikePos.y - g_state.prev_bike_y;
     }
     g_state.prev_bike_x = t.bikePos.x;
-    g_state.have_prev_bike_x = true;
+    g_state.prev_bike_y = t.bikePos.y;
+    g_state.have_prev_bike = true;
 }
 
 // When the targeted gate changes, the previous one has just been passed:
@@ -202,10 +206,11 @@ void ScoreCrossing(const PadTick& t) {
     if (caught) acc::audio::PlayCue(kAccelpadLoopResref);
 }
 
-// The nearest pad, or after the last pad on KOTOR 2 a point straight ahead (see
-// kVirtualTargetAheadU), so the mine-aware line keeps working to the finish.
+// The nearest pad, or after the last pad a point straight ahead (see
+// kVirtualTargetAheadU), so the line around the mines (KOTOR 2) and the
+// automatic pilot's line around the buoys keep working to the finish.
 void ChooseTarget(PadTick& t) {
-    if (t.aheadSlot < 0 && t.bikeOk && acc::game::IsKotor2() &&
+    if (t.aheadSlot < 0 && t.bikeOk && (acc::game::IsKotor2() || AutopilotOn()) &&
         t.bikeSpeed > kSwoopMinRaceSpeed) {
         t.virtualTarget = true;
         t.aheadPos = t.bikePos;
@@ -303,11 +308,12 @@ void TickAccelpadCues(void* miniGame) {
     PadTick t;
     if (!ReadTickInputs(miniGame, t)) return;
     ScanEnemies(mgoArray, t);
-    UpdateLateralVelocity(t);
+    UpdateVelocity(t);
     ScoreCrossing(t);
     ChooseTarget(t);
     ApplyBarDetour(miniGame, t);
     ApplyMineDetour(t);
+    ApplyRockDetour(t);
     t.now = GetTickCount64();
     ApplyMagnet(t);
     PredictWallCue(t);

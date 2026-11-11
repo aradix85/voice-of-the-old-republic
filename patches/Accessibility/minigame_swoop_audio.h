@@ -23,8 +23,9 @@ void TickSpatialAudio(void* miniGame);
 void ResetSpatialAudio();
 
 // The mod setting "Swoop race: automatic pilot": the bike steers to the
-// accelerator pads and shifts by itself. KOTOR 1 only: it has not been run on
-// KOTOR 2, where every relaunch into a bar costs hit points.
+// accelerator pads, around the buoys, and shifts by itself. KOTOR 1 only: it
+// has not been run on KOTOR 2, where every relaunch into a bar costs hit
+// points.
 bool AutopilotOn();
 
 // KOTOR 2: what the parked bike is stuck against, as seen by the obstacle

@@ -327,6 +327,11 @@ constexpr float       kMinePassWindowU  = 30.0f;  // forward window of the mine-
 // off unless a detour is active (a target at the bike's own x must not
 // damp the player's steering).
 constexpr float       kVirtualTargetAheadU = 400.0f;
+// Automatic pilot (KOTOR 1): the bike's collision sphere for when the live
+// read faults (the Taris track sets Sphere_Radius 3), and the least forward
+// travel per tick the line around the buoys is planned with.
+constexpr float       kPilotBikeRadiusU = 3.0f;
+constexpr float       kPilotMinFwdU     = 1.0f;
 // Riding a strip beside the posts (MGC03 at x −12.5) the wall loop's
 // projected-crossing trigger chattered on and off six times in 1.5 s from
 // drift velocities of 0.06–0.26 u/tick (round 14, 34:12–34:13). While the

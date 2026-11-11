@@ -36,6 +36,11 @@ int ObstacleLoopBudget() {
     return acc::game::IsKotor2() ? 6 : kMgoArraySlotCount;
 }
 
+// Half the size of the largest KOTOR 1 buoy box (Manaan: 7.2 wide; all tracks:
+// 8.5 long), for a buoy whose box did not resolve.
+constexpr float kBuoyHalfWidthU  = 3.6f;
+constexpr float kBuoyHalfLengthU = 4.25f;
+
 // The `<track>_MGE*` scenery objects (see the constants block): the token
 // "_MGE" anywhere in the resref, case-insensitive. Same hand-rolled match as
 // the mine test in TickAccelpadCues — no <cctype> / locale in SEH-heavy code.
@@ -82,6 +87,7 @@ void ResolveHazardBox(void* aur, const char* name, HazardInfo& hz) {
 // a listener anchor.
 bool ReadObstacleTick(void* miniGame, ObstacleTick& t) {
     t.k2 = acc::game::IsKotor2();
+    t.pilot = AutopilotOn();
     void* player = ReadPtrOrNull(miniGame, kMiniGamePlayerOffset);
     t.bikeOk = ReadFollowerPosition(player, t.bikePos);
     t.bikeSpeed = ReadFloatOr0(player, kFollowerSpeedOffset);
@@ -172,6 +178,30 @@ void LogObstacleInventory(int i, const ObstacleView& v, const HazardInfo& hz) {
                       v.pos.x, v.pos.y, v.pos.z,
                       hz.state == kHazardFailed ? " box=FAILED" : "");
     }
+}
+
+// A buoy for the automatic pilot: its box, or without one the largest buoy
+// around the object's origin.
+void AddRock(ObstacleTick& t, int slot, const ObstacleView& v) {
+    acc::swoop_pilot::Rock& r = t.newRocks[t.newRockCount++];
+    r.slot = slot;
+    r.x0 = v.haveBox ? v.x0 : v.pos.x - kBuoyHalfWidthU;
+    r.x1 = v.haveBox ? v.x1 : v.pos.x + kBuoyHalfWidthU;
+    r.y0 = v.haveBox ? v.y0 : v.pos.y - kBuoyHalfLengthU;
+    r.y1 = v.haveBox ? v.y1 : v.pos.y + kBuoyHalfLengthU;
+}
+
+// Nearest first, as the pilot reads them.
+void PublishRocks(const ObstacleTick& t) {
+    for (int n = 0; n < t.newRockCount; ++n) {
+        int at = n;
+        while (at > 0 && g_state.rocks[at - 1].y0 > t.newRocks[n].y0) {
+            g_state.rocks[at] = g_state.rocks[at - 1];
+            --at;
+        }
+        g_state.rocks[at] = t.newRocks[n];
+    }
+    g_state.rock_count = t.newRockCount;
 }
 
 // A hazard that warns through the loop (K1 buoys, K2 blocks and mines):
@@ -284,10 +314,12 @@ void TickObstacleCues(void* miniGame) {
             HandleBar(i, v, hz, t);
             continue;
         }
+        if (t.pilot) AddRock(t, i, v);
         Admit(t, i, v.hazardPos, v.name);
     }
     for (int b = 0; b < t.newBarCount; ++b) g_state.bars[b] = t.newBars[b];
     g_state.bar_count = t.newBarCount;
+    PublishRocks(t);
 
     // K2 mines, collected by this tick's pad sweep, warn like blocks.
     for (int m = 0; m < g_state.mine_count; ++m) {

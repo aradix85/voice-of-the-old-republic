@@ -1,4 +1,4 @@
-# minigame_swoop_audio_tuning.h (364 lines)
+# minigame_swoop_audio_tuning.h (369 lines)
 
 Source: `patches/Accessibility/minigame_swoop_audio_tuning.h`
 
@@ -10,4 +10,4 @@ The swoop race as the audio cues see it: the engine layout of the minigame objec
 - L115 `enum HazardState`
 - L116 `struct HazardInfo`
 
-Also 58 constants or variables at namespace scope.
+Also 60 constants or variables at namespace scope.

@@ -31,6 +31,7 @@ $underTest = @(
     'menus_skillflow_nav.cpp',
     'minigame_latch.cpp',
     'minigame_magnet.cpp',
+    'minigame_swoop_pilot.cpp',
     'minigame_turret_lead.cpp',
     'save_points.cpp',
     'shortest_paths.cpp',

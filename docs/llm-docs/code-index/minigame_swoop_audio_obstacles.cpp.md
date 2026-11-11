@@ -1,4 +1,4 @@
-# minigame_swoop_audio_obstacles.cpp (324 lines)
+# minigame_swoop_audio_obstacles.cpp (356 lines)
 
 Source: `patches/Accessibility/minigame_swoop_audio_obstacles.cpp`
 
@@ -7,13 +7,15 @@ Obstacle cues of the swoop race: each tick sweeps the minigame's objects, places
 ## Declarations (in source order)
 
 - L35 `int ObstacleLoopBudget()`: How many warn loops may sound at once, nearest first.
-- L42 `bool IsSceneryObstacleName(const char* name)`: The ` _MGE*` scenery objects (see the constants block): the token "_MGE" anywhere in the resref, case-insensitive.
-- L56 `void ResolveHazardBox(void* aur, const char* name, HazardInfo& hz)`: Resolve and classify one obstacle's collision box.
-- L83 `bool ReadObstacleTick(void* miniGame, ObstacleTick& t)`: Bike state for the K2 bar logic (lane, forward position, speed, the airborne edge for the "jump again" repeat) and the listener; false without a listener anchor.
-- L111 `bool ReadObstacle(void* mgoArray, int i, ObstacleTick& t, ObstacleView& v)`
-- L154 `void LogObstacleInventory(int i, const ObstacleView& v, const HazardInfo& hz)`: First sweep only: every obstacle's slot and name (and its box and class), so the per-track inventory is in the log once.
-- L181 `bool Admit(ObstacleTick& t, int slot, const Vector& hazardPos, const char* name)`: A hazard that warns through the loop (K1 buoys, K2 blocks and mines): ahead of the listener within the margin, and inside range.
-- L197 `int SelectNearest(ObstacleTick& t)`: Nearest first, cut to the loop budget: a partial selection sort (single digits on K2; on K1 the budget is the whole array).
-- L217 `int SoundWarnLoops(const ObstacleTick& t, int sounding, bool active[kMgoArraySlotCount])`: The decoupled cue: lateral and vertical true, forward pinned to a fixed reference depth, so the pan says lane error only; loudness follows our own curve on the real 3D distance.
-- L253 `int StopStaleLoops(const bool active[kMgoArraySlotCount])`: Loops whose obstacle left range (passed, or its reads failed this tick); Stop is idempotent.
-- L266 `void TickObstacleCues(void* miniGame)`
+- L47 `bool IsSceneryObstacleName(const char* name)`: The ` _MGE*` scenery objects (see the constants block): the token "_MGE" anywhere in the resref, case-insensitive.
+- L61 `void ResolveHazardBox(void* aur, const char* name, HazardInfo& hz)`: Resolve and classify one obstacle's collision box.
+- L88 `bool ReadObstacleTick(void* miniGame, ObstacleTick& t)`: Bike state for the K2 bar logic (lane, forward position, speed, the airborne edge for the "jump again" repeat) and the listener; false without a listener anchor.
+- L117 `bool ReadObstacle(void* mgoArray, int i, ObstacleTick& t, ObstacleView& v)`
+- L160 `void LogObstacleInventory(int i, const ObstacleView& v, const HazardInfo& hz)`: First sweep only: every obstacle's slot and name (and its box and class), so the per-track inventory is in the log once.
+- L185 `void AddRock(ObstacleTick& t, int slot, const ObstacleView& v)`: A buoy for the automatic pilot: its box, or without one the largest buoy around the object's origin.
+- L195 `void PublishRocks(const ObstacleTick& t)`: Nearest first, as the pilot reads them.
+- L211 `bool Admit(ObstacleTick& t, int slot, const Vector& hazardPos, const char* name)`: A hazard that warns through the loop (K1 buoys, K2 blocks and mines): ahead of the listener within the margin, and inside range.
+- L227 `int SelectNearest(ObstacleTick& t)`: Nearest first, cut to the loop budget: a partial selection sort (single digits on K2; on K1 the budget is the whole array).
+- L247 `int SoundWarnLoops(const ObstacleTick& t, int sounding, bool active[kMgoArraySlotCount])`: The decoupled cue: lateral and vertical true, forward pinned to a fixed reference depth, so the pan says lane error only; loudness follows our own curve on the real 3D distance.
+- L283 `int StopStaleLoops(const bool active[kMgoArraySlotCount])`: Loops whose obstacle left range (passed, or its reads failed this tick); Stop is idempotent.
+- L296 `void TickObstacleCues(void* miniGame)`

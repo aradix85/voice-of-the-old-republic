@@ -1,4 +1,4 @@
-# minigame_swoop_audio.cpp (191 lines)
+# minigame_swoop_audio.cpp (197 lines)
 
 Source: `patches/Accessibility/minigame_swoop_audio.cpp`
 

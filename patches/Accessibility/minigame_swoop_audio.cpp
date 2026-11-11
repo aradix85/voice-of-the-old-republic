@@ -159,7 +159,8 @@ void ResetSpatialAudio() {
         g_state.hazards[i].park_cued   = 0;
     }
     g_state.prev_bike_x           = 0.0f;
-    g_state.have_prev_bike_x      = false;
+    g_state.prev_bike_y           = 0.0f;
+    g_state.have_prev_bike        = false;
     g_state.smoothed_vel          = 0.0f;
     g_state.prev_ahead_slot       = -1;
     g_state.guide_was_active      = false;
@@ -171,6 +172,11 @@ void ResetSpatialAudio() {
     g_state.bar_detour_slot       = -1;
     g_state.bar_air_cleared_slot  = -1;
     g_state.bar_gap_diag_emitted  = false;
+    g_state.rock_count            = 0;
+    g_state.rock_detour_slot      = -1;
+    for (int i = 0; i < kMgoArraySlotCount; ++i) {
+        g_state.rock_side[i] = acc::swoop_pilot::kUndecided;
+    }
     g_state.ground_z              = 40.0f;
     for (int i = 0; i < kMgoArraySlotCount; ++i) g_state.mine_pass_open[i] = false;
     g_state.last_magnet_log_ms    = 0;

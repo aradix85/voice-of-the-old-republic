@@ -1,4 +1,4 @@
-# minigame_swoop_audio_internal.h (218 lines)
+# minigame_swoop_audio_internal.h (233 lines)
 
 Source: `patches/Accessibility/minigame_swoop_audio_internal.h`
 
@@ -6,14 +6,14 @@ Internal to the minigame_swoop_audio module (minigame_swoop_audio*.cpp); no othe
 
 ## Declarations (in source order)
 
-- L40 `struct SpatialAudioState`: Module state.
-- L130 `inline int SwoopVolumeByte(float dist, float range)`: Linear volume byte for a source at 3D distance `dist` within `range`: full (kSwoopVolNearByte) at the listener, ramping to kSwoopVolFarByte at the range edge.
-- L144 `const char* ReadAurObjectName(void* aurObject)`: minigame_swoop_audio.cpp
-- L162 `struct ObstacleTick`: The bike, the listener and this tick's collections, shared by the steps of TickObstacleCues.
-- L194 `struct ObstacleView`: One obstacle as the steps see it.
-- L208 `void TickObstacleCues(void* miniGame)`: minigame_swoop_audio_obstacles.cpp
-- L211 `void TrackMinePasses(void* player, const Vector& bikePos, float playerRadius)`: minigame_swoop_audio_bars.cpp
-- L212 `void HandleBar(int i, const ObstacleView& v, HazardInfo& hz, ObstacleTick& t)`
-- L215 `void TickAccelpadCues(void* miniGame)`: minigame_swoop_audio_accelpad.cpp
+- L41 `struct SpatialAudioState`: Module state.
+- L140 `inline int SwoopVolumeByte(float dist, float range)`: Linear volume byte for a source at 3D distance `dist` within `range`: full (kSwoopVolNearByte) at the listener, ramping to kSwoopVolFarByte at the range edge.
+- L154 `const char* ReadAurObjectName(void* aurObject)`: minigame_swoop_audio.cpp
+- L172 `struct ObstacleTick`: The bike, the listener and this tick's collections, shared by the steps of TickObstacleCues.
+- L209 `struct ObstacleView`: One obstacle as the steps see it.
+- L223 `void TickObstacleCues(void* miniGame)`: minigame_swoop_audio_obstacles.cpp
+- L226 `void TrackMinePasses(void* player, const Vector& bikePos, float playerRadius)`: minigame_swoop_audio_bars.cpp
+- L227 `void HandleBar(int i, const ObstacleView& v, HazardInfo& hz, ObstacleTick& t)`
+- L230 `void TickAccelpadCues(void* miniGame)`: minigame_swoop_audio_accelpad.cpp
 
 Also 13 constants or variables at namespace scope.

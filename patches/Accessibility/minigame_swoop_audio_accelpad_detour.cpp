@@ -1,4 +1,5 @@
-// The detours of the guide line around bars and mines (KOTOR 2).
+// The detours of the guide line: around bars and mines (KOTOR 2) and, for the
+// automatic pilot, around the buoys (KOTOR 1).
 
 #include "minigame_swoop_audio_accelpad_internal.h"
 
@@ -189,6 +190,42 @@ void ApplyMineDetour(PadTick& t) {
             acclog::Write("SwoopRace", "detour: clear (pad slot=%d)", t.aheadSlot);
         }
         g_state.detour_slot = detour_slot;
+    }
+}
+
+// The automatic pilot's line around the buoys (KOTOR 1), from the obstacle
+// sweep's list of last tick. The line itself is minigame_swoop_pilot.cpp's.
+void ApplyRockDetour(PadTick& t) {
+    int slot = -1;
+    if (AutopilotOn() && t.haveTarget && t.tunOk && t.fwdPerTick > 0.0f) {
+        acc::swoop_pilot::Bike bike;
+        bike.x          = t.bikePos.x;
+        bike.y          = t.refY;
+        bike.laneX      = t.bikePos.x - t.tunnel.x;   // offset.x maps 1:1 to world X
+        bike.radius     = t.playerRadius > 0.0f ? t.playerRadius : kPilotBikeRadiusU;
+        bike.fwdPerTick = t.fwdPerTick > kPilotMinFwdU ? t.fwdPerTick : kPilotMinFwdU;
+        const float line = acc::swoop_pilot::LineAroundRocks(
+            bike, t.guidePos.x, t.aheadPos.y, g_state.rocks, g_state.rock_count,
+            g_state.rock_side, slot);
+        if (slot >= 0) {
+            t.guidePos.x = line;
+            t.guideErr   = line - t.bikePos.x;
+        }
+    }
+    t.rockDetourSlot = slot;
+    if (slot != g_state.rock_detour_slot) {
+        if (slot >= 0) {
+            acclog::Write("SwoopRace",
+                          "pilot: buoy slot=%d passed on the %s, line x=%.1f (pad slot=%d "
+                          "padX=%.1f padY=%.0f bikeX=%.1f bikeY=%.0f fwd=%.1f/tick)",
+                          slot, g_state.rock_side[slot] < 0 ? "left" : "right", t.guidePos.x,
+                          t.aheadSlot, t.aheadPos.x, t.aheadPos.y, t.bikePos.x, t.refY,
+                          t.fwdPerTick);
+        } else {
+            acclog::Write("SwoopRace", "pilot: no buoy in the way (pad slot=%d bikeX=%.1f)",
+                          t.aheadSlot, t.bikePos.x);
+        }
+        g_state.rock_detour_slot = slot;
     }
 }
 

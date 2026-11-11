@@ -22,6 +22,7 @@ struct PadTick {
     bool      tunOk = false;
     float     refY = 0.0f;
     float     bikeSpeed = 0.0f;
+    float     fwdPerTick = 0.0f;   // forward travel since last tick, 0 on the first
     float     playerRadius = 0.0f;
     ULONGLONG now = 0;
     int       slotsSeen = 0;
@@ -42,6 +43,7 @@ struct PadTick {
     int       barDetourSlot = -1;
     float     barY = 0.0f;
     int       mineDetourSlot = -1;
+    int       rockDetourSlot = -1;
     bool      inGear = false;
 };
 
@@ -50,6 +52,7 @@ struct PadTick {
 // minigame_swoop_audio_accelpad_detour.cpp
 void ApplyBarDetour(void* miniGame, PadTick& t);
 void ApplyMineDetour(PadTick& t);
+void ApplyRockDetour(PadTick& t);
 
 // minigame_swoop_audio_accelpad_assist.cpp
 void ApplyMagnet(PadTick& t);

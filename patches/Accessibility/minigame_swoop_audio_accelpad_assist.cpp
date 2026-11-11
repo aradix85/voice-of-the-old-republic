@@ -89,21 +89,26 @@ Pull MagnetPull(const PadTick& t, float s, const acc::minigame::MagnetParams& mp
 // waits there in front of what it hit, and the magnet dragged every relaunch
 // back into the same bar; both games' scripts keep MIN_RACE_GEAR.
 //
-// With the automatic pilot the magnet has no engage gap and is fully sticky
-// from any distance: it steers the whole race.
+// With the automatic pilot there is no engage gap, no ramp and no brake: the
+// bike goes to the line by a fixed step per tick, from any distance. Nobody
+// steers against it, and its line around the buoys counts on that step.
 void ApplyMagnet(PadTick& t) {
     t.inGear = acc::engine::ReadGlobalNumber("MIN_RACE_GEAR") >= 1;
     if (!t.haveTarget || !t.bikeOk || !t.tunOk || !t.player || !t.inGear) return;
-    if (t.virtualTarget && t.mineDetourSlot < 0) return;
+    if (t.virtualTarget && t.mineDetourSlot < 0 && t.rockDetourSlot < 0) return;
     if (!(t.bikeSpeed > kSwoopMinRaceSpeed)) return;
     const bool pilot = AutopilotOn();
     if (!pilot && !(std::fabs(t.guideErr) <= MagnetEngageU())) return;
 
     const acc::minigame::MagnetParams mp{
-        kSwoopMagnetGainFar, kSwoopMagnetGainNear, kSwoopMagnetMaxStepU};
-    float s = pilot ? 1.0f : 1.0f - std::fabs(t.guideErr) / MagnetEngageU();
-    if (s < 0.0f) s = 0.0f;
-    const Pull pull = MagnetPull(t, s, mp);
+        kSwoopMagnetGainFar, kSwoopMagnetGainNear,
+        pilot ? acc::swoop_pilot::kPilotStepU : kSwoopMagnetMaxStepU};
+    Pull pull = {1.0f, t.guideErr};
+    if (!pilot) {
+        float s = 1.0f - std::fabs(t.guideErr) / MagnetEngageU();
+        if (s < 0.0f) s = 0.0f;
+        pull = MagnetPull(t, s, mp);
+    }
     const float newOffX = acc::minigame::MagnetStep(t.tunnel.x, -pull.err, pull.gain, mp);
     Vector newOff = t.tunnel;
     newOff.x = newOffX;

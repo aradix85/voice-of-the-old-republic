@@ -19,6 +19,7 @@
                               //     the offset field that steers the bike
 #include "engine_offsets_select.h"
 #include "minigame_swoop_audio_tuning.h"
+#include "minigame_swoop_pilot.h"  // Rock: the buoys as the automatic pilot reads them
 
 namespace acc::swoop_race {
 
@@ -47,11 +48,13 @@ struct SpatialAudioState {
     // The panned steering-guide tone (acc_boost), aimed at the next gate or
     // the active detour point; centred = on the line.
     acc::audio::LoopSource accelpad_line_loop;
-    // Bike world X last tick and the smoothed per-tick lateral velocity (the
-    // magnet's brake and the wall cues).
-    float prev_bike_x      = 0.0f;
-    bool  have_prev_bike_x = false;
-    float smoothed_vel     = 0.0f;
+    // Bike world position last tick, for the smoothed per-tick lateral velocity
+    // (the magnet's brake and the wall cues) and the forward travel per tick
+    // (the automatic pilot).
+    float prev_bike_x    = 0.0f;
+    float prev_bike_y    = 0.0f;
+    bool  have_prev_bike = false;
+    float smoothed_vel   = 0.0f;
     // The pad slot targeted last tick; a change means a gate was crossed.
     int   prev_ahead_slot    = -1;
     // Panned-guide aligned confirmation: whether the guide tone was sounding
@@ -112,6 +115,13 @@ struct SpatialAudioState {
     int     bar_air_cleared_slot = -1;   // bar released mid-flight (landing past it)
     bool    bar_gap_diag_emitted = false;
     ParkedBar parked_bar         = ParkedBar::None;   // see GetParkedBarSituation
+    // KOTOR 1 buoys for the automatic pilot, in world space and nearest first.
+    // The obstacle sweep rebuilds the list every tick while the pilot is on;
+    // the pad sweep, which runs first, reads the previous tick's copy.
+    int     rock_count = 0;
+    acc::swoop_pilot::Rock rocks[kMgoArraySlotCount];
+    int8_t  rock_side[kMgoArraySlotCount];   // acc::swoop_pilot::Side per obstacle slot
+    int     rock_detour_slot = -1;           // buoy the pilot is steering around, -1 none
     // Airborne state last tick (offset.z) — the touchdown edge re-arms one
     // "jump again" beep for a bar still ahead.
     bool   was_airborne = false;
@@ -183,6 +193,11 @@ struct ObstacleTick {
     // lookup inside it reads a consistent (last tick's) list.
     SpatialAudioState::BarInfo newBars[kMgoArraySlotCount];
     int newBarCount = 0;
+
+    // This tick's buoys for the automatic pilot (K1), published after the sweep.
+    bool pilot = false;
+    acc::swoop_pilot::Rock newRocks[kMgoArraySlotCount];
+    int newRockCount = 0;
 
     int slotsSeen = 0, obstaclesFound = 0, ahead = 0, inRange = 0;
     int postsSkipped = 0, scenerySkipped = 0, barsSeen = 0, minesInRange = 0;

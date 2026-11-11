@@ -114,8 +114,8 @@ installer, as the pre-release `bridge-latest`.
   KOTOR 2 no longer are.
 - Keyboard only: the mod's gamepad support is gone.
 - View mode (B) is gone.
-- New setting "Swoop race: automatic pilot": the bike steers and shifts by
-  itself (KOTOR 1).
+- New setting "Swoop race: automatic pilot": the bike steers to the
+  accelerator pads, around the obstacles, and shifts by itself (KOTOR 1).
 - KOTOR 1 swoop race: the obstacle warning sounds where the buoy stands.
 - Enter on an open door walks through it.
 - Tab says the name of the character you now control once, and no longer
@@ -373,10 +373,15 @@ installer, as the pre-release `bridge-latest`.
 - View mode is gone: B does nothing, and its line in F1 and its row in the key
   settings went with it.
 - New setting "Swoop race: automatic pilot" in Mod settings, off by default
-  (KOTOR 1). With it on, the steering magnet works from any distance and the
-  mod presses the shift at the launch and at every shift-ready moment, so the
-  race drives itself; the cues still sound. It follows the accelerator pads
-  and does not steer round the obstacles. It has not been raced yet.
+  (KOTOR 1). With it on, the bike goes to the next accelerator pad from any
+  distance, at most 5 units sideways per tick, and the mod presses the shift
+  at the launch and at every shift-ready moment, so the race drives itself;
+  the cues still sound. It steers around the buoys: a buoy in the way is
+  passed on the side nearest the pad when there is time to cross in front of
+  it, otherwise on the bike's own side, and the pad is let go when it cannot
+  be had without a hit. On the three tracks as the game files have them the
+  line touches no buoy at any speed, where the pads alone lead into 7 to 9 of
+  the 22 (unit test). It has not been raced yet.
 - KOTOR 1 swoop race: the obstacle warning is placed by the buoy's collision
   box, as on KOTOR 2, and no longer by the object's origin. The buoy often
   stands elsewhere: on Taris 8 of the 22 buoys, on Tatooine 21 and on Manaan
