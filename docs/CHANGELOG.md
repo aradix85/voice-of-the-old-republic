@@ -81,6 +81,7 @@ installer, as the pre-release `bridge-latest`.
 - Script triggers are no longer announced as exits.
 - Locked doors and containers say whether they open only through the story,
   need a key, or need Security N, with the best Security in the party.
+- The best Security in the party is counted the way the game counts it.
 - A locked door that the story opens when you try it says "may open when you
   try".
 - A door that a script opened says "open", not "locked".
@@ -278,6 +279,10 @@ installer, as the pre-release `bridge-latest`.
 
 - Locked doors and containers say "locked, opens only through the story",
   "needs a key" or "Security N, best in your party: Name with N".
+- The Security of a party member is the rank plus the Wisdom bonus, the
+  ability skills.2da keys the skill to. It added the Intelligence bonus, so
+  Carth with rank 1, Intelligence 13 and Wisdom 10 was named with 2 where the
+  game gives him 1.
 - A locked door with an OnFailToOpen script and no key or Security to open it
   says "locked, may open when you try" instead of "opens only through the
   story" (KOTOR 1). The attempt is what such a script reacts to: the Endar

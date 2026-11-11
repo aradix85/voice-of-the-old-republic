@@ -32,9 +32,10 @@ struct Member {
 };
 
 // CSWSCreatureStats skill fields, KOTOR 1 (1.03 address DB): skill_ranks is
-// a pointer to the per-skill base ranks, int_mod the Intelligence modifier.
+// a pointer to the per-skill base ranks, wis_mod the Wisdom modifier (the
+// key ability of Security in skills.2da).
 const size_t kStatsSkillRanksOffset = acc::off::Kotor1Only(0x168);  // byte*
-const size_t kStatsIntModOffset     = acc::off::Kotor1Only(0xf0);   // byte
+const size_t kStatsWisModOffset     = acc::off::Kotor1Only(0xf2);   // byte
 
 constexpr DWORD kLevelCheckPeriodMs = 1000;
 
@@ -63,7 +64,7 @@ std::string NameOf(void* obj) {
 bool ReadSecurity(void* creature, int& out) {
     if (!creature || !acc::game::IsKotor1() ||
         !acc::off::Ok(kStatsSkillRanksOffset) ||
-        !acc::off::Ok(kStatsIntModOffset)) {
+        !acc::off::Ok(kStatsWisModOffset)) {
         return false;
     }
     __try {
@@ -75,7 +76,7 @@ bool ReadSecurity(void* creature, int& out) {
             stats + kStatsSkillRanksOffset);
         if (!ranks) return false;
         const int rank = ranks[kSkillSecurity];
-        const int mod  = *reinterpret_cast<signed char*>(stats + kStatsIntModOffset);
+        const int mod  = *reinterpret_cast<signed char*>(stats + kStatsWisModOffset);
         if (rank > 60 || mod < -6 || mod > 12) return false;  // not these fields
         out = rank + mod;
         return true;

@@ -14,7 +14,7 @@ and, once per member each time it becomes true (polled about once a second, held
 
 Without that notice a player can walk into "You must level up before you pass through the door" with no idea why the door stays shut.
 
-BestSecurity feeds the lock detail ("Security 15, best in your party: Trask with 4"). KOTOR 1 only: skill rank + Intelligence modifier read from CSWSCreatureStats (1.03 address DB), the skill's key ability in KOTOR. Item bonuses are not counted.
+BestSecurity feeds the lock detail ("Security 15, best in your party: Trask with 4"). KOTOR 1 only: skill rank + Wisdom modifier read from CSWSCreatureStats (1.03 address DB), the skill's key ability in skills.2da. Item bonuses are not counted.
 
 ## Declarations (in source order)
 
