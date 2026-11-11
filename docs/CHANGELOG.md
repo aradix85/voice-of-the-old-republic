@@ -77,6 +77,9 @@ installer, as the pre-release `bridge-latest`.
 - R while already attacking that enemy says "Already attacking X".
 - Standing idle in combat with an enemy near is announced once.
 - Door numbers stay the same after saving and loading.
+- Objects with the same name set in a row are numbered west to east.
+- The wall panels of the Sith base puzzle on Taris say their real on or off
+  state.
 - Decorative doors are left out of the , / . cycle.
 - , / . lists only what you can still reach, and no empty containers.
 - Script triggers are no longer announced as exits.
@@ -253,6 +256,14 @@ installer, as the pre-release `bridge-latest`.
 
 - Door numbers depend on position only, so they no longer change after a
   save and reload (the engine restores doors in a different order).
+- Objects with the same name that stand in a row, within half a metre north
+  to south, are numbered west to east. Along one wall the numbers came out
+  scrambled: 1, 2, 5, 4, 3 for the panels of the Sith base puzzle on Taris.
+  This can change the number of such objects anywhere in the game. Taken from
+  the original mod's work towards 0.9.2 (Aaron Page).
+- The wall panels of that puzzle say their real state. They were read the
+  wrong way round, "off" for a panel that was on, so following the speech set
+  off the execution instead of the release. Also from 0.9.2.
 - Decorative (cosmetic) doors are left out of the , / . door list.
 - In the world, , / . skip what you cannot reach (behind a locked door) and
   empty containers; an empty category is skipped.
