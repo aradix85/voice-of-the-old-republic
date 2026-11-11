@@ -708,6 +708,22 @@ prefix (menus_listbox_picker.cpp).
 - End: in-game checks (main menu without the updater, F5 does nothing; the
   untested features in brief.md), end report against the baseline, delete
   this file, short changelog note.
+  Measured at 40baba6f with the baseline's tools (analyse.py): 479 files,
+  50,725 code lines (86,907 with comments), 2,444 functions, 135 above
+  complexity 15, 273 __try blocks (230 outside engine_reads), 3 cloned
+  blocks of 10+ lines and none across files, about 105 comment lines
+  with a date, 89 unit test cases with 712 assertions. Measure again
+  after the in-game fixes.
+  Installing: the installed build is still d875083. Since then one hook
+  left hooks.toml (OnSetListenerPosition); the other 27 are unchanged in
+  address, bytes and parameters (compared field by field against the
+  installed patch_config.toml). kotor-tools/installeer.ps1 now runs
+  patch_config_sync.py, which takes a removed hook out of
+  patch_config.toml and stops when a hook is new or changed (then
+  `kdev apply`, which also drops the widescreen patch the maker's
+  installer put there). d875083 speaks through prism.dll, the new build
+  through the NVDA controller client: back up accessibility.dll,
+  prism.dll and patch_config.toml before the first install.
 
 ## Splitting a file
 
