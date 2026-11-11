@@ -102,6 +102,9 @@ installer, as the pre-release `bridge-latest`.
 - The map cursor says "Edge of the map".
 - The combat heartbeat is gone.
 - The mod and the installer are English only and assume the English game.
+- Supported games: KOTOR 1 version 1.0.3 (Steam or GOG) and KOTOR 2 from
+  Steam; the Russian and Polish editions of KOTOR 1 and the GOG release of
+  KOTOR 2 no longer are.
 - Keyboard only: the mod's gamepad support is gone.
 - View mode (B) is gone.
 - Enter on an open door walks through it.
@@ -314,6 +317,11 @@ installer, as the pre-release `bridge-latest`.
   the English game; on another language the combat lines are not shortened.
 - The installer is English only and no longer handles other game languages
   (localized TSLRCM editions, K1CP translation overlays).
+- The mod loads in one executable per game: KOTOR 1 version 1.0.3, which
+  Steam and GOG both ship, and KOTOR 2 as Steam ships it. The Russian 1.72
+  and Polish editions of KOTOR 1 and the GOG release of KOTOR 2 are separate
+  builds with every address moved; the tables and hook files that carried
+  them are gone, and the patch manager does not install there.
 
 <h3>Input:</h3>
 

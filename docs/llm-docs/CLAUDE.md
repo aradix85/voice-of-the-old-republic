@@ -64,7 +64,7 @@ carry meaning — trust them when deciding whether code is safe to remove.
 
 Recorded during the Phase-2 K2-portability pass (2026-07-29). K2 on Steam
 is an Aspyr recompile eleven years after K1, not a relocated K1 build:
-`kdev sigscan` scores 0/213 against it, and struct offsets — not
+no KOTOR 1 address is valid in it, and struct offsets — not
 addresses — dominate the port cost. See `docs/kotor2-port-feasibility.md`.
 
 **Will not port — K1 story content.** These encode specific K1 areas,
@@ -101,11 +101,13 @@ three extra script slots; CPazaakCard 8 -> 12 bytes). Full ledger in
 the `strings*` localisation tables, and the debounce/geometry/formatting
 logic generally.
 
-**The address seam.** `acc::addr::R()` (engine_rebase.h) covers **.text
-only** — .data global pointers are byte-stable across the builds it
-targets and are deliberately left raw (`kAddrAppManagerPtr`,
-`kAddrGuiManagerPtr`, `kAddrCExoSoundPtr`). R() is a *same-game*
-build-variant seam, not a cross-game one; it does nothing for K2.
+**The address seam.** Every engine address is declared once, with its value
+per game, through `acc::addr` (engine_rebase.h): `Pick(k1, k2)`, `PickGlobal`
+for a .data global, `R(k1)` and `TodoGlobal` for a KOTOR 1 address whose
+KOTOR 2 twin has not been found (0 on KOTOR 2), `Kotor1Only` and
+`Kotor2Only`. Only the Steam builds are supported, so no address is ever
+relocated. `tools/analysis/call_convention.py` and `engine_twins.py` check
+the declared pairs against both executables.
 
 **The real K2 seam is upstream.** KPatchManager ships
 `AddressDatabases/*.db` keyed by executable SHA-256, with global pointers,

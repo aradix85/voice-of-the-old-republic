@@ -1,5 +1,9 @@
 # KOTOR 2 port — feasibility check (SUPERSEDED)
 
+> **Fork note.** `kdev sigscan` was removed on 2026-11-11 together with the
+> builds it served (the fork supports the Steam builds only). This file is the
+> record of what it measured.
+
 **Status: SUPERSEDED (2026-07-31) by `docs/kotor2-port.md`,** which is the live
 plan. Read this file for the sigscan measurement and why it will not improve —
 that part still holds and is still referenced from `kdev-design.md`. Do **not**

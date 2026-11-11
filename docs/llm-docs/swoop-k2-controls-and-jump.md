@@ -347,9 +347,6 @@ Round-1 additions:
 - `hotkeys` / `menus_keybinds` / `strings`: `SwoopShift` action (rebindable,
   listed under Minigames), `SwoopRaceControlsK2` cheat sheet, both in all
   seven languages.
-- GOG K2: the two runner addresses are `Kotor2Only()` literals, so the
-  relocation table must be regenerated (`kdev sigscan --k2` + the two
-  re-scripts) whenever they change.
 
 ## 9. State at the end of 2026-09-15 (13 rounds) and how KOTOR 2 differs from KOTOR 1
 

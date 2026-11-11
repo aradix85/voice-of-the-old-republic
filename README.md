@@ -19,7 +19,7 @@ This is a fork of [Voice of the Old Republic](https://github.com/JeanStiletto/vo
 - NVDA
 - About 200 MB of free disk space
 
-Knights of the Old Republic II: the installer can set the mod up for it and the game speaks, but it has not been played through, and its minigames and tutorial messages are not covered yet. Only Aspyr's current build (Steam and GOG) is supported.
+Knights of the Old Republic II: the installer can set the mod up for it and the game speaks, but it has not been played through, and its minigames and tutorial messages are not covered yet. Only the Steam release is supported: the GOG release of Knights of the Old Republic II is a different build of the game, and the mod does not load in it.
 
 ## Installing, updating, uninstalling
 

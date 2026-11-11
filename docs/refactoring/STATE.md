@@ -423,23 +423,18 @@ prefix (menus_listbox_picker.cpp).
     nothing to compare, mostly small accessors. Two pairs read by hand
     are in engine_twins_reviewed.txt. To prove more of the 69: compare
     distinctive constants, or the callers of both.
-- Decision (Anouk, 2026-11-11): she plays on Steam; GOG support may go.
-  What that is in the code: only KOTOR 2's GOG release is its own build
-  (Kotor2Relink2021). KOTOR 1's GOG release is the same executable as
-  Steam and keeps working. Plan, one commit each, build and tests green:
-  (1) engine_rebase: K2() is the identity; kK2Table, kK2RdataTable and
-  their two .inc files go; Kotor2Relink2021 becomes a build the version
-  gate refuses with a clear log line (read engine_game and the loader
-  first). (2) kotor2-gog.hooks.toml and whatever packs or selects it in
-  kdev and the installer; the installer must not install into a GOG
-  KOTOR 2. (3) tools/re-scripts/k2_gog_*.py and the --k2 mode of kdev
-  sigscan. (4) docs, README, CONTRIBUTING; the Ok() guard and the GOG
-  sentence in tutorial_popup.cpp. (5) Anouk, 2026-11-11 00:49: other
-  languages than English may go too. That is the 2004 relink of KOTOR 1
-  (the Russian 1.72 and Polish editions: engine_rebase_table.inc,
-  engine_rebase_rdata.inc, kXrefTable, relink2004.hooks.toml, the rest
-  of kdev sigscan); after it engine_rebase is just the choice between
-  the two games.
+- Done (Anouk, 2026-11-11: Steam only, English only): one executable per
+  game. The 2004 relink of KOTOR 1 (Russian, Polish) and the GOG release
+  of KOTOR 2 are out: their tables, hook files, kdev sigscan and the
+  k2_gog re-scripts (54b3b0b7 and the two commits after it). acc::addr is
+  six inline one-liners in engine_rebase.h. Left for later: the header's
+  name no longer fits (engine_addr.h would; 48 includes, a move-only
+  commit); PickGlobal, TodoGlobal and Kotor1Only now do what Pick and R
+  do and are kept for what they say at the declaration; Ok() guards that
+  only existed for the relink can be judged per module. kdev dump-text
+  stays: it makes the KOTOR 1 image for the two engine checks.
+  Changelog: the UseObject fix and the KOTOR 2 popup text get their
+  lines once they are confirmed in game.
   Run clang_tidy.py FILE on every file a lean rewrites: it caught an
   index of -1 in the first one it was used on (room_topology_doors).
   A check for docs: every `name.cpp` / `name.h` a .md mentions should

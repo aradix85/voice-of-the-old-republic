@@ -39,7 +39,7 @@ Follow-ups to decide:
 - Check whether our bundled-mods install can clobber a pre-existing modded
   baseitems.2da (install-order conflict) — if yes, this class of crash is
   partly ours to prevent.
-- Defensive patch SHIPPED 2026-08-25 (both games + the 2004 relink, fallback
+- Defensive patch SHIPPED 2026-08-25 (both games, fallback
   row 0), live-tested in BOTH games the same day: CLI-injected
   CreateItemOnObject of a BaseItem=200 item survived, item usable in
   inventory, `BaseItemGuard` log lines present (K1: id=200/92 rows,
@@ -62,8 +62,6 @@ Follow-ups to decide:
   over K1's whole .text found exactly three sites (accessor, wrapper copy,
   loader's count*200 allocation) — coverage now complete. K2's unoptimised
   wrapper CALLs the accessor (byte-verified) — one hook suffices there.
-  Relink addresses `0x005b340b` + `0x005b4a03` via sigscan, cut bytes
-  verified against the Allard exe.
 - Test tooling (all in place): `Override\acc_test_baditem.uti` (BaseItem=200)
   + `Override\acc_givebaditem.ncs` in both games,
   `build\runscript\runscript.exe <script>` injects the engine's runscript
@@ -204,9 +202,7 @@ WAS correct. The button ctor `0x0089CDA0` stores `0x009A40FC` (the
 `CSWGuiRadioButton` base, shared by nine constructors) and then immediately
 overwrites it with `0x009A6D9C`; RTTI names the latter
 `CSWGuiPartySelectionButton` (`docs/llm-docs/re/k2/k2-vtables.csv`). The fix
-read the first store. Verified on the clean Steam reference and on GOG (base
-`0x00991EEC`, then `0x00991E44`). Constant restored, GOG rdata table
-regenerated, validator green, built; not yet tested in game. Side effect of the
+read the first store. Verified on the clean Steam reference. Constant restored and built; not yet tested in game. Side effect of the
 miss: the unrecognised top-middle portrait fell through to the sibling-label
 reader and spoke "2 Available Slots"; a recognised portrait stops the ladder
 before that step. The rest of the 2026-09-17 work (offsets, 12-slot roster,
@@ -225,7 +221,7 @@ never been ported. Fixed via one shared reader (`ReadPartyPortrait` /
 and BTN_ACCEPT dropped from the chain on K2 as on K1. K2 names come from the
 engine (GetNPCObject template-loads benched companions); the K1 fixed name table
 is untouched. Engine model: `docs/llm-docs/ingame-screens-reference.md`,
-partyselection K2 section. GOG tables regenerated, validator green.
+partyselection K2 section.
 
 What to check in the next K2 round: on the party screen, arrowing speaks
 "<name>, in party" or "<name>, available" for recruited companions only; Enter
@@ -314,24 +310,6 @@ engine's PollInput(0x11c) answer, i.e. its own held-turn-key view),
 / +0x100, written only when AcclTurnCamera applies a turn). The END line
 carries `playerTurn` too. Read the next spin's first report line: it names
 the driver.
-
-### GOG KOTOR 2 relocation port — executed and locally verified 2026-09-04, awaiting the tester round
-
-The "mod has never loaded on GOG K2" defect (silent vanilla game since v0.7.0;
-fingerprint: K2 `logs/` directory never created, diagnosed from
-`userlogs/maybe08k2modnotworking.7z`) is fixed by the full Steam→GOG address
-relocation: `kdev sigscan --k2` + the two re-scripts generate and validate the
-K2 rebase tables and `kotor2-gog.hooks.toml` (all 265 addresses resolved, every
-offline check green — Lane's per-store databases 10/10, the patcher's own hook
-byte-verify 26/26). Local GOG smoke test passed: the DLL initialises
-(`build=relink-2021-09-09`), hooks fire, the main menu's focused button is read
-and announced. Full record in `docs/kotor2-port.md` "GOG build (2021 relink)".
-
-What remains is the GOG tester's confirmation round (speech through real play,
-not just the main menu). Note for reading that tester's logs: during the local
-smoke test the game crashed at the main menu whenever another fullscreen app
-stole foreground — but VANILLA GOG K2 (proxy removed) crashed identically, so
-that is engine/environment behaviour, not the port.
 
 ### World hotkeys that still act while a screen owns the keyboard
 
