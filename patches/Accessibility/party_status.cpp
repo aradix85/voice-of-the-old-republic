@@ -35,7 +35,6 @@ struct Member {
 // a pointer to the per-skill base ranks, int_mod the Intelligence modifier.
 const size_t kStatsSkillRanksOffset = acc::off::Kotor1Only(0x168);  // byte*
 const size_t kStatsIntModOffset     = acc::off::Kotor1Only(0xf0);   // byte
-constexpr int kSkillSecurity = 6;  // skills.2da row
 
 constexpr DWORD kLevelCheckPeriodMs = 1000;
 

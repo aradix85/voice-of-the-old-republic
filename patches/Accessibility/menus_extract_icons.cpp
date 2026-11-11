@@ -6,6 +6,7 @@
 
 #include "engine_game.h"     // IsKotor2
 #include "engine_offsets_select.h"
+#include "engine_offsets_values.h"
 #include "engine_panels.h"
 #include "engine_player.h"   // PartyTableIsNPCAvailable / Selectable, ReadPartyPortrait
 #include "log.h"
@@ -14,8 +15,6 @@
 namespace acc::menus::extract {
 
 namespace {
-
-constexpr uint32_t kNoStrref = 0xFFFFFFFFu;
 
 // The in-game menu's icons, keyed by the control's own .gui id: top.gui
 // (K1) and top_p.gui (K2) give the 8 labels ids 0..7 and their buttons

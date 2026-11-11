@@ -26,8 +26,6 @@ namespace {
 // the engine's "Config 1" / "Config 2"): the engine keeps no active-set
 // state, SwitchWeaps moves the items between the slot pairs, so the first
 // pair is what the character holds.
-constexpr uint32_t kNoStrref = 0xFFFFFFFFu;
-
 struct EquipSlotName {
     uint32_t         strref;
     acc::strings::Id literalId;

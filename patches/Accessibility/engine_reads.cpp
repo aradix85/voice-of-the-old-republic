@@ -120,7 +120,7 @@ bool TryReadFloat(void* base, size_t offset, float* out) {
 // that unwinds through a hook trampoline disables the hook, so the call is
 // guarded and implausible strrefs are rejected before it.
 bool LookupTlk(uint32_t strref, char* outBuf, size_t bufSize) {
-    if (strref == 0 || strref == 0xFFFFFFFF) return false;
+    if (strref == 0 || strref == kNoStrref) return false;
     if (strref > 0x100000) return false;  // KOTOR's TLK is well below this
 
     void* tlk = *reinterpret_cast<void**>(kAddrTlkTablePtr);

@@ -48,6 +48,13 @@ constexpr uint32_t kCloseButtonStrRef = 1582;
 // from CGameObjectArray's removed-handle sentinel (0xFFFFFFFF).
 constexpr uint32_t kInvalidObjectId = 0x7F000000u;
 
+// A TLK strref that names no string.
+constexpr uint32_t kNoStrref = 0xFFFFFFFFu;
+
+// Row of Security in skills.2da, the same in both games. The door code
+// passes it to GetCanUseSkill as the literal 6.
+constexpr int kSkillSecurity = 6;
+
 // Inferred action_type byte mapping. The engine's AddX adders on
 // CSWSCombatRound are declared in this order; matches typical enum-by-
 // declaration patterns. Validate via DumpBytes on each AddX path.

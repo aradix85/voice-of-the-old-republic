@@ -15,8 +15,6 @@ namespace acc::menus::monitors {
 
 namespace {
 
-constexpr uint32_t kNoStrref = 0xFFFFFFFFu;
-
 // The quest-items modal's LBL_TITLE.
 constexpr size_t kQuestItemsTitleLabelOffset = 0x768;
 

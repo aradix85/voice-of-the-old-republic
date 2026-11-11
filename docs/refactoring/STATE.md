@@ -353,8 +353,8 @@ prefix (menus_listbox_picker.cpp).
   the clock position on Q / E, "leads West" on a door, the route on
   Ctrl+-, "way blocked" with its direction, a region label that names a
   direction.
-  Still to do from engine_constants.py --all: kNoStrref (3 files),
-  kSkillSecurity (2), kExitDebounceTicks (swoop, turret).
+  kNoStrref (3 files) and kSkillSecurity (2) are in
+  engine_offsets_values.h once.
 - Goal (Anouk, 2026-11-10): split every file above 600 lines where that is
   possible; for files above 500 lines, judge whether a split into modules of
   things that belong together makes sense, and do it where it does.
@@ -476,10 +476,8 @@ prefix (menus_listbox_picker.cpp).
   tools/analysis/engine_constants.py checks it (exit 1 on a constant
   defined twice): run it with the other checks after every commit. Its
   --all mode lists plain constants that share a name across files, for
-  review; what it shows that is a real duplicate: kRadToDeg (3 files) and
-  kDegToRad (2), kSectorSize and kHalfSector (camera_announce repeats
-  engine_compass: F12), kNoStrref (3), kSkillSecurity (2),
-  kExitDebounceTicks (swoop, turret).
+  review; the one real duplicate it still shows is kExitDebounceTicks
+  (swoop and turret: F9).
   In-game check: the tutorial popups in the Endar Spire (the game pauses
   while one is up and resumes after), a swoop race and the turret game.
   minigame_aim.h holds more than aim now (the object array, the area's
@@ -496,7 +494,8 @@ prefix (menus_listbox_picker.cpp).
   the two files is the one-line call into it, AnnounceValueChange differs
   in substance (the attribute screen tracks modifier and cost), and
   AnnounceChainStepSuffix is one name for four different suffixes.
-- F9 minigames: HandleEnter/HandleExit/AnnounceEntry.
+- F9 minigames: HandleEnter/HandleExit/AnnounceEntry, and the exit
+  debounce both have (kExitDebounceTicks, "mirrors minigame_swoop_race").
 - Bridge: a party/equipment/inventory path; check what K2 needs (all
   but /health, /spoken, /state, /menu, say and key are KOTOR 1 only);
   live check of /objects with creatures and kotor.py kaart --personen

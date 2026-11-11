@@ -28,10 +28,6 @@ const uintptr_t kAddrGetCanUseSkill = acc::addr::Pick(0x006477E0, 0x00845730);
 // Security row (id 0x3f3) — K1's shape with the gate moved 0x2D8 -> 0x328.
 const size_t kServerDoorSecurityGateOffset = acc::off::Pick(0x2D8, 0x328);
 
-// Skill index for "Security" — door decomp passes literal `6` to
-// GetCanUseSkill. Re-stated as a constant for log readability.
-constexpr int kSkillSecurity = 6;
-
 // CSWCDoor field offsets (swkotor.exe.h:6192 STRUCTURE NAME="CSWCDoor"):
 //   +0x104  cannot_bash       (int) — gates Bash row
 //   +0x108  can_use_actions   (int) — gates BOTH Bash and Security rows
