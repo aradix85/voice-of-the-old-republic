@@ -1,4 +1,4 @@
-# menus_extract_speculative.cpp (78 lines)
+# menus_extract_speculative.cpp (80 lines)
 
 Source: `patches/Accessibility/menus_extract_speculative.cpp`
 
@@ -6,5 +6,5 @@ The speculative text read for controls whose class overrides AsLabel/AsButton, s
 
 ## Declarations (in source order)
 
-- L32 `bool ReadAt(void* control, size_t textOff, size_t strrefOff, size_t textObjOff, char* text, size_t size)`: Inline CExoString, then strref, then the text_object's own text or strref (labelhilights route their rendered text through it).
-- L43 `const char* TrySpeculativeVtableRead(void* control, char* outBuf, size_t bufSize)`
+- L34 `bool ReadAt(void* control, size_t textOff, size_t strrefOff, size_t textObjOff, char* text, size_t size)`: Inline CExoString, then strref, then the text_object's own text or strref (labelhilights route their rendered text through it).
+- L45 `const char* TrySpeculativeVtableRead(void* control, char* outBuf, size_t bufSize)`

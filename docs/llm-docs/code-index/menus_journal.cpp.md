@@ -1,4 +1,4 @@
-# menus_journal.cpp (248 lines)
+# menus_journal.cpp (246 lines)
 
 Source: `patches/Accessibility/menus_journal.cpp`
 
@@ -17,4 +17,4 @@ For screen-reader users we repurpose Enter on a journal row: it refreshes item_d
 - L149 `bool IsSortButton(void* panel, void* control)`
 - L161 `bool IsSwapButton(void* panel, void* control)`
 - L165 `void LogEntryCounts(void* panel)`
-- L224 `void ForceRepopulate(void* panel)`
+- L222 `void ForceRepopulate(void* panel)`

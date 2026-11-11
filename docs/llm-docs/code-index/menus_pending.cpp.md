@@ -1,4 +1,4 @@
-# menus_pending.cpp (336 lines)
+# menus_pending.cpp (335 lines)
 
 Source: `patches/Accessibility/menus_pending.cpp`
 
@@ -19,22 +19,22 @@ The deferred menu-side operation queue (see menus_pending.h for why the ops are 
 - L132 `void DrainCraftRowCommit(const PendingOp& op)`: K2 workbench / crafting list-row commit — select the row, then fire the panel's own commit button.
 - L140 `void DrainGalaxyInput(const PendingOp& op)`: Galaxy-map planet cycle / accept / cancel.
 - L150 `void DrainWagerInput(const PendingOp& op)`: Pazaak wager less/more step — the popup's BTN_LESS / BTN_MORE speed buttons only respond to their push callback, which re-dispatches to the panel's HandleInputEvent (0x2f decrement / 0x30 increment).
-- L160 `bool EngineOpsReady(Kind kind)`: Are the engine addresses this op needs resolved for the running build?
-- L212 `uint32_t RaiseIsActiveIfZero(void* control)`: Raise a control's is_active flag from 0 to 1 and return what it was.
-- L220 `bool QueueMoveCursor(int x, int y, void* target)`
-- L224 `bool QueueClickAt(int x, int y, void* target)`
-- L228 `bool QueueActivate(void* target)`
-- L232 `bool QueueEquipSelect(void* panel, void* slot)`
-- L236 `bool QueueEquipCommit(void* panel, void* row, void* btn)`
-- L240 `bool QueueEquipPickerCancel(void* panel)`
-- L244 `bool QueueWorkbenchSlotSelect(void* panel, void* slot)`
-- L248 `bool QueueWorkbenchUpgradeCommit(void* panel, void* row, void* btnAssemble)`
-- L252 `bool QueueWorkbenchUpgradeInstallK2(void* panel, void* row)`
-- L256 `bool QueueWorkbenchPickerCancel(void* panel)`
-- L260 `bool QueueSliderInput(void* target, int code)`
-- L264 `bool QueueStoreItemActivate(void* panel, void* row)`
-- L268 `bool QueueCraftRowCommit(void* panel, void* listBox, void* row)`
-- L272 `bool QueueGalaxyInput(void* panel, int engineCode, bool announcePlanet)`
-- L278 `bool QueueWagerInput(void* panel, int code)`
-- L282 `bool IsPending()`
-- L286 `void Drain(void* gm)`
+- L159 `bool EngineOpsReady(Kind kind)`: Are the engine addresses this op needs resolved for the running build?
+- L211 `uint32_t RaiseIsActiveIfZero(void* control)`: Raise a control's is_active flag from 0 to 1 and return what it was.
+- L219 `bool QueueMoveCursor(int x, int y, void* target)`
+- L223 `bool QueueClickAt(int x, int y, void* target)`
+- L227 `bool QueueActivate(void* target)`
+- L231 `bool QueueEquipSelect(void* panel, void* slot)`
+- L235 `bool QueueEquipCommit(void* panel, void* row, void* btn)`
+- L239 `bool QueueEquipPickerCancel(void* panel)`
+- L243 `bool QueueWorkbenchSlotSelect(void* panel, void* slot)`
+- L247 `bool QueueWorkbenchUpgradeCommit(void* panel, void* row, void* btnAssemble)`
+- L251 `bool QueueWorkbenchUpgradeInstallK2(void* panel, void* row)`
+- L255 `bool QueueWorkbenchPickerCancel(void* panel)`
+- L259 `bool QueueSliderInput(void* target, int code)`
+- L263 `bool QueueStoreItemActivate(void* panel, void* row)`
+- L267 `bool QueueCraftRowCommit(void* panel, void* listBox, void* row)`
+- L271 `bool QueueGalaxyInput(void* panel, int engineCode, bool announcePlanet)`
+- L277 `bool QueueWagerInput(void* panel, int code)`
+- L281 `bool IsPending()`
+- L285 `void Drain(void* gm)`

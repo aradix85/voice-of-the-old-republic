@@ -1,4 +1,4 @@
-# engine_app.h (128 lines)
+# engine_app.h (126 lines)
 
 Source: `patches/Accessibility/engine_app.h`
 
@@ -18,12 +18,12 @@ K2 port note: the three constants and the functions below are the entire seam. O
 
 ## Declarations (in source order)
 
-- L100 `void* GetAppManager()`: *kAddrAppManagerPtr.
-- L104 `void* GetClientApp()`: CClientExoApp facade (AppManager +0x4).
-- L108 `void* GetClientAppInternal()`: CClientExoAppInternal (facade +0x4) — the real client state: player_control @+0x2a0, CGuiInGame, the options block, input_class @+0x9c.
-- L112 `void* GetClientModule()`: CSWCModule (client internal +0x18) — the client's view of the loaded module.
-- L116 `void* GetCamera()`: The active camera (CSWCModule +0x40).
-- L120 `void* GetServerApp()`: CServerExoApp facade (AppManager +0x8).
-- L125 `void* GetServerAppInternal()`: CServerExoAppInternal (facade +0x4).
+- L98 `void* GetAppManager()`: *kAddrAppManagerPtr.
+- L102 `void* GetClientApp()`: CClientExoApp facade (AppManager +0x4).
+- L106 `void* GetClientAppInternal()`: CClientExoAppInternal (facade +0x4) — the real client state: player_control @+0x2a0, CGuiInGame, the options block, input_class @+0x9c.
+- L110 `void* GetClientModule()`: CSWCModule (client internal +0x18) — the client's view of the loaded module.
+- L114 `void* GetCamera()`: The active camera (CSWCModule +0x40).
+- L118 `void* GetServerApp()`: CServerExoApp facade (AppManager +0x8).
+- L123 `void* GetServerAppInternal()`: CServerExoAppInternal (facade +0x4).
 
 Also 8 constants or variables at namespace scope.

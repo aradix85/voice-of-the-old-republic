@@ -1,4 +1,4 @@
-# engine_offsets_addresses.h (1046 lines)
+# engine_offsets_addresses.h (1037 lines)
 
 Source: `patches/Accessibility/engine_offsets_addresses.h`
 
@@ -30,7 +30,7 @@ A .data pointer must never be left bare `constexpr`: that hands out the KOTOR 1 
 - L550 `typedef void (__thiscall* PFN_CSWGuiUpgradeOnAssemble) (void* panel, void* btn_assemble)`
 - L567 `typedef void (__thiscall* PFN_CSWGuiUpgradeOnControlEntered)(void* panel, void* item_entry)`: CSWGuiUpgrade::OnControlEntered @0x006c5370 — __thiscall(panel, item_entry).
 - L602 `typedef void (__thiscall* PFN_CSWGuiUpgradeShowItems)(void* panel, int visible)`: CSWGuiUpgrade::ShowItems @0x006c2f80 — __thiscall(int visible).
-- L948 `typedef void (__thiscall* PFN_AddItemProperty)(void* item, CExoString* accum)`: Per-category property-block builders that GetPropertyDescription calls in fixed order (decompile-verified at 0055f340).
-- L985 `typedef CExoString* (__thiscall* PFN_CExoStringCtor)(CExoString* this_)`: CExoString default constructor — __thiscall(CExoString* this).
+- L945 `typedef void (__thiscall* PFN_AddItemProperty)(void* item, CExoString* accum)`: Per-category property-block builders that GetPropertyDescription calls in fixed order (decompile-verified at 0055f340).
+- L982 `typedef CExoString* (__thiscall* PFN_CExoStringCtor)(CExoString* this_)`: CExoString default constructor — __thiscall(CExoString* this).
 
 Also 112 constants or variables at namespace scope.
