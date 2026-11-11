@@ -1,4 +1,4 @@
-# exit_memory_regions.cpp (194 lines)
+# exit_memory_regions.cpp (193 lines)
 
 Source: `patches/Accessibility/exit_memory_regions.cpp`
 

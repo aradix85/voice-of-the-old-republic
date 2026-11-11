@@ -1,4 +1,4 @@
-# combat_query.cpp (266 lines)
+# combat_query.cpp (265 lines)
 
 Source: `patches/Accessibility/combat_query.cpp`
 
@@ -14,4 +14,4 @@ Combat readouts: the brief added to a creature's name when it becomes the target
 - L137 `void AppendLoadout(acc::strfmt::FixedText& b, void* serverCreature, Loadout& out)`: What both readouts end with: the active effects, then what each hand holds.
 - L154 `void SpeakSelfStatus()`: The leader's hit points, Force points for a Force user, effects and weapons.
 - L202 `bool BuildTargetCombatBrief(void* targetServerObject, const char* targetName, char* outBuf, size_t outBufSize)`
-- L242 `void PollWin32SelfStatusHotkey()`
+- L241 `void PollWin32SelfStatusHotkey()`

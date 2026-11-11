@@ -77,7 +77,7 @@ void AnnounceSelectedTarget(int idx, const int occSlot[], const float occDist[],
     g_state.selected_behind    = false;  // re-evaluate the behind-gate cleanly
     const int number = NumberForSlot(occSlot[idx]);
 
-    const int meters = static_cast<int>(occDist[idx] + 0.5f);
+    const int meters = WholeMetres(occDist[idx]);
     if (speak) {
         char buf[128];
         const char* noun = g_state.area_noun[occSlot[idx]];

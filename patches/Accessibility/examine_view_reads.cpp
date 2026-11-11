@@ -147,8 +147,7 @@ int Read2DDistanceMeters(void* obj) {
     if (!acc::engine::GetObjectPosition(obj, tgt)) return -1;
     Vector pc{};
     if (!acc::engine::GetPlayerPosition(pc)) return -1;
-    const float d = static_cast<float>(std::sqrt(static_cast<double>(DistXYSq(tgt, pc))));
-    return static_cast<int>(d + 0.5f);
+    return WholeMetres(DistXY(tgt, pc));
 }
 
 uint32_t ReadLastTargetHandle() {

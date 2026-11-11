@@ -173,8 +173,7 @@ std::string Located(const std::string& subject, const Vector& pos) {
     if (!acc::engine::GetPlayerPosition(player)) return subject;
     const float dx = pos.x - player.x;
     const float dy = pos.y - player.y;
-    int metres = static_cast<int>(std::sqrt(dx * dx + dy * dy) + 0.5f);
-    if (metres < 1) metres = 1;
+    const int metres = WholeMetresAtLeastOne(std::sqrt(dx * dx + dy * dy));
     float yaw = 0.0f;
     char buf[640];
     if (acc::engine::GetPlayerYawDegrees(yaw)) {

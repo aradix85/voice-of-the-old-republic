@@ -1,4 +1,4 @@
-# guidance_approach_rescue.cpp (440 lines)
+# guidance_approach_rescue.cpp (439 lines)
 
 Source: `patches/Accessibility/guidance_approach_rescue.cpp`
 

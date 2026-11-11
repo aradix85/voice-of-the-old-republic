@@ -135,8 +135,7 @@ std::string WithClock(const char* label, const Vector& target) {
         int clock = acc::engine::ClockPosition(yaw, target.x - p.x,
                                                target.y - p.y);
         float dx = target.x - p.x, dy = target.y - p.y;
-        int m = static_cast<int>(std::sqrt(dx * dx + dy * dy) + 0.5f);
-        if (m < 1) m = 1;
+        const int m = WholeMetresAtLeastOne(std::sqrt(dx * dx + dy * dy));
         const char* fmt =
             acc::strings::Get(acc::strings::Id::FmtAnnounceWithClock);
         if (fmt && fmt[0]) return acc::strfmt::Format(fmt, label, clock, m);

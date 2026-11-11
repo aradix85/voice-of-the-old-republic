@@ -81,8 +81,7 @@ bool RuleMineDetect(const char* text) {
     if (acc::viewpoint::Get(p, yaw)) {
         int clock = acc::engine::ClockPosition(yaw, minePos.x - p.x,
                                                minePos.y - p.y);
-        int m = static_cast<int>(DistXY(p, minePos) + 0.5f);
-        if (m < 1) m = 1;
+        const int m = WholeMetresAtLeastOne(DistXY(p, minePos));
         const char* fmt =
             acc::strings::Get(acc::strings::Id::FmtAnnounceWithClock);
         if (fmt && fmt[0]) line = acc::strfmt::Format(fmt, prefix, clock, m);

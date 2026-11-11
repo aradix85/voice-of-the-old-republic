@@ -122,9 +122,9 @@ std::string AxisPhrase(const Vector& playerPos, const Plate& p) {
     std::string out;
     auto add = [&out](float d, Id plus, Id minus) {
         if (d == 0.0f) return;
-        int m = static_cast<int>(std::fabs(d) + 0.5f);
         if (!out.empty()) out += ", ";
-        out += acc::strfmt::Format(Get(Id::FmtRouteSegment), m < 1 ? 1 : m,
+        out += acc::strfmt::Format(Get(Id::FmtRouteSegment),
+                                   WholeMetresAtLeastOne(std::fabs(d)),
                                    Get(d > 0 ? plus : minus));
     };
     add(off.north, Id::DirNorth, Id::DirSouth);

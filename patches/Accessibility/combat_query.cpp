@@ -225,8 +225,7 @@ bool BuildTargetCombatBrief(void* targetServerObject, const char* targetName,
     // target reticle.
     const float distM = PlayerDistanceMeters(targetServerObject);
     if (distM >= 0.0f) {
-        b.Append(acc::strings::Get(S::FmtBriefDistanceMeters),
-                    static_cast<int>(distM + 0.5f));
+        b.Append(acc::strings::Get(S::FmtBriefDistanceMeters), WholeMetres(distM));
     }
 
     Loadout loadout;

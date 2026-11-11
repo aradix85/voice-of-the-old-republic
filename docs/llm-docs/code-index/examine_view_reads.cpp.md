@@ -1,4 +1,4 @@
-# examine_view_reads.cpp (192 lines)
+# examine_view_reads.cpp (191 lines)
 
 Source: `patches/Accessibility/examine_view_reads.cpp`
 
@@ -20,8 +20,8 @@ Reading a creature for the examine panel: hit points, level, faction, flags, and
 - L113 `int ReadFactionId(void* serverCreature)`
 - L120 `acc::strings::Id FactionWordIdFor(int factionId)`
 - L144 `int Read2DDistanceMeters(void* obj)`
-- L154 `uint32_t ReadLastTargetHandle()`
-- L164 `bool IsCreatureDead(void* serverCreature)`
-- L171 `bool IsHostileCreature(void* serverObject)`: The faction table of the examine panel's Faction row, so "hostile" means the same everywhere.
-- L177 `bool ResolveSpellName(int spellId, char* outBuf, size_t outBufSize)`
-- L184 `bool ResolveFeatName(unsigned short featIdx, char* outBuf, size_t outBufSize)`
+- L153 `uint32_t ReadLastTargetHandle()`
+- L163 `bool IsCreatureDead(void* serverCreature)`
+- L170 `bool IsHostileCreature(void* serverObject)`: The faction table of the examine panel's Faction row, so "hostile" means the same everywhere.
+- L176 `bool ResolveSpellName(int spellId, char* outBuf, size_t outBufSize)`
+- L183 `bool ResolveFeatName(unsigned short featIdx, char* outBuf, size_t outBufSize)`

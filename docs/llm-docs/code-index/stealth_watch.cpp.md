@@ -1,4 +1,4 @@
-# stealth_watch.cpp (149 lines)
+# stealth_watch.cpp (148 lines)
 
 Source: `patches/Accessibility/stealth_watch.cpp`
 
@@ -13,4 +13,4 @@ Silent in all normal play — the module is inert unless the leader is actually 
 - L45 `bool ReadLeaderStealth(void* leader)`
 - L55 `void ResetBaseline()`
 - L68 `int Distance2DMeters(void* target)`: Rounded 2-D (floor-plane) distance in metres between the leader and target, matching the examine panel's distance readout.
-- L79 `void Tick()`
+- L78 `void Tick()`

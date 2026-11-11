@@ -18,6 +18,21 @@ TEST_CASE("Distances on the floor plan ignore height") {
     CHECK(DistXY(b, a) == DistXY(a, b));
 }
 
+TEST_CASE("A spoken distance is the nearest whole metre") {
+    CHECK(WholeMetres(0.0f) == 0);
+    CHECK(WholeMetres(0.49f) == 0);
+    CHECK(WholeMetres(0.5f) == 1);
+    CHECK(WholeMetres(12.4f) == 12);
+    CHECK(WholeMetres(12.6f) == 13);
+}
+
+TEST_CASE("Something elsewhere is never 0 metres away") {
+    CHECK(WholeMetresAtLeastOne(0.0f) == 1);
+    CHECK(WholeMetresAtLeastOne(0.2f) == 1);
+    CHECK(WholeMetresAtLeastOne(1.4f) == 1);
+    CHECK(WholeMetresAtLeastOne(7.5f) == 8);
+}
+
 TEST_CASE("Engine yaw becomes compass degrees") {
     CHECK(EngineYawToCompass(0.0f) == Approx(90.0f));    // engine 0 = east
     CHECK(EngineYawToCompass(90.0f) == Approx(0.0f));    // north

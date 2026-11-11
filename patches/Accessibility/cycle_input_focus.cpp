@@ -158,7 +158,7 @@ void OnAnnounceFocus() {
     if (havePos) {
         float dx = a.pos.x - viewPos.x;
         float dy = a.pos.y - viewPos.y;
-        metres = static_cast<int>(std::sqrt(dx * dx + dy * dy) + 0.5f);
+        metres = WholeMetres(std::sqrt(dx * dx + dy * dy));
         if (haveYaw) clock = ClockPosition(yaw, dx, dy);
     }
 

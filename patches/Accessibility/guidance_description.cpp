@@ -82,8 +82,7 @@ private:
 // Format one segment as "{rounded metres} metres {DirectionWord}". The
 // outBuf must have room; returns bytes written excluding NUL.
 int FormatSegment(const Segment& seg, char* outBuf, size_t outBufSize) {
-    int metres = static_cast<int>(seg.dist + 0.5f);
-    if (metres < 1) metres = 1;
+    const int metres = WholeMetresAtLeastOne(seg.dist);
     const char* dir = acc::strings::Get(acc::engine::SectorString(seg.sector));
     int n = std::snprintf(outBuf, outBufSize,
                           acc::strings::Get(
@@ -96,9 +95,7 @@ int FormatSegment(const Segment& seg, char* outBuf, size_t outBufSize) {
 int TotalMetres(const std::vector<Segment>& segs, float pending) {
     float sum = pending;
     for (const auto& s : segs) sum += s.dist;
-    int m = static_cast<int>(sum + 0.5f);
-    if (m < 1) m = 1;
-    return m;
+    return WholeMetresAtLeastOne(sum);
 }
 
 }  // namespace

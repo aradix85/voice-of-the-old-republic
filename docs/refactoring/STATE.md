@@ -470,9 +470,16 @@ prefix (menus_listbox_picker.cpp).
   exist in patches/Accessibility (history sections excepted).
   cppcheck is not in CI: the packages a runner can install are old
   versions and would not give our results.
-- F15 GetTickCount is called directly 105 times beside acc::tick::NowMs:
-  one clock.
-- F16 metres are rounded with `(int)(x + 0.5f)` in 19 places: one helper.
+- F15 judged, no change: GetTickCount and acc::tick::NowMs are two clocks
+  on purpose. NowMs is the timestamp of the tick being dispatched, valid
+  only inside the fan-out and stale in an input hook; GetTickCount is the
+  live clock, and its `now - then` idiom is safe across the wrap that
+  C28159 warns about. Replacing one by the other blindly would give
+  stale times.
+- F16 done: WholeMetres and WholeMetresAtLeastOne (engine_offsets_types.h,
+  unit tests in test_geometry) for the 14 places that round a spoken
+  distance. The other `+ 0.5f` roundings are degrees, a clock hour, a
+  sample rate and a volume.
 - F17 407 raw __try blocks remain outside engine_reads (the analyzer's
   count of constant exception filters); each lean moves its module's.
 - Max HP of companions: party_status and bridge_state read it with

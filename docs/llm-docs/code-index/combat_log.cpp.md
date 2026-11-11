@@ -1,4 +1,4 @@
-# combat_log.cpp (135 lines)
+# combat_log.cpp (134 lines)
 
 Source: `patches/Accessibility/combat_log.cpp`
 
@@ -10,6 +10,6 @@ Parsing is anchor-based against the engine strings in combat_strings.*; the anch
 
 - L32 `bool RuleKill(const char* text)`: " killed : N XP" — a defeat.
 - L49 `bool RuleMineDetect(const char* text)`: Mine-detection feedback enrichment.
-- L99 `bool MsgStartsWith(const char* s, const char* p)`
-- L104 `void CopyRange(char* dst, size_t cap, const char* start, const char* end)`
-- L113 `void RegisterCombatMsgRules()`
+- L98 `bool MsgStartsWith(const char* s, const char* p)`
+- L103 `void CopyRange(char* dst, size_t cap, const char* start, const char* end)`
+- L112 `void RegisterCombatMsgRules()`

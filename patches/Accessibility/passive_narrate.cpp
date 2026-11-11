@@ -189,8 +189,7 @@ bool NarrateHandle(uint32_t handle, const char* reason, bool explicitRequest) {
         acc::engine::GetPlayerPosition(playerPos)) {
         const float dx = pos.x - playerPos.x;
         const float dy = pos.y - playerPos.y;
-        int metres = static_cast<int>(std::sqrt(dx * dx + dy * dy) + 0.5f);
-        if (metres < 1) metres = 1;
+        const int metres = WholeMetresAtLeastOne(std::sqrt(dx * dx + dy * dy));
         const bool haveYaw = acc::engine::GetPlayerYawDegrees(yaw);
         const char* fmt = acc::strings::Get(haveYaw
             ? acc::strings::Id::FmtAnnounceWithClock

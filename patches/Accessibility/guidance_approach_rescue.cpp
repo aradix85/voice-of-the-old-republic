@@ -412,8 +412,7 @@ void SpeakWayBlocked(const char* name, const Vector& targetPos) {
         if (acc::engine::GetPlayerPosition(playerPos)) {
             float dx = targetPos.x - playerPos.x;
             float dy = targetPos.y - playerPos.y;
-            int metres = static_cast<int>(std::sqrt(dx * dx + dy * dy) + 0.5f);
-            if (metres < 1) metres = 1;
+            const int metres = WholeMetresAtLeastOne(std::sqrt(dx * dx + dy * dy));
 
             // Absolute 8-point compass of the player→target vector — same frame
             // the route readout and passive cue use (+X=East, +Y=North).

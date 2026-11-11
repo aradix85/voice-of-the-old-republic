@@ -70,8 +70,7 @@ int Distance2DMeters(void* target) {
     if (!acc::engine::GetObjectPosition(target, t)) return -1;
     Vector p{};
     if (!acc::engine::GetPlayerPosition(p)) return -1;
-    float d = DistXY(t, p);
-    return static_cast<int>(d + 0.5f);
+    return WholeMetres(DistXY(t, p));
 }
 
 }  // namespace

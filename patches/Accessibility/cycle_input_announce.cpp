@@ -233,7 +233,7 @@ void AnnounceCurrent(const acc::cycle::CategoryListing& listing,
         clock = ClockPosition(yaw, objPos.x - viewPos.x,
                               objPos.y - viewPos.y);
     }
-    int metres = static_cast<int>(listing.distances[s.focusedIndex] + 0.5f);
+    int metres = WholeMetres(listing.distances[s.focusedIndex]);
 
     char itemMsg[576];
     const int itemLen =
