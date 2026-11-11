@@ -51,6 +51,33 @@ float WallEdgeOffsetU() {
     return acc::game::IsKotor2() ? kWallEdgeOffsetK2U : kWallEdgeOffsetU;
 }
 
+// How hard the magnet pulls this tick, and on which error.
+struct Pull {
+    float gain;
+    float err;
+};
+
+// The pull at closeness `s` (0 at the engage edge, 1 on the line).
+Pull MagnetPull(const PadTick& t, float s, const acc::minigame::MagnetParams& mp) {
+    // Hold through the crossing: in the last kSwoopMagnetHoldSec before the
+    // gate the pull ramps to fully sticky, so drift toward the next gate cannot
+    // peel the bike off this one before it scores. Time-based, so it is the same
+    // in every gear.
+    if (t.fwdGap > 0.0f && t.bikeSpeed > 1.0f) {
+        const float ttc = t.fwdGap / t.bikeSpeed;                  // seconds to crossing
+        if (ttc < kSwoopMagnetHoldSec) {
+            const float hold = 1.0f - ttc / kSwoopMagnetHoldSec;  // 0 far -> 1 at crossing
+            s += (1.0f - s) * hold;
+        }
+    }
+    // Velocity brake: aim at where the bike will coast to, so closing fast
+    // eases or counter-pulls before arrival and bleeds the overshoot.
+    // smoothed_vel is bike-X velocity (+ right) and the error is target minus
+    // bike (+ target right), so the lead damps inward motion on either side.
+    return {acc::minigame::MagnetGain(s, mp),
+            t.guideErr - kSwoopMagnetBrakeTicks * g_state.smoothed_vel};
+}
+
 }  // namespace
 
 // Lateral steering magnetism. Cues that only inform plateaued at a third of
@@ -76,24 +103,8 @@ void ApplyMagnet(PadTick& t) {
         kSwoopMagnetGainFar, kSwoopMagnetGainNear, kSwoopMagnetMaxStepU};
     float s = pilot ? 1.0f : 1.0f - std::fabs(t.guideErr) / MagnetEngageU();
     if (s < 0.0f) s = 0.0f;
-    // Hold through the crossing: in the last kSwoopMagnetHoldSec before the
-    // gate the pull ramps to fully sticky, so drift toward the next gate cannot
-    // peel the bike off this one before it scores. Time-based, so it is the same
-    // in every gear.
-    if (t.fwdGap > 0.0f && t.bikeSpeed > 1.0f) {
-        const float ttc = t.fwdGap / t.bikeSpeed;                  // seconds to crossing
-        if (ttc < kSwoopMagnetHoldSec) {
-            const float hold = 1.0f - ttc / kSwoopMagnetHoldSec;  // 0 far -> 1 at crossing
-            s += (1.0f - s) * hold;
-        }
-    }
-    const float gain = acc::minigame::MagnetGain(s, mp);
-    // Velocity brake: aim at where the bike will coast to, so closing fast
-    // eases or counter-pulls before arrival and bleeds the overshoot.
-    // smoothed_vel is bike-X velocity (+ right) and the error is target minus
-    // bike (+ target right), so the lead damps inward motion on either side.
-    const float brakedErr = t.guideErr - kSwoopMagnetBrakeTicks * g_state.smoothed_vel;
-    const float newOffX = acc::minigame::MagnetStep(t.tunnel.x, -brakedErr, gain, mp);
+    const Pull pull = MagnetPull(t, s, mp);
+    const float newOffX = acc::minigame::MagnetStep(t.tunnel.x, -pull.err, pull.gain, mp);
     Vector newOff = t.tunnel;
     newOff.x = newOffX;
     acc::minigame::WriteOffsetVector(t.player, newOff);
@@ -104,8 +115,8 @@ void ApplyMagnet(PadTick& t) {
                       "magnet%s slot=%d padErr=%.2f vel=%.2f brakedErr=%.2f "
                       "gain=%.2f offX %.2f->%.2f bikeX=%.2f padX=%.2f fwdGap=%.1f",
                       pilot ? " (pilot)" : "", t.aheadSlot, t.padErr,
-                      g_state.smoothed_vel, brakedErr,
-                      gain, t.tunnel.x, newOffX,
+                      g_state.smoothed_vel, pull.err,
+                      pull.gain, t.tunnel.x, newOffX,
                       t.bikePos.x, t.aheadPos.x, t.fwdGap);
     }
 }
