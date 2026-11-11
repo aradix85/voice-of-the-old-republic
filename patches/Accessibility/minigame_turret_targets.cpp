@@ -27,8 +27,12 @@ void DrainLeadProbes(int slot, const Vector& fighterWorldNow, ULONGLONG now) {
         State::LeadProbe& p = g_state.lead_probes[i];
         if (p.dueMs == 0 || now < p.dueMs) continue;
         if (p.slot == slot) {
-            const float lx = p.lin.x - fighterWorldNow.x, ly = p.lin.y - fighterWorldNow.y, lz = p.lin.z - fighterWorldNow.z;
-            const float cx = p.curve.x - fighterWorldNow.x, cy = p.curve.y - fighterWorldNow.y, cz = p.curve.z - fighterWorldNow.z;
+            const float lx = p.lin.x - fighterWorldNow.x,
+                        ly = p.lin.y - fighterWorldNow.y,
+                        lz = p.lin.z - fighterWorldNow.z;
+            const float cx = p.curve.x - fighterWorldNow.x,
+                        cy = p.curve.y - fighterWorldNow.y,
+                        cz = p.curve.z - fighterWorldNow.z;
             const float el = std::sqrt(lx * lx + ly * ly + lz * lz);
             const float ec = std::sqrt(cx * cx + cy * cy + cz * cz);
             acclog::Write("LeadCheck", "slot=%d linErr=%.1f curveErr=%.1f gain=%.1f",
@@ -140,7 +144,8 @@ void HandleTargetCycle(const int occSlot[], const float occDist[],
     g_state.last_manual_cycle_ms = GetTickCount64();
 
     if (occCount <= 0) {
-        acc::speech::Speak(acc::strings::Get(acc::strings::Id::TurretNoTargets), /*interrupt=*/true);
+        acc::speech::Speak(acc::strings::Get(acc::strings::Id::TurretNoTargets),
+                           /*interrupt=*/true);
         g_state.selected_slot = -1;
         acclog::Write("Turret", "cycle: no targets");
         return;

@@ -74,8 +74,8 @@ bool ResolveLock(int& idx, const int occSlot[], const float occDist[],
             // retarget with Q/E. (Re-picking here jolted the lock, and a
             // transient read miss could trip it spuriously; re-pick now
             // happens only on round start and on a kill.)
-            if (g_state.peg_cue.IsActive()) {
-                g_state.peg_cue.Stop();
+            if (g_pegCue.IsActive()) {
+                g_pegCue.Stop();
                 acclog::Write("Turret",
                               "peg off (out of view) — holding lock slot=%d",
                               g_state.selected_slot);
@@ -90,8 +90,8 @@ bool ResolveLock(int& idx, const int occSlot[], const float occDist[],
         // down-detector in TickFighterCues already announced "Fighter N
         // destroyed", so here we only transition the lock — stop the cue
         // and auto-advance to the nearest remaining fighter (silently).
-        if (g_state.peg_cue.IsActive()) {
-            g_state.peg_cue.Stop();
+        if (g_pegCue.IsActive()) {
+            g_pegCue.Stop();
             acclog::Write("Turret", "peg off (selected destroyed) slot=%d",
                           g_state.selected_slot);
         }
@@ -237,9 +237,9 @@ float DrivePegSound(bool onTargetCue, float angle, float onTargetAngle,
         // swells toward dead-centre within the cone (the bolt-margin reward).
         // The elevation pitch glide applies below. This is the unambiguous
         // "a shot connects — fire" signal, at any range.
-        if (g_state.peg_cue.IsActive()) {
-            g_state.peg_cue.UpdatePosition(cuePos);
-        } else if (g_state.peg_cue.Start(kLockCueResref, cuePos,
+        if (g_pegCue.IsActive()) {
+            g_pegCue.UpdatePosition(cuePos);
+        } else if (g_pegCue.Start(kLockCueResref, cuePos,
                        /*looping=*/true, /*spatial=*/true, /*priorityGroup=*/-1,
                        /*volumeByte=*/-1, /*maxVolDist=*/kPegMinDist,
                        /*minVolDist=*/kPegMaxDist)) {
@@ -249,8 +249,8 @@ float DrivePegSound(bool onTargetCue, float angle, float onTargetAngle,
     } else {
         // TICKING: stop the solid loop; pulse a one-shot whose interval shrinks
         // as the aim approaches the cone (fast just outside, slow far off/behind).
-        if (g_state.peg_cue.IsActive()) {
-            g_state.peg_cue.Stop();
+        if (g_pegCue.IsActive()) {
+            g_pegCue.Stop();
             acclog::Write("Turret", "peg -> tick mode slot=%d angle=%.1f%s",
                           g_state.selected_slot, angle, behind ? " (behind)" : "");
         } else if (behindEntered) {
@@ -453,7 +453,7 @@ void DriveSelectedPeg(const int occSlot[], const float occDist[],
     if (elevOct > kElevMaxOctaves)       elevOct = kElevMaxOctaves;
     else if (elevOct < -kElevMaxOctaves) elevOct = -kElevMaxOctaves;
     const float pitchMult = std::pow(2.0f, elevOct);
-    g_state.peg_cue.SetPitchMultiplier(pitchMult);
+    g_pegCue.SetPitchMultiplier(pitchMult);
 
     // Real engine-scored hit (hp drop). Engine plays its own mgs_sith_hit, so
     // this is diagnostic only. errAngle here is to the intercept; lead-correct

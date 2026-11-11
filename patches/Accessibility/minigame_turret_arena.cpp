@@ -47,7 +47,8 @@ namespace {
 //     FindPart(name) -> world position (3 floats) + orientation (4 floats)).
 const size_t kFollowerGunBanksOffset   = acc::off::Same(0x74);  // CSWMGGunBank** array base
 const size_t kFollowerGunBankCountOff  = acc::off::Same(0x78);  // int
-const size_t kGunBankGunsDataOffset    = acc::off::Same(0x34);  // CExoArrayList data ptr (CAurObject*[])
+// CExoArrayList data ptr (CAurObject*[])
+const size_t kGunBankGunsDataOffset    = acc::off::Same(0x34);
 const size_t kGunBankGunCountOffset    = acc::off::Same(0x38);  // int
 const size_t kGunBankBulletSpeedOffset = acc::off::Same(0x44);  // float, units/s
 const size_t kGunBankBulletLifeOffset  = acc::off::Same(0x4c);  // float, seconds

@@ -55,11 +55,14 @@ using acc::minigame::ReadFollowerPosition;
 //
 // Resulting starting values: K1 130 / 480 / 600; Dxun (bolt 600, same paths
 // as K1) 130 / 960 / 1200; Onderon (bolt 600, r 30) 195 / 720-960 / 1200.
-constexpr float kK1BoltSpeed        = 300.0f;  // M12ab Bullet.Speed — fallback when the gun bank can't be read
+// M12ab Bullet.Speed — fallback when the gun bank can't be read
+constexpr float kK1BoltSpeed        = 300.0f;
 constexpr float kK1BoltLife         = 3.0f;    // M12ab Bullet.Lifespan — same fallback
 constexpr float kRefRadius          = 20.0f;   // K1 fighter Sphere_Radius
-constexpr float kRefFighterSpeed    = 74.0f;   // K1 fighter path speed (median of M12ab's six tracks)
-constexpr float kRefMakeHorizonSec  = 1.6f;    // K1-tuned bolt-flight limit at the reference radius/speed
+// K1 fighter path speed (median of M12ab's six tracks)
+constexpr float kRefFighterSpeed    = 74.0f;
+// K1-tuned bolt-flight limit at the reference radius/speed
+constexpr float kRefMakeHorizonSec  = 1.6f;
 constexpr float kMinMakeHorizonSec  = 0.5f;
 constexpr float kKillRangePerRadius = 6.5f;    // K1's 130 m range cue / 20 m radius
 constexpr float kCensusOverMake     = 1.25f;   // K1's 600 m census / 480 m makeable distance
@@ -82,7 +85,8 @@ constexpr float kHitscanReach       = 10.0f;
 // and reaches the 5 m floor by ~150 m, so the hum grows louder all the way in.
 // A hitscan area has no census range; its targets are a hangar's width away.
 constexpr float kFighterMinSourceDistanceM  = 5.0f;
-constexpr float kHitscanHumCompression      = 0.4f;   // 107PER: troopers 10-50 u -> 5-20 m (starting value)
+// 107PER: troopers 10-50 u -> 5-20 m (starting value)
+constexpr float kHitscanHumCompression      = 0.4f;
 constexpr const char* kFighterLoopResref    = "acc_turret_loop";
 
 // ----- Targeting "peg" cue (the single unified cue; drives the selected fighter) -----
@@ -127,7 +131,8 @@ constexpr const char* kFighterLoopResref    = "acc_turret_loop";
 //   aim error into only the gentle end (5->20 m) leaves dead-centre faint and
 //   the whole swing compressed, so the ramp spans the full band: dead-centre
 //   at 1 m (loudest), the quiet beacon floor at 20 m.
-constexpr float kPegRampDeg   = 25.0f;  // fade width beyond the hitbox edge (narrow = steep near-centre swing)
+// fade width beyond the hitbox edge (narrow = steep near-centre swing)
+constexpr float kPegRampDeg   = 25.0f;
 constexpr float kPegMinDist   = 1.0f;   // dead-centre -> right on top -> loudest
 constexpr float kPegEdgeDist  = 9.0f;   // hitbox edge -> clearly audible (mid)
 constexpr float kPegMaxDist   = 20.0f;  // way off -> just-audible beacon floor
@@ -248,12 +253,6 @@ struct State {
     bool      area_is_creature[kMgoArraySlotCount] = {};
     char      area_noun[kMgoArraySlotCount][48]    = {};
     int       area_slot_count = 0;
-    // Single continuous targeting "peg" tone: tracks the Q/E-SELECTED
-    // fighter; its loudness rises as the aim ray closes on that fighter.
-    acc::audio::LoopSource peg_cue;
-    // Continuous "approach" hum on the locked fighter (real compressed position;
-    // loudness = how close it is). See kFighterLoopResref.
-    acc::audio::LoopSource hum_cue;
     // MGO slot of the fighter the player has locked via Q/E (-1 = none).
     // Explicit selection — the cue no longer auto-jumps between fighters.
     int selected_slot = -1;
@@ -376,6 +375,14 @@ struct State {
 
 extern State g_state;
 
+// The two loops of the locked fighter. Beside State and not in it: a loop
+// source cannot be copied, and State is reset as a whole at entry.
+// The targeting "peg" tone, louder as the aim ray closes on the fighter.
+extern acc::audio::LoopSource g_pegCue;
+// The approach hum at the fighter's compressed position, louder as it nears
+// (kFighterLoopResref).
+extern acc::audio::LoopSource g_humCue;
+
 // Helpers shared across the files, by the file that defines them.
 
 // minigame_turret_arena.cpp
@@ -399,17 +406,26 @@ void TickFighterCues();
 void PushLeadProbe(int slot, const Vector& linW, const Vector& curveW, ULONGLONG dueMs);
 void DrainLeadProbes(int slot, const Vector& fighterWorldNow, ULONGLONG now);
 Vector PlayRangeCueAt(const Vector& targetPos, float dist, const Vector& listener);
-void AnnounceSelectedTarget(int idx, const int occSlot[], const float occDist[], const Vector occPos[], const TargetInfo occInfo[], int occCount, const Vector& listener, bool speak = true);
-void HandleTargetCycle(const int occSlot[], const float occDist[], const Vector occPos[], const TargetInfo occInfo[], int occCount, const Vector& listener);
+void AnnounceSelectedTarget(int idx, const int occSlot[], const float occDist[],
+                            const Vector occPos[], const TargetInfo occInfo[],
+                            int occCount, const Vector& listener, bool speak = true);
+void HandleTargetCycle(const int occSlot[], const float occDist[], const Vector occPos[],
+                       const TargetInfo occInfo[], int occCount, const Vector& listener);
 
 // minigame_turret_peg.cpp
-void DriveSelectedPeg(const int occSlot[], const float occDist[], const Vector occPos[], const TargetInfo occInfo[], int occCount, const Vector& aimDir, bool haveAim, const Vector& listener, bool selectedAliveInPool);
+void DriveSelectedPeg(const int occSlot[], const float occDist[], const Vector occPos[],
+                      const TargetInfo occInfo[], int occCount, const Vector& aimDir,
+                      bool haveAim, const Vector& listener, bool selectedAliveInPool);
 float Wrap180(float d);
 
 // minigame_turret_assist.cpp
 void UpdateMotionEstimate(const Vector& P, ULONGLONG now);
 void CalibrateOffsetSigns(float offAz, float offEl, float aimAz, float aimEl);
-bool SteerGun(bool steer, float offAz, float offEl, float angle, float errAz, float errEl, bool fullAuto, float& gain);
-void AutoaimRetarget(bool justLandedHit, bool makeable, float leadT, float crossingSpeed, float sd, const int occSlot[], const float occDist[], const Vector occPos[], const TargetInfo occInfo[], int occCount, const Vector& listener);
+bool SteerGun(bool steer, float offAz, float offEl, float angle, float errAz, float errEl,
+              bool fullAuto, float& gain);
+void AutoaimRetarget(bool justLandedHit, bool makeable, float leadT, float crossingSpeed,
+                     float sd, const int occSlot[], const float occDist[],
+                     const Vector occPos[], const TargetInfo occInfo[], int occCount,
+                     const Vector& listener);
 
 }  // namespace acc::turret_game

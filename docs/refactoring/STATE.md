@@ -377,6 +377,14 @@ prefix (menus_listbox_picker.cpp).
 - F13 done: one WriteJmpRel32, in code_patch.h. The three installers
   (mouse guard, keyboard resync, save guard) still each do their own
   VirtualProtect / write / restore / flush around it.
+- StableFlag judged for camera_announce, party_leader_announce and
+  door_announce: no fit. The camera debounces a sector with hysteresis
+  and three reasons to speak, the leader announce is a tick countdown
+  and a grace period after an area change, the door announce has
+  one-shot windows. None is a boolean that has to hold still.
+- discovery lost its migration of saves from before 2026-08-08 (the
+  variable name once took the engine's spelling of the module): no save
+  of this fork is that old. ToUpperAscii and AsciiUpper went with it.
 - F2b done: what discovery and exit_memory shared around the save
   variables is in engine_scriptvar: ReadPlayerVar and WritePlayerVar on
   std::string (four static buffers of four sizes are gone, and a map-note
@@ -426,8 +434,7 @@ prefix (menus_listbox_picker.cpp).
   does not.
   combat.cpp is lean (312 to 104): its listbox poll only wrote log lines
   and is gone, and the two debounces are one StableFlag (stable_flag.h,
-  unit tests) that other debounces can take over in their lean
-  (camera_announce, party_leader_announce, door_announce). In-game check:
+  unit tests). In-game check:
   "Combat begins" and "Combat ends" once per fight.
 - Class of an object (found with analyse2.py, same helper name in several
   files): ReadVtable and HasVtable are in engine_reads; some twenty files
@@ -498,8 +505,8 @@ prefix (menus_listbox_picker.cpp).
   kVtableSlotAsObstacle are slot indices now (7 and 8). The layout
   constants of minigame_engine.h are in the catalog headers. Left as it
   is: GetDeviceState in engine_keyboard_resync, a DirectInput device and
-  not an engine object. Seen on the way: the turret files have some
-  twenty lines over 100 columns, for their lean. In-game check: a swoop
+  not an engine object. The turret files' lines over 100 columns are
+  wrapped. In-game check: a swoop
   race (obstacles, pads, the pull toward a pad), the turret game
   (aim line, pull toward a fighter, hit telemetry), crafting on the
   KOTOR 2 workbench, a slider in the options, Esc in the equip picker.
@@ -523,8 +530,11 @@ prefix (menus_listbox_picker.cpp).
   race re-latched to any new struct, also one of another kind; it now
   does what the turret did and lets the debounce run. HandleEnter,
   HandleExit and AnnounceEntry themselves differ in substance and stay.
-  For the turret's lean: HandleEnter resets some forty state fields by
-  hand where the swoop race assigns State{}. In-game check: a swoop
+  The turret's HandleEnter reset some forty state fields by hand and
+  missed fifteen (stale lead probes, hit times and motion estimates of
+  the session before); it assigns a fresh State now, like the swoop
+  race, with the two loop sources beside State because they cannot be
+  copied. In-game check: a swoop
   race and the turret game start with their opener, and end with the
   race time or "turret game ended" once.
 - Bridge: a party/equipment/inventory path; check what K2 needs (all

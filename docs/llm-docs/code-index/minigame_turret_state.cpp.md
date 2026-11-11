@@ -1,4 +1,4 @@
-# minigame_turret_state.cpp (11 lines)
+# minigame_turret_state.cpp (13 lines)
 
 Source: `patches/Accessibility/minigame_turret_state.cpp`
 

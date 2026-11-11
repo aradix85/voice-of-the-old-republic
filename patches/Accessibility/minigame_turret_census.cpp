@@ -316,14 +316,14 @@ void TickFighterCues() {
                 humPos.y = listener.y + (c.pos[hidx].y - listener.y) * kk;
                 humPos.z = listener.z + (c.pos[hidx].z - listener.z) * kk;
             }
-            if (g_state.hum_cue.IsActive()) {
-                g_state.hum_cue.UpdatePosition(humPos);
-            } else if (g_state.hum_cue.Start(kFighterLoopResref, humPos)) {
+            if (g_humCue.IsActive()) {
+                g_humCue.UpdatePosition(humPos);
+            } else if (g_humCue.Start(kFighterLoopResref, humPos)) {
                 acclog::Write("Turret", "hum on locked slot=%d realDist=%.0fm",
                               g_state.selected_slot, realDist);
             }
-        } else if (g_state.hum_cue.IsActive()) {
-            g_state.hum_cue.Stop();
+        } else if (g_humCue.IsActive()) {
+            g_humCue.Stop();
             acclog::Write("Turret", "hum off (locked not in census)");
         }
     }

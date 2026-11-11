@@ -110,8 +110,8 @@ constexpr int kVtableSlotGetVictimFollower = 5;  // OnHitBullet's vtable[0x14]
 // ============================================================================
 
 void StopAllLoops() {
-    g_state.peg_cue.Stop();
-    g_state.hum_cue.Stop();
+    g_pegCue.Stop();
+    g_humCue.Stop();
 }
 
 // ============================================================================
@@ -143,57 +143,24 @@ void AnnounceExit() {
 // ============================================================================
 
 void HandleEnter() {
-    void* mg = g_state.latch.game;
-    g_state.entered_at_ms     = GetTickCount64();
-    g_state.selected_slot     = -1;
-    g_state.last_enemy_count  = -1;
-    g_state.last_selected_hp  = -1;
-    g_state.selected_in_range = -1;
-    g_state.selected_on_target = false;
-    g_state.selected_behind   = false;
-    g_state.last_tick_ms      = 0;
-    g_state.leave_tap_due_ms  = 0;
-    g_state.have_last_pos     = false;
-    g_state.have_vel          = false;
-    // Fresh stable-number assignment for this round.
-    for (int i = 0; i < kMgoArraySlotCount; ++i) {
-        g_state.slot_number[i]     = 0;
-        g_state.slot_alive_last[i] = false;
-        g_state.slot_hp_last[i]    = -1;
-        g_state.slot_damaged[i]    = false;
-    }
-    g_state.next_number       = 1;
-    // Fresh aim-quality counters for the session summary.
-    g_state.qc_frames = 0;
-    g_state.qc_on_total = 0;
-    for (int b = 0; b < 3; ++b) { g_state.qc_n[b] = 0; g_state.qc_on[b] = 0; }
-    g_state.qc_min_err = 1e9f;
-    g_state.qc_sum_err = 0.0f;
-    // Fresh aim-assist accuracy telemetry for this round.
-    g_state.assist_last_log_ms = 0;
-    g_state.shots_fired  = 0;
-    g_state.fighter_hits = 0;
-    // Fresh aim-assist sign calibration.
-    g_state.calib_have      = false;
-    g_state.calib_sign_az   = 0; g_state.calib_sign_el = 0;
-    g_state.calib_vote_az   = 0; g_state.calib_vote_el = 0;
-    // Defensive: no loop from a prior turret session must survive.
+    // No loop of an earlier session survives, and every value of the session
+    // starts fresh; slot_hp_last starts as unknown.
     StopAllLoops();
+    static const State fresh{};
+    const acc::minigame::Latch latch = g_state.latch;
+    g_state               = fresh;
+    g_state.latch         = latch;
+    g_state.entered_at_ms = GetTickCount64();
+    for (int& hp : g_state.slot_hp_last) hp = -1;
 
-    // Fresh arena (ballistics + aim limits) and area-target tables. A turret
-    // whose .are declares no enemies (107PER) shoots at the area instead.
-    g_state.arena = Arena{};
-    g_state.area_slot_count = 0;
-    for (int i = 0; i < kMgoArraySlotCount; ++i) {
-        g_state.area_handle[i]      = 0;
-        g_state.area_is_creature[i] = false;
-        g_state.area_noun[i][0]     = '\0';
-    }
-    uint32_t enemies = ReadU32Or0(mg, kMiniGameEnemyCountOffset);
+    // A turret whose .are declares no enemies (107PER) shoots at the area
+    // instead.
+    void* mg = latch.game;
+    const uint32_t enemies = ReadU32Or0(mg, kMiniGameEnemyCountOffset);
     g_state.area_targets = (enemies == 0);
     acclog::Write("Turret",
                   "ENTER mini_game=%p vtable=%p type=%u enemies=%u%s",
-                  mg, g_state.latch.vtable,
+                  mg, latch.vtable,
                   ReadU32Or0(mg, kMiniGameTypeOffset), enemies,
                   g_state.area_targets ? " -> area-target mode" : "");
     ReadArena(mg);
@@ -253,7 +220,8 @@ void HandleExit() {
 // ECX = the hit-event object (see the constants block above for its layout).
 // ============================================================================
 extern "C" void __cdecl OnTurretBulletHit(void* hitEvent) {
-    if (!acc::game::HandlerEnabled()) return;  // KOTOR 1 only — no K2 hook (see the hit-event constants)
+    // KOTOR 1 only — no K2 hook (see the hit-event constants)
+    if (!acc::game::HandlerEnabled()) return;
     if (!hitEvent || !g_state.latch.Active()) return;
 
     Vector impact;
@@ -294,7 +262,8 @@ extern "C" void __cdecl OnTurretBulletHit(void* hitEvent) {
 // player fire event; counts PLAYER shots only (enemy fire shares AddBullet, not
 // this). Drives the session hits/shots accuracy line. ECX = CSWMiniPlayer (unused).
 extern "C" void __cdecl OnPlayerFire(void* /*player*/) {
-    if (!acc::game::HandlerEnabled()) return;  // KOTOR 1 only — no K2 hook (see the hit-event constants)
+    // KOTOR 1 only — no K2 hook (see the hit-event constants)
+    if (!acc::game::HandlerEnabled()) return;
     if (!g_state.latch.Active()) return;
     ++g_state.shots_fired;
 }

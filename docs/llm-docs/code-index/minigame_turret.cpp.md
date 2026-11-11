@@ -1,4 +1,4 @@
-# minigame_turret.cpp (346 lines)
+# minigame_turret.cpp (315 lines)
 
 Source: `patches/Accessibility/minigame_turret.cpp`
 
@@ -16,8 +16,8 @@ Both games. KOTOR 1 has one turret area (M12ab); KOTOR 2 has three, and they dif
 - L123 `void AnnounceEntry()`
 - L135 `void AnnounceExit()`
 - L145 `void HandleEnter()`
-- L204 `void HandleExit()`
-- L255 `extern "C" void __cdecl OnTurretBulletHit(void* hitEvent)`: TurretHitGeom diagnostic handler — hooked at CSWMiniGameObject::OnHitBullet (@0x0066c190), which fires once per engine-CONFIRMED bullet hit.
-- L296 `extern "C" void __cdecl OnPlayerFire(void* /*player*/)`: Player fire counter (hooked at CSWMiniPlayer::Fire @0x0066dc50).
-- L302 `bool IsActive()`
-- L304 `void Tick()`
+- L171 `void HandleExit()`
+- L222 `extern "C" void __cdecl OnTurretBulletHit(void* hitEvent)`: TurretHitGeom diagnostic handler — hooked at CSWMiniGameObject::OnHitBullet (@0x0066c190), which fires once per engine-CONFIRMED bullet hit.
+- L264 `extern "C" void __cdecl OnPlayerFire(void* /*player*/)`: Player fire counter (hooked at CSWMiniPlayer::Fire @0x0066dc50).
+- L271 `bool IsActive()`
+- L273 `void Tick()`

@@ -6,5 +6,7 @@
 namespace acc::turret_game {
 
 State g_state;
+acc::audio::LoopSource g_pegCue;
+acc::audio::LoopSource g_humCue;
 
 }  // namespace acc::turret_game
