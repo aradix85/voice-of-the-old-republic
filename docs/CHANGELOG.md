@@ -70,6 +70,7 @@ installer, as the pre-release `bridge-latest`.
   and the conversation starts.
 - Enter on a map note at a door uses the door.
 - Enter on a closed door into another area opens it and takes you through.
+- Enter and the walk keys work while you stand at an area transition.
 - Arriving by a lift or an area door, the region in front of it is announced
   and routes no longer go "via" the door you came through.
 - A door near you that someone else opens says "Door 1 opens".
@@ -231,6 +232,11 @@ installer, as the pre-release `bridge-latest`.
   It waits out the walk there and a conversation, gives up after 2 minutes,
   and does not pull you back if you walked more than 6 metres away. Any
   other Enter cancels it (KOTOR 1).
+- Enter, Ctrl+N, Ctrl+Shift+N, Ctrl+L and Ctrl+H work while you stand at an
+  area transition. The game shows a banner with the destination's name there
+  for as long as you stand in it, and that banner counted as a menu in front
+  of the world, so the keys did nothing on the very spot where you want to go
+  through, for instance after loading a save made at a door.
 - A door within 20 metres that someone else opens says "Door 1 opens" (KOTOR
   1). This is mostly a story door opening from its own script after your
   attempt; the last thing heard used to be "Door 1, locked", so a successful

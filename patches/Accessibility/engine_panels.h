@@ -327,8 +327,10 @@ bool SetGuiInputClass(int klass);
 //
 // Triggers: a CSWGuiDialog* in panels[]; foreground = modal_stack[top];
 // foreground kind ∈ {Container, Store, Examine, Dialog*, TutorialBox,
-// MessageBoxModal, StatusSummary, AreaTransition, InGameMenu (the strip
-// stays fg while any sub-screen is drilled), InGameGalaxyMap}.
+// MessageBoxModal, StatusSummary, InGameMenu (the strip stays fg while any
+// sub-screen is drilled), InGameGalaxyMap}. The AreaTransition banner (the
+// destination's name while the player stands at a transition) blocks only
+// when it is the modal on top.
 enum class UiBlockReason {
     NotBlocked,
     DialogInStack,

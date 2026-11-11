@@ -1,4 +1,4 @@
-# engine_panels.h (363 lines)
+# engine_panels.h (365 lines)
 
 Source: `patches/Accessibility/engine_panels.h`
 
@@ -31,7 +31,7 @@ Chain: *(CAppManager**)0x7A39FC → CAppManager → +0x4 CClientExoApp → +0x4 
 - L313 `bool CloseInGameMenuToWorld()`: Close the in-game menu (strip + drilled sub-screen) back to the world, replicating a menu tab's own Escape exactly: HideSWInGameGui(0) followed by SetInputClass(0,1).
 - L316 `int GetInputClass()`: Read the live client input_class (0/4 = in-world, 2 = menu/GUI owns input).
 - L321 `bool SetGuiInputClass(int klass)`: Set the client input class via the engine setter.
-- L332 `enum class UiBlockReason`: True iff foreground UI is capturing input.
-- L339 `struct UiBlockState`
-- L347 `bool IsForegroundUiBlocking(UiBlockState* outState = nullptr)`: outState (optional) carries diagnostic detail for the log line.
-- L360 `bool IsWorldLevelForegroundKind(PanelKind k)`: True for the handful of foreground kinds that coexist with normal in-world play — the HUD, the pause overlay, a bark bubble, a fade, and the unclassified Unknown.
+- L334 `enum class UiBlockReason`: True iff foreground UI is capturing input.
+- L341 `struct UiBlockState`
+- L349 `bool IsForegroundUiBlocking(UiBlockState* outState = nullptr)`: outState (optional) carries diagnostic detail for the log line.
+- L362 `bool IsWorldLevelForegroundKind(PanelKind k)`: True for the handful of foreground kinds that coexist with normal in-world play — the HUD, the pause overlay, a bark bubble, a fade, and the unclassified Unknown.

@@ -323,6 +323,13 @@ bool IsForegroundUiBlocking(UiBlockState* outState) {
     // any sub-screen (Inventory / Map / Equip / …) is drilled — covers them
     // transitively. Strip itself routes Enter to its chain handler in
     // menus_chain_input_enter.cpp; in-world hotkeys never make sense while a menu is open.
+    //
+    // AreaTransition is not in the list: it is the banner with the
+    // destination's name that stays in the foreground for as long as the
+    // player stands at an area transition. It takes no input, and blocking on
+    // it left Enter dead exactly where the player wants to go through. When
+    // the engine does push it as a modal, (2) blocks. It stays out of
+    // IsWorldLevelForegroundKind, so a press over it is still logged.
     switch (fgKind) {
     case PanelKind::Container:
     case PanelKind::Store:
@@ -334,7 +341,6 @@ bool IsForegroundUiBlocking(UiBlockState* outState) {
     case PanelKind::TutorialBox:
     case PanelKind::MessageBoxModal:
     case PanelKind::StatusSummary:
-    case PanelKind::AreaTransition:
     case PanelKind::InGameMenu:
     // The star map is opened from the world, not from the menu strip, and the
     // engine does not push it onto modal_stack — so neither (2) nor the
