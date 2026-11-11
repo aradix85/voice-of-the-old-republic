@@ -4,6 +4,7 @@
 #include <cstdint>
 
 #include "engine_app.h"     // GetClientAppInternal
+#include "engine_reads.h"
 
 namespace acc::engine {
 
@@ -12,44 +13,25 @@ namespace {
 // Null at any null link or fault.
 void* GetClientOptions() {
     void* internal = GetClientAppInternal();
-    if (!internal) return nullptr;
-    __try {
-        return *reinterpret_cast<void**>(
-            reinterpret_cast<unsigned char*>(internal) +
-            kClientAppOptionsOffset);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return nullptr;
-    }
+    return ReadPtrOrNull(internal, kClientAppOptionsOffset);
 }
 
 }  // namespace
 
 bool GetMouseLook(bool& out) {
-    void* options = GetClientOptions();
-    if (!options) return false;
-    __try {
-        unsigned int bits = *reinterpret_cast<unsigned int*>(
-            reinterpret_cast<unsigned char*>(options) +
-            kClientOptionsBitFieldOffset);
-        out = (bits & kClientOptionsMouseLookMask) != 0;
-        return true;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return false;
-    }
+    uint32_t bits = 0;
+    if (!TryReadU32(GetClientOptions(), kClientOptionsBitFieldOffset, &bits)) return false;
+    out = (bits & kClientOptionsMouseLookMask) != 0;
+    return true;
 }
 
 bool GetActionMenuAutoPause(bool& out) {
-    void* options = GetClientOptions();
-    if (!options) return false;
-    __try {
-        unsigned int bits = *reinterpret_cast<unsigned int*>(
-            reinterpret_cast<unsigned char*>(options) +
-            kClientOptionsAutoPauseFlagsOffset);
-        out = (bits & kClientOptionsActionMenuAutoPauseMask) != 0;
-        return true;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
+    uint32_t bits = 0;
+    if (!TryReadU32(GetClientOptions(), kClientOptionsAutoPauseFlagsOffset, &bits)) {
         return false;
     }
+    out = (bits & kClientOptionsActionMenuAutoPauseMask) != 0;
+    return true;
 }
 
 }  // namespace acc::engine

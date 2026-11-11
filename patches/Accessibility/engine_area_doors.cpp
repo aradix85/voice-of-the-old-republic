@@ -5,6 +5,7 @@
 #include "engine_area_internal.h"
 
 #include "engine_game.h"    // IsKotor2: K2 flags real locked doors Static
+#include "engine_reads.h"
 #include "log.h"
 #include "strings.h"        // the door state words
 
@@ -195,14 +196,7 @@ bool DoorHasTransitionDest(void* serverDoor) {
 }
 
 bool IsDoorStatic(void* serverDoor) {
-    if (!serverDoor) return false;
-    __try {
-        return *reinterpret_cast<uint32_t*>(
-                   reinterpret_cast<unsigned char*>(serverDoor) +
-                   kDoorStaticOffset) != 0;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return false;
-    }
+    return ReadU32Or0(serverDoor, kDoorStaticOffset) != 0;
 }
 
 bool IsDoorCosmetic(void* serverDoor) {

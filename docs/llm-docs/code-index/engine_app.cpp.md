@@ -1,17 +1,17 @@
-# engine_app.cpp (96 lines)
+# engine_app.cpp (49 lines)
 
 Source: `patches/Accessibility/engine_app.cpp`
 
 AppManager resolve primitives. See engine_app.h for the chain and the reason this file exists.
 
-Each walk gets its own __try rather than sharing one: a fault reading the global is a different situation from a fault reading a facade field, and both have to yield nullptr cleanly to callers that run during engine teardown.
+Every link is read guarded on its own: the callers run during engine teardown too, and a null or freed link has to yield nullptr.
 
 ## Declarations (in source order)
 
-- L15 `void* GetAppManager()`
-- L23 `void* GetClientApp()`
-- L35 `void* GetClientAppInternal()`
-- L47 `void* GetClientModule()`
-- L59 `void* GetCamera()`
-- L71 `void* GetServerApp()`
-- L83 `void* GetServerAppInternal()`
+- L14 `void* GetAppManager()`
+- L18 `void* GetClientApp()`
+- L23 `void* GetClientAppInternal()`
+- L28 `void* GetClientModule()`
+- L33 `void* GetCamera()`
+- L38 `void* GetServerApp()`
+- L43 `void* GetServerAppInternal()`

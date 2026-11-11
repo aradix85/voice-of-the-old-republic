@@ -164,14 +164,8 @@ const char* TryClassSelectionIcon(void* control, void* owner,
             //
             // Guarded: `owner` passed IsPanelInManager, which proves it is
             // listed in panels[], not that the object is still alive.
-            void* activeCtrl = nullptr;
-            __try {
-                activeCtrl = *reinterpret_cast<void**>(
-                    reinterpret_cast<unsigned char*>(owner) +
-                    kPanelActiveControlOffset);
-            } __except (EXCEPTION_EXECUTE_HANDLER) {
-                activeCtrl = nullptr;
-            }
+            void* activeCtrl =
+                acc::engine::ReadPtrOrNull(owner, kPanelActiveControlOffset);
             if (activeCtrl == control) {
                 void* classLabel =
                     reinterpret_cast<unsigned char*>(owner) +

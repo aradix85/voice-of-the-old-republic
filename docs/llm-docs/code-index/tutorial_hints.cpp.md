@@ -1,4 +1,4 @@
-# tutorial_hints.cpp (228 lines)
+# tutorial_hints.cpp (224 lines)
 
 Source: `patches/Accessibility/tutorial_hints.cpp`
 
@@ -6,7 +6,7 @@ The tutorial popup side of the tutorial hints: the keyboard hint spoken for a mo
 
 ## Declarations (in source order)
 
-- L23 `int ReadTutorialRow(void* panel)`
-- L33 `const char* HintForTutorialRow(int row)`
-- L197 `const MouseMsg* ActiveMouseMsgs(int* count)`
-- L213 `const char* HintForMouseText(const char* text)`
+- L24 `int ReadTutorialRow(void* panel)`
+- L29 `const char* HintForTutorialRow(int row)`
+- L193 `const MouseMsg* ActiveMouseMsgs(int* count)`
+- L209 `const char* HintForMouseText(const char* text)`

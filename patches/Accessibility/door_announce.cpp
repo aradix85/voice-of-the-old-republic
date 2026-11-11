@@ -9,6 +9,7 @@
 #include "engine_area.h"    // door position, base name, cosmetic test
 #include "engine_panels.h"  // HasActiveDialogPanel
 #include "engine_player.h"  // GetPlayerServerCreature
+#include "engine_reads.h"
 #include "filter_objects.h"
 #include "interact_dispatch.h"  // walk-through: the open-door path of Enter
 #include "log.h"
@@ -62,14 +63,7 @@ DWORD           s_walkArmedAtMs      = 0;
 DWORD           s_walkOpenSinceMs    = 0;
 
 bool ReadServerObjectId(void* serverObj, uint32_t& outId) {
-    if (!serverObj) return false;
-    __try {
-        outId = *reinterpret_cast<uint32_t*>(
-            static_cast<unsigned char*>(serverObj) + kGameObjectIdOffset);
-        return true;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return false;
-    }
+    return acc::engine::TryReadU32(serverObj, kGameObjectIdOffset, &outId);
 }
 
 // "Door 1 opens" for a door the leader did not open, near the leader. The

@@ -9,6 +9,7 @@
 
 #include "engine_game.h"     // IsKotor2: per-game strref and row tables
 #include "engine_offsets_select.h"
+#include "engine_reads.h"
 #include "strings.h"
 #include "text_match.h"
 
@@ -21,13 +22,8 @@ using acc::strings::Id;
 }  // namespace
 
 int ReadTutorialRow(void* panel) {
-    if (!panel) return -1;
-    __try {
-        return *reinterpret_cast<uint8_t*>(
-            reinterpret_cast<unsigned char*>(panel) + kTutorialBoxRowOffset);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return -1;
-    }
+    uint8_t row = 0;
+    return acc::engine::TryReadU8(panel, kTutorialBoxRowOffset, &row) ? row : -1;
 }
 
 const char* HintForTutorialRow(int row) {

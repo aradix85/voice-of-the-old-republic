@@ -80,13 +80,8 @@ void* GetCurrentArea() {
 }
 
 int GetObjectKind(void* gameObject) {
-    if (!gameObject) return -1;
-    __try {
-        return static_cast<int>(*reinterpret_cast<uint8_t*>(
-            reinterpret_cast<unsigned char*>(gameObject) + kObjectKindOffset));
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return -1;
-    }
+    uint8_t kind = 0;
+    return TryReadU8(gameObject, kObjectKindOffset, &kind) ? kind : -1;
 }
 
 uint32_t GetObjectHandle(void* gameObject) {
@@ -138,25 +133,11 @@ void* ResolveClientObjectHandle(uint32_t handle) {
 
     // CSWCObject.server_object @+0xf8 → CSWSObject*. Same offset
     // engine_player uses on the player creature's CSWCCreature.
-    __try {
-        return *reinterpret_cast<void**>(
-            reinterpret_cast<unsigned char*>(clientObject) +
-            kClientObjectServerObjectOffset);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return nullptr;
-    }
+    return ReadPtrOrNull(clientObject, kClientObjectServerObjectOffset);
 }
 
 bool GetObjectPosition(void* gameObject, Vector& out) {
-    if (!gameObject) return false;
-    __try {
-        out = *reinterpret_cast<Vector*>(
-            reinterpret_cast<unsigned char*>(gameObject) +
-            kServerObjectPositionOffset);
-        return true;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return false;
-    }
+    return TryReadVector(gameObject, kServerObjectPositionOffset, &out);
 }
 
 void* GetRoomAtIndexed(void* area, const Vector& pos, int& outIndex) {

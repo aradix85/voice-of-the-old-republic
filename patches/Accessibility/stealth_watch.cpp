@@ -7,6 +7,7 @@
 
 #include "engine_area.h"      // GetObjectPosition
 #include "engine_player.h"    // GetPlayerServerCreature / GetPlayerPosition
+#include "engine_reads.h"
 #include "examine_view.h"     // IsHostileCreature
 #include "log.h"
 #include "narrated_target.h"
@@ -43,13 +44,7 @@ uint32_t  g_focusHandle    = 0;      // hostile focus we last logged as acquired
 int       g_lastLoggedDist = -1;     // last distance we wrote a diag line for
 
 bool ReadLeaderStealth(void* leader) {
-    if (!leader) return false;
-    __try {
-        return *(reinterpret_cast<unsigned char*>(leader) +
-                 kCreatureStealthModeOffset) != 0;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return false;
-    }
+    return acc::engine::ReadU8Or0(leader, kCreatureStealthModeOffset) != 0;
 }
 
 void ResetBaseline() {

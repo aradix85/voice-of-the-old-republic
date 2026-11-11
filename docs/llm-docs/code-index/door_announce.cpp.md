@@ -1,4 +1,4 @@
-# door_announce.cpp (251 lines)
+# door_announce.cpp (245 lines)
 
 Source: `patches/Accessibility/door_announce.cpp`
 
@@ -12,12 +12,12 @@ De-noising lives in camera_announce::AnnounceCurrentFacing: the same sector spok
 
 ## Declarations (in source order)
 
-- L64 `bool ReadServerObjectId(void* serverObj, uint32_t& outId)`
-- L81 `void AnnounceNearbyOpen(uint32_t doorHandle)`: "Door 1 opens" for a door the leader did not open, near the leader.
-- L114 `void PollWalkThrough()`
-- L166 `void ArmWalkThrough(uint32_t doorHandle)`
-- L177 `void DisarmWalkThrough()`
-- L184 `void NoteDoorOpened(uint32_t openerServerId, uint32_t doorHandle)`
-- L190 `void Tick()`
-- L224 `extern "C" void __cdecl OnDoorOpen(void* serverDoor, uint32_t openerServerId)`: CSWSDoor::OpenDoor detour @0x00589ceb — fires at the START of the open, right where the engine stamps the opener id into the door and is about to call SetOpenState to begin the animation.
-- L237 `void __cdecl OnDoorOpenK2(void* ebp)`
+- L65 `bool ReadServerObjectId(void* serverObj, uint32_t& outId)`
+- L75 `void AnnounceNearbyOpen(uint32_t doorHandle)`: "Door 1 opens" for a door the leader did not open, near the leader.
+- L108 `void PollWalkThrough()`
+- L160 `void ArmWalkThrough(uint32_t doorHandle)`
+- L171 `void DisarmWalkThrough()`
+- L178 `void NoteDoorOpened(uint32_t openerServerId, uint32_t doorHandle)`
+- L184 `void Tick()`
+- L218 `extern "C" void __cdecl OnDoorOpen(void* serverDoor, uint32_t openerServerId)`: CSWSDoor::OpenDoor detour @0x00589ceb — fires at the START of the open, right where the engine stamps the opener id into the door and is about to call SetOpenState to begin the animation.
+- L231 `void __cdecl OnDoorOpenK2(void* ebp)`

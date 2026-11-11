@@ -27,14 +27,7 @@
 namespace acc::engine {
 
 bool IsMapNoteEnabled(void* waypoint) {
-    if (!waypoint) return false;
-    __try {
-        return *reinterpret_cast<int*>(
-            reinterpret_cast<unsigned char*>(waypoint) +
-            kWaypointMapNoteEnabledOffset) != 0;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return false;
-    }
+    return ReadI32Or0(waypoint, kWaypointMapNoteEnabledOffset) != 0;
 }
 
 bool EnableMapNote(void* waypoint) {
@@ -284,24 +277,11 @@ void* GetClientArea(void* serverArea) {
             return nullptr;
         }
     }
-    __try {
-        return *reinterpret_cast<void**>(
-            reinterpret_cast<unsigned char*>(serverArea) +
-            kAreaClientAreaBackOffset);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return nullptr;
-    }
+    return ReadPtrOrNull(serverArea, kAreaClientAreaBackOffset);
 }
 
 int GetMapPinCount(void* clientArea) {
-    if (!clientArea) return 0;
-    __try {
-        return *reinterpret_cast<int*>(
-            reinterpret_cast<unsigned char*>(clientArea) +
-            kClientAreaMapPinsCountOffset);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return 0;
-    }
+    return ReadI32Or0(clientArea, kClientAreaMapPinsCountOffset);
 }
 
 void* GetMapPinAt(void* clientArea, int i) {
@@ -318,26 +298,12 @@ void* GetMapPinAt(void* clientArea, int i) {
 }
 
 bool GetMapPinPosition(void* mapPin, Vector& out) {
-    if (!mapPin) return false;
-    __try {
-        out = *reinterpret_cast<Vector*>(
-            reinterpret_cast<unsigned char*>(mapPin) + kMapPinPositionOffset);
-        return true;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return false;
-    }
+    return TryReadVector(mapPin, kMapPinPositionOffset, &out);
 }
 
 
 bool IsMapPinEnabled(void* mapPin) {
-    if (!mapPin) return false;
-    __try {
-        return *reinterpret_cast<int*>(
-            reinterpret_cast<unsigned char*>(mapPin) + kMapPinEnabledOffset)
-            != 0;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return false;
-    }
+    return ReadI32Or0(mapPin, kMapPinEnabledOffset) != 0;
 }
 
 bool GetMapPinNoteText(void* mapPin, char* outBuf, size_t bufSize) {

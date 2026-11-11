@@ -547,9 +547,8 @@ prefix (menus_listbox_picker.cpp).
   surfaced are fixed, 76e89f64). The tools, all under tools/analysis
   unless said otherwise:
   - cppcheck.ps1: after every commit, exit 0. Suppressions with their
-    reasons in cppcheck_suppressions.txt. With -Style a report: 86
-    knownConditionTrueFalse findings (possible redundant guards) are not
-    reviewed yet; take them per module during its lean.
+    reasons in cppcheck_suppressions.txt. With -Style a report; its
+    knownConditionTrueFalse findings go with F17 (see there).
   - clang_tidy.py (checks in .clang-tidy): baseline 8, all reviewed
     false positives (audio_loop 261 logs a freed pointer's value,
     combat_log_parse 220, cycle_state 358, engine_area_names 82,
@@ -624,8 +623,23 @@ prefix (menus_listbox_picker.cpp).
   unit tests in test_geometry) for the 14 places that round a spoken
   distance. The other `+ 0.5f` roundings are degrees, a clock hour, a
   sample rate and a volume.
-- F17 407 raw __try blocks remain outside engine_reads (the analyzer's
-  count of constant exception filters); each lean moves its module's.
+- F17, raw __try blocks outside engine_reads. `python
+  tools/analysis/raw_try.py .` counts them and lists the ones that only
+  read or write memory (no call inside): those can go through
+  engine_reads. Part 1 done: 307 -> 250. The blocks that return one
+  field went by script (ReadPtrOrNull, ReadI32Or0, ReadU32Or0, the new
+  ReadU8Or0 / TryReadU8, TryReadVector), some thirty by hand. That also
+  removes the cppcheck knownConditionTrueFalse findings (38 left, was
+  86): cppcheck does not follow an assignment inside __try, so nearly
+  all of them are a variable set in a raw __try and tested after it.
+  Left, 53 read-only blocks: the guarded writes (a TryWrite family is
+  not there yet: menus_keymap, menus_focus_k2, engine_picker,
+  engine_actionbar, camera_orient_turn, camera_spin_guard, pazaak,
+  minigame_engine), reads of several fields in one block, array walks,
+  and the reads off a hook's stack frame, which stay. The other 197
+  call the engine and keep their guard. Seen on the way:
+  IsK2UpgradeNoneRow (menus_listbox_workbench) and
+  IsUpgradePickerNoneRow (menus_pending_workbench) are one function.
 - Max HP of companions: party_status and bridge_state read it with
   ReadCreatureMaxHitPoints (GetMaxHitPoints(1)), which the maker's notes
   in the old combat_query say returns garbage for anyone but the PC.

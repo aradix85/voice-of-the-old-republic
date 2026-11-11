@@ -21,6 +21,7 @@
 #include <windows.h>
 #include <cstdint>
 
+#include "engine_reads.h"
 #include "log.h"
 
 namespace acc::engine {
@@ -65,14 +66,7 @@ typedef void (__thiscall* PFN_CSWPlayerControlSetEnabled)(void* this_, int enabl
 // any failure.
 void* GetPlayerControl() {
     void* internal = GetClientAppInternal();
-    if (!internal) return nullptr;
-    __try {
-        return *reinterpret_cast<void**>(
-            reinterpret_cast<unsigned char*>(internal) +
-            kClientAppPlayerControlOffset);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return nullptr;
-    }
+    return ReadPtrOrNull(internal, kClientAppPlayerControlOffset);
 }
 
 }  // namespace
@@ -83,18 +77,12 @@ void* GetPlayerControl() {
 // so the interact feature's dialog-approach watchdog can tell "walk-to-talk
 // still pending" (depth>0) from "nothing enqueued" (depth 0).
 int GetPlayerActionQueueDepth() {
-    void* obj = GetPlayerServerObject();
-    if (!obj) return -1;
-    __try {
-        void* internal = *reinterpret_cast<void**>(
-            reinterpret_cast<unsigned char*>(obj) + kObjectActionNodesOffset);
-        if (!internal) return 0;  // unallocated list ⇒ no pending actions
-        return *reinterpret_cast<int*>(
-            reinterpret_cast<unsigned char*>(internal) +
-            kExoLinkedListInternalCountOffset);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return -1;
-    }
+    void* internal = nullptr;
+    if (!TryReadPtr(GetPlayerServerObject(), kObjectActionNodesOffset, &internal)) return -1;
+    if (!internal) return 0;  // an unallocated list: no pending actions
+    int count = -1;
+    TryReadI32(internal, kExoLinkedListInternalCountOffset, &count);
+    return count;
 }
 
 bool SetPlayerInputEnabled(bool enabled) {

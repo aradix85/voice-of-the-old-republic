@@ -1,4 +1,4 @@
-# weapon_set_watch.cpp (159 lines)
+# weapon_set_watch.cpp (152 lines)
 
 Source: `patches/Accessibility/weapon_set_watch.cpp`
 
@@ -12,9 +12,9 @@ Inert on KOTOR 1: the game has no second weapon pair (the slot offsets are Kotor
 
 ## Declarations (in source order)
 
-- L38 `uint32_t NormalizeHandle(uint32_t h)`
-- L44 `bool ReadSlots(void* leader, SlotState& out)`: Reads the four slot handles off the leader's CSWInventory.
-- L71 `bool SameState(const SlotState& a, const SlotState& b)`
-- L79 `bool PairExchanged(uint32_t prevA, uint32_t prevB, uint32_t newA, uint32_t newB)`: The engine's swap exchanges a pair's contents: what was in the active slot is now in the secondary slot and vice versa.
-- L84 `void SpeakNewLoadout(void* leader)`
-- L113 `void Tick()`
+- L39 `uint32_t NormalizeHandle(uint32_t h)`
+- L45 `bool ReadSlots(void* leader, SlotState& out)`: Reads the four slot handles off the leader's CSWInventory.
+- L64 `bool SameState(const SlotState& a, const SlotState& b)`
+- L72 `bool PairExchanged(uint32_t prevA, uint32_t prevB, uint32_t newA, uint32_t newB)`: The engine's swap exchanges a pair's contents: what was in the active slot is now in the secondary slot and vice versa.
+- L77 `void SpeakNewLoadout(void* leader)`
+- L106 `void Tick()`

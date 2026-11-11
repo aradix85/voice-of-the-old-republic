@@ -14,6 +14,7 @@
                              // GetPlayerPosition (proximity trigger only —
                              // the WARNING radius is about where the body
                              // physically is, not where the user looks)
+#include "engine_reads.h"
 #include "viewpoint.h"
                              // position + facing for the spoken clock
 #include "log.h"
@@ -101,13 +102,7 @@ void ExpireFresh(DWORD now) {
 
 // SEH-guarded is-mine read (CSWSTrigger.is_trap). False on fault.
 bool TriggerIsTrap(void* trigger) {
-    __try {
-        return *reinterpret_cast<int*>(
-                   reinterpret_cast<unsigned char*>(trigger) +
-                   kTriggerIsTrapOffset) != 0;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return false;
-    }
+    return acc::engine::ReadI32Or0(trigger, kTriggerIsTrapOffset) != 0;
 }
 
 // Localized object name with per-kind fallback (mines placed by scripts

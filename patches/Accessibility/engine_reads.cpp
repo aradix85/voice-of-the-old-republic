@@ -66,6 +66,16 @@ bool TryReadU32(void* base, size_t offset, uint32_t* out) {
     }
 }
 
+bool TryReadU8(void* base, size_t offset, uint8_t* out) {
+    if (!base || !out) return false;
+    __try {
+        *out = *(reinterpret_cast<unsigned char*>(base) + offset);
+        return true;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+}
+
 bool TryReadU16(void* base, size_t offset, uint16_t* out) {
     if (!base || !out) return false;
     __try {

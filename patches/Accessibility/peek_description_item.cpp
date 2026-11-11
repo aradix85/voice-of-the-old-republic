@@ -77,12 +77,7 @@ bool TryReadWorkbenchSaberDescription(void* panel, void* row,
     // proven-correct menus_extract.cpp read. A 4-byte int read here pulls in
     // neighbouring panel bytes and mis-compares against 1 when they're non-zero.
     uint8_t category = 0;
-    __try {
-        category = *(reinterpret_cast<unsigned char*>(panel) +
-                     kUpgradePanelCategoryOff);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return false;
-    }
+    if (!acc::engine::TryReadU8(panel, kUpgradePanelCategoryOff, &category)) return false;
     if (category != 1) {  // non-saber → caller uses GetPropertyDescription
         acclog::Write("Peek.Workbench",
                       "panel=%p row=%p category=%u (!=1); non-saber path",

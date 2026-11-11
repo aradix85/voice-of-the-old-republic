@@ -43,13 +43,8 @@ void* ReadUpgradeSlotInstalled(void* panel) {
 
 // K2: true iff `row` is the engine's "-" none/remove picker entry (key -1).
 bool IsUpgradePickerNoneRow(void* row) {
-    if (!row) return false;
-    __try {
-        return *reinterpret_cast<int32_t*>(
-            reinterpret_cast<unsigned char*>(row) + kUpgradePickerRowKeyOff) == -1;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return false;
-    }
+    int32_t key = 0;
+    return acc::engine::TryReadI32(row, kUpgradePickerRowKeyOff, &key) && key == -1;
 }
 
 // Rows in the panel's LB_ITEMS (the control with id 0).

@@ -138,14 +138,11 @@ unsigned int ChartCellId(void* chart, int row, int col) {
 void SelectMaxRankInRow(void* panel, int tab) {
     void* chart = ChartForTab(panel, tab);
 
-    int row = -1;
-    __try {
-        row = *(reinterpret_cast<unsigned char*>(chart) +
-                kSkillFlowChartSelectedRowOffset);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        row = -1;
+    uint8_t selectedRow = 0;
+    if (!acc::engine::TryReadU8(chart, kSkillFlowChartSelectedRowOffset, &selectedRow)) {
+        return;
     }
-    if (row < 0) return;
+    const int row = selectedRow;
 
     unsigned int id  = kFlowSkillStructEmptyFeatId;
     int          col = -1;
@@ -235,15 +232,11 @@ int BuildAvailableTabs(void* panel, int outTabs[3]) {
 // Active tab: 0 = Skills, 1 = Powers, 2 = Feats (CGuiInGame.field139_0xbc0).
 // -1 on any resolve failure.
 int ReadTab() {
-    void* gui = acc::engine::ResolveGuiInGame();
-    if (!gui) return -1;
-    int tab = -1;
-    __try {
-        tab = *(reinterpret_cast<unsigned char*>(gui) + kGuiInGameAbilitiesTabOffset);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        tab = -1;
-    }
-    return tab;
+    uint8_t tab = 0;
+    return acc::engine::TryReadU8(acc::engine::ResolveGuiInGame(),
+                                  kGuiInGameAbilitiesTabOffset, &tab)
+               ? tab
+               : -1;
 }
 
 // Read an inline CSWGuiLabel/CSWGuiButton member at panel+offset. Returns true

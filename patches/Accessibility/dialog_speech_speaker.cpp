@@ -182,15 +182,10 @@ bool FillSpeakerFromServerObject(void* partner, SpeakerInfo& out) {
 // The current dialog line's speaker as a CLIENT object id, off CGuiInGame;
 // kInvalidObjectId or 0 when there is none.
 uint32_t ReadGuiDialogSpeakerClientId() {
-    void* gui = acc::engine::ResolveGuiInGame();
-    if (!gui) return kInvalidObjectId;
-    __try {
-        return *reinterpret_cast<uint32_t*>(
-            reinterpret_cast<unsigned char*>(gui) +
-            kCGuiInGameDialogSpeakerOffset);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return kInvalidObjectId;
-    }
+    uint32_t id = kInvalidObjectId;
+    acc::engine::TryReadU32(acc::engine::ResolveGuiInGame(),
+                            kCGuiInGameDialogSpeakerOffset, &id);
+    return id;
 }
 
 }  // namespace
@@ -221,14 +216,8 @@ bool ResolveDialogSpeaker(SpeakerInfo& out) {
     void* player = acc::engine::GetPlayerServerCreature();
     if (!player) return false;
 
-    uint32_t partnerHandle = 0;
-    __try {
-        partnerHandle = *reinterpret_cast<uint32_t*>(
-            reinterpret_cast<unsigned char*>(player) +
-            kServerObjectDialogOwnerOffset);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return false;
-    }
+    const uint32_t partnerHandle =
+        acc::engine::ReadU32Or0(player, kServerObjectDialogOwnerOffset);
     if (partnerHandle == 0 || partnerHandle == kInvalidObjectId) return false;
 
     void* partner = acc::engine::ResolveServerObjectHandle(partnerHandle);
@@ -242,12 +231,8 @@ bool ResolveBarkSpeaker(void* barkPanel, SpeakerInfo& out) {
     out = SpeakerInfo{};
     if (!barkPanel) return false;
 
-    uint32_t clientId;
-    __try {
-        clientId = *reinterpret_cast<uint32_t*>(
-            reinterpret_cast<unsigned char*>(barkPanel) +
-            kBarkBubbleObjectIdOffset);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
+    uint32_t clientId = 0;
+    if (!acc::engine::TryReadU32(barkPanel, kBarkBubbleObjectIdOffset, &clientId)) {
         return false;
     }
     return FillSpeakerFromServerObject(ServerObjectFromClientId(clientId), out);

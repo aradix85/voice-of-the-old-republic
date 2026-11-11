@@ -54,25 +54,12 @@ bool LookupUpgradeSlotType(int slotCustomValue, int category,
 
 void* ResolveGuiInGame() {
     void* internal = GetClientAppInternal();
-    if (!internal) return nullptr;
-    __try {
-        return *reinterpret_cast<void**>(
-            reinterpret_cast<unsigned char*>(internal) + kClientExoAppGuiInGameOff);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return nullptr;
-    }
+    return ReadPtrOrNull(internal, kClientExoAppGuiInGameOff);
 }
 
 void* ResolveMainInterface() {
     void* guiInGame = ResolveGuiInGame();
-    if (!guiInGame) return nullptr;
-    __try {
-        return *reinterpret_cast<void**>(
-            reinterpret_cast<unsigned char*>(guiInGame) +
-            kGuiInGameMainInterfaceOff);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return nullptr;
-    }
+    return ReadPtrOrNull(guiInGame, kGuiInGameMainInterfaceOff);
 }
 
 bool ReadDialogReplyText(int replyIndex, char* outBuf, size_t bufSize) {
@@ -102,13 +89,9 @@ bool ReadDialogReplyText(int replyIndex, char* outBuf, size_t bufSize) {
 
 int ReadDialogReplyCount() {
     void* gui = ResolveGuiInGame();
-    if (!gui) return -1;
-    __try {
-        return *reinterpret_cast<int*>(
-            reinterpret_cast<unsigned char*>(gui) + kCGuiInGameReplyCountOffset);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return -1;
-    }
+    int value = -1;
+    TryReadI32(gui, kCGuiInGameReplyCountOffset, &value);
+    return value;
 }
 
 }  // namespace acc::engine

@@ -41,10 +41,7 @@ void* FindWagerMaxLabel(void* panel) {
 bool ExtractWagerRow(void* panel, void* maxLabel, char* outBuf, size_t bufSize) {
     if (!panel || !maxLabel || bufSize == 0) return false;
     int wager = -1;
-    __try {
-        wager = *reinterpret_cast<int*>(
-            reinterpret_cast<unsigned char*>(panel) + kWagerCurrentValueOffset);
-    } __except (EXCEPTION_EXECUTE_HANDLER) { return false; }
+    if (!acc::engine::TryReadI32(panel, kWagerCurrentValueOffset, &wager)) return false;
     if (wager < 0) return false;
 
     char raw[96];

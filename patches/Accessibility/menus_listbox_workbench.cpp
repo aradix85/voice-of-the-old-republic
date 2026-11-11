@@ -123,12 +123,8 @@ bool IsDashOrBlankRowText(const char* s) {
 // the disabled-slot picker showed. SEH-guarded; false on fault.
 bool IsK2UpgradeNoneRow(void* row) {
     if (!row || !acc::game::IsKotor2()) return false;
-    __try {
-        return *reinterpret_cast<int32_t*>(
-            reinterpret_cast<unsigned char*>(row) + kUpgradePickerRowKeyOff) == -1;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return false;
-    }
+    int32_t key = 0;
+    return acc::engine::TryReadI32(row, kUpgradePickerRowKeyOff, &key) && key == -1;
 }
 
 void WorkbenchUpgradeAnnounce(void* /*lb*/, const ListBoxNavResult& r) {

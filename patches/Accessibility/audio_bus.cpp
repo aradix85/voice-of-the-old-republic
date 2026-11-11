@@ -7,6 +7,7 @@
 
 #include "audio_pitch.h"   // BeginScopedZero / EndScopedZero (per-call jitter)
 #include "engine_player.h"
+#include "engine_reads.h"
 #include "log.h"
 #include "mod_settings_store.h"  // persist the cue-volume slider across launches
 #include "engine_addr.h"
@@ -57,11 +58,7 @@ typedef void (__thiscall* PFN_Play3DOneShotSound)(
     float    pitch_variance);
 
 void* GetCExoSound() {
-    __try {
-        return *reinterpret_cast<void**>(kAddrCExoSoundPtr);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return nullptr;
-    }
+    return acc::engine::ReadPtrOrNull(reinterpret_cast<void*>(kAddrCExoSoundPtr), 0);
 }
 
 // --- Global cue volume ----------------------------------------------
@@ -135,13 +132,7 @@ constexpr int      kMaxGroupScan             = 40;
 
 void* GetSoundInternal() {
     void* exoSound = GetCExoSound();
-    if (!exoSound) return nullptr;
-    __try {
-        return *reinterpret_cast<void**>(
-            reinterpret_cast<char*>(exoSound) + kSoundInternalOffset);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return nullptr;
-    }
+    return acc::engine::ReadPtrOrNull(exoSound, kSoundInternalOffset);
 }
 
 void SetGlobalCueVolumePercent(int percent) {

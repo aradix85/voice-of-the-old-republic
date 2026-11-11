@@ -1,4 +1,4 @@
-# audio_bus.cpp (335 lines)
+# audio_bus.cpp (326 lines)
 
 Source: `patches/Accessibility/audio_bus.cpp`
 
@@ -8,16 +8,16 @@ CExoSound* lives at *kAddrCExoSoundPtr; can be nullptr early in DLL-attach. All 
 
 ## Declarations (in source order)
 
-- L19 `void FillResRef(CResRef& out, const char* tag)`: Declared in audio_bus.h so audio_loop.cpp shares it rather than mirroring.
-- L59 `void* GetCExoSound()`
-- L76 `void EnsureCueVolumeLoaded()`
-- L88 `uint8_t EffectiveVolumeByte(uint8_t baseVolume)`: baseVolume × slider, rounded, clamped to [0,127].
-- L136 `void* GetSoundInternal()`
-- L147 `void SetGlobalCueVolumePercent(int percent)`
-- L156 `int GetGlobalCueVolumePercent()`
-- L170 `int ScanForSentinelGroup(uint16_t sentinel)`
-- L207 `uint8_t GetCuePriorityGroup()`
-- L232 `bool PlayCue(const char* resref, uint8_t priorityGroup, uint8_t baseVolume)`
-- L267 `bool PlayCue3DImpl(const char* resref, const Vector& worldPosition, uint8_t priorityGroup, uint8_t baseVolume, bool characterRelative)`: Shared body of PlayCue3D / PlayCue3DRaw.
-- L322 `bool PlayCue3D(const char* resref, const Vector& worldPosition, uint8_t priorityGroup, uint8_t baseVolume)`
-- L328 `bool PlayCue3DRaw(const char* resref, const Vector& listenerSpacePosition, uint8_t priorityGroup, uint8_t baseVolume)`
+- L20 `void FillResRef(CResRef& out, const char* tag)`: Declared in audio_bus.h so audio_loop.cpp shares it rather than mirroring.
+- L60 `void* GetCExoSound()`
+- L73 `void EnsureCueVolumeLoaded()`
+- L85 `uint8_t EffectiveVolumeByte(uint8_t baseVolume)`: baseVolume × slider, rounded, clamped to [0,127].
+- L133 `void* GetSoundInternal()`
+- L138 `void SetGlobalCueVolumePercent(int percent)`
+- L147 `int GetGlobalCueVolumePercent()`
+- L161 `int ScanForSentinelGroup(uint16_t sentinel)`
+- L198 `uint8_t GetCuePriorityGroup()`
+- L223 `bool PlayCue(const char* resref, uint8_t priorityGroup, uint8_t baseVolume)`
+- L258 `bool PlayCue3DImpl(const char* resref, const Vector& worldPosition, uint8_t priorityGroup, uint8_t baseVolume, bool characterRelative)`: Shared body of PlayCue3D / PlayCue3DRaw.
+- L313 `bool PlayCue3D(const char* resref, const Vector& worldPosition, uint8_t priorityGroup, uint8_t baseVolume)`
+- L319 `bool PlayCue3DRaw(const char* resref, const Vector& listenerSpacePosition, uint8_t priorityGroup, uint8_t baseVolume)`

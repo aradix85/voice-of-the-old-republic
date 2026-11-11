@@ -5,6 +5,7 @@
 #include "engine_offsets.h"
 #include "engine_app.h"
 #include "engine_player.h"
+#include "engine_reads.h"
 #include "log.h"
 
 namespace acc::engine_radial {
@@ -252,12 +253,7 @@ void LogTargetDiag(uint32_t targetClient, const char* tag) {
     // Read the vtable address itself for log identification — different
     // runtime classes have different vtables, so this is a quick "is the
     // door we got the same one between calls" check.
-    uintptr_t vtableAddr = 0;
-    __try {
-        vtableAddr = *reinterpret_cast<uintptr_t*>(gameObject);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        vtableAddr = 0;
-    }
+    const uintptr_t vtableAddr = acc::engine::ReadVtable(gameObject);
 
     void* asDoor      = CallVtableAsClass(gameObject, kVtableAsSWCDoorOffset);
     void* asCreature  = CallVtableAsClass(gameObject, kVtableAsSWCCreatureOffset);
@@ -294,14 +290,8 @@ void LogTargetDiag(uint32_t targetClient, const char* tag) {
         // Server-side door's Security gate (kServerDoorSecurityGateOffset)
         // must be 0 for CSWCDoor::GetTargetActions to add the Security row.
         // The server object sits at the same offset on every client object.
-        void* serverDoor = nullptr;
-        __try {
-            serverDoor = *reinterpret_cast<void**>(
-                reinterpret_cast<unsigned char*>(asDoor) +
-                kClientObjectServerObjectOffset);
-        } __except (EXCEPTION_EXECUTE_HANDLER) {
-            serverDoor = nullptr;
-        }
+        void* serverDoor =
+            acc::engine::ReadPtrOrNull(asDoor, kClientObjectServerObjectOffset);
         int32_t securityGate = -1;
         bool gateRead = false;
         if (serverDoor) {
@@ -325,14 +315,8 @@ void LogTargetDiag(uint32_t targetClient, const char* tag) {
         void* clientLeader = acc::engine::GetClientLeader();
         int leaderSecurity = -1;
         if (clientLeader) {
-            void* lvlUpStats = nullptr;
-            __try {
-                lvlUpStats = *reinterpret_cast<void**>(
-                    reinterpret_cast<unsigned char*>(clientLeader) +
-                    kClientCreatureLevelUpStatsOffset);
-            } __except (EXCEPTION_EXECUTE_HANDLER) {
-                lvlUpStats = nullptr;
-            }
+            void* lvlUpStats = acc::engine::ReadPtrOrNull(
+                clientLeader, kClientCreatureLevelUpStatsOffset);
             if (lvlUpStats) {
                 __try {
                     auto fn = reinterpret_cast<PFN_GetCanUseSkill>(

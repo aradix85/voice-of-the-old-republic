@@ -9,6 +9,7 @@
 #include "engine_keymap.h"  // FirstMovementKeyHeld — the player's bound move/turn
                             // keys, so cancel works regardless of rebinds.
 #include "engine_player.h"
+#include "engine_reads.h"
 #include "guidance_approach.h"  // IsAnyModApproachInFlight / CancelByMovement —
                                 // the unified tracker owns in-flight semantics
                                 // and the owner-aware cancel teardown.
@@ -109,13 +110,9 @@ void PrimeActionManager(void* creature, int mode) {
 
 // Read an int field off a server object with SEH protection.
 int ReadServerObjInt(void* obj, size_t off, int dflt) {
-    if (!obj) return dflt;
-    __try {
-        return *reinterpret_cast<int*>(
-            reinterpret_cast<unsigned char*>(obj) + off);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return dflt;
-    }
+    int value = dflt;
+    acc::engine::TryReadI32(obj, off, &value);
+    return value;
 }
 
 }  // namespace

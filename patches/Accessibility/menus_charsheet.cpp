@@ -102,15 +102,9 @@ const uint32_t kControlShownBit = acc::off::Same(0x2);
 // control.bit_flags at +0x44), which SetStats clears for non-Jedi and sets
 // for Jedi. Fails safe to false (hide FP) on any null/fault.
 bool DisplayedHasForce(void* panel) {
-    if (!panel) return false;
-    __try {
-        uint32_t flags = *reinterpret_cast<uint32_t*>(
-            reinterpret_cast<unsigned char*>(panel) + kCharSheetLblFp +
-            kControlBitFlagsOffset);
-        return (flags & kControlShownBit) != 0;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return false;
-    }
+    const uint32_t flags =
+        acc::engine::ReadU32Or0(panel, kCharSheetLblFp + kControlBitFlagsOffset);
+    return (flags & kControlShownBit) != 0;
 }
 
 // Stat-row anchor table. The chain inserts a virtual entry for each

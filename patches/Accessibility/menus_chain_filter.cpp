@@ -268,14 +268,7 @@ bool IsDecorativeControl(void* panel, void* c,
     // the last applicable slot to BTN_ASSEMBLE.
     if (pk == PanelKind::WorkbenchUpgrade &&
         acc::menus::detail::UpgradeSlotIndexFromButton(panel, c) >= 0) {
-        uint32_t bf = 0;
-        __try {
-            bf = *reinterpret_cast<uint32_t*>(
-                reinterpret_cast<unsigned char*>(c) + kControlBitFlagsOffset);
-        } __except (EXCEPTION_EXECUTE_HANDLER) {
-            bf = 0;
-        }
-        if ((bf & 0x2) == 0) return true;
+        if ((acc::engine::ReadControlBitFlags(c) & 0x2) == 0) return true;
     }
     // Universal close-button filter. Every
     // standalone "close/back" button the engine ships across

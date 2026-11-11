@@ -1,4 +1,4 @@
-# engine_area_kinds.cpp (165 lines)
+# engine_area_kinds.cpp (160 lines)
 
 Source: `patches/Accessibility/engine_area_kinds.cpp`
 
@@ -6,12 +6,12 @@ What kind of object this is: a usable placeable, an empty container and its item
 
 ## Declarations (in source order)
 
-- L16 `bool ReadContainerCount(void* gameObject, int& count)`: Item count of a loot container; false for anything else.
-- L40 `bool IsUsablePlaceable(void* placeable)`
-- L52 `bool IsEmptyContainer(void* gameObject)`
-- L57 `bool IsLandmarkWaypoint(void* waypoint)`
-- L67 `bool IsTransitionTrigger(void* trigger)`
-- L97 `int GetTriggerGeometry(void* trigger, Vector* out, int maxVerts)`
-- L116 `bool GetObjectLocalBoolean(void* gameObject, int index)`
-- L128 `bool TrapDetectedByAnyOf(void* gameObject, const uint32_t* ids, int idCount)`
-- L159 `int GetContainerItemCount(void* gameObject)`
+- L17 `bool ReadContainerCount(void* gameObject, int& count)`: Item count of a loot container; false for anything else.
+- L41 `bool IsUsablePlaceable(void* placeable)`
+- L53 `bool IsEmptyContainer(void* gameObject)`
+- L58 `bool IsLandmarkWaypoint(void* waypoint)`
+- L62 `bool IsTransitionTrigger(void* trigger)`
+- L92 `int GetTriggerGeometry(void* trigger, Vector* out, int maxVerts)`
+- L111 `bool GetObjectLocalBoolean(void* gameObject, int index)`
+- L123 `bool TrapDetectedByAnyOf(void* gameObject, const uint32_t* ids, int idCount)`
+- L154 `int GetContainerItemCount(void* gameObject)`

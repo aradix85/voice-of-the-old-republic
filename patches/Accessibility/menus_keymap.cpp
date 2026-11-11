@@ -154,12 +154,7 @@ void SetSelectionIndex(void* lb, short v) {
 }
 
 int CaptureActive(void* panel) {
-    int v = 0;
-    __try {
-        v = *reinterpret_cast<int*>(
-            reinterpret_cast<unsigned char*>(panel) + kCaptureActiveOff);
-    } __except (EXCEPTION_EXECUTE_HANDLER) { v = 0; }
-    return v;
+    return acc::engine::ReadI32Or0(panel, kCaptureActiveOff);
 }
 
 // Speak a control's text (entry name or "{action}: {key}" row readout).
@@ -267,12 +262,7 @@ void ArmCapture(void* panel, void* row) {
 // modified mod combo is reserved in-world and never collides). Spoken as a queued
 // follow-up so it trails the row re-announce rather than cutting it off.
 void WarnIfModBindClash(void* row) {
-    if (!row) return;
-    int keyCode = 0;
-    __try {
-        keyCode = *reinterpret_cast<int*>(
-            reinterpret_cast<unsigned char*>(row) + kKeyMapButtonKeyCodeOff);
-    } __except (EXCEPTION_EXECUTE_HANDLER) { return; }
+    const int keyCode = acc::engine::ReadI32Or0(row, kKeyMapButtonKeyCodeOff);
     if (keyCode <= 0) return;
     // key_code is an engine InputIndices value (KEYBOARD_*), not a DIK scancode.
     int vk = acc::engine_keymap::InputIndexToVk(keyCode);
@@ -432,11 +422,8 @@ bool HandleInput(void* activePanel, int param_1, int param_2, int& outRv) {
         // navigated to.
         void* row = RowAt(activePanel, s_rowCursor);
         if (!row) { outRv = 1; return true; }
-        int fixed = 0;
-        __try {
-            fixed = *reinterpret_cast<int*>(
-                reinterpret_cast<unsigned char*>(row) + kKeyMapButtonUnchangeableOff);
-        } __except (EXCEPTION_EXECUTE_HANDLER) { fixed = 1; }
+        int fixed = 1;  // an unreadable row counts as not changeable
+        acc::engine::TryReadI32(row, kKeyMapButtonUnchangeableOff, &fixed);
         if (fixed != 0) {
             acc::speech::Speak(acc::strings::Get(acc::strings::Id::KeyBindNotChangeable),
                          /*interrupt=*/true);

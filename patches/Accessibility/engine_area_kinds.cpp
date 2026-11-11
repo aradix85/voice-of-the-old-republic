@@ -3,6 +3,7 @@
 // detected trap, and an object's local booleans.
 
 #include "engine_area_internal.h"
+#include "engine_reads.h"
 
 namespace acc::engine {
 
@@ -55,13 +56,7 @@ bool IsEmptyContainer(void* gameObject) {
 }
 
 bool IsLandmarkWaypoint(void* waypoint) {
-    if (!waypoint) return false;
-    __try {
-        return *(reinterpret_cast<unsigned char*>(waypoint) +
-                 kWaypointHasMapNoteOffset) != 0;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return false;
-    }
+    return ReadU8Or0(waypoint, kWaypointHasMapNoteOffset) != 0;
 }
 
 bool IsTransitionTrigger(void* trigger) {

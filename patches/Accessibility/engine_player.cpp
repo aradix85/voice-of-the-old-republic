@@ -14,6 +14,7 @@
 #include <cstdint>
 #include "engine_compass.h"
 #include "engine_offsets_select.h"
+#include "engine_reads.h"
 
 namespace acc::engine {
 
@@ -69,29 +70,14 @@ void* ClientToServerCreature(void* clientCreature) {
 
 bool GetPlayerPosition(Vector& out) {
     void* obj = GetPlayerServerObject();
-    if (!obj) return false;
-    __try {
-        out = *reinterpret_cast<Vector*>(
-            reinterpret_cast<unsigned char*>(obj) +
-            kServerObjectPositionOffset);
-        return true;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return false;
-    }
+    return TryReadVector(obj, kServerObjectPositionOffset, &out);
 }
 
 bool GetPlayerFacing(Vector& out) {
     void* obj = GetPlayerServerObject();
-    if (!obj) return false;
-    __try {
-        out = *reinterpret_cast<Vector*>(
-            reinterpret_cast<unsigned char*>(obj) +
-            kServerObjectOrientationOffset);
-        out.z = 0.0f;  // engine zeros z for object facing — see Q1
-        return true;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return false;
-    }
+    if (!TryReadVector(obj, kServerObjectOrientationOffset, &out)) return false;
+    out.z = 0.0f;  // the engine zeroes z for an object's facing
+    return true;
 }
 
 bool GetPlayerYawDegrees(float& out) {
@@ -121,15 +107,7 @@ bool GetCameraPosition(Vector& out) {
     // confirming the Gob still sits at Camera+0x4).
     const size_t kCameraGobPositionOffset    = acc::off::Pick(0x7c, 0xa8);
     void* camera = GetCamera();
-    if (!camera) return false;
-    __try {
-        out = *reinterpret_cast<Vector*>(
-            reinterpret_cast<unsigned char*>(camera) +
-            kCameraGobPositionOffset);
-        return true;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return false;
-    }
+    return TryReadVector(camera, kCameraGobPositionOffset, &out);
 }
 
 bool GetCameraYawRadians(float& outRad) {

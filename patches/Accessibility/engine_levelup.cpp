@@ -7,6 +7,7 @@
 #include "engine_panels.h"    // ResolveGuiInGame, HasActiveLevelUpPanel
 #include "engine_player.h"    // GetClientLeader, kClientObjectServerObjectOffset
 #include "engine_offsets.h"   // kCreatureStatsPointerOffset
+#include "engine_reads.h"
 #include "engine_subscreen.h" // Begin/EndOverlayPause — freeze the world like
                               // the action menu, WITHOUT opening a sub-screen
 #include "log.h"
@@ -103,14 +104,7 @@ typedef void     (__thiscall* PFN_SetLevelUpMode)(void* this_, int mode);
 // singleton. Returns nullptr if the panel hasn't been instantiated (e.g.
 // user never opened the character sheet this session).
 void* GetInGameCharacterPanel(void* gui) {
-    if (!gui) return nullptr;
-    __try {
-        return *reinterpret_cast<void**>(
-            reinterpret_cast<unsigned char*>(gui) +
-            kCGuiInGameCharacterSlotOffset);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return nullptr;
-    }
+    return acc::engine::ReadPtrOrNull(gui, kCGuiInGameCharacterSlotOffset);
 }
 
 // Set CGuiInGame.level_up_mode via the engine's own setter. Wrapping the

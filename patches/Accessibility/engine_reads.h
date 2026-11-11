@@ -62,6 +62,7 @@ bool ReadCExoString(void* base, size_t offset, char* outBuf, size_t bufSize);
 // a null base and on a fault, with *out untouched.
 bool TryReadU32(void* base, size_t offset, uint32_t* out);
 bool TryReadU16(void* base, size_t offset, uint16_t* out);
+bool TryReadU8(void* base, size_t offset, uint8_t* out);
 bool TryReadPtr(void* base, size_t offset, void** out);
 bool TryReadFloat(void* base, size_t offset, float* out);
 bool TryReadVector(void* base, size_t offset, Vector* out);
@@ -76,6 +77,11 @@ inline bool TryReadI32(void* base, size_t offset, int32_t* out) {
 inline uint32_t ReadU32Or0(void* base, size_t offset) {
     uint32_t value = 0;
     TryReadU32(base, offset, &value);
+    return value;
+}
+inline uint8_t ReadU8Or0(void* base, size_t offset) {
+    uint8_t value = 0;
+    TryReadU8(base, offset, &value);
     return value;
 }
 inline int ReadI32Or0(void* base, size_t offset) {

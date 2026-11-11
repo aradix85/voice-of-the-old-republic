@@ -8,6 +8,7 @@
 #include "engine_game.h"     // IsKotor2
 #include "engine_offsets.h"  // kCreatureInventoryOffset, kInventory*HandleOffset
 #include "engine_player.h"   // GetPlayerServerCreature
+#include "engine_reads.h"
 #include "log.h"
 #include "speech.h"
 #include "strings.h"
@@ -42,15 +43,7 @@ uint32_t NormalizeHandle(uint32_t h) {
 // Reads the four slot handles off the leader's CSWInventory. False when
 // any hop is unreadable (no inventory yet — loading screens).
 bool ReadSlots(void* leader, SlotState& out) {
-    if (!leader) return false;
-    void* inventory = nullptr;
-    __try {
-        inventory = *reinterpret_cast<void**>(
-            reinterpret_cast<unsigned char*>(leader) +
-            kCreatureInventoryOffset);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return false;
-    }
+    void* inventory = acc::engine::ReadPtrOrNull(leader, kCreatureInventoryOffset);
     if (!inventory) return false;
     __try {
         unsigned char* base = reinterpret_cast<unsigned char*>(inventory);

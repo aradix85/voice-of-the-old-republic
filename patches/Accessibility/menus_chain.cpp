@@ -119,14 +119,7 @@ void SpeakLevelUpDoStepFirst() {
     for (int i = 0; i < g_chainCount; ++i) {
         void* c = g_chain[i].control;
         if (!c) continue;
-        uint32_t bf = 0;
-        __try {
-            bf = *reinterpret_cast<uint32_t*>(
-                reinterpret_cast<unsigned char*>(c) + kControlBitFlagsOffset);
-        } __except (EXCEPTION_EXECUTE_HANDLER) {
-            continue;
-        }
-        if ((bf & 0x8) == 0) continue;
+        if ((acc::engine::ReadControlBitFlags(c) & 0x8) == 0) continue;
         char name[128];
         const char* src = acc::menus::extract::FromControl(
             c, name, sizeof(name), g_chainPanel);

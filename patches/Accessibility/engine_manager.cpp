@@ -6,16 +6,13 @@
 
 #include "engine_offsets.h"  // CExoArrayList, kPanelControlsOffset
 #include "engine_panels.h"   // PanelKind, IdentifyPanel
+#include "engine_reads.h"
 #include "log.h"
 
 namespace acc::engine {
 
 void* GetGuiManager() {
-    __try {
-        return *reinterpret_cast<void**>(kAddrGuiManagerPtr);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return nullptr;
-    }
+    return ReadPtrOrNull(reinterpret_cast<void*>(kAddrGuiManagerPtr), 0);
 }
 
 namespace {

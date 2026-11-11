@@ -1,4 +1,4 @@
-# menus_charsheet.cpp (292 lines)
+# menus_charsheet.cpp (286 lines)
 
 Source: `patches/Accessibility/menus_charsheet.cpp`
 
@@ -9,7 +9,7 @@ See menus_charsheet.h for design overview. User-facing strings route through acc
 ## Declarations (in source order)
 
 - L104 `bool DisplayedHasForce(void* panel)`: True iff the character currently shown on this sheet is a Force user.
-- L179 `const StatRowSpec* FindSpecForControl(void* panel, void* labelControl)`: Resolve `labelControl` to a StatRowSpec for `panel`.
-- L204 `bool IsStatRowAnchor(void* panel, void* labelControl)`
-- L208 `void ForEachStatRowAnchor(void* panel, bool (*callback)(void* labelControl, int sortCy, void* userData), void* userData)`
-- L231 `bool ExtractStatRow(void* panel, void* labelControl, char* outBuf, size_t bufSize)`
+- L173 `const StatRowSpec* FindSpecForControl(void* panel, void* labelControl)`: Resolve `labelControl` to a StatRowSpec for `panel`.
+- L198 `bool IsStatRowAnchor(void* panel, void* labelControl)`
+- L202 `void ForEachStatRowAnchor(void* panel, bool (*callback)(void* labelControl, int sortCy, void* userData), void* userData)`
+- L225 `bool ExtractStatRow(void* panel, void* labelControl, char* outBuf, size_t bufSize)`
