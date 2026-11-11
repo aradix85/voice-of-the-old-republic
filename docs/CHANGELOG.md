@@ -71,6 +71,8 @@ installer, as the pre-release `bridge-latest`.
 - Enter on a map note at a door uses the door.
 - Enter on a closed door into another area opens it and takes you through.
 - Enter and the walk keys work while you stand at an area transition.
+- The overview and the walk to unexplored places work from a small entrance
+  hall.
 - Arriving by a lift or an area door, the region in front of it is announced
   and routes no longer go "via" the door you came through.
 - A door near you that someone else opens says "Door 1 opens".
@@ -240,6 +242,11 @@ installer, as the pre-release `bridge-latest`.
   for as long as you stand in it, and that banner counted as a menu in front
   of the world, so the keys did nothing on the very spot where you want to go
   through, for instance after loading a save made at a door.
+- Ctrl+N, Ctrl+Shift+N and the routes in target lines work while you stand
+  in a region too small to count as a place, such as the hall between the
+  entrance of the Hidden Bek base and its first inner door. From there nothing
+  counted as reachable, so the overview said "Explored 1 of 1 regions.
+  Everything you can reach is explored" with seventeen regions still ahead.
 - A door within 20 metres that someone else opens says "Door 1 opens" (KOTOR
   1). This is mostly a story door opening from its own script after your
   attempt; the last thing heard used to be "Door 1, locked", so a successful

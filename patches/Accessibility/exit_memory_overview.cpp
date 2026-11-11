@@ -131,9 +131,11 @@ bool CollectOverview(Overview& o) {
         int target = -1;
         for (size_t i = 0; i < g.nodes.size(); ++i) {
             // A doorway sliver of an area door is not a place to explore
-            // (the region in front of the door stands for it).
+            // (the region in front of the door stands for it), and neither
+            // is the unlisted region the player stands in.
             if (TransitionSliverOwner(area, g.nodes[i].id, nullptr) !=
-                g.nodes[i].id) {
+                    g.nodes[i].id ||
+                (g.startUnlisted && static_cast<int>(i) == g.si)) {
                 continue;
             }
             const bool visited = g_visited.count(g.nodes[i].id) != 0;

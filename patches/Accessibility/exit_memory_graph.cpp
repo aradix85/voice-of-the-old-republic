@@ -56,6 +56,21 @@ bool BuildGraph(void* area, const Vector& player, Graph& g) {
     // In the doorway sliver of an area door the region in front of it is
     // where the player is (and ExitToward then names no exit of the sliver).
     g.start = TransitionSliverOwner(area, g.start, nullptr);
+    // The list leaves out a region too small to be a place of its own, but
+    // the player can stand in one: the hall between an entrance and the
+    // first inner door. Walks are measured from where the player is, so
+    // that region joins the graph for this build. Without it nothing counted
+    // as reachable from there, and the overview said all was explored.
+    ClusterInfo here;
+    if (g.start >= 0 && g.IndexOf(g.start) < 0 &&
+        acc::room_topology::GetClusterInfo(area, g.start, here)) {
+        ClusterSummary node;
+        node.id     = g.start;
+        node.kind   = here.kind;
+        node.centre = here.centre;
+        g.nodes.push_back(node);
+        g.startUnlisted = true;
+    }
 
     acc::room_topology::GetClusterLinks(area, g.links);
     const std::vector<Vector> lockedDoors = LockedDoorPositions(area);
@@ -357,6 +372,7 @@ bool ListRegions(std::vector<RegionSummary>& out,
     Graph g;
     if (!BuildGraph(area, player, g)) return false;
     for (size_t i = 0; i < g.nodes.size(); ++i) {
+        if (g.startUnlisted && static_cast<int>(i) == g.si) continue;
         RegionSummary r;
         r.id      = g.nodes[i].id;
         r.centre  = g.nodes[i].centre;

@@ -116,6 +116,9 @@ struct Graph {
     int                         underPlayer = kClusterIdNone;
     int                         start       = kClusterIdNone;
     int                         si          = -1;  // start's index in nodes
+    // The player stands in a region the list leaves out (see BuildGraph);
+    // it is the last node, and no place to count or to explore.
+    bool                        startUnlisted = false;
     std::vector<float>          distOpen, distAll;
     std::vector<int>            hopOpen, hopAll;
 
