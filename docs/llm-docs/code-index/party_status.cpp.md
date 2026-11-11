@@ -1,4 +1,4 @@
-# party_status.cpp (161 lines)
+# party_status.cpp (166 lines)
 
 Source: `patches/Accessibility/party_status.cpp`
 
@@ -10,7 +10,8 @@ Party status — see party_status.h.
 - L58 `std::string NameOf(void* obj)`
 - L64 `bool ReadSecurity(void* creature, int& out)`
 - L88 `bool InWorldAndFree()`
-- L96 `void PollHotkey()`
-- L120 `void Tick()`
-- L142 `bool SecurityOf(void* serverCreature, int& outScore)`
-- L146 `bool BestSecurity(std::string& outName, int& outScore)`
+- L96 `std::string HealthLine(bool withLevelUp)`
+- L116 `void PollHotkey()`
+- L125 `void Tick()`
+- L147 `bool SecurityOf(void* serverCreature, int& outScore)`
+- L151 `bool BestSecurity(std::string& outName, int& outScore)`

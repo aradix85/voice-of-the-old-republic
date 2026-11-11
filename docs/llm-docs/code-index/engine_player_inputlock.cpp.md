@@ -1,4 +1,4 @@
-# engine_player_inputlock.cpp (205 lines)
+# engine_player_inputlock.cpp (217 lines)
 
 Source: `patches/Accessibility/engine_player_inputlock.cpp`
 
@@ -12,8 +12,9 @@ Declarations stay in engine_player.h; GetPlayerServerObject comes from engine_pl
 
 ## Declarations (in source order)
 
-- L67 `void* GetPlayerControl()`: CClientExoAppInternal → CSWPlayerControl.
-- L79 `int GetPlayerActionQueueDepth()`: Player's pending AI-action count (CSWSObject.action_nodes @+0xfc → internal->count @+0x8).
-- L88 `bool SetPlayerInputEnabled(bool enabled)`
-- L130 `void TickPlayerInputRestore()`
-- L188 `void TickActionQueueDiag()`
+- L69 `void* GetPlayerControl()`: CClientExoAppInternal → CSWPlayerControl.
+- L81 `int GetPlayerActionQueueDepth()`: Player's pending AI-action count (CSWSObject.action_nodes @+0xfc → internal->count @+0x8).
+- L90 `bool SetPlayerInputEnabled(bool enabled)`
+- L133 `void TickPlayerInputRestore()`
+- L196 `bool LastInputSessionDidNothing()`
+- L200 `void TickActionQueueDiag()`

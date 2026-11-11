@@ -1,4 +1,4 @@
-# combat.h (35 lines)
+# combat.h (39 lines)
 
 Source: `patches/Accessibility/combat.h`
 
@@ -9,6 +9,7 @@ Combat narration: the combat-mode cues (combat.cpp) and the flushes of the comba
 - L16 `bool IsCombatActive()`: Cross-feature gating read — false on chain fault (treat as not-in-combat).
 - L17 `bool IsPartyInCombat()`
 - L19 `void TickCombatMode()`
-- L23 `void TickCombatAbsorb()`: Flushes a debounced burst of damage-absorption lines into one spoken total.
-- L28 `void TickCombatDeflect()`: Flushes debounced blaster-deflection bursts into one spoken line per deflector (" deflects N shots").
-- L32 `void TickCombatEffects()`: Flushes debounced per-target ability/grenade/force-power effects into one merged spoken line each.
+- L23 `void NoteKillLine(const char* line)`: A kill line of the combat log (" killed : N XP"), kept for the summary that "Combat ends" speaks.
+- L27 `void TickCombatAbsorb()`: Flushes a debounced burst of damage-absorption lines into one spoken total.
+- L32 `void TickCombatDeflect()`: Flushes debounced blaster-deflection bursts into one spoken line per deflector (" deflects N shots").
+- L36 `void TickCombatEffects()`: Flushes debounced per-target ability/grenade/force-power effects into one merged spoken line each.

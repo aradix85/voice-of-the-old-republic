@@ -78,6 +78,8 @@ installer, as the pre-release `bridge-latest`.
 - A door near you that someone else opens says "Door 1 opens".
 - R while already attacking that enemy says "Already attacking X".
 - Standing idle in combat with an enemy near is announced once.
+- Enter on a container that did nothing tries the game's own click the next
+  time.
 - Door numbers stay the same after saving and loading.
 - Objects with the same name set in a row are numbered west to east.
 - The wall panels of the Sith base puzzle on Taris say their real on or off
@@ -93,6 +95,8 @@ installer, as the pre-release `bridge-latest`.
 - A door that a script opened says "open", not "locked".
 - Ctrl+H reads the health of the whole party and who can level up; "Name can
   level up" is announced on its own.
+- Shift+Enter on a door or container names the other rows of its action menu,
+  such as Security next to Bash.
 - Q/E say the clock direction and distance of each object.
 - New setting: Q and E step through everything within 30 metres instead of
   only what the camera sees.
@@ -108,6 +112,8 @@ installer, as the pre-release `bridge-latest`.
 - Ctrl+- describes the route step by step instead of starting a sound beacon.
 - The map cursor says "Edge of the map".
 - The combat heartbeat is gone.
+- "Combat ends" says who was killed and how the party stands.
+- A kill no longer cuts off the combat lines before it.
 - The mod and the installer are English only and assume the English game.
 - Supported games: KOTOR 1 version 1.0.3 (Steam or GOG) and KOTOR 2 from
   Steam; the Russian and Polish editions of KOTOR 1 and the GOG release of
@@ -264,6 +270,10 @@ installer, as the pre-release `bridge-latest`.
   a living enemy is within 25 metres (not paused, no conversation), you hear
   once "You are not attacking. Choose an enemy with Q or E and press R."
   (KOTOR 1).
+- A container that was bashed open did nothing on Enter: the engine accepts
+  the use and puts no action on the queue. When a use ends that way, with no
+  screen in front, the next Enter on the same target goes through the game's
+  own click. Not yet seen to open such a container in the game.
 
 <h3>Cycles:</h3>
 
@@ -329,6 +339,10 @@ installer, as the pre-release `bridge-latest`.
   said the old name, and the other then said the new one; when the switch
   was quick both said the new name. One announcer is left. A Tab that
   switches nobody still answers with the current name, after 0.75 seconds.
+- Shift+Enter on a door or container ends its announcement with the entries
+  of the other rows: "Action menu, Weapons Locker. Bash. Left or Right:
+  Security". Only the row the menu lands on was named, so a lock looked as if
+  it could only be bashed.
 
 <h3>Endar Spire:</h3>
 
@@ -351,6 +365,15 @@ installer, as the pre-release `bridge-latest`.
 - Ctrl+- (Ctrl+/) describes the route to the focused object step by step;
   it used to arm a sound beacon. N turns to exits only.
 - The map cursor says "Edge of the map" once per push against the edge.
+- "Combat ends" comes with a summary after a fight with kills: "Combat ends.
+  Killed: 3 Gamorrean Elite, Gamorrean Chief. korasha 60 of 78; Carth 59 of
+  72; Mission 35 of 35". A fight of thirteen seconds sent thirty combat lines
+  to the screen reader and nearly none was heard, because every interrupting
+  announcement (a Tab, a new target, a direction) cuts the queued lines off;
+  the summary comes after them. A fight without kills ends with "Combat ends"
+  alone.
+- The kill line ("X killed Y: 100 XP") is spoken in its turn. It used to
+  interrupt, and so cut off the blows that led to the kill.
 
 <h3>Language:</h3>
 

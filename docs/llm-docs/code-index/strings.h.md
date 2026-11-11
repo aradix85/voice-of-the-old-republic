@@ -1,4 +1,4 @@
-# strings.h (2208 lines)
+# strings.h (2216 lines)
 
 Source: `patches/Accessibility/strings.h`
 
@@ -9,4 +9,4 @@ Logs stay out of this table; only spoken strings use Get(). Format-string Ids us
 ## Declarations (in source order)
 
 - L11 `enum class Id`
-- L2205 `const char* Get(Id id)`: Resolve a string Id.
+- L2213 `const char* Get(Id id)`: Resolve a string Id.
