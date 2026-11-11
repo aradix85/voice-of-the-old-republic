@@ -213,6 +213,29 @@ bool GetPlayerCharacterName(char* outBuf, size_t bufSize) {
 }
 
 
+// The object id of the player character's creature, 0 when it is not in the
+// area. Player objects have the ids above kInvalidObjectId, handed out from
+// 0x7fffffff down, a new one with every load (0x7fffffff at the start of a
+// session, 0x7ffffff3 a few loads later), so the id is found by looking and
+// kept while it still resolves.
+static uint32_t PlayerCharacterObjectId() {
+    static uint32_t s_id = 0;
+    if (s_id != 0 && ResolveServerObjectHandle(s_id)) return s_id;
+    s_id = 0;
+    void* area = GetCurrentArea();
+    if (!area) return 0;
+    AreaObjectIterator it(area);
+    while (void* obj = it.Next()) {
+        if (GetObjectKind(obj) != static_cast<int>(GameObjectKind::Creature)) continue;
+        const uint32_t id = GetObjectHandle(obj);
+        if (id > kInvalidObjectId && id != 0xFFFFFFFFu) {
+            s_id = id;
+            break;
+        }
+    }
+    return s_id;
+}
+
 int GetPartyMembers(uint32_t* outHandles, int maxCount) {
     if (!outHandles || maxCount <= 0) return 0;
     void* table = GetServerPartyTable();
@@ -249,10 +272,9 @@ int GetPartyMembers(uint32_t* outHandles, int maxCount) {
     // With a companion in control (Tab) the player character follows like any
     // member, and the member table never lists it.
     void* controlled = GetPlayerServerCreature();
-    if (written < maxCount && controlled &&
-        GetObjectHandle(controlled) != kPlayerCharacterObjectId &&
-        ResolveServerObjectHandle(kPlayerCharacterObjectId)) {
-        outHandles[written++] = kPlayerCharacterObjectId;
+    if (written < maxCount && controlled && GetObjectHandle(controlled) < kInvalidObjectId) {
+        const uint32_t pc = PlayerCharacterObjectId();
+        if (pc != 0) outHandles[written++] = pc;
     }
     return written;
 }
