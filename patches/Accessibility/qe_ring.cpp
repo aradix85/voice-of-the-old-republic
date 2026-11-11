@@ -134,8 +134,7 @@ bool HandlePress(int direction) {
                 if (!setInWall) continue;  // behind a wall
             }
         }
-        const float bearing = acc::engine::EngineYawToCompass(
-            std::atan2(dy, dx) * 57.29577951308232f);
+        const float bearing = acc::engine::VectorCompass(dx, dy);
         float rel = std::fmod(bearing - facing + 720.0f, 360.0f);
         if (rel >= 359.5f) rel = 0.0f;
         cands.push_back(Candidate{handle, rel, dist});

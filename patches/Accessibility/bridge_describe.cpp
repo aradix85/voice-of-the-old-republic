@@ -23,13 +23,6 @@ namespace {
 const char* kDir8[8] = {"north", "northeast", "east", "southeast",
                         "south", "southwest", "west", "northwest"};
 
-// Compass bearing (0 = north, clockwise) of the vector dx,dy in the engine
-// frame (+X east, +Y north).
-float BearingDeg(float dx, float dy) {
-    float engineYaw = std::atan2(dy, dx) * 57.29577951308232f;
-    return acc::engine::EngineYawToCompass(engineYaw);
-}
-
 }  // namespace
 
 std::string GameFields() {
@@ -100,7 +93,7 @@ std::string SpokenName(void* obj) {
 std::string RelativeJson(const PlayerFrame& f, const Vector& p) {
     if (!f.ok) return "null";
     float dx = p.x - f.pos.x, dy = p.y - f.pos.y;
-    float bearing = BearingDeg(dx, dy);
+    float bearing = acc::engine::VectorCompass(dx, dy);
     std::string s = "{\"distance\":" + Num(DistXY(f.pos, p)) +
                     ",\"bearing\":" + Num(bearing, 0) +
                     ",\"direction\":" + Json(Dir8(bearing));

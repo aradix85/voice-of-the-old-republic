@@ -21,8 +21,6 @@ namespace acc::announce_facing {
 
 namespace {
 
-constexpr float kDegToRad = 0.017453292519943295f;
-
 int CompassDegreesFromEngineYaw(float engineYaw) {
     float compass = acc::engine::EngineYawToCompass(engineYaw);
     int degrees = static_cast<int>(std::floor(compass + 0.5f)) % 360;
@@ -41,10 +39,7 @@ bool ReadCameraEngineYawDegrees(float& out) {
     float dx = player.x - cam.x;
     float dy = player.y - cam.y;
     if (std::fabs(dx) < 1e-3f && std::fabs(dy) < 1e-3f) return false;
-    constexpr float kRadToDeg = 57.29577951308232f;
-    float yaw = std::atan2(dy, dx) * kRadToDeg;
-    if (yaw < 0.0f) yaw += 360.0f;
-    out = yaw;
+    out = acc::engine::VectorEngineYaw(dx, dy);
     return true;
 }
 

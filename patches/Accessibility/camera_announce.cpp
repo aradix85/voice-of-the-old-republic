@@ -23,9 +23,7 @@ namespace acc::camera_announce {
 namespace {
 
 // Compass frame: 0° = North, CW positive, 8 × 45° wedges.
-constexpr float kSectorSize  = 45.0f;
-constexpr float kHalfSector  = 22.5f;
-constexpr float kHysteresis  = 5.0f;
+constexpr float kHysteresis = 5.0f;
 
 // Speak only when the sector has been stable this long — collapses
 // transient flips during fast rotation.
@@ -140,10 +138,7 @@ bool ReadCameraCompass(float& outCompass) {
     float distXY = std::sqrt(dx * dx + dy * dy);
     if (distXY < kMinXYDistance) return false;
 
-    constexpr float kRadToDeg = 57.29577951308232f;
-    float engineYaw = std::atan2(dy, dx) * kRadToDeg;
-    if (engineYaw < 0.0f) engineYaw += 360.0f;
-    outCompass = acc::engine::EngineYawToCompass(engineYaw);
+    outCompass = acc::engine::VectorCompass(dx, dy);
     return true;
 }
 
@@ -316,9 +311,9 @@ void Tick() {
 
     // Sticky hysteresis: the active sector stays put while the camera is
     // within (kHalfSector + kHysteresis)° of its centre.
-    float lastCentre   = s_lastSpokenSector * kSectorSize;
+    float lastCentre   = s_lastSpokenSector * acc::engine::kSectorSize;
     float distFromLast = std::fabs(AngularDelta(camCompass, lastCentre));
-    int   stickySector = (distFromLast <= kHalfSector + kHysteresis)
+    int   stickySector = (distFromLast <= acc::engine::kHalfSector + kHysteresis)
                              ? s_lastSpokenSector
                              : acc::engine::CompassToSector(camCompass);
     if (stickySector != s_pendingSector) {

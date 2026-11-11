@@ -1,4 +1,4 @@
-# engine_compass.cpp (56 lines)
+# engine_compass.cpp (67 lines)
 
 Source: `patches/Accessibility/engine_compass.cpp`
 
@@ -14,5 +14,8 @@ Sectors: 0=N 1=NE 2=E 3=SE 4=S 5=SW 6=W 7=NW. Nearest-sector with half-sector of
 
 - L15 `float EngineYawToCompass(float engineYawDeg)`
 - L21 `int CompassToSector(float compassDeg)`
-- L29 `int ClockPosition(float playerYawDeg, float dx, float dy)`
-- L40 `acc::strings::Id SectorString(int sector)`
+- L29 `float VectorEngineYaw(float dx, float dy)`
+- L34 `float VectorCompass(float dx, float dy)`
+- L38 `int VectorSector(float dx, float dy)`
+- L42 `int ClockPosition(float playerYawDeg, float dx, float dy)`
+- L51 `acc::strings::Id SectorString(int sector)`

@@ -4,6 +4,7 @@
 
 #include "room_topology_internal.h"
 
+#include "engine_compass.h"
 #include "strfmt.h"             // Format — heap-backed printf, never truncates announcements
 
 namespace acc::room_topology {
@@ -21,32 +22,11 @@ void NoteUnspokenExit(const Vector& pos) {
 // 8-way octant classifier. Engine frame: +X = East, +Y = North. Returns
 // the Id corresponding to the octant the (dx,dy) vector points into.
 acc::strings::Id OctantFromVector(float dx, float dy) {
-    using acc::strings::Id;
-    // atan2 gives radians in (-pi, pi] measured from +X (East) counter-
-    // clockwise. Convert to a 0..8 bucket where 0 = East, 1 = Northeast,
-    // …, 7 = Southeast.
-    float theta = std::atan2(dy, dx);
-    // Snap to nearest 45° bucket. Add half-bucket for round-to-nearest.
-    constexpr float kPi  = 3.14159265358979323846f;
-    constexpr float kStep = kPi / 4.0f;  // 45 degrees
-    int bucket = static_cast<int>(std::floor((theta + kStep * 0.5f) / kStep));
-    bucket = ((bucket % 8) + 8) % 8;
-    switch (bucket) {
-        case 0: return Id::DirEast;
-        case 1: return Id::DirNortheast;
-        case 2: return Id::DirNorth;
-        case 3: return Id::DirNorthwest;
-        case 4: return Id::DirWest;
-        case 5: return Id::DirSouthwest;
-        case 6: return Id::DirSouth;
-        case 7: return Id::DirSoutheast;
-    }
-    return Id::DirEast;
+    return acc::engine::SectorString(acc::engine::VectorSector(dx, dy));
 }
 
-// Map an Id::Dir* to a stable bit index 0..7 (for dedup masks). Order
-// matches OctantFromVector's bucket numbering: E=0, NE=1, N=2, NW=3,
-// W=4, SW=5, S=6, SE=7.
+// Map an Id::Dir* to a stable bit index 0..7 (for dedup masks),
+// counter-clockwise from east: E=0, NE=1, N=2, NW=3, W=4, SW=5, S=6, SE=7.
 int OctantBit(acc::strings::Id dir) {
     using acc::strings::Id;
     switch (dir) {

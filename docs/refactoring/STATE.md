@@ -341,29 +341,20 @@ prefix (menus_listbox_picker.cpp).
   clockwise like engine_compass, which would also simplify
   kOctantEmitOrder). 39 of 55 functions are shared through the internal
   header: the pipeline really is one; accept.
-- F12 engine yaw of a vector, started, nothing edited yet.
-  `atan2(dy, dx) * 57.29...` is written out in about 15 files with four
-  spellings of the constant, often followed by EngineYawToCompass /
-  CompassToSector / SectorString. Design: kPi, kRadToDeg and kDegToRad
-  once, at global scope in engine_offsets_types.h, with the literals of
-  today so no float changes. Every other definition goes, because a
-  local that hides a global is C4459 under /WX: announce_facing,
-  camera_announce, camera_spin_guard, engine_compass, engine_player,
-  guidance_description, guidance_approach_rescue, room_topology_words,
-  camera_orient_pick.h (kTwoPi stays there), kRad2Deg of
-  minigame_turret_peg, and the bare literals in bridge_describe,
-  qe_ring, exit_memory_graph and minigame_turret_arena. In
-  engine_compass, pure and tested in test_geometry:
-  `float VectorEngineYaw(float dx, float dy)` (degrees, 0 = east,
-  counter-clockwise) and `int VectorSector(float dx, float dy)` (0 = N
-  to 7 = NW); CompassSectorOf of guidance_description, exit_memory_graph
-  and guidance_approach_rescue take VectorSector. camera_announce
-  repeats kSectorSize and kHalfSector of engine_compass.
-  OctantFromVector of room_topology_words has its own east-based
-  octants: a candidate for VectorSector with SectorString.
-  After it, the other real duplicates of engine_constants.py --all:
-  kNoStrref (3 files), kSkillSecurity (2), kExitDebounceTicks (swoop,
-  turret).
+- F12 done: kPi, kRadToDeg and kDegToRad are defined once
+  (engine_offsets_types.h). VectorEngineYaw, VectorCompass and
+  VectorSector in engine_compass (unit tests) replace
+  `atan2(dy, dx) * 57.29...` and the chain after it in eleven files;
+  kSectorSize and kHalfSector come from engine_compass.h;
+  OctantFromVector of room_topology_words is SectorString(VectorSector).
+  The turret files used two shorter spellings of the constant (57.2958,
+  0.01745329): their angles change in the seventh digit. In-game check:
+  Right Alt (facing and area), the compass word while the camera turns,
+  the clock position on Q / E, "leads West" on a door, the route on
+  Ctrl+-, "way blocked" with its direction, a region label that names a
+  direction.
+  Still to do from engine_constants.py --all: kNoStrref (3 files),
+  kSkillSecurity (2), kExitDebounceTicks (swoop, turret).
 - Goal (Anouk, 2026-11-10): split every file above 600 lines where that is
   possible; for files above 500 lines, judge whether a split into modules of
   things that belong together makes sense, and do it where it does.

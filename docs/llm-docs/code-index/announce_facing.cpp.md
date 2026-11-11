@@ -1,4 +1,4 @@
-# announce_facing.cpp (217 lines)
+# announce_facing.cpp (212 lines)
 
 Source: `patches/Accessibility/announce_facing.cpp`
 
@@ -12,11 +12,11 @@ Win32 polling because AltGr is unbound in stock kotor.ini and the engine keymap 
 
 ## Declarations (in source order)
 
-- L26 `int CompassDegreesFromEngineYaw(float engineYaw)`
-- L36 `bool ReadCameraEngineYawDegrees(float& out)`: Camera facing in engine yaw (0° = +X, CCW+).
-- L51 `const char* SectorWord(int compassDegrees)`
-- L60 `bool ResolveClusterLabelForPlayer(std::string& outBuf)`: Perceptual-region label at the player's position.
-- L86 `void AnnounceWorldFacing()`
-- L111 `bool ResolveRoomNameForPlayer(char* outBuf, size_t bufSize)`: Three-tier room name lookup matching transitions::Tick: landmark → friendly room name → synthetic "Room N".
-- L150 `void AnnounceMapFacing()`
-- L203 `void PollWin32()`
+- L24 `int CompassDegreesFromEngineYaw(float engineYaw)`
+- L34 `bool ReadCameraEngineYawDegrees(float& out)`: Camera facing in engine yaw (0° = +X, CCW+).
+- L46 `const char* SectorWord(int compassDegrees)`
+- L55 `bool ResolveClusterLabelForPlayer(std::string& outBuf)`: Perceptual-region label at the player's position.
+- L81 `void AnnounceWorldFacing()`
+- L106 `bool ResolveRoomNameForPlayer(char* outBuf, size_t bufSize)`: Three-tier room name lookup matching transitions::Tick: landmark → friendly room name → synthetic "Room N".
+- L145 `void AnnounceMapFacing()`
+- L198 `void PollWin32()`

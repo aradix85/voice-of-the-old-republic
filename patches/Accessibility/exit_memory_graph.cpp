@@ -249,9 +249,7 @@ std::string DoorBeyond(const Graph& g, const Vector& doorPos, int* outNear) {
         dy = info.centre.y - doorPos.y;
     }
     if (dx * dx + dy * dy < 0.25f) return std::string();
-    const float yaw = std::atan2(dy, dx) * 57.29578f;
-    const int sector =
-        acc::engine::CompassToSector(acc::engine::EngineYawToCompass(yaw));
+    const int sector = acc::engine::VectorSector(dx, dy);
     char buf[320];
     std::snprintf(buf, sizeof(buf), acc::strings::Get(Id::FmtDoorLeads),
                   acc::strings::Get(acc::engine::SectorString(sector)));

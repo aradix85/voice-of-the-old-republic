@@ -11,10 +11,7 @@
 
 namespace acc::camera_orient {
 
-constexpr float kPi       = 3.14159265358979323846f;
-constexpr float kTwoPi    = 6.28318530717958647692f;
-constexpr float kRadToDeg = 57.29577951308232f;
-constexpr float kDegToRad = 0.017453292519943295f;
+constexpr float kTwoPi = 6.28318530717958647692f;
 
 // Within this of a heading counts as facing it (about 2.9 degrees).
 constexpr float kArrivalRad = 0.05f;

@@ -110,7 +110,6 @@ bool ChooseSidestep(const Vector& pc, const Vector& tgt, Vector& out,
     Vector obs[kMaxObstacles];
     const int n = NearbyCreatures(pc, kObstacleRadius, obs, nullptr,
                                   kMaxObstacles);
-    const float kPi   = 3.14159265358979f;
     const float toTgt = std::atan2(tgt.y - pc.y, tgt.x - pc.x);
     float best = -1.0e9f;
     bool  found = false;
@@ -414,12 +413,8 @@ void SpeakWayBlocked(const char* name, const Vector& targetPos) {
             float dy = targetPos.y - playerPos.y;
             const int metres = WholeMetresAtLeastOne(std::sqrt(dx * dx + dy * dy));
 
-            // Absolute 8-point compass of the player→target vector — same frame
-            // the route readout and passive cue use (+X=East, +Y=North).
-            float engineYaw = std::atan2(dy, dx) * (180.0f / 3.14159265358979f);
-            int   sector    = acc::engine::CompassToSector(
-                                  acc::engine::EngineYawToCompass(engineYaw));
-            const char* dir = acc::strings::Get(acc::engine::SectorString(sector));
+            const char* dir = acc::strings::Get(
+                acc::engine::SectorString(acc::engine::VectorSector(dx, dy)));
 
             std::snprintf(msg, sizeof(msg),
                 acc::strings::Get(acc::strings::Id::FmtInteractWayBlockedTarget),

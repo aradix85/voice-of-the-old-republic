@@ -5,7 +5,8 @@
 //
 //   engine_offsets_types.h      This file. Plain C++ struct layouts for engine
 //                               types we read through or construct, and the
-//                               distances between positions. No addresses,
+//                               distances between positions and the angle
+//                               units. No addresses,
 //                               no offsets.
 //   engine_offsets_addresses.h  Executable addresses: functions, vtables and
 //                               .data global pointers, through acc::addr.
@@ -84,6 +85,11 @@ inline int WholeMetresAtLeastOne(float metres) {
     const int whole = WholeMetres(metres);
     return whole < 1 ? 1 : whole;
 }
+
+// Radians for the math library, degrees for everything else.
+constexpr float kPi       = 3.14159265358979323846f;
+constexpr float kRadToDeg = 57.29577951308232f;
+constexpr float kDegToRad = 0.017453292519943295f;
 
 // CExoString - the engine's string type: heap c_string plus explicit length.
 // Most engine string accessors construct one in place into caller-supplied

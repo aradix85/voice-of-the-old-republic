@@ -262,7 +262,7 @@ void WriteOffset(float az, float el) {
 float AngleBetweenDeg(const Vector& a, const Vector& b) {
     float dot = a.x * b.x + a.y * b.y + a.z * b.z;
     if (dot > 1.0f) dot = 1.0f; else if (dot < -1.0f) dot = -1.0f;
-    return std::acos(dot) * 57.2958f;
+    return std::acos(dot) * kRadToDeg;
 }
 
 }  // namespace acc::turret_game

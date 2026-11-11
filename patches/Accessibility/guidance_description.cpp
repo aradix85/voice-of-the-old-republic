@@ -14,22 +14,11 @@ namespace {
 
 constexpr float kMinSegmentMeters = 1.0f;  // hops shorter than this are
                                            // merged into the next segment
-constexpr float kRadToDeg         = 57.29577951308232f;
 
 struct Segment {
     int sector;     // 0..7 (engine_compass convention)
     float dist;     // metres
 };
-
-// Compute the 8-point compass sector of a displacement vector. The
-// game-world frame matches the engine yaw frame: +X = East, +Y =
-// North in compass convention. atan2(dy, dx) gives engine yaw of the
-// displacement; EngineYawToCompass + CompassToSector buckets to 0..7.
-int CompassSectorOf(float dx, float dy) {
-    float engineYaw = std::atan2(dy, dx) * kRadToDeg;
-    float compass   = acc::engine::EngineYawToCompass(engineYaw);
-    return acc::engine::CompassToSector(compass);
-}
 
 // Build the merged segment list from a (player + waypoints) iteration.
 // Each call to AddHop folds the hop into the existing tail when the
@@ -51,7 +40,7 @@ public:
             return;
         }
 
-        int sector = CompassSectorOf(dx, dy);
+        int sector = acc::engine::VectorSector(dx, dy);
 
         // If we have a tail with the same sector, merge.
         if (!segments_.empty() && segments_.back().sector == sector) {

@@ -16,6 +16,7 @@
 #include "camera_orient.h"   // IsActive: our own snap-turn drives the camera
 #include "core_tick.h"       // NowMs: rates divide by an inter-tick interval
 #include "engine_app.h"      // GetClientAppInternal, GetClientModule
+#include "engine_compass.h"
 #include "engine_input.h"    // PollTurnAxis, ReadNativeStickAxes
 #include "engine_keymap.h"   // AnyMovementKeyHeld
 #include "engine_manager.h"  // GetGuiManager
@@ -31,8 +32,6 @@
 namespace acc::camera_spin_guard {
 
 namespace {
-
-constexpr float kRadToDeg = 57.29577951308232f;
 
 // UpdateCamera (K1 0x5f5e10; K2's edge-band code 0x0078C520-0x0078C6A0):
 // screenFramePercentage, the cursor at [[GuiManager]+0] / +4, the viewport
@@ -253,7 +252,7 @@ void SampleYaws(DWORD now, const Vector& playerPos, Sample& s) {
         const float dx = playerPos.x - camPos.x;
         const float dy = playerPos.y - camPos.y;
         s.camDistM = std::sqrt(dx * dx + dy * dy);
-        if (s.camDistM >= 0.1f) s.posYawDeg = NormDeg(std::atan2(dy, dx) * kRadToDeg);
+        if (s.camDistM >= 0.1f) s.posYawDeg = acc::engine::VectorEngineYaw(dx, dy);
     }
     if (s.quatYawDeg >= 0.0f) {
         s.haveRate = StepWitness(s.quatYawDeg, now, g_state.have, g_state.prevYaw, g_state.prevMs,

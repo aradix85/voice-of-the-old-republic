@@ -7,6 +7,9 @@
 using acc::engine::ClockPosition;
 using acc::engine::CompassToSector;
 using acc::engine::EngineYawToCompass;
+using acc::engine::VectorCompass;
+using acc::engine::VectorEngineYaw;
+using acc::engine::VectorSector;
 using doctest::Approx;
 
 TEST_CASE("Distances on the floor plan ignore height") {
@@ -58,4 +61,26 @@ TEST_CASE("Clock positions are relative to where the player faces") {
     CHECK(ClockPosition(0.0f, 0.0f, 1.0f) == 9);
     // Facing north (engine yaw 90): east is to the right.
     CHECK(ClockPosition(90.0f, 1.0f, 0.0f) == 3);
+}
+
+TEST_CASE("A floor-plan vector has an engine yaw, a bearing and a sector") {
+    CHECK(VectorEngineYaw(1.0f, 0.0f) == Approx(0.0f));     // east
+    CHECK(VectorEngineYaw(0.0f, 1.0f) == Approx(90.0f));    // north
+    CHECK(VectorEngineYaw(0.0f, -1.0f) == Approx(270.0f));  // never negative
+    CHECK(VectorCompass(0.0f, 1.0f) == Approx(0.0f));
+    CHECK(VectorCompass(1.0f, 0.0f) == Approx(90.0f));
+    CHECK(VectorCompass(-1.0f, 0.0f) == Approx(270.0f));
+    CHECK(VectorSector(0.0f, 1.0f) == 0);    // N
+    CHECK(VectorSector(1.0f, 1.0f) == 1);    // NE
+    CHECK(VectorSector(1.0f, 0.0f) == 2);    // E
+    CHECK(VectorSector(1.0f, -1.0f) == 3);   // SE
+    CHECK(VectorSector(0.0f, -1.0f) == 4);   // S
+    CHECK(VectorSector(-1.0f, -1.0f) == 5);  // SW
+    CHECK(VectorSector(-1.0f, 0.0f) == 6);   // W
+    CHECK(VectorSector(-1.0f, 1.0f) == 7);   // NW
+}
+
+TEST_CASE("Degrees and radians convert both ways") {
+    CHECK(180.0f * kDegToRad == Approx(kPi));
+    CHECK(kPi * kRadToDeg == Approx(180.0f));
 }

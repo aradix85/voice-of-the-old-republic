@@ -48,8 +48,6 @@ constexpr float kElevMaxOctaves   = 1.0f;   // clamp the glide to +/- 1 octave
 // to ride a sustained tone. Played toward the fighter so it pans correctly.
 constexpr const char* kFireCueResref = "c_drdastro_hit2";
 
-constexpr float kRad2Deg = 57.2957795f;
-
 float Clamp1(float v) { return v > 1.0f ? 1.0f : (v < -1.0f ? -1.0f : v); }
 
 // The census index of the locked fighter in `idx`, after keeping or moving
@@ -364,7 +362,7 @@ void DriveSelectedPeg(const int occSlot[], const float occDist[],
     // Hitbox half-angle at the INTERCEPT distance — "on target" = a bolt fired
     // now lands in the sphere when it arrives.
     const float subtendDeg =
-        (radius > 0.0f && aimTgtDist > 0.0f) ? std::atan(radius / aimTgtDist) * kRad2Deg : 0.0f;
+        (radius > 0.0f && aimTgtDist > 0.0f) ? std::atan(radius / aimTgtDist) * kRadToDeg : 0.0f;
     const float onTargetAngle =
         (subtendDeg > 0.0f) ? subtendDeg : kFallbackOnTargetDeg;
     const bool  onTarget = (angle <= onTargetAngle);
@@ -397,13 +395,13 @@ void DriveSelectedPeg(const int occSlot[], const float occDist[],
     const float srcDist = DrivePegSound(onTargetCue, angle, onTargetAngle, subtendDeg,
                                         aimTgtDist, aimRel, tdir, aimDir, listener);
 
-    const float lateral = std::sin(angle * 0.01745329f) * aimTgtDist;
+    const float lateral = std::sin(angle * kDegToRad) * aimTgtDist;
 
     // Per-axis error to the INTERCEPT direction (the cue's target).
-    const float aimAz = std::atan2(aimDir.x, aimDir.y) * kRad2Deg;
-    const float aimEl = std::asin(Clamp1(aimDir.z))   * kRad2Deg;
-    const float tgtAz = std::atan2(tdir.x,   tdir.y)  * kRad2Deg;
-    const float tgtEl = std::asin(Clamp1(tdir.z))     * kRad2Deg;
+    const float aimAz = std::atan2(aimDir.x, aimDir.y) * kRadToDeg;
+    const float aimEl = std::asin(Clamp1(aimDir.z))   * kRadToDeg;
+    const float tgtAz = std::atan2(tdir.x,   tdir.y)  * kRadToDeg;
+    const float tgtEl = std::asin(Clamp1(tdir.z))     * kRadToDeg;
     const float errAz = Wrap180(aimAz - tgtAz);
     const float errEl = aimEl - tgtEl;
 

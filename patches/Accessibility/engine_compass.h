@@ -18,15 +18,24 @@
 
 namespace acc::engine {
 
+// A sector is 45 degrees wide, centred on its direction.
+constexpr float kSectorSize = 45.0f;
+constexpr float kHalfSector = 22.5f;
+
 float EngineYawToCompass(float engineYawDeg);
 int   CompassToSector(float compassDeg);
 acc::strings::Id SectorString(int sector);
 
+// The floor-plan vector (dx, dy), +X east and +Y north: its engine yaw and
+// its compass bearing, both in [0, 360], and its sector.
+float VectorEngineYaw(float dx, float dy);
+float VectorCompass(float dx, float dy);
+int   VectorSector(float dx, float dy);
+
 // Clock position of the world-space offset (dx, dy) relative to a
 // facing given in ENGINE yaw degrees: 12 = directly ahead, 3 = right,
 // 6 = behind, 9 = left. 30° buckets, round-to-nearest; the ahead bucket
-// returns 12 (never 0). Moved here from cycle_input.cpp so trap/object
-// announcements share one definition.
+// returns 12 (never 0).
 int ClockPosition(float playerYawDeg, float dx, float dy);
 
 }  // namespace acc::engine

@@ -2,13 +2,13 @@
 
 #include <cmath>
 
+#include "engine_offsets_types.h"
+
 namespace acc::engine {
 
 namespace {
 
-constexpr int   kSectorCount = 8;
-constexpr float kSectorSize  = 45.0f;
-constexpr float kHalfSector  = 22.5f;
+constexpr int kSectorCount = 8;
 
 }  // namespace
 
@@ -26,10 +26,21 @@ int CompassToSector(float compassDeg) {
     return s;
 }
 
+float VectorEngineYaw(float dx, float dy) {
+    const float yaw = std::atan2(dy, dx) * kRadToDeg;
+    return yaw < 0.0f ? yaw + 360.0f : yaw;
+}
+
+float VectorCompass(float dx, float dy) {
+    return EngineYawToCompass(VectorEngineYaw(dx, dy));
+}
+
+int VectorSector(float dx, float dy) {
+    return CompassToSector(VectorCompass(dx, dy));
+}
+
 int ClockPosition(float playerYawDeg, float dx, float dy) {
-    constexpr float kRadToDeg = 57.29577951308232f;
-    float worldAngle = std::atan2(dy, dx) * kRadToDeg;
-    float relCcw = worldAngle - playerYawDeg;
+    float relCcw = VectorEngineYaw(dx, dy) - playerYawDeg;
     float clockDeg = -relCcw;  // flip to clockwise from +ahead
     while (clockDeg < 0.0f)    clockDeg += 360.0f;
     while (clockDeg >= 360.0f) clockDeg -= 360.0f;

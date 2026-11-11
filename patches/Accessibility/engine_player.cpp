@@ -12,6 +12,7 @@
 #include <windows.h>
 #include <cmath>
 #include <cstdint>
+#include "engine_compass.h"
 #include "engine_offsets_select.h"
 
 namespace acc::engine {
@@ -97,10 +98,7 @@ bool GetPlayerYawDegrees(float& out) {
     Vector facing;
     if (!GetPlayerFacing(facing)) return false;
     if (facing.x == 0.0f && facing.y == 0.0f) return false;
-    constexpr float kRadToDeg = 57.29577951308232f;  // 180 / π
-    float deg = std::atan2(facing.y, facing.x) * kRadToDeg;
-    if (deg < 0.0f) deg += 360.0f;
-    out = deg;
+    out = VectorEngineYaw(facing.x, facing.y);
     return true;
 }
 

@@ -1,4 +1,4 @@
-# qe_ring.cpp (186 lines)
+# qe_ring.cpp (185 lines)
 
 Source: `patches/Accessibility/qe_ring.cpp`
 

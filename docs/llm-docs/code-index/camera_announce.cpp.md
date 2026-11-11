@@ -1,4 +1,4 @@
-# camera_announce.cpp (441 lines)
+# camera_announce.cpp (436 lines)
 
 Source: `patches/Accessibility/camera_announce.cpp`
 
@@ -6,8 +6,8 @@ divides by an inter-tick interval, which GetTickCount cannot resolve (see the No
 
 ## Declarations (in source order)
 
-- L98 `float AngularDelta(float a, float b)`
-- L132 `bool ReadCameraCompass(float& outCompass)`
-- L152 `void Tick()`
-- L389 `bool AnnounceCurrentFacing(unsigned int dedupMs)`
-- L431 `bool TryGetCameraEngineYawDegrees(float& out)`
+- L96 `float AngularDelta(float a, float b)`
+- L130 `bool ReadCameraCompass(float& outCompass)`
+- L147 `void Tick()`
+- L384 `bool AnnounceCurrentFacing(unsigned int dedupMs)`
+- L426 `bool TryGetCameraEngineYawDegrees(float& out)`
