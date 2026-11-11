@@ -625,10 +625,7 @@ const uintptr_t kAddrCSWGuiUpgradeShowItems = acc::addr::Pick(0x006c2f80, 0x008c
 // entry COUNT differs too, so the 16-entry assumption above is KOTOR 1's.
 // Callers must branch on acc::game::IsKotor2() for the index; this constant
 // only fixes the base.
-// Pick(), NOT PickGlobal(): this is .rdata, and .rdata DOES move on the 2004
-// relink — this very table is one of the entries engine_rebase_rdata.inc
-// resolves. PickGlobal skips R() and would hand out the reference address on
-// the relink build.
+// Pick(), not PickGlobal(): the table is .rdata.
 const uintptr_t kAddrUpgradeSlotTypeTable = acc::addr::Pick(0x00756fb0, 0x009A84E8);
 
 // Server-side combat-mode global. Read via accessor for safety; the
@@ -1024,14 +1021,8 @@ const uintptr_t kVtableCSWGuiJournalItemEntry          = acc::addr::Pick(0x00751
 const uintptr_t kAddrJournalOnControlEntered = acc::addr::Pick(0x00645100, 0x007FC390);
 
 // ---------------------------------------------------------------------------
-// .data global pointers - deliberately NOT passed through acc::addr::R().
-//
-// R() covers .text only (engine_addr.h) and .data is byte-stable across the
-// builds it exists for, so wrapping these would be wrong rather than merely
-// redundant. Upstream models them as the AddressDatabase `global_pointers`
-// table and already carries them by name for both K1 and K2. Same treatment as
-// kAddrGuiManagerPtr (engine_manager.h), kAddrAppManagerPtr (engine_player.h)
-// and kAddrCExoSoundPtr (audio_bus.h).
+// .data global pointers. Upstream models them as the AddressDatabase
+// `global_pointers` table and carries them by name for both games.
 // ---------------------------------------------------------------------------
 
 // CSWSRules* - the global rules object. The feat and spell table geometry

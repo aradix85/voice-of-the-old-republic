@@ -6,7 +6,8 @@
 
 #include "menus_extract_internal.h"
 
-#include "engine_addr.h"  // R: the reference-build vtables
+#include "engine_addr.h"  // R: the vtables are KOTOR 1 addresses
+
 #include "log.h"
 
 namespace acc::menus::extract {
@@ -14,7 +15,8 @@ namespace acc::menus::extract {
 namespace {
 
 struct VtableOverride {
-    uintptr_t   vtable;  // reference build, mapped at the comparison
+    uintptr_t   vtable;  // in KOTOR 1; passed through R() at the comparison
+
     bool        label;   // label offsets, else button offsets
     const char* tag;
 };

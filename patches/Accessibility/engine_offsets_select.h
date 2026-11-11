@@ -1,19 +1,10 @@
 // Per-game selection for struct field offsets.
 //
-// Why this exists
-// ---------------
-// `acc::addr::R()` solves the same problem for .text ADDRESSES, but it cannot
-// be reused here, and the reason is worth stating because it is not obvious:
-// R() is a table keyed on the reference address, which works only because
-// addresses are globally unique. Offsets are not. `+0x4` is CAppManager.Client
-// AND CGameObject.Id AND a dozen others, so there is no key to look up. The
-// per-game value has to be chosen at the declaration site, where the field's
-// identity is known.
-//
-// Hence three markers rather than a table. Each constant initialises itself at
-// load time from its own declaration, exactly as the R()-wrapped addresses do,
-// so there is no cross-translation-unit initialisation-order problem: the only
-// shared state is acc::game's function-local static.
+// The per-game value is chosen at the declaration, where the field's identity
+// is known, as acc::addr does for addresses (engine_addr.h). Each constant
+// initialises itself at load time from its own declaration, so there is no
+// cross-translation-unit initialisation-order problem: the only shared state
+// is acc::game's function-local static.
 //
 // Choosing a marker
 // -----------------

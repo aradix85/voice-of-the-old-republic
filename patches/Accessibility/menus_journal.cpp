@@ -175,8 +175,6 @@ void LogEntryCounts(void* panel) {
     //   CClientExoApp::GetInGameGui   @0x005ed690 → CGuiInGame*
     //     +0xbc4 bit0 = done-view mode
     typedef void* (__thiscall* PFN_ClientGetter)(void* client);
-    // 0x007A39FC is .data (byte-stable, raw by design); the two getters are
-    // .text and must go through R().
     const std::uintptr_t addrGetQuestJournal = acc::addr::R(0x005ed320);
     const std::uintptr_t addrGetInGameGui    = acc::addr::R(0x005ed690);
     if (!acc::addr::Ok(addrGetQuestJournal) || !acc::addr::Ok(addrGetInGameGui)) {

@@ -155,8 +155,7 @@ void DrainWagerInput(const PendingOp& op) {
 // On KOTOR 1 every one of these is known; on KOTOR 2 an unported one
 // resolves to 0, and calling it would fault outside any SEH frame. A
 // lookup per op rather than one "is this KOTOR 2" test: the ops resolve
-// independently, and it also covers an address missing from the KOTOR 1
-// rebase table.
+// independently.
 bool EngineOpsReady(Kind kind) {
     using acc::addr::Ok;
     switch (kind) {

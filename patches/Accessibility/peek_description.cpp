@@ -117,7 +117,7 @@ int StepBlockCursor(bool down, int count) {
 // so equipped inventory rows stay at 0 forever. Save → force 1 → call →
 // restore around the engine call only.
 void CallOnControlEnteredWithActive(std::uintptr_t addr, void* panel, void* focused) {
-    // Guard before touching is_active: on a rebased build an unmapped address
+    // Guard before touching is_active: an address not known for this game
     // is 0, and we must not force the flag and then fail to make the call that
     // restores it.
     if (!acc::addr::Ok(addr)) {
