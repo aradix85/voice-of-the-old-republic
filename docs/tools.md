@@ -247,7 +247,19 @@ On Anouk's machine; the scripts find them at these default paths.
 - **capstone and minidump** (pip) for `python tools/analysis/call_convention.py`: it compares the argument bytes of every engine function-pointer typedef with the `ret N` of the engine function itself, read from a memory image of the running game (`--from-dump` cuts one out of a process dump). One argument too many crashed the game on 2026-11-11. `python tools/analysis/engine_twins.py` checks the other half: that the KOTOR 2 address of each `Pick(k1, k2)` is the same method as the KOTOR 1 one, by comparing the calls, engine globals and strings the two functions use.
 - `python tools/analysis/engine_constants.py` needs nothing beyond Python: it fails when an engine address or offset is defined in more than one file, and `--all` lists plain constants that share a name across files, for review.
 
-Reports land in `build/analysis/`. The current baselines are in `docs/refactoring/STATE.md` while the refactoring runs.
+Reports land in `build/analysis/`. Where the checks stood on 2026-11-11; anything above these numbers is new:
+
+- `cppcheck.ps1`: exit 0. With `-Style`, 38 knownConditionTrueFalse findings remain, each a variable set inside a raw `__try`, which cppcheck does not follow. Left as they are: constVariablePointer and its relatives, useStlAlgorithm, uninitMemberVarNoCtor (structs the engine fills) and three false positives (bridge_describe containerOutOfBounds, cycle_state and skillinfo uninitvar).
+- `clang_tidy.py`: 8 findings, all reviewed false positives (audio_loop, combat_log_parse, cycle_state, engine_area_names, guidance_autowalk, mod_settings_store, party_status, room_topology_absorb). Run it on every file a rewrite touches.
+- `msvc_check.ps1 -Mode analyze`: 121. 105 are C28159 (GetTickCount is the live clock on purpose; `acc::tick::NowMs` is the time of the tick being dispatched), 7 C6385 and 3 C6054 are false positives, 4 C6262 are stack frames over 16 KB (engine_manager, map_ui_cursor, menus_chain_input, peek_description_item), 2 are in the Windows SDK.
+- Unit tests: 89 cases, 712 assertions; 91% line coverage of the files under test.
+- `call_convention.py`: 184 calls fit in both games, 11 not checked.
+- `engine_twins.py`: 159 pairs, 110 agree, 0 disagree, 3 mixed (read by hand, see `engine_twins_reviewed.txt`), 46 unproven (small accessors with nothing to compare).
+- `engine_constants.py`: no constant defined twice.
+- `raw_try.py`: 230 `__try` blocks outside `engine_reads`; 33 of them have no call inside and stay (several fields of one object under one guard, array walks, reads off a hook's stack frame).
+- `analyse.py`: 479 files, 50,725 code lines, 2,444 functions, 135 above complexity 15, 3 cloned blocks of ten lines or more and none across files.
+
+Splitting a file: `python tools/analysis/split_file.py CONFIG.json` (format in its docstring). Afterwards move the project includes of the internal header to the files that use them; the compiler names a missing one. When the module's public header is not `<module>.h`, fix the include in the internal header by hand, and move a constant that a shared function's default argument uses to the internal header yourself.
 
 ## Conventions
 

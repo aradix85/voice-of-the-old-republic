@@ -1,7 +1,7 @@
 # Voice of the Old Republic — KOTOR 1 Accessibility Mod
 
 ## Purpose
-Accessibility mod for **Star Wars: Knights of the Old Republic** (KOTOR 1, BioWare 2003) enabling blind players to play with NVDA (speech and braille, through the NVDA Controller Client). This is Anouk's fork (aradix85, branch `bridge`) of JeanStiletto's Voice of the Old Republic: NVDA only, English only, keyboard only, text instead of exploration sounds. The refactoring plan and its decisions are in `docs/refactoring/STATE.md`.
+Accessibility mod for **Star Wars: Knights of the Old Republic** (KOTOR 1, BioWare 2003) enabling blind players to play with NVDA (speech and braille, through the NVDA Controller Client). This is Anouk's fork (aradix85, branch `bridge`) of JeanStiletto's Voice of the Old Republic: NVDA only, English only, keyboard only, text instead of exploration sounds.
 
 ## Developer accessibility
 The developer of this mod is blind. Any workflow you propose has to be doable with a screen reader and keyboard alone. Things to avoid unless there is no alternative:

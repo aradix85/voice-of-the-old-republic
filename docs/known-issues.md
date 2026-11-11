@@ -12,6 +12,26 @@ When an entry is closed, move it out of this file (the corresponding fix or comm
 
 ## Bugs
 
+### A container that opens through its own dialog is labelled "opens only through the story" (found in play 2026-11-10)
+
+`ReadLockNeed` answers StoryOnly for key-required without a key name, and gives TryIt only to doors with an OnFailToOpen script. Two on Taris: Sealed Strongbox (tar_m03ab; Conversation tar03_strongbox, OnUsed k_ptar_boxused) and Security Crate (tar_m03ad; tar03_puzzle, k_ptar_puzzlebox). Fix: a placeable with a Conversation or an OnUsed script gets TryIt, or a wording of its own; this needs the CSWSPlaceable offsets of those two fields, verified. Enter from 1 m does start the crate's dialog.
+
+### A placeable without an inventory reads as a lock to pick (2026-11-11)
+
+A hologram that is switched on is locked by its script and then reads "locked, Security 18, best in your party: Carth with 2". There is nothing to pick: no Security line for a placeable without an inventory (needs the has-inventory field).
+
+### "Locked, may open when you try" is too wide
+
+Every door with an OnFailToOpen script gets it, also when the script only barks a line (Arena Door, cp_tar02_duelbrk). Idea: read the script, and treat one that only does BarkString / SpeakString as no story door.
+
+### Class selection: Left / Right pick a class once Up / Down was used (2026-11-11, in the original mod too)
+
+Before the chain is bound the engine moves the selection itself. After one Up or Down the chain owns the panel, and `HandleLeftRight` (menus_chain_input_keys.cpp) treats Left / Right as a cycle arrow: it activates the neighbour, which `classIconOffsetX` makes the class two places on. On this panel Left / Right should step the chain.
+
+### A run of panel texts is spoken on the load into a new game (KOTOR 1)
+
+"Add Power", "Buy", "You cannot equip this item", "control 8", "Party Inventory", "Script Selection", "Active Quests", "Options", "Load a saved game", "Messages", "Load Game", all in the second the panels are built, before "Area: ...". KOTOR 2 had the same and was silenced.
+
 ### KOTOR 2 crash entering the Peragus Fuel Depot — third-party item, engine null-deref (diagnosed 2026-08-24, no code change yet)
 
 Kenny's game died on the area transition into the Fuel Depot
@@ -172,6 +192,15 @@ Let players give their own map pins a name when they drop one, and read that nam
 Offer the community resolution / widescreen + HR-menus patches as an installer option, and make our own code robust to the layout changes they introduce. Deliberately deferred until the mod leaves beta: it widens the support surface (several of our paths still assume a particular screen geometry — screen-pixel coordinates, the OS cursor, hardcoded hit-test offset compensations), and a beta is the wrong time to add a second variable to every bug report. Prerequisite when we do take it on: audit every place we depend on screen geometry and read it live from the engine instead of assuming. See `archiev/installer-design-original.md` (Widescreen / HR-menus bundling).
 
 ## Monitor
+
+### To check in play after the 2026-11 restructuring
+
+- Tab: the leader's name had two announcers and was heard twice, or as the old name and then the new one (confirmed by Anouk, 2026-11-11). party_leader_announce has one `Tick` now; confirm in play that the name comes once, and that Tab alone in the party still answers.
+- Max HP of companions: party_status and bridge_state read it with `ReadCreatureMaxHitPoints` (GetMaxHitPoints(1)), which the original notes say returns garbage for anyone but the player character. `ReadClientCreatureHitPoints` is what the character sheet uses. Compare Ctrl+H with the character sheet.
+- Enter on something out of reach: the use call left KOTOR 1's caller with garbage registers until 4c91ad0d, so the stalled approach could not read its target and gave up without a word. It should now say that the way is blocked. In Anouk's logs of 2026-11-10 and 11 on the old build, 212 of 610 armed approaches carried the handle where the object pointer belongs, and 63 ended in "target position unresolvable - disarm quietly". She reports (2026-11-11) that after "way blocked" she often cannot walk on until she reloads, and that turning the character does not always free it. Whether that is gone with the fix is open: when it happens again, look at the live state (action queue depth, `Approach:` and `Autowalk:` lines) before she reloads.
+- KOTOR 2 tutorial popups: the popup called the wrong engine function for its text until 9b6fcb1b (a vtable slot off by one). Its text should show and be spoken now; no KOTOR 2 session has confirmed it.
+- combat_queue counts a round without an action list as 0 where it was -1 and silent; if the engine can add an action on such a round, the announce now says "position 1" there.
+- NVDA's "speech interrupt for typed characters" (Keyboard settings) cuts a line while a key is held (map cursor, turret fire key). The Windows voices used to dodge that; they are gone.
 
 ### KOTOR 2 party selection read "control 13..24" — v0.8.3 fix FAILED in the field, re-fixed 2026-10-24, awaiting test (GitHub issues 6, 7 and 9)
 

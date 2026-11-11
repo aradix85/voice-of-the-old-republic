@@ -155,7 +155,7 @@ Confirmed unsafe in the chargen→world transient:
 - `CClientExoApp::GetPlayerCharacterName @0x5edab0` — getter for the PC
   name slot. Returns "temp" (placeholder) during the transient. Calling
   every frame intermittently wedges the load. Fixed 2026-05-19 by
-  gating `party_leader_announce::TickLeaderChange` on
+  gating `party_leader_announce::Tick` on
   `GetPlayerPosition` (same gate `passive_narrate` uses).
 
 - `CClientExoApp::GetObjectName` (reached via
@@ -175,7 +175,7 @@ they touch.
 accessor (or any engine getter that touches player state) needs a
 player-loaded gate. Default to `acc::engine::GetPlayerPosition(unused)`
 — same gate `passive_narrate::Tick` and now
-`party_leader_announce::TickLeaderChange` use. When adding new
+`party_leader_announce::Tick` use. When adding new
 per-tick probes, ask: "does this fire during chargen→world?" If yes
 and it touches player state, gate it.
 

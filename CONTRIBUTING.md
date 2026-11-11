@@ -1,6 +1,6 @@
 # Contributing
 
-This is Anouk's fork of Voice of the Old Republic (branch `bridge`). Its changes are written by Claude at her direction; the original mod takes contributions at [JeanStiletto/voice-of-the-old-republic](https://github.com/JeanStiletto/voice-of-the-old-republic). This file covers the dev setup, the inner loop, and the conventions that are not obvious from reading the code. The plan and the rules of the ongoing refactoring are in `docs/refactoring/STATE.md`.
+This is Anouk's fork of Voice of the Old Republic (branch `bridge`). Its changes are written by Claude at her direction; the original mod takes contributions at [JeanStiletto/voice-of-the-old-republic](https://github.com/JeanStiletto/voice-of-the-old-republic). This file covers the dev setup, the inner loop, and the conventions that are not obvious from reading the code.
 
 ## Before you start
 
@@ -62,6 +62,10 @@ Every push to `bridge` is built by `.github/workflows/build.yml`, which runs the
 - Loader-lock-safe in `DllMain` only. Anything that loads DLLs, opens files or initialises COM is deferred to the first hook fire. See `core_dllmain.cpp`.
 - Strings: never hardcode user-facing text in handler code. Add an `Id` to `strings.h` and its English text to `strings.cpp`; handlers call `strings::Get(Id)`. Log lines are English and stay out of the table.
 - Engine-free logic (parsing, geometry, graph walks) goes in files that do not include engine headers, with doctest tests in `tests/unit/`.
+- Engine memory is read and written through `engine_reads` (`TryRead*`, `Read*Or0`, `TryWrite*`): one guarded layer. A `__try` of its own belongs only around a call into the engine, or around several fields of one object read together.
+- A guard that makes a failure audible, or visible in the log, stays. Never make a failure silent.
+- A KOTOR 1 path and its KOTOR 2 twin live in the same file. Constants in the `engine_offsets_*.h` catalogs stay even when nothing uses them: they are verified engine knowledge.
+- Splitting a module takes two commits: one that only moves code (checked with a line comparison), then one that makes it lean with the same behaviour. `tools/analysis/split_plan.py` measures calls and shared data first; `split_file.py` does the move.
 
 ### Comments
 

@@ -108,6 +108,8 @@ installer, as the pre-release `bridge-latest`.
 - Keyboard only: the mod's gamepad support is gone.
 - View mode (B) is gone.
 - Enter on an open door walks through it.
+- Tab says the name of the character you now control once, and no longer
+  the previous one first.
 - Endar Spire: Trask as party leader can no longer try the door that must be
   opened by your own character.
 - F1 help lists the new keys.
@@ -119,8 +121,9 @@ installer, as the pre-release `bridge-latest`.
 - The installer installs NVDA's controller client, downloads the mod from
   this fork, and no longer updates itself.
 - Every build publishes the installer next to the mod.
-- The code is being reorganised into smaller parts with less duplication,
-  and has unit tests; play is meant to stay the same.
+- Using an object through the bridge no longer crashes the game.
+- The code is reorganised into small files with one job each, with less
+  duplication and with unit tests; play is meant to stay the same.
 - Log only: the patch log can be read while the game runs; lock lines name a
   door's OnFailToOpen script.
 
@@ -286,6 +289,11 @@ installer, as the pre-release `bridge-latest`.
   "locked" as you walked through it.
 - Ctrl+H reads every party member's health and who can level up; "Name can
   level up" is announced when it becomes true.
+- Tab says the name of the character you now control, once. Two parts of
+  the mod announced the switch: one waited a few frames for it, gave up and
+  said the old name, and the other then said the new one; when the switch
+  was quick both said the new name. One announcer is left. A Tab that
+  switches nobody still answers with the current name, after 0.75 seconds.
 
 <h3>Endar Spire:</h3>
 
@@ -359,6 +367,9 @@ installer, as the pre-release `bridge-latest`.
 - `/objects` includes people (with dead and hostile) and each object's tag.
 - The token header must match exactly, and a bad `%XX` in a request no
   longer turns into a NUL.
+- The `use` action no longer crashes the game. The call that queues a use
+  passed KOTOR 1 one argument too many, which left the caller with garbage
+  registers after every use; the bridge was the caller that died of it.
 
 <h3>Installer:</h3>
 
@@ -383,13 +394,16 @@ installer, as the pre-release `bridge-latest`.
 - `tools/analysis/`: scripts that measure the patch source (function length
   and complexity with lizard, clones, include cycles, single-use functions,
   same-named helpers across files), plan a split, and generate the code index.
-- Refactoring (in progress): large files split into one job per file with
-  `tools/analysis/split_file.py` (exit_memory, room_topology, menus_extract,
-  menus_listbox, the turret and swoop minigames, speech, the bridge),
-  duplicated helpers merged (door lookup, distances, case folding), unused
-  functions removed. Unit tests (doctest, `tests/unit`,
-  `tools/tests/run_unit_tests.ps1`) run on every build. `kdev
-  combat-strings-extract` is gone with the other languages.
+- Refactoring (2026-11-09 to 11): every large file is split into one job
+  per file, duplicated code is merged, and guarded reads and writes of
+  engine memory go through one layer (`engine_reads`). From 334 files with
+  72,485 code lines to 479 files with 50,725; functions above complexity
+  15 from 212 to 135; `__try` blocks from 581 to 273; cloned blocks of ten
+  lines or more from 45 to 3. Unit tests (doctest, `tests/unit`,
+  `tools/tests/run_unit_tests.ps1`, 89 cases) run on every build, and
+  `tools/analysis/` checks every call into the engine against the
+  engine's own code in both games. `kdev combat-strings-extract` is gone
+  with the other languages.
 - Log only: the patch log is opened shared for reading, so it can be followed
   while the game runs.
 

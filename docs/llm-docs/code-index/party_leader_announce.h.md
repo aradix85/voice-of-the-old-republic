@@ -1,14 +1,9 @@
-# party_leader_announce.h (23 lines)
+# party_leader_announce.h (14 lines)
 
 Source: `patches/Accessibility/party_leader_announce.h`
 
-Tab leader-change announce.
-
-Speaks the new controlled creature's name on Tab rising-edge. Repetition is intentional — in solo mode Tab on the same creature still speaks, confirming "still solo" rather than swallowing the press.
-
-Fires in panels too — engine strip panels re-bind to the new leader, so the announce is wanted in both world and UI contexts.
+Speaks the name of the creature the player controls when it changes: by Tab, in the world or in a panel, or by a script. A Tab that changes nobody answers with the current name, so the key never goes unanswered. Silent on the first observation and right after an area change, when the engine is putting the party together.
 
 ## Declarations (in source order)
 
-- L15 `void Tick()`: Foreground + player-loaded gates inside.
-- L20 `void TickLeaderChange()`: Polls the active leader's name and speaks it on change.
+- L11 `void Tick()`
