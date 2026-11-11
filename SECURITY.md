@@ -28,10 +28,12 @@ the mod.
 
 ## Reporting a vulnerability
 
-Issues are switched off on this fork and GitHub's private vulnerability
-reporting is not enabled. Reach the owner through her GitHub profile:
-https://github.com/aradix85. A problem that is also in the original mod belongs
-with its maker: https://github.com/JeanStiletto/voice-of-the-old-republic.
+Report it privately through GitHub: on this repository, Security, then
+"Report a vulnerability"
+(https://github.com/aradix85/voice-of-the-old-republic/security/advisories/new).
+Issues are switched off on this fork. A problem that is also in the original
+mod belongs with its maker:
+https://github.com/JeanStiletto/voice-of-the-old-republic.
 
 ## Realistic attack surface
 
