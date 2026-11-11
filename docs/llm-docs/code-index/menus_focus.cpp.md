@@ -1,4 +1,4 @@
-# menus_focus.cpp (423 lines)
+# menus_focus.cpp (421 lines)
 
 Source: `patches/Accessibility/menus_focus.cpp`
 
@@ -12,7 +12,7 @@ First-sight / focus-capture logic for the panel focus hook: OnSetActiveControl (
 - L112 `void SpeakFirstLabelAsTitle(void* panel)`: The panel's first label with text that can be a title.
 - L150 `static void AnnouncePanelTitle(void* panel)`: The first focus into a panel speaks its title, so that the user knows which menu this is.
 - L194 `void acc::menus::focus::PrefillClassIconCacheOnTransition(void* panel, void* newControl)`: Chargen class-icon cache pump.
-- L230 `void acc::menus::focus::UpdateFocusedPanelState(void* panel)`: Update g_currentPanel on panel transitions.
-- L241 `void acc::menus::focus::WalkAndCaptureOnFirstSight(void* panel)`: First focus event into a previously-unseen panel: dump every child control + capture cycle-button category text.
-- L329 `void acc::menus::focus::SpeakPanelTitleOnFirstSight(void* panel)`: First focus into a new panel: speak its title once.
-- L354 `void acc::menus::focus::AnnounceNewFocusedControl(int n, void* panel, void* newControl)`: Record the new focused control into the pending-announce slot for the drain to read on the next tick.
+- L228 `void acc::menus::focus::UpdateFocusedPanelState(void* panel)`: Update g_currentPanel on panel transitions.
+- L239 `void acc::menus::focus::WalkAndCaptureOnFirstSight(void* panel)`: First focus event into a previously-unseen panel: dump every child control + capture cycle-button category text.
+- L327 `void acc::menus::focus::SpeakPanelTitleOnFirstSight(void* panel)`: First focus into a new panel: speak its title once.
+- L352 `void acc::menus::focus::AnnounceNewFocusedControl(int n, void* panel, void* newControl)`: Record the new focused control into the pending-announce slot for the drain to read on the next tick.

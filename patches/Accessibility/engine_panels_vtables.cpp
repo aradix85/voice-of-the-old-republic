@@ -8,18 +8,9 @@
 
 #include "engine_addr.h"
 #include "engine_offsets.h"
+#include "engine_reads.h"
 
 namespace acc::engine {
-
-bool HasVtable(void* obj, uintptr_t expected) {
-    if (!obj) return false;
-    __try {
-        void** vt = *reinterpret_cast<void***>(obj);
-        return reinterpret_cast<uintptr_t>(vt) == expected;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return false;
-    }
-}
 
 namespace {
 
@@ -92,13 +83,8 @@ const VtableKind kVtableKinds[] = {
 }  // namespace
 
 PanelKind IdentifyByVtable(void* panel) {
-    if (!panel) return PanelKind::Unknown;
-    uintptr_t vt = 0;
-    __try {
-        vt = reinterpret_cast<uintptr_t>(*reinterpret_cast<void***>(panel));
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return PanelKind::Unknown;
-    }
+    const uintptr_t vt = ReadVtable(panel);
+    if (!vt) return PanelKind::Unknown;
     for (const auto& e : kVtableKinds) {
         if (acc::addr::Ok(e.vtable) && e.vtable == vt) return e.kind;
     }

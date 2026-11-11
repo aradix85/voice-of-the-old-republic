@@ -4,6 +4,7 @@
 
 #include "menus_extract_internal.h"
 
+#include "engine_reads.h"
 #include "engine_panels.h"
 #include "menus_charsheet.h"
 #include "menus_credits.h"
@@ -193,9 +194,7 @@ const char* TryKeyBindingRow(void* control, void* owner,
     if (owner &&
         IdentifyPanel(owner) == PanelKind::KeyboardMapping) {
         __try {
-            uintptr_t vt = reinterpret_cast<uintptr_t>(
-                *reinterpret_cast<void***>(control));
-            if (vt == kVtableKeyMapButton) {
+            if (acc::engine::HasVtable(control, kVtableKeyMapButton)) {
                 char action[128]; action[0] = '\0';
                 char key[64];     key[0] = '\0';
                 acc::engine::ReadButtonText(control, action, sizeof(action));

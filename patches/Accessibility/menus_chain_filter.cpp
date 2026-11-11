@@ -24,10 +24,7 @@ namespace acc::menus::chain {
 // existing `[◀] value [▶]` UX without needing the head_3d_scene_control
 // (a non-button, IsChainNavigable would reject it) as a chain anchor.
 void* ResolvePortraitChargenSkip(void* panel) {
-    void** pVt = *reinterpret_cast<void***>(panel);
-    if (reinterpret_cast<uintptr_t>(pVt) != kVtableCSWGuiPortraitCharGen) {
-        return nullptr;
-    }
+    if (!acc::engine::HasVtable(panel, kVtableCSWGuiPortraitCharGen)) return nullptr;
     return reinterpret_cast<unsigned char*>(panel) + kPortraitRightArrowOffset;
 }
 

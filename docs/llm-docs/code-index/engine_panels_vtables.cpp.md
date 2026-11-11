@@ -1,4 +1,4 @@
-# engine_panels_vtables.cpp (109 lines)
+# engine_panels_vtables.cpp (95 lines)
 
 Source: `patches/Accessibility/engine_panels_vtables.cpp`
 
@@ -6,5 +6,4 @@ The heap-allocated panels with no CGuiInGame slot, identified by their vtable: e
 
 ## Declarations (in source order)
 
-- L14 `bool HasVtable(void* obj, uintptr_t expected)`
-- L94 `PanelKind IdentifyByVtable(void* panel)`
+- L85 `PanelKind IdentifyByVtable(void* panel)`

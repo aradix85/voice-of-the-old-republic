@@ -86,6 +86,16 @@ bool TryReadPtr(void* base, size_t offset, void** out) {
     }
 }
 
+uintptr_t ReadVtable(void* object) {
+    void* vtable = nullptr;
+    TryReadPtr(object, 0, &vtable);
+    return reinterpret_cast<uintptr_t>(vtable);
+}
+
+bool HasVtable(void* object, uintptr_t vtable) {
+    return vtable != 0 && ReadVtable(object) == vtable;
+}
+
 bool TryReadFloat(void* base, size_t offset, float* out) {
     if (!base || !out) return false;
     __try {

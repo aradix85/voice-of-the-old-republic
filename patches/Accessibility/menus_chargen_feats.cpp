@@ -85,9 +85,7 @@ skillflow_grid::Grid g_grid(kScreen);
 }  // namespace
 
 bool IsChargenFeatsPanel(void* panel) {
-    void* vtable = nullptr;
-    return acc::engine::TryReadPtr(panel, 0, &vtable) &&
-           reinterpret_cast<uintptr_t>(vtable) == kVtableCSWGuiFeatsCharGen;
+    return acc::engine::HasVtable(panel, kVtableCSWGuiFeatsCharGen);
 }
 
 bool HandleInput(void* panel, int code, int value, int& outRv) {

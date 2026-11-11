@@ -50,8 +50,7 @@ const EditboxPanelSpec kSpecs[] = {
 };
 
 bool Matches(const EditboxPanelSpec& spec, void* panel) {
-    void* vt = nullptr;
-    return TryReadPtr(panel, 0, &vt) && reinterpret_cast<uintptr_t>(vt) == *spec.vtable;
+    return acc::engine::HasVtable(panel, *spec.vtable);
 }
 
 void* At(void* panel, size_t offset) {

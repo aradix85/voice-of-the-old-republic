@@ -1,4 +1,4 @@
-# menus_chargen_feats.cpp (98 lines)
+# menus_chargen_feats.cpp (96 lines)
 
 Source: `patches/Accessibility/menus_chargen_feats.cpp`
 
@@ -14,4 +14,4 @@ The feat chart of character generation and level-up: what menus_skillflow_grid n
 - L46 `void OnEnterFeat(void* panel, unsigned long featId)`: Refreshes the name label, the description and the Add / Remove button.
 - L50 `void OnFeatPicked(void* panel, unsigned long featId)`
 - L87 `bool IsChargenFeatsPanel(void* panel)`
-- L93 `bool HandleInput(void* panel, int code, int value, int& outRv)`
+- L91 `bool HandleInput(void* panel, int code, int value, int& outRv)`

@@ -183,19 +183,6 @@ void ValidateTabbedPanel() {
     ResetTabbedState();
 }
 
-// Read a panel/control's vtable word under SEH. 0 on a faulting read or a
-// null object — callers treat 0 as "cannot vouch for this object".
-uintptr_t ReadVtable(void* obj) {
-    if (!obj) return 0;
-    uintptr_t vt = 0;
-    __try {
-        vt = *reinterpret_cast<uintptr_t*>(obj);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return 0;
-    }
-    return vt;
-}
-
 // Identity check for the panel the chain is bound to.
 //
 // IsPanelLive (above) asks "is this pointer in panels[]", which a freed
@@ -215,7 +202,7 @@ uintptr_t ReadVtable(void* obj) {
 // generation token).
 bool ChainPanelIdentityHolds() {
     if (!g_chainPanel || g_chainVtable == 0) return true;  // nothing vouched
-    uintptr_t now = ReadVtable(g_chainPanel);
+    uintptr_t now = acc::engine::ReadVtable(g_chainPanel);
     if (now == g_chainVtable) return true;
     acclog::Write("ChainIdentity",
                   "STALE panel=%p bound-vtable=0x%p now=0x%p — the address "
@@ -246,7 +233,7 @@ void ValidateChainPanel() {
 
 void RebindChain(void* panel) {
     g_chainPanel  = panel;
-    g_chainVtable = ReadVtable(panel);
+    g_chainVtable = acc::engine::ReadVtable(panel);
     g_chainIndex  = 0;
     g_chainCount  = 0;
     if (!panel) return;

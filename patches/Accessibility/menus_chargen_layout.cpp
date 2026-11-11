@@ -43,14 +43,7 @@ int RowPitchFromButtonExtents(void* panel, size_t buttonsArrayOffset) {
 }  // namespace
 
 bool IsPanel(const PanelDesc& d, void* panel) {
-    if (!panel) return false;
-    void** vt = nullptr;
-    __try {
-        vt = *reinterpret_cast<void***>(panel);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return false;
-    }
-    return reinterpret_cast<uintptr_t>(vt) == d.vtable;
+    return acc::engine::HasVtable(panel, d.vtable);
 }
 
 int IndexFromButton(const PanelDesc& d, void* panel, void* control) {

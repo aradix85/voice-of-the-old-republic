@@ -8,6 +8,7 @@
 
 #include "engine_game.h"
 #include "engine_offsets.h"
+#include "engine_reads.h"
 #include "log.h"
 #include "strfmt.h"
 
@@ -142,15 +143,7 @@ void DumpChartCells(void* fcp) {
 
 void DumpStructureIfNeeded(void* panel) {
     if (!panel || panel == s_loggedFeatsPanel) return;
-    void** vt = nullptr;
-    __try {
-        vt = *reinterpret_cast<void***>(panel);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return;
-    }
-    if (reinterpret_cast<uintptr_t>(vt) != kVtableCSWGuiFeatsCharGen) {
-        return;
-    }
+    if (!acc::engine::HasVtable(panel, kVtableCSWGuiFeatsCharGen)) return;
     s_loggedFeatsPanel = panel;
 
     acclog::Write("FeatsCharGen.Dump",

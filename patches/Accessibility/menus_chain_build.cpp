@@ -135,8 +135,7 @@ void AppendChainEntry(void* control, int sortCy) {
 void AppendListBoxChildren(void* panel, void* c, void* equipPickerLb,
                            void* workbenchUpgradeLb, bool modalText,
                            int& listBlockTop) {
-    void** vt = *reinterpret_cast<void***>(c);
-    if (reinterpret_cast<uintptr_t>(vt) != kVtableListBox) return;
+    if (!acc::engine::IsListBox(c)) return;
     // The engine keeps BOTH store listboxes (shop and inventory) in
     // panel.controls whichever is visible; the hidden one's rows can be
     // neither examined nor traded. The K2 crafting screens flip visibility
@@ -444,8 +443,7 @@ void ComputeEquipSlotClickOffset(void* panel) {
 void ComputeClassIconClickOffset(void* panel) {
     g_classIconClickOffsetX = 0;
     if (acc::game::IsKotor2() || !panel) return;
-    void** pVt = *reinterpret_cast<void***>(panel);
-    if (reinterpret_cast<uintptr_t>(pVt) != kVtableCSWGuiClassSelection) return;
+    if (!acc::engine::HasVtable(panel, kVtableCSWGuiClassSelection)) return;
     int firstIconIdx = -1;
     for (int i = 0; i < g_chainCount; ++i) {
         if (!IsClassSelectionIcon(panel, g_chain[i].control)) continue;

@@ -24,6 +24,7 @@
 
 #include "engine_game.h"
 #include "engine_manager.h"
+#include "engine_reads.h"
 #include "engine_panels.h"
 #include "engine_addr.h"
 #include "log.h"
@@ -76,9 +77,7 @@ bool LooksLikePazaak(void* panel) {
     const int maxCard =
         acc::game::IsKotor2() ? kMaxCardIndexK2 : kMaxCardIndexK1;
     __try {
-        if (*reinterpret_cast<uintptr_t*>(panel) == kVtableCSWGuiPazaakGame) {
-            return true;
-        }
+        if (acc::engine::HasVtable(panel, kVtableCSWGuiPazaakGame)) return true;
         auto* p = reinterpret_cast<unsigned char*>(panel);
         void* model = *reinterpret_cast<void**>(p + kPanelModelOffset);
         if (!model) return false;

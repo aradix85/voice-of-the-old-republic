@@ -271,9 +271,7 @@ int PartyRosterSlotCount() {
 }
 
 bool IsPartyPortrait(void* control) {
-    void* vt = nullptr;
-    return TryReadPtr(control, 0, &vt) &&
-           reinterpret_cast<uintptr_t>(vt) == kVtableCSWGuiPartySelectionButton;
+    return acc::engine::HasVtable(control, kVtableCSWGuiPartySelectionButton);
 }
 
 bool ReadPartyPortrait(void* control, PartyPortrait* out) {

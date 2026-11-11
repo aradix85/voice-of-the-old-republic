@@ -1,4 +1,4 @@
-# minigame_pazaak.cpp (277 lines)
+# minigame_pazaak.cpp (276 lines)
 
 Source: `patches/Accessibility/minigame_pazaak.cpp`
 
@@ -8,9 +8,9 @@ Design (no engine detour hook): * Identify the live board panel by its vtable, o
 
 ## Declarations (in source order)
 
-- L75 `bool LooksLikePazaak(void* panel)`: Structural identity probe — true iff `panel` looks like a CSWGuiPazaakGame.
-- L100 `Snap ReadSnap(void* panel)`
-- L119 `void AnnounceDeltas(void* panel, const Snap& cur)`
-- L198 `void ResetState()`
-- L214 `bool IsBoardForeground()`
-- L216 `void Tick()`
+- L76 `bool LooksLikePazaak(void* panel)`: Structural identity probe — true iff `panel` looks like a CSWGuiPazaakGame.
+- L99 `Snap ReadSnap(void* panel)`
+- L118 `void AnnounceDeltas(void* panel, const Snap& cur)`
+- L197 `void ResetState()`
+- L213 `bool IsBoardForeground()`
+- L215 `void Tick()`

@@ -44,9 +44,8 @@ bool ReadAt(void* control, size_t textOff, size_t strrefOff, size_t textObjOff,
 
 const char* TrySpeculativeVtableRead(void* control, char* outBuf, size_t bufSize) {
     // A walked control slot can hold a non-null garbage pointer.
-    void* vt = nullptr;
-    if (!TryReadPtr(control, 0, &vt)) return nullptr;
-    const uintptr_t vta = reinterpret_cast<uintptr_t>(vt);
+    const uintptr_t vta = acc::engine::ReadVtable(control);
+    if (!vta) return nullptr;
     for (const VtableOverride& ov : kOverrides) {
         // R() is 0 for a vtable with no K2 mapping: without the check every
         // garbage control whose first dword reads 0 would match.

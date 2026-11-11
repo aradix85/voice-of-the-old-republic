@@ -20,6 +20,18 @@ bool ReadControlNameFields(void* control, const char*& outTip,
 // engine's default for a control without one.
 int ReadControlId(void* control);
 
+// An object's vtable address: 0 for a null object and on a fault. Every
+// CSWGui class has its own, so it tells the class of a control and of a
+// panel (a heap-allocated single-class panel has no CGuiInGame slot, and
+// its vtable is its identity). Use these and not a deref of your own: a
+// panel that is listed in the manager is not proven alive, the array still
+// holds freed panels during teardown.
+uintptr_t ReadVtable(void* object);
+
+// The object is of the class with this vtable. False for a vtable that is
+// not known in this game (0).
+bool HasVtable(void* object, uintptr_t vtable);
+
 // vtable[index](control) as __thiscall.
 //
 // SEH-wrapped: per-tick monitors walk panels[] and call this on every

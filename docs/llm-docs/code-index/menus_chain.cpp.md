@@ -1,4 +1,4 @@
-# menus_chain.cpp (376 lines)
+# menus_chain.cpp (363 lines)
 
 Source: `patches/Accessibility/menus_chain.cpp`
 
@@ -16,7 +16,6 @@ The menu chain: one flat, top-to-bottom list of a panel's navigable controls tha
 - L152 `void RebindChainPreserveIndex(void* panel)`
 - L164 `void InvalidateChain()`
 - L178 `void ValidateTabbedPanel()`
-- L188 `uintptr_t ReadVtable(void* obj)`: Read a panel/control's vtable word under SEH.
-- L216 `bool ChainPanelIdentityHolds()`: Identity check for the panel the chain is bound to.
-- L228 `void ValidateChainPanel()`
-- L247 `void RebindChain(void* panel)`
+- L203 `bool ChainPanelIdentityHolds()`: Identity check for the panel the chain is bound to.
+- L215 `void ValidateChainPanel()`
+- L234 `void RebindChain(void* panel)`

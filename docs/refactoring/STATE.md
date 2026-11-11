@@ -422,15 +422,29 @@ prefix (menus_listbox_picker.cpp).
   unit tests) that other debounces can take over in their lean
   (camera_announce, party_leader_announce, door_announce). In-game check:
   "Combat begins" and "Combat ends" once per fight.
+- Class of an object (found with analyse2.py, same helper name in several
+  files): ReadVtable and HasVtable are in engine_reads; some twenty files
+  had the vtable read and compare written out, six of them without a
+  guard, and four had a private ReadVtable, VtableOf or HasVtable. HasVtable is false for a
+  vtable that is unknown in this game (0), which the hand-written
+  compares were not. In-game check: chargen (class, portrait, attributes,
+  skills, feats), the store, the journal, save and load, pazaak.
+  Next in this family: the readers with a default (SafeReadPtr / U32 /
+  Float / Vector of minigame_aim with some 100 uses, ReadInt32 and
+  ReadPtr of engine_actionbar, ReadIntAt of the two pazaak files, SafeRead
+  of the two camera probes, the unguarded ReadU32 with 8 uses).
+- F7: analyse.py now finds 3 cloned blocks of 10+ lines, none across
+  files (the baseline had 45), and analyse2.py one near-copy pair. What
+  is left are helpers with the same name in two files: DamageLevelStringId
+  (combat_query, examine_view_reads), ReadMiniGameViaArea (swoop, turret),
+  ReadRowText (three different readers, judge), IsButtonAtOffset
+  (inventory, journal), ResolveRowItem (crafting, peek).
 - F6 done as far as it is a duplicate: the physical-key read
   `(GetAsyncKeyState(vk) & 0x8000) != 0` was written out in nine files
   and is acc::hotkeys::KeyDown now. The polls themselves differ on
   purpose: the bring-up and Big Picture threads and the keybind capture
   read raw keys before or outside the hotkey registry, and the pazaak
   wager has its own hold-and-repeat.
-- F7 cross-file clones: engine_reads_items/menus_store,
-  cycle_input/interact_dispatch, engine_area_walls/guidance_pathfind,
-  combat_query/examine_view, engine_actionbar/engine_radial.
 - F8 chargen: AnnounceChainStepSuffix (4 files), AnnounceValueChange,
   RowPitchForCursorWarp (3 files).
 - F9 minigames: HandleEnter/HandleExit/AnnounceEntry.

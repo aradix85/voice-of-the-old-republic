@@ -1,4 +1,4 @@
-# menus_extract_speculative.cpp (80 lines)
+# menus_extract_speculative.cpp (79 lines)
 
 Source: `patches/Accessibility/menus_extract_speculative.cpp`
 

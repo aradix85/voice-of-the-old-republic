@@ -22,12 +22,6 @@ typedef void*    (__thiscall* PFN_GetItemByGameObjectID)(void* this_, uint32_t h
 // substring id.
 constexpr uint32_t kEnglish = 0;
 
-uintptr_t ReadVtable(void* control) {
-    void* vt = nullptr;
-    if (!control || !TryReadPtr(control, 0, &vt)) return 0;
-    return reinterpret_cast<uintptr_t>(vt);
-}
-
 bool IsItemEntryRow(void* control) {
     const uintptr_t v = ReadVtable(control);
     return v != 0 && (v == kVtableCSWGuiInGameItemEntry || v == kVtableCSWGuiStoreItemEntry);

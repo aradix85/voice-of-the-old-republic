@@ -59,16 +59,7 @@ void* FindFeatsCharGenPanel() {
         acc::engine::GetGuiManager(), panelsData, kCap);
     for (int i = 0; i < n; ++i) {
         void* panel = panelsData[i];
-        if (!panel) continue;
-        void** vt = nullptr;
-        __try {
-            vt = *reinterpret_cast<void***>(panel);
-        } __except (EXCEPTION_EXECUTE_HANDLER) {
-            continue;
-        }
-        if (reinterpret_cast<uintptr_t>(vt) == kVtableCSWGuiFeatsCharGen) {
-            return panel;
-        }
+        if (acc::engine::HasVtable(panel, kVtableCSWGuiFeatsCharGen)) return panel;
     }
     return nullptr;
 }

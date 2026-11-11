@@ -67,11 +67,9 @@ bool DetectTabsCluster(void* panel, int& outStart, int& outCount) {
     if (!panelList->data || panelList->size < 2) return false;
 
     void* lb = panelList->data[0];
-    if (!lb) return false;
-    void** vt = *reinterpret_cast<void***>(lb);
-    if (reinterpret_cast<uintptr_t>(vt) != kVtableListBox) return false;
-
-    if (acc::engine::ReadListBoxRowCount(lb) <= 0) return false;
+    if (!acc::engine::IsListBox(lb) || acc::engine::ReadListBoxRowCount(lb) <= 0) {
+        return false;
+    }
 
     int n = panelList->size > 256 ? 256 : panelList->size;
     int start = -1, end = -1;

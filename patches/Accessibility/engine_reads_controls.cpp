@@ -11,17 +11,6 @@
 
 namespace acc::engine {
 
-namespace {
-
-// The control's vtable address, 0 on fault.
-uintptr_t VtableOf(void* control) {
-    void* vt = nullptr;
-    TryReadPtr(control, 0, &vt);
-    return reinterpret_cast<uintptr_t>(vt);
-}
-
-}  // namespace
-
 int ReadControlId(void* control) {
     uint32_t id = 0;
     return TryReadU32(control, kControlIdOffset, &id) ? static_cast<int>(id) : -1;
@@ -32,19 +21,18 @@ bool IsToggle(void* control) {
 }
 
 bool IsSlider(void* control) {
-    return control && VtableOf(control) == kVtableSlider;
+    return HasVtable(control, kVtableSlider);
 }
 
 bool IsListBox(void* control) {
-    return control && VtableOf(control) == kVtableListBox;
+    return HasVtable(control, kVtableListBox);
 }
 
 // CSWGuiSaveGameEditBox (the save-name popup) is a subclass with its own
 // vtable and the same layout.
 bool IsEditbox(void* control) {
-    if (!control) return false;
-    const uintptr_t vt = VtableOf(control);
-    return vt == kVtableEditbox || vt == kVtableSaveGameEditbox;
+    return HasVtable(control, kVtableEditbox) ||
+           HasVtable(control, kVtableSaveGameEditbox);
 }
 
 uint32_t ReadControlBitFlags(void* control) {
@@ -121,7 +109,7 @@ bool ReadToggleState(void* toggle) {
 }
 
 void DumpControlVtable(void* control, char* out, size_t outSize) {
-    void* vtable = reinterpret_cast<void*>(VtableOf(control));
+    void* vtable = reinterpret_cast<void*>(ReadVtable(control));
     void* slot[4] = {};
     const size_t kSlots[4] = {0, 4, 20, 22};
     for (int i = 0; i < 4; ++i) {

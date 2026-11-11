@@ -106,9 +106,8 @@ void MonitorFocusedControl() {
     if (void* mgr = GetGuiManager()) {
         void* fg = GetForegroundPanel(mgr);
         if (fg && fg != acc::menus::chain::g_chainPanel) {
-            void* vt = nullptr;  // guarded: fg may already be torn down
-            if (acc::engine::TryReadPtr(fg, 0, &vt)) {
-                uintptr_t vtaddr = reinterpret_cast<uintptr_t>(vt);
+            // 0 when fg is already torn down.
+            if (const uintptr_t vtaddr = acc::engine::ReadVtable(fg)) {
                 if (vtaddr == kVtableCSWGuiPortraitCharGen ||
                     vtaddr == kVtableCSWGuiAbilitiesCharGen ||
                     vtaddr == kVtableCSWGuiSkillsCharGen) {

@@ -1,4 +1,4 @@
-# engine_panels.h (382 lines)
+# engine_panels.h (363 lines)
 
 Source: `patches/Accessibility/engine_panels.h`
 
@@ -35,4 +35,3 @@ Chain: *(CAppManager**)0x7A39FC → CAppManager → +0x4 CClientExoApp → +0x4 
 - L339 `struct UiBlockState`
 - L347 `bool IsForegroundUiBlocking(UiBlockState* outState = nullptr)`: outState (optional) carries diagnostic detail for the log line.
 - L360 `bool IsWorldLevelForegroundKind(PanelKind k)`: True for the handful of foreground kinds that coexist with normal in-world play — the HUD, the pause overlay, a bark bubble, a fade, and the unclassified Unknown.
-- L379 `bool HasVtable(void* obj, uintptr_t expected)`: Verify an object's vtable pointer matches `expected`.

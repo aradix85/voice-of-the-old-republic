@@ -59,11 +59,6 @@ int ListSize(void* panel, Mode m) {
     return acc::engine::ReadListBoxRowCount(static_cast<unsigned char*>(panel) + ListOffset(m));
 }
 
-bool HasVtable(void* object, uintptr_t vtable) {
-    void* vt = nullptr;
-    return TryReadPtr(object, 0, &vt) && reinterpret_cast<uintptr_t>(vt) == vtable;
-}
-
 uint32_t ReadU32Or0(void* base, size_t offset) {
     uint32_t v = 0;
     TryReadU32(base, offset, &v);
@@ -197,11 +192,11 @@ void ResolveTradeWatch(void* fg, Mode current, bool sizeChanged, int currentSize
 }  // namespace
 
 bool IsStorePanel(void* panel) {
-    return HasVtable(panel, kVtableCSWGuiStore);
+    return acc::engine::HasVtable(panel, kVtableCSWGuiStore);
 }
 
 bool IsStoreItemRow(void* control) {
-    return HasVtable(control, kVtableCSWGuiStoreItemEntry);
+    return acc::engine::HasVtable(control, kVtableCSWGuiStoreItemEntry);
 }
 
 bool IsHiddenStoreListBox(void* panel, void* listBox) {

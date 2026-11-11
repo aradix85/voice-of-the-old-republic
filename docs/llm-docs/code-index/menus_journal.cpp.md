@@ -1,4 +1,4 @@
-# menus_journal.cpp (227 lines)
+# menus_journal.cpp (220 lines)
 
 Source: `patches/Accessibility/menus_journal.cpp`
 
@@ -13,8 +13,8 @@ For screen-reader users we repurpose Enter on a journal row: it refreshes item_d
 - L27 `bool IsButtonAtOffset(void* panel, void* control, std::size_t offset)`: Embedded button objects live AT panel+offset (the ctor constructs them in place via &this->sort_button etc.), so the chain captures &button == that address.
 - L33 `bool ReadRowText(void* row, char* outBuf, std::size_t bufSize)`
 - L55 `bool IsJournalEntry(void* control)`
-- L66 `void SpeakDescription(void* panel, void* focusedRow)`
-- L135 `bool IsSortButton(void* panel, void* control)`
-- L147 `bool IsSwapButton(void* panel, void* control)`
-- L151 `void LogEntryCounts(void* panel)`
-- L203 `void ForceRepopulate(void* panel)`
+- L59 `void SpeakDescription(void* panel, void* focusedRow)`
+- L128 `bool IsSortButton(void* panel, void* control)`
+- L140 `bool IsSwapButton(void* panel, void* control)`
+- L144 `void LogEntryCounts(void* panel)`
+- L196 `void ForceRepopulate(void* panel)`

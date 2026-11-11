@@ -1,4 +1,4 @@
-# engine_player_party.cpp (387 lines)
+# engine_player_party.cpp (385 lines)
 
 Source: `patches/Accessibility/engine_player_party.cpp`
 
@@ -20,8 +20,8 @@ Who is in the party, who is leading, and what they are called: leader and creatu
 - L256 `bool GetSoloMode()`
 - L269 `int PartyRosterSlotCount()`
 - L273 `bool IsPartyPortrait(void* control)`
-- L279 `bool ReadPartyPortrait(void* control, PartyPortrait* out)`
-- L301 `int PartySelectionChosenCount(void* panel)`
-- L307 `bool PartyTableIsNPCAvailable(int npcSlot)`
-- L320 `bool PartyTableIsNPCSelectable(int npcSlot)`
-- L347 `bool GetPartyNpcNameForSlot(int npcSlot, char* outBuf, size_t bufSize)`
+- L277 `bool ReadPartyPortrait(void* control, PartyPortrait* out)`
+- L299 `int PartySelectionChosenCount(void* panel)`
+- L305 `bool PartyTableIsNPCAvailable(int npcSlot)`
+- L318 `bool PartyTableIsNPCSelectable(int npcSlot)`
+- L345 `bool GetPartyNpcNameForSlot(int npcSlot, char* outBuf, size_t bufSize)`

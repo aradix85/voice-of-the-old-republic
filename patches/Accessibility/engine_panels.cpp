@@ -212,9 +212,7 @@ void LogUnknownPanelDiagnostics(void* panel) {
             acclog::Write("PanelProbe", "  [%d] (null)", i);
             continue;
         }
-        void* vt = nullptr;
-        TryReadPtr(c, 0, &vt);
-        const uintptr_t cvt = reinterpret_cast<uintptr_t>(vt);
+        const uintptr_t cvt = ReadVtable(c);
         const int       cid = ReadControlId(c);
         char text[96];
         text[0] = '\0';

@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include <cstdint>   // uintptr_t, in HasVtable's signature
+#include <cstdint>
 
 namespace acc::engine {
 
@@ -358,24 +358,5 @@ bool IsForegroundUiBlocking(UiBlockState* outState = nullptr);
 // lines are checked against, so a leak shows up in a tester log as a named
 // kind instead of going unnoticed until it breaks a module transition.
 bool IsWorldLevelForegroundKind(PanelKind k);
-
-// Verify an object's vtable pointer matches `expected`. Works on anything
-// whose vtable sits at +0 — both child controls and whole panels.
-//
-// Controls: disambiguates panels that share .gui-time IDs but differ in
-// control type at those IDs (canonical case: SaveLoad's BTN_DELETE at ID 11
-// = Button vs. Workbench's LBL_UPGRADE44 at ID 11 = LabelHilight).
-// Panels: heap-allocated single-class panels have no CGuiInGame slot, so
-// vtable equality IS their identity.
-//
-// Use this rather than dereferencing a panel pointer yourself. A panel that
-// passed IsPanelInManager is LISTED, not proven alive — the array still
-// holds freed panels during teardown — so the deref needs the guard even
-// when the pointer looks vetted. Published in Phase-3 B2 after two more
-// hand-spelled copies turned up outside this file; five inside it were
-// folded in B6.
-//
-// Returns false on null / SEH fault.
-bool HasVtable(void* obj, uintptr_t expected);
 
 }  // namespace acc::engine

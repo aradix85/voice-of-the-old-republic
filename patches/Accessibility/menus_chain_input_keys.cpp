@@ -24,8 +24,7 @@ namespace {
 // Right activate the left and right arrow directly. The focus monitor then
 // announces the new portrait.
 void* PortraitArrowTarget(void* panel, void* focused, bool toRight) {
-    void** vt = *reinterpret_cast<void***>(panel);
-    if (reinterpret_cast<uintptr_t>(vt) != kVtableCSWGuiPortraitCharGen) return nullptr;
+    if (!acc::engine::HasVtable(panel, kVtableCSWGuiPortraitCharGen)) return nullptr;
     auto* base = reinterpret_cast<unsigned char*>(panel);
     void* leftArrow = base + kPortraitLeftArrowOffset;
     if (focused != leftArrow) return nullptr;

@@ -4,6 +4,7 @@
 #include "menus_extract_internal.h"
 
 #include "engine_game.h"        // IsKotor2 — K1-only portraits.2da row table
+#include "engine_reads.h"
 #include "engine_panels.h"
 #include "log.h"
 #include "strfmt.h"   // AsciiLower

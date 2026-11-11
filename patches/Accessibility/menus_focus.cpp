@@ -192,9 +192,7 @@ static void AnnouncePanelTitle(void* panel) {
 // input: the monitor only catches icons the user dwells on, but every
 // SetActiveControl event fires regardless of duration.
 void acc::menus::focus::PrefillClassIconCacheOnTransition(void* panel, void* newControl) {
-    if (!panel) return;
-    void** pVt = *reinterpret_cast<void***>(panel);
-    if (reinterpret_cast<uintptr_t>(pVt) != kVtableCSWGuiClassSelection) return;
+    if (!acc::engine::HasVtable(panel, kVtableCSWGuiClassSelection)) return;
     void* outgoing = *reinterpret_cast<void**>(
         reinterpret_cast<unsigned char*>(panel) + kPanelActiveControlOffset);
     if (!outgoing || outgoing == newControl) return;

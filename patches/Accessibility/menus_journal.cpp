@@ -53,14 +53,7 @@ bool ReadRowText(void* row, char* outBuf, std::size_t bufSize) {
 }  // namespace
 
 bool IsJournalEntry(void* control) {
-    if (!control) return false;
-    void** vt = nullptr;
-    __try {
-        vt = *reinterpret_cast<void***>(control);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return false;
-    }
-    return reinterpret_cast<std::uintptr_t>(vt) == kVtableCSWGuiJournalItemEntry;
+    return acc::engine::HasVtable(control, kVtableCSWGuiJournalItemEntry);
 }
 
 void SpeakDescription(void* panel, void* focusedRow) {
