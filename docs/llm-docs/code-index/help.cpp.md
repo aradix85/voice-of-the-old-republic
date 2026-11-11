@@ -1,26 +1,23 @@
-# help.cpp (520 lines)
+# help.cpp (379 lines)
 
 Source: `patches/Accessibility/help.cpp`
 
-Help system — see help.h for the design summary.
-
-One catalog (kEntries) feeds both surfaces. `grp` decides the F1 section a line is listed under (F1 lists every entry); `ctx` is a curated bitmask of the screens that speak the line on Ctrl+F1 (kept short on purpose). Adding a keybind = add a strings::Id (strings.h) + one row here.
+The help system; help.h has the design. One catalog (kEntries) feeds both surfaces: `grp` is the F1 section a line is listed under (F1 lists every entry), `ctx` the screens that speak the line on Ctrl+F1 (kept short on purpose). A new keybind is a strings::Id (strings.h) and one row here.
 
 ## Declarations (in source order)
 
-- L50 `uint32_t ContextBit(Context c)`
-- L64 `S ContextNameId(Context c)`
-- L80 `Context DetectContext()`: Detect the screen the user is on.
-- L263 `void BuildComposedText(S formatId, char* out, size_t cap)`: Resolve a composed entry's text.
-- L291 `bool EntryListed(const Entry& e)`: Build the flat row list: each non-empty group emits a header row followed by its entries, in catalog order.
-- L295 `void BuildRows()`
-- L337 `void SpeakRow(int idx, bool interrupt)`
-- L356 `void StepFocus(int delta)`: Focus movement.
-- L362 `void FocusEdge(bool last)`
-- L368 `void SpeakContext()`: Ctrl+F1 — speak the keys tagged for the current screen, joined.
-- L409 `bool IsMenuOpen()`
-- L411 `void OpenMenu()`
-- L432 `void CloseMenu()`
-- L445 `void ToggleMenu()`
-- L450 `void PollWin32()`
-- L499 `void Tick()`
+- L30 `const char* Str(S id)`
+- L44 `S ContextName(Context c)`
+- L60 `Context DetectContext()`: The screen the user is on: the most specific surfaces first, then "some menu is up", the world last.
+- L189 `bool EntryListed(const Entry& e)`: A line that KOTOR 2 alone has is not listed on KOTOR 1.
+- L196 `void EntryText(S label, char* out, size_t cap)`: An entry's line.
+- L233 `void BuildRows()`
+- L251 `void SpeakRow(int idx, bool interrupt)`
+- L267 `void FocusRow(int idx)`: Clamped, no wrap: the repeated line is the boundary cue.
+- L274 `void SpeakContext()`: Ctrl+F1: the lines tagged for the current screen, joined.
+- L303 `void Open()`
+- L323 `void Close(bool announce)`
+- L336 `bool Took(acc::hotkeys::Action a)`: This tick's press of `a`, claimed so that no later poller (cycle, interact, examine, the Home/End synthesiser) acts on it too.
+- L344 `bool IsMenuOpen()`
+- L346 `void PollWin32()`
+- L368 `void Tick()`

@@ -358,7 +358,11 @@ prefix (menus_listbox_picker.cpp).
   possible; for files above 500 lines, judge whether a split into modules of
   things that belong together makes sense, and do it where it does.
 - Next file, by size (2026-11-10 21:15, strings*.cpp excepted):
-  to judge: help 520 (belongs to F4). menus_focus_k2 is lean now (239;
+  nothing left to judge above 500. help is lean now (375: one Context
+  enum, rows without stored text, Open and Close file-local; in-game
+  check: F1 list with arrows, Home / End, Enter, Esc and F1 again, and
+  Ctrl+F1 in the world and in a menu).
+  menus_focus_k2 is lean now (239;
   its header is gone, the K2.Focus line keeps prev, id, vtable, caller;
   in-game check on KOTOR 2: the arrows in the main menu speak each button
   once and focus does not snap back). Judged
@@ -381,8 +385,12 @@ prefix (menus_listbox_picker.cpp).
   the column search (menus_skillflow_nav) has unit tests. In game,
   check at the next level-up: arrows, Home / End, Enter and Esc on
   the Feats screen; later the same on the Force powers screen.
-- F4 small list overlays (help, combat_queue, examine_view,
-  unified_action_menu): Open, BuildRows, SpeakRow, HandleInputEvent.
+- F4 judged, no shared model: help, combat_queue, examine_view and
+  unified_action_menu share function names, not code. They differ in
+  the input route (hotkey poll against the engine's input event), in
+  when rows are rebuilt and in what Enter does; what is common is a
+  clamped step of three lines. A shared model would cost more than it
+  saves.
 - F5 memory readers outside engine_reads (SafeRead in 4 files,
   ReadListBoxRowCount in 3, ReadCExoStringLocal, ReadButtonText).
 - F6 PollWin32 key-edge polling in 9 files, against hotkeys.

@@ -1,4 +1,4 @@
-# help.h (55 lines)
+# help.h (49 lines)
 
 Source: `patches/Accessibility/help.h`
 
@@ -15,7 +15,5 @@ The strings live in strings.h (HelpGroup* / HelpKey* / HelpContext*).
 ## Declarations (in source order)
 
 - L34 `bool IsMenuOpen()`: True while the F1 list overlay is interactive.
-- L39 `void OpenMenu()`: Open / close / toggle the F1 list.
-- L40 `void CloseMenu()`
-- L47 `void PollWin32()`: Global per-tick poll.
-- L52 `void Tick()`: Self-disarm hook.
+- L41 `void PollWin32()`: Global per-tick poll.
+- L46 `void Tick()`: Self-disarm hook.

@@ -33,12 +33,6 @@ namespace acc::help {
 // overlay owns.
 bool IsMenuOpen();
 
-// Open / close / toggle the F1 list. OpenMenu pauses the world via
-// BeginOverlayPause only when opened from pure in-world context (matching
-// examine_view); in a menu the engine panel already holds the world.
-void OpenMenu();
-void CloseMenu();
-
 // Global per-tick poll. Drives F1 (toggle the list), Ctrl+F1 (speak the
 // current screen's keys), and — while the list is open — the list's own
 // Up/Down/Home/End/Enter/Esc navigation via the hotkey registry. Claims the
