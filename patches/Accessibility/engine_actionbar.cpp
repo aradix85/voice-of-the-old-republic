@@ -6,6 +6,7 @@
 #include "engine_app.h"      // GetClientApp, GetClientAppInternal
 #include "engine_area.h"     // ResolveClientObject — LogDispatchDiag's probe
 #include "engine_game.h"     // IsKotor2 — medpick probe is K2-only
+#include "engine_reads.h"
 #include "engine_panels.h"   // ResolveGuiInGame, ResolveMainInterface
 #include "log.h"
 #include "engine_addr.h"
@@ -117,27 +118,8 @@ typedef void (__thiscall* PFN_SetMainInterfaceTarget)(void* this_,
                                                       uint32_t pad);
 typedef void (__thiscall* PFN_RePopulateMainInterface)(void* this_);
 
-// Local chain helpers (same shape as engine_radial / engine_picker).
-bool ReadInt32(void* base, size_t offset, int32_t* out) {
-    if (!base || !out) return false;
-    __try {
-        *out = *reinterpret_cast<int32_t*>(
-            reinterpret_cast<unsigned char*>(base) + offset);
-        return true;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return false;
-    }
-}
-
-void* ReadPtr(void* base, size_t offset) {
-    if (!base) return nullptr;
-    __try {
-        return *reinterpret_cast<void**>(
-            reinterpret_cast<unsigned char*>(base) + offset);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return nullptr;
-    }
-}
+using acc::engine::ReadPtrOrNull;
+using acc::engine::TryReadI32;
 
 // Address of the descriptor list entry at `index` within slot's
 // personal-actions list. Returns null on null/oor/empty list.
@@ -148,9 +130,9 @@ void* DescriptorAddr(void* mi, int slot, int index) {
     if (index < 0) return nullptr;
 
     size_t listBase = kPersonalListsOffset + slot * kPersonalListStride;
-    void* dataPtr   = ReadPtr(mi, listBase + kPersonalListDataOffset);
+    void* dataPtr   = ReadPtrOrNull(mi, listBase + kPersonalListDataOffset);
     int32_t size    = 0;
-    ReadInt32(mi, listBase + kPersonalListSizeOffset, &size);
+    TryReadI32(mi, listBase + kPersonalListSizeOffset, &size);
     if (!dataPtr || index >= size) return nullptr;
 
     return reinterpret_cast<unsigned char*>(dataPtr) +
@@ -195,7 +177,7 @@ int VariantCount(void* mi, int slot) {
     int32_t size = 0;
     size_t off = kPersonalListsOffset + slot * kPersonalListStride +
                  kPersonalListSizeOffset;
-    if (!ReadInt32(mi, off, &size)) return 0;
+    if (!TryReadI32(mi, off, &size)) return 0;
     if (size < 0) return 0;
     return static_cast<int>(size);
 }
@@ -216,8 +198,8 @@ bool VariantRefusal(void* mi, int slot, int index, uint32_t* outStrRef) {
 
     int32_t flags = 0;
     int32_t handler = 0;
-    if (!ReadInt32(desc, kIfActionFlagsOffset, &flags)) return false;
-    if (!ReadInt32(desc, kIfActionHandlerOffset, &handler)) return false;
+    if (!TryReadI32(desc, kIfActionFlagsOffset, &flags)) return false;
+    if (!TryReadI32(desc, kIfActionHandlerOffset, &handler)) return false;
 
     // KOTOR 2 item entries carry an UNINITIALISED flag word — the K2
     // appender only writes it for the three equipped-slot items (decompiled
@@ -264,7 +246,7 @@ uint32_t ReadVariantActionId(void* mi, int slot, int index) {
     void* desc = DescriptorAddr(mi, slot, index);
     if (!desc) return 0;
     int32_t v = 0;
-    ReadInt32(desc, kIfActionIdOffset, &v);
+    TryReadI32(desc, kIfActionIdOffset, &v);
     return static_cast<uint32_t>(v);
 }
 
@@ -276,10 +258,10 @@ void LogDispatchDiag(void* mi, int slot, int index) {
         return;
     }
     int32_t id = 0, creature = 0, handler = 0, flags = 0;
-    ReadInt32(desc, kIfActionIdOffset,       &id);
-    ReadInt32(desc, kIfActionCreatureOffset, &creature);
-    ReadInt32(desc, kIfActionHandlerOffset,  &handler);
-    ReadInt32(desc, kIfActionFlagsOffset,    &flags);
+    TryReadI32(desc, kIfActionIdOffset,       &id);
+    TryReadI32(desc, kIfActionCreatureOffset, &creature);
+    TryReadI32(desc, kIfActionHandlerOffset,  &handler);
+    TryReadI32(desc, kIfActionFlagsOffset,    &flags);
     // Same resolver family the engine's dispatch gate uses
     // (CClientExoApp::GetGameObject). NOT ResolveClientObjectHandle — its
     // +0xf8 server chain is deliberately unresolved on KOTOR 2.
@@ -300,9 +282,9 @@ void LogDispatchDiag(void* mi, int slot, int index) {
     // whole medical column: every further press early-returns on target -1.
     if (acc::game::IsKotor2()) {
         int32_t armed = 0, pickTarget = 0, pendItem = 0;
-        ReadInt32(mi, 0x15230, &armed);
-        ReadInt32(mi, 0x15234, &pickTarget);
-        ReadInt32(mi, 0x15238, &pendItem);
+        TryReadI32(mi, 0x15230, &armed);
+        TryReadI32(mi, 0x15234, &pickTarget);
+        TryReadI32(mi, 0x15238, &pendItem);
         acclog::Write("ActionBar.Fire",
                       "medpick armed=%d target=0x%08x item=0x%08x",
                       armed, static_cast<unsigned>(pickTarget),
@@ -315,7 +297,7 @@ bool EntryIsMedicalK2(void* mi, int slot, int index) {
     void* desc = DescriptorAddr(mi, slot, index);
     if (!desc) return false;
     int32_t handler = 0;
-    if (!ReadInt32(desc, kIfActionHandlerOffset, &handler)) return false;
+    if (!TryReadI32(desc, kIfActionHandlerOffset, &handler)) return false;
     return handler == kK2MedicalUseHandler;
 }
 

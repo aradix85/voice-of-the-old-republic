@@ -66,13 +66,6 @@ int FirstMainDeckIndex() { return acc::game::IsKotor2() ? 23 : 18; }
 bool IsMainDeckCard(int index) { return index >= FirstMainDeckIndex(); }
 
 // ---- SEH-guarded primitive reads -----------------------------------------
-bool ReadIntAt(void* base, size_t off, int* out) {
-    __try {
-        *out = *reinterpret_cast<int*>(reinterpret_cast<unsigned char*>(base) + off);
-        return true;
-    } __except (EXCEPTION_EXECUTE_HANDLER) { return false; }
-}
-
 void WriteIntAt(void* base, size_t off, int v) {
     __try {
         *reinterpret_cast<int*>(reinterpret_cast<unsigned char*>(base) + off) = v;
@@ -86,7 +79,7 @@ void* GetModel(void* panel) {
 
 int GetState(void* panel) {
     int s = -1;
-    return ReadIntAt(panel, kPanelStateOffset, &s) ? s : -1;
+    return TryReadI32(panel, kPanelStateOffset, &s) ? s : -1;
 }
 
 void* PlayerOf(void* model) {
@@ -100,9 +93,9 @@ void* EnemyOf(void* model) {
 CardView ReadCard(void* player, size_t baseOff, int slot) {
     CardView c{ -1, 0, 0 };
     void* cardPtr = reinterpret_cast<unsigned char*>(player) + baseOff + (size_t)slot * kCardStride;
-    ReadIntAt(cardPtr, kCardIndexOffset, &c.index);
-    ReadIntAt(cardPtr, kCardFlipOffset, &c.flip);
-    if (acc::game::IsKotor2()) ReadIntAt(cardPtr, kCardValueOffset, &c.value);
+    TryReadI32(cardPtr, kCardIndexOffset, &c.index);
+    TryReadI32(cardPtr, kCardFlipOffset, &c.flip);
+    if (acc::game::IsKotor2()) TryReadI32(cardPtr, kCardValueOffset, &c.value);
     return c;
 }
 

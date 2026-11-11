@@ -211,7 +211,7 @@ void HandleBar(int i, const ObstacleView& v, HazardInfo& hz, ObstacleTick& t) {
 // outside it would say the collision is flat; clean passes the other way
 // round say it is spherical (the model kPostContactU's block assumes).
 void TrackMinePasses(void* player, const Vector& bikePos, float playerRadius) {
-    const int hp = static_cast<int>(SafeReadU32(player, kFollowerHpOffset));
+    const int hp = static_cast<int>(ReadU32Or0(player, kFollowerHpOffset));
     for (int m = 0; m < g_state.mine_count; ++m) {
         const int slot = g_state.mine_slot[m];
         if (slot < 0 || slot >= kMgoArraySlotCount) continue;

@@ -23,6 +23,7 @@ namespace acc::menus::store {
 
 namespace {
 
+using acc::engine::ReadU32Or0;
 using acc::engine::TryReadPtr;
 using acc::engine::TryReadU16;
 using acc::engine::TryReadU32;
@@ -57,12 +58,6 @@ Mode ResolveMode(void* panel) {
 
 int ListSize(void* panel, Mode m) {
     return acc::engine::ReadListBoxRowCount(static_cast<unsigned char*>(panel) + ListOffset(m));
-}
-
-uint32_t ReadU32Or0(void* base, size_t offset) {
-    uint32_t v = 0;
-    TryReadU32(base, offset, &v);
-    return v;
 }
 
 // The item behind a store row (CSWGuiStoreItemEntry).

@@ -1,4 +1,4 @@
-# probe_camera_state.cpp (128 lines)
+# probe_camera_state.cpp (118 lines)
 
 Source: `patches/Accessibility/probe_camera_state.cpp`
 
@@ -14,6 +14,5 @@ Hotkey: F12 (unbound in stock kotor.ini).
 
 ## Declarations (in source order)
 
-- L24 `void* GetPlayerControlCamera(void* clientInternal)`
-- L40 `T SafeRead(void* base, size_t offset, T fallback)`
-- L52 `void PollWin32()`
+- L25 `void* GetPlayerControlCamera(void* clientInternal)`
+- L42 `void PollWin32()`

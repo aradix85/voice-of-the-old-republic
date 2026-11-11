@@ -70,8 +70,8 @@ void ServiceWagerPopup(void* fg) {
     }
 
     int cur = -1, max = -1;
-    ReadIntAt(fg, kWagerCurOffset, &cur);
-    ReadIntAt(fg, kWagerMaxOffset, &max);
+    TryReadI32(fg, kWagerCurOffset, &cur);
+    TryReadI32(fg, kWagerMaxOffset, &max);
     bool firstSight = (fg != g_wagerPanel);
 
     const bool leftDown  = acc::hotkeys::KeyDown(VK_LEFT);

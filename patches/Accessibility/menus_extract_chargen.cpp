@@ -404,7 +404,7 @@ const char* TryPortraitCharGenArrow(void* control, void* owner,
                     // the panel's stale portrait_id field as a last
                     // resort so the chain entry isn't text-less.
                     uint32_t fallbackId =
-                        ReadU32(owner, kPortraitIdOffset);
+                        ReadU32Or0(owner, kPortraitIdOffset);
                     snprintf(outBuf, bufSize,
                              acc::strings::Get(
                                  acc::strings::Id::FmtPortraitArrowId),

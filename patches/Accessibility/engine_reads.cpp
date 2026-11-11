@@ -48,11 +48,6 @@ bool ReadCExoString(void* base, size_t offset,
     }
 }
 
-uint32_t ReadU32(void* base, size_t offset) {
-    return *reinterpret_cast<uint32_t*>(
-        reinterpret_cast<unsigned char*>(base) + offset);
-}
-
 bool TryReadU32(void* base, size_t offset, uint32_t* out) {
     if (!base || !out) return false;
     __try {
@@ -79,6 +74,17 @@ bool TryReadPtr(void* base, size_t offset, void** out) {
     if (!base || !out) return false;
     __try {
         *out = *reinterpret_cast<void**>(
+            reinterpret_cast<unsigned char*>(base) + offset);
+        return true;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+}
+
+bool TryReadVector(void* base, size_t offset, Vector* out) {
+    if (!base || !out) return false;
+    __try {
+        *out = *reinterpret_cast<Vector*>(
             reinterpret_cast<unsigned char*>(base) + offset);
         return true;
     } __except (EXCEPTION_EXECUTE_HANDLER) {

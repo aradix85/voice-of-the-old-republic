@@ -77,7 +77,7 @@ void CensusFighters(Census& c, const Vector& listener) {
     const float range   = CensusRangeM();
     const float rangeSq = range * range;
     for (int i = 0; i < kMgoArraySlotCount; ++i) {
-        void* slot = SafeReadPtr(mgoArray,
+        void* slot = ReadPtrOrNull(mgoArray,
                                  kMgoArrayObjectsOffset +
                                  static_cast<size_t>(i) * sizeof(void*));
         void* enemy = slot ? CallAsCast(slot, kVtableSlotAsEnemy) : nullptr;
@@ -89,10 +89,10 @@ void CensusFighters(Census& c, const Vector& listener) {
         NumberForSlot(i);
 
         TargetInfo info;
-        info.hp           = static_cast<int>(SafeReadU32(enemy, kFollowerHpOffset));
-        info.max_hp       = static_cast<int>(SafeReadU32(enemy, kFollowerMaxHpOffset));
-        info.radius       = SafeReadFloat(enemy, kFollowerSphereRadiusOffset);
-        info.engine_speed = SafeReadFloat(enemy, kFollowerSpeedOffset);
+        info.hp           = static_cast<int>(ReadU32Or0(enemy, kFollowerHpOffset));
+        info.max_hp       = static_cast<int>(ReadU32Or0(enemy, kFollowerMaxHpOffset));
+        info.radius       = ReadFloatOr0(enemy, kFollowerSphereRadiusOffset);
+        info.engine_speed = ReadFloatOr0(enemy, kFollowerSpeedOffset);
         TrackSlotHp(i, info.hp, info.max_hp);
         if (i == g_state.selected_slot) c.selected_alive = true;
 

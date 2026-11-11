@@ -45,16 +45,40 @@ void* CallDowncast(void* control, int vtableIndex);
 // CExoString at base+offset. True if non-empty and length sane.
 bool ReadCExoString(void* base, size_t offset, char* outBuf, size_t bufSize);
 
-uint32_t ReadU32(void* base, size_t offset);
-
-// SEH-guarded single-field reads for possibly-dead engine pointers (a
-// non-null control pointer is NOT proof of life on KOTOR 2). Return false
-// on fault instead of crashing; use for any read through a pointer the
-// engine may have freed since we captured it.
+// Single-field reads through a pointer the engine may have freed since we
+// captured it (a non-null control pointer is not proof of life). False for
+// a null base and on a fault, with *out untouched.
 bool TryReadU32(void* base, size_t offset, uint32_t* out);
 bool TryReadU16(void* base, size_t offset, uint16_t* out);
 bool TryReadPtr(void* base, size_t offset, void** out);
 bool TryReadFloat(void* base, size_t offset, float* out);
+bool TryReadVector(void* base, size_t offset, Vector* out);
+
+// A signed 32-bit field, the engine's `int`.
+inline bool TryReadI32(void* base, size_t offset, int32_t* out) {
+    return TryReadU32(base, offset, reinterpret_cast<uint32_t*>(out));
+}
+
+// The same reads with a default for a null base and for a fault, for a
+// caller whose default is harmless.
+inline uint32_t ReadU32Or0(void* base, size_t offset) {
+    uint32_t value = 0;
+    TryReadU32(base, offset, &value);
+    return value;
+}
+inline int ReadI32Or0(void* base, size_t offset) {
+    return static_cast<int>(ReadU32Or0(base, offset));
+}
+inline void* ReadPtrOrNull(void* base, size_t offset) {
+    void* value = nullptr;
+    TryReadPtr(base, offset, &value);
+    return value;
+}
+inline float ReadFloatOr0(void* base, size_t offset) {
+    float value = 0.0f;
+    TryReadFloat(base, offset, &value);
+    return value;
+}
 
 // SEH-wrapped TLK lookup. False on invalid strref, missing TLK pointer,
 // or any fault.

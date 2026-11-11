@@ -76,7 +76,7 @@ bool GetWaypointMapNote(void* waypoint, char* outBuf, size_t bufSize) {
                            outBuf, bufSize)) {
             return outBuf[0] != '\0';
         }
-        strref = ReadU32(waypoint, kWaypointMapNoteLocOffset + 4);
+        strref = ReadU32Or0(waypoint, kWaypointMapNoteLocOffset + 4);
     } __except (EXCEPTION_EXECUTE_HANDLER) {
         return false;
     }
@@ -358,7 +358,7 @@ bool GetMapPinNoteText(void* mapPin, char* outBuf, size_t bufSize) {
         if (ReadCExoString(mapPin, kMapPinNoteTextOffset, outBuf, bufSize)) {
             return outBuf[0] != '\0';
         }
-        strref = ReadU32(mapPin, kMapPinNoteStrrefOffset);
+        strref = ReadU32Or0(mapPin, kMapPinNoteStrrefOffset);
     } __except (EXCEPTION_EXECUTE_HANDLER) {
         return false;
     }

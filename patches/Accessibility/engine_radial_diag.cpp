@@ -93,7 +93,7 @@ void LogState(void* tam, const char* tag) {
         uint32_t w[4] = {0, 0, 0, 0};
         for (int i = 0; i < 4; ++i) {
             int32_t tmp = 0;
-            ReadInt32(tam, off + i * 4, &tmp);
+            TryReadI32(tam, off + i * 4, &tmp);
             w[i] = static_cast<uint32_t>(tmp);
         }
         std::snprintf(hex, sizeof(hex),
@@ -107,9 +107,9 @@ void LogState(void* tam, const char* tag) {
     for (int r = 0; r < kRowCount; ++r) {
         size_t base = kTamActionListsOffset + r * kActionListStride;
         int32_t dataPtr = 0, size = 0, cap = 0;
-        ReadInt32(tam, base + 0x00, &dataPtr);
-        ReadInt32(tam, base + 0x04, &size);
-        ReadInt32(tam, base + 0x08, &cap);
+        TryReadI32(tam, base + 0x00, &dataPtr);
+        TryReadI32(tam, base + 0x04, &size);
+        TryReadI32(tam, base + 0x08, &cap);
         acclog::Write("Radial.State", "[%s] action_lists[%d] data=0x%08x size=%d cap=%d",
             tag ? tag : "?", r,
             static_cast<uint32_t>(dataPtr), size, cap);
@@ -119,7 +119,7 @@ void LogState(void* tam, const char* tag) {
     for (int r = 0; r < kRowCount; ++r) {
         size_t rowBase = kTamTargetActionsOffset + r * kTargetActionStride;
         int32_t isAction = 0;
-        ReadInt32(tam, rowBase + kRowIsActionOffset, &isAction);
+        TryReadI32(tam, rowBase + kRowIsActionOffset, &isAction);
 
         char label[128] = "";
         void* btn = reinterpret_cast<unsigned char*>(tam) + rowBase +
@@ -151,7 +151,7 @@ void LogStateWide(void* tam, const char* tag) {
     {
         int32_t f[12] = {0};
         for (int i = 0; i < 12; ++i) {
-            ReadInt32(tam, 0x24 + i * 4, &f[i]);
+            TryReadI32(tam, 0x24 + i * 4, &f[i]);
         }
         acclog::Write("Radial.StateW", "[%s] field1[0..3]=%d,%d,%d,%d "
             "[4..7]=%d,%d,%d,%d [8..11]=%d,%d,%d,%d",
@@ -175,9 +175,9 @@ void LogStateWide(void* tam, const char* tag) {
         acc::engine::ReadButtonText(row + kRowUpButtonOffset,     upBtn,  sizeof(upBtn));
         acc::engine::ReadButtonText(row + kRowDownButtonOffset,   downBtn, sizeof(downBtn));
         int32_t f4 = 0, f5 = 0, isAct = 0;
-        ReadInt32(tam, rowBase + kRowField4Offset, &f4);
-        ReadInt32(tam, rowBase + kRowField5Offset, &f5);
-        ReadInt32(tam, rowBase + kRowIsActionOffset, &isAct);
+        TryReadI32(tam, rowBase + kRowField4Offset, &f4);
+        TryReadI32(tam, rowBase + kRowField5Offset, &f5);
+        TryReadI32(tam, rowBase + kRowIsActionOffset, &isAct);
 
         acclog::Write("Radial.StateW", "[%s] target_actions[%d] is_action=%d "
             "field4=0x%08x field5=0x%08x",
@@ -197,9 +197,9 @@ void LogStateWide(void* tam, const char* tag) {
     for (int r = 0; r < kRowCount; ++r) {
         size_t base = kTamActionListsOffset + r * kActionListStride;
         int32_t dataPtr = 0, sizeF = 0, cap = 0;
-        ReadInt32(tam, base + 0x00, &dataPtr);
-        ReadInt32(tam, base + 0x04, &sizeF);
-        ReadInt32(tam, base + 0x08, &cap);
+        TryReadI32(tam, base + 0x00, &dataPtr);
+        TryReadI32(tam, base + 0x04, &sizeF);
+        TryReadI32(tam, base + 0x08, &cap);
         if (cap <= 0 || dataPtr == 0) continue;
         void* peek = reinterpret_cast<void*>(static_cast<uintptr_t>(dataPtr));
 
@@ -208,8 +208,8 @@ void LogStateWide(void* tam, const char* tag) {
         int32_t actionId = 0;
         int32_t targetId = 0;
         acc::engine::ReadCExoString(peek, kIfActionLabelOffset, label, sizeof(label));
-        ReadInt32(peek, kIfActionIdOffset,    &actionId);
-        ReadInt32(peek, kIfActionTargetOffset, &targetId);
+        TryReadI32(peek, kIfActionIdOffset,    &actionId);
+        TryReadI32(peek, kIfActionTargetOffset, &targetId);
         ReadResRef(peek, kIfActionIconOffset, icon, sizeof(icon));
 
         acclog::Write("Radial.StateW", "[%s] action_lists[%d].data[0] peek "
@@ -286,11 +286,11 @@ void LogTargetDiag(uint32_t targetClient, const char* tag) {
         int32_t isHostile = -1;
         int32_t state = -1;
         int32_t field17 = -1;
-        ReadInt32(asDoor, kDoorCannotBashOffset,    &cannotBash);
-        ReadInt32(asDoor, kDoorCanUseActionsOffset, &canUseActions);
-        ReadInt32(asDoor, kDoorIsHostileOffset,     &isHostile);
-        ReadInt32(asDoor, kDoorStateOffset,         &state);
-        ReadInt32(asDoor, kDoorField17Offset,       &field17);
+        TryReadI32(asDoor, kDoorCannotBashOffset,    &cannotBash);
+        TryReadI32(asDoor, kDoorCanUseActionsOffset, &canUseActions);
+        TryReadI32(asDoor, kDoorIsHostileOffset,     &isHostile);
+        TryReadI32(asDoor, kDoorStateOffset,         &state);
+        TryReadI32(asDoor, kDoorField17Offset,       &field17);
         acclog::Write("Radial.Diag", "[%s] door=%p cannot_bash=%d can_use_actions=%d "
             "is_hostile=%d state=%d field17=%d",
             t, asDoor, cannotBash, canUseActions, isHostile, state, field17);
@@ -309,7 +309,7 @@ void LogTargetDiag(uint32_t targetClient, const char* tag) {
         int32_t securityGate = -1;
         bool gateRead = false;
         if (serverDoor) {
-            gateRead = ReadInt32(serverDoor,
+            gateRead = TryReadI32(serverDoor,
                                  kServerDoorSecurityGateOffset, &securityGate);
         }
         if (gateRead) {

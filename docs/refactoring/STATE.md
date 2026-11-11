@@ -429,10 +429,18 @@ prefix (menus_listbox_picker.cpp).
   vtable that is unknown in this game (0), which the hand-written
   compares were not. In-game check: chargen (class, portrait, attributes,
   skills, feats), the store, the journal, save and load, pazaak.
-  Next in this family: the readers with a default (SafeReadPtr / U32 /
-  Float / Vector of minigame_aim with some 100 uses, ReadInt32 and
-  ReadPtr of engine_actionbar, ReadIntAt of the two pazaak files, SafeRead
-  of the two camera probes, the unguarded ReadU32 with 8 uses).
+  The readers with a default are in engine_reads too: ReadU32Or0,
+  ReadI32Or0, ReadPtrOrNull, ReadFloatOr0, with TryReadI32 and
+  TryReadVector. They replace SafeReadPtr / U32 / Float / Vector of
+  minigame_aim (some 100 uses in the swoop and turret files), ReadInt32
+  and ReadPtr of engine_actionbar and engine_radial, ReadIntAt of the two
+  pazaak files and SafeRead of the two camera probes. The unguarded
+  ReadU32 is gone; its 8 callers read guarded now. In-game check: a swoop
+  race, the turret game, pazaak (the board and the side-deck builder),
+  the action menu.
+  Question for Anouk: probe_camera_state and probe_camera_distance are
+  developer probes on F12, Ctrl+F12 and Ctrl+F11 (the last one writes the
+  camera distance). Keep them in the mod or remove them?
 - F7: analyse.py now finds 3 cloned blocks of 10+ lines, none across
   files (the baseline had 45), and analyse2.py one near-copy pair. What
   is left are helpers with the same name in two files: DamageLevelStringId
@@ -445,8 +453,11 @@ prefix (menus_listbox_picker.cpp).
   purpose: the bring-up and Big Picture threads and the keybind capture
   read raw keys before or outside the hotkey registry, and the pazaak
   wager has its own hold-and-repeat.
-- F8 chargen: AnnounceChainStepSuffix (4 files), AnnounceValueChange,
-  RowPitchForCursorWarp (3 files).
+- F8 judged, nothing left: the attribute and skill screens already share
+  menus_chargen_layout (a PanelDesc per screen). RowPitchForCursorWarp in
+  the two files is the one-line call into it, AnnounceValueChange differs
+  in substance (the attribute screen tracks modifier and cost), and
+  AnnounceChainStepSuffix is one name for four different suffixes.
 - F9 minigames: HandleEnter/HandleExit/AnnounceEntry.
 - Bridge: a party/equipment/inventory path; check what K2 needs (all
   but /health, /spoken, /state, /menu, say and key are KOTOR 1 only);

@@ -67,7 +67,7 @@ void* ReadMiniGameViaArea() {
     void* serverArea = acc::engine::GetCurrentArea();
     if (!serverArea) return nullptr;
     void* clientArea = acc::engine::GetClientArea(serverArea);
-    return SafeReadPtr(clientArea, kClientAreaMiniGameOffset);
+    return ReadPtrOrNull(clientArea, kClientAreaMiniGameOffset);
 }
 
 // True iff the latched CSWMiniGame is still readable and its vtable is the
@@ -76,7 +76,7 @@ void* ReadMiniGameViaArea() {
 // "no longer the same struct" signal.
 bool LatchedStillValid() {
     if (!g_state.latched_mini_game || !g_state.latched_vtable) return false;
-    void* vt = SafeReadPtr(g_state.latched_mini_game, kMiniGameVtableOffset);
+    void* vt = ReadPtrOrNull(g_state.latched_mini_game, kMiniGameVtableOffset);
     return vt == g_state.latched_vtable;
 }
 
@@ -100,7 +100,7 @@ void HandleEnter(void* mg) {
     g_state = State{};
     g_state.active            = true;
     g_state.latched_mini_game = mg;
-    g_state.latched_vtable    = SafeReadPtr(mg, kMiniGameVtableOffset);
+    g_state.latched_vtable    = ReadPtrOrNull(mg, kMiniGameVtableOffset);
     g_state.entered_at_ms     = GetTickCount64();
     // Loops left over from an earlier race must not survive into this one.
     ResetSpatialAudio();
@@ -129,8 +129,8 @@ bool RunPlayerSlotScript(uintptr_t runner, const char* what) {
     if (!acc::game::IsKotor2() || !g_state.active) return false;
     void* mg = g_state.latched_mini_game;
     if (!mg || runner == 0) return false;
-    if (SafeReadU32(mg, kMiniGameTypeOffset) != kMiniGameTypeSwoop) return false;
-    void* player = SafeReadPtr(mg, kMiniGamePlayerOffset);
+    if (ReadU32Or0(mg, kMiniGameTypeOffset) != kMiniGameTypeSwoop) return false;
+    void* player = ReadPtrOrNull(mg, kMiniGamePlayerOffset);
     if (!player) return false;
     __try {
         reinterpret_cast<PFN_RunFollowerSlotScript>(runner)(player, 0);
@@ -180,7 +180,7 @@ void Tick() {
         // shares this struct and vtable but reports type 2 and is handled by
         // minigame_turret.cpp. The type is set by the time the area chain
         // exposes mini_game.
-        if (mgArea && SafeReadU32(mgArea, kMiniGameTypeOffset) == kMiniGameTypeSwoop) {
+        if (mgArea && ReadU32Or0(mgArea, kMiniGameTypeOffset) == kMiniGameTypeSwoop) {
             HandleEnter(mgArea);
         }
         return;
@@ -193,7 +193,7 @@ void Tick() {
     if (mgArea && mgArea != g_state.latched_mini_game) {
         // A different minigame mid-race (engine swap, injected reset):
         // re-latch so later reads track it.
-        void* vt = SafeReadPtr(mgArea, kMiniGameVtableOffset);
+        void* vt = ReadPtrOrNull(mgArea, kMiniGameVtableOffset);
         acclog::Write("SwoopRace",
                       "re-latch: old=%p new=%p vtable=%p",
                       g_state.latched_mini_game, mgArea, vt);

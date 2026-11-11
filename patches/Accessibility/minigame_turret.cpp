@@ -117,17 +117,17 @@ void* ReadMiniGameViaArea() {
     void* serverArea = acc::engine::GetCurrentArea();
     if (!serverArea) return nullptr;
     void* clientArea = acc::engine::GetClientArea(serverArea);
-    return SafeReadPtr(clientArea, kClientAreaMiniGameOffset);
+    return ReadPtrOrNull(clientArea, kClientAreaMiniGameOffset);
 }
 
 // True iff `mg` is a live CSWMiniGame reporting the turret type.
 bool IsTurretMiniGame(void* mg) {
-    return mg && SafeReadU32(mg, kMiniGameTypeOffset) == kMiniGameTypeTurret;
+    return mg && ReadU32Or0(mg, kMiniGameTypeOffset) == kMiniGameTypeTurret;
 }
 
 bool LatchedStillValid() {
     if (!g_state.latched_mini_game || !g_state.latched_vtable) return false;
-    void* vt = SafeReadPtr(g_state.latched_mini_game, kMiniGameVtableOffset);
+    void* vt = ReadPtrOrNull(g_state.latched_mini_game, kMiniGameVtableOffset);
     return vt == g_state.latched_vtable;
 }
 
@@ -180,7 +180,7 @@ void AnnounceExit() {
 void HandleEnter(void* mg) {
     g_state.active            = true;
     g_state.latched_mini_game = mg;
-    g_state.latched_vtable    = SafeReadPtr(mg, kMiniGameVtableOffset);
+    g_state.latched_vtable    = ReadPtrOrNull(mg, kMiniGameVtableOffset);
     g_state.entered_at_ms     = GetTickCount64();
     g_state.ticks_since_lost  = 0;
     g_state.selected_slot     = -1;
@@ -227,12 +227,12 @@ void HandleEnter(void* mg) {
         g_state.area_is_creature[i] = false;
         g_state.area_noun[i][0]     = '\0';
     }
-    uint32_t enemies = SafeReadU32(mg, kMiniGameEnemyCountOffset);
+    uint32_t enemies = ReadU32Or0(mg, kMiniGameEnemyCountOffset);
     g_state.area_targets = (enemies == 0);
     acclog::Write("Turret",
                   "ENTER mini_game=%p vtable=%p type=%u enemies=%u%s",
                   mg, g_state.latched_vtable,
-                  SafeReadU32(mg, kMiniGameTypeOffset), enemies,
+                  ReadU32Or0(mg, kMiniGameTypeOffset), enemies,
                   g_state.area_targets ? " -> area-target mode" : "");
     ReadArena(mg);
 
@@ -299,9 +299,9 @@ extern "C" void __cdecl OnTurretBulletHit(void* hitEvent) {
     if (!hitEvent || !g_state.active) return;
 
     Vector impact;
-    impact.x = SafeReadFloat(hitEvent, kHitEventImpactXOffset);
-    impact.y = SafeReadFloat(hitEvent, kHitEventImpactYOffset);
-    impact.z = SafeReadFloat(hitEvent, kHitEventImpactZOffset);
+    impact.x = ReadFloatOr0(hitEvent, kHitEventImpactXOffset);
+    impact.y = ReadFloatOr0(hitEvent, kHitEventImpactYOffset);
+    impact.z = ReadFloatOr0(hitEvent, kHitEventImpactZOffset);
 
     void* follower = CallAsCast(hitEvent, kVtableSlotGetVictimFollower);
     if (!follower) return;
@@ -310,12 +310,12 @@ extern "C" void __cdecl OnTurretBulletHit(void* hitEvent) {
     if (!ReadFollowerPosition(follower, centre)) return;
 
     const float impactDist   = std::sqrt(DistXYZSq(impact, centre));
-    const float sphereRadius = SafeReadFloat(follower, kFollowerSphereRadiusOffset);
+    const float sphereRadius = ReadFloatOr0(follower, kFollowerSphereRadiusOffset);
 
     // Distinguish our shots landing on a fighter (the hitbox we care about)
     // from incoming fire on the player's own ship. CSWMiniPlayer.follower is
     // the first member, so the player follower pointer == the player pointer.
-    void* player = SafeReadPtr(g_state.latched_mini_game, kMiniGamePlayerOffset);
+    void* player = ReadPtrOrNull(g_state.latched_mini_game, kMiniGamePlayerOffset);
 
     const bool victimIsPlayer = (follower == player);
 
@@ -361,7 +361,7 @@ void Tick() {
         // re-latch if it's still a turret; otherwise let the debounce
         // run toward EXIT.
         if (IsTurretMiniGame(mgArea)) {
-            void* vt = SafeReadPtr(mgArea, kMiniGameVtableOffset);
+            void* vt = ReadPtrOrNull(mgArea, kMiniGameVtableOffset);
             acclog::Write("Turret", "re-latch: old=%p new=%p vtable=%p",
                           g_state.latched_mini_game, mgArea, vt);
             g_state.latched_mini_game = mgArea;
@@ -387,7 +387,7 @@ void Tick() {
     // Surface kills: when CSWMiniGame.enemy_count drops, a fighter was
     // destroyed (vs. merely leaving cue range, which leaves the count alone).
     const int enemyCount =
-        static_cast<int>(SafeReadU32(g_state.latched_mini_game,
+        static_cast<int>(ReadU32Or0(g_state.latched_mini_game,
                                      kMiniGameEnemyCountOffset));
     if (enemyCount != g_state.last_enemy_count) {
         acclog::Write("Turret", "enemy_count %d -> %d",

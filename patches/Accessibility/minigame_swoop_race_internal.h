@@ -17,10 +17,10 @@
 namespace acc::swoop_race {
 
 // The SEH reads the minigame files share (minigame_aim.h).
-using acc::minigame::SafeReadPtr;
-using acc::minigame::SafeReadU32;
-using acc::minigame::SafeReadFloat;
-using acc::minigame::SafeReadVector;
+using acc::engine::ReadPtrOrNull;
+using acc::engine::ReadU32Or0;
+using acc::engine::ReadFloatOr0;
+using acc::engine::TryReadVector;
 
 // CSWMiniGame (swkotor.exe.h line 9309). Type and counts confirmed by name;
 // the obstacle list at +0x44 / +0x48 verified live.

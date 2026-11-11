@@ -60,14 +60,14 @@ bool ReadTickInputs(void* miniGame, PadTick& t) {
                       "accelpad cues: no listener anchor available");
         return false;
     }
-    t.player = SafeReadPtr(miniGame, kMiniGamePlayerOffset);
+    t.player = ReadPtrOrNull(miniGame, kMiniGamePlayerOffset);
     t.bikeOk = ReadFollowerPosition(t.player, t.bikePos);
-    t.tunOk  = SafeReadVector(t.player, kMiniPlayerOffsetVectorOffset, t.tunnel);
+    t.tunOk  = TryReadVector(t.player, kMiniPlayerOffsetVectorOffset, &t.tunnel);
     t.refY   = t.bikeOk ? t.bikePos.y : t.listener.y;
     // Forward speed gates the magnet at the start hold; sphere_radius is the
     // player's half of the real hit radius.
-    t.bikeSpeed    = SafeReadFloat(t.player, kFollowerSpeedOffset);
-    t.playerRadius = SafeReadFloat(t.player, kFollowerSphereRadiusOffset);
+    t.bikeSpeed    = ReadFloatOr0(t.player, kFollowerSpeedOffset);
+    t.playerRadius = ReadFloatOr0(t.player, kFollowerSphereRadiusOffset);
     return true;
 }
 
@@ -92,7 +92,7 @@ void ScanEnemies(void* mgoArray, PadTick& t) {
     g_state.mine_count = 0;   // rebuilt every tick for the obstacle sweep
     const float bikeXref = t.bikeOk ? t.bikePos.x : t.listener.x;
     for (int i = 0; i < kMgoArraySlotCount; ++i) {
-        void* obj = SafeReadPtr(mgoArray,
+        void* obj = ReadPtrOrNull(mgoArray,
                                 kMgoArrayObjectsOffset +
                                 static_cast<size_t>(i) * sizeof(void*));
         if (!obj) continue;
@@ -109,13 +109,13 @@ void ScanEnemies(void* mgoArray, PadTick& t) {
 
         // First fire: every enemy once in the log, for the track inventory.
         if (!g_state.accelpad_diag_emitted) {
-            void* vt = SafeReadPtr(enemy, 0);
+            void* vt = ReadPtrOrNull(enemy, 0);
             acclog::Write("SwoopRace",
                           "%s slot=%d ptr=%p vtable=%p model=[%s] "
                           "pos=(%.2f,%.2f,%.2f) radius=%.2f",
                           isMine ? "mine" : "accelpad", i, enemy, vt,
                           modelName ? modelName : "(null)", pos.x, pos.y, pos.z,
-                          SafeReadFloat(enemy, kFollowerSphereRadiusOffset));
+                          ReadFloatOr0(enemy, kFollowerSphereRadiusOffset));
         }
 
         if (isMine) {
@@ -124,7 +124,7 @@ void ScanEnemies(void* mgoArray, PadTick& t) {
                 g_state.mine_slot[g_state.mine_count]   = i;
                 g_state.mine_pos[g_state.mine_count]    = pos;
                 g_state.mine_radius[g_state.mine_count] =
-                    SafeReadFloat(enemy, kFollowerSphereRadiusOffset);
+                    ReadFloatOr0(enemy, kFollowerSphereRadiusOffset);
                 ++g_state.mine_count;
             }
             continue;   // never a steering target
@@ -137,7 +137,7 @@ void ScanEnemies(void* mgoArray, PadTick& t) {
         if (t.aheadSlot < 0 || pos.y < t.aheadPos.y) {
             t.aheadSlot   = i;
             t.aheadPos    = pos;
-            t.aheadRadius = SafeReadFloat(enemy, kFollowerSphereRadiusOffset);
+            t.aheadRadius = ReadFloatOr0(enemy, kFollowerSphereRadiusOffset);
         }
     }
 

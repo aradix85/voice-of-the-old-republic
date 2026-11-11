@@ -79,12 +79,12 @@ void ResolveHazardBox(void* aur, const char* name, HazardInfo& hz) {
 // a listener anchor.
 bool ReadObstacleTick(void* miniGame, ObstacleTick& t) {
     t.k2 = acc::game::IsKotor2();
-    void* player = SafeReadPtr(miniGame, kMiniGamePlayerOffset);
+    void* player = ReadPtrOrNull(miniGame, kMiniGamePlayerOffset);
     t.bikeOk = ReadFollowerPosition(player, t.bikePos);
-    t.bikeSpeed = SafeReadFloat(player, kFollowerSpeedOffset);
-    t.playerRadius = SafeReadFloat(player, kFollowerSphereRadiusOffset);
+    t.bikeSpeed = ReadFloatOr0(player, kFollowerSpeedOffset);
+    t.playerRadius = ReadFloatOr0(player, kFollowerSphereRadiusOffset);
     Vector tunnel = {0, 0, 0};
-    const bool tunOk = SafeReadVector(player, kMiniPlayerOffsetVectorOffset, tunnel);
+    const bool tunOk = TryReadVector(player, kMiniPlayerOffsetVectorOffset, &tunnel);
     const bool airborne = tunOk && tunnel.z > kAirborneZ;
     t.justLanded = g_state.was_airborne && !airborne;
     g_state.was_airborne = airborne;
@@ -107,7 +107,7 @@ bool ReadObstacleTick(void* miniGame, ObstacleTick& t) {
 
 bool ReadObstacle(void* mgoArray, int i, ObstacleTick& t, ObstacleView& v) {
     void* obj =
-        SafeReadPtr(mgoArray, kMgoArrayObjectsOffset + static_cast<size_t>(i) * sizeof(void*));
+        ReadPtrOrNull(mgoArray, kMgoArrayObjectsOffset + static_cast<size_t>(i) * sizeof(void*));
     if (!obj) return false;
     ++t.slotsSeen;
     // AsObstacle (vtable[8]) returns the object itself for a CSWMGObstacle,
@@ -115,8 +115,8 @@ bool ReadObstacle(void* mgoArray, int i, ObstacleTick& t, ObstacleView& v) {
     v.obstacle = CallAsCast(obj, kVtableSlotAsObstacle);
     if (!v.obstacle) return false;
     ++t.obstaclesFound;
-    void* aur = SafeReadPtr(v.obstacle, kObstacleAurObjectOffset);
-    if (!aur || !SafeReadVector(aur, kAurObjectPositionOffset, v.pos)) return false;
+    void* aur = ReadPtrOrNull(v.obstacle, kObstacleAurObjectOffset);
+    if (!aur || !TryReadVector(aur, kAurObjectPositionOffset, &v.pos)) return false;
     // For the inventory log and the K2 classification (rocks and accelpads
     // are in different engine pools).
     v.name = ReadAurObjectName(aur);
@@ -146,7 +146,7 @@ bool ReadObstacle(void* mgoArray, int i, ObstacleTick& t, ObstacleView& v) {
 // First sweep only: every obstacle's slot and name (and the K2 box and
 // class), so the per-track inventory is in the log once.
 void LogObstacleInventory(int i, const ObstacleView& v, const HazardInfo& hz, bool k2) {
-    void* vt = SafeReadPtr(v.obstacle, 0);
+    void* vt = ReadPtrOrNull(v.obstacle, 0);
     if (v.haveBox) {
         acclog::Write("SwoopRace",
                       "obstacle slot=%d ptr=%p vtable=%p name=[%s] "

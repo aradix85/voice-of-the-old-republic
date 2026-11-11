@@ -244,8 +244,8 @@ bool ExtractStatRow(void* panel, void* labelControl,
         __try {
             auto* sld = reinterpret_cast<unsigned char*>(panel) +
                         spec->valueOffset;
-            curVal = acc::engine::ReadU32(sld, kSliderCurValueOffset);
-            maxVal = acc::engine::ReadU32(sld, kSliderMaxValueOffset);
+            curVal = acc::engine::ReadU32Or0(sld, kSliderCurValueOffset);
+            maxVal = acc::engine::ReadU32Or0(sld, kSliderMaxValueOffset);
         } __except (EXCEPTION_EXECUTE_HANDLER) {
             return false;
         }

@@ -18,11 +18,11 @@ constexpr ULONGLONG kDiagLogIntervalMs    = 1000;
 }  // namespace
 
 void EmitEntrySummary(void* miniGame) {
-    uint32_t type      = SafeReadU32(miniGame, kMiniGameTypeOffset);
-    uint32_t enemies   = SafeReadU32(miniGame, kMiniGameEnemyCountOffset);
-    uint32_t obstacles = SafeReadU32(miniGame, kMiniGameObstacleCountOffset);
-    void*    obstData  = SafeReadPtr(miniGame, kMiniGameObstacleDataOffset);
-    void*    player    = SafeReadPtr(miniGame, kMiniGamePlayerOffset);
+    uint32_t type      = ReadU32Or0(miniGame, kMiniGameTypeOffset);
+    uint32_t enemies   = ReadU32Or0(miniGame, kMiniGameEnemyCountOffset);
+    uint32_t obstacles = ReadU32Or0(miniGame, kMiniGameObstacleCountOffset);
+    void*    obstData  = ReadPtrOrNull(miniGame, kMiniGameObstacleDataOffset);
+    void*    player    = ReadPtrOrNull(miniGame, kMiniGamePlayerOffset);
     acclog::Write("SwoopRace",
                   "ENTER mini_game=%p vtable=%p type=%u enemies=%u "
                   "obstacles=%u obstacles_ptr=%p player=%p",
@@ -35,22 +35,22 @@ void EmitDiagSnapshot(void* miniGame) {
     if (now - g_state.last_diag_log_ms < kDiagLogIntervalMs) return;
     g_state.last_diag_log_ms = now;
 
-    void* player = SafeReadPtr(miniGame, kMiniGamePlayerOffset);
+    void* player = ReadPtrOrNull(miniGame, kMiniGamePlayerOffset);
     if (!player) {
         acclog::Write("SwoopRace", "snapshot: player ptr null");
         return;
     }
-    float speed    = SafeReadFloat(player, kFollowerSpeedOffset);
-    float minSpeed = SafeReadFloat(player, kMiniPlayerMinSpeedOffset);
-    float maxSpeed = SafeReadFloat(player, kMiniPlayerMaxSpeedOffset);
+    float speed    = ReadFloatOr0(player, kFollowerSpeedOffset);
+    float minSpeed = ReadFloatOr0(player, kMiniPlayerMinSpeedOffset);
+    float maxSpeed = ReadFloatOr0(player, kMiniPlayerMaxSpeedOffset);
     Vector off;
-    const bool offOk = SafeReadVector(player, kMiniPlayerOffsetVectorOffset, off);
+    const bool offOk = TryReadVector(player, kMiniPlayerOffsetVectorOffset, &off);
     // The scripts' gear global and (K2) the jump velocity ride along so a log
     // alone shows whether the bike is in the countdown (<0), racing (0..5) or
     // finished (6), and whether a Space press actually launched a hop.
     const int   scriptGear = acc::engine::ReadGlobalNumber(kGearGlobalName);
     const float jumpV      = acc::game::IsKotor2()
-        ? SafeReadFloat(miniGame, kMiniGameJumpVelocityOffset) : 0.0f;
+        ? ReadFloatOr0(miniGame, kMiniGameJumpVelocityOffset) : 0.0f;
     acclog::Write("SwoopRace",
                   "snapshot speed=%.2f [%.2f..%.2f] gear=%d global=%d jumpV=%.1f "
                   "tunnel=%s (%.2f,%.2f,%.2f)",

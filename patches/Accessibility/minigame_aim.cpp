@@ -10,58 +10,12 @@
 
 namespace acc::minigame {
 
-// ---- SEH read primitives ---------------------------------------------------
-// Consolidated from minigame_turret.cpp, minigame_swoop_race.cpp and
-// minigame_swoop_audio.cpp, which each carried a byte-identical private copy
-// (Phase-2 duplication finding D2). Bodies are verbatim.
-
-void* SafeReadPtr(void* base, size_t off) {
-    if (!base) return nullptr;
-    __try {
-        return *reinterpret_cast<void**>(
-            reinterpret_cast<unsigned char*>(base) + off);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return nullptr;
-    }
-}
-
-uint32_t SafeReadU32(void* base, size_t off) {
-    if (!base) return 0;
-    __try {
-        return *reinterpret_cast<uint32_t*>(
-            reinterpret_cast<unsigned char*>(base) + off);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return 0;
-    }
-}
-
-float SafeReadFloat(void* base, size_t off) {
-    if (!base) return 0.0f;
-    __try {
-        return *reinterpret_cast<float*>(
-            reinterpret_cast<unsigned char*>(base) + off);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return 0.0f;
-    }
-}
-
-bool SafeReadVector(void* base, size_t off, Vector& out) {
-    if (!base) return false;
-    __try {
-        out = *reinterpret_cast<Vector*>(
-            reinterpret_cast<unsigned char*>(base) + off);
-        return true;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return false;
-    }
-}
-
 // ---- Minigame object array -------------------------------------------------
 
 void* ResolveMgoArray() {
     void* clientInternal = acc::engine::GetClientAppInternal();
     if (!clientInternal) return nullptr;
-    return SafeReadPtr(clientInternal, kClientInternalMgoArrayOffset);
+    return ReadPtrOrNull(clientInternal, kClientInternalMgoArrayOffset);
 }
 
 bool ReadFollowerPosition(void* follower, Vector& out) {
@@ -71,7 +25,7 @@ bool ReadFollowerPosition(void* follower, Vector& out) {
         // (offset 0) and holds 4-byte pointers to model wrapper objects,
         // each with its own vtable. A null data[0] is the empty case, so
         // the list size at +0x6c never has to be read.
-        void* modelsData = SafeReadPtr(follower,
+        void* modelsData = ReadPtrOrNull(follower,
                                        kTrackFollowerModelsDataOffset);
         if (!modelsData) return false;
         void* model = *reinterpret_cast<void**>(modelsData);
@@ -96,7 +50,7 @@ bool ReadFollowerPosition(void* follower, Vector& out) {
 void* ReadFollowerModelGob(void* follower) {
     if (!follower) return nullptr;
     __try {
-        void* modelsData = SafeReadPtr(follower, kTrackFollowerModelsDataOffset);
+        void* modelsData = ReadPtrOrNull(follower, kTrackFollowerModelsDataOffset);
         if (!modelsData) return nullptr;
         return *reinterpret_cast<void**>(modelsData);
     } __except (EXCEPTION_EXECUTE_HANDLER) {

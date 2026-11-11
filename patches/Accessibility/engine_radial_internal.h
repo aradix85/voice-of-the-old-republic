@@ -95,9 +95,7 @@ typedef void (__thiscall* PFN_DoTargetAction)(void* this_, int row, int pad);
 typedef void* (__thiscall* PFN_GetGameObject)(void* exoApp, uint32_t handle);
 typedef bool (__thiscall* PFN_GetCanUseSkill)(void* stats, uint16_t skillIdx);
 
-inline bool ReadInt32(void* base, size_t offset, int32_t* out) {
-    return acc::engine::TryReadU32(base, offset, reinterpret_cast<uint32_t*>(out));
-}
+using acc::engine::TryReadI32;
 
 // The game object's AsSWCxxx downcast at the given vtable byte offset, or
 // nullptr.

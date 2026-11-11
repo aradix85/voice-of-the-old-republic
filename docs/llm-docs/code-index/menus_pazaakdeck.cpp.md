@@ -1,4 +1,4 @@
-# menus_pazaakdeck.cpp (396 lines)
+# menus_pazaakdeck.cpp (403 lines)
 
 Source: `patches/Accessibility/menus_pazaakdeck.cpp`
 
@@ -8,17 +8,18 @@ Integrates with the menu chain: ExtractCardLabel plugs into the per-kind extract
 
 ## Declarations (in source order)
 
-- L61 `int NumTypes()`: Collectable card types: 18 on KOTOR 1 (6 plus, 6 minus, 6 flip), 24 on KOTOR 2 (those plus its five specials, with the grid's last cell unused).
-- L64 `bool VtableIs(void* p, uintptr_t vt)`
-- L69 `int ReadIntAt(void* base, size_t off)`
-- L77 `bool Classify(void* panel, void* control, bool& outAvailable, int& outIdx)`: Classify a card widget by its position in the panel's embedded arrays.
-- L97 `bool IsDeckPanel(void* panel)`
-- L101 `bool ExtractCardLabel(void* panel, void* control, char* outBuf, size_t bufSize)`
-- L135 `bool IsChainDecorative(void* panel, void* control)`
-- L192 `int BuildCollection(void* panel, int* outTypes)`: Owned card types, ascending.
-- L208 `int DeckFilledCount(void* panel)`
-- L215 `int RowLength(void* panel, int row)`
-- L225 `void Speak(const char* s)`
-- L227 `void AnnounceFocus(void* panel)`
-- L280 `bool TryHandleInput(void* panel, int param_1, int param_2, int& rv)`
-- L331 `void Tick()`
+- L62 `int NumTypes()`: Collectable card types: 18 on KOTOR 1 (6 plus, 6 minus, 6 flip), 24 on KOTOR 2 (those plus its five specials, with the grid's last cell unused).
+- L65 `bool VtableIs(void* p, uintptr_t vt)`
+- L71 `int OwnedCount(void* panel, int type)`: How many of card type `type` the player owns.
+- L76 `int SideDeckCard(void* panel, int slot)`: The card type in side-deck slot `slot`, negative for an empty slot.
+- L84 `bool Classify(void* panel, void* control, bool& outAvailable, int& outIdx)`: Classify a card widget by its position in the panel's embedded arrays.
+- L104 `bool IsDeckPanel(void* panel)`
+- L108 `bool ExtractCardLabel(void* panel, void* control, char* outBuf, size_t bufSize)`
+- L142 `bool IsChainDecorative(void* panel, void* control)`
+- L199 `int BuildCollection(void* panel, int* outTypes)`: Owned card types, ascending.
+- L215 `int DeckFilledCount(void* panel)`
+- L222 `int RowLength(void* panel, int row)`
+- L232 `void Speak(const char* s)`
+- L234 `void AnnounceFocus(void* panel)`
+- L287 `bool TryHandleInput(void* panel, int param_1, int param_2, int& rv)`
+- L338 `void Tick()`

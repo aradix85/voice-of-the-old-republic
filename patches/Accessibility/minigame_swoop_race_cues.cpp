@@ -123,10 +123,10 @@ void TickGearWatch(void* miniGame) {
 
     // ---- Fallback: the max_speed-plateau heuristic, for a track whose
     // scripts do not maintain the global. Upward jumps only.
-    void* player = SafeReadPtr(miniGame, kMiniGamePlayerOffset);
+    void* player = ReadPtrOrNull(miniGame, kMiniGamePlayerOffset);
     if (!player) return;
 
-    float maxSpeed = SafeReadFloat(player, kMiniPlayerMaxSpeedOffset);
+    float maxSpeed = ReadFloatOr0(player, kMiniPlayerMaxSpeedOffset);
     if (maxSpeed <= 0.0f) return;  // not yet initialised
 
     if (maxSpeed > g_state.last_max_speed + kGearShiftMinJump) {
@@ -149,20 +149,20 @@ void TickGearWatch(void* miniGame) {
 // follower reads 0 once more when it is torn down after the race. K1's
 // obstacle script never touches hp, so nothing fires there.
 void TickHitPoints(void* miniGame) {
-    void* player = SafeReadPtr(miniGame, kMiniGamePlayerOffset);
+    void* player = ReadPtrOrNull(miniGame, kMiniGamePlayerOffset);
     if (!player) return;
-    const int hp = static_cast<int>(SafeReadU32(player, kFollowerHpOffset));
+    const int hp = static_cast<int>(ReadU32Or0(player, kFollowerHpOffset));
     if (hp < 0 || hp > 1000000) return;              // faulted / garbage
     // After the finish the engine zeroes the follower (max hp 0 too): that
     // final drop to 0 is not a hit, so keep it out of the per-race hit count
     // a log reader would tally.
-    if (SafeReadU32(player, kFollowerMaxHpOffset) == 0) return;
+    if (ReadU32Or0(player, kFollowerMaxHpOffset) == 0) return;
     if (g_state.last_hp < 0) { g_state.last_hp = hp; return; }
     if (hp >= g_state.last_hp) { g_state.last_hp = hp; return; }
     const int drop = g_state.last_hp - hp;
     g_state.last_hp = hp;
     acclog::Write("SwoopRace", "hit: hp %d -> %d (drop %d of %u)",
-                  hp + drop, hp, drop, SafeReadU32(player, kFollowerMaxHpOffset));
+                  hp + drop, hp, drop, ReadU32Or0(player, kFollowerMaxHpOffset));
 }
 
 void TickStuckHint(void* miniGame) {
@@ -180,8 +180,8 @@ void TickStuckHint(void* miniGame) {
         return;
     }
     if (g_state.race_time_announced) return;   // finished, not stuck
-    void* player = SafeReadPtr(miniGame, kMiniGamePlayerOffset);
-    const float speed = player ? SafeReadFloat(player, kFollowerSpeedOffset) : 0.0f;
+    void* player = ReadPtrOrNull(miniGame, kMiniGamePlayerOffset);
+    const float speed = player ? ReadFloatOr0(player, kFollowerSpeedOffset) : 0.0f;
     const int   gear  = acc::engine::ReadGlobalNumber(kGearGlobalName);
     if (gear != 0 || speed > 2.0f) return;     // moving or in gear: not pinned
     const ParkedBar bar  = GetParkedBarSituation();
@@ -196,7 +196,7 @@ void TickStuckHint(void* miniGame) {
     // At a wall the direction is known (K2 posts from |x| ≈ 16.3; 13 leaves
     // the pad lanes at 11 out of it): say which way, then the shift key.
     Vector off = {0.0f, 0.0f, 0.0f};
-    const bool offOk = player && SafeReadVector(player, kMiniPlayerOffsetVectorOffset, off);
+    const bool offOk = player && TryReadVector(player, kMiniPlayerOffsetVectorOffset, &off);
     acc::strings::Id id = acc::strings::Id::SwoopRaceStuckHint;
     const char* why = "generic";
     switch (bar) {
@@ -218,18 +218,18 @@ void TickStuckHint(void* miniGame) {
 
 void TickJumpWatch(void* miniGame) {
     if (!acc::game::IsKotor2()) return;
-    void* player = SafeReadPtr(miniGame, kMiniGamePlayerOffset);
+    void* player = ReadPtrOrNull(miniGame, kMiniGamePlayerOffset);
     if (!player) return;
     Vector off;
-    if (!SafeReadVector(player, kMiniPlayerOffsetVectorOffset, off)) return;
+    if (!TryReadVector(player, kMiniPlayerOffsetVectorOffset, &off)) return;
 
     if (!g_state.airborne) {
         if (off.z <= kJumpArmZ) return;
         g_state.airborne        = true;
         g_state.jump_started_ms = GetTickCount64();
         g_state.jump_peak_z     = off.z;
-        const float speed = SafeReadFloat(player, kFollowerSpeedOffset);
-        const float vz    = SafeReadFloat(miniGame, kMiniGameJumpVelocityOffset);
+        const float speed = ReadFloatOr0(player, kFollowerSpeedOffset);
+        const float vz    = ReadFloatOr0(miniGame, kMiniGameJumpVelocityOffset);
         Vector pos = {0.0f, 0.0f, 0.0f};
         const bool posOk = acc::engine::GetCameraPosition(pos);
         acclog::Write("SwoopRace",
@@ -266,13 +266,13 @@ void TickShiftReady(void* miniGame) {
     if (gear < kFirstGatedGear || gear > kLastGatedGear) return;  // launch / top gear: no gate
     const float gate = kShiftGateSpeed[gear];
 
-    void* player = SafeReadPtr(miniGame, kMiniGamePlayerOffset);
+    void* player = ReadPtrOrNull(miniGame, kMiniGamePlayerOffset);
     if (!player) return;
 
-    const float maxSpeed = SafeReadFloat(player, kMiniPlayerMaxSpeedOffset);
+    const float maxSpeed = ReadFloatOr0(player, kMiniPlayerMaxSpeedOffset);
     if (maxSpeed <= 0.0f || gate >= maxSpeed) return;  // gate unreachable
 
-    const float speed = SafeReadFloat(player, kFollowerSpeedOffset);
+    const float speed = ReadFloatOr0(player, kFollowerSpeedOffset);
     if (speed <= gate) return;
 
     g_state.shift_ready_announced = true;

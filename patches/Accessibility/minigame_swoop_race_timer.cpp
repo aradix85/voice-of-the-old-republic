@@ -115,8 +115,8 @@ bool ReadWorldClockMs(void* server, uint32_t& outMs, uint32_t& outMph) {
 // assumption; a miss reads -1 and the fallback decides, and the log line
 // shows which happened.
 void DecideWreckAtFinish(void* miniGame) {
-    void* player = SafeReadPtr(miniGame, kMiniGamePlayerOffset);
-    const int hp = player ? static_cast<int>(SafeReadU32(player, kFollowerHpOffset))
+    void* player = ReadPtrOrNull(miniGame, kMiniGamePlayerOffset);
+    const int hp = player ? static_cast<int>(ReadU32Or0(player, kFollowerHpOffset))
                           : -1;
 
     char area[96] = "";
@@ -147,10 +147,10 @@ void DecideWreckAtFinish(void* miniGame) {
 // Per tick while the latch is alive: detect the finish, cache the start
 // stamp once, and keep the elapsed current until the finish freezes it.
 void TickRaceTimer(void* miniGame) {
-    void* player = SafeReadPtr(miniGame, kMiniGamePlayerOffset);
+    void* player = ReadPtrOrNull(miniGame, kMiniGamePlayerOffset);
     if (!player) return;
-    const float speed    = SafeReadFloat(player, kFollowerSpeedOffset);
-    const float maxSpeed = SafeReadFloat(player, kMiniPlayerMaxSpeedOffset);
+    const float speed    = ReadFloatOr0(player, kFollowerSpeedOffset);
+    const float maxSpeed = ReadFloatOr0(player, kMiniPlayerMaxSpeedOffset);
 
     // Finish crossing = the speed envelope just zeroed (maxSpeed -> 0) on a bike
     // that reached a real gear; see the finish-detection note above

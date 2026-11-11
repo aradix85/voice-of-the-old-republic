@@ -30,23 +30,17 @@
 #include <cstdint>
 
 #include "engine_offsets.h"  // Vector
+#include "engine_reads.h"
 #include "engine_offsets_select.h"
 
 namespace acc::minigame {
 
-// ---- SEH read primitives ---------------------------------------------------
-// Fault-tolerant field reads against engine objects. Every minigame TU used to
-// carry its own byte-identical copy of these (Phase-2 duplication finding D2);
-// they live here now. Each returns a benign value rather than propagating a
-// fault, so a stale or half-torn-down engine pointer can never take the game
-// down through us.
-//
-// Naming note: SafeReadFloat, not SafeReadF32 — minigame_turret.cpp used the
-// latter and the other two used the former; one name had to win.
-void*    SafeReadPtr(void* base, size_t off);
-uint32_t SafeReadU32(void* base, size_t off);
-float    SafeReadFloat(void* base, size_t off);
-bool     SafeReadVector(void* base, size_t off, Vector& out);
+// Field reads against engine objects come from engine_reads: a stale or
+// half-torn-down engine pointer reads as 0 or null.
+using acc::engine::ReadFloatOr0;
+using acc::engine::ReadPtrOrNull;
+using acc::engine::ReadU32Or0;
+using acc::engine::TryReadVector;
 
 // ---- Minigame object array -------------------------------------------------
 // CClientExoAppInternal holds the minigame object array (obstacles, accelerator

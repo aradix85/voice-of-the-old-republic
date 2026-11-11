@@ -23,7 +23,7 @@ void ApplyBarDetour(void* miniGame, PadTick& t) {
         const float vWorld = t.bikeSpeed * kSpeedToWorldPerSec;   // world u/s
         if (airborne) {
             // Remaining flight from the arc: z + vz*t - g*t^2/2 = 0.
-            const float vz   = SafeReadFloat(miniGame, kMiniGameJumpVelocityOffset);
+            const float vz   = ReadFloatOr0(miniGame, kMiniGameJumpVelocityOffset);
             const float disc = vz * vz + 2.0f * kJumpGravity * t.tunnel.z;
             const float tLand = (vz + std::sqrt(disc > 0.0f ? disc : 0.0f)) / kJumpGravity;
             groundedY = t.refY + tLand * vWorld;

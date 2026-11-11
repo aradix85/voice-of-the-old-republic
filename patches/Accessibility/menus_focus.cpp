@@ -269,7 +269,7 @@ void acc::menus::focus::WalkAndCaptureOnFirstSight(void* panel) {
 
         char text[128];
         bool gotText = false;
-        uint32_t strref = ReadU32(c, kButtonStrRefOffset);
+        uint32_t strref = ReadU32Or0(c, kButtonStrRefOffset);
         if (LookupTlk(strref, text, sizeof(text))) {
             gotText = true;
         } else if (ReadCExoString(c, kButtonTextOffset, text, sizeof(text))) {

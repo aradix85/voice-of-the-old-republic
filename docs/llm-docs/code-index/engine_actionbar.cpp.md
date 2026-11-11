@@ -1,4 +1,4 @@
-# engine_actionbar.cpp (448 lines)
+# engine_actionbar.cpp (430 lines)
 
 Source: `patches/Accessibility/engine_actionbar.cpp`
 
@@ -14,19 +14,17 @@ CSWGuiMainInterface::DoPersonalAction @0x0068ad60 — what bare 4..7 hit. param_
 
 ## Declarations (in source order)
 
-- L121 `bool ReadInt32(void* base, size_t offset, int32_t* out)`: Local chain helpers (same shape as engine_radial / engine_picker).
-- L132 `void* ReadPtr(void* base, size_t offset)`
-- L144 `void* DescriptorAddr(void* mi, int slot, int index)`: Address of the descriptor list entry at `index` within slot's personal-actions list.
-- L161 `bool ReadCExoStringLocal(void* base, size_t offset, char* outBuf, size_t bufSize)`: CExoString (c_string + length) read with NUL-termination guarantee.
-- L189 `void* ResolveMainInterface()`: Kept as this module's public name — nine callers, including input_pipeline.cpp.
-- L193 `int VariantCount(void* mi, int slot)`
-- L203 `bool ReadVariantLabel(void* mi, int slot, int index, char* outBuf, size_t bufSize)`
-- L212 `bool VariantRefusal(void* mi, int slot, int index, uint32_t* outStrRef)`
-- L263 `uint32_t ReadVariantActionId(void* mi, int slot, int index)`
-- L271 `void LogDispatchDiag(void* mi, int slot, int index)`
-- L313 `bool EntryIsMedicalK2(void* mi, int slot, int index)`
-- L322 `bool SendUseItemRequestK2(uint32_t actionId, void* targetClientCreature)`
-- L363 `bool SelectVariant(void* mi, int slot, int index)`
-- L379 `bool FireSelectedVariant(void* mi, int slot)`
-- L395 `void LogState(void* mi, const char* tag)`
-- L412 `bool PrepareBareDispatch(uint32_t targetClientHandle)`
+- L126 `void* DescriptorAddr(void* mi, int slot, int index)`: Address of the descriptor list entry at `index` within slot's personal-actions list.
+- L143 `bool ReadCExoStringLocal(void* base, size_t offset, char* outBuf, size_t bufSize)`: CExoString (c_string + length) read with NUL-termination guarantee.
+- L171 `void* ResolveMainInterface()`: Kept as this module's public name — nine callers, including input_pipeline.cpp.
+- L175 `int VariantCount(void* mi, int slot)`
+- L185 `bool ReadVariantLabel(void* mi, int slot, int index, char* outBuf, size_t bufSize)`
+- L194 `bool VariantRefusal(void* mi, int slot, int index, uint32_t* outStrRef)`
+- L245 `uint32_t ReadVariantActionId(void* mi, int slot, int index)`
+- L253 `void LogDispatchDiag(void* mi, int slot, int index)`
+- L295 `bool EntryIsMedicalK2(void* mi, int slot, int index)`
+- L304 `bool SendUseItemRequestK2(uint32_t actionId, void* targetClientCreature)`
+- L345 `bool SelectVariant(void* mi, int slot, int index)`
+- L361 `bool FireSelectedVariant(void* mi, int slot)`
+- L377 `void LogState(void* mi, const char* tag)`
+- L394 `bool PrepareBareDispatch(uint32_t targetClientHandle)`

@@ -20,10 +20,10 @@ namespace acc::turret_game {
 // SEH read primitives + minigame-object-array resolution are shared across
 // the minigame TUs (see minigame_aim.h). Brought into unqualified scope so
 // the dense reads below read as they did when each file had its own copy.
-using acc::minigame::SafeReadPtr;
-using acc::minigame::SafeReadU32;
-using acc::minigame::SafeReadFloat;
-using acc::minigame::SafeReadVector;
+using acc::engine::ReadPtrOrNull;
+using acc::engine::ReadU32Or0;
+using acc::engine::ReadFloatOr0;
+using acc::engine::TryReadVector;
 using acc::minigame::ResolveMgoArray;
 using acc::minigame::CallAsCast;
 using acc::minigame::ReadFollowerPosition;

@@ -6,6 +6,7 @@
 
 #include <cstdlib>
 
+#include "engine_reads.h"
 #include "log.h"
 #include "strings.h"
 
@@ -195,8 +196,8 @@ const char* TryLabelHilight(void* control, char* outBuf, size_t bufSize) {
 // hold no label near the slider.
 const char* TrySlider(void* control, void* owner, char* outBuf, size_t bufSize) {
     if (!IsSlider(control)) return nullptr;
-    const uint32_t cur = ReadU32(control, kSliderCurValueOffset);
-    const uint32_t max = ReadU32(control, kSliderMaxValueOffset);
+    const uint32_t cur = ReadU32Or0(control, kSliderCurValueOffset);
+    const uint32_t max = ReadU32Or0(control, kSliderMaxValueOffset);
     char label[128];
     const char* labelText = nullptr;
     if (owner && IsSoundOptionsMovieSlider(owner, control)) {

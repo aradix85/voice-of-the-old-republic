@@ -1,4 +1,4 @@
-# probe_camera_distance.cpp (335 lines)
+# probe_camera_distance.cpp (325 lines)
 
 Source: `patches/Accessibility/probe_camera_distance.cpp`
 
@@ -24,15 +24,14 @@ Diagnostic-only TU; ships only while we're characterising the camera- distance s
 
 ## Declarations (in source order)
 
-- L70 `T SafeRead(void* base, size_t offset, T fallback)`
-- L81 `bool SafeWrite(void* base, size_t offset, T value)`
-- L92 `void* GetCamera()`
-- L99 `void* GetActiveBehavior(void* camera)`: Camera::GetBehavior(0xffffffff) — fetches the active behavior.
-- L118 `void* GetBehaviorStateStruct(void* behavior)`: Behavior::vtable[7]() — returns the inner state struct (where AcclTurnCamera writes yaw at +0x40).
-- L136 `float SafeCallGetFloat(uintptr_t addr, void* this_)`
-- L171 `const char* ModeName(ClampMode m)`
-- L181 `float ModeTarget(ClampMode m)`
-- L190 `void AdvanceClampMode()`
-- L216 `void DumpSnapshot()`: One-shot full state dump.
-- L269 `void TickClamp()`: Per-tick clamp + readback while a non-off clamp mode is active.
-- L321 `void Tick()`
+- L71 `bool SafeWrite(void* base, size_t offset, T value)`
+- L82 `void* GetCamera()`
+- L89 `void* GetActiveBehavior(void* camera)`: Camera::GetBehavior(0xffffffff) — fetches the active behavior.
+- L108 `void* GetBehaviorStateStruct(void* behavior)`: Behavior::vtable[7]() — returns the inner state struct (where AcclTurnCamera writes yaw at +0x40).
+- L126 `float SafeCallGetFloat(uintptr_t addr, void* this_)`
+- L161 `const char* ModeName(ClampMode m)`
+- L171 `float ModeTarget(ClampMode m)`
+- L180 `void AdvanceClampMode()`
+- L206 `void DumpSnapshot()`: One-shot full state dump.
+- L259 `void TickClamp()`: Per-tick clamp + readback while a non-off clamp mode is active.
+- L311 `void Tick()`

@@ -18,6 +18,7 @@
 #include "engine_input.h"    // kInputNav* / kInputEnter*
 #include "engine_manager.h"  // IsPanelInManager
 #include "engine_offsets.h"  // acc::off — the panel's card/model field offsets
+#include "engine_reads.h"
 #include "menus_extract.h"   // FromControl — reads BTN_CLEARCARDS' own label
 #include "menus_internal.h"  // PazaakStartPanel* — engine-member control resolution
 #include "menus_pending.h"   // QueueActivate (Play button)
@@ -66,9 +67,15 @@ bool VtableIs(void* p, uintptr_t vt) {
     __except (EXCEPTION_EXECUTE_HANDLER) { return false; }
 }
 
-int ReadIntAt(void* base, size_t off) {
-    __try { return *reinterpret_cast<int*>(reinterpret_cast<unsigned char*>(base) + off); }
-    __except (EXCEPTION_EXECUTE_HANDLER) { return 0; }
+// How many of card type `type` the player owns.
+int OwnedCount(void* panel, int type) {
+    return acc::engine::ReadI32Or0(panel, kCardCountsOff + static_cast<size_t>(type) * 4);
+}
+
+// The card type in side-deck slot `slot`, negative for an empty slot.
+int SideDeckCard(void* panel, int slot) {
+    return acc::engine::ReadI32Or0(
+        panel, kSidedeckOff + static_cast<size_t>(slot) * kModelCardStride);
 }
 
 // Classify a card widget by its position in the panel's embedded arrays.
@@ -109,7 +116,7 @@ bool ExtractCardLabel(void* panel, void* control, char* outBuf, size_t bufSize) 
     char name[80];
     if (avail) {
         if (idx < 0 || idx >= NumTypes()) return false;
-        int count = ReadIntAt(panel, kCardCountsOff + static_cast<size_t>(idx) * 4);
+        int count = OwnedCount(panel, idx);
         // all_cards[i] always represents card type i.
         acc::pazaak::FormatCardLabel(idx, 0, acc::pazaak::CardContext::Collection,
                                      name, sizeof(name));
@@ -120,8 +127,8 @@ bool ExtractCardLabel(void* panel, void* control, char* outBuf, size_t bufSize) 
 
     if (idx < 0 || idx >= kNumSlots) return false;
     size_t slotOff = kSidedeckOff + static_cast<size_t>(idx) * kModelCardStride;  // CPazaakCard{index,is_flipped}
-    int cardIdx = ReadIntAt(panel, slotOff + 0);
-    int flip    = ReadIntAt(panel, slotOff + 4);
+    int cardIdx = acc::engine::ReadI32Or0(panel, slotOff + 0);
+    int flip    = acc::engine::ReadI32Or0(panel, slotOff + 4);
     if (cardIdx < 0) {
         snprintf(outBuf, bufSize, Get(Id::PazaakDeckSlotEmpty), idx + 1);
         return true;
@@ -143,7 +150,7 @@ bool IsChainDecorative(void* panel, void* control) {
     if (VtableIs(control, kVtablePazaakCard)) {
         bool avail; int idx;
         if (Classify(panel, control, avail, idx) && avail && idx >= 0 && idx < NumTypes()) {
-            if (ReadIntAt(panel, kCardCountsOff + static_cast<size_t>(idx) * 4) <= 0) return true;
+            if (OwnedCount(panel, idx) <= 0) return true;
         }
     }
     return false;
@@ -192,10 +199,10 @@ void* g_opPanel = nullptr;
 int BuildCollection(void* panel, int* outTypes) {
     int n = 0;
     for (int i = 0; i < NumTypes(); ++i) {
-        int owned = ReadIntAt(panel, kCardCountsOff + static_cast<size_t>(i) * 4);
+        int owned = OwnedCount(panel, i);
         if (owned <= 0) {
             for (int s = 0; s < kNumSlots; ++s) {
-                if (ReadIntAt(panel, kSidedeckOff + static_cast<size_t>(s) * kModelCardStride) == i) {
+                if (SideDeckCard(panel, s) == i) {
                     owned = 1; break;
                 }
             }
@@ -208,7 +215,7 @@ int BuildCollection(void* panel, int* outTypes) {
 int DeckFilledCount(void* panel) {
     int c = 0;
     for (int s = 0; s < kNumSlots; ++s)
-        if (ReadIntAt(panel, kSidedeckOff + static_cast<size_t>(s) * kModelCardStride) >= 0) ++c;
+        if (SideDeckCard(panel, s) >= 0) ++c;
     return c;
 }
 
@@ -234,7 +241,7 @@ void AnnounceFocus(void* panel) {
         if (g_col >= cnt) g_col = cnt - 1;
         if (g_col < 0) g_col = 0;
         int t = types[g_col];
-        int count = ReadIntAt(panel, kCardCountsOff + static_cast<size_t>(t) * 4);
+        int count = OwnedCount(panel, t);
         acc::pazaak::FormatCardLabel(t, 0, acc::pazaak::CardContext::Collection,
                                      name, sizeof(name));
         if (count <= 0) snprintf(msg, sizeof(msg), Get(Id::PazaakDeckNoneLeft), name);
@@ -244,8 +251,8 @@ void AnnounceFocus(void* panel) {
         if (g_col < 0) g_col = 0;
         if (g_col >= kNumSlots) g_col = kNumSlots - 1;
         size_t off = kSidedeckOff + static_cast<size_t>(g_col) * kModelCardStride;
-        int idx = ReadIntAt(panel, off);
-        int flip = ReadIntAt(panel, off + 4);
+        int idx = acc::engine::ReadI32Or0(panel, off);
+        int flip = acc::engine::ReadI32Or0(panel, off + 4);
         if (idx < 0) {
             snprintf(msg, sizeof(msg), Get(Id::PazaakDeckSlotEmpty), g_col + 1);
         } else {
@@ -316,7 +323,7 @@ bool TryHandleInput(void* panel, int param_1, int param_2, int& rv) {
                 g_op = Op::Add; g_opArg = types[g_col]; g_opPanel = panel;
             }
         } else if (g_row == 1) {
-            int idx = ReadIntAt(panel, kSidedeckOff + static_cast<size_t>(g_col) * kModelCardStride);
+            int idx = SideDeckCard(panel, g_col);
             if (idx >= 0) { g_op = Op::Remove; g_opArg = g_col; g_opPanel = panel; }
             // empty slot: nothing to remove — stay silent.
         } else if (g_col == 1) {
@@ -368,7 +375,7 @@ void Tick() {
             Speak(Get(Id::PazaakDeckFull));
         }
     } else if (op == Op::Remove) {
-        int idx = ReadIntAt(panel, kSidedeckOff + static_cast<size_t>(arg) * kModelCardStride);  // before removal
+        int idx = SideDeckCard(panel, arg);  // before removal
         acc::pazaak::FormatCardLabel(idx, 0, acc::pazaak::CardContext::Collection,
                                      name, sizeof(name));
         int r = 0;

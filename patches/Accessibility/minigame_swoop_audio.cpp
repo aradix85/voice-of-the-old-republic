@@ -75,7 +75,7 @@ bool TrackAxisUsable(void* miniGame) {
     if (g_state.axis_state == kAxisRejected) return false;
     if (g_state.axis_state == kAxisAccepted) return true;
 
-    void* player = SafeReadPtr(miniGame, kMiniGamePlayerOffset);
+    void* player = ReadPtrOrNull(miniGame, kMiniGamePlayerOffset);
     Vector pos;
     if (!ReadFollowerPosition(player, pos)) return false;  // undecided → silent
 

@@ -11,6 +11,7 @@
 #include <cstdio>
 #include <cstring>
 
+#include "engine_reads.h"
 #include "engine_offsets_select.h"
 
 namespace acc::pazaak {
@@ -128,7 +129,7 @@ extern int  g_optValue;
 bool IsValueChoiceCard(int index);
 int FirstMainDeckIndex();
 bool IsMainDeckCard(int index);
-bool ReadIntAt(void* base, size_t off, int* out);
+using acc::engine::TryReadI32;
 void WriteIntAt(void* base, size_t off, int v);
 void* GetModel(void* panel);
 int GetState(void* panel);

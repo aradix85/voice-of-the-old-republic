@@ -23,10 +23,10 @@
 namespace acc::swoop_race {
 
 // Shared SEH reads and minigame-object-array helpers (minigame_aim.h).
-using acc::minigame::SafeReadPtr;
-using acc::minigame::SafeReadU32;
-using acc::minigame::SafeReadFloat;
-using acc::minigame::SafeReadVector;
+using acc::engine::ReadPtrOrNull;
+using acc::engine::ReadU32Or0;
+using acc::engine::ReadFloatOr0;
+using acc::engine::TryReadVector;
 using acc::minigame::ResolveMgoArray;
 using acc::minigame::CallAsCast;
 using acc::minigame::ReadFollowerPosition;

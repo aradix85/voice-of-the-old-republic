@@ -122,13 +122,13 @@ int RowActionCount(void* tam, int row) {
     int32_t size = 0;
     size_t offset = kTamActionListsOffset + row * kActionListStride +
                     kActionListSizeOffset;
-    if (!ReadInt32(tam, offset, &size)) return 0;
+    if (!TryReadI32(tam, offset, &size)) return 0;
     return size < 0 ? 0 : static_cast<int>(size);
 }
 
 uint32_t ReadSelectedRowActionId(void* tam, int row) {
     int32_t id = 0;
-    if (!ReadInt32(FindSelectedActionDescriptor(tam, row), kIfActionIdOffset, &id)) {
+    if (!TryReadI32(FindSelectedActionDescriptor(tam, row), kIfActionIdOffset, &id)) {
         return 0;
     }
     return static_cast<uint32_t>(id);

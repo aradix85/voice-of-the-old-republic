@@ -88,22 +88,22 @@ Vector QuatRotate(const Quat& q, const Vector& v) {
 
 // Resolve the player's first gun bank (CSWMGGunBank*).
 void* ResolveGunBank0(void* miniGame) {
-    void* player = SafeReadPtr(miniGame, kMiniGamePlayerOffset);
+    void* player = ReadPtrOrNull(miniGame, kMiniGamePlayerOffset);
     if (!player) return nullptr;
-    if (SafeReadU32(player, kFollowerGunBankCountOff) == 0) return nullptr;
-    void* banksBase = SafeReadPtr(player, kFollowerGunBanksOffset);  // CSWMGGunBank*[]
+    if (ReadU32Or0(player, kFollowerGunBankCountOff) == 0) return nullptr;
+    void* banksBase = ReadPtrOrNull(player, kFollowerGunBanksOffset);  // CSWMGGunBank*[]
     if (!banksBase) return nullptr;
-    return SafeReadPtr(banksBase, 0);
+    return ReadPtrOrNull(banksBase, 0);
 }
 
 // Resolve the player's first gun model (CAurObject*) for the bullethook read.
 void* ResolveGunModel() {
     void* bank0 = ResolveGunBank0(g_state.latched_mini_game);
     if (!bank0) return nullptr;
-    if (SafeReadU32(bank0, kGunBankGunCountOffset) == 0) return nullptr;
-    void* gunsData = SafeReadPtr(bank0, kGunBankGunsDataOffset);    // CAurObject*[]
+    if (ReadU32Or0(bank0, kGunBankGunCountOffset) == 0) return nullptr;
+    void* gunsData = ReadPtrOrNull(bank0, kGunBankGunsDataOffset);    // CAurObject*[]
     if (!gunsData) return nullptr;
-    return SafeReadPtr(gunsData, 0);  // guns[0] = CAurObject*
+    return ReadPtrOrNull(gunsData, 0);  // guns[0] = CAurObject*
 }
 
 }  // namespace
@@ -115,8 +115,8 @@ void ReadArena(void* miniGame) {
     Arena& a = g_state.arena;
     if (!a.ballistics_read) {
         void* bank0 = ResolveGunBank0(miniGame);
-        const float speed = bank0 ? SafeReadFloat(bank0, kGunBankBulletSpeedOffset) : 0.0f;
-        const float life  = bank0 ? SafeReadFloat(bank0, kGunBankBulletLifeOffset)  : 0.0f;
+        const float speed = bank0 ? ReadFloatOr0(bank0, kGunBankBulletSpeedOffset) : 0.0f;
+        const float life  = bank0 ? ReadFloatOr0(bank0, kGunBankBulletLifeOffset)  : 0.0f;
         // Lifespan > 0 is the "read a real bullet" test: the engine's setter
         // refuses non-positive lifespans, so a built bank always passes it.
         if (life > 0.0f && life < 1000.0f && speed >= 0.0f && speed < 100000.0f) {
@@ -130,13 +130,13 @@ void ReadArena(void* miniGame) {
         }
     }
     if (!a.limits_read) {
-        void* player = SafeReadPtr(miniGame, kMiniGamePlayerOffset);
+        void* player = ReadPtrOrNull(miniGame, kMiniGamePlayerOffset);
         Vector pos, neg, inf, org;
         if (player &&
-            SafeReadVector(player, kMiniPlayerTunnelPosOffset, pos) &&
-            SafeReadVector(player, kMiniPlayerTunnelNegOffset, neg) &&
-            SafeReadVector(player, kMiniPlayerTunnelInfiniteOffset, inf) &&
-            SafeReadVector(player, kMiniPlayerOriginOffset, org)) {
+            TryReadVector(player, kMiniPlayerTunnelPosOffset, &pos) &&
+            TryReadVector(player, kMiniPlayerTunnelNegOffset, &neg) &&
+            TryReadVector(player, kMiniPlayerTunnelInfiniteOffset, &inf) &&
+            TryReadVector(player, kMiniPlayerOriginOffset, &org)) {
             const bool  azFree = inf.z != 0.0f;
             const bool  elFree = inf.x != 0.0f;
             const float azLo = org.z + neg.z, azHi = org.z + pos.z;
@@ -240,7 +240,7 @@ bool ReadAimLine(Vector& outDir, Vector& outOrigin) {
 // Read / write the aim field (CSWMiniPlayer.offset +0x1c4): x = elevation°,
 // z = azimuth°. Writing it steers the gun (the engine re-integrates next tick).
 bool ReadOffset(float& azOut, float& elOut) {
-    void* player = SafeReadPtr(g_state.latched_mini_game, kMiniGamePlayerOffset);
+    void* player = ReadPtrOrNull(g_state.latched_mini_game, kMiniGamePlayerOffset);
     Vector v;
     if (!acc::minigame::ReadOffsetVector(player, v)) return false;
     elOut = v.x;   // offset.x = elevation
@@ -249,7 +249,7 @@ bool ReadOffset(float& azOut, float& elOut) {
 }
 
 void WriteOffset(float az, float el) {
-    void* player = SafeReadPtr(g_state.latched_mini_game, kMiniGamePlayerOffset);
+    void* player = ReadPtrOrNull(g_state.latched_mini_game, kMiniGamePlayerOffset);
     Vector v;
     if (!acc::minigame::ReadOffsetVector(player, v)) return;  // preserve offset.y
     v.x = el;   // offset.x = elevation

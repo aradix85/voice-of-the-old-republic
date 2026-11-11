@@ -12,6 +12,7 @@
 #include "engine_player.h"
 #include "hotkeys.h"
 #include "log.h"
+#include "engine_reads.h"
 #include "engine_offsets_select.h"
 
 namespace acc::probe_camera_state {
@@ -36,17 +37,6 @@ void* GetPlayerControlCamera(void* clientInternal) {
     }
 }
 
-template <typename T>
-T SafeRead(void* base, size_t offset, T fallback) {
-    if (!base) return fallback;
-    __try {
-        return *reinterpret_cast<T*>(
-            reinterpret_cast<unsigned char*>(base) + offset);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return fallback;
-    }
-}
-
 }  // namespace
 
 void PollWin32() {
@@ -60,17 +50,17 @@ void PollWin32() {
     // gameplay camera. Camera embeds a Gob at +0x04 which has its world
     // orientation quaternion at Gob+0x84 → Camera+0x88. Position at
     // Camera+0x7C.
-    void* modCamera = SafeRead<void*>(module, 0x40, nullptr);
+    void* modCamera = acc::engine::ReadPtrOrNull(module, 0x40);
 
     // Quaternion at modCamera + 0x88 — engine layout is w,x,y,z (w first).
-    float qw = SafeRead<float>(modCamera, 0x88 + 0x0, 0.0f);
-    float qx = SafeRead<float>(modCamera, 0x88 + 0x4, 0.0f);
-    float qy = SafeRead<float>(modCamera, 0x88 + 0x8, 0.0f);
-    float qz = SafeRead<float>(modCamera, 0x88 + 0xc, 0.0f);
+    float qw = acc::engine::ReadFloatOr0(modCamera, 0x88 + 0x0);
+    float qx = acc::engine::ReadFloatOr0(modCamera, 0x88 + 0x4);
+    float qy = acc::engine::ReadFloatOr0(modCamera, 0x88 + 0x8);
+    float qz = acc::engine::ReadFloatOr0(modCamera, 0x88 + 0xc);
     // Camera position at +0x7C
-    float px = SafeRead<float>(modCamera, 0x7c + 0x0, 0.0f);
-    float py = SafeRead<float>(modCamera, 0x7c + 0x4, 0.0f);
-    float pz = SafeRead<float>(modCamera, 0x7c + 0x8, 0.0f);
+    float px = acc::engine::ReadFloatOr0(modCamera, 0x7c + 0x0);
+    float py = acc::engine::ReadFloatOr0(modCamera, 0x7c + 0x4);
+    float pz = acc::engine::ReadFloatOr0(modCamera, 0x7c + 0x8);
 
     // Yaw from the orientation quaternion via the shared, convention-
     // correct helper (engine yaw frame: 0=+X/East, CCW+). The earlier
@@ -85,8 +75,8 @@ void PollWin32() {
     float yawCompass = acc::engine::EngineYawToCompass(yawDeg);
 
     // Read the original candidates too for back-comparison.
-    float cam_0x90 = SafeRead<float>(pcCamera, 0x90, 0.0f);
-    float cam_0x94 = SafeRead<float>(pcCamera, 0x94, 0.0f);
+    float cam_0x90 = acc::engine::ReadFloatOr0(pcCamera, 0x90);
+    float cam_0x94 = acc::engine::ReadFloatOr0(pcCamera, 0x94);
 
     float playerEngineYaw = 0.0f;
     bool playerOk = acc::engine::GetPlayerYawDegrees(playerEngineYaw);

@@ -12,6 +12,7 @@
 #include "log.h"
 #include "speech.h"
 #include "engine_addr.h"
+#include "engine_reads.h"
 #include "engine_offsets_select.h"
 
 namespace acc::probe_camera_distance {
@@ -65,17 +66,6 @@ typedef float (__thiscall* PFN_CameraGetFloat)(void* this_);
 typedef void* (__thiscall* PFN_CameraGetBehavior)(void* this_, unsigned int tag);
 
 // ----- Chain walk -----------------------------------------------------------
-
-template <typename T>
-T SafeRead(void* base, size_t offset, T fallback) {
-    if (!base) return fallback;
-    __try {
-        return *reinterpret_cast<T*>(
-            reinterpret_cast<unsigned char*>(base) + offset);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return fallback;
-    }
-}
 
 template <typename T>
 bool SafeWrite(void* base, size_t offset, T value) {
@@ -226,29 +216,29 @@ void DumpSnapshot() {
     // CSWCModule cached fields (per probe_camera_state notes):
     //   +0x98 = cached camera yaw (written by AcclTurnCamera)
     //   +0x9c = cached camera distance (written by ZoomCamera)
-    float modYaw  = SafeRead<float>(module, 0x98, 0.0f);
-    float modDist = SafeRead<float>(module, 0x9c, 0.0f);
+    float modYaw  = acc::engine::ReadFloatOr0(module, 0x98);
+    float modDist = acc::engine::ReadFloatOr0(module, 0x9c);
 
     // Behavior fields we care about (CSWCameraOnAStick).
-    uint32_t autoFit  = SafeRead<uint32_t>(behavior, kBehAutoFitFlagOffset, 0);
-    float    tgtDist  = SafeRead<float>(behavior, kBehTargetDistOffset, 0.0f);
-    float    zOffset  = SafeRead<float>(behavior, kBehZOffsetOffset, 0.0f);
+    uint32_t autoFit  = acc::engine::ReadU32Or0(behavior, kBehAutoFitFlagOffset);
+    float    tgtDist  = acc::engine::ReadFloatOr0(behavior, kBehTargetDistOffset);
+    float    zOffset  = acc::engine::ReadFloatOr0(behavior, kBehZOffsetOffset);
 
     // Deep state struct (vtable[7] return) — yaw at +0x40, distance at +0x34
     // per AcclTurnCamera + ZoomCamera. May be the same address as behavior;
     // log both so we can see.
-    float stateDist = SafeRead<float>(state, 0x34, 0.0f);
-    float stateYaw  = SafeRead<float>(state, 0x40, 0.0f);
+    float stateDist = acc::engine::ReadFloatOr0(state, 0x34);
+    float stateYaw  = acc::engine::ReadFloatOr0(state, 0x40);
 
     // Camera tuning globals.
-    float persSpace   = SafeRead<float>(
-        reinterpret_cast<void*>(kAddrCameraPersonalSpace), 0, 0.0f);
-    float interp1     = SafeRead<float>(
-        reinterpret_cast<void*>(kAddrCameraInterpAmt1), 0, 0.0f);
-    float interpDist  = SafeRead<float>(
-        reinterpret_cast<void*>(kAddrCameraInterpDistAmt), 0, 0.0f);
-    uint32_t freeStyle = SafeRead<uint32_t>(
-        reinterpret_cast<void*>(kAddrCameraFreeStyle), 0, 0);
+    float persSpace   = acc::engine::ReadFloatOr0(
+        reinterpret_cast<void*>(kAddrCameraPersonalSpace), 0);
+    float interp1     = acc::engine::ReadFloatOr0(
+        reinterpret_cast<void*>(kAddrCameraInterpAmt1), 0);
+    float interpDist  = acc::engine::ReadFloatOr0(
+        reinterpret_cast<void*>(kAddrCameraInterpDistAmt), 0);
+    uint32_t freeStyle = acc::engine::ReadU32Or0(
+        reinterpret_cast<void*>(kAddrCameraFreeStyle), 0);
 
     acclog::Write("CamDistProbe",
         "DUMP: mod=%p cam=%p beh=%p state=%p | "
@@ -272,21 +262,21 @@ void TickClamp() {
 
     // Read PRE-write so we see what the engine had at the start of our
     // tick (i.e. result of last frame's Control + collision pass).
-    float pre = SafeRead<float>(behavior, kBehTargetDistOffset, 0.0f);
+    float pre = acc::engine::ReadFloatOr0(behavior, kBehTargetDistOffset);
 
     // Write our target.
     bool wrote = SafeWrite<float>(behavior, kBehTargetDistOffset, g_clampTarget);
 
     // Immediate readback to confirm the store landed at the offset we
     // think it did. If post != target the OFFSET is wrong.
-    float post = SafeRead<float>(behavior, kBehTargetDistOffset, 0.0f);
+    float post = acc::engine::ReadFloatOr0(behavior, kBehTargetDistOffset);
 
     // Also dampen the auto-fit recompute trigger: zero field29_0x84. The
     // Control() function recomputes field46_0x110 from view-cone math
     // ONLY when this flag is non-zero, so zeroing it should prevent the
     // most common stomp source. We do this every tick (cheap) and log it
     // alongside the readback so we can see if engine flips it back on.
-    uint32_t autoFitPre = SafeRead<uint32_t>(behavior, kBehAutoFitFlagOffset, 0);
+    uint32_t autoFitPre = acc::engine::ReadU32Or0(behavior, kBehAutoFitFlagOffset);
     SafeWrite<uint32_t>(behavior, kBehAutoFitFlagOffset, 0u);
 
     // Stomp accounting: if post-write readback doesn't equal what we

@@ -105,10 +105,10 @@ Snap ReadSnap(void* panel) {
     s.state  = GetState(panel);
     s.pBoard = BoardCount(p);
     s.eBoard = BoardCount(e);
-    ReadIntAt(p, kPlayerStandOffset, &s.pStand);
-    ReadIntAt(e, kPlayerStandOffset, &s.eStand);
-    ReadIntAt(p, kPlayerScoreOffset, &s.pScore);
-    ReadIntAt(e, kPlayerScoreOffset, &s.eScore);
+    TryReadI32(p, kPlayerStandOffset, &s.pStand);
+    TryReadI32(e, kPlayerStandOffset, &s.eStand);
+    TryReadI32(p, kPlayerScoreOffset, &s.pScore);
+    TryReadI32(e, kPlayerScoreOffset, &s.eScore);
     s.pTotal = CallGetTotal(p);
     s.eTotal = CallGetTotal(e);
     s.valid = true;
