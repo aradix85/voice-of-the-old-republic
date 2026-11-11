@@ -1,19 +1,14 @@
-# combat.h (45 lines)
+# combat.h (35 lines)
 
 Source: `patches/Accessibility/combat.h`
 
-Combat event narration.
-
-Channels: - Combat mode entry/exit — debounced via the turn_announce stability pattern; speaks "Combat begins" / "Combat ends". - Combat log — live narration via the OnAppendToMsgBuffer hook (see the msg_router subscriber at the bottom of combat.cpp). TickCombatLog polls CSWGuiInGameMessages.messages_listbox for diagnostic logging only; speech is OFF there because the engine fills that listbox lazily when the review screen opens.
-
-Each Tick is cheap and idle when nothing is happening.
+Combat narration: the combat-mode cues (combat.cpp) and the flushes of the combat log's merged lines (combat_log_shields.cpp, combat_log_effects.cpp). The log itself is narrated from the OnAppendToMsgBuffer hook.
 
 ## Declarations (in source order)
 
-- L25 `bool IsCombatActive()`: Cross-feature gating read — false on chain fault (treat as not-in-combat).
-- L26 `bool IsPartyInCombat()`
-- L28 `void TickCombatMode()`
-- L29 `void TickCombatLog()`
-- L33 `void TickCombatAbsorb()`: Flushes a debounced burst of damage-absorption lines into one spoken total.
-- L38 `void TickCombatDeflect()`: Flushes debounced blaster-deflection bursts into one spoken line per deflector (" deflects N shots").
-- L42 `void TickCombatEffects()`: Flushes debounced per-target ability/grenade/force-power effects into one merged spoken line each.
+- L16 `bool IsCombatActive()`: Cross-feature gating read — false on chain fault (treat as not-in-combat).
+- L17 `bool IsPartyInCombat()`
+- L19 `void TickCombatMode()`
+- L23 `void TickCombatAbsorb()`: Flushes a debounced burst of damage-absorption lines into one spoken total.
+- L28 `void TickCombatDeflect()`: Flushes debounced blaster-deflection bursts into one spoken line per deflector (" deflects N shots").
+- L32 `void TickCombatEffects()`: Flushes debounced per-target ability/grenade/force-power effects into one merged spoken line each.

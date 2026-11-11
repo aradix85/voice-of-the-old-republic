@@ -302,7 +302,6 @@ void Dispatch() {
     PHASE("footstep_suppress", acc::audio::footstep_suppress::Tick());
 
     PHASE("combat.mode", acc::combat::TickCombatMode());
-    PHASE("combat.log", acc::combat::TickCombatLog());
     PHASE("combat.absorb", acc::combat::TickCombatAbsorb());
     PHASE("combat.deflect", acc::combat::TickCombatDeflect());
     PHASE("combat.effects", acc::combat::TickCombatEffects());

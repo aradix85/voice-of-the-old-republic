@@ -1,15 +1,6 @@
-// Combat event narration.
-//
-// Channels:
-//   - Combat mode entry/exit — debounced via the turn_announce stability
-//     pattern; speaks "Combat begins" / "Combat ends".
-//   - Combat log — live narration via the OnAppendToMsgBuffer hook
-//     (see the msg_router subscriber at the bottom of combat.cpp).
-//     TickCombatLog polls CSWGuiInGameMessages.messages_listbox for
-//     diagnostic logging only; speech is OFF there because the engine
-//     fills that listbox lazily when the review screen opens.
-//
-// Each Tick is cheap and idle when nothing is happening.
+// Combat narration: the combat-mode cues (combat.cpp) and the flushes of the
+// combat log's merged lines (combat_log_shields.cpp, combat_log_effects.cpp).
+// The log itself is narrated from the OnAppendToMsgBuffer hook.
 
 #pragma once
 
@@ -26,7 +17,6 @@ bool IsCombatActive();
 bool IsPartyInCombat();
 
 void TickCombatMode();
-void TickCombatLog();
 
 // Flushes a debounced burst of damage-absorption lines into one spoken
 // total. Cheap and idle when no absorb burst is pending.

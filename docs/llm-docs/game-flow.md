@@ -220,8 +220,7 @@ each tick in `combat::TickCombatMode`. Stability-debounce pattern (same as
   16-byte stride). Handler in `combat::OnAppendToMsgBuffer` pushes
   `CExoString*` argument straight to TTS.
 - `CSWGuiInGameMessages.messages_listbox` fills lazily only when the review
-  panel mounts — not a live source. The listbox poll in `TickCombatLog`
-  is a log-only sanity check, not the speech path.
+  panel mounts: not a live source.
 
 **Attack resolution**
 - Poll: player creature's `combat_round.attacks_list[7]`, edge-detected

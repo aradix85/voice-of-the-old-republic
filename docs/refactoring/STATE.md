@@ -391,8 +391,18 @@ prefix (menus_listbox_picker.cpp).
   when rows are rebuilt and in what Enter does; what is common is a
   clamped step of three lines. A shared model would cost more than it
   saves.
-- F5 memory readers outside engine_reads (SafeRead in 4 files,
-  ReadListBoxRowCount in 3, ReadCExoStringLocal, ReadButtonText).
+- F5 memory readers outside engine_reads. Left: SafeRead in
+  camera_spin_guard and engine_navgraph, ReadListBoxRowCount in
+  dialog_speech, and the listbox rows: some 25 files walk the controls
+  array of a CSWGuiListBox themselves (row at an index, the selected row,
+  the index of a row). ReadCExoStringLocal (engine_actionbar) stays: it
+  reads to the NUL and ignores the length field, which ReadCExoString
+  does not.
+  combat.cpp is lean (312 to 104): its listbox poll only wrote log lines
+  and is gone, and the two debounces are one StableFlag (stable_flag.h,
+  unit tests) that other debounces can take over in their lean
+  (camera_announce, party_leader_announce, door_announce). In-game check:
+  "Combat begins" and "Combat ends" once per fight.
 - F6 PollWin32 key-edge polling in 9 files, against hotkeys.
 - F7 cross-file clones: engine_reads_items/menus_store,
   cycle_input/interact_dispatch, engine_area_walls/guidance_pathfind,

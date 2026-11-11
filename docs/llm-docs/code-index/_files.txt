@@ -432,6 +432,7 @@ patches/Accessibility/speech.cpp
 patches/Accessibility/speech.h
 patches/Accessibility/speech_clipboard.cpp
 patches/Accessibility/speech_clipboard.h
+patches/Accessibility/stable_flag.h
 patches/Accessibility/state_overrides.cpp
 patches/Accessibility/state_overrides.h
 patches/Accessibility/stealth_watch.cpp
