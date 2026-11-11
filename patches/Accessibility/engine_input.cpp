@@ -48,7 +48,6 @@ std::atomic<unsigned long long> g_lastEngineKeyMs{0};
 }  // namespace
 
 void* ExoInput() {
-    if (!acc::addr::Ok(kAddrExoInputGlobal)) return nullptr;
     return *reinterpret_cast<void**>(kAddrExoInputGlobal);
 }
 
@@ -140,7 +139,7 @@ int ManagerTranslateCode(int code) {
 
 bool PollTurnAxis(float* out) {
     void* exoInput = ExoInput();
-    if (!out || !exoInput || !acc::addr::Ok(kAddrCExoInputPollInput)) return false;
+    if (!out || !exoInput) return false;
     __try {
         auto poll = reinterpret_cast<PFN_CExoInputPollInput>(kAddrCExoInputPollInput);
         *out = poll(exoInput, kInputCodeTurnAxis, 0);

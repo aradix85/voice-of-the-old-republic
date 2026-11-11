@@ -1,4 +1,4 @@
-# menus_inventory.cpp (98 lines)
+# menus_inventory.cpp (86 lines)
 
 Source: `patches/Accessibility/menus_inventory.cpp`
 
@@ -15,4 +15,4 @@ The engine model behind these three predicates is written up next to kInventoryI
 - L21 `bool IsUseItemButton(void* panel, void* control)`
 - L25 `bool IsFilterButton(void* panel, void* control)`
 - L42 `void SyncListBoxSelection(void* panel, void* row)`
-- L77 `void ForceRepopulate(void* panel)`
+- L71 `void ForceRepopulate(void* panel)`

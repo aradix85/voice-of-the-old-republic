@@ -87,7 +87,7 @@ bool CallSetActive(const int* states, int count, void** exoOut) {
     __try {
         void* exoInput = ExoInput();
         *exoOut = exoInput;
-        if (!exoInput || !acc::addr::Ok(kAddrCExoInputSetActive)) return false;
+        if (!exoInput) return false;
         auto setActive = reinterpret_cast<PFN_CExoInputSetActive>(kAddrCExoInputSetActive);
         for (int i = 0; i < count; ++i) setActive(exoInput, states[i]);
         return true;

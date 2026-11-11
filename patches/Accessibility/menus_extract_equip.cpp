@@ -73,9 +73,9 @@ bool SlotLabel(int idx, char* out, size_t size) {
 bool SlotItemName(void* panel, int idx, char* out, size_t size) {
     out[0] = '\0';
     uint32_t handle = 0;
-    if (!acc::off::Ok(kEquipPanelSlotItemIdsOffset) ||
-        !TryReadU32(panel, kEquipPanelSlotItemIdsOffset + 4u * static_cast<size_t>(idx), &handle) ||
-        handle == 0 || handle == 0xffffffff || handle == kInvalidObjectId) {
+    const size_t offset = kEquipPanelSlotItemIdsOffset + 4u * static_cast<size_t>(idx);
+    if (!TryReadU32(panel, offset, &handle) || handle == 0 || handle == 0xffffffff ||
+        handle == kInvalidObjectId) {
         return false;
     }
     if (acc::engine::GetObjectDisplayNameByHandle(handle, out, size)) return true;

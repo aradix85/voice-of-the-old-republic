@@ -197,7 +197,6 @@ bool IsLoadingSaveGame() {
         // GetObjectArray pair (K1 0x004AED70 / K2 0x0051C080, both +0x1005C).
         const uintptr_t kAddrGetLoadFromSaveGame =
             acc::addr::Pick(0x004af050, 0x0051CDE0);
-        if (!acc::addr::Ok(kAddrGetLoadFromSaveGame)) return false;
         using PFN = int(__thiscall*)(void*);
         return reinterpret_cast<PFN>(kAddrGetLoadFromSaveGame)(serverApp) != 0;
     } __except (EXCEPTION_EXECUTE_HANDLER) {

@@ -1,4 +1,4 @@
-# peek_description_item.cpp (385 lines)
+# peek_description_item.cpp (384 lines)
 
 Source: `patches/Accessibility/peek_description_item.cpp`
 
@@ -16,7 +16,7 @@ Reading an item's description block by block: the equipment and workbench slot t
 - L123 `void ResetItemBlocks()`
 - L134 `bool SpeakItemBlocks(void* item, bool down)`: Shift+Up/Down over an item's four categorised description blocks.
 - L182 `bool HandleEquipSlotTooltip(void* panel, int slotIdx, bool down)`: Per-slot peek for the equip slot buttons (all 9, plus KOTOR 2's two second-weapon-set slots for free).
-- L223 `bool HandleWorkbenchSlotTooltip(void* panel, void* control, bool down)`: Shift+arrow on a workbench upgrade slot button (upgrade.gui IDs 12..18): speak the installed mod's full property description ("what the slot does for your item"), or announce the slot is empty.
-- L275 `const ItemTooltipPanelInfo* LookupItemTooltipPanel(acc::engine::PanelKind k)`
-- L283 `bool HandleItemTooltip(acc::engine::PanelKind kind, const ItemTooltipPanelInfo& info, void* activePanel, bool down)`: Caller consumes the key regardless of return (predictable behaviour).
-- L359 `bool SpeakItemRowDescription(void* row)`
+- L222 `bool HandleWorkbenchSlotTooltip(void* panel, void* control, bool down)`: Shift+arrow on a workbench upgrade slot button (upgrade.gui IDs 12..18): speak the installed mod's full property description ("what the slot does for your item"), or announce the slot is empty.
+- L274 `const ItemTooltipPanelInfo* LookupItemTooltipPanel(acc::engine::PanelKind k)`
+- L282 `bool HandleItemTooltip(acc::engine::PanelKind kind, const ItemTooltipPanelInfo& info, void* activePanel, bool down)`: Caller consumes the key regardless of return (predictable behaviour).
+- L358 `bool SpeakItemRowDescription(void* row)`

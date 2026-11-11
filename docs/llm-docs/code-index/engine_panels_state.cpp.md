@@ -1,4 +1,4 @@
-# engine_panels_state.cpp (399 lines)
+# engine_panels_state.cpp (378 lines)
 
 Source: `patches/Accessibility/engine_panels_state.cpp`
 
@@ -15,13 +15,13 @@ Declarations stay in engine_panels.h, so all 39 includers are unaffected.
 - L32 `bool HasActiveDialogPanel()`
 - L59 `bool HasActiveBarkBubble()`
 - L73 `bool CallPrevSWInGameGui()`
-- L116 `bool SetGlobalDialogState(int state)`
-- L149 `bool CloseInGameMenuToWorld()`
-- L191 `int GetInputClass()`: Read the live input_class (CClientExoAppInternal +0x9c).
-- L207 `bool SetGuiInputClass(int klass)`: Set the client input class via the engine's own setter.
-- L234 `bool HasActiveMapPanel(void** outPanel)`
-- L250 `bool HasActiveLevelUpPanel()`
-- L262 `bool IsInGameOptionsSubScreen(void* panel)`
-- L277 `bool HasActiveSubScreen()`
-- L306 `bool IsForegroundUiBlocking(UiBlockState* outState)`
-- L381 `bool IsWorldLevelForegroundKind(PanelKind k)`
+- L111 `bool SetGlobalDialogState(int state)`
+- L144 `bool CloseInGameMenuToWorld()`
+- L180 `int GetInputClass()`: Read the live input_class (CClientExoAppInternal +0x9c).
+- L196 `bool SetGuiInputClass(int klass)`: Set the client input class via the engine's own setter.
+- L213 `bool HasActiveMapPanel(void** outPanel)`
+- L229 `bool HasActiveLevelUpPanel()`
+- L241 `bool IsInGameOptionsSubScreen(void* panel)`
+- L256 `bool HasActiveSubScreen()`
+- L285 `bool IsForegroundUiBlocking(UiBlockState* outState)`
+- L360 `bool IsWorldLevelForegroundKind(PanelKind k)`

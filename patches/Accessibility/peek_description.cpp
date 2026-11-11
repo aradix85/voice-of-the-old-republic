@@ -50,11 +50,6 @@ void RefreshStore(void* panel, void* focused) {
 
 void RefreshJournal(void* panel, void* focused) {
     if (!panel || !focused) return;
-    if (!acc::addr::Ok(kAddrJournalOnControlEntered)) {
-        acclog::Write("Peek", "RefreshJournal skipped: address unresolved on build %s",
-                      acc::game::TitleName());
-        return;
-    }
     auto fn = reinterpret_cast<PFN_PanelOnControl>(
         kAddrJournalOnControlEntered);
     fn(panel, focused);

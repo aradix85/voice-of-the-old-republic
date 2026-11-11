@@ -71,11 +71,6 @@ static const uintptr_t kAddrPrevSWInGameGui = acc::addr::Pick(0x0062cdf0, 0x007C
 typedef void (__thiscall* PFN_PrevSWInGameGui)(void* gui);
 
 bool CallPrevSWInGameGui() {
-    if (!acc::addr::Ok(kAddrPrevSWInGameGui)) {
-        acclog::Write("PrevSWInGameGui", "skipped: address unresolved on build %s",
-                      acc::game::TitleName());
-        return false;
-    }
     void* gui = ResolveGuiInGame();
     if (!gui) {
         acclog::Write("PrevSWInGameGui",
@@ -147,14 +142,8 @@ static const uintptr_t kAddrSetInputClass = acc::addr::Pick(0x005eda60, 0x0073FE
 typedef void (__thiscall* PFN_SetInputClass)(void* client, int klass, int p2);
 
 bool CloseInGameMenuToWorld() {
-    // Both halves are required — closing without the SetInputClass leaves
-    // input_class != 0 and in-world movement dead (see the comment inside), so
-    // if either address is unresolved, do neither.
-    if (!acc::addr::Ok(kAddrHideSWInGameGui) || !acc::addr::Ok(kAddrSetInputClass)) {
-        acclog::Write("CloseInGameMenu", "skipped: address unresolved on build %s",
-                      acc::game::TitleName());
-        return false;
-    }
+    // Both halves are required: closing without the SetInputClass leaves
+    // input_class != 0 and in-world movement dead (see the comment inside).
     void* gui = ResolveGuiInGame();
     void* client = GetClientApp();
     if (!gui || !client) {
@@ -205,16 +194,6 @@ int GetInputClass() {
 // the manager's nav codes (181-185), so the wizard sits unreachable on the
 // modal stack (the "frozen until Escape" limbo).
 bool SetGuiInputClass(int klass) {
-    // Address check first, mirroring CloseInGameMenuToWorld above. It matters
-    // more since Batch 2: GetClientApp() now returns a real pointer on KOTOR 2,
-    // so without this the function would reach the CALL and fault into its own
-    // SEH on every invocation rather than declining cheaply.
-    if (!acc::addr::Ok(kAddrSetInputClass)) {
-        acclog::Write("InputClass",
-                      "SetGuiInputClass(%d) skipped: address unresolved on "
-                      "build %s", klass, acc::game::TitleName());
-        return false;
-    }
     void* client = GetClientApp();
     if (!client) {
         acclog::Write("InputClass", "SetGuiInputClass(%d) skipped: no client", klass);

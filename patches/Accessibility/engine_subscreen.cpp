@@ -127,15 +127,8 @@ void DispatchUnpauseCleanup(const char* trigger) {
     ResumeSoundMixer();
 }
 
-// The client app for SetPausedByCombat, or nullptr (logged with `what`). An
-// unresolved address is reported as such: a null call under __try would look
-// like the engine refusing.
+// The client app for SetPausedByCombat, or nullptr (logged with `what`).
 void* PauseClient(const char* what) {
-    if (!acc::addr::Ok(kAddrSetPausedByCombat)) {
-        acclog::Write("PauseToggle", "%s skipped: SetPausedByCombat unresolved on this "
-                      "build — the world will NOT change pause state", what);
-        return nullptr;
-    }
     if (!GetAppManager()) {
         acclog::Write("PauseToggle", "%s skipped: AppManager NULL", what);
         return nullptr;

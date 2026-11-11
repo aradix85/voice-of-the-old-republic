@@ -200,9 +200,7 @@ void InstallDirectInputMouseGuard() {
 
     const bool k2 = acc::game::IsKotor2();
 
-    if (!acc::addr::Ok(kAddrInitMouse) ||
-        !acc::addr::Ok(kAddrInitMouseContinue) ||
-        (!k2 && !acc::addr::Ok(kAddrInitMouseFailEpilogue))) {
+    if (!k2 && !acc::addr::Ok(kAddrInitMouseFailEpilogue)) {
         acclog::Write("EngineInput",
             "DirectInput mouse guard: no address for this build (%s); skipped",
             acc::game::TitleName());
@@ -317,14 +315,6 @@ void InstallMouseTeardownBlock() {
     if (installed) return;
     installed = true;
 
-    if (!acc::addr::Ok(kAddrInitMouse) ||
-        !acc::addr::Ok(kAddrInitMouseEnd) ||
-        !acc::addr::Ok(kAddrShutDownDirectInput)) {
-        acclog::Write("EngineInput",
-            "MouseTeardownBlock: no address for this build (%s); skipped",
-            acc::game::TitleName());
-        return;
-    }
 
     auto* lo = reinterpret_cast<uint8_t*>(kAddrInitMouse);
     auto* hi = reinterpret_cast<uint8_t*>(kAddrInitMouseEnd);

@@ -1,4 +1,4 @@
-# menus_internal_members.cpp (403 lines)
+# menus_internal_members.cpp (399 lines)
 
 Source: `patches/Accessibility/menus_internal_members.cpp`
 
@@ -60,6 +60,6 @@ The panel-member resolvers (see menus_internal.h) and the slot index of an equip
 - L361 `void* KeyMapPanelAcceptButton(void* panel)`
 - L366 `void* KeyMapPanelCancelButton(void* panel)`
 - L371 `void* KeyMapPanelFilterButton(void* panel, int filterIndex)`
-- L387 `void* WorkbenchItemsPanelItemsListBox(void* panel)`
-- L392 `void* WorkbenchItemsPanelUpgradeButton(void* panel)`
-- L397 `void* WorkbenchItemsPanelBackButton(void* panel)`
+- L383 `void* WorkbenchItemsPanelItemsListBox(void* panel)`
+- L388 `void* WorkbenchItemsPanelUpgradeButton(void* panel)`
+- L393 `void* WorkbenchItemsPanelBackButton(void* panel)`

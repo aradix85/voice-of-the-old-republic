@@ -181,7 +181,6 @@ bool SpeakItemBlocks(void* item, bool down) {
 // item. Caller still consumes the key (predictable-behaviour rule).
 bool HandleEquipSlotTooltip(void* panel, int slotIdx, bool down) {
     if (!panel || slotIdx < 0) return false;
-    if (!acc::off::Ok(kEquipPanelSlotItemIdsOffset)) return false;
     uint32_t handle = 0;
     if (!acc::engine::TryReadU32(
             panel, kEquipPanelSlotItemIdsOffset + 4u * static_cast<size_t>(slotIdx),

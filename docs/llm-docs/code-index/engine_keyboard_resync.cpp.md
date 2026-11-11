@@ -1,4 +1,4 @@
-# engine_keyboard_resync.cpp (346 lines)
+# engine_keyboard_resync.cpp (339 lines)
 
 Source: `patches/Accessibility/engine_keyboard_resync.cpp`
 

@@ -49,24 +49,15 @@ bool IsJournalEntry(void* control) {
 void SpeakDescription(void* panel, void* focusedRow) {
     if (!panel || !focusedRow) return;
 
-    // Unresolved address behaves like the SEH path: skip the repaint and read
-    // whatever the listbox already holds, rather than dispatching through 0.
-    if (!acc::addr::Ok(kAddrJournalOnControlEntered)) {
+    __try {
+        auto fn = reinterpret_cast<PFN_PanelOnControl>(
+            kAddrJournalOnControlEntered);
+        fn(panel, focusedRow);
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
         acclog::Write("Menus.Journal",
-                      "OnControlEntered skipped (unresolved on build %s); reading "
+                      "OnControlEntered SEH (panel=%p row=%p); reading "
                       "whatever the description listbox already held",
-                      acc::game::TitleName());
-    } else {
-        __try {
-            auto fn = reinterpret_cast<PFN_PanelOnControl>(
-                kAddrJournalOnControlEntered);
-            fn(panel, focusedRow);
-        } __except (EXCEPTION_EXECUTE_HANDLER) {
-            acclog::Write("Menus.Journal",
-                          "OnControlEntered SEH (panel=%p row=%p); reading "
-                          "whatever the description listbox already held",
-                          panel, focusedRow);
-        }
+                      panel, focusedRow);
     }
 
     void* lb = acc::off::Ptr(panel, kJournalDescriptionListBoxOffset);
@@ -185,15 +176,6 @@ void LogEntryCounts(void* panel) {
 
 void ForceRepopulate(void* panel) {
     if (!panel) return;
-    // Unresolved address behaves like the SEH path: skip the repopulate
-    // rather than dispatching through 0. Same guard the OnControlEntered
-    // sibling above uses; this one was missing it.
-    if (!acc::addr::Ok(kAddrJournalPopulateItemListBox)) {
-        acclog::Write("Menus.Journal",
-                      "ForceRepopulate skipped (unresolved on build %s)",
-                      acc::game::TitleName());
-        return;
-    }
     __try {
         auto fn = reinterpret_cast<PFN_PanelThiscall>(
             kAddrJournalPopulateItemListBox);

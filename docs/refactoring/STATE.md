@@ -596,8 +596,11 @@ prefix (menus_listbox_picker.cpp).
   of KOTOR 2 are out: their tables, hook files, kdev sigscan and the
   k2_gog re-scripts (54b3b0b7 and the two commits after it). acc::addr is
   six inline one-liners in engine_addr.h. The header is engine_addr.h now. Left for later: PickGlobal, TodoGlobal and Kotor1Only now do what Pick and R
-  do and are kept for what they say at the declaration; Ok() guards that
-  only existed for the relink can be judged per module. kdev dump-text
+  do and are kept for what they say at the declaration. The Ok() guards
+  on a constant that is known in both games (a Pick with two addresses,
+  an offset Pick or Same) were always true and are gone, 27 of them in
+  14 files, with their "address unresolved on build" log lines; the
+  guards on a one-game or unported constant stay. kdev dump-text
   stays: it makes the KOTOR 1 image for the two engine checks.
   Changelog: the UseObject fix and the KOTOR 2 popup text get their
   lines once they are confirmed in game.

@@ -1,4 +1,4 @@
-# engine_area_map.cpp (384 lines)
+# engine_area_map.cpp (383 lines)
 
 Source: `patches/Accessibility/engine_area_map.cpp`
 
@@ -17,13 +17,13 @@ Declarations stay in engine_area.h - splitting that header is a separate, deferr
 - L115 `bool GetCurrentAreaResName(char* outBuf, size_t bufSize)`
 - L149 `int ReadGlobalNumber(const char* name)`
 - L186 `bool IsLoadingSaveGame()`
-- L208 `bool IsWorldPointExplored(void* areaMap, const Vector& pos)`
-- L219 `bool GetFogCellSizeM(void* areaMap, float& outCellXM, float& outCellYM)`
-- L243 `bool GetMapRotateCCWFromWorldOrientation(void* areaMap, const Vector& orientation, float& outDegCCW)`
-- L258 `void* GetClientArea(void* serverArea)`
-- L271 `int GetMapPinCount(void* clientArea)`
-- L275 `void* GetMapPinAt(void* clientArea, int i)`
-- L281 `bool GetMapPinPosition(void* mapPin, Vector& out)`
-- L286 `bool IsMapPinEnabled(void* mapPin)`
-- L290 `bool GetMapPinNoteText(void* mapPin, char* outBuf, size_t bufSize)`
-- L331 `bool CreateMapPin(void* clientArea, const Vector& pos, const char* name, uint32_t referenceNumber, void** outPin)`
+- L207 `bool IsWorldPointExplored(void* areaMap, const Vector& pos)`
+- L218 `bool GetFogCellSizeM(void* areaMap, float& outCellXM, float& outCellYM)`
+- L242 `bool GetMapRotateCCWFromWorldOrientation(void* areaMap, const Vector& orientation, float& outDegCCW)`
+- L257 `void* GetClientArea(void* serverArea)`
+- L270 `int GetMapPinCount(void* clientArea)`
+- L274 `void* GetMapPinAt(void* clientArea, int i)`
+- L280 `bool GetMapPinPosition(void* mapPin, Vector& out)`
+- L285 `bool IsMapPinEnabled(void* mapPin)`
+- L289 `bool GetMapPinNoteText(void* mapPin, char* outBuf, size_t bufSize)`
+- L330 `bool CreateMapPin(void* clientArea, const Vector& pos, const char* name, uint32_t referenceNumber, void** outPin)`

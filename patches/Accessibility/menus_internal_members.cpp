@@ -370,10 +370,6 @@ void* KeyMapPanelCancelButton(void* panel) {
 
 void* KeyMapPanelFilterButton(void* panel, int filterIndex) {
     if (filterIndex < 0 || filterIndex > 2) return nullptr;
-    if (!acc::off::Ok(kKeyMapPanelFilterButtonsOffset) ||
-        !acc::off::Ok(kKeyMapPanelFilterButtonStride)) {
-        return nullptr;
-    }
     static const char* const kTags[3] = { "KeyMap.BTN_Filter_Move",
                                           "KeyMap.BTN_Filter_Game",
                                           "KeyMap.BTN_Filter_Mini" };

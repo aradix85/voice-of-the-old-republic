@@ -41,12 +41,6 @@ bool IsFilterButton(void* panel, void* control) {
 
 void SyncListBoxSelection(void* panel, void* row) {
     if (!panel || !row) return;
-    if (!acc::addr::Ok(kAddrCSWGuiListBoxSetSelectedControl)) {
-        acclog::Write("Menus.Inventory",
-                      "SyncListBoxSelection skipped (unresolved on build %s)",
-                      acc::game::TitleName());
-        return;
-    }
     void* lb = acc::off::Ptr(panel, kInventoryItemListBoxOffset);
     const int idx = acc::engine::FindListBoxRow(lb, row);
     if (idx < 0) {
@@ -76,12 +70,6 @@ void SyncListBoxSelection(void* panel, void* row) {
 
 void ForceRepopulate(void* panel) {
     if (!panel) return;
-    if (!acc::addr::Ok(kAddrInventoryPopulateItemListBox)) {
-        acclog::Write("Menus.Inventory",
-                      "ForceRepopulate skipped (unresolved on build %s)",
-                      acc::game::TitleName());
-        return;
-    }
     __try {
         auto fn = reinterpret_cast<PFN_PanelThiscall>(
             kAddrInventoryPopulateItemListBox);
