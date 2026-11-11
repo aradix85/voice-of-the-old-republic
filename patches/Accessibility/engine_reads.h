@@ -42,6 +42,7 @@ uint32_t ReadU32(void* base, size_t offset);
 bool TryReadU32(void* base, size_t offset, uint32_t* out);
 bool TryReadU16(void* base, size_t offset, uint16_t* out);
 bool TryReadPtr(void* base, size_t offset, void** out);
+bool TryReadFloat(void* base, size_t offset, float* out);
 
 // SEH-wrapped TLK lookup. False on invalid strref, missing TLK pointer,
 // or any fault.

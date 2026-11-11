@@ -86,6 +86,17 @@ bool TryReadPtr(void* base, size_t offset, void** out) {
     }
 }
 
+bool TryReadFloat(void* base, size_t offset, float* out) {
+    if (!base || !out) return false;
+    __try {
+        *out = *reinterpret_cast<float*>(
+            reinterpret_cast<unsigned char*>(base) + offset);
+        return true;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+}
+
 // The engine copy-constructs the result into `tmp`, allocating c_string with
 // its own CRT. That string is leaked on purpose: freeing it from this DLL
 // risks a heap mismatch, and lookups are rare enough for the leak not to

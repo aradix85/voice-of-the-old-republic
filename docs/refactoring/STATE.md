@@ -391,8 +391,9 @@ prefix (menus_listbox_picker.cpp).
   when rows are rebuilt and in what Enter does; what is common is a
   clamped step of three lines. A shared model would cost more than it
   saves.
-- F5 memory readers outside engine_reads. Left: SafeRead in
-  camera_spin_guard and engine_navgraph, and the listbox rows. Files
+- F5 done: memory readers outside engine_reads. The SafeRead templates
+  of camera_spin_guard and engine_navgraph are gone (TryReadFloat joined
+  TryReadU32 / U16 / Ptr). The listbox rows: files
   walked the controls array of a CSWGuiListBox themselves; engine_reads
   now has ReadListBoxRow, ReadListBoxSelection, ReadListBoxSelectedRow
   and FindListBoxRow beside ReadListBoxRowCount. Step 1 uses them in

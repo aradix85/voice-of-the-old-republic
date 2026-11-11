@@ -1,34 +1,17 @@
-// CSWSArea nav-graph reader — see engine_navgraph.h.
-//
-// Extracted 2026-05-13 from guidance_pathfind.cpp's anon-namespace
-// SnapshotGraphMeta + LoadPoints + LoadConnections helpers. Behaviour is
-// preserved verbatim; the only mechanical changes are the snapshot
-// container (vector replaces static buffers, freeing the caller from
-// kMax* assumptions outside this TU) and the namespace move.
+// CSWSArea nav-graph reader; engine_navgraph.h has the design.
 
 #include "engine_navgraph.h"
 
 #include <windows.h>
 #include <cstring>
 
+#include "engine_reads.h"
 #include "guidance_pathfind.h"  // canonical home of the offset constants
 #include "log.h"
 
 namespace acc::engine::navgraph {
 
 namespace {
-
-// SEH-guarded scalar read — same pattern as engine_area's helpers.
-template <typename T>
-bool SafeRead(void* base, size_t offset, T& out) {
-    __try {
-        out = *reinterpret_cast<const T*>(
-            reinterpret_cast<const unsigned char*>(base) + offset);
-        return true;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return false;
-    }
-}
 
 struct GraphMeta {
     uint32_t pointsCount;
@@ -46,10 +29,12 @@ bool ReadMeta(void* area, GraphMeta& out) {
     uint32_t pointsPtrU  = 0;
     uint32_t connsCount  = 0;
     uint32_t connsPtrU   = 0;
-    if (!SafeRead(area, kAreaPathPointsCountOffset,      pointsCount)) return false;
-    if (!SafeRead(area, kAreaPathPointsPtrOffset,        pointsPtrU))  return false;
-    if (!SafeRead(area, kAreaPathConnectionsCountOffset, connsCount))  return false;
-    if (!SafeRead(area, kAreaPathConnectionsPtrOffset,   connsPtrU))   return false;
+    if (!TryReadU32(area, kAreaPathPointsCountOffset, &pointsCount) ||
+        !TryReadU32(area, kAreaPathPointsPtrOffset, &pointsPtrU) ||
+        !TryReadU32(area, kAreaPathConnectionsCountOffset, &connsCount) ||
+        !TryReadU32(area, kAreaPathConnectionsPtrOffset, &connsPtrU)) {
+        return false;
+    }
 
     if (pointsCount == 0 || connsCount == 0) return false;
     if (pointsPtrU < 0x00100000u || pointsPtrU >= 0x80000000u) return false;

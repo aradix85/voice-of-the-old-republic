@@ -18,10 +18,11 @@
 #include "engine_app.h"      // GetClientAppInternal, GetClientModule
 #include "engine_input.h"    // PollTurnAxis, ReadNativeStickAxes
 #include "engine_keymap.h"   // AnyMovementKeyHeld
-#include "engine_manager.h"  // kAddrGuiManagerPtr
+#include "engine_manager.h"  // GetGuiManager
 #include "engine_offsets_select.h"
 #include "engine_options.h"  // GetMouseLook
 #include "engine_panels.h"   // IsForegroundUiBlocking
+#include "engine_reads.h"
 #include "engine_player.h"   // camera yaw and position, player position and facing
 #include "engine_addr.h"
 #include "hotkeys.h"         // IsForegroundGame
@@ -76,30 +77,23 @@ constexpr float kSpinRateThresh = 20.0f;   // deg/s
 constexpr float kSpinReportDeg  = 360.0f;
 constexpr int   kSpinMaxReports = 5;
 
-template <typename T>
-T SafeRead(uintptr_t addr, T fallback) {
-    __try {
-        return *reinterpret_cast<T*>(addr);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return fallback;
-    }
+using acc::engine::TryReadFloat;
+using acc::engine::TryReadPtr;
+using acc::engine::TryReadU16;
+using acc::engine::TryReadU32;
+
+// The engine's rightClickHeld flag, 0 when unreadable.
+int RightClickHeld() {
+    uint32_t held = 0;
+    TryReadU32(reinterpret_cast<void*>(kAddrRightClickHeld), 0, &held);
+    return static_cast<int>(held);
 }
 
-template <typename T>
-T SafeReadOff(void* base, size_t off, T fallback) {
-    if (!base) return fallback;
+// The engine's cursor x on the GuiManager.
+bool WriteCursorX(void* gui, uint32_t x) {
+    if (!gui) return false;
     __try {
-        return *reinterpret_cast<T*>(static_cast<unsigned char*>(base) + off);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return fallback;
-    }
-}
-
-template <typename T>
-bool SafeWriteOff(void* base, size_t off, T value) {
-    if (!base) return false;
-    __try {
-        *reinterpret_cast<T*>(static_cast<unsigned char*>(base) + off) = value;
+        *reinterpret_cast<uint32_t*>(static_cast<unsigned char*>(gui) + kGuiMouseXOffset) = x;
         return true;
     } __except (EXCEPTION_EXECUTE_HANDLER) {
         return false;
@@ -281,16 +275,19 @@ void SampleYaws(DWORD now, const Vector& playerPos, Sample& s) {
 // The cursor against the edge band. The width lives on the GuiManager in K1
 // and on the viewport object at [client internal + 0x274] in K2.
 void SampleCursor(Sample& s) {
-    s.gui = SafeRead<void*>(kAddrGuiManagerPtr, nullptr);
-    s.mouseX = SafeReadOff<uint32_t>(s.gui, kGuiMouseXOffset, 0);
-    s.mouseY = SafeReadOff<uint32_t>(s.gui, kGuiMouseYOffset, 0);
+    s.gui = acc::engine::GetGuiManager();
+    TryReadU32(s.gui, kGuiMouseXOffset, &s.mouseX);
+    TryReadU32(s.gui, kGuiMouseYOffset, &s.mouseY);
     void* vpObj = s.gui;
     if (acc::game::IsKotor2()) {
-        vpObj = SafeReadOff<void*>(acc::engine::GetClientAppInternal(),
-                                   kK2InternalViewportObjOffset, nullptr);
+        vpObj = nullptr;
+        TryReadPtr(acc::engine::GetClientAppInternal(), kK2InternalViewportObjOffset, &vpObj);
     }
-    s.vpW = SafeReadOff<int16_t>(vpObj, kGuiViewportWidthOffset, 0);
-    const float pct = SafeRead<float>(kAddrScreenFramePercent, 0.0f);
+    uint16_t width = 0;
+    TryReadU16(vpObj, kGuiViewportWidthOffset, &width);
+    s.vpW = static_cast<int16_t>(width);
+    float pct = 0.0f;
+    TryReadFloat(reinterpret_cast<void*>(kAddrScreenFramePercent), 0, &pct);
     // The engine's real turn band is wider than screenFramePercentage says
     // (0.8 px at 800 px wide): a cursor parked at x=2 spun the camera for a
     // whole session past a 1 px floor. Over-detecting costs nothing, as the
@@ -316,12 +313,12 @@ bool ApplyEdgeGuard(const Sample& s) {
         !acc::hotkeys::IsForegroundGame() || !s.gui || s.vpW <= 0) {
         return false;
     }
-    return SafeWriteOff<uint32_t>(s.gui, kGuiMouseXOffset, static_cast<uint32_t>(s.vpW / 2));
+    return WriteCursorX(s.gui, static_cast<uint32_t>(s.vpW / 2));
 }
 
 void TrackEpisode(DWORD now, const Sample& s, bool fired) {
     if (fired && !g_ep.active) {
-        const int rightClick = SafeRead<int>(kAddrRightClickHeld, 0);
+        const int rightClick = RightClickHeld();
         bool mouseLook = false;
         acc::engine::GetMouseLook(mouseLook);
         g_ep.active      = true;
@@ -347,7 +344,7 @@ void TrackEpisode(DWORD now, const Sample& s, bool fired) {
 
 // One line per full uncommanded turn, with every input UpdateCamera turns on.
 void ReportSpinTurn(DWORD now, const Sample& s, int due) {
-    const int rightClick = SafeRead<int>(kAddrRightClickHeld, 0);
+    const int rightClick = RightClickHeld();
     bool mouseLook = false;
     acc::engine::GetMouseLook(mouseLook);
     // K2-only witnesses of the camera's own turn path; -1 on K1 or without
@@ -356,8 +353,11 @@ void ReportSpinTurn(DWORD now, const Sample& s, int due) {
     int   turnedFlag = -1;
     if (acc::game::IsKotor2()) {
         void* mod = acc::engine::GetClientModule();
-        acclMirror = SafeReadOff<float>(mod, kK2ModuleAcclMirrorOffset, -1.0f);
-        turnedFlag = SafeReadOff<int>(mod, kK2ModuleTurnedFlagOffset, -1);
+        TryReadFloat(mod, kK2ModuleAcclMirrorOffset, &acclMirror);
+        uint32_t turned = 0;
+        if (TryReadU32(mod, kK2ModuleTurnedFlagOffset, &turned)) {
+            turnedFlag = static_cast<int>(turned);
+        }
     }
     // The engine's held-turn-key view (a stranded flag shows here even when
     // the re-sync sees nothing) and K2's native right stick.
