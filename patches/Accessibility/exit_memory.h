@@ -187,6 +187,15 @@ bool ListRegions(std::vector<RegionSummary>& out,
 // itself is never held back.
 void WarnIfBehindLock(void* target);
 
+// Enter or Ctrl+L on something in another region with a closed door on the
+// way, or on an enemy round a corner: walk there region by region, opening
+// the doors, and act on the target on arrival, as Enter on it does. The
+// engine's own walk to a use or an attack opens no door and gives up in a
+// corner with people in it. True when that walk started: the caller then
+// dispatches nothing. False when the target is in the player's region, has
+// no open way to it, or needs neither.
+bool WalkThenInteract(void* target, uint32_t handle, const char* name);
+
 // Ctrl+Shift+N (ExploreWalkUnexplored): walk the whole way to the nearest
 // unexplored region, region by region, opening closed doors on the way. One
 // line up front (what and how far); the regions passed announce themselves as

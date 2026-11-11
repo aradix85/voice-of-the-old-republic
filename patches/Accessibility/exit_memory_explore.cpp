@@ -5,6 +5,7 @@
 
 #include "cycle_input.h"       // WalkToNarratedTarget
 #include "endar_softlock.h"    // Trask may not try his own door
+#include "examine_view.h"      // IsHostileCreature
 #include "engine_area.h"
 #include "engine_panels.h"     // IsForegroundUiBlocking
 #include "engine_player.h"     // position, yaw, party, player creature
@@ -26,6 +27,11 @@ namespace {
 constexpr int   kChainMaxHops  = 40;
 constexpr DWORD kChainSettleMs = 500;   // after a hop: door swing, region commit
 constexpr float kChainMinMoveM = 1.0f;  // a hop that moved less made no progress
+
+// A walk this much longer than the straight line, and this many times it,
+// goes round a corner.
+constexpr float kCornerExtraM = 8.0f;
+constexpr float kCornerFactor = 1.5f;
 
 void StopChain(const char* why) {
     if (!g_chain.active) return;
@@ -87,6 +93,21 @@ bool ChainStep() {
                   g_chain.hops, g.start, hopId, door ? " through a door" : "",
                   g_chain.goal);
     return true;
+}
+
+// The walk of WalkThenInteract reached the target's region: act on the target
+// as Enter on it does.
+void ActOnArrival() {
+    void* obj = g_chain.thenObj;
+    const uint32_t handle = g_chain.thenHandle;
+    StopChain("arrived");
+    const uint32_t now = obj ? acc::engine::GetObjectHandle(obj) : 0;
+    if (now == 0 || ((now ^ handle) & 0x7FFFFFFFu) != 0) {
+        acclog::Write("ExitMemory", "walk then act: target 0x%08x is gone", handle);
+        return;
+    }
+    acc::narrated_target::Stamp(obj, handle);
+    acc::interact::DispatchInteract(obj, handle, /*forceRadial=*/false);
 }
 
 void WalkTowardUnexplored() {
@@ -180,12 +201,63 @@ void WalkToNearestLoot() {
     }
     const LootSpot& s = o.loot.front();
     if (!s.obj || !s.handle) return;
+    if (WalkThenInteract(s.obj, s.handle, s.name.c_str())) return;
     acc::narrated_target::Stamp(s.obj, s.handle);
     acc::cycle_input::WalkToNarratedTarget();
     acclog::Write("ExitMemory", "walk loot: %s", s.name.c_str());
 }
 
 }  // namespace
+
+bool WalkThenInteract(void* target, uint32_t handle, const char* name) {
+    if (!target || handle == 0) return false;
+    // The walk stops when a fight starts, so it is no way to act in one.
+    if (acc::engine::IsAnyPartyMemberInCombat()) return false;
+    Vector pos;
+    Vector player;
+    if (!acc::engine::GetObjectPosition(target, pos) ||
+        !acc::engine::GetPlayerPosition(player)) {
+        return false;
+    }
+    void* area = acc::engine::GetCurrentArea();
+    Graph g;
+    if (!BuildGraph(area, player, g)) return false;
+    const int t = g.IndexOf(RegionAt(g.area, pos));
+    if (t < 0 || g.si < 0 || t == g.si) return false;
+    if (g.distOpen[t] >= kFar || g.hopOpen[t] < 0) return false;
+
+    const Route route    = RouteToIndex(g, t, pos);
+    const float straight = DistXY(player, pos);
+    const bool  corner   = route.kind == Route::Open &&
+                           static_cast<float>(route.walkM) >= straight + kCornerExtraM &&
+                           static_cast<float>(route.walkM) >= straight * kCornerFactor;
+    const bool door  = ClosedDoorOnHop(g, area, g.nodes[g.hopOpen[t]].id) != nullptr;
+    const bool enemy = corner && acc::examine_view::IsHostileCreature(
+                                     acc::engine::ResolveServerObjectHandle(handle));
+    if (!door && !enemy) return false;
+
+    g_chain            = ExploreChain{};
+    g_chain.active     = true;
+    g_chain.goal       = g.nodes[t].id;
+    g_chain.name       = (name && name[0]) ? name : "?";
+    g_chain.thenObj    = target;
+    g_chain.thenHandle = handle;
+    if (!ChainStep()) {
+        g_chain.active = false;
+        return false;
+    }
+    std::string subject = g_chain.name;
+    const std::string way = RouteText(route);
+    if (!way.empty()) subject += ", " + way;
+    char buf[640];
+    std::snprintf(buf, sizeof(buf),
+                  acc::strings::Get(acc::strings::Id::FmtWalkingTo), subject.c_str());
+    acc::speech::Speak(buf, /*interrupt=*/true);
+    acclog::Write("ExitMemory", "walk then act: %s (goal region %d, %s) target 0x%08x",
+                  buf, g_chain.goal, door ? "closed door on the way" : "enemy round a corner",
+                  handle);
+    return true;
+}
 
 void TickExploreChain() {
     if (!g_chain.active) return;
@@ -200,7 +272,12 @@ void TickExploreChain() {
     if (out == acc::guidance::ApproachOutcome::Blocked) return StopChain("blocked");
     if (out == acc::guidance::ApproachOutcome::Cancelled) return StopChain("cancelled");
     if (acc::engine::GetCurrentArea() != g_area) return StopChain("area changed");
-    if (g_chain.goal == g_current || g_visited.count(g_chain.goal)) {
+    if (g_chain.thenHandle != 0) {
+        Vector at;
+        if (acc::engine::GetPlayerPosition(at) && RegionAt(g_area, at) == g_chain.goal) {
+            return ActOnArrival();
+        }
+    } else if (g_chain.goal == g_current || g_visited.count(g_chain.goal)) {
         return StopChain("arrived");
     }
     if (acc::engine::IsAnyPartyMemberInCombat()) return StopChain("combat");

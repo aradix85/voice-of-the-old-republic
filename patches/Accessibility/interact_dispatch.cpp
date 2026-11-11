@@ -352,6 +352,13 @@ void DispatchInteract(void* target, uint32_t handle, bool forceRadial) {
     }
     if (!forceRadial) acc::exit_memory::WarnIfBehindLock(target);
 
+    // A closed door on the way, or an enemy round a corner: the mod walks
+    // there first and comes back here on arrival.
+    if (!forceRadial && (cat == C::Container || cat == C::Item || cat == C::Npc) &&
+        acc::exit_memory::WalkThenInteract(target, handle, name)) {
+        return;
+    }
+
     if (cat == C::Landmark && RedirectLandmarkToDoor(target, name, forceRadial)) return;
     if ((cat == C::Transition || cat == C::Landmark) &&
         WalkToTrigger(target, handle, name, cat, forceRadial)) {
