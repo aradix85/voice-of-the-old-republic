@@ -401,10 +401,11 @@ installer, as the pre-release `bridge-latest`.
   of three, the bridge's /state left the player character out, and whatever
   else asks who is in the party (the Q and E ring, the trap watch) could take
   the player character for a stranger. The party list now adds the player
-  character's own creature whenever someone else is in control. A companion whose roster slot
-  has no live creature is logged once ("Party: member ..."): Mission went
-  unlisted from the moment she joined until the next load, and that is not
-  solved yet.
+  character's own creature whenever someone else is in control; it is found
+  by its object id, which lies in the range the engine keeps for player
+  objects and changes with every load. A companion whose roster slot has no
+  live creature is logged once ("Party: member ..."): Mission went unlisted
+  from the moment she joined until the next load, and that is not solved yet.
 
 <h3>Help:</h3>
 
