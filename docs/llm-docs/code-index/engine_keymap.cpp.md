@@ -1,4 +1,4 @@
-# engine_keymap.cpp (419 lines)
+# engine_keymap.cpp (416 lines)
 
 Source: `patches/Accessibility/engine_keymap.cpp`
 
@@ -10,23 +10,22 @@ Namespace note -------------- The codes here are the engine's internal "quick ac
 
 ## Declarations (in source order)
 
-- L111 `bool IsDownVk(int vk)`
-- L115 `void AddAxisVk(int axis, int vk)`
-- L164 `void AddPair(int code, int vk)`
-- L174 `void AddGameVk(int vk)`
-- L187 `bool ResolveIniPath(char* out, size_t cap)`: Resolve the game's config ini from acclog::PatchDir() (= \patches) by stripping the last path component — the same derivation mod_settings_store uses.
-- L201 `int ScancodeToVk(int scancode)`
-- L216 `void SeedDefaults()`: WASD in every axis bucket and primary bind, so neither is ever empty, whatever happens to the ini.
-- L229 `void ApplyEntry(const KeymapEntry& e)`: Files one [Keymapping] entry into the tables.
-- L264 `void ReloadGameConfig()`
-- L306 `bool IsKeyUsedByGame(int vk)`
-- L316 `int GameActionVk(int actionId)`
-- L324 `int GameActionScancode(int actionId)`
-- L332 `void Rebuild()`
-- L348 `int VksForCode(int code, int* out, int cap)`
-- L362 `int CodeForVk(int vk)`
-- L370 `int MoveAxisPrimaryVk(MoveAxis axis)`
-- L377 `int TurnScancode(bool left)`
-- L384 `bool ForwardBackwardKeyHeld()`
-- L396 `int FirstMovementKeyHeld()`
-- L414 `bool AnyMovementKeyHeld()`
+- L112 `void AddAxisVk(int axis, int vk)`
+- L161 `void AddPair(int code, int vk)`
+- L171 `void AddGameVk(int vk)`
+- L184 `bool ResolveIniPath(char* out, size_t cap)`: Resolve the game's config ini from acclog::PatchDir() (= \patches) by stripping the last path component — the same derivation mod_settings_store uses.
+- L198 `int ScancodeToVk(int scancode)`
+- L213 `void SeedDefaults()`: WASD in every axis bucket and primary bind, so neither is ever empty, whatever happens to the ini.
+- L226 `void ApplyEntry(const KeymapEntry& e)`: Files one [Keymapping] entry into the tables.
+- L261 `void ReloadGameConfig()`
+- L303 `bool IsKeyUsedByGame(int vk)`
+- L313 `int GameActionVk(int actionId)`
+- L321 `int GameActionScancode(int actionId)`
+- L329 `void Rebuild()`
+- L345 `int VksForCode(int code, int* out, int cap)`
+- L359 `int CodeForVk(int vk)`
+- L367 `int MoveAxisPrimaryVk(MoveAxis axis)`
+- L374 `int TurnScancode(bool left)`
+- L381 `bool ForwardBackwardKeyHeld()`
+- L393 `int FirstMovementKeyHeld()`
+- L411 `bool AnyMovementKeyHeld()`

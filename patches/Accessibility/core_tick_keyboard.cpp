@@ -19,6 +19,7 @@
 #include "camera_orient.h"
 #include "engine_keymap.h"
 #include "focus_guard.h"
+#include "hotkeys.h"
 #include "engine_player.h"
 #include "log.h"
 #include "engine_input.h"
@@ -36,7 +37,7 @@ int HeldEngineBoundKey() {
         VK_RETURN, VK_ESCAPE, VK_UP, VK_DOWN, VK_LEFT, VK_RIGHT, VK_TAB, VK_SPACE
     };
     for (int vk : kProbe) {
-        if (GetAsyncKeyState(vk) & 0x8000) return vk;
+        if (acc::hotkeys::KeyDown(vk)) return vk;
     }
     return acc::engine_keymap::FirstMovementKeyHeld();
 }

@@ -1,4 +1,4 @@
-# hotkeys.h (241 lines)
+# hotkeys.h (245 lines)
 
 Source: `patches/Accessibility/hotkeys.h`
 
@@ -19,15 +19,16 @@ We don't piggyback on the engine's [Keymapping] because it's bare DIK→Action w
 - L187 `void ClaimRisingEdge(Action a)`: Pre-claim the NEXT rising edge.
 - L190 `bool ShiftHeld()`: Direct OS-level modifier reads — no edge, no foreground gate.
 - L191 `bool CtrlHeld()`
-- L195 `uint32_t CurrentModifiers()`: Current OS modifier mask (kMod* bits) — the same read BeginTick uses for edge matching.
-- L203 `bool ModifiedComboOwns(int vk)`: True iff some registered binding on `vk` (primary or alt key) REQUIRES at least one modifier and currently matches the live keyboard (its key is down, every required modifier is held, no forbidden modifier is held).
-- L205 `bool IsForegroundGame()`
-- L209 `Binding Get(Action a)`: IsUserRebindable returns false for diagnostic probes (excluded from the rebind UI).
-- L210 `void Set(Action a, Binding b)`
-- L211 `bool IsUserRebindable(Action a)`
-- L215 `void SetUserBinding(Action a, Binding b)`: Apply a user rebind: update the live binding AND persist it to acc_settings.ini so it survives a relaunch.
-- L219 `void ResetUserBindings()`: Reset every user-rebindable action to its factory default and rewrite the persisted overrides to match.
-- L227 `Action FindConflict(Action self, int vk, uint32_t mods)`: Conflict scan for the configurator.
-- L231 `const char* Name(Action a)`: Describe(a) goes into a rotating static buffer so multiple calls in one log line stay valid (acclog::FmtPtr convention).
-- L232 `const char* Describe(Action a)`
-- L238 `const char* VkLabel(int vk)`: Spoken/printable label for a bare VK ("V", "F5", "Enter", ...).
+- L195 `bool KeyDown(int vk)`: The physical key `vk` is down right now; false for vk 0.
+- L199 `uint32_t CurrentModifiers()`: Current OS modifier mask (kMod* bits) — the same read BeginTick uses for edge matching.
+- L207 `bool ModifiedComboOwns(int vk)`: True iff some registered binding on `vk` (primary or alt key) REQUIRES at least one modifier and currently matches the live keyboard (its key is down, every required modifier is held, no forbidden modifier is held).
+- L209 `bool IsForegroundGame()`
+- L213 `Binding Get(Action a)`: IsUserRebindable returns false for diagnostic probes (excluded from the rebind UI).
+- L214 `void Set(Action a, Binding b)`
+- L215 `bool IsUserRebindable(Action a)`
+- L219 `void SetUserBinding(Action a, Binding b)`: Apply a user rebind: update the live binding AND persist it to acc_settings.ini so it survives a relaunch.
+- L223 `void ResetUserBindings()`: Reset every user-rebindable action to its factory default and rewrite the persisted overrides to match.
+- L231 `Action FindConflict(Action self, int vk, uint32_t mods)`: Conflict scan for the configurator.
+- L235 `const char* Name(Action a)`: Describe(a) goes into a rotating static buffer so multiple calls in one log line stay valid (acclog::FmtPtr convention).
+- L236 `const char* Describe(Action a)`
+- L242 `const char* VkLabel(int vk)`: Spoken/printable label for a bare VK ("V", "F5", "Enter", ...).

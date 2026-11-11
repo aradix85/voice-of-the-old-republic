@@ -422,7 +422,12 @@ prefix (menus_listbox_picker.cpp).
   unit tests) that other debounces can take over in their lean
   (camera_announce, party_leader_announce, door_announce). In-game check:
   "Combat begins" and "Combat ends" once per fight.
-- F6 PollWin32 key-edge polling in 9 files, against hotkeys.
+- F6 done as far as it is a duplicate: the physical-key read
+  `(GetAsyncKeyState(vk) & 0x8000) != 0` was written out in nine files
+  and is acc::hotkeys::KeyDown now. The polls themselves differ on
+  purpose: the bring-up and Big Picture threads and the keybind capture
+  read raw keys before or outside the hotkey registry, and the pazaak
+  wager has its own hold-and-repeat.
 - F7 cross-file clones: engine_reads_items/menus_store,
   cycle_input/interact_dispatch, engine_area_walls/guidance_pathfind,
   combat_query/examine_view, engine_actionbar/engine_radial.

@@ -11,6 +11,7 @@
 #include <cstring>
 
 #include "log.h"
+#include "hotkeys.h"
 #include "speech.h"
 #include "strfmt.h"
 #include "strings.h"
@@ -33,11 +34,11 @@ bool  g_interactionKeyDownPrev = false;  // poll thread only
 bool AnyInteractionKeyDown() {
     static const int kKeys[] = {VK_RETURN, VK_SPACE, VK_ESCAPE, VK_TAB, VK_BACK,
                                 VK_LEFT, VK_RIGHT, VK_UP, VK_DOWN};
-    auto down = [](int vk) { return (GetAsyncKeyState(vk) & 0x8000) != 0; };
-    for (int vk : kKeys) if (down(vk)) return true;
-    for (int vk = '0'; vk <= '9'; ++vk) if (down(vk)) return true;
-    for (int vk = 'A'; vk <= 'Z'; ++vk) if (down(vk)) return true;
-    for (int vk = VK_F1; vk <= VK_F12; ++vk) if (down(vk)) return true;
+    using acc::hotkeys::KeyDown;
+    for (int vk : kKeys) if (KeyDown(vk)) return true;
+    for (int vk = '0'; vk <= '9'; ++vk) if (KeyDown(vk)) return true;
+    for (int vk = 'A'; vk <= 'Z'; ++vk) if (KeyDown(vk)) return true;
+    for (int vk = VK_F1; vk <= VK_F12; ++vk) if (KeyDown(vk)) return true;
     return false;
 }
 

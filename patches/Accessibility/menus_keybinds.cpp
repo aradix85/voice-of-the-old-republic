@@ -184,7 +184,7 @@ void SpeakActionRow(bool interrupt) {
 // ----- Capture --------------------------------------------------------------
 void SnapshotKeys() {
     for (int vk = 0; vk < 256; ++vk) {
-        g_snap[vk] = (GetAsyncKeyState(vk) & 0x8000) != 0;
+        g_snap[vk] = acc::hotkeys::KeyDown(vk);
     }
 }
 
@@ -378,7 +378,7 @@ void Tick() {
 
     // Escape cancels — must be tested before any binding capture so it is never
     // itself recorded as the new key.
-    bool escDown = (GetAsyncKeyState(VK_ESCAPE) & 0x8000) != 0;
+    bool escDown = acc::hotkeys::KeyDown(VK_ESCAPE);
     if (escDown && !g_snap[VK_ESCAPE]) {
         g_capturing = false;
         acc::speech::Speak(T(S::KeybindCaptureCancelled), /*interrupt=*/true);
@@ -391,7 +391,7 @@ void Tick() {
     for (int vk = 8; vk < 256; ++vk) {
         if (vk == VK_ESCAPE) continue;
         if (!IsCandidateVk(vk)) continue;
-        bool downNow = (GetAsyncKeyState(vk) & 0x8000) != 0;
+        bool downNow = acc::hotkeys::KeyDown(vk);
         if (downNow && !g_snap[vk]) {
             ApplyCapturedKey(vk);
             return;  // one capture per tick

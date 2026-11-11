@@ -190,6 +190,10 @@ void ClaimRisingEdge(Action a);
 bool ShiftHeld();
 bool CtrlHeld();
 
+// The physical key `vk` is down right now; false for vk 0. No edge, no
+// foreground gate.
+bool KeyDown(int vk);
+
 // Current OS modifier mask (kMod* bits) — the same read BeginTick uses for
 // edge matching. No edge, no foreground gate.
 uint32_t CurrentModifiers();

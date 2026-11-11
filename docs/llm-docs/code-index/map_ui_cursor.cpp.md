@@ -8,8 +8,8 @@ The cursor lives in map-pixel space [0..440] x [0..256]. The move keys translate
 
 ## Declarations (in source order)
 
-- L39 `bool IsForegroundProcess()`: Keys are only consumed while KOTOR has focus, so alt-tabbing does not steal movement from other apps.
-- L54 `bool AxisDown(acc::engine_keymap::MoveAxis axis)`: True if the PRIMARY key bound to the movement axis is held: the map cursor follows the keys the player walks with (forward → up, back → down, strafe-left → left, strafe-right → right), WASD by default.
+- L40 `bool IsForegroundProcess()`: Keys are only consumed while KOTOR has focus, so alt-tabbing does not steal movement from other apps.
+- L55 `bool AxisDown(acc::engine_keymap::MoveAxis axis)`: True if the PRIMARY key bound to the movement axis is held: the map cursor follows the keys the player walks with (forward → up, back → down, strafe-left → left, strafe-right → right), WASD by default.
 - L60 `bool ClampToMap(float& px, float& py)`: Clamps a map pixel into the map; true if it had to.
 - L69 `void SeedCursorAtPlayer(void* areaMap)`
 - L81 `void ResetSessionState()`: A fresh session state; the cursor keeps its position.

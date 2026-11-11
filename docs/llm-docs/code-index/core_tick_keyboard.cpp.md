@@ -1,4 +1,4 @@
-# core_tick_keyboard.cpp (265 lines)
+# core_tick_keyboard.cpp (266 lines)
 
 Source: `patches/Accessibility/core_tick_keyboard.cpp`
 
@@ -8,7 +8,7 @@ Both recover by driving CExoInput::SetActive 0 -> 1 (ForceReacquireInput). The 1
 
 ## Declarations (in source order)
 
-- L34 `int HeldEngineBoundKey()`: The engine-bound key held right now, or 0: GUI confirm, cancel and nav, leader cycle, movement.
-- L81 `void SampleWorldResponse(ULONGLONG now)`
-- L120 `void RetryColdStartReacquire()`
-- L169 `void WatchDeadKeyboard()`
+- L35 `int HeldEngineBoundKey()`: The engine-bound key held right now, or 0: GUI confirm, cancel and nav, leader cycle, movement.
+- L82 `void SampleWorldResponse(ULONGLONG now)`
+- L121 `void RetryColdStartReacquire()`
+- L170 `void WatchDeadKeyboard()`

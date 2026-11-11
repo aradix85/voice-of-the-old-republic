@@ -31,12 +31,8 @@ struct EdgeState {
 };
 EdgeState g_edge[static_cast<int>(Action::COUNT)] = {};
 
-bool IsDownVk(int vk) {
-    return vk != 0 && (GetAsyncKeyState(vk) & 0x8000) != 0;
-}
-
 bool AnyDown(int a, int b, int c) {
-    return IsDownVk(a) || IsDownVk(b) || IsDownVk(c);
+    return KeyDown(a) || KeyDown(b) || KeyDown(c);
 }
 
 // AltGr (right Alt) counts as Alt too, but has its own bit for the bindings
@@ -46,12 +42,12 @@ uint32_t ReadModifiers() {
     if (ShiftHeld()) m |= kModShift;
     if (CtrlHeld()) m |= kModCtrl;
     if (AnyDown(VK_MENU, VK_LMENU, VK_RMENU)) m |= kModAlt;
-    if (IsDownVk(VK_RMENU)) m |= kModAltGr;
+    if (KeyDown(VK_RMENU)) m |= kModAltGr;
     return m;
 }
 
 bool BindingKeyDown(const Binding& b) {
-    return IsDownVk(b.vk) || IsDownVk(b.altVk);
+    return KeyDown(b.vk) || KeyDown(b.altVk);
 }
 
 // The index of `a` once the defaults exist, or -1 when out of range.
@@ -111,6 +107,10 @@ void Consume(Action a) {
 void ClaimRisingEdge(Action a) {
     const int i = Index(a);
     if (i >= 0) g_edge[i].claimed = true;
+}
+
+bool KeyDown(int vk) {
+    return vk != 0 && (GetAsyncKeyState(vk) & 0x8000) != 0;
 }
 
 bool ShiftHeld() {

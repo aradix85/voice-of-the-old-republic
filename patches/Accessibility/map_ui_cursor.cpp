@@ -16,6 +16,7 @@
 #include "engine_panels.h"
 #include "engine_player.h"
 #include "engine_reads.h"
+#include "hotkeys.h"
 #include "map_shipped_hints.h"
 #include "speech.h"
 #include "strings.h"
@@ -52,8 +53,7 @@ bool IsForegroundProcess() {
 // to HandleNavStep with no InGameMap gate) — with them, one Down press
 // panned the cursor south AND stepped the chain.
 bool AxisDown(acc::engine_keymap::MoveAxis axis) {
-    const int vk = acc::engine_keymap::MoveAxisPrimaryVk(axis);
-    return vk != 0 && (GetAsyncKeyState(vk) & 0x8000) != 0;
+    return acc::hotkeys::KeyDown(acc::engine_keymap::MoveAxisPrimaryVk(axis));
 }
 
 // Clamps a map pixel into the map; true if it had to.

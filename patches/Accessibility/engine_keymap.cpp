@@ -7,6 +7,7 @@
 
 #include "engine_keymap_codes.h"
 #include "engine_game.h"  // IsKotor2 — per-game ini filename
+#include "hotkeys.h"
 #include "log.h"
 
 namespace acc::engine_keymap {
@@ -107,10 +108,6 @@ constexpr AxisContrib kAxisPrimary[] = {
     {3, 281, 'B'},   // Right    : D (mod layout) / C (vanilla)
 };
 int s_axisPrimaryVk[kMoveAxisCount] = {0, 0, 0, 0};
-
-bool IsDownVk(int vk) {
-    return vk != 0 && (GetAsyncKeyState(vk) & 0x8000) != 0;
-}
 
 void AddAxisVk(int axis, int vk) {
     if (vk == 0 || axis < 0 || axis >= kMoveAxisCount) return;
@@ -387,7 +384,7 @@ bool ForwardBackwardKeyHeld() {
     for (MoveAxis axis : kWalkAxes) {
         const int a = static_cast<int>(axis);
         for (int i = 0; i < s_axisVkCount[a]; ++i) {
-            if (IsDownVk(s_axisVks[a][i])) return true;
+            if (acc::hotkeys::KeyDown(s_axisVks[a][i])) return true;
         }
     }
     return false;
@@ -398,7 +395,7 @@ int FirstMovementKeyHeld() {
     // The four directional buckets (bound move/turn keys + WASD defaults)…
     for (int a = 0; a < kMoveAxisCount; ++a) {
         for (int i = 0; i < s_axisVkCount[a]; ++i) {
-            if (IsDownVk(s_axisVks[a][i])) return s_axisVks[a][i];
+            if (acc::hotkeys::KeyDown(s_axisVks[a][i])) return s_axisVks[a][i];
         }
     }
     // …plus the legacy extras the German QWERTZ set relies on that aren't in
@@ -406,7 +403,7 @@ int FirstMovementKeyHeld() {
     // this never regresses below the old hardcoded {W,S,A,D,C,Y} check.
     static const int kExtra[] = {'C', 'Y', 'Z'};
     for (int vk : kExtra) {
-        if (IsDownVk(vk)) return vk;
+        if (acc::hotkeys::KeyDown(vk)) return vk;
     }
     return 0;
 }

@@ -5,6 +5,7 @@
 #include <cstring>
 
 #include "log.h"
+#include "hotkeys.h"
 #include "speech.h"
 #include "strings.h"
 
@@ -196,7 +197,7 @@ bool UserNavKeyHeld() {
         VK_RETURN, VK_SPACE,
     };
     for (int vk : kKeys) {
-        if (GetAsyncKeyState(vk) & 0x8000) return true;
+        if (acc::hotkeys::KeyDown(vk)) return true;
     }
     return false;
 }

@@ -4,6 +4,7 @@
 #include "minigame_pazaak_internal.h"
 
 #include "engine_panels.h"
+#include "hotkeys.h"
 #include "strings.h"
 
 namespace acc::pazaak {
@@ -73,8 +74,8 @@ void ServiceWagerPopup(void* fg) {
     ReadIntAt(fg, kWagerMaxOffset, &max);
     bool firstSight = (fg != g_wagerPanel);
 
-    bool leftDown  = (GetAsyncKeyState(VK_LEFT)  & 0x8000) != 0;
-    bool rightDown = (GetAsyncKeyState(VK_RIGHT) & 0x8000) != 0;
+    const bool leftDown  = acc::hotkeys::KeyDown(VK_LEFT);
+    const bool rightDown = acc::hotkeys::KeyDown(VK_RIGHT);
     int  dir = (leftDown == rightDown) ? 0 : (leftDown ? -1 : +1);
     unsigned now = GetTickCount();
 
