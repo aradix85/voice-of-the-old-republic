@@ -358,8 +358,10 @@ prefix (menus_listbox_picker.cpp).
   possible; for files above 500 lines, judge whether a split into modules of
   things that belong together makes sense, and do it where it does.
 - Next file, by size (2026-11-10 21:15, strings*.cpp excepted):
-  to judge: menus_listbox_picker 524, menus_focus_k2 520, help 520 (help
-  belongs to F4). Judged and left whole: minigame_turret_peg 536, one
+  to judge: menus_focus_k2 520, help 520 (help belongs to F4). Judged
+  and left whole: menus_listbox_picker (512): one concern, the equip
+  picker and the workbench upgrade picker with their latches and
+  monitors; a lean could give the two latches one struct. Judged and left whole: minigame_turret_peg 536, one
   task per tick that already has its named steps; what is left of
   DriveSelectedPeg is one pass over some twenty shared values, and its
   five diagnostic blocks could move behind a frame struct if the file is

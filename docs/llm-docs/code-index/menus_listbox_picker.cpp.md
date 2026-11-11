@@ -1,4 +1,4 @@
-# menus_listbox_picker.cpp (524 lines)
+# menus_listbox_picker.cpp (512 lines)
 
 Source: `patches/Accessibility/menus_listbox_picker.cpp`
 
@@ -18,19 +18,19 @@ The cursor-park mechanism ------------------------- Both pickers set useEngineSe
 
 ## Declarations (in source order)
 
-- L104 `bool ReadPickerOpenBit(void* panel, size_t fieldOff)`: Bit 0 of a panel's picker-open field.
-- L120 `bool IsEquipPickerArmed()`: Both IsArmed queries are PURE — they are called from the input dispatcher, the extractor's disabled-suffix path and the msg-router rule, several times per frame, and a query that mutated the latch would make the answe...
-- L127 `void ArmEquipPicker(void* panel, void* slotBtn)`
-- L137 `void ClearEquipPickerArmLatch()`: "We are done driving this picker." Deliberately does NOT clear the engine's bit — the engine clears it itself when the commit or cancel we queued reaches CloseDescription, and the slots are genuinely still disabled un...
-- L143 `bool IsWorkbenchUpgradePickerArmed()`
-- L150 `void* WorkbenchUpgradePickerPanel()`
-- L156 `void ArmWorkbenchUpgradePicker(void* panel)`
-- L161 `void ClearWorkbenchUpgradeArmLatch()`
-- L190 `bool ParkPickerCursorOffList(void* panel, void* backBtn, const char* tag)`: Warp the OS cursor onto the panel's BTN_BACK so it sits OFF the LB_ITEMS list while a picker is armed — see the cursor-park note in the file header.
-- L207 `void TraceEquipPickerOpenField(void* panel, bool armed)`: Raw read of the equip panel's picker-open field for the diagnostic trace.
-- L232 `void SpeakStillEquippedAfterRefusal(void* panel, void* slotBtn)`: The engine refused to open the picker — its "no items for this slot" modal is what the user just heard (the ContentChange monitor speaks it).
-- L256 `void MonitorEquipPickerSelection()`: Equip picker: retire the arm latch, run the one-shot cursor park, and speak row changes.
-- L402 `void MonitorWorkbenchUpgradePicker()`: Workbench upgrade picker: retire the arm latch and run the one-shot cursor park.
-- L504 `bool RuleSuppressEquipPreviewFeedback(const char* text)`: Message-buffer rule: mute the engine's feedback while the equip picker is up.
-- L513 `void RegisterPickerMsgRules()`
-- L518 `void TickPickerMonitors()`
+- L103 `bool ReadPickerOpenBit(void* panel, size_t fieldOff)`: Bit 0 of a panel's picker-open field; "not armed" when it cannot be read.
+- L113 `bool IsEquipPickerArmed()`: Both IsArmed queries are PURE — they are called from the input dispatcher, the extractor's disabled-suffix path and the msg-router rule, several times per frame, and a query that mutated the latch would make the answe...
+- L120 `void ArmEquipPicker(void* panel, void* slotBtn)`
+- L130 `void ClearEquipPickerArmLatch()`: "We are done driving this picker." Deliberately does NOT clear the engine's bit — the engine clears it itself when the commit or cancel we queued reaches CloseDescription, and the slots are genuinely still disabled un...
+- L136 `bool IsWorkbenchUpgradePickerArmed()`
+- L143 `void* WorkbenchUpgradePickerPanel()`
+- L149 `void ArmWorkbenchUpgradePicker(void* panel)`
+- L154 `void ClearWorkbenchUpgradeArmLatch()`
+- L183 `bool ParkPickerCursorOffList(void* panel, void* backBtn, const char* tag)`: Warp the OS cursor onto the panel's BTN_BACK so it sits OFF the LB_ITEMS list while a picker is armed — see the cursor-park note in the file header.
+- L198 `void TraceEquipPickerOpenField(void* panel, bool armed)`: The equip panel's picker-open field, raw, for the diagnostic trace.
+- L220 `void SpeakStillEquippedAfterRefusal(void* panel, void* slotBtn)`: The engine refused to open the picker — its "no items for this slot" modal is what the user just heard (the ContentChange monitor speaks it).
+- L244 `void MonitorEquipPickerSelection()`: Equip picker: retire the arm latch, run the one-shot cursor park, and speak row changes.
+- L390 `void MonitorWorkbenchUpgradePicker()`: Workbench upgrade picker: retire the arm latch and run the one-shot cursor park.
+- L492 `bool RuleSuppressEquipPreviewFeedback(const char* text)`: Message-buffer rule: mute the engine's feedback while the equip picker is up.
+- L501 `void RegisterPickerMsgRules()`
+- L506 `void TickPickerMonitors()`

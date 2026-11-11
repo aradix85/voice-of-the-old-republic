@@ -69,6 +69,7 @@
 #include "engine_manager.h"
 #include "engine_offsets.h"
 #include "engine_panels.h"
+#include "engine_reads.h"
 #include "log.h"
 #include "menus_extract.h"
 #include "menus_internal.h"
@@ -98,18 +99,10 @@ bool  s_equipParkPending = false;
 void* s_workbenchUpgradeArmPending  = nullptr;
 bool  s_workbenchUpgradeParkPending = false;
 
-// Bit 0 of a panel's picker-open field. Under SEH like every engine read here:
-// an unported offset on the other game would otherwise fault on a live panel
-// pointer rather than simply answering "not armed".
+// Bit 0 of a panel's picker-open field; "not armed" when it cannot be read.
 bool ReadPickerOpenBit(void* panel, size_t fieldOff) {
-    if (!panel) return false;
-    __try {
-        uint32_t flag = *reinterpret_cast<uint32_t*>(
-            reinterpret_cast<unsigned char*>(panel) + fieldOff);
-        return (flag & 1u) != 0;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return false;
-    }
+    uint32_t flag = 0;
+    return TryReadU32(panel, fieldOff, &flag) && (flag & 1u) != 0;
 }
 }  // namespace
 
@@ -201,20 +194,15 @@ bool ParkPickerCursorOffList(void* panel, void* backBtn, const char* tag) {
     return true;
 }
 
-// Raw read of the equip panel's picker-open field for the diagnostic trace.
-// Split out of the monitor so that function stays free of SEH (MSVC C2712 — see
-// the CLAUDE.md note on __try and unwinding).
+// The equip panel's picker-open field, raw, for the diagnostic trace.
 void TraceEquipPickerOpenField(void* panel, bool armed) {
-    __try {
-        uint32_t raw = *reinterpret_cast<uint32_t*>(
-            reinterpret_cast<unsigned char*>(panel) + kEquipPickerOpenFlagOff);
-        acclog::Trace("EquipPickerBit",
-                      "panel=%p raw=0x%08x open=%d latch=%p armed=%d",
-                      panel, raw, (raw & 1u) ? 1 : 0, s_equipArmPending,
-                      armed ? 1 : 0);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
+    uint32_t raw = 0;
+    if (!TryReadU32(panel, kEquipPickerOpenFlagOff, &raw)) {
         acclog::Trace("EquipPickerBit", "panel=%p read faulted", panel);
+        return;
     }
+    acclog::Trace("EquipPickerBit", "panel=%p raw=0x%08x open=%d latch=%p armed=%d",
+                  panel, raw, (raw & 1u) ? 1 : 0, s_equipArmPending, armed ? 1 : 0);
 }
 
 // The engine refused to open the picker — its "no items for this slot"
