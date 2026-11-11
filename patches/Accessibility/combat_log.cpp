@@ -27,13 +27,13 @@ namespace acc::combat {
 
 namespace {
 
-// "<actor> killed <target>: N XP" — a defeat. Spoken verbatim and
-// interrupting, so a kill cuts through queued combat chatter instead of
-// waiting behind it.
+// "<actor> killed <target>: N XP" — a defeat. Spoken verbatim, in its turn:
+// interrupting, it cut off the blows that led to it. The summary at the end
+// of the fight names the kill again.
 bool RuleKill(const char* text) {
     if (!strstr(text, acc::combat::loc::Get().kill_marker)) return false;
     NoteKillLine(text);
-    acc::speech::Speak(text, /*interrupt=*/true);
+    acc::speech::Speak(text, /*interrupt=*/false);
     return true;  // claimed: speech handled here
 }
 

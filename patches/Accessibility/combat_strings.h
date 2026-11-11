@@ -78,7 +78,7 @@ struct MsgStrings {
     const char* word_resists;        // save-success verb
     const char* word_save_failed;    // save-failure tag
 
-    // Kill line ("<actor> killed <target>"), spoken interrupting.
+    // Kill line ("<actor> killed <target>").
     const char* kill_marker;
 
     // The copula in "<target> is <status>": lifts the status word onto the
