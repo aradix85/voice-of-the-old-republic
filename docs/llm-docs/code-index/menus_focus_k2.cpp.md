@@ -1,4 +1,4 @@
-# menus_focus_k2.cpp (240 lines)
+# menus_focus_k2.cpp (235 lines)
 
 Source: `patches/Accessibility/menus_focus_k2.cpp`
 
@@ -16,7 +16,7 @@ For focus, two more things: the hook sits ahead of SetActiveControl's own `if (a
 - L144 `bool FramePtr(void* ebp, ptrdiff_t disp, void** out)`: The frame slot [EBP + disp].
 - L148 `bool FrameInt(void* ebp, ptrdiff_t disp, int* out)`
 - L156 `bool StoreInputCode(void* mgr, int code)`: this->input_code = code on a CSWGuiManager.
-- L173 `extern "C" void __cdecl OnSetActiveControlK2(void* ebp)`: CSWGuiPanel::SetActiveControl @0x0040EC00, hooked at 0x0040EC09, after the prologue has stored `this`.
-- L199 `extern "C" int __cdecl OnHandleInputEventK2(void* ebp)`: CSWGuiManager::HandleInputEvent @0x00410AA0, hooked at 0x00410AC8, after the SEH prologue has stored `this`.
-- L218 `extern "C" void __cdecl OnHandleFocusChangeK2(void* thisCtrl, void* ebp)`: CSWGuiControl::HandleFocusChange @0x00418FE0, hooked at 0x00418FE6, before `this` is stored, so the hook passes ECX and EBP.
-- L231 `extern "C" void __cdecl OnListBoxSetActiveControlK2(void* listBox, void* ebp)`: CSWGuiListBox::SetActiveControl's implementation @0x0041E9A0 (the vtable slot 0x0041FEE0 is a forwarder to it, so hooking the body catches both routes), hooked at 0x0041E9A4, before `this` is stored.
+- L168 `extern "C" void __cdecl OnSetActiveControlK2(void* ebp)`: CSWGuiPanel::SetActiveControl @0x0040EC00, hooked at 0x0040EC09, after the prologue has stored `this`.
+- L194 `extern "C" int __cdecl OnHandleInputEventK2(void* ebp)`: CSWGuiManager::HandleInputEvent @0x00410AA0, hooked at 0x00410AC8, after the SEH prologue has stored `this`.
+- L213 `extern "C" void __cdecl OnHandleFocusChangeK2(void* thisCtrl, void* ebp)`: CSWGuiControl::HandleFocusChange @0x00418FE0, hooked at 0x00418FE6, before `this` is stored, so the hook passes ECX and EBP.
+- L226 `extern "C" void __cdecl OnListBoxSetActiveControlK2(void* listBox, void* ebp)`: CSWGuiListBox::SetActiveControl's implementation @0x0041E9A0 (the vtable slot 0x0041FEE0 is a forwarder to it, so hooking the body catches both routes), hooked at 0x0041E9A4, before `this` is stored.

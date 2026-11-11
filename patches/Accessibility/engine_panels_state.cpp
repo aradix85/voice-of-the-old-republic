@@ -24,6 +24,7 @@
 
 #include "engine_game.h"     // IsKotor1 — the client-internal state plumbing
 #include "engine_manager.h"
+#include "engine_reads.h"
 #include "log.h"
 
 namespace acc::engine {
@@ -188,19 +189,12 @@ bool CloseInGameMenuToWorld() {
 // 2 = a menu/sub-screen owns input (mouse shown). Diagnostic + gating helper.
 // Chain: GetClientAppInternal() → +0x9c.
 int GetInputClass() {
-    void* internal = GetClientAppInternal();
-    if (!internal) return -1;
-    __try {
-        // Verified Same on KOTOR 2 (2026-08-01), by two independent
-        // witnesses: KOTOR 1's own GetInputClass facade thunk reads
-        // [internal+0x9c], and KOTOR 2's SetInputClass internal
-        // (0x007B3050) guards and stores the same [this+0x9c] field.
-        return *reinterpret_cast<int*>(
-            reinterpret_cast<unsigned char*>(internal) +
-            kClientInternalInputClassOffset);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return -1;
-    }
+    // The same field on KOTOR 2, by two witnesses: KOTOR 1's own
+    // GetInputClass facade thunk reads [internal+0x9c], and KOTOR 2's
+    // SetInputClass internal (0x007B3050) guards and stores [this+0x9c].
+    int inputClass = -1;
+    TryReadI32(GetClientAppInternal(), kClientInternalInputClassOffset, &inputClass);
+    return inputClass;
 }
 
 // Set the client input class via the engine's own setter. klass 0 = in-world

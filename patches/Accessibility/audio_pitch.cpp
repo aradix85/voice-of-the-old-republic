@@ -22,6 +22,7 @@
 #include <windows.h>
 #include <cstdint>
 
+#include "engine_reads.h"
 #include "log.h"
 #include "engine_game.h"
 #include "engine_offsets_select.h"
@@ -65,11 +66,8 @@ extern "C" int __cdecl OnCalculatePitchVarianceFrequency(void* source) {
     // Consume on bad source to avoid crashing the audio thread.
     if (!source) return 1;
     int base_frequency = 0;
-    __try {
-        base_frequency = *reinterpret_cast<int*>(
-            reinterpret_cast<char*>(source) +
-            acc::audio::pitch::kOffsetBaseFrequency);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
+    if (!acc::engine::TryReadI32(source, acc::audio::pitch::kOffsetBaseFrequency,
+                                 &base_frequency)) {
         return 1;
     }
     DWORD now_ms = GetTickCount();

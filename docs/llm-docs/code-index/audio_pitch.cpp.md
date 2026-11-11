@@ -1,4 +1,4 @@
-# audio_pitch.cpp (87 lines)
+# audio_pitch.cpp (85 lines)
 
 Source: `patches/Accessibility/audio_pitch.cpp`
 
@@ -10,7 +10,7 @@ base_frequency=0 with flag set: return 1 instead of 0 so the wrapper's TEST does
 
 ## Declarations (in source order)
 
-- L43 `void BeginScopedZero()`
-- L47 `void EndScopedZero()`
-- L51 `bool IsScopedZeroActive()`
-- L57 `extern "C" int __cdecl OnCalculatePitchVarianceFrequency(void* source)`
+- L44 `void BeginScopedZero()`
+- L48 `void EndScopedZero()`
+- L52 `bool IsScopedZeroActive()`
+- L58 `extern "C" int __cdecl OnCalculatePitchVarianceFrequency(void* source)`

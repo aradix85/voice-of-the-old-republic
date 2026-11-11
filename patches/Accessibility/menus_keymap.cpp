@@ -146,11 +146,7 @@ void* RowAt(void* panel, short index) {
 // 2 to 1; log patch-20260725-150854). selection_index is therefore not a
 // reliable record of where the keyboard user is, and we keep our own.
 void SetSelectionIndex(void* lb, short v) {
-    __try {
-        *reinterpret_cast<short*>(
-            reinterpret_cast<unsigned char*>(lb) +
-            kListBoxSelectionIndexOffset) = v;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {}
+    acc::engine::TryWriteU16(lb, kListBoxSelectionIndexOffset, static_cast<uint16_t>(v));
 }
 
 int CaptureActive(void* panel) {

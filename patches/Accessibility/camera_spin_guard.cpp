@@ -90,13 +90,7 @@ int RightClickHeld() {
 
 // The engine's cursor x on the GuiManager.
 bool WriteCursorX(void* gui, uint32_t x) {
-    if (!gui) return false;
-    __try {
-        *reinterpret_cast<uint32_t*>(static_cast<unsigned char*>(gui) + kGuiMouseXOffset) = x;
-        return true;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return false;
-    }
+    return acc::engine::TryWriteU32(gui, kGuiMouseXOffset, x);
 }
 
 float NormDeg(float d) {

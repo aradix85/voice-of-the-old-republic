@@ -263,19 +263,7 @@ void* GetClientArea(void* serverArea) {
         // uses ([module+0x48] is what it hands AddMapPin). Every caller
         // passes the CURRENT server area, so the current client area is the
         // correct resolution; `serverArea` still gates on area-present.
-        void* internal = GetClientAppInternal();
-        if (!internal) return nullptr;
-        __try {
-            void* module = *reinterpret_cast<void**>(
-                reinterpret_cast<unsigned char*>(internal) +
-                kClientInternalModuleOffset);
-            if (!module) return nullptr;
-            return *reinterpret_cast<void**>(
-                reinterpret_cast<unsigned char*>(module) +
-                kClientModuleAreaOffset);
-        } __except (EXCEPTION_EXECUTE_HANDLER) {
-            return nullptr;
-        }
+        return ReadPtrOrNull(GetClientModule(), kClientModuleAreaOffset);
     }
     return ReadPtrOrNull(serverArea, kAreaClientAreaBackOffset);
 }
@@ -285,16 +273,9 @@ int GetMapPinCount(void* clientArea) {
 }
 
 void* GetMapPinAt(void* clientArea, int i) {
-    if (!clientArea || i < 0) return nullptr;
-    __try {
-        void** pinArray = *reinterpret_cast<void***>(
-            reinterpret_cast<unsigned char*>(clientArea) +
-            kClientAreaMapPinsOffset);
-        if (!pinArray) return nullptr;
-        return pinArray[i];
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return nullptr;
-    }
+    if (i < 0) return nullptr;
+    void* pinArray = ReadPtrOrNull(clientArea, kClientAreaMapPinsOffset);
+    return ReadPtrOrNull(pinArray, static_cast<size_t>(i) * sizeof(void*));
 }
 
 bool GetMapPinPosition(void* mapPin, Vector& out) {

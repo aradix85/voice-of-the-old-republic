@@ -67,6 +67,16 @@ bool TryReadPtr(void* base, size_t offset, void** out);
 bool TryReadFloat(void* base, size_t offset, float* out);
 bool TryReadVector(void* base, size_t offset, Vector* out);
 
+// Single-field writes, guarded the same way: false for a null base and on a
+// fault.
+bool TryWriteU32(void* base, size_t offset, uint32_t value);
+bool TryWriteU16(void* base, size_t offset, uint16_t value);
+bool TryWriteFloat(void* base, size_t offset, float value);
+bool TryWriteVector(void* base, size_t offset, const Vector& value);
+inline bool TryWriteI32(void* base, size_t offset, int32_t value) {
+    return TryWriteU32(base, offset, static_cast<uint32_t>(value));
+}
+
 // A signed 32-bit field, the engine's `int`.
 inline bool TryReadI32(void* base, size_t offset, int32_t* out) {
     return TryReadU32(base, offset, reinterpret_cast<uint32_t*>(out));

@@ -1,4 +1,4 @@
-# engine_actionbar.cpp (395 lines)
+# engine_actionbar.cpp (391 lines)
 
 Source: `patches/Accessibility/engine_actionbar.cpp`
 
@@ -25,6 +25,6 @@ CSWGuiMainInterface::DoPersonalAction @0x0068ad60 — what bare 4..7 hit. param_
 - L260 `bool EntryIsMedicalK2(void* mi, int slot, int index)`
 - L269 `bool SendUseItemRequestK2(uint32_t actionId, void* targetClientCreature)`
 - L310 `bool SelectVariant(void* mi, int slot, int index)`
-- L326 `bool FireSelectedVariant(void* mi, int slot)`
-- L342 `void LogState(void* mi, const char* tag)`
-- L359 `bool PrepareBareDispatch(uint32_t targetClientHandle)`
+- L322 `bool FireSelectedVariant(void* mi, int slot)`
+- L338 `void LogState(void* mi, const char* tag)`
+- L355 `bool PrepareBareDispatch(uint32_t targetClientHandle)`

@@ -25,6 +25,7 @@
 #include <windows.h>
 
 #include "engine_game.h"
+#include "engine_reads.h"
 #include "log.h"
 
 // KOTOR 1 — hooked at 0x005b31ab with the engine's entire bounds check
@@ -42,9 +43,7 @@ extern "C" int __cdecl OnGetBaseItem(void* thisPtr, int id) {
     if (acc::game::IsKotor2()) return id;  // belt and braces; the hook is K1-only
 
     int count = 0;
-    __try {
-        count = *reinterpret_cast<int*>(thisPtr);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
+    if (!acc::engine::TryReadI32(thisPtr, 0, &count)) {
         return id;  // unreadable `this` — engine read it moments ago, cannot happen
     }
 

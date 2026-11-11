@@ -17,6 +17,7 @@
 #include "engine_keymap.h"    // TurnScancode: the bound turn key
 #include "engine_player.h"
 #include "engine_addr.h"
+#include "engine_reads.h"
 #include "hotkeys.h"
 #include "key_inject.h"
 #include "log.h"
@@ -89,24 +90,19 @@ struct Snap {
 Snap g_snap;
 
 bool WriteDesiredOrientation(float deg) {
-    if (!kAddrDesiredOrientation) return false;
-    __try {
-        *reinterpret_cast<volatile float*>(kAddrDesiredOrientation) = deg;
-        return true;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return false;
-    }
+    return acc::engine::TryWriteFloat(reinterpret_cast<void*>(kAddrDesiredOrientation), 0,
+                                      deg);
 }
 
 // False on no address or a fault.
 bool ReadDesiredOrientationPending(bool& pending) {
-    if (!kAddrDesiredOrientation) return false;
-    __try {
-        pending = *reinterpret_cast<volatile float*>(kAddrDesiredOrientation) >= 0.0f;
-        return true;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
+    float desired = 0.0f;
+    if (!acc::engine::TryReadFloat(reinterpret_cast<void*>(kAddrDesiredOrientation), 0,
+                                   &desired)) {
         return false;
     }
+    pending = desired >= 0.0f;
+    return true;
 }
 
 void ReleaseAndDisarm(const char* reason, float curYawRad) {

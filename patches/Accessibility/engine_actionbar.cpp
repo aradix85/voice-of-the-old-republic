@@ -311,16 +311,12 @@ bool SelectVariant(void* mi, int slot, int index) {
     if (!mi || slot < 0 || slot >= kColumnCount) return false;
     uint32_t actionId = ReadVariantActionId(mi, slot, index);
     if (actionId == 0) return false;
-    __try {
-        *reinterpret_cast<uint32_t*>(
-            reinterpret_cast<unsigned char*>(mi) +
-            kSelectedActionIdArrayOffset + slot * 4) = actionId;
-        return true;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
+    if (!acc::engine::TryWriteU32(mi, kSelectedActionIdArrayOffset + slot * 4, actionId)) {
         acclog::Write("ActionBar", "SelectVariant SEH-FAULT slot=%d idx=%d",
                       slot, index);
         return false;
     }
+    return true;
 }
 
 bool FireSelectedVariant(void* mi, int slot) {

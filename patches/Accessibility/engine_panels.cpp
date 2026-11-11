@@ -175,13 +175,7 @@ void RememberDumpedVtable(uintptr_t vt) {
 }
 
 void LogUnknownPanelDiagnostics(void* panel) {
-    if (!panel) return;
-    uintptr_t panelVt = 0;
-    __try {
-        panelVt = reinterpret_cast<uintptr_t>(*reinterpret_cast<void**>(panel));
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return;
-    }
+    const uintptr_t panelVt = ReadVtable(panel);
     if (panelVt == 0) return;
     if (IsVtableAlreadyDumped(panelVt)) return;
     RememberDumpedVtable(panelVt);

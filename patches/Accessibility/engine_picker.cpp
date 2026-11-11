@@ -99,13 +99,6 @@ bool CallHandleMouseClickInWorld(void* internal) {
     }
 }
 
-void WriteUInt32(void* base, size_t offset, uint32_t value) {
-    __try {
-        *reinterpret_cast<uint32_t*>(static_cast<unsigned char*>(base) + offset) = value;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-    }
-}
-
 // Copies a NUL-terminated string of at most `limit` bytes, truncated to the
 // buffer. "" on a null source or a fault.
 void CopyCString(const char* src, size_t limit, char* out, size_t outCap) {
@@ -215,9 +208,9 @@ bool DispatchClick(void* internal, uint32_t targetClient, const ActionSnapshot& 
     // The click gate: HandleMouseClickInWorld dispatches (instead of opening
     // the radial) only when these three hold the same valid id. Written
     // directly; the engine's setters add side flags.
-    WriteUInt32(internal, kInternalLastTargetOffset, targetClient);
-    WriteUInt32(internal, kInternalLastClickedOnTargetOffset, targetClient);
-    WriteUInt32(internal, kInternalHoverTargetOffset, targetClient);
+    acc::engine::TryWriteU32(internal, kInternalLastTargetOffset, targetClient);
+    acc::engine::TryWriteU32(internal, kInternalLastClickedOnTargetOffset, targetClient);
+    acc::engine::TryWriteU32(internal, kInternalHoverTargetOffset, targetClient);
 
     // Player input goes off for the action the engine enqueues, so the
     // per-tick movement input does not clobber it; TickPlayerInputRestore

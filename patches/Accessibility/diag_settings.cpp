@@ -11,6 +11,7 @@
 #include "audio_bus.h"    // GetSoundInternal — the engine's Miles 3D provider handle
 #include "engine_game.h"  // IsKotor2 — per-game ini filename
 #include "engine_offsets_select.h"
+#include "engine_reads.h"
 #include "log.h"
 #include "strfmt.h"
 
@@ -152,13 +153,8 @@ void LogMilesProvider(void* soundInternal) {
     uint32_t opened = 0;
     bool     haveOpened = false;
     if (acc::off::Ok(kSoundInternal3dProviderOff)) {
-        __try {
-            opened = *reinterpret_cast<uint32_t*>(
-                reinterpret_cast<char*>(soundInternal) + kSoundInternal3dProviderOff);
-            haveOpened = true;
-        } __except (EXCEPTION_EXECUTE_HANDLER) {
-            haveOpened = false;
-        }
+        haveOpened = acc::engine::TryReadU32(soundInternal, kSoundInternal3dProviderOff,
+                                             &opened);
     }
 
     char chosen[128] = {};

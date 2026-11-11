@@ -154,12 +154,7 @@ bool FrameInt(void* ebp, ptrdiff_t disp, int* out) {
 
 // this->input_code = code on a CSWGuiManager.
 bool StoreInputCode(void* mgr, int code) {
-    __try {
-        *reinterpret_cast<int*>(static_cast<char*>(mgr) + kMgrInputCodeOffset) = code;
-        return true;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return false;
-    }
+    return acc::engine::TryWriteI32(mgr, kMgrInputCodeOffset, code);
 }
 
 }  // namespace

@@ -62,11 +62,6 @@ constexpr int    kNumSlots = 10;
 int NumTypes() { return acc::game::IsKotor2() ? 24 : 18; }
 constexpr int kMaxTypes = 24;   // array bound for both games
 
-bool VtableIs(void* p, uintptr_t vt) {
-    __try { return *reinterpret_cast<uintptr_t*>(p) == vt; }
-    __except (EXCEPTION_EXECUTE_HANDLER) { return false; }
-}
-
 // How many of card type `type` the player owns.
 int OwnedCount(void* panel, int type) {
     return acc::engine::ReadI32Or0(panel, kCardCountsOff + static_cast<size_t>(type) * 4);
@@ -104,13 +99,13 @@ bool Classify(void* panel, void* control, bool& outAvailable, int& outIdx) {
 }  // namespace
 
 bool IsDeckPanel(void* panel) {
-    return panel && VtableIs(panel, kVtablePazaakStart);
+    return panel && acc::engine::HasVtable(panel, kVtablePazaakStart);
 }
 
 bool ExtractCardLabel(void* panel, void* control, char* outBuf, size_t bufSize) {
     using namespace acc::strings;
     if (!IsDeckPanel(panel) || !control || !outBuf || bufSize == 0) return false;
-    if (!VtableIs(control, kVtablePazaakCard)) return false;
+    if (!acc::engine::HasVtable(control, kVtablePazaakCard)) return false;
 
     bool avail; int idx;
     if (!Classify(panel, control, avail, idx)) return false;
@@ -145,11 +140,11 @@ bool IsChainDecorative(void* panel, void* control) {
     if (!IsDeckPanel(panel) || !control) return false;
     // Drop every label control — value / count / section-title overlays. Their
     // info is folded into the card labels (count) and the panel-title speech.
-    if (VtableIs(control, kVtableCSWGuiLabel)) return true;
+    if (acc::engine::HasVtable(control, kVtableCSWGuiLabel)) return true;
     // Drop available cards with no copies left to place — they aren't
     // actionable (AddChosenCard refuses at count 0), so the grid steps only
     // through addable cards.
-    if (VtableIs(control, kVtablePazaakCard)) {
+    if (acc::engine::HasVtable(control, kVtablePazaakCard)) {
         bool avail; int idx;
         if (Classify(panel, control, avail, idx) && avail && idx >= 0 && idx < NumTypes()) {
             if (OwnedCount(panel, idx) <= 0) return true;

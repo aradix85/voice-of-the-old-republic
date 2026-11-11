@@ -4,6 +4,7 @@
 
 #include "engine_app.h"     // GetClientAppInternal
 #include "engine_area.h"
+#include "engine_reads.h"
 #include "log.h"
 
 namespace acc::minigame {
@@ -105,12 +106,7 @@ bool ReadOffsetVector(void* player, Vector& out) {
 }
 
 void WriteOffsetVector(void* player, const Vector& v) {
-    if (!player) return;
-    __try {
-        *reinterpret_cast<Vector*>(reinterpret_cast<unsigned char*>(player) +
-                                   kMiniPlayerOffsetVectorOffset) = v;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-    }
+    acc::engine::TryWriteVector(player, kMiniPlayerOffsetVectorOffset, v);
 }
 
 }  // namespace acc::minigame

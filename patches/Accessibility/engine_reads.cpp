@@ -66,6 +66,50 @@ bool TryReadU32(void* base, size_t offset, uint32_t* out) {
     }
 }
 
+bool TryWriteU32(void* base, size_t offset, uint32_t value) {
+    if (!base) return false;
+    __try {
+        *reinterpret_cast<uint32_t*>(reinterpret_cast<unsigned char*>(base) + offset) =
+            value;
+        return true;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+}
+
+bool TryWriteU16(void* base, size_t offset, uint16_t value) {
+    if (!base) return false;
+    __try {
+        *reinterpret_cast<uint16_t*>(reinterpret_cast<unsigned char*>(base) + offset) =
+            value;
+        return true;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+}
+
+bool TryWriteFloat(void* base, size_t offset, float value) {
+    if (!base) return false;
+    __try {
+        *reinterpret_cast<float*>(reinterpret_cast<unsigned char*>(base) + offset) =
+            value;
+        return true;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+}
+
+bool TryWriteVector(void* base, size_t offset, const Vector& value) {
+    if (!base) return false;
+    __try {
+        *reinterpret_cast<Vector*>(reinterpret_cast<unsigned char*>(base) + offset) =
+            value;
+        return true;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+}
+
 bool TryReadU8(void* base, size_t offset, uint8_t* out) {
     if (!base || !out) return false;
     __try {

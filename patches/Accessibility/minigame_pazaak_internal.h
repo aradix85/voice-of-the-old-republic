@@ -130,7 +130,6 @@ bool IsValueChoiceCard(int index);
 int FirstMainDeckIndex();
 bool IsMainDeckCard(int index);
 using acc::engine::TryReadI32;
-void WriteIntAt(void* base, size_t off, int v);
 void* GetModel(void* panel);
 int GetState(void* panel);
 void* PlayerOf(void* model);

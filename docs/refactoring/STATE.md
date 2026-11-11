@@ -632,11 +632,15 @@ prefix (menus_listbox_picker.cpp).
   removes the cppcheck knownConditionTrueFalse findings (38 left, was
   86): cppcheck does not follow an assignment inside __try, so nearly
   all of them are a variable set in a raw __try and tested after it.
-  Left, 53 read-only blocks: the guarded writes (a TryWrite family is
-  not there yet: menus_keymap, menus_focus_k2, engine_picker,
-  engine_actionbar, camera_orient_turn, camera_spin_guard, pazaak,
-  minigame_engine), reads of several fields in one block, array walks,
-  and the reads off a hook's stack frame, which stay. The other 197
+  Part 2 done: the guarded writes (TryWriteU32 / I32 / U16 / Float /
+  Vector in engine_reads; eight modules had their own) and the single
+  reads the script missed: 250 -> 230. pazaak's ReadPtrAt and
+  WriteIntAt, the picker's WriteUInt32 and the deck builder's VtableIs
+  were copies of engine_reads functions and are gone.
+  Left, 33 blocks without a call inside, judged to stay: several
+  fields of one object read under one guard (the area iterator, doors,
+  placeables, the map hover, the chargen layout, the diagnostics),
+  array walks, and the reads off a hook's stack frame. The other 197
   call the engine and keep their guard. Seen on the way:
   IsK2UpgradeNoneRow (menus_listbox_workbench) and
   IsUpgradePickerNoneRow (menus_pending_workbench) are one function.

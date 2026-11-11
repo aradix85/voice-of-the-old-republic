@@ -1,4 +1,4 @@
-# baseitem_guard.cpp (91 lines)
+# baseitem_guard.cpp (90 lines)
 
 Source: `patches/Accessibility/baseitem_guard.cpp`
 
@@ -12,5 +12,5 @@ The guard hooks the accessor mid-function, AFTER the engine's own table-loaded c
 
 ## Declarations (in source order)
 
-- L41 `extern "C" int __cdecl OnGetBaseItem(void* thisPtr, int id)`: KOTOR 1 — hooked at 0x005b31ab with the engine's entire bounds check (TEST EAX,EAX / JL / CMP EAX,[ECX] / JGE, 8 bytes) cut and NOT replayed: the two relative jumps in the cut cannot be relocated, so this handler IS t...
-- L69 `extern "C" void __cdecl OnGetBaseItemK2(void* ebp)`: KOTOR 2 — hooked at 0x006d5210, after the prologue and the engine's table-loaded check.
+- L42 `extern "C" int __cdecl OnGetBaseItem(void* thisPtr, int id)`: KOTOR 1 — hooked at 0x005b31ab with the engine's entire bounds check (TEST EAX,EAX / JL / CMP EAX,[ECX] / JGE, 8 bytes) cut and NOT replayed: the two relative jumps in the cut cannot be relocated, so this handler IS t...
+- L68 `extern "C" void __cdecl OnGetBaseItemK2(void* ebp)`: KOTOR 2 — hooked at 0x006d5210, after the prologue and the engine's table-loaded check.

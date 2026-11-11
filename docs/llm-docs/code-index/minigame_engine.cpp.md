@@ -1,4 +1,4 @@
-# minigame_engine.cpp (117 lines)
+# minigame_engine.cpp (113 lines)
 
 Source: `patches/Accessibility/minigame_engine.cpp`
 
@@ -8,12 +8,12 @@ Both the swoop bike and the turret gun are a CSWMiniPlayer (extends CSWTrackFoll
 
 ## Declarations (in source order)
 
-- L13 `void* ReadAreaMiniGame()`
-- L19 `LatchStep TickLatch(Latch& latch, uint32_t type, const char* logTag)`
-- L35 `void* ResolveMgoArray()`
-- L39 `void* ReadFollowerModelGob(void* follower)`
-- L45 `bool ReadFollowerPosition(void* follower, Vector& out)`
-- L61 `bool ReadGobBoundingBox(void* gob, Vector& mn, Vector& mx)`
-- L77 `bool ReadGobPartBoundingBox(void* gob, const char* partName, Vector& mn, Vector& mx)`
-- L103 `bool ReadOffsetVector(void* player, Vector& out)`
-- L107 `void WriteOffsetVector(void* player, const Vector& v)`
+- L14 `void* ReadAreaMiniGame()`
+- L20 `LatchStep TickLatch(Latch& latch, uint32_t type, const char* logTag)`
+- L36 `void* ResolveMgoArray()`
+- L40 `void* ReadFollowerModelGob(void* follower)`
+- L46 `bool ReadFollowerPosition(void* follower, Vector& out)`
+- L62 `bool ReadGobBoundingBox(void* gob, Vector& mn, Vector& mx)`
+- L78 `bool ReadGobPartBoundingBox(void* gob, const char* partName, Vector& mn, Vector& mx)`
+- L104 `bool ReadOffsetVector(void* player, Vector& out)`
+- L108 `void WriteOffsetVector(void* player, const Vector& v)`

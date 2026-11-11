@@ -1,4 +1,4 @@
-# engine_reads.h (434 lines)
+# engine_reads.h (444 lines)
 
 Source: `patches/Accessibility/engine_reads.h`
 
@@ -21,61 +21,66 @@ SEH-guarded read helpers for KOTOR GUI controls. Safe from hook handlers that ma
 - L66 `bool TryReadPtr(void* base, size_t offset, void** out)`
 - L67 `bool TryReadFloat(void* base, size_t offset, float* out)`
 - L68 `bool TryReadVector(void* base, size_t offset, Vector* out)`
-- L71 `inline bool TryReadI32(void* base, size_t offset, int32_t* out)`: A signed 32-bit field, the engine's `int`.
-- L77 `inline uint32_t ReadU32Or0(void* base, size_t offset)`: The same reads with a default for a null base and for a fault, for a caller whose default is harmless.
-- L82 `inline uint8_t ReadU8Or0(void* base, size_t offset)`
-- L87 `inline int ReadI32Or0(void* base, size_t offset)`
-- L90 `inline void* ReadPtrOrNull(void* base, size_t offset)`
-- L95 `inline float ReadFloatOr0(void* base, size_t offset)`
-- L103 `bool LookupTlk(uint32_t strref, char* outBuf, size_t bufSize)`: SEH-wrapped TLK lookup.
-- L110 `bool ReadControlTooltip(void* control, char* outBuf, size_t bufSize)`: Mirrors CSWGuiControl::DisplayToolTip @0x418a90: 1.
-- L126 `bool ReadGuiString(void* control, size_t guiStringPtrOffset, char* outBuf, size_t bufSize)`: Read directly from CAurGUIStringInternal — the engine's actually- rendered string.
-- L130 `bool ExtractTextOrStrRef(void* control, size_t cexoOffset, size_t strRefOffset, char* outBuf, size_t bufSize)`: Inline CExoString, then TLK strref fallback.
-- L142 `bool ExtractTextOrStrRefIndirect(void* control, size_t cexoOffset, size_t strRefOffset, size_t textObjectOffset, char* outBuf, size_t bufSize)`: Try every text path: 1.
-- L152 `bool ReadLabelText(void* label, char* outBuf, size_t bufSize)`: Read a CSWGuiLabel's rendered text — engine's resolved gui_string path with the strref / CExoString / text_object fallback chain (i.e.
-- L156 `inline bool ReadLabelTextAt(void* panel, size_t offset, char* outBuf, size_t bufSize)`: Convenience: panel + label-field offset, for the common case where a label is embedded in the panel struct at a known field.
-- L169 `bool ReadButtonText(void* button, char* outBuf, size_t bufSize)`: Read a CSWGuiButton's rendered text — same two-step shape against the button's own field offsets (kButton{GuiStringPtr,Text,StrRef,TextObject} Offset).
-- L173 `bool IsToggle(void* control)`: Used by ExtractAnnounceableText (which field reads) and IsChainNavigable (where chain nav can land).
-- L174 `bool IsSlider(void* control)`
-- L175 `bool IsListBox(void* control)`
-- L176 `bool IsEditbox(void* control)`
-- L180 `uint32_t ReadControlBitFlags(void* control)`: CSWGuiControl.bit_flags read, SEH-guarded.
-- L185 `bool IsControlVisible(void* control)`: bit_flags & kControlVisibleBit — the engine's own "shown" bit, which panels with several stacked listboxes (store, crafting, messages) flip to pick the one on screen.
-- L191 `int ReadListBoxRowCount(void* listBox)`: A CSWGuiListBox's rows.
-- L193 `void* ReadListBoxRow(void* listBox, int index)`: Row `index`, nullptr out of range.
-- L195 `int ReadListBoxSelection(void* listBox)`: selection_index; -1 is also the engine's "no selection".
-- L197 `void* ReadListBoxSelectedRow(void* listBox)`: The selected row, nullptr without a selection.
-- L199 `int FindListBoxRow(void* listBox, void* row)`: The index of `row` among the rows, -1 when it is not one.
-- L205 `bool ReadEditboxText(void* editbox, char* out, size_t cap, uint32_t& outLen)`: A CSWGuiEditbox's text.
-- L209 `bool ReadToggleState(void* toggle)`: CSWGuiButtonToggle.field2_0x1c8 bit 0 — HandleInputEvent XORs on activate, Draw branches on (& 1) for which border to render.
-- L213 `void DumpControlVtable(void* control, char* out, size_t outSize)`: vtable[0..7] dump.
-- L219 `uint32_t ClientToServerObjectId(uint32_t clientHandle)`: Convert a client-side object id to its server-side id via CServerExoApp::ClientToServerObjectId.
-- L225 `void* ResolveItemFromClientHandle(uint32_t clientHandle)`: Client-side handles (the kind in row+0x1c4 on CSWGuiStoreItemEntry, CSWGuiInGameItemEntry in Container/Equip-picker) → CSWSItem*.
-- L231 `void* ResolveItemFromRow(void* rowControl)`: The CSWSItem* behind an inventory, container, store or crafting row: the row's obj_id (kStoreItemEntryObjIdOffset, the same on every row class) resolved as a client handle.
-- L236 `bool ReadItemPropertyDescription(void* item, char* outBuf, size_t bufSize)`: Multi-line property description (damage / range / on-hit / defence / base description).
-- L243 `struct ItemDescriptionBlocks`: The four screen-reader navigation blocks of an item's property description, reconstructed by calling the engine's own per-category builders (the same ones GetPropertyDescription chains) into separate accumulators.
-- L253 `bool BuildItemDescriptionBlocks(void* item, ItemDescriptionBlocks* out)`: Build the four blocks for `item` (a CSWSItem*).
-- L262 `void* GetWorkbenchSlotInstalledItem(void* upgradePanel, void* slotControl)`: Workbench upgrade slot → installed-mod item.
-- L274 `struct WorkbenchPickerInfo`: Layout of the workbench mod-picker (LB_ITEMS) for the currently-open slot.
-- L280 `WorkbenchPickerInfo GetWorkbenchPickerInfo(void* upgradePanel)`
-- L297 `bool ResolveActionDescriptionFromActionId(uint32_t actionId, char* outBuf, size_t bufSize)`: CSWGuiInterfaceAction.action_id → human-readable description.
-- L307 `int ReadItemRowStackCount(void* rowControl)`: Returns: > 1 stackable; caller speaks the count suffix.
-- L316 `int ReadItemCharges(void* item)`: Charge readers — for limited-use consumables that carry a current / max charge count (CSWSItem.charges / max_charges).
-- L317 `int ReadItemRowCharges(void* rowControl)`
-- L330 `bool ReadItemRowName(void* rowControl, char* outBuf, size_t bufSize)`: Name an item row from the ITEM it points at, not from its own caption.
-- L342 `bool ReadLocStringOtherLanguage(void* base, size_t locStringOffset, char* outBuf, size_t bufSize)`: Text of the CExoLocString at base+offset from a substring that is not English, for strings the English game cannot resolve.
-- L348 `int ReadItemStack(void* item)`: Raw stack_size for a resolved CSWSItem* (0 on fault / infinite stock).
-- L355 `void* ItemFromActionId(uint32_t actionId)`: Resolve the CSWSItem* behind an item-tagged CSWGuiInterfaceAction action_id (high nibble 0x4xxxxxxx, low 28 bits = server game-object id).
-- L359 `void* GetFeatRow(uint16_t featIdx)`: The rules rows of a feat (CSWRules::GetFeat) and of a Force power (CSWSpellArray::GetSpell), or nullptr.
-- L360 `void* GetSpellRow(int spellId)`
-- L364 `bool ReadRowStrRefText(void* row, size_t offset, char* outBuf, size_t bufSize)`: The TLK text of the strref at `offset` of such a row; false when there is none.
-- L369 `bool IsInventoryItemRow(void* control)`: CSWGuiInGameItemEntry rows (Inventory + Container loot listbox).
-- L383 `bool ReadCreatureForcePoints(void* clientCreature, int* outCur, int* outMax)`: Read a client creature's live Force pool.
-- L391 `bool ReadClientCreatureHitPoints(void* clientCreature, int* outCur, int* outMax)`: A client creature's live hit points, from the stats block its character sheet renders (CSWCCreatureStats: +0x4c pregame_current_hp, +0x4e max_hit_points; +0x48 hit_points is the base value, not the live one).
-- L397 `int ReadCreatureEffectIconIds(void* serverCreature, int* outIds, int cap)`: Icon ids of a server creature's effect-icon row (CSWSCreature.effect_icons: the icons its portrait shows, priority-sorted, one entry per icon id).
-- L402 `int ReadObjectEffectTypes(void* serverObject, int* outTypes, int cap)`: EFFECT_TYPES of the first cap effects in CSWSObject.effects, in list order (a type can repeat).
-- L412 `int ReadObjectDamageLevel(void* serverObject)`: The 0..5 visible wound-state bucket for a server object (0 healthy, 1 light, 2 wounded, 3 badly wounded, 4 dying, 5 dead), -1 when unreadable.
-- L416 `int ReadObjectCurrentHitPoints(void* serverObject)`: Current hit points of a server object (CSWSObject +0xe0, signed short), -1 on null / fault.
-- L421 `int ReadCreatureMaxHitPoints(void* serverCreature)`: Maximum hit points of a server creature (GetMaxHitPoints(1), the same call ReadObjectDamageLevel's KOTOR 2 path makes), -1 on null / fault.
-- L426 `int ReadCreatureCurrentHitPoints(void* serverCreature)`: Current hit points through the engine accessor GetCurrentHitPoints(0) (current plus temporary), -1 on null / fault.
-- L431 `bool IsPlotObject(void* serverObject)`: True when a server object carries the plot flag (indestructible).
+- L72 `bool TryWriteU32(void* base, size_t offset, uint32_t value)`: Single-field writes, guarded the same way: false for a null base and on a fault.
+- L73 `bool TryWriteU16(void* base, size_t offset, uint16_t value)`
+- L74 `bool TryWriteFloat(void* base, size_t offset, float value)`
+- L75 `bool TryWriteVector(void* base, size_t offset, const Vector& value)`
+- L76 `inline bool TryWriteI32(void* base, size_t offset, int32_t value)`
+- L81 `inline bool TryReadI32(void* base, size_t offset, int32_t* out)`: A signed 32-bit field, the engine's `int`.
+- L87 `inline uint32_t ReadU32Or0(void* base, size_t offset)`: The same reads with a default for a null base and for a fault, for a caller whose default is harmless.
+- L92 `inline uint8_t ReadU8Or0(void* base, size_t offset)`
+- L97 `inline int ReadI32Or0(void* base, size_t offset)`
+- L100 `inline void* ReadPtrOrNull(void* base, size_t offset)`
+- L105 `inline float ReadFloatOr0(void* base, size_t offset)`
+- L113 `bool LookupTlk(uint32_t strref, char* outBuf, size_t bufSize)`: SEH-wrapped TLK lookup.
+- L120 `bool ReadControlTooltip(void* control, char* outBuf, size_t bufSize)`: Mirrors CSWGuiControl::DisplayToolTip @0x418a90: 1.
+- L136 `bool ReadGuiString(void* control, size_t guiStringPtrOffset, char* outBuf, size_t bufSize)`: Read directly from CAurGUIStringInternal — the engine's actually- rendered string.
+- L140 `bool ExtractTextOrStrRef(void* control, size_t cexoOffset, size_t strRefOffset, char* outBuf, size_t bufSize)`: Inline CExoString, then TLK strref fallback.
+- L152 `bool ExtractTextOrStrRefIndirect(void* control, size_t cexoOffset, size_t strRefOffset, size_t textObjectOffset, char* outBuf, size_t bufSize)`: Try every text path: 1.
+- L162 `bool ReadLabelText(void* label, char* outBuf, size_t bufSize)`: Read a CSWGuiLabel's rendered text — engine's resolved gui_string path with the strref / CExoString / text_object fallback chain (i.e.
+- L166 `inline bool ReadLabelTextAt(void* panel, size_t offset, char* outBuf, size_t bufSize)`: Convenience: panel + label-field offset, for the common case where a label is embedded in the panel struct at a known field.
+- L179 `bool ReadButtonText(void* button, char* outBuf, size_t bufSize)`: Read a CSWGuiButton's rendered text — same two-step shape against the button's own field offsets (kButton{GuiStringPtr,Text,StrRef,TextObject} Offset).
+- L183 `bool IsToggle(void* control)`: Used by ExtractAnnounceableText (which field reads) and IsChainNavigable (where chain nav can land).
+- L184 `bool IsSlider(void* control)`
+- L185 `bool IsListBox(void* control)`
+- L186 `bool IsEditbox(void* control)`
+- L190 `uint32_t ReadControlBitFlags(void* control)`: CSWGuiControl.bit_flags read, SEH-guarded.
+- L195 `bool IsControlVisible(void* control)`: bit_flags & kControlVisibleBit — the engine's own "shown" bit, which panels with several stacked listboxes (store, crafting, messages) flip to pick the one on screen.
+- L201 `int ReadListBoxRowCount(void* listBox)`: A CSWGuiListBox's rows.
+- L203 `void* ReadListBoxRow(void* listBox, int index)`: Row `index`, nullptr out of range.
+- L205 `int ReadListBoxSelection(void* listBox)`: selection_index; -1 is also the engine's "no selection".
+- L207 `void* ReadListBoxSelectedRow(void* listBox)`: The selected row, nullptr without a selection.
+- L209 `int FindListBoxRow(void* listBox, void* row)`: The index of `row` among the rows, -1 when it is not one.
+- L215 `bool ReadEditboxText(void* editbox, char* out, size_t cap, uint32_t& outLen)`: A CSWGuiEditbox's text.
+- L219 `bool ReadToggleState(void* toggle)`: CSWGuiButtonToggle.field2_0x1c8 bit 0 — HandleInputEvent XORs on activate, Draw branches on (& 1) for which border to render.
+- L223 `void DumpControlVtable(void* control, char* out, size_t outSize)`: vtable[0..7] dump.
+- L229 `uint32_t ClientToServerObjectId(uint32_t clientHandle)`: Convert a client-side object id to its server-side id via CServerExoApp::ClientToServerObjectId.
+- L235 `void* ResolveItemFromClientHandle(uint32_t clientHandle)`: Client-side handles (the kind in row+0x1c4 on CSWGuiStoreItemEntry, CSWGuiInGameItemEntry in Container/Equip-picker) → CSWSItem*.
+- L241 `void* ResolveItemFromRow(void* rowControl)`: The CSWSItem* behind an inventory, container, store or crafting row: the row's obj_id (kStoreItemEntryObjIdOffset, the same on every row class) resolved as a client handle.
+- L246 `bool ReadItemPropertyDescription(void* item, char* outBuf, size_t bufSize)`: Multi-line property description (damage / range / on-hit / defence / base description).
+- L253 `struct ItemDescriptionBlocks`: The four screen-reader navigation blocks of an item's property description, reconstructed by calling the engine's own per-category builders (the same ones GetPropertyDescription chains) into separate accumulators.
+- L263 `bool BuildItemDescriptionBlocks(void* item, ItemDescriptionBlocks* out)`: Build the four blocks for `item` (a CSWSItem*).
+- L272 `void* GetWorkbenchSlotInstalledItem(void* upgradePanel, void* slotControl)`: Workbench upgrade slot → installed-mod item.
+- L284 `struct WorkbenchPickerInfo`: Layout of the workbench mod-picker (LB_ITEMS) for the currently-open slot.
+- L290 `WorkbenchPickerInfo GetWorkbenchPickerInfo(void* upgradePanel)`
+- L307 `bool ResolveActionDescriptionFromActionId(uint32_t actionId, char* outBuf, size_t bufSize)`: CSWGuiInterfaceAction.action_id → human-readable description.
+- L317 `int ReadItemRowStackCount(void* rowControl)`: Returns: > 1 stackable; caller speaks the count suffix.
+- L326 `int ReadItemCharges(void* item)`: Charge readers — for limited-use consumables that carry a current / max charge count (CSWSItem.charges / max_charges).
+- L327 `int ReadItemRowCharges(void* rowControl)`
+- L340 `bool ReadItemRowName(void* rowControl, char* outBuf, size_t bufSize)`: Name an item row from the ITEM it points at, not from its own caption.
+- L352 `bool ReadLocStringOtherLanguage(void* base, size_t locStringOffset, char* outBuf, size_t bufSize)`: Text of the CExoLocString at base+offset from a substring that is not English, for strings the English game cannot resolve.
+- L358 `int ReadItemStack(void* item)`: Raw stack_size for a resolved CSWSItem* (0 on fault / infinite stock).
+- L365 `void* ItemFromActionId(uint32_t actionId)`: Resolve the CSWSItem* behind an item-tagged CSWGuiInterfaceAction action_id (high nibble 0x4xxxxxxx, low 28 bits = server game-object id).
+- L369 `void* GetFeatRow(uint16_t featIdx)`: The rules rows of a feat (CSWRules::GetFeat) and of a Force power (CSWSpellArray::GetSpell), or nullptr.
+- L370 `void* GetSpellRow(int spellId)`
+- L374 `bool ReadRowStrRefText(void* row, size_t offset, char* outBuf, size_t bufSize)`: The TLK text of the strref at `offset` of such a row; false when there is none.
+- L379 `bool IsInventoryItemRow(void* control)`: CSWGuiInGameItemEntry rows (Inventory + Container loot listbox).
+- L393 `bool ReadCreatureForcePoints(void* clientCreature, int* outCur, int* outMax)`: Read a client creature's live Force pool.
+- L401 `bool ReadClientCreatureHitPoints(void* clientCreature, int* outCur, int* outMax)`: A client creature's live hit points, from the stats block its character sheet renders (CSWCCreatureStats: +0x4c pregame_current_hp, +0x4e max_hit_points; +0x48 hit_points is the base value, not the live one).
+- L407 `int ReadCreatureEffectIconIds(void* serverCreature, int* outIds, int cap)`: Icon ids of a server creature's effect-icon row (CSWSCreature.effect_icons: the icons its portrait shows, priority-sorted, one entry per icon id).
+- L412 `int ReadObjectEffectTypes(void* serverObject, int* outTypes, int cap)`: EFFECT_TYPES of the first cap effects in CSWSObject.effects, in list order (a type can repeat).
+- L422 `int ReadObjectDamageLevel(void* serverObject)`: The 0..5 visible wound-state bucket for a server object (0 healthy, 1 light, 2 wounded, 3 badly wounded, 4 dying, 5 dead), -1 when unreadable.
+- L426 `int ReadObjectCurrentHitPoints(void* serverObject)`: Current hit points of a server object (CSWSObject +0xe0, signed short), -1 on null / fault.
+- L431 `int ReadCreatureMaxHitPoints(void* serverCreature)`: Maximum hit points of a server creature (GetMaxHitPoints(1), the same call ReadObjectDamageLevel's KOTOR 2 path makes), -1 on null / fault.
+- L436 `int ReadCreatureCurrentHitPoints(void* serverCreature)`: Current hit points through the engine accessor GetCurrentHitPoints(0) (current plus temporary), -1 on null / fault.
+- L441 `bool IsPlotObject(void* serverObject)`: True when a server object carries the plot flag (indestructible).

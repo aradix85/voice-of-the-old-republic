@@ -239,7 +239,7 @@ void Tick() {
         g_panel = fg;
         // Disable the visual tutorial so its help popups can't stack on top of
         // the board and freeze the turn engine (see kTutorialActiveOffset).
-        WriteIntAt(fg, kTutorialActiveOffset, 0);
+        acc::engine::TryWriteI32(fg, kTutorialActiveOffset, 0);
         acclog::Write("Pazaak", "acquired board panel=%p", fg);
     }
     if (!g_panel) return;

@@ -183,12 +183,9 @@ bool HandleEquipSlotTooltip(void* panel, int slotIdx, bool down) {
     if (!panel || slotIdx < 0) return false;
     if (!acc::off::Ok(kEquipPanelSlotItemIdsOffset)) return false;
     uint32_t handle = 0;
-    __try {
-        handle = *reinterpret_cast<uint32_t*>(
-            reinterpret_cast<unsigned char*>(panel) +
-            kEquipPanelSlotItemIdsOffset +
-            4u * static_cast<size_t>(slotIdx));
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
+    if (!acc::engine::TryReadU32(
+            panel, kEquipPanelSlotItemIdsOffset + 4u * static_cast<size_t>(slotIdx),
+            &handle)) {
         acclog::Write("Peek.EquipSlot",
                       "panel=%p slot_index=%d SEH reading slot id",
                       panel, slotIdx);

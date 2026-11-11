@@ -85,17 +85,9 @@ int GetObjectKind(void* gameObject) {
 }
 
 uint32_t GetObjectHandle(void* gameObject) {
-    if (!gameObject) return 0;
-    __try {
-        // CGameObject.id @+0x4 (per /KotOR Types/Other Classes/CGameObject
-        // size 0xc, members vtable@0x0 / id@0x4 / object_type@0x8). Same
-        // ulong namespace AreaObjectIterator yields and ResolveServerObjectHandle
-        // accepts.
-        return *reinterpret_cast<uint32_t*>(
-            reinterpret_cast<unsigned char*>(gameObject) + 0x4);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return 0;
-    }
+    // CGameObject.id (vtable @0x0, id @0x4, object_type @0x8): the handle
+    // AreaObjectIterator yields and ResolveServerObjectHandle accepts.
+    return ReadU32Or0(gameObject, 0x4);
 }
 
 // Engine sentinels shared by both resolve paths: 0 (uninitialised),

@@ -6,6 +6,7 @@
 
 #include "engine_game.h"
 #include "engine_addr.h"
+#include "engine_reads.h"
 #include "log.h"
 
 namespace acc::pazaak {
@@ -45,13 +46,6 @@ const uintptr_t kAddrHandlePlayHandCard = acc::addr::Pick(0x0067ede0, 0x0088F280
 const uintptr_t kAddrWagerHandleInput = acc::addr::Pick(0x0067e150, 0x00887B10); // CSWGuiWagerPopup::HandleInputEvent
 typedef void (__thiscall* PFN_WagerHandleInput)(void* popup, int code, int state);
 
-bool ReadPtrAt(void* base, size_t off, void** out) {
-    __try {
-        *out = *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(base) + off);
-        return true;
-    } __except (EXCEPTION_EXECUTE_HANDLER) { return false; }
-}
-
 }  // namespace
 
 // True for the one card whose FACE the player picks as well as its sign.
@@ -66,15 +60,8 @@ int FirstMainDeckIndex() { return acc::game::IsKotor2() ? 23 : 18; }
 bool IsMainDeckCard(int index) { return index >= FirstMainDeckIndex(); }
 
 // ---- SEH-guarded primitive reads -----------------------------------------
-void WriteIntAt(void* base, size_t off, int v) {
-    __try {
-        *reinterpret_cast<int*>(reinterpret_cast<unsigned char*>(base) + off) = v;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {}
-}
-
 void* GetModel(void* panel) {
-    void* m = nullptr;
-    return ReadPtrAt(panel, kPanelModelOffset, &m) ? m : nullptr;
+    return acc::engine::ReadPtrOrNull(panel, kPanelModelOffset);
 }
 
 int GetState(void* panel) {

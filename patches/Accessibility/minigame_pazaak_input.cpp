@@ -4,6 +4,7 @@
 #include "minigame_pazaak_internal.h"
 
 #include "engine_input.h"
+#include "engine_reads.h"
 #include "hotkeys.h"
 #include "log.h"
 #include "strings.h"
@@ -239,11 +240,11 @@ bool TryHandleInput(void* /*activePanel*/, int param_1, int param_2, int& rv) {
                 auto* card = reinterpret_cast<unsigned char*>(player) +
                              kPlayerHandOffset + (size_t)g_optSlot * kCardStride;
                 CardView c = ReadCard(player, kPlayerHandOffset, g_optSlot);
-                WriteIntAt(card, kCardFlipOffset, g_optSign);
+                acc::engine::TryWriteI32(card, kCardFlipOffset, g_optSign);
                 // The value card's face lives in the third dword — the same
                 // field the engine's own BTN_CHANGE writes.
                 if (IsValueChoiceCard(c.index)) {
-                    WriteIntAt(card, kCardValueOffset, g_optValue);
+                    acc::engine::TryWriteI32(card, kCardValueOffset, g_optValue);
                 }
                 int slot = g_optSlot;
                 CloseSignChooser();
