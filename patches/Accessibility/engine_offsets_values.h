@@ -76,3 +76,9 @@ constexpr int       kAbilitiesPanelCodeCycleTab       = 0x29;
 // OnEnterPower instead, which is silent and lands in one step.
 constexpr int       kAbilitiesPanelCodeChartUp        = 0x31;
 constexpr int       kAbilitiesPanelCodeChartDown      = 0x32;
+
+// The minigame object array has 255 slots, and CSWMiniGameObject's downcasts
+// are at these vtable byte offsets (kMgoArrayObjectsOffset has the witnesses).
+constexpr int    kMgoArraySlotCount    = 255;
+constexpr size_t kVtableSlotAsEnemy    = 0x1c;
+constexpr size_t kVtableSlotAsObstacle = 0x20;

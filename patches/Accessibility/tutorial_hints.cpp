@@ -18,13 +18,6 @@ namespace {
 
 using acc::strings::Id;
 
-// CSWGuiTutorialBox's tutorial.2da row (uint8): SetTutorialReason writes it
-// and SetNextMessage reads it back as the 2DA row; it outlives the build, so
-// a poll learns which popup this is in any language. K2 +0x9d8
-// (SetTutorialReason 0x00898f60 also zeroes the page counter at +0x9d9;
-// SetNextMessage 0x00899630 reads it for its "Message_PC%i" lookups).
-const size_t kTutorialBoxRowOffset = acc::off::Pick(0x994, 0x9d8);
-
 }  // namespace
 
 int ReadTutorialRow(void* panel) {

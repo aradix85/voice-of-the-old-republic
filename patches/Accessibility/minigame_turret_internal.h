@@ -28,52 +28,17 @@ using acc::minigame::ResolveMgoArray;
 using acc::minigame::CallAsCast;
 using acc::minigame::ReadFollowerPosition;
 
-// ============================================================================
-// Engine struct offsets (shared with minigame_swoop_race.cpp — see that file and
-// docs/llm-docs/re/swkotor.exe.h for the full CSWMiniGame walk). The KOTOR 2
-// witnesses for the CSWCArea / CSWMiniGame / CSWTrackFollower values are at
-// the matching declarations in minigame_swoop_race.cpp (same struct, same
-// fields); turret-only fields carry their own below.
-// ============================================================================
-const size_t kMiniGameVtableOffset     = acc::off::Same(0x00);
-const size_t kMiniGamePlayerOffset     = acc::off::Same(0x24);   // CSWMiniPlayer*
-const size_t kMiniGameEnemyCountOffset = acc::off::Same(0x30);
-const size_t kMiniGameTypeOffset       = acc::off::Same(0x80);   // 1=swoop, 2=turret
-                                                     // (CSWMiniGame::Load sets
-                                                     // type ONLY to 1 or 2)
-
-// ----- Approach-cue: MGO enemy-pool walk -----
+// CSWTrackFollower fields the turret reads for its diagnostics (a CSWMiniEnemy
+// is a single follower at offset 0): sphere_radius, the hitbox radius, so the
+// half-angle the gun must fall inside is atan(radius / dist); hp and max_hp,
+// where a drop in hp is a hit the engine scored this tick; and the
+// invulnerability timer below, nonzero while hits do not register.
 //
-// Same chain minigame_swoop_audio*.cpp walks:
-//   AppManager(*kAddrAppManagerPtr) +0x4 -> CClientExoApp +0x4 ->
-//   CClientExoAppInternal +0x0 -> CSWMiniGameObjectArray
-//   (+0x00 index, +0x04 objects[255]). vtable[0x1c] = AsEnemy.
-const size_t     kMgoArrayObjectsOffset        = acc::off::Same(0x4);
-constexpr int    kMgoArraySlotCount            = 255;
-constexpr size_t kVtableSlotAsEnemy            = 0x1c;
-// CSWTrackFollower model list (for world position via the model wrapper's
-// vtable[+0x64], mirroring CSWTrackFollower::GetPosition).
-// Combat fields on CSWTrackFollower (== CSWMiniEnemy, which is just a single
-// follower at offset 0; offsets confirmed against the explicit field9_0x88
-// and field17_0x144 markers in swkotor.exe.h). Diagnostics only:
-//   sphere_radius — hitbox radius, so the TRUE subtended half-angle the gun
-//                   must fall inside is atan(radius/dist), not a fixed 6°.
-//   hp/max_hp     — per-fighter health; an hp drop is a real engine-scored
-//                   hit this tick, the ground truth for the actual hit cone.
-//   invulnerability — i-frame timer; nonzero means hits won't register.
-//
-// KOTOR 2: all five sit BELOW the follower's script-CResRef array (K1 +0xa4,
-// the array that grew from ten to thirteen entries), so none of them moved.
-// sphere_radius / hp / max_hp / speed carry witnesses in
-// minigame_swoop_race.cpp. invulnerability (+0x9c, the live timer that K1's
-// GetIsInvulnerable @0x005CB440 tests) is bracketed by two witnessed
-// neighbours: speed +0x98 below it, and the invince PERIOD at +0xa0 above it,
+// The timer is at +0x9c in both games (the live timer that K1's
+// GetIsInvulnerable @0x005CB440 tests): it is bracketed by two witnessed
+// neighbours, speed +0x98 below it and the invince period +0xa0 above it,
 // which each game's setter writes at the same offset (K1 SetInvincibility
 // @0x0066C920, K2's "Invince_Period" setter @0x00835650). Log-only read.
-const size_t kFollowerSphereRadiusOffset = acc::off::Same(0x84);  // float
-const size_t kFollowerHpOffset           = acc::off::Same(0x8c);  // int
-const size_t kFollowerMaxHpOffset        = acc::off::Same(0x90);  // int
-const size_t kFollowerSpeedOffset        = acc::off::Same(0x98);  // float (engine speed)
 const size_t kFollowerInvulnOffset       = acc::off::Same(0x9c);  // float
 
 // ----- Range model (calibrated on KOTOR 1, scaled per area) -----

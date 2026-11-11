@@ -3,12 +3,13 @@
 #include <windows.h>
 #include <cstring>
 
-#include "engine_app.h"      // GetServerApp — SetPauseState `this`
-#include "engine_panels.h"   // ResolveGuiInGame, IdentifyPanel, PanelKind
-#include "log.h"
 #include "engine_addr.h"
-#include "engine_offsets_select.h"
-#include "engine_game.h"     // IsKotor2 — SetSoundMode signature split
+#include "engine_app.h"      // GetServerApp
+#include "engine_game.h"     // IsKotor2
+#include "engine_offsets.h"
+#include "engine_panels.h"   // ResolveGuiInGame, IdentifyPanel, PanelKind
+#include "engine_subscreen.h"  // SetMenuPauseBit, ResumeSoundMixer
+#include "log.h"
 
 namespace acc::tutorial_popup {
 
@@ -58,11 +59,6 @@ const uintptr_t kAddrSetTutorialReason = acc::addr::Pick(0x006aa900, 0x00898f60)
 // witness as engine_panels' slot table (creator 0x007be4c0 stores the
 // CSWGuiTutorialBox ctor 0x00898ca0 result there).
 const size_t kGuiTutorialBoxOffset = acc::off::Pick(0xa0, 0xb0);
-// CSWGuiTutorialBox source-row byte @+0x994 (we set it to our reason so the
-// fingerprint's row lookup lands on an unmapped row; the synthetic flag wins
-// regardless, but keeps things tidy). KOTOR 2: +0x9d8 (SetTutorialReason
-// writes it, SetNextMessage 0x00899630 reads it back — see tutorial_hints).
-const size_t kTutorialBoxRowOffset = acc::off::Pick(0x994, 0x9d8);
 // Tutorial once-shown bitfield: byte at CGuiInGame + base + (reason>>3),
 // bit (reason & 7). Clear before mounting so it fires every time.
 // KOTOR 1 base 0xba8; KOTOR 2 base 0xf88 (bit test 0x007cfa10 reads
@@ -77,20 +73,6 @@ const size_t kShownBitsBase = acc::off::Pick(0xba8, 0xf88);
 // we own the box, so the row-keyed hint never fires for our synthetic popups.
 constexpr int kSyntheticReason = 0x2a;
 
-// ---- Pause (mirrors engine_subscreen; kept self-contained here — keep
-// the three values in sync with engine_subscreen.cpp's copies) ----
-using PFN_SetPauseState =
-    void(__thiscall*)(void* server, int source_bit, unsigned long on_off);
-const uintptr_t kAddrSetPauseState = acc::addr::Pick(0x004ae9a0, 0x0051C760);
-// CAUTION: signatures differ per game — K1 internal takes (mode), K2's
-// facade takes (mode, flag) with flag 0. See engine_subscreen for the
-// witnesses.
-using PFN_SetSoundMode = void(__thiscall*)(void* self, int mode);
-using PFN_SetSoundModeK2 = void(__thiscall*)(void* self, int mode, int flag);
-const uintptr_t kAddrSetSoundMode = acc::addr::Pick(0x005d5e80, 0x0070BC60);
-const uintptr_t kAddrExoSoundPtr    = acc::addr::PickGlobal(0x007a39ec, 0x00A1B494);
-constexpr unsigned char kPauseBitMenu   = 0x02;
-
 // ---- State ----
 // Trask often delivers several rewritten tutorial lines back-to-back before a
 // reply break; accumulate their hints (newline-joined) so the popup carries all
@@ -104,30 +86,14 @@ char        s_activeHintBuf[4096] = {0}; // the combined hint spoken while activ
 const char* s_activeHint    = nullptr;   // -> s_activeHintBuf while active
 bool        s_paused        = false;     // we issued the pause
 
+
 void SetPause(bool on) {
-    void* server = acc::engine::GetServerApp();
-    if (!server) return;
-    __try {
-        reinterpret_cast<PFN_SetPauseState>(kAddrSetPauseState)(
-            server, kPauseBitMenu, on ? 1u : 0u);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        acclog::Write("TutorialPopup", "SEH in SetPause(%d)", on ? 1 : 0);
+    if (!acc::engine::GetServerApp()) return;
+    if (!acc::engine::SetMenuPauseBit(on)) {
+        acclog::Write("TutorialPopup", "SetPause(%d) failed", on ? 1 : 0);
     }
-    if (!on) {
-        // Audio resync on unpause (un-mute the mixer), same as the modal-close path.
-        __try {
-            void* exo = *reinterpret_cast<void**>(kAddrExoSoundPtr);
-            if (exo) {
-                if (acc::game::IsKotor2()) {
-                    reinterpret_cast<PFN_SetSoundModeK2>(kAddrSetSoundMode)(exo, 0, 0);
-                } else {
-                    reinterpret_cast<PFN_SetSoundMode>(kAddrSetSoundMode)(exo, 0);
-                }
-            }
-        } __except (EXCEPTION_EXECUTE_HANDLER) {
-            acclog::Write("TutorialPopup", "SEH in SetSoundMode(0)");
-        }
-    }
+    // Un-mute the mixer on unpause, as the modal-close path does.
+    if (!on) acc::engine::ResumeSoundMixer();
 }
 
 // Is a TutorialBox panel currently in the GUI manager's stack?

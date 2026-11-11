@@ -2322,3 +2322,187 @@ const size_t    kPartySelectionPanelAcceptButtonOffset  = acc::off::Pick(0x38b8,
 // button is invisible on screen yet still sits in panel.controls[] for the
 // chain to find.
 const size_t    kMainMenuWarpButtonOffset = acc::off::Pick(0x1248, 0x5c90);
+
+// ---------------------------------------------------------------------------
+// Minigames (swoop race, turret): the area's minigame, CSWMiniGame, the object
+// array, CSWTrackFollower and CSWMiniPlayer.
+// ---------------------------------------------------------------------------
+
+// CSWCArea.mini_game (swkotor.exe.h line 8726, after rooms at +0x260).
+//
+// KOTOR 2 = +0x268, witnessed as a write: the K2 area's minigame-load path
+// @0x007A2FB0 allocates 0x11c bytes, runs the CSWMiniGame ctor @0x00839260 on
+// it and stores the result with `mov [ecx+0x268], edx`; the reader at
+// 0x007AA940 loads the same slot. The +4 shift matches the map-pin array's
+// (kClientAreaMapPinsOffset, 0x1c4 -> 0x1c8): CSWCArea gained one dword low
+// down and everything above moved together. The same delta shows at the tail
+// of the CSWMiniGame ctor, which takes the area's resref from area+0x110 on K2
+// where KOTOR 1 takes it from +0x10c.
+const size_t kClientAreaMiniGameOffset = acc::off::Pick(0x264, 0x268);
+
+// CSWMiniGame (swkotor.exe.h line 9309). Type and counts confirmed by name;
+// the obstacle list at +0x44 / +0x48 verified live.
+//
+// KOTOR 2: CSWMiniGame is UNCHANGED through +0xec and merely grows a tail
+// (0xf0 -> 0x11c: a unit Vector, the swoopupgrade.2da handle, and six per-level
+// upgrade rows — K2's swoop-bike upgrades). Every field below is therefore
+// Same(), each with its own witness in the K2 twins:
+//   * ctor @0x00839260 — area at +0x28 (its only argument), player +0x24 nulled,
+//     near/far clip 0.1f/100.0f at +0x68/+0x6c, view angle 65.0f at +0x70, and
+//     five CExoArrayList triples constructed at +0x2c / +0x38 / +0x44 / +0x50 /
+//     +0x5c, exactly the five KOTOR 1 zeroes inline (so the enemy id list stays
+//     at +0x2c with its count at +0x30, and the obstacle list at +0x44 / +0x48);
+//   * Load @0x0083db30 — branches on `[this+0x80] == 1` (swoop) vs `== 2`
+//     (turret) to pick the MovementPerSec default, writes UseInertia/DoBumping
+//     at +0x94/+0x95 and negates AxisX/AxisY at +0x84/+0x88;
+//   * the streaming sound source at +0x1c.
+const size_t kMiniGameVtableOffset          = acc::off::Same(0x00);  // pointer
+const size_t kMiniGamePlayerOffset          = acc::off::Same(0x24);
+const size_t kMiniGameEnemyCountOffset      = acc::off::Same(0x30);
+const size_t kMiniGameObstacleDataOffset    = acc::off::Same(0x44);  // CSWMiniGameObject**
+const size_t kMiniGameObstacleCountOffset   = acc::off::Same(0x48);
+// 1 = swoop, 2 = turret; CSWMiniGame::Load sets no other value.
+const size_t kMiniGameTypeOffset            = acc::off::Same(0x80);
+
+// ----- Global minigame-object-array layout.
+//
+// From decompiling
+// CSWVirtualMachineCommands::ExecuteCommandSWMG_GetFollowerPosition
+// @0x5cc280 + CSWMiniGameObjectArray::GetMiniGameObject @0x66bf30:
+//
+//   AppManager (*0x7a39fc) +0x4
+//     -> CClientExoApp +0x4
+//       -> CClientExoAppInternal +0x0
+//         -> CSWMiniGameObjectArray (255 ptr slots, handle-indexed)
+//             +0x00  ulong index (next-free hint)
+//             +0x04  CSWMiniGameObject *objects[255]
+//
+// Each slot is a CSWMiniGameObject* (or null). To classify by type we
+// invoke the vtable slot:
+//     vtable[0x14] = AsFollower
+//     vtable[0x18] = AsPlayer
+//     vtable[0x1c] = AsEnemy
+//     vtable[0x20] = AsObstacle
+// Each returns the same `this` pointer downcast to the requested
+// concrete subclass, or null if it isn't that type. So enumerating
+// "all obstacles" = walk 255 slots, call vtable[0x20] thiscall on each
+// non-null slot, keep the non-null returns. Two such passes per tick: one
+// for obstacles (rocks/debris), one for enemies (accelerator pads, K2 mines).
+//
+// KOTOR 2: identical, and so is the 255. Three independent witnesses in its own
+// code — CSWMiniGameObject's ctor @0x00833000 registers itself with
+// `array[4 + mgo_index*4] = this`; the by-name lookup @0x00832eb0 walks
+// `[array + i*4 + 4]` under `cmp i, 0xff / jge`; and the AsEnemy-filtered getter
+// @0x00832e20 indexes the same way. The four downcast slots are unchanged too —
+// the vtable-slot map pairs all six minigame classes with EXACT slot counts, and
+// slots 5/6/7/8 (= +0x14/+0x18/+0x1c/+0x20) are self_return on precisely
+// CSWTrackFollower / CSWMiniPlayer / CSWMiniEnemy / CSWMGObstacle respectively,
+// return_zero everywhere else — the same fingerprint as KOTOR 1's.
+const size_t kMgoArrayObjectsOffset         = acc::off::Same(0x4);
+
+// CSWTrackFollower (line 15028) — base of CSWMiniPlayer. The byte-by-byte
+// walk lines up with the swkotor.exe.h definition:
+//   +0x00..0x5f  CSWMiniGameObject (60 bytes)
+//   +0x60        mini_game ptr
+//   +0x68..0x73  CExoArrayList models
+//   +0x80        looping
+//   +0x98        speed (float)
+//
+// KOTOR 2: unmoved. `speed` sits BELOW the script-CResRef array that grew from
+// ten entries to thirteen (see kMiniPlayerOffsetVectorOffset), so it is one of the fields the
+// +0x30 shift does not reach — its ctor twin @0x00833ba0 writes the same 100.0f
+// default to dword index 0x26 = +0x98.
+const size_t kFollowerSpeedOffset           = acc::off::Same(0x98);
+// hp / max_hp sit just below speed (swkotor.exe.h: looping +0x80,
+// sphere_radius +0x84, +0x88, hp +0x8c, max_hp +0x90, bump_damage +0x94,
+// speed +0x98; SetHitPoints @0x0066c900 / SetMaxHitPoints @0x0066c950 write
+// them). Below the script array on KOTOR 2 too — a live K2 read gives
+// 600 / 600 there, the .are's Hit_Points / Max_HPs for the Citadel bike.
+const size_t kFollowerHpOffset              = acc::off::Same(0x8c);
+const size_t kFollowerMaxHpOffset           = acc::off::Same(0x90);
+
+// CSWTrackFollower combat/physics scalars (the turret reads sphere_radius at
+// the same offset). sphere_radius is the
+// engine's real hit primitive: the accelpad hit test is a swept sphere-vs-sphere
+// at player.sphere_radius + pad.sphere_radius (swoop-accelpad-hit-model.md), so
+// we read BOTH live and sum them for the CROSS scoring rather than hard-coding a
+// per-track literal. speed gates the steering magnet off during the start hold.
+// Both Same() on KOTOR 2 — they sit below the script-CResRef array that grew
+// there, so the +0x30 shift the CSWMiniPlayer fields take does not reach them.
+// sphere_radius has a direct witness: K2's SetSphereRadius @0x008352b0, reached
+// from CSWTrackFollower::Load's "Sphere_Radius" read, writes [this+0x84].
+const size_t kFollowerSphereRadiusOffset    = acc::off::Same(0x84);  // float
+
+// CSWMiniPlayer.offset — the per-tick-integrated aim/lane field. minigame_aim.h has the
+// per-game interpretation of its components.
+//
+// KOTOR 2 = +0x1f4, i.e. KOTOR 1 + 0x30. That delta is CSWTrackFollower's, not
+// CSWMiniPlayer's: K2's follower carries THIRTEEN per-object script CResRefs
+// instead of ten (its .are Scripts struct gained OnAccelerate / OnBrake /
+// OnHitWorld — the swoop jump), so the base class grew by 3 * 0x10 and every
+// CSWMiniPlayer field above it shifted by exactly that. Anchored at both ends:
+// the follower's own sphere_radius (+0x84) and speed (+0x98) are UNMOVED (they
+// sit below the script array), while min/max speed are +0x30 up, witnessed
+// directly in K2's SetMinSpeed/SetMaxSpeed (@0x00838240 / @0x00838290 write
+// +0x208 / +0x20c). `offset` is the first Vector its constructor zeroes, at
+// dword index 0x7d = +0x1f4.
+const size_t kMiniPlayerOffsetVectorOffset = acc::off::Pick(0x1c4, 0x1f4);
+
+// KOTOR 2 ONLY — the swoop bike's vertical (jump) velocity. It lives in the
+// CSWMiniGame tail that KOTOR 1 does not have (K1's struct ends at 0xf0), not
+// in the player. Witnessed in K2's CSWMiniPlayer::Control twin @0x00837960:
+//   if (mini_game->type == 1) {            // swoop only
+//       v = mini_game->+0x118;
+//       offset_delta.z += v * dt;           // integrates into offset.z (+0x1fc)
+//       mini_game->+0x118 = v - dt * 45.8f; // gravity, units/s²
+//   }
+// followed by KeepInTunnel, whose +Z bound the track scripts set to 10 (the
+// onaccelerate gear-0 branch: SWMG_SetPlayerTunnelPos z=10). The only script
+// writer is onjump.ncs — bound to the follower's OnBrake slot on all three K2
+// tracks — which calls SWMG_SetJumpSpeed(30) unless the bike is already above
+// z=2. 30 u/s against 45.8 u/s² gives a 1.3 s hop peaking at ~9.8 units, i.e.
+// exactly under the tunnel ceiling. Read only on KOTOR 2 (Kotor2Only poisons
+// the K1 side, and the consumers are IsKotor2()-gated as well).
+const size_t kMiniGameJumpVelocityOffset    = acc::off::Kotor2Only(0x118);
+
+// ---------------------------------------------------------------------------
+// CSWGuiInterfaceAction: one entry of an action list (the personal columns
+// of the main interface, the rows of the target action menu, the descriptors
+// GetDefaultActions writes). The same positions in both games, witnessed
+// across the K2 GetDefaultActions writes and both Do*Action bodies. The
+// stride grew 0x38 -> 0x3c (`idx * 0x3c` in both K2 Do*Action bodies): one
+// dword past +0x30, at the tail, which moves none of these fields.
+// ---------------------------------------------------------------------------
+const size_t kIfActionLabelOffset   = acc::off::Same(0x00);  // CExoString, +0..+7
+const size_t kIfActionIdOffset      = acc::off::Same(0x08);  // ulong
+// The entry's handler, a pointer-to-member. The first dword is enough: the
+// engine's own null test in DoPersonalAction reads exactly this dword.
+const size_t kIfActionHandlerOffset = acc::off::Same(0x0c);
+// The object the action is for: the target of a target action, and for a
+// personal action its owning creature (the appender writes the creature's own
+// id here for every personal item entry). It is what the dispatch resolves,
+// and on K2 bails on in silence when the resolve fails.
+const size_t kIfActionTargetOffset  = acc::off::Same(0x1c);  // ulong
+const size_t kIfActionIconOffset    = acc::off::Same(0x20);  // CResRef, 16 bytes
+// Flag word, tested by DoPersonalAction before it dispatches (K1 decompile of
+// 0x0068ad60; K2 listing at 0x007518ca: `mov eax,[edx+0x30] / and eax,1 /
+// je <refusal>`, then the null test on the handler). Bit 0 = "this entry can
+// be used right now"; bits 1..4 are a reason code, 1..6, for the engine's six
+// refusal strings.
+const size_t kIfActionFlagsOffset   = acc::off::Same(0x30);
+const size_t kIfActionStride        = acc::off::Pick(0x38, 0x3c);
+
+// CSWCCreature's combat-mode word (field200_0x440), set by
+// CSWCCreature::SetCombatMode @0x00610a10 and kept for every party member
+// each tick. Bit 0 is the replace-or-append knob that both action dispatchers
+// (DoPersonalAction, DoTargetAction) branch on. K2 0x458, witnessed twice in
+// the K2 DoTargetAction twin 0x007445D0, which tests
+// `[clientCreature+0x458] & 1` exactly where K1 tests 0x440.
+const size_t kCSWCCreatureCombatModeOffset = acc::off::Pick(0x440, 0x458);
+
+// CSWGuiTutorialBox's tutorial.2da row (uint8): SetTutorialReason writes it
+// and SetNextMessage reads it back as the 2DA row, so a poll learns which
+// popup this is in any language. K2 +0x9d8 (SetTutorialReason 0x00898f60 also
+// zeroes the page counter at +0x9d9; SetNextMessage 0x00899630 reads it for
+// its "Message_PC%i" lookups).
+const size_t kTutorialBoxRowOffset = acc::off::Pick(0x994, 0x9d8);

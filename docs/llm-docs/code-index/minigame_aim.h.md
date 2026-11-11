@@ -1,4 +1,4 @@
-# minigame_aim.h (180 lines)
+# minigame_aim.h (153 lines)
 
 Source: `patches/Accessibility/minigame_aim.h`
 
@@ -10,17 +10,17 @@ What is shared (here): the offset read/write primitives and the magnetism curve 
 
 ## Declarations (in source order)
 
-- L60 `void* ReadAreaMiniGame()`: CSWCArea.mini_game of the player's area, or nullptr.
-- L73 `void* ResolveMgoArray()`: Returns the minigame object array, or nullptr if any link of the chain is null or faults (i.e.
-- L77 `void* CallAsCast(void* obj, size_t vtableSlotOffset)`: Call a vtable AsSWCxxx-style downcast at `vtableSlotOffset` on `obj`.
-- L99 `bool ReadFollowerPosition(void* follower, Vector& out)`: World position of `follower`'s first model.
-- L104 `void* ReadFollowerModelGob(void* follower)`: `follower`'s first model object — a Gob (render object), the same class the obstacles' CAurObject slot points at, so the Gob accessors below apply to it (GetModelName tells a K2 accelerator pad from a mine).
-- L128 `bool ReadGobBoundingBox(void* gob, Vector& mn, Vector& mx)`: Model-local bounding box of a Gob (whole model).
-- L131 `bool ReadGobPartBoundingBox(void* gob, const char* partName, Vector& mn, Vector& mx)`: Model-local bounding box of one named part of a Gob.
-- L152 `bool ReadOffsetVector(void* player, Vector& out)`: Read / write the whole offset Vector on a CSWMiniPlayer `player` pointer.
-- L153 `void WriteOffsetVector(void* player, const Vector& v)`
-- L161 `struct MagnetParams`: ---- Console-style sticky magnetism (the "less invasive" assist) ----------- A proximity-ramped pull on one offset axis: gentle far from the target (a guide you can steer straight through to pick a different target) a...
-- L169 `float MagnetGain(float t, const MagnetParams& p)`: Proximity-ramped gain.
-- L176 `float MagnetStep(float offsetVal, float mappedErr, float gain, const MagnetParams& p)`: One tick of magnetism on a single axis.
+- L48 `void* ReadAreaMiniGame()`: CSWCArea.mini_game of the player's area, or nullptr.
+- L61 `void* ResolveMgoArray()`: Returns the minigame object array, or nullptr if any link of the chain is null or faults (i.e.
+- L65 `void* CallAsCast(void* obj, size_t vtableSlotOffset)`: Call a vtable AsSWCxxx-style downcast at `vtableSlotOffset` on `obj`.
+- L87 `bool ReadFollowerPosition(void* follower, Vector& out)`: World position of `follower`'s first model.
+- L92 `void* ReadFollowerModelGob(void* follower)`: `follower`'s first model object — a Gob (render object), the same class the obstacles' CAurObject slot points at, so the Gob accessors below apply to it (GetModelName tells a K2 accelerator pad from a mine).
+- L116 `bool ReadGobBoundingBox(void* gob, Vector& mn, Vector& mx)`: Model-local bounding box of a Gob (whole model).
+- L119 `bool ReadGobPartBoundingBox(void* gob, const char* partName, Vector& mn, Vector& mx)`: Model-local bounding box of one named part of a Gob.
+- L125 `bool ReadOffsetVector(void* player, Vector& out)`: Read / write the whole offset Vector on a CSWMiniPlayer `player` pointer.
+- L126 `void WriteOffsetVector(void* player, const Vector& v)`
+- L134 `struct MagnetParams`: ---- Console-style sticky magnetism (the "less invasive" assist) ----------- A proximity-ramped pull on one offset axis: gentle far from the target (a guide you can steer straight through to pick a different target) a...
+- L142 `float MagnetGain(float t, const MagnetParams& p)`: Proximity-ramped gain.
+- L149 `float MagnetStep(float offsetVal, float mappedErr, float gain, const MagnetParams& p)`: One tick of magnetism on a single axis.
 
-Also 12 constants or variables at namespace scope.
+Also 10 constants or variables at namespace scope.

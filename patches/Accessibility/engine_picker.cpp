@@ -41,14 +41,6 @@ const size_t kInternalHoverTargetOffset         = acc::off::Pick(0x4a4, 0x4b0);
 const size_t kInternalDescriptorArrayOffset     = acc::off::Pick(0x4c8, 0x4cc);
 const size_t kInternalDescriptorCountOffset     = acc::off::Pick(0x4cc, 0x4d0);
 
-// CSWGuiInterfaceAction fields (the writes in GetDefaultActions; struct in
-// swkotor.exe.h). Same positions in KOTOR 2, witnessed across its
-// GetDefaultActions writes and both Do*Action bodies. The stride (0x38,
-// K2 0x3c) and the fn pointer at +0x0c are not needed here.
-const size_t kInterfaceActionLabelOffset  = acc::off::Same(0x00);  // CExoString
-const size_t kInterfaceActionIdOffset     = acc::off::Same(0x08);  // ulong
-const size_t kInterfaceActionTargetOffset = acc::off::Same(0x1c);  // ulong
-const size_t kInterfaceActionIconOffset   = acc::off::Same(0x20);  // CResRef
 constexpr size_t kResRefMaxLen = 16;
 
 // K2 GetDefaultActions was found by its icon-resref string xrefs (the only
@@ -58,7 +50,6 @@ constexpr size_t kResRefMaxLen = 16;
 // before GetDefaultActions as in KOTOR 1.
 const uintptr_t kAddrGetDefaultActions = acc::addr::Pick(0x00620620, 0x007B40F0);
 const uintptr_t kAddrHandleMouseClickInWorld = acc::addr::Pick(0x00620350, 0x007B3CA0);
-const uintptr_t kAddrSetMainInterfaceTarget = acc::addr::Pick(0x0062b000, 0x007CE710);
 // CSWGuiMainInterface::PopulateMenus builds the radial action menu;
 // HandleMouseClickInWorld calls it on the first click on a target.
 const uintptr_t kAddrPopulateMenus = acc::addr::Pick(0x00689d80, 0x0074CFE0);
@@ -149,13 +140,13 @@ void SnapshotDescriptor(void* internal, ActionSnapshot* snap) {
     snap->count = static_cast<int>(count);
     if (!action || snap->count <= 0) return;
 
-    TryReadU32(action, kInterfaceActionIdOffset, &snap->action_id);
-    TryReadU32(action, kInterfaceActionTargetOffset, &snap->target_id);
+    TryReadU32(action, kIfActionIdOffset, &snap->action_id);
+    TryReadU32(action, kIfActionTargetOffset, &snap->target_id);
     void* label = nullptr;
-    TryReadPtr(action, kInterfaceActionLabelOffset, &label);
+    TryReadPtr(action, kIfActionLabelOffset, &label);
     CopyCString(static_cast<const char*>(label), sizeof(snap->label), snap->label,
                 sizeof(snap->label));
-    CopyCString(static_cast<const char*>(action) + kInterfaceActionIconOffset,
+    CopyCString(static_cast<const char*>(action) + kIfActionIconOffset,
                 kResRefMaxLen, snap->icon, sizeof(snap->icon));
     snap->valid = true;
 }

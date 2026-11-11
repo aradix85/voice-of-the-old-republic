@@ -78,6 +78,21 @@ void CallSetSoundMode(void* exoSound, int mode) {
     }
 }
 
+// `own` marks the call as the mod's, so that OnSetPauseState, which fires
+// inside it, stays silent.
+bool CallSetPauseState(void* server, bool on, bool own) {
+    __try {
+        g_inOwnPauseCall = own;
+        reinterpret_cast<PFN_SetPauseState>(kAddrSetPauseState)(
+            server, kPauseBitManualOrMenu, on ? 1u : 0u);
+        g_inOwnPauseCall = false;
+        return true;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        g_inOwnPauseCall = false;
+        return false;
+    }
+}
+
 // The modal-stack size and whether a sub-screen is up; false on a fault.
 bool ReadUiState(int* modalSize, bool* hasSubScreen) {
     *modalSize = 0;
@@ -102,29 +117,14 @@ void DispatchUnpauseCleanup(const char* trigger) {
     if (!GetAppManager()) {
         acclog::Write("PauseToggle", "SetPauseState skipped: AppManager NULL");
     } else if (void* server = GetServerApp()) {
-        __try {
-            g_inOwnPauseCall = true;   // OnSetPauseState fires inside this call
-            reinterpret_cast<PFN_SetPauseState>(kAddrSetPauseState)(
-                server, kPauseBitManualOrMenu, 0);
-            g_inOwnPauseCall = false;
-        } __except (EXCEPTION_EXECUTE_HANDLER) {
+        if (!CallSetPauseState(server, false, /*own=*/true)) {
             acclog::Write("PauseToggle", "fault in SetPauseState");
         }
     } else {
         acclog::Write("PauseToggle", "SetPauseState skipped: server NULL");
     }
 
-    void* exoSound = nullptr;
-    TryReadPtr(reinterpret_cast<void*>(kAddrExoSoundPtr), 0, &exoSound);
-    if (!exoSound) {
-        acclog::Write("PauseToggle", "SetSoundMode skipped: ExoSound NULL");
-        return;
-    }
-    __try {
-        CallSetSoundMode(exoSound, 0);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        acclog::Write("PauseToggle", "fault in SetSoundMode");
-    }
+    ResumeSoundMixer();
 }
 
 // The client app for SetPausedByCombat, or nullptr (logged with `what`). An
@@ -168,6 +168,25 @@ void DispatchOverlayPause(const char* trigger, int paused) {
 }
 
 }  // namespace
+
+bool SetMenuPauseBit(bool on) {
+    void* server = GetServerApp();
+    return server && CallSetPauseState(server, on, /*own=*/false);
+}
+
+void ResumeSoundMixer() {
+    void* exoSound = nullptr;
+    TryReadPtr(reinterpret_cast<void*>(kAddrExoSoundPtr), 0, &exoSound);
+    if (!exoSound) {
+        acclog::Write("PauseToggle", "SetSoundMode skipped: ExoSound NULL");
+        return;
+    }
+    __try {
+        CallSetSoundMode(exoSound, 0);
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        acclog::Write("PauseToggle", "fault in SetSoundMode");
+    }
+}
 
 // The mod's in-world menus have no engine panel, so the engine never pauses
 // for them; these give them a native sub-screen's freeze through the pause

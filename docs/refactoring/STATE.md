@@ -448,12 +448,28 @@ prefix (menus_listbox_picker.cpp).
   acc::off::IsAt for the control embedded at an offset, and
   acc::engine::ResolveItemFromRow. ReadRowText stays three functions:
   they read different row shapes.
-  Found on the way: engine constants defined in more than one file, 21
-  names (the minigame headers mirror each other's struct offsets, the
-  tutorial popup repeats the pause addresses of engine_subscreen and its
-  pause code, kAddrSetMainInterfaceTarget, kCSWCCreatureCombatModeOffset
-  three times, the kIfAction* offsets, kTutorialBoxRowOffset). Next: one
-  definition each, and a check for it in tools/analysis.
+- One definition per engine constant. 21 addresses and offsets were
+  written down in two or three files ("mirrors the declarations in ...,
+  keep in sync"): the minigame headers repeated each other's struct
+  offsets, CSWGuiInterfaceAction was described three times under two
+  naming schemes (kIfAction*, kInterfaceAction*), the tutorial popup had
+  a copy of engine_subscreen's pause addresses and pause code,
+  kCSWCCreatureCombatModeOffset stood in three places. Each is in the
+  catalog headers once now (engine_offsets_fields.h, _addresses.h,
+  _values.h), with the comments of the copies merged; the tutorial popup
+  pauses through engine_subscreen (SetMenuPauseBit, ResumeSoundMixer).
+  tools/analysis/engine_constants.py checks it (exit 1 on a constant
+  defined twice): run it with the other checks after every commit. Its
+  --all mode lists plain constants that share a name across files, for
+  review; what it shows that is a real duplicate: kRadToDeg (3 files) and
+  kDegToRad (2), kSectorSize and kHalfSector (camera_announce repeats
+  engine_compass: F12), kNoStrref (3), kSkillSecurity (2),
+  kExitDebounceTicks (swoop, turret).
+  In-game check: the tutorial popups in the Endar Spire (the game pauses
+  while one is up and resumes after), a swoop race and the turret game.
+  minigame_aim.h holds more than aim now (the object array, the area's
+  minigame, follower positions): a split into the engine side and the
+  aim assist would be a move-only commit.
 - F6 done as far as it is a duplicate: the physical-key read
   `(GetAsyncKeyState(vk) & 0x8000) != 0` was written out in nine files
   and is acc::hotkeys::KeyDown now. The polls themselves differ on

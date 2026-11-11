@@ -53,7 +53,7 @@ const size_t kAllCardsOff    = acc::off::Pick(0x1A4,  0x1B0);   // all_cards[N] 
 const size_t kSidedeckGuiOff = acc::off::Pick(0x501C, 0x6D50);  // sidedeck_gui[10] (gui stride)
 const size_t kCardCountsOff  = acc::off::Pick(0x755C, 0x94E0);  // int card_counts[N]
 const size_t kSidedeckOff    = acc::off::Pick(0x75A4, 0x9540);  // CPazaakCard sidedeck[10]
-const size_t kCardStride     = acc::off::Pick(0x31C,  0x334);   // CSWGuiPazaakCard control
+const size_t kCardWidgetStride     = acc::off::Pick(0x31C,  0x334);   // CSWGuiPazaakCard control
 const size_t kModelCardStride = acc::off::Pick(0x8,   0xC);     // CPazaakCard
 constexpr int    kNumSlots = 10;
 
@@ -85,15 +85,17 @@ bool Classify(void* panel, void* control, bool& outAvailable, int& outIdx) {
     auto* base = reinterpret_cast<unsigned char*>(panel);
     auto* c    = reinterpret_cast<unsigned char*>(control);
     ptrdiff_t a = c - (base + kAllCardsOff);
-    if (a >= 0 && static_cast<size_t>(a) < static_cast<size_t>(NumTypes()) * kCardStride &&
-        a % static_cast<ptrdiff_t>(kCardStride) == 0) {
-        outAvailable = true; outIdx = static_cast<int>(a / static_cast<ptrdiff_t>(kCardStride));
+    if (a >= 0 && static_cast<size_t>(a) < static_cast<size_t>(NumTypes()) * kCardWidgetStride &&
+        a % static_cast<ptrdiff_t>(kCardWidgetStride) == 0) {
+        outAvailable = true;
+        outIdx = static_cast<int>(a / static_cast<ptrdiff_t>(kCardWidgetStride));
         return true;
     }
     ptrdiff_t s = c - (base + kSidedeckGuiOff);
-    if (s >= 0 && static_cast<size_t>(s) < static_cast<size_t>(kNumSlots) * kCardStride &&
-        s % static_cast<ptrdiff_t>(kCardStride) == 0) {
-        outAvailable = false; outIdx = static_cast<int>(s / static_cast<ptrdiff_t>(kCardStride));
+    if (s >= 0 && static_cast<size_t>(s) < static_cast<size_t>(kNumSlots) * kCardWidgetStride &&
+        s % static_cast<ptrdiff_t>(kCardWidgetStride) == 0) {
+        outAvailable = false;
+        outIdx = static_cast<int>(s / static_cast<ptrdiff_t>(kCardWidgetStride));
         return true;
     }
     return false;

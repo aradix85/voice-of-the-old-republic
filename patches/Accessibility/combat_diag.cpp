@@ -17,13 +17,6 @@ namespace acc::combat_diag {
 
 namespace {
 
-// CSWCCreature combat-mode bit (set by CSWCCreature::SetCombatMode @0x00610a10).
-// Bit 0 of field200_0x440 is the chain/overwrite knob DoPersonalAction +
-// DoTargetAction branch on.
-// K2 0x458 — witnessed twice in the K2 DoTargetAction twin 0x007445D0,
-// which tests `[clientCreature+0x458] & 1` exactly where K1 tests 0x440.
-const size_t kCSWCCreatureCombatModeOffset = acc::off::Pick(0x440, 0x458);
-
 // Engine accessors used by DoPersonalAction's chain branch.
 // GetAutoPaused: K2 facade 0x00740960 is K1's inlined body byte for byte
 // ([internal+0x384] & 1) and shows up in the K2 DoPersonalAction call

@@ -1034,3 +1034,13 @@ const uintptr_t kAddrRulesGlobal              = acc::addr::PickGlobal(0x007a3a28
 // kAddrGetSimpleString above.
 // KOTOR 2 value from the seeded kotor2_steam_aspyr.db (TLK_TABLE_PTR).
 const uintptr_t kAddrTlkTablePtr     = acc::addr::PickGlobal(0x007a3a08, 0x00A1B4B0);
+
+// CGuiInGame::SetMainInterfaceTarget: a thin forwarder to
+// CSWGuiMainInterface::SetTarget, which stores the target (field1_0x64) and
+// resets the refresh-hint float (field21_0x5cb0). It cleans TWO dwords off the
+// stack (ret 8) although the decompiler shows one parameter: the typedef needs
+// a second, unused dword, or the call corrupts the caller's frame. K2 twin
+// byte-verified: guards CGuiInGame+0x98 (the MainInterface slot), forwards both
+// dwords to CSWGuiMainInterface::SetTarget 0x0074CFB0 (target +0x68, hint
+// +0x595c), ret 8.
+const uintptr_t kAddrSetMainInterfaceTarget = acc::addr::Pick(0x0062b000, 0x007CE710);

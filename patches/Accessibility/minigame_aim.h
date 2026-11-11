@@ -42,18 +42,6 @@ using acc::engine::ReadPtrOrNull;
 using acc::engine::ReadU32Or0;
 using acc::engine::TryReadVector;
 
-// CSWCArea.mini_game (swkotor.exe.h line 8726, after rooms at +0x260).
-//
-// KOTOR 2 = +0x268, witnessed as a write: the K2 area's minigame-load path
-// @0x007A2FB0 allocates 0x11c bytes, runs the CSWMiniGame ctor @0x00839260 on
-// it and stores the result with `mov [ecx+0x268], edx`; the reader at
-// 0x007AA940 loads the same slot. The +4 shift matches the map-pin array's
-// (kClientAreaMapPinsOffset, 0x1c4 -> 0x1c8): CSWCArea gained one dword low
-// down and everything above moved together. The same delta shows at the tail
-// of the CSWMiniGame ctor, which takes the area's resref from area+0x110 on K2
-// where KOTOR 1 takes it from +0x10c.
-const size_t kClientAreaMiniGameOffset = acc::off::Pick(0x264, 0x268);
-
 // CSWCArea.mini_game of the player's area, or nullptr. The truth at the
 // moment of detection; a caller latches it, because this chain churns
 // during the transition into and out of a minigame.
@@ -129,21 +117,6 @@ bool ReadGobBoundingBox(void* gob, Vector& mn, Vector& mx);
 // Model-local bounding box of one named part of a Gob. False when the part is
 // missing, the box comes back empty, or anything faults.
 bool ReadGobPartBoundingBox(void* gob, const char* partName, Vector& mn, Vector& mx);
-
-// CSWMiniPlayer.offset — the per-tick-integrated aim/lane field. See the file
-// header for the per-game interpretation of its components.
-//
-// KOTOR 2 = +0x1f4, i.e. KOTOR 1 + 0x30. That delta is CSWTrackFollower's, not
-// CSWMiniPlayer's: K2's follower carries THIRTEEN per-object script CResRefs
-// instead of ten (its .are Scripts struct gained OnAccelerate / OnBrake /
-// OnHitWorld — the swoop jump), so the base class grew by 3 * 0x10 and every
-// CSWMiniPlayer field above it shifted by exactly that. Anchored at both ends:
-// the follower's own sphere_radius (+0x84) and speed (+0x98) are UNMOVED (they
-// sit below the script array), while min/max speed are +0x30 up, witnessed
-// directly in K2's SetMinSpeed/SetMaxSpeed (@0x00838240 / @0x00838290 write
-// +0x208 / +0x20c). `offset` is the first Vector its constructor zeroes, at
-// dword index 0x7d = +0x1f4.
-const size_t kMiniPlayerOffsetVectorOffset = acc::off::Pick(0x1c4, 0x1f4);
 
 // Read / write the whole offset Vector on a CSWMiniPlayer `player` pointer.
 // Read returns false (and leaves `out` untouched) on a null/faulting player;

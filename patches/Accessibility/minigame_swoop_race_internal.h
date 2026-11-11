@@ -22,51 +22,8 @@ using acc::engine::ReadU32Or0;
 using acc::engine::ReadFloatOr0;
 using acc::engine::TryReadVector;
 
-// CSWMiniGame (swkotor.exe.h line 9309). Type and counts confirmed by name;
-// the obstacle list at +0x44 / +0x48 verified live.
-//
-// KOTOR 2: CSWMiniGame is UNCHANGED through +0xec and merely grows a tail
-// (0xf0 -> 0x11c: a unit Vector, the swoopupgrade.2da handle, and six per-level
-// upgrade rows — K2's swoop-bike upgrades). Every field below is therefore
-// Same(), each with its own witness in the K2 twins:
-//   * ctor @0x00839260 — area at +0x28 (its only argument), player +0x24 nulled,
-//     near/far clip 0.1f/100.0f at +0x68/+0x6c, view angle 65.0f at +0x70, and
-//     five CExoArrayList triples constructed at +0x2c / +0x38 / +0x44 / +0x50 /
-//     +0x5c, exactly the five KOTOR 1 zeroes inline (so the enemy id list stays
-//     at +0x2c with its count at +0x30, and the obstacle list at +0x44 / +0x48);
-//   * Load @0x0083db30 — branches on `[this+0x80] == 1` (swoop) vs `== 2`
-//     (turret) to pick the MovementPerSec default, writes UseInertia/DoBumping
-//     at +0x94/+0x95 and negates AxisX/AxisY at +0x84/+0x88;
-//   * the streaming sound source at +0x1c.
-const size_t kMiniGameVtableOffset          = acc::off::Same(0x00);  // pointer
-const size_t kMiniGamePlayerOffset          = acc::off::Same(0x24);
-const size_t kMiniGameEnemyCountOffset      = acc::off::Same(0x30);
-const size_t kMiniGameObstacleDataOffset    = acc::off::Same(0x44);  // CSWMiniGameObject**
-const size_t kMiniGameObstacleCountOffset   = acc::off::Same(0x48);
-// 1 = swoop, 2 = turret; CSWMiniGame::Load sets no other value.
-const size_t kMiniGameTypeOffset            = acc::off::Same(0x80);
-constexpr uint32_t kMiniGameTypeSwoop           = 1;
-
-// CSWTrackFollower (line 15028) — base of CSWMiniPlayer. The byte-by-byte
-// walk lines up with the swkotor.exe.h definition:
-//   +0x00..0x5f  CSWMiniGameObject (60 bytes)
-//   +0x60        mini_game ptr
-//   +0x68..0x73  CExoArrayList models
-//   +0x80        looping
-//   +0x98        speed (float)
-//
-// KOTOR 2: unmoved. `speed` sits BELOW the script-CResRef array that grew from
-// ten entries to thirteen (see minigame_aim.h), so it is one of the fields the
-// +0x30 shift does not reach — its ctor twin @0x00833ba0 writes the same 100.0f
-// default to dword index 0x26 = +0x98.
-const size_t kFollowerSpeedOffset           = acc::off::Same(0x98);
-// hp / max_hp sit just below speed (swkotor.exe.h: looping +0x80,
-// sphere_radius +0x84, +0x88, hp +0x8c, max_hp +0x90, bump_damage +0x94,
-// speed +0x98; SetHitPoints @0x0066c900 / SetMaxHitPoints @0x0066c950 write
-// them). Below the script array on KOTOR 2 too — a live K2 read gives
-// 600 / 600 there, the .are's Hit_Points / Max_HPs for the Citadel bike.
-const size_t kFollowerHpOffset              = acc::off::Same(0x8c);
-const size_t kFollowerMaxHpOffset           = acc::off::Same(0x90);
+// CSWMiniGame.type of a swoop race.
+constexpr uint32_t kMiniGameTypeSwoop = 1;
 
 // CSWMiniPlayer (line 15382, extends CSWTrackFollower size 0x1a4).
 // Tunnel-frame offset (X=lane, Y=forward, Z=vertical) and the speed
@@ -76,27 +33,9 @@ const size_t kFollowerMaxHpOffset           = acc::off::Same(0x90);
 // CSWMiniEnemy allocates exactly 0x1d4). min/max speed are direct witnesses:
 // SetMinSpeed @0x00838240 writes +0x208, SetMaxSpeed @0x00838290 writes +0x20c,
 // both reached from CSWMiniPlayer::Load's "Minimum_Speed" / "Maximum_Speed"
-// reads. Full reasoning at kMiniPlayerOffsetVectorOffset in minigame_aim.h.
-const size_t kMiniPlayerOffsetVectorOffset  = acc::off::Pick(0x1c4, 0x1f4);
+// reads. Full reasoning at kMiniPlayerOffsetVectorOffset.
 const size_t kMiniPlayerMinSpeedOffset      = acc::off::Pick(0x1d8, 0x208);
 const size_t kMiniPlayerMaxSpeedOffset      = acc::off::Pick(0x1dc, 0x20c);
-
-// KOTOR 2 ONLY — the swoop bike's vertical (jump) velocity. It lives in the
-// CSWMiniGame tail that KOTOR 1 does not have (K1's struct ends at 0xf0), not
-// in the player. Witnessed in K2's CSWMiniPlayer::Control twin @0x00837960:
-//   if (mini_game->type == 1) {            // swoop only
-//       v = mini_game->+0x118;
-//       offset_delta.z += v * dt;           // integrates into offset.z (+0x1fc)
-//       mini_game->+0x118 = v - dt * 45.8f; // gravity, units/s²
-//   }
-// followed by KeepInTunnel, whose +Z bound the track scripts set to 10 (the
-// onaccelerate gear-0 branch: SWMG_SetPlayerTunnelPos z=10). The only script
-// writer is onjump.ncs — bound to the follower's OnBrake slot on all three K2
-// tracks — which calls SWMG_SetJumpSpeed(30) unless the bike is already above
-// z=2. 30 u/s against 45.8 u/s² gives a 1.3 s hop peaking at ~9.8 units, i.e.
-// exactly under the tunnel ceiling. Read only on KOTOR 2 (Kotor2Only poisons
-// the K1 side, and the consumers are IsKotor2()-gated as well).
-const size_t kMiniGameJumpVelocityOffset    = acc::off::Kotor2Only(0x118);
 
 // ----- Gear source: the tracks' own MIN_RACE_GEAR global -----
 //

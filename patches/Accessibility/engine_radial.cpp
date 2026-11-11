@@ -36,7 +36,6 @@ const size_t kTamNameLabelOffset      = acc::off::Pick(0x15CC, 0x1668);
 const size_t kTamField1Offset         = acc::off::Same(0x24);
 const size_t kTamTargetTypeOffset     = acc::off::Pick(0x1AEA, 0x1BAA);
 constexpr int    kActionIdNone            = -1;
-const size_t kIfActionStride          = acc::off::Pick(0x38, 0x3c);
 
 // Engine entry points (k1_win_gog_swkotor.exe.xml symbol table).
 // K2 twin found by the six-StrRef "can't do that" switch shared with

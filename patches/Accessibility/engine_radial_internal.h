@@ -54,18 +54,6 @@ const size_t kRowField5Offset         = acc::off::Pick(0x714, 0x744);
 // inside the 0x750 row; the flag appears in byte 1 of the logged value.
 const size_t kRowIsActionOffset       = acc::off::Pick(0x718, 0x74c);
 
-// CSWGuiInterfaceAction stride/offsets — same as engine_picker uses on
-// the descriptor read. Re-stated here so the wide-diagnostic peek into
-// action_lists[r].data[0] doesn't depend on the picker module.
-// K2: id/target/icon/flags positions unchanged (witnessed across the K2
-// GetDefaultActions descriptor writes + Do*Action reads); label is the
-// leading 8-byte CExoString (+0..+7 — id at +8 pins it). Stride grew
-// 0x38 -> 0x3C, tail growth only.
-const size_t kIfActionLabelOffset    = acc::off::Same(0x00);  // CExoString
-const size_t kIfActionIdOffset       = acc::off::Same(0x08);  // ulong
-const size_t kIfActionTargetOffset   = acc::off::Same(0x1c);  // ulong
-const size_t kIfActionIconOffset     = acc::off::Same(0x20);  // CResRef (16B)
-
 // GameObjectMethods vtable indices we care about for runtime-class probing.
 // Layout from swkotor.exe.h:14638. Each entry is one __thiscall pointer
 // (4 bytes on x86); offsets are byte offsets into the vtable.

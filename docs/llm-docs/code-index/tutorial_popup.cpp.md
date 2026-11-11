@@ -1,4 +1,4 @@
-# tutorial_popup.cpp (257 lines)
+# tutorial_popup.cpp (223 lines)
 
 Source: `patches/Accessibility/tutorial_popup.cpp`
 
@@ -8,12 +8,12 @@ Mechanism (see scratchpad trask_popup_recipe.md / docs): * Clear the tutorial on
 
 ## Declarations (in source order)
 
-- L107 `void SetPause(bool on)`
-- L134 `bool TutorialBoxPresent()`: Is a TutorialBox panel currently in the GUI manager's stack?
-- L139 `void FirePopup(uint32_t strref, const char* hint)`
-- L191 `static bool PendingContainsHint(const char* hint)`: True if `hint` is already one of the newline-separated segments accumulated this break.
-- L204 `void RecordPendingHint(uint32_t strref, const char* hint)`
-- L224 `bool FirePendingAtReplyBreak()`
-- L240 `bool SyntheticActive()`
-- L241 `const char* SyntheticHint()`
-- L243 `void PollDismiss()`
+- L90 `void SetPause(bool on)`
+- L100 `bool TutorialBoxPresent()`: Is a TutorialBox panel currently in the GUI manager's stack?
+- L105 `void FirePopup(uint32_t strref, const char* hint)`
+- L157 `static bool PendingContainsHint(const char* hint)`: True if `hint` is already one of the newline-separated segments accumulated this break.
+- L170 `void RecordPendingHint(uint32_t strref, const char* hint)`
+- L190 `bool FirePendingAtReplyBreak()`
+- L206 `bool SyntheticActive()`
+- L207 `const char* SyntheticHint()`
+- L209 `void PollDismiss()`

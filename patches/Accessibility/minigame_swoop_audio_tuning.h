@@ -14,58 +14,7 @@
 
 namespace acc::swoop_race {
 
-// ----- Global minigame-object-array layout.
-//
-// From decompiling
-// CSWVirtualMachineCommands::ExecuteCommandSWMG_GetFollowerPosition
-// @0x5cc280 + CSWMiniGameObjectArray::GetMiniGameObject @0x66bf30:
-//
-//   AppManager (*0x7a39fc) +0x4
-//     -> CClientExoApp +0x4
-//       -> CClientExoAppInternal +0x0
-//         -> CSWMiniGameObjectArray (255 ptr slots, handle-indexed)
-//             +0x00  ulong index (next-free hint)
-//             +0x04  CSWMiniGameObject *objects[255]
-//
-// Each slot is a CSWMiniGameObject* (or null). To classify by type we
-// invoke the vtable slot:
-//     vtable[0x14] = AsFollower
-//     vtable[0x18] = AsPlayer
-//     vtable[0x1c] = AsEnemy
-//     vtable[0x20] = AsObstacle
-// Each returns the same `this` pointer downcast to the requested
-// concrete subclass, or null if it isn't that type. So enumerating
-// "all obstacles" = walk 255 slots, call vtable[0x20] thiscall on each
-// non-null slot, keep the non-null returns. Two such passes per tick: one
-// for obstacles (rocks/debris), one for enemies (accelerator pads, K2 mines).
-//
-// KOTOR 2: identical, and so is the 255. Three independent witnesses in its own
-// code — CSWMiniGameObject's ctor @0x00833000 registers itself with
-// `array[4 + mgo_index*4] = this`; the by-name lookup @0x00832eb0 walks
-// `[array + i*4 + 4]` under `cmp i, 0xff / jge`; and the AsEnemy-filtered getter
-// @0x00832e20 indexes the same way. The four downcast slots are unchanged too —
-// the vtable-slot map pairs all six minigame classes with EXACT slot counts, and
-// slots 5/6/7/8 (= +0x14/+0x18/+0x1c/+0x20) are self_return on precisely
-// CSWTrackFollower / CSWMiniPlayer / CSWMiniEnemy / CSWMGObstacle respectively,
-// return_zero everywhere else — the same fingerprint as KOTOR 1's.
-const size_t kMgoArrayObjectsOffset         = acc::off::Same(0x4);
-constexpr int    kMgoArraySlotCount             = 255;
-constexpr size_t kVtableSlotAsObstacle          = 0x20;
-constexpr size_t kVtableSlotAsEnemy             = 0x1c;
 
-// CSWTrackFollower combat/physics scalars (the turret reads sphere_radius at
-// the same offset). sphere_radius is the
-// engine's real hit primitive: the accelpad hit test is a swept sphere-vs-sphere
-// at player.sphere_radius + pad.sphere_radius (swoop-accelpad-hit-model.md), so
-// we read BOTH live and sum them for the CROSS scoring rather than hard-coding a
-// per-track literal. speed gates the steering magnet off during the start hold.
-// Both Same() on KOTOR 2 — they sit below the script-CResRef array that grew
-// there, so the +0x30 shift the CSWMiniPlayer fields take does not reach them.
-// sphere_radius has a direct witness: K2's SetSphereRadius @0x008352b0, reached
-// from CSWTrackFollower::Load's "Sphere_Radius" read, writes [this+0x84].
-const size_t kFollowerSphereRadiusOffset    = acc::off::Same(0x84);  // float
-const size_t kFollowerHpOffset              = acc::off::Same(0x8c);  // u32 (mine-pass log; witnesses in minigame_swoop_race.cpp)
-const size_t kFollowerSpeedOffset           = acc::off::Same(0x98);  // float
 
 // ----- Player and lane offsets -----
 //
@@ -74,15 +23,6 @@ const size_t kFollowerSpeedOffset           = acc::off::Same(0x98);  // float
 // Manaan 5.0) in world units; world-X tracks tunnel-X 1:1 (lane ±20).
 // CSWMiniGame.player at +0x24; CSWMiniPlayer.offset (tunnel lane coord,
 // x = lateral) at +0x1c4.
-// Both mirror the declarations in minigame_swoop_race.cpp / minigame_aim.h —
-// see those for the KOTOR 2 witnesses (CSWMiniGame is unshifted; CSWMiniPlayer
-// carries the follower's +0x30).
-const size_t kMiniGamePlayerOffset          = acc::off::Same(0x24);
-const size_t kMiniPlayerOffsetVectorOffset  = acc::off::Pick(0x1c4, 0x1f4);
-// KOTOR 2 jump velocity (CSWMiniGame +0x118, float, u/s; the jump watch in
-// minigame_swoop_race.cpp has the witnesses). With offset.z it gives the
-// remaining flight time, which the bar-aware guide turns into a landing point.
-const size_t kMiniGameJumpVelocityOffset    = acc::off::Kotor2Only(0x118);
 
 // ----- KOTOR 2 hazard geometry (bounding-box classification) -----
 //

@@ -40,32 +40,6 @@ const size_t kPersonalListStride     = acc::off::Same(0x0C);
 const size_t kPersonalListDataOffset = acc::off::Same(0x00);  // T** data
 const size_t kPersonalListSizeOffset = acc::off::Same(0x04);  // int size
 
-// CSWGuiInterfaceAction layout — same as engine_radial / engine_picker.
-// K2 stride witnessed 0x3C in BOTH K2 Do*Action bodies (`idx * 0x3c`) — one
-// dword grew somewhere past +0x30; id (+8) and the +0x30 flag word are
-// unchanged, so the growth is at the tail and does not move our fields.
-const size_t kIfActionLabelOffset    = acc::off::Same(0x00);  // CExoString (+0..+7, id at +8 pins it)
-const size_t kIfActionIdOffset       = acc::off::Same(0x08);  // ulong
-const size_t kIfActionStride         = acc::off::Pick(0x38, 0x3c);
-
-// The two fields DoPersonalAction itself tests before it will dispatch. Both
-// games read them at the SAME offsets (K1 decompile of 0x0068ad60; K2 listing
-// at 0x007518ca — `mov eax,[edx+0x30] / and eax,1 / je <refusal>`, then the
-// null test on the handler at +0x0c).
-//
-//   +0x30  flag word. Bit 0 = "this entry can be used right now". Bits 1..4
-//          are a reason code, 1..6, mapping to the six StrRefs below.
-//   +0x0c  the entry's handler (a pointer-to-member; the first dword is
-//          enough — the engine's own null test reads exactly this dword).
-const size_t kIfActionFlagsOffset    = acc::off::Same(0x30);
-const size_t kIfActionHandlerOffset  = acc::off::Same(0x0c);
-
-// The entry's baked creature reference — what the dispatch resolves (and on
-// K2 bails on in total silence when the resolve fails). Same +0x1c in the K1
-// decompile of DoPersonalAction and the K2 twin (its appender writes the
-// owning creature's own id here for every personal item entry).
-const size_t kIfActionCreatureOffset = acc::off::Same(0x1c);
-
 // The two K2 item-entry handlers, byte-witnessed in the K2 appender
 // (0x0077BCF0): the medical two-step arm/consume flow, and the plain
 // one-step inventory use. KOTOR-2-only values; every consumer gates on
@@ -87,15 +61,6 @@ constexpr uint32_t kRefusalStrRefs[6] = {
 // (0x96d5..0xbb40, identical ids) + personal-list/selected-array reads.
 // Byte-verified ret 8 on BOTH games — the two-arg typedef stays correct.
 const uintptr_t kAddrDoPersonalAction = acc::addr::Pick(0x0068ad60, 0x00751750);
-
-// CGuiInGame::SetMainInterfaceTarget @ 0x0062b000 — same wrapper as
-// the radial/picker drive uses. Thin forwarder to
-// CSWGuiMainInterface::SetTarget (stores field1_0x64 + resets the
-// refresh-hint float field21_0x5cb0). K2 twin byte-verified: guards
-// CGuiInGame+0x98 (the Batch-2 MainInterface slot), forwards both dwords
-// to CSWGuiMainInterface::SetTarget 0x0074CFB0 (target +0x68, hint
-// +0x595c), ret 8 — the pad-dword typedef stays correct.
-const uintptr_t kAddrSetMainInterfaceTarget = acc::addr::Pick(0x0062b000, 0x007CE710);
 
 // CGuiInGame::RePopulateMainInterface @ 0x0062b050 — thin forwarder to
 // CSWGuiMainInterface::PopulateMenus @ 0x00689d80. Refreshes both the
@@ -259,7 +224,7 @@ void LogDispatchDiag(void* mi, int slot, int index) {
     }
     int32_t id = 0, creature = 0, handler = 0, flags = 0;
     TryReadI32(desc, kIfActionIdOffset,       &id);
-    TryReadI32(desc, kIfActionCreatureOffset, &creature);
+    TryReadI32(desc, kIfActionTargetOffset, &creature);
     TryReadI32(desc, kIfActionHandlerOffset,  &handler);
     TryReadI32(desc, kIfActionFlagsOffset,    &flags);
     // Same resolver family the engine's dispatch gate uses

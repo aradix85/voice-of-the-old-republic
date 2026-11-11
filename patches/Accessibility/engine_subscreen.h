@@ -77,6 +77,15 @@ bool WorldIsPaused();
 // Returns true if it issued a resume.
 bool ResumeWorldIfPaused(const char* reason);
 
+// The server's menu pause bit (CServerExoApp::SetPauseState, bit 2), set or
+// cleared. The engine's pause cue speaks for this call; the overlay pause
+// above is the silent one. False without a server and on a fault.
+bool SetMenuPauseBit(bool on);
+
+// The mixer back to playing (SetSoundMode 0): the server round trip of an
+// unpause does not touch the sound mode.
+void ResumeSoundMixer();
+
 }  // namespace acc::engine
 
 // Detour @0x0062cf2d (5-byte cut after EBX = GUI_id is loaded).

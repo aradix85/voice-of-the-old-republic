@@ -1,4 +1,4 @@
-# engine_offsets_fields.h (2325 lines)
+# engine_offsets_fields.h (2509 lines)
 
 Source: `patches/Accessibility/engine_offsets_fields.h`
 
@@ -16,4 +16,4 @@ They are `const` rather than `constexpr` because Pick/Todo resolve at load time 
 
 Everything is currently Todo(): the conversion was made deliberately as a pure structural change with the KOTOR 1 values untouched, so that KOTOR 1 behaviour is provably identical and the reverse-engineering can then land one constant at a time. `grep -c "Todo("` is the remaining-work counter.
 
-Also 360 constants or variables at namespace scope.
+Also 383 constants or variables at namespace scope.
