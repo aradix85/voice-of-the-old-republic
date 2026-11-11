@@ -8,6 +8,7 @@
 #include "engine_game.h"
 #include "engine_offsets.h"
 #include "engine_panels.h"
+#include "engine_reads.h"
 
 using namespace acc::engine;
 
@@ -154,6 +155,12 @@ void* UpgradeSelPanelListBox(void* panel) {
     return PanelMemberWithTripwire(panel, kUpgradeSelPanelListBoxOffset,
                                    9,
                                    "UpgradeSel.LB_UPGRADELIST");
+}
+
+bool IsUpgradePickerNoneRow(void* row) {
+    int32_t key = 0;
+    return acc::off::Ok(kUpgradePickerRowKeyOff) &&
+           acc::engine::TryReadI32(row, kUpgradePickerRowKeyOff, &key) && key == -1;
 }
 
 void* UpgradeSelPanelUpgradeButton(void* panel) {

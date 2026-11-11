@@ -1173,7 +1173,7 @@ enum class Id : int {
     // vocabulary for zero information. Transitions speak as a doorway
     // ("doorway") and optionally compose with the friendly room
     // name in transitions.cpp.
-    FmtMapCursorCorridorDir,  // "%s" — direction word alone, "corridor"/"Corridor" noun dropped 2026-05-22
+    FmtMapCursorCorridorDir,  // "%s": the direction word alone
     // Door announce — replaces the corridor/dead-end/junction-octant
     // direction word when a CSWSDoor in the area sits on the relevant
     // nav-graph edge. Single `%s` = direction word ("North", "North-South",

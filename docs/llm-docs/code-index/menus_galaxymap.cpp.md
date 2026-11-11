@@ -1,4 +1,4 @@
-# menus_galaxymap.cpp (200 lines)
+# menus_galaxymap.cpp (197 lines)
 
 Source: `patches/Accessibility/menus_galaxymap.cpp`
 
@@ -15,6 +15,6 @@ Instead we drive the engine's own CSWGuiInGameGalaxyMap::HandleInputEvent, whose
 - L75 `void* FindGalaxyMapInPanels()`
 - L81 `bool IsGalaxyMapPanel(void* panel)`
 - L85 `bool TryHandleInput(void* activePanel, int param_1, int param_2, int& rv)`
-- L140 `bool SpeakDescription(void* panel)`
-- L152 `void DispatchInput(void* panel, int engineCode, bool announcePlanet)`
-- L176 `void Tick()`
+- L138 `bool SpeakDescription(void* panel)`
+- L150 `void DispatchInput(void* panel, int engineCode, bool announcePlanet)`
+- L174 `void Tick()`

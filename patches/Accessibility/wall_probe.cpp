@@ -29,9 +29,6 @@ namespace acc::wall_probe {
 //   - dead-end alcove agreement (WalkmeshAgreesDeadEnd spins the 4-ray
 //     probe along the graph-edge axis and checks the alcove signature
 //     before believing a graph-degree-1 dead-end claim).
-//
-// Lived in region_classifier until 2026-05-27; absorbed here when the
-// region module was retired in favour of pure nav-graph classification.
 
 constexpr float kProbeLenWu = 25.0f;
 

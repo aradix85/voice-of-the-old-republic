@@ -1,4 +1,4 @@
-# menus_keymap.cpp (454 lines)
+# menus_keymap.cpp (449 lines)
 
 Source: `patches/Accessibility/menus_keymap.cpp`
 
@@ -18,4 +18,4 @@ Keymapping screen — see menus_keymap.h for the design rationale.
 - L260 `void WarnIfModBindClash(void* row)`: After the engine applies a freshly captured key to a game action, warn if that same physical key also drives a mod hotkey.
 - L282 `bool IsKeyMapPanel(void* panel)`
 - L288 `void Tick()`
-- L321 `bool HandleInput(void* activePanel, int param_1, int param_2, int& outRv)`
+- L319 `bool HandleInput(void* activePanel, int param_1, int param_2, int& outRv)`

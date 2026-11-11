@@ -1,4 +1,4 @@
-# menus_pazaakdeck.cpp (400 lines)
+# menus_pazaakdeck.cpp (399 lines)
 
 Source: `patches/Accessibility/menus_pazaakdeck.cpp`
 
@@ -21,4 +21,4 @@ Integrates with the menu chain: ExtractCardLabel plugs into the per-kind extract
 - L229 `void Speak(const char* s)`
 - L231 `void AnnounceFocus(void* panel)`
 - L284 `bool TryHandleInput(void* panel, int param_1, int param_2, int& rv)`
-- L335 `void Tick()`
+- L334 `void Tick()`

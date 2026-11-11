@@ -34,12 +34,9 @@ void* GetGuiManager();
 // memory and a torn-down array cannot fault them mid-loop.
 //
 // `maxEntries` is the caller's sanity bound against a corrupt size field —
-// it is NOT an engine limit. Every site passes 32. The old copies disagreed
-// (most 16, four 32), which meant two of our own queries could contradict
-// each other about the same panel whenever more than 16 were live. Rare, but
-// observed: patch-20260530-112606.log recorded panels.size climbing to 27
-// with modal.size 24. Unified on 32 (2026-07-30, user's call) — it is a
-// 128-byte stack buffer and can only let a query see more of the truth.
+// it is NOT an engine limit. Every site passes 32: a log recorded panels.size
+// climbing to 27 with modal.size 24, and a 128-byte stack buffer can only let
+// a query see more of the truth.
 // `outRawCount`, if given, receives the UNCLAMPED size field (the manager
 // diagnostics print it).
 //

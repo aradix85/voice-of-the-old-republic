@@ -116,17 +116,6 @@ bool IsDashOrBlankRowText(const char* s) {
     return false;
 }
 
-// K2 only: is this picker row the engine's "-" none/remove entry? Its
-// upgrades key at entry+0x1e0 is -1 (the ctor's seed; a real mod row carries
-// the actual key). Reading the key, not the text, keeps a real-but-unreadable
-// mod row from being mislabelled as the none entry — the two "No item" rows
-// the disabled-slot picker showed. SEH-guarded; false on fault.
-bool IsK2UpgradeNoneRow(void* row) {
-    if (!row || !acc::game::IsKotor2()) return false;
-    int32_t key = 0;
-    return acc::engine::TryReadI32(row, kUpgradePickerRowKeyOff, &key) && key == -1;
-}
-
 void WorkbenchUpgradeAnnounce(void* /*lb*/, const ListBoxNavResult& r) {
     if (!r.row || r.rowCount <= 0) return;
     char rowText[256];
@@ -139,7 +128,7 @@ void WorkbenchUpgradeAnnounce(void* /*lb*/, const ListBoxNavResult& r) {
         // (never masked as the none entry). On K1 (no key field) a dash row
         // is the remove entry, so it maps to none there.
         acc::strings::Id sid =
-            (IsK2UpgradeNoneRow(r.row) || !acc::game::IsKotor2())
+            (acc::menus::detail::IsUpgradePickerNoneRow(r.row) || !acc::game::IsKotor2())
                 ? acc::strings::Id::WorkbenchPickerNone
                 : acc::strings::Id::WorkbenchPickerUnnamed;
         const char* sub = acc::strings::Get(sid);
@@ -214,7 +203,7 @@ bool WorkbenchUpgradeOnEnter(void* panel) {
             acc::menus::pending::QueueWorkbenchUpgradeInstallK2(panel, row);
             acclog::Write("WorkbenchUpgrade", "K2 install/remove queued (row sel=%d "
                           "%p none=%d panel=%p)", selIdx, row,
-                          IsK2UpgradeNoneRow(row) ? 1 : 0, panel);
+                          acc::menus::detail::IsUpgradePickerNoneRow(row) ? 1 : 0, panel);
         } else {
             acclog::Write("WorkbenchUpgrade", "K2 Enter -- no row (lb=%p sel=%d "
                           "rows=%d) panel=%p", lb, selIdx, rowCount, panel);

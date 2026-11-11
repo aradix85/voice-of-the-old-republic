@@ -83,8 +83,6 @@ bool IsGalaxyMapPanel(void* panel) {
 }
 
 bool TryHandleInput(void* activePanel, int param_1, int param_2, int& rv) {
-    // Gate cleared for KOTOR 2 (2026-08-02): both label offsets witnessed
-    // in the K2 panel ctor (see the constants above).
     if (!IsGalaxyMapPanel(activePanel)) return false;
 
     const bool isUp    = (param_1 == kInputNavUp);
@@ -174,7 +172,6 @@ void DispatchInput(void* panel, int engineCode, bool announcePlanet) {
 }
 
 void Tick() {
-    // Gate cleared for KOTOR 2 (2026-08-02) together with TryHandleInput.
     void* panel = FindGalaxyMapInPanels();
     if (!panel) {
         // Map closed — drop the latch so the next open re-announces.

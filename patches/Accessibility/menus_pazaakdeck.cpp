@@ -282,9 +282,8 @@ void AnnounceFocus(void* panel) {
 }  // namespace
 
 bool TryHandleInput(void* panel, int param_1, int param_2, int& rv) {
-    // Both games since the minigame port (2026-08-15). IsDeckPanel is a vtable
-    // compare against the per-game CSWGuiPazaakStart, so this stays inert on
-    // every other panel by itself.
+    // IsDeckPanel is a vtable compare against the per-game CSWGuiPazaakStart,
+    // so this stays inert on every other panel by itself.
     if (!IsDeckPanel(panel)) return false;
     if (panel != g_navPanel) { g_navPanel = panel; g_row = 0; g_col = 0; }
 

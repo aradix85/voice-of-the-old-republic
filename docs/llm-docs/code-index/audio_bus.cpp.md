@@ -1,4 +1,4 @@
-# audio_bus.cpp (326 lines)
+# audio_bus.cpp (324 lines)
 
 Source: `patches/Accessibility/audio_bus.cpp`
 
@@ -12,12 +12,12 @@ CExoSound* lives at *kAddrCExoSoundPtr; can be nullptr early in DLL-attach. All 
 - L60 `void* GetCExoSound()`
 - L73 `void EnsureCueVolumeLoaded()`
 - L85 `uint8_t EffectiveVolumeByte(uint8_t baseVolume)`: baseVolume × slider, rounded, clamped to [0,127].
-- L133 `void* GetSoundInternal()`
-- L138 `void SetGlobalCueVolumePercent(int percent)`
-- L147 `int GetGlobalCueVolumePercent()`
-- L161 `int ScanForSentinelGroup(uint16_t sentinel)`
-- L198 `uint8_t GetCuePriorityGroup()`
-- L223 `bool PlayCue(const char* resref, uint8_t priorityGroup, uint8_t baseVolume)`
-- L258 `bool PlayCue3DImpl(const char* resref, const Vector& worldPosition, uint8_t priorityGroup, uint8_t baseVolume, bool characterRelative)`: Shared body of PlayCue3D / PlayCue3DRaw.
-- L313 `bool PlayCue3D(const char* resref, const Vector& worldPosition, uint8_t priorityGroup, uint8_t baseVolume)`
-- L319 `bool PlayCue3DRaw(const char* resref, const Vector& listenerSpacePosition, uint8_t priorityGroup, uint8_t baseVolume)`
+- L131 `void* GetSoundInternal()`
+- L136 `void SetGlobalCueVolumePercent(int percent)`
+- L145 `int GetGlobalCueVolumePercent()`
+- L159 `int ScanForSentinelGroup(uint16_t sentinel)`
+- L196 `uint8_t GetCuePriorityGroup()`
+- L221 `bool PlayCue(const char* resref, uint8_t priorityGroup, uint8_t baseVolume)`
+- L256 `bool PlayCue3DImpl(const char* resref, const Vector& worldPosition, uint8_t priorityGroup, uint8_t baseVolume, bool characterRelative)`: Shared body of PlayCue3D / PlayCue3DRaw.
+- L311 `bool PlayCue3D(const char* resref, const Vector& worldPosition, uint8_t priorityGroup, uint8_t baseVolume)`
+- L317 `bool PlayCue3DRaw(const char* resref, const Vector& listenerSpacePosition, uint8_t priorityGroup, uint8_t baseVolume)`

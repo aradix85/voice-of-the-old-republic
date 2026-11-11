@@ -8,6 +8,7 @@
 #include "engine_panels.h"
 #include "engine_reads.h"
 #include "log.h"
+#include "menus_internal.h"
 #include "menus_listbox.h"
 #include "speech.h"
 #include "strings.h"
@@ -39,12 +40,6 @@ void* ReadUpgradeSlotInstalled(void* panel) {
     } __except (EXCEPTION_EXECUTE_HANDLER) {
         return kUpgradeSlotUnknown;
     }
-}
-
-// K2: true iff `row` is the engine's "-" none/remove picker entry (key -1).
-bool IsUpgradePickerNoneRow(void* row) {
-    int32_t key = 0;
-    return acc::engine::TryReadI32(row, kUpgradePickerRowKeyOff, &key) && key == -1;
 }
 
 // Rows in the panel's LB_ITEMS (the control with id 0).
@@ -226,7 +221,7 @@ void DrainWorkbenchUpgradeInstallK2(const PendingOp& op) {
         // before and after the engine call, so we announce what actually
         // happened rather than assuming success — an incompatible slot/mod
         // leaves field35 unchanged and must not say "installed".
-        bool isNoneRow = IsUpgradePickerNoneRow(row);
+        bool isNoneRow = acc::menus::detail::IsUpgradePickerNoneRow(row);
         void* before = ReadUpgradeSlotInstalled(panel);
 
         uint32_t prevRowActive = RaiseIsActiveIfZero(row);

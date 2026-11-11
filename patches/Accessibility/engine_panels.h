@@ -234,7 +234,7 @@ bool IsModalPopupPanel(PanelKind k);
 
 // True for the title-screen Options sub-screens (Sound, Graphics, their
 // Advanced variants, Auto-Pause, Feedback, Game, Mouse, Keyboard). Groups
-// the nine kinds added 2026-06-13 so chain-side code can apply option-panel
+// these nine kinds so chain-side code can apply option-panel
 // behaviour (e.g. the wider cycle-flanker squash that the spinner rows need)
 // without re-listing every kind at the call site.
 bool IsMainMenuOptionsSubScreen(PanelKind k);

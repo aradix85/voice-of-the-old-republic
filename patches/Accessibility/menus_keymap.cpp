@@ -286,8 +286,6 @@ bool IsKeyMapPanel(void* panel) {
 }
 
 void Tick() {
-    // Gate cleared for KOTOR 2 (2026-08-02) together with HandleInput —
-    // see the engine-entry-point block at the top of this file.
     // Cursor park — must run from the Update tick, never the input hook
     // (MoveMouseToPosition recurses through the hover pipeline).
     if (s_parkPending &&
@@ -319,9 +317,6 @@ void Tick() {
 }
 
 bool HandleInput(void* activePanel, int param_1, int param_2, int& outRv) {
-    // Gate cleared for KOTOR 2 (2026-08-02): category switching goes
-    // through the witnessed K2 SetFilter, capture through the panel's own
-    // HandleInputEvent Enter case, and the capture flag is Pick'd.
     if (!IsKeyMapPanel(activePanel)) return false;
 
     // Fresh open → start at the tab level on the first entry, and arm the

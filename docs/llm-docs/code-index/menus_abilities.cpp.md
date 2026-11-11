@@ -1,4 +1,4 @@
-# menus_abilities.cpp (459 lines)
+# menus_abilities.cpp (455 lines)
 
 Source: `patches/Accessibility/menus_abilities.cpp`
 

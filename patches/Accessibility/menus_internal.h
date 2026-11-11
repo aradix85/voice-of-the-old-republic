@@ -217,6 +217,11 @@ void* SaveLoadPanelBackButton(void* panel);     // BTN_BACK
 // (component_p) and CSWGuiCreateMedicalItem (chemical_p), which lay the same
 // controls out at different offsets, and answer nullptr for any other panel.
 void* UpgradeSelPanelListBox(void* panel);        // LB_UPGRADELIST
+// KOTOR 2: `row` is the upgrade picker's "-" entry (none / remove). Its key
+// is -1, the constructor's seed; a real mod row carries its key. Read from
+// the key and not from the text, so that an unreadable mod row is not taken
+// for the none entry. False on KOTOR 1 and on a fault.
+bool IsUpgradePickerNoneRow(void* row);
 void* UpgradeSelPanelUpgradeButton(void* panel);  // BTN_UPGRADEITEMS
 void* UpgradeSelPanelTitleLabel(void* panel);     // LBL_TITLE
 void* CraftPanelShopListBox(void* panel);         // LB_SHOPITEMS (create view)

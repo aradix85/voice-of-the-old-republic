@@ -334,11 +334,14 @@ prefix (menus_listbox_picker.cpp).
   Note for Anouk at the end: with NVDA only, NVDA's "speech interrupt for
   typed characters" (Keyboard settings) cuts lines while a key is held
   (map cursor, turret fire key); the SAPI voices used to dodge that.
-- room_topology: pure logic to engine-free files with tests (octant
-  helpers; the bits E=0 counter-clockwise could become compass order N=0
-  clockwise like engine_compass, which would also simplify
-  kOctantEmitOrder). 39 of 55 functions are shared through the internal
-  header: the pipeline really is one; accept.
+- room_topology: 39 of 55 functions are shared through the internal
+  header: the pipeline really is one; accept. Judged, no change: the
+  octant bits stay E=0 counter-clockwise. The numbering is written into
+  literal tables (the octant_x / octant_y steps and `bitA == 2` of the
+  corridor axis, the axis masks of room_topology_shape, the ray order of
+  wall_probe, kOctantEmitOrder); renumbering to compass order risks a
+  wrong direction word for little gain. OctantFromVector already is
+  SectorString(VectorSector), and VectorSector has unit tests.
 - F12 done: kPi, kRadToDeg and kDegToRad are defined once
   (engine_offsets_types.h). VectorEngineYaw, VectorCompass and
   VectorSector in engine_compass (unit tests) replace
@@ -644,9 +647,16 @@ prefix (menus_listbox_picker.cpp).
   fields of one object read under one guard (the area iterator, doors,
   placeables, the map hover, the chargen layout, the diagnostics),
   array walks, and the reads off a hook's stack frame. The other 197
-  call the engine and keep their guard. Seen on the way:
+  call the engine and keep their guard.
   IsK2UpgradeNoneRow (menus_listbox_workbench) and
-  IsUpgradePickerNoneRow (menus_pending_workbench) are one function.
+  IsUpgradePickerNoneRow (menus_pending_workbench) were one function:
+  it is acc::menus::detail::IsUpgradePickerNoneRow now
+  (menus_internal_members.cpp).
+- Dated comment lines: 116 left of 437. Looked at all of them: the 42 in
+  the catalog headers and most of the others are the date an engine fact
+  was witnessed, or the concrete case behind a rule, and stay. Some
+  fifteen that only told what the code used to be ("gate cleared for
+  KOTOR 2", "was X before") are out, in ten files.
 - Max HP of companions: party_status and bridge_state read it with
   ReadCreatureMaxHitPoints (GetMaxHitPoints(1)), which the maker's notes
   in the old combat_query say returns garbage for anyone but the PC.
