@@ -722,8 +722,22 @@ prefix (menus_listbox_picker.cpp).
   patch_config.toml and stops when a hook is new or changed (then
   `kdev apply`, which also drops the widescreen patch the maker's
   installer put there). d875083 speaks through prism.dll, the new build
-  through the NVDA controller client: back up accessibility.dll,
-  prism.dll and patch_config.toml before the first install.
+  through the NVDA controller client.
+  Installed 2026-11-11 12:22 (40baba6f), on Anouk's word without a
+  backup of d875083. First run, driven through the bridge in a new game:
+  start, main menu (F5 silent), F1 help, character creation, the load
+  into the Endar Spire, Q / E, comma / period, Ctrl+N, door lines, the
+  bridge (`pak` on a container no longer crashes), the start of Trask's
+  dialog. The spoken lines were compared with her log of 2026-11-10 on
+  d875083 over the same route and are the same line for line. Not
+  tested: Right Alt, a loaded save, combat, equipment, saving. Anouk
+  tests the rest herself.
+- Found in that run, already in the maker's code: in the class selection
+  Left / Right activate a class once Up / Down has bound the chain
+  (HandleLeftRight takes the neighbour for a cycle arrow, and
+  classIconOffsetX makes it the one two places on). They should step the
+  chain there. Also old: on the load into the world a run of panel texts
+  is spoken (Add Power, Buy, Party Inventory, ...).
 
 ## Splitting a file
 
