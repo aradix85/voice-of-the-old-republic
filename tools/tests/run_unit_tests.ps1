@@ -28,6 +28,7 @@ $underTest = @(
     'engine_keymap_codes.cpp',
     'floor_puzzle_plates.cpp',
     'log.cpp',
+    'menus_skillflow_nav.cpp',
     'minigame_turret_lead.cpp',
     'save_points.cpp',
     'shortest_paths.cpp',

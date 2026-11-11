@@ -1,27 +1,23 @@
-// 2D grid navigation primitives shared by the two CSWGuiSkillFlow-shaped
-// menus (chargen feats grid, powers level-up grid). Each panel's row data
-// lives in its own TU with a per-panel "empty cell" sentinel (featId vs
-// powerId @ 0xffff); callers pass that cell predicate as a function
-// pointer so the scan loops only have to be written once.
-//
-// Column count is kSkillFlowColumnsPerRow from engine_offsets.h.
+// Column search in one row of a skill-flow chart (the feat chart and the
+// Force-power chart). A row is a chain of kColumns cells - base, improved,
+// master - and kEmptyCell marks a cell the chain does not have.
 
 #pragma once
 
 namespace acc::menus::skillflow_nav {
 
-// Cell predicate. True if (row, col) is a filled cell on the caller's
-// chart. Row range is the caller's chart row count (NOT including the
-// trailing button rows — those have their own per-panel handling).
-using IsFilledFn = bool (*)(int row, int col);
+constexpr int kColumns = 3;
+constexpr unsigned short kEmptyCell = 0xffff;
 
-// First filled column in chart row `row`, or -1 if none.
-int FirstFilledCol(int row, IsFilledFn isFilled);
+// The first filled column, or -1 for an empty row.
+int FirstFilledCol(const unsigned short* cells);
 
-// Pick the column closest to `want` in chart row `row` among filled
-// columns. Used by vertical nav to preserve the cursor's column when
-// entering a new chart row, falling back to the nearest filled cell.
-// Returns FirstFilledCol(row) on miss.
-int NearestFilledCol(int row, int want, IsFilledFn isFilled);
+// `want` when that cell is filled, else the filled column nearest to it (the
+// lower one when two are as near), else -1.
+int NearestFilledCol(const unsigned short* cells, int want);
+
+// The next filled column from `from` in direction `step` (+1 or -1), or
+// `from` itself at the end of the row.
+int StepCol(const unsigned short* cells, int from, int step);
 
 }  // namespace acc::menus::skillflow_nav

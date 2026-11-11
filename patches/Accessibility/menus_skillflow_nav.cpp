@@ -1,23 +1,36 @@
 #include "menus_skillflow_nav.h"
 
-#include "engine_offsets.h"  // kSkillFlowColumnsPerRow
-
 namespace acc::menus::skillflow_nav {
 
-int FirstFilledCol(int row, IsFilledFn isFilled) {
-    for (int c = 0; c < kSkillFlowColumnsPerRow; ++c) {
-        if (isFilled(row, c)) return c;
+namespace {
+
+bool Filled(const unsigned short* cells, int col) {
+    return col >= 0 && col < kColumns && cells[col] != kEmptyCell;
+}
+
+}  // namespace
+
+int FirstFilledCol(const unsigned short* cells) {
+    for (int c = 0; c < kColumns; ++c) {
+        if (Filled(cells, c)) return c;
     }
     return -1;
 }
 
-int NearestFilledCol(int row, int want, IsFilledFn isFilled) {
-    if (isFilled(row, want)) return want;
-    for (int d = 1; d < kSkillFlowColumnsPerRow; ++d) {
-        if (isFilled(row, want - d)) return want - d;
-        if (isFilled(row, want + d)) return want + d;
+int NearestFilledCol(const unsigned short* cells, int want) {
+    if (Filled(cells, want)) return want;
+    for (int d = 1; d < kColumns; ++d) {
+        if (Filled(cells, want - d)) return want - d;
+        if (Filled(cells, want + d)) return want + d;
     }
-    return FirstFilledCol(row, isFilled);
+    return FirstFilledCol(cells);
+}
+
+int StepCol(const unsigned short* cells, int from, int step) {
+    for (int c = from + step; c >= 0 && c < kColumns; c += step) {
+        if (Filled(cells, c)) return c;
+    }
+    return from;
 }
 
 }  // namespace acc::menus::skillflow_nav

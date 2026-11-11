@@ -1,510 +1,96 @@
-// Force-power picker input handler.
-// See menus_powers_levelup.h for the design rationale.
-
-#include <windows.h>
-#include <cstdint>
-#include <cstdio>
-#include <cstring>
+// The Force-power chart: what menus_skillflow_grid needs to know about
+// CSWGuiPowersLevelUp.
 
 #include "menus_powers_levelup.h"
 
-#include "engine_input.h"
+#include <cstdint>
+
 #include "engine_offsets.h"
-#include "engine_panels.h"
+#include "engine_panels.h"    // IdentifyPanel
 #include "engine_reads.h"
-#include "log.h"
-#include "menus_internal.h"   // PowersPanel* resolvers, QueueControlActivate
-#include "menus_pending.h"
-#include "menus_skillflow_nav.h"
-#include "strings.h"
-#include "speech.h"
-
-using namespace acc::engine;  // kInput*, IdentifyPanel, PanelKind, ReadGuiString, ExtractTextOrStrRefIndirect
-
-using acc::menus::detail::PowersPanelAcceptButton;
-using acc::menus::detail::PowersPanelBackButton;
-using acc::menus::detail::PowersPanelDescListBox;
-using acc::menus::detail::PowersPanelPowerLabel;
-using acc::menus::detail::PowersPanelPowersListBox;
-using acc::menus::detail::PowersPanelRecommendedButton;
-using acc::menus::detail::PowersPanelSubTitleLabel;
-using acc::menus::detail::QueueControlActivate;
+#include "menus_internal.h"   // PowersPanel* resolvers
+#include "menus_skillflow_grid.h"
 
 namespace acc::menus::powers_levelup {
 
 namespace {
 
-// Control resolution is engine-truth (ctor-bound member offsets,
-// kPowersPanel*Offset via the PowersPanel* resolvers in
-// menus_internal.cpp) — this panel was the audit's poster child for why
-// .gui ids can't be trusted: the two games re-number pwrlvlup's controls
-// AND the numbers collide across games (K1 id 6 is LB_POWERS while K2
-// id 6 is a label; K1 id 12 is BTN_BACK while K2 id 12 is LB_POWERS).
-// The historical per-game ids live on only as the resolvers'
-// GuiIdMismatch tripwires.
+using acc::menus::detail::PowersPanelAcceptButton;
+using acc::menus::detail::PowersPanelBackButton;
+using acc::menus::detail::PowersPanelRecommendedButton;
+using skillflow_grid::Button;
 
-struct ChartRow {
-    void*           row;            // CSWGuiSkillFlow*
-    int             rowIdx;         // index within powers_listbox.controls
-    unsigned short  powerId[kSkillFlowColumnsPerRow];  // 0xffff = empty
-};
-
-struct ButtonRow {
-    void*       (*resolve)(void*);  // PowersPanel* engine-member resolver
-    const char* logTag;
-};
-
-// Button virtual entries after the chart cells. SELECT_BTN ("Add
-// Power") is intentionally omitted — Enter on a focused cell dispatches
-// OnPowerPicked directly, which is the same engine action SELECT_BTN's
-// click would fire. Mirrors the chargen_feats button list
-// (recommended / accept / back).
-constexpr ButtonRow kButtonRows[] = {
-    { &PowersPanelRecommendedButton, "RECOMMENDED_BTN" },
-    { &PowersPanelAcceptButton,      "ACCEPT_BTN" },
-    { &PowersPanelBackButton,        "BACK_BTN" },
-};
-constexpr int kButtonRowCount = sizeof(kButtonRows) / sizeof(kButtonRows[0]);
-
-constexpr int kMaxChartRows = 64;  // observed 17 rows in patch-20260526-074742.log
-ChartRow s_chartRows[kMaxChartRows];
-int      s_chartRowCount = 0;
-
-int   s_curRow      = 0;
-int   s_curCol      = 0;
-
-// Binding signature — EnsureBound uses this to spot when the engine
-// has re-bound the panel to a different character (auto-level-up reuses
-// the same panel pointer; the powers_listbox.controls array swaps).
-void* s_boundPanel     = nullptr;
-void* s_boundRowsPtr   = nullptr;
-int   s_boundRowsCount = 0;
-
-inline int  TotalRowCount()    { return s_chartRowCount + kButtonRowCount; }
-inline bool IsButtonRow(int r) { return r >= s_chartRowCount; }
-
-// Cell predicate for the shared skillflow_nav helpers — powers grid empty
-// sentinel is powerId == 0xffff.
-bool ColFilled(int r, int c) {
-    if (r < 0 || r >= s_chartRowCount) return false;
-    if (c < 0 || c >= kSkillFlowColumnsPerRow) return false;
-    return s_chartRows[r].powerId[c] != 0xffff;
+void* Chart(void* panel) {
+    return static_cast<unsigned char*>(panel) + kPowersLevelUpChartOffset;
 }
 
-int FirstFilledCol(int r) {
-    return acc::menus::skillflow_nav::FirstFilledCol(r, ColFilled);
-}
-
-int NearestFilledCol(int r, int want) {
-    return acc::menus::skillflow_nav::NearestFilledCol(r, want, ColFilled);
-}
-
-// Read the engine's current chart binding (powers_listbox.controls
-// data pointer + size). Returns false on failure with outputs cleared.
-// Row source per CSWGuiPowersLevelUp::OnPowerSelectionChanged (decomp
-// @0x006f1940): listbox.GetSelectedControl() returns a CSWGuiSkillFlow*.
-// The chart at +0x19fc holds (selected_row, selected_col) state only;
-// its rows_data is not populated in the level-up flow.
-bool ReadChartBinding(void* panel, void*& outRows, int& outCount) {
-    outRows  = nullptr;
-    outCount = 0;
-    if (!panel) return false;
-    void* lb = PowersPanelPowersListBox(panel);
-    if (!lb) return false;
-    auto* list = reinterpret_cast<CExoArrayList*>(
-        reinterpret_cast<unsigned char*>(lb) + kListBoxControlsOffset);
-    __try {
-        outRows  = list ? list->data : nullptr;
-        outCount = list ? list->size : 0;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        outRows  = nullptr;
-        outCount = 0;
+// The rows are the controls of the powers list box. The chart only holds the
+// selection here; its own row array is not filled in this screen
+// (CSWGuiPowersLevelUp::OnPowerSelectionChanged @0x006f1940 takes the
+// CSWGuiSkillFlow from the list box's selected control).
+bool ReadRows(void* panel, void** rows, int* count) {
+    void* listBox = acc::menus::detail::PowersPanelPowersListBox(panel);
+    *count = acc::engine::ReadListBoxRowCount(listBox);
+    if (*count < 0 || !acc::engine::TryReadPtr(listBox, kListBoxControlsOffset, rows)) {
+        *rows = nullptr;
+        *count = 0;
         return false;
     }
     return true;
 }
 
-// Walk the engine's chart rows array into s_chartRows[]. Does NOT touch
-// the cursor — placement is decided by EnsureBound.
-void WalkChartRows(void* rows, int nRows) {
-    s_chartRowCount = 0;
-    if (!rows || nRows < 0 || nRows > kMaxChartRows) nRows = 0;
+typedef void (__thiscall* PFN_PanelPower)(void* panel, unsigned long powerId);
 
-    auto** rowsArr = reinterpret_cast<void**>(rows);
-    for (int r = 0; r < nRows; ++r) {
-        void* rowPtr = nullptr;
-        __try { rowPtr = rowsArr[r]; }
-        __except (EXCEPTION_EXECUTE_HANDLER) { continue; }
-        if (!rowPtr) continue;
-
-        ChartRow& cr = s_chartRows[s_chartRowCount];
-        cr.row    = rowPtr;
-        cr.rowIdx = r;
-        bool any  = false;
-        auto* rb  = reinterpret_cast<unsigned char*>(rowPtr);
-        for (int c = 0; c < kSkillFlowColumnsPerRow; ++c) {
-            unsigned int v = kFlowSkillStructEmptyFeatId;
-            __try {
-                auto* cell = rb + kSkillFlowFirstColumnOffset +
-                             c * kSkillFlowColumnStride;
-                v = *reinterpret_cast<unsigned int*>(
-                    cell + kFlowSkillStructFeatIdOffset);
-            } __except (EXCEPTION_EXECUTE_HANDLER) {
-                v = kFlowSkillStructEmptyFeatId;
-            }
-            if (v == kFlowSkillStructEmptyFeatId) {
-                cr.powerId[c] = 0xffff;
-            } else {
-                cr.powerId[c] = (unsigned short)v;
-                any = true;
-            }
-        }
-        if (!any) continue;
-        s_chartRowCount++;
-        if (s_chartRowCount >= kMaxChartRows) break;
-    }
+void OnEnterPower(void* panel, unsigned long powerId) {
+    reinterpret_cast<PFN_PanelPower>(kAddrCSWGuiPowersLevelUpOnEnterPower)(panel, powerId);
 }
 
-// Re-walk the engine's chart on every hit so we never index stale row
-// pointers when the same panel pointer is reused for the next character
-// in the auto-level-up queue. Cursor reset only fires on a real binding
-// change — otherwise the user's nav position is preserved (clamped on
-// shrink).
-void EnsureBound(void* panel) {
-    void* rows  = nullptr;
-    int   nRows = 0;
-    ReadChartBinding(panel, rows, nRows);
-
-    bool newBinding = (panel != s_boundPanel) ||
-                      (rows  != s_boundRowsPtr) ||
-                      (nRows != s_boundRowsCount);
-
-    WalkChartRows(rows, nRows);
-
-    s_boundPanel     = panel;
-    s_boundRowsPtr   = rows;
-    s_boundRowsCount = nRows;
-
-    if (newBinding) {
-        if (s_chartRowCount > 0) {
-            s_curRow = 0;
-            s_curCol = FirstFilledCol(0);
-            if (s_curCol < 0) s_curCol = 0;
-        } else {
-            s_curRow = 0;
-            s_curCol = 0;
-        }
-        acclog::Write("PowersLevelUp",
-                      "rebuild panel=%p chartRows=%d totalRows=%d "
-                      "cursor=(r=%d, c=%d) [new binding]",
-                      panel, s_chartRowCount, TotalRowCount(),
-                      s_curRow, s_curCol);
-    } else {
-        int total = TotalRowCount();
-        if (s_curRow >= total) s_curRow = total > 0 ? total - 1 : 0;
-        if (s_curRow < 0)      s_curRow = 0;
-    }
+void OnPowerPicked(void* panel, unsigned long powerId) {
+    reinterpret_cast<PFN_PanelPower>(kAddrCSWGuiPowersLevelUpOnPowerPicked)(panel, powerId);
 }
 
-unsigned char ReadCellStatus(int r, int c) {
-    if (r < 0 || r >= s_chartRowCount) return 0xff;
-    if (c < 0 || c >= kSkillFlowColumnsPerRow) return 0xff;
-    auto* rb = reinterpret_cast<unsigned char*>(s_chartRows[r].row);
-    unsigned int v = 0;
-    __try {
-        auto* cell = rb + kSkillFlowFirstColumnOffset +
-                     (size_t)c * kSkillFlowColumnStride;
-        v = *reinterpret_cast<unsigned int*>(
-            cell + kFlowSkillStructStatusOffset);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return 0xff;
-    }
-    return (unsigned char)(v & 0xff);
-}
+// The Add Power button is left out: Enter on a cell calls OnPowerPicked,
+// which is what that button's click does.
+constexpr Button kButtons[] = {
+    {PowersPanelRecommendedButton, "RECOMMENDED_BTN", acc::strings::Id::ChargenBtnRecommended},
+    {PowersPanelAcceptButton,      "ACCEPT_BTN",      acc::strings::Id::ChargenBtnAccept},
+    {PowersPanelBackButton,        "BACK_BTN",        acc::strings::Id::ChargenBtnBack},
+};
 
-const char* StatusWord(unsigned char status) {
-    using acc::strings::Get;
-    using acc::strings::Id;
-    switch (status) {
-        case 0: return Get(Id::ChargenFeatStatusAvailable);
-        case 1: return Get(Id::ChargenFeatStatusExisting);
-        case 2: return Get(Id::ChargenFeatStatusGranted);
-        case 3: return Get(Id::ChargenFeatStatusLocked);
-        case 4: return Get(Id::ChargenFeatStatusChosen);
-        default: return "";
-    }
-}
+const skillflow_grid::Screen kScreen = {
+    "PowersLevelUp",
+    ReadRows,
+    Chart,
+    acc::menus::detail::PowersPanelPowerLabel,
+    acc::menus::detail::PowersPanelDescListBox,
+    OnEnterPower,
+    OnPowerPicked,
+    acc::strings::Id::FmtChargenPowerUnnamed,
+    kButtons,
+    3,
+    PowersPanelBackButton,
+};
 
-bool ReadPowerName(void* panel, char* out, size_t outN) {
-    void* lab = PowersPanelPowerLabel(panel);
-    return ReadLabelText(lab, out, outN);
-}
-
-bool ReadDescription(void* panel, char* out, size_t outN) {
-    if (!panel || !out || outN == 0) return false;
-    out[0] = '\0';
-    void* descLb = PowersPanelDescListBox(panel);
-    if (!descLb) return false;
-    auto* descList = reinterpret_cast<CExoArrayList*>(
-        reinterpret_cast<unsigned char*>(descLb) + kListBoxControlsOffset);
-    void* row = nullptr;
-    __try {
-        if (descList && descList->data && descList->size > 0) {
-            row = descList->data[0];
-        }
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        row = nullptr;
-    }
-    if (!row) return false;
-    return ReadLabelText(row, out, outN);
-}
-
-// SetSelectedSkill on the embedded chart + OnEnterPower on the panel.
-// Mirrors chargen_feats::DriveEngineSelection. The chart lives at
-// kPowersLevelUpChartOffset and the same CSWGuiSkillFlowChart class
-// (so the same SetSelectedSkill address @0x006cdc00 applies).
-void DriveEngineSelection(void* panel, unsigned short powerId) {
-    auto* base  = reinterpret_cast<unsigned char*>(panel);
-    void* chart = base + kPowersLevelUpChartOffset;
-
-    typedef void (__thiscall* PFN_SetSelected)(void*, unsigned long);
-    typedef void (__thiscall* PFN_OnEnter)(void*, unsigned long);
-
-    __try {
-        auto setSel = reinterpret_cast<PFN_SetSelected>(
-            kAddrCSWGuiSkillFlowChartSetSelectedSkill);
-        setSel(chart, powerId);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        acclog::Write("PowersLevelUp",
-                      "SetSelectedSkill faulted powerId=%u",
-                      (unsigned)powerId);
-    }
-    __try {
-        auto onEnter = reinterpret_cast<PFN_OnEnter>(
-            kAddrCSWGuiPowersLevelUpOnEnterPower);
-        onEnter(panel, powerId);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        acclog::Write("PowersLevelUp",
-                      "OnEnterPower faulted powerId=%u",
-                      (unsigned)powerId);
-    }
-}
-
-void AnnounceFocused(void* panel) {
-    if (s_curRow < 0 || s_curRow >= TotalRowCount()) return;
-
-    if (IsButtonRow(s_curRow)) {
-        const ButtonRow& br = kButtonRows[s_curRow - s_chartRowCount];
-        void* btn = br.resolve(panel);
-        char btnText[64];
-        bool got = btn && ReadButtonText(btn, btnText, sizeof(btnText)) &&
-                   btnText[0] != '\0';
-        if (!got) {
-            snprintf(btnText, sizeof(btnText), "%s",
-                     br.logTag ? br.logTag : "?");
-        }
-        acc::speech::Speak(btnText, /*interrupt=*/false);
-        acclog::Write("PowersLevelUp",
-                      "focus button %s text=\"%s\"",
-                      br.logTag, btnText);
-        return;
-    }
-
-    if (s_curCol < 0 || s_curCol >= kSkillFlowColumnsPerRow) return;
-    if (!ColFilled(s_curRow, s_curCol)) return;
-
-    unsigned short powerId = s_chartRows[s_curRow].powerId[s_curCol];
-    DriveEngineSelection(panel, powerId);
-
-    char name[128];
-    if (!ReadPowerName(panel, name, sizeof(name)) || name[0] == '\0') {
-        snprintf(name, sizeof(name), "Power %u", (unsigned)powerId);
-    }
-    unsigned char st = ReadCellStatus(s_curRow, s_curCol);
-    const char* sw   = StatusWord(st);
-
-    char head[256];
-    snprintf(head, sizeof(head),
-             acc::strings::Get(
-                 acc::strings::Id::FmtChargenFeatChartCell),
-             name, sw);
-    acc::speech::Speak(head, /*interrupt=*/false);
-
-    char desc[1024];
-    if (ReadDescription(panel, desc, sizeof(desc)) && desc[0] != '\0') {
-        acc::speech::Speak(desc, /*interrupt=*/false);
-    }
-
-    acclog::Write("PowersLevelUp",
-                  "focus row=%d col=%d powerId=%u status=%u name=\"%s\"",
-                  s_chartRows[s_curRow].rowIdx, s_curCol,
-                  (unsigned)powerId, (unsigned)st, name);
-}
-
-void NavVertical(void* panel, bool down) {
-    int oldR = s_curRow;
-    int oldC = s_curCol;
-    int total = TotalRowCount();
-    int r = s_curRow + (down ? 1 : -1);
-    if (r < 0)      r = 0;
-    if (r >= total) r = total - 1;
-    s_curRow = r;
-    if (IsButtonRow(r)) {
-        s_curCol = 0;
-    } else {
-        int c = NearestFilledCol(r, oldC);
-        if (c < 0) c = 0;
-        s_curCol = c;
-    }
-    AnnounceFocused(panel);
-    acclog::Write("PowersLevelUp",
-                  "%s sel=(r=%d,c=%d) -> (r=%d,c=%d) [chartRows=%d, "
-                  "totalRows=%d]",
-                  down ? "Down" : "Up",
-                  oldR, oldC, s_curRow, s_curCol,
-                  s_chartRowCount, total);
-}
-
-void NavHorizontal(void* panel, bool right) {
-    if (IsButtonRow(s_curRow)) {
-        AnnounceFocused(panel);
-        return;
-    }
-    int oldC = s_curCol;
-    int c = oldC;
-    int step = right ? 1 : -1;
-    while (true) {
-        c += step;
-        if (c < 0 || c >= kSkillFlowColumnsPerRow) {
-            c = oldC;
-            break;
-        }
-        if (ColFilled(s_curRow, c)) break;
-    }
-    s_curCol = c;
-    AnnounceFocused(panel);
-    acclog::Write("PowersLevelUp",
-                  "%s sel=(r=%d,c=%d) -> (r=%d,c=%d)",
-                  right ? "Right" : "Left",
-                  s_curRow, oldC, s_curRow, s_curCol);
-}
-
-// Home / End across the whole 2D surface — leftmost filled cell of the
-// first power row, and the final button row (Cancel). Mirrors
-// chargen_feats::NavJumpEnd; see the rationale there.
-void NavJumpEnd(void* panel, bool toEnd) {
-    int oldR  = s_curRow;
-    int oldC  = s_curCol;
-    int total = TotalRowCount();
-    if (total <= 0) return;
-
-    if (toEnd) {
-        s_curRow = total - 1;   // last button row (BTN_BACK / Cancel)
-        s_curCol = 0;
-    } else {
-        s_curRow = 0;
-        if (IsButtonRow(0)) {
-            s_curCol = 0;
-        } else {
-            int c = FirstFilledCol(0);
-            s_curCol = c < 0 ? 0 : c;
-        }
-    }
-    AnnounceFocused(panel);
-    acclog::Write("PowersLevelUp",
-                  "%s sel=(r=%d,c=%d) -> (r=%d,c=%d) [chartRows=%d, "
-                  "totalRows=%d]",
-                  toEnd ? "End" : "Home",
-                  oldR, oldC, s_curRow, s_curCol,
-                  s_chartRowCount, total);
-}
+skillflow_grid::Grid g_grid(kScreen);
 
 }  // namespace
 
 bool IsPowersLevelUpPanel(void* panel) {
-    return IdentifyPanel(panel) == PanelKind::PowersLevelUp;
+    return acc::engine::IdentifyPanel(panel) == acc::engine::PanelKind::PowersLevelUp;
 }
 
 const char* GetTitleOverride(void* panel) {
     if (!IsPowersLevelUpPanel(panel)) return nullptr;
-    void* lab = PowersPanelSubTitleLabel(panel);
-    if (!lab) return nullptr;
-    static thread_local char s_titleBuf[128];
-    if (!ReadLabelText(lab, s_titleBuf, sizeof(s_titleBuf))) return nullptr;
-    if (s_titleBuf[0] == '\0') return nullptr;
-    return s_titleBuf;
+    static thread_local char s_title[128];
+    void* label = acc::menus::detail::PowersPanelSubTitleLabel(panel);
+    if (!label || !acc::engine::ReadLabelText(label, s_title, sizeof(s_title)) || !s_title[0]) {
+        return nullptr;
+    }
+    return s_title;
 }
 
-bool HandleInput(int n, void* thisPtr, void* panel,
-                 int param_1, int param_2, int& outRv)
-{
-    (void)n; (void)thisPtr;
-    if (!IsPowersLevelUpPanel(panel)) return false;
-    EnsureBound(panel);
-    if (s_chartRowCount + kButtonRowCount == 0) return false;
-
-    if (param_2 == 0) return false;
-
-    if (param_1 == kInputNavUp || param_1 == kInputNavDown) {
-        NavVertical(panel, /*down=*/param_1 == kInputNavDown);
-        outRv = 1;
-        return true;
-    }
-
-    if (param_1 == kInputNavLeft || param_1 == kInputNavRight) {
-        NavHorizontal(panel, /*right=*/param_1 == kInputNavRight);
-        outRv = 1;
-        return true;
-    }
-
-    if (param_1 == kInputHome || param_1 == kInputEnd) {
-        NavJumpEnd(panel, /*toEnd=*/param_1 == kInputEnd);
-        outRv = 1;
-        return true;
-    }
-
-    if (param_1 == kInputEnter1 || param_1 == kInputEnter2) {
-        if (IsButtonRow(s_curRow)) {
-            const ButtonRow& br = kButtonRows[s_curRow - s_chartRowCount];
-            QueueControlActivate(br.resolve(panel),
-                                 "PowersLevelUp: Enter -> button");
-        } else if (s_curRow >= 0 && s_curRow < s_chartRowCount &&
-                   s_curCol >= 0 && s_curCol < kSkillFlowColumnsPerRow &&
-                   ColFilled(s_curRow, s_curCol)) {
-            unsigned short powerId = s_chartRows[s_curRow].powerId[s_curCol];
-            if (acc::menus::pending::IsPending()) {
-                acclog::Write("PowersLevelUp",
-                              "Enter -- op already pending; ignoring");
-            } else {
-                typedef void (__thiscall* PFN_OnPowerPicked)(
-                    void*, unsigned long);
-                __try {
-                    auto fn = reinterpret_cast<PFN_OnPowerPicked>(
-                        kAddrCSWGuiPowersLevelUpOnPowerPicked);
-                    fn(panel, powerId);
-                } __except (EXCEPTION_EXECUTE_HANDLER) {
-                    acclog::Write("PowersLevelUp",
-                                  "OnPowerPicked faulted powerId=%u",
-                                  (unsigned)powerId);
-                }
-                acclog::Write("PowersLevelUp",
-                              "OnPowerPicked panel=%p powerId=%u",
-                              panel, (unsigned)powerId);
-                AnnounceFocused(panel);
-            }
-        }
-        outRv = 1;
-        return true;
-    }
-
-    if (param_1 == kInputEsc1 || param_1 == kInputEsc2) {
-        QueueControlActivate(PowersPanelBackButton(panel),
-                             "PowersLevelUp: Esc -> BACK_BTN");
-        outRv = 1;
-        return true;
-    }
-
-    return false;
+bool HandleInput(void* panel, int code, int value, int& outRv) {
+    return IsPowersLevelUpPanel(panel) && g_grid.HandleInput(panel, code, value, outRv);
 }
 
 }  // namespace acc::menus::powers_levelup

@@ -358,15 +358,18 @@ prefix (menus_listbox_picker.cpp).
   possible; for files above 500 lines, judge whether a split into modules of
   things that belong together makes sense, and do it where it does.
 - Next file, by size (2026-11-10 21:15, strings*.cpp excepted):
-  to judge: menus_chargen_feats 561, minigame_turret_peg 536,
-  menus_listbox_picker 524, menus_focus_k2 520, help 520, menus_focus 510,
-  menus_powers_levelup 510. The catalog headers (engine_offsets_fields.h
+  to judge: minigame_turret_peg 536, menus_listbox_picker 524,
+  menus_focus_k2 520, help 520, menus_focus 510. The catalog headers (engine_offsets_fields.h
   2318, engine_offsets_addresses.h 1060, engine_area.h 789) stay as they are.
 - F13 WriteJmpRel32 (engine_input_mouseguard) and WriteRel32Jmp
   (save_crash_guard) are the same four lines: one shared helper.
 - F2b: share the save-variable code of exit_memory with discovery.cpp.
-- F3 menus_chargen_feats / menus_powers_levelup: about 15 same-named
-  functions, 22 cloned blocks; one chart-grid module (check K2 plans).
+- F3 done: the feat chart and the Force-power chart share
+  menus_skillflow_grid (one Grid per screen, a Screen record for what
+  differs); the two files went from 561 and 510 lines to 97 and 96,
+  the column search (menus_skillflow_nav) has unit tests. In game,
+  check at the next level-up: arrows, Home / End, Enter and Esc on
+  the Feats screen; later the same on the Force powers screen.
 - F4 small list overlays (help, combat_queue, examine_view,
   unified_action_menu): Open, BuildRows, SpeakRow, HandleInputEvent.
 - F5 memory readers outside engine_reads (SafeRead in 4 files,

@@ -2115,6 +2115,7 @@ enum class Id : int {
     // ---- Startup + chargen fallbacks.
     FmtModLoadedVersion,      // spoken once at DLL init - the first thing heard
     FmtChargenFeatUnnamed,    // fallback when the feat's name label is empty
+    FmtChargenPowerUnnamed,   // the same for a Force power
     ChargenBtnRecommended,    // fallback when the button's own text is empty
     ChargenBtnAccept,
     ChargenBtnBack,

@@ -1,4 +1,4 @@
-# menus_dispatch.cpp (330 lines)
+# menus_dispatch.cpp (328 lines)
 
 Source: `patches/Accessibility/menus_dispatch.cpp`
 

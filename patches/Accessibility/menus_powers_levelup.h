@@ -1,58 +1,24 @@
-// Force-power picker (CSWGuiPowersLevelUp).
+// The Force-power picker (CSWGuiPowersLevelUp), in character generation and
+// in level-up: one engine class hosts both.
 //
-// Used by both the chargen Power-selection screen and the InGameLevelUp
-// "Kr�fte" sub-screen — the same engine class hosts both flows
-// (swkotor.exe.h:16603, decompile of OnPowerSelectionChanged @0x006f1940).
-//
-// The panel is structurally a 2D skill tree, NOT a flat listbox: its
-// powers_listbox (.gui id 6 on K1, 12 on K2 — this panel's control ids are
-// re-numbered between the games, see the id table in the .cpp) holds
-// CSWGuiSkillFlow rows (one per power family), each with up to 3
-// CSWGuiFlowSkillStruct cells (base / improved / master variants) —
-// identical layout to chargen Feats. The chart at
-// kPowersLevelUpChartOffset (0x19fc K1 / 0x1bf8 K2) is a
-// CSWGuiSkillFlowChart tracking (row, col) selection state.
-//
-// Our navigation model mirrors menus_chargen_feats: a 2D cursor over
-// non-empty cells, vertical movement keeps the column (snapping to the
-// nearest filled column when the destination row doesn't have it),
-// horizontal movement steps through filled columns within a row, then
-// virtual rows for the action buttons. Enter on a cell dispatches
-// OnPowerPicked(powerId); Enter on a button activates that button; Esc
-// queues BTN_BACK.
-//
-// Engine state changes per focused cell:
-//   * CSWGuiSkillFlowChart::SetSelectedSkill(chart, powerId) — chart
-//     render highlight + (selected_row, selected_col).
-//   * CSWGuiPowersLevelUp::OnEnterPower(panel, powerId) — refreshes
-//     power_label + description_listbox + BTN_SELECT state for the
-//     focused power.
+// The panel is a chart of power families, not a flat list: its powers list
+// box holds CSWGuiSkillFlow rows with up to three cells (the power, its
+// improved and its master form), the same layout as the Feats screen. The
+// keyboard model is the shared one in menus_skillflow_grid.h.
 
 #pragma once
 
 namespace acc::menus::powers_levelup {
 
-// True iff `panel` is the CSWGuiPowersLevelUp screen (identified via
-// engine_panels::PanelKind::PowersLevelUp).
 bool IsPowersLevelUpPanel(void* panel);
 
-// Title-override hook for AnnouncePanelTitle. Returns the panel's
-// sub_title_label (.gui id 1, the powers title) instead of the misleading
-// main_title_label (id 0, the chargen header) baked into pwrlvlup.gui.
-// nullptr when `panel` isn't a PowersLevelUp screen. Buffer is
-// thread-local; caller copies / speaks before re-invoking.
+// The title to announce for this panel: its sub-title label, which names the
+// powers screen, where the main title label of pwrlvlup.gui is the character
+// generation header. nullptr when `panel` is another screen. The buffer is
+// thread-local: use it before the next call.
 const char* GetTitleOverride(void* panel);
 
-// Input dispatcher. Returns true when the event is consumed (caller
-// returns `outRv` from the input hook); false to fall through.
-//
-// Up/Down: change row across non-empty cells + button virtual entries.
-// Left/Right: step through filled columns within the current row.
-// Enter: activate the focused entry (chart cell → OnPowerPicked; button
-//        → QueueButtonByIdActivate).
-// Esc:  queue BTN_BACK activation.
-// All other keys: fall through.
-bool HandleInput(int n, void* thisPtr, void* panel,
-                 int param_1, int param_2, int& outRv);
+// True when the event is consumed; `outRv` is then the input hook's result.
+bool HandleInput(void* panel, int code, int value, int& outRv);
 
 }  // namespace acc::menus::powers_levelup

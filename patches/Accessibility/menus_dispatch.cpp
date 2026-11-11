@@ -286,12 +286,10 @@ extern "C" int __cdecl OnHandleInputEvent(void* thisPtr, int param_1, int param_
     }
     // The two chart grids return without the press tracker, as they always
     // have.
-    if (int rv = 0;
-        acc::menus::chargen_feats::HandleInput(e.n, e.mgr, panel, e.code, e.val, rv)) {
+    if (int rv = 0; acc::menus::chargen_feats::HandleInput(panel, e.code, e.val, rv)) {
         return rv;
     }
-    if (int rv = 0;
-        acc::menus::powers_levelup::HandleInput(e.n, e.mgr, panel, e.code, e.val, rv)) {
+    if (int rv = 0; acc::menus::powers_levelup::HandleInput(panel, e.code, e.val, rv)) {
         return rv;
     }
 

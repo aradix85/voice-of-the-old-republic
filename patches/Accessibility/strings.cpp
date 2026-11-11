@@ -922,6 +922,7 @@ const char* Get(Id id) {
 
         case Id::FmtModLoadedVersion:   return "Voice of the Old Republic loaded, version %s";
         case Id::FmtChargenFeatUnnamed: return "Feat %u";
+        case Id::FmtChargenPowerUnnamed: return "Power %u";
         case Id::ChargenBtnRecommended: return "Recommended";
         case Id::ChargenBtnAccept:      return "Accept";
         case Id::ChargenBtnBack:        return "Back";
