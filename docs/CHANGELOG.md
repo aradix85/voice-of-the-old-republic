@@ -80,6 +80,8 @@ installer, as the pre-release `bridge-latest`.
 - Standing idle in combat with an enemy near is announced once.
 - Enter on a container that did nothing tries the game's own click the next
   time.
+- Enter or Ctrl+L on something behind a closed door opens the door on the way.
+- Enter on an enemy round a corner walks there first and then attacks.
 - Door numbers stay the same after saving and loading.
 - Objects with the same name set in a row are numbered west to east.
 - The wall panels of the Sith base puzzle on Taris say their real on or off
@@ -273,7 +275,21 @@ installer, as the pre-release `bridge-latest`.
 - A container that was bashed open did nothing on Enter: the engine accepts
   the use and puts no action on the queue. When a use ends that way, with no
   screen in front, the next Enter on the same target goes through the game's
-  own click. Not yet seen to open such a container in the game.
+  own click. On the bashed-open container that click did nothing either: the
+  game itself does not open a container in that state.
+- Enter on a corpse behind a closed, unlocked door said "Open Corpse" and then
+  walked into the door: the engine's own walk to a use opens no door, the
+  party stood in the way, and all that followed was "way blocked". Enter on a
+  container, item or person, and Ctrl+L, now check the way first. With a
+  closed door on the first stretch the mod walks itself, region by region as
+  Ctrl+Shift+N does, opening the doors, says "Walking to Corpse - Sith
+  soldier, via Sewer Door 7 Southeast, about 25 metres to walk", and acts on
+  the target once it stands in the target's region.
+- The same walk goes before an attack on an enemy round a corner (a walk at
+  least 8 metres and half as long again as the straight line). The engine's
+  attack walk ran on the spot for eight seconds between a wall and a party
+  member and then dropped the attack; the only thing said was "Combat ends".
+  Not during a fight: the walk stops when one starts.
 
 <h3>Cycles:</h3>
 
