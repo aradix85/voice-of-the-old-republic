@@ -213,17 +213,13 @@ float TargetSpeed(const TargetInfo* info, float measured) {
 // ~0, +Z elevation ~85.)
 bool ReadAimLine(Vector& outDir, Vector& outOrigin) {
     void* gun = ResolveGunModel();
-    if (!gun) return false;
+    const auto getPartTransform = reinterpret_cast<PFN_GetPartTransform>(
+        acc::engine::ReadVirtual(gun, kGobVtableGetPartXform));
+    if (!getPartTransform) return false;
     __try {
-        void* vtable = *reinterpret_cast<void**>(gun);
-        if (!vtable) return false;
-        void* fn = *reinterpret_cast<void**>(
-            reinterpret_cast<unsigned char*>(vtable) + kGobVtableGetPartXform);
-        if (!fn) return false;
         Vector pos = {0, 0, 0};
         Quat   q   = {1, 0, 0, 0};
-        int found = reinterpret_cast<PFN_GetPartTransform>(fn)(
-            gun, "bullethook0", &pos, &q);
+        int found = getPartTransform(gun, "bullethook0", &pos, &q);
         if (found == 0) return false;
         const Vector baseForward = {0.0f, 1.0f, 0.0f};
         Vector dir = QuatRotate(q, baseForward);

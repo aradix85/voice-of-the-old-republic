@@ -180,7 +180,7 @@ void DrainActivate(const PendingOp& op) {
     uint32_t prevIsActive = RaiseIsActiveIfZero(op.a);
     acclog::Write("Update", "FireActivate target=%p is_active=%u%s",
                   op.a, prevIsActive, RaiseNote(prevIsActive));
-    if (auto fn = HandleInputEventOf(op.a)) {
+    if (auto fn = acc::engine::ReadHandleInputEvent(op.a)) {
         acclog::Write("Update", "FireActivate dispatch target=%p fn=%p", op.a, fn);
         fn(op.a, kInputActivate, 1);
         acclog::Write("Update", "FireActivate returned target=%p", op.a);

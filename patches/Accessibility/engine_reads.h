@@ -32,7 +32,19 @@ uintptr_t ReadVtable(void* object);
 // not known in this game (0).
 bool HasVtable(void* object, uintptr_t vtable);
 
-// vtable[index](control) as __thiscall.
+// The function at `slotOffset` bytes into `object`'s vtable (the slot index
+// times the pointer size), or nullptr for a null object, a null slot and on
+// a fault. The call is the caller's, inside its own guard: the function
+// belongs to an object the engine may have freed since.
+void* ReadVirtual(void* object, size_t slotOffset);
+
+// HandleInputEvent of a control or a panel, or nullptr. Called with an input
+// code and 1 for "down".
+typedef void (__thiscall* PFN_GuiHandleInputEvent)(void* this_, int code, int state);
+PFN_GuiHandleInputEvent ReadHandleInputEvent(void* object);
+
+// vtable[index](object) as __thiscall without arguments: the As* downcasts,
+// which return the object as the asked class or null.
 //
 // SEH-wrapped: per-tick monitors walk panels[] and call this on every
 // child control. During engine teardown (FireActivate("Play") /
@@ -40,7 +52,7 @@ bool HasVtable(void* object, uintptr_t vtable);
 // panel pointer can still resolve next tick. The freed control's vtable
 // slot yields garbage; without SEH the deref would crash. Faults map
 // to "not this subclass" so the caller skips the stale control.
-void* CallDowncast(void* control, int vtableIndex);
+void* CallDowncast(void* object, int vtableIndex);
 
 // CExoString at base+offset. True if non-empty and length sane.
 bool ReadCExoString(void* base, size_t offset, char* outBuf, size_t bufSize);

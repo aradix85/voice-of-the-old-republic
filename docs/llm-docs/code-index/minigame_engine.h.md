@@ -1,4 +1,4 @@
-# minigame_engine.h (119 lines)
+# minigame_engine.h (65 lines)
 
 Source: `patches/Accessibility/minigame_engine.h`
 
@@ -8,14 +8,13 @@ Both the swoop bike and the turret gun are a CSWMiniPlayer (extends CSWTrackFoll
 
 ## Declarations (in source order)
 
-- L38 `void* ReadAreaMiniGame()`: CSWCArea.mini_game of the player's area, or nullptr.
-- L51 `void* ResolveMgoArray()`: Returns the minigame object array, or nullptr if any link of the chain is null or faults (i.e.
-- L55 `void* CallAsCast(void* obj, size_t vtableSlotOffset)`: Call a vtable AsSWCxxx-style downcast at `vtableSlotOffset` on `obj`.
-- L77 `bool ReadFollowerPosition(void* follower, Vector& out)`: World position of `follower`'s first model.
-- L82 `void* ReadFollowerModelGob(void* follower)`: `follower`'s first model object — a Gob (render object), the same class the obstacles' CAurObject slot points at, so the Gob accessors below apply to it (GetModelName tells a K2 accelerator pad from a mine).
-- L106 `bool ReadGobBoundingBox(void* gob, Vector& mn, Vector& mx)`: Model-local bounding box of a Gob (whole model).
-- L109 `bool ReadGobPartBoundingBox(void* gob, const char* partName, Vector& mn, Vector& mx)`: Model-local bounding box of one named part of a Gob.
-- L115 `bool ReadOffsetVector(void* player, Vector& out)`: Read / write the whole offset Vector on a CSWMiniPlayer `player` pointer.
-- L116 `void WriteOffsetVector(void* player, const Vector& v)`
+- L34 `void* ReadAreaMiniGame()`: CSWCArea.mini_game of the player's area, or nullptr.
+- L38 `void* ResolveMgoArray()`: The minigame object array (obstacles, accelerator pads, track followers), or nullptr when no minigame is live.
+- L44 `bool ReadFollowerPosition(void* follower, Vector& out)`: World position of `follower`'s first model: the model is what the engine renders and what the spatial cues must track, and the follower's own transform is not the same.
+- L50 `void* ReadFollowerModelGob(void* follower)`: `follower`'s first model object: a Gob (render object), the class the obstacles' CAurObject slot points at, so the two readers below apply to it (and GetModelName, which tells a KOTOR 2 accelerator pad from a mine).
+- L53 `bool ReadGobBoundingBox(void* gob, Vector& mn, Vector& mx)`: Model-local bounding box of a Gob (whole model).
+- L56 `bool ReadGobPartBoundingBox(void* gob, const char* partName, Vector& mn, Vector& mx)`: Model-local bounding box of one named part of a Gob.
+- L61 `bool ReadOffsetVector(void* player, Vector& out)`: The whole offset Vector of a CSWMiniPlayer.
+- L62 `void WriteOffsetVector(void* player, const Vector& v)`
 
-Also 10 constants or variables at namespace scope.
+Also 4 constants or variables at namespace scope.

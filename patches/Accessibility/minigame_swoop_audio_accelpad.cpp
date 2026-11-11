@@ -98,7 +98,7 @@ void ScanEnemies(void* mgoArray, PadTick& t) {
         if (!obj) continue;
         ++t.slotsSeen;
 
-        void* enemy = CallAsCast(obj, kVtableSlotAsEnemy);
+        void* enemy = CallDowncast(obj, kVtableSlotAsEnemy);
         if (!enemy) continue;
 
         Vector pos;

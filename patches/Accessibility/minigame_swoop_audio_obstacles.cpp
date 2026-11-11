@@ -112,7 +112,7 @@ bool ReadObstacle(void* mgoArray, int i, ObstacleTick& t, ObstacleView& v) {
     ++t.slotsSeen;
     // AsObstacle (vtable[8]) returns the object itself for a CSWMGObstacle,
     // null otherwise: the engine's own type check.
-    v.obstacle = CallAsCast(obj, kVtableSlotAsObstacle);
+    v.obstacle = CallDowncast(obj, kVtableSlotAsObstacle);
     if (!v.obstacle) return false;
     ++t.obstaclesFound;
     void* aur = ReadPtrOrNull(v.obstacle, kObstacleAurObjectOffset);

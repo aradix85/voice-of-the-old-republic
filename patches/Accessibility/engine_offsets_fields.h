@@ -2506,3 +2506,27 @@ const size_t kCSWCCreatureCombatModeOffset = acc::off::Pick(0x440, 0x458);
 // zeroes the page counter at +0x9d9; SetNextMessage 0x00899630 reads it for
 // its "Message_PC%i" lookups).
 const size_t kTutorialBoxRowOffset = acc::off::Pick(0x994, 0x9d8);
+
+// CClientExoAppInternal holds the minigame object array (obstacles, accelerator
+// pads, track followers) at offset 0. Resolution walks
+// AppManager -> CClientExoApp -> internal -> array.
+//
+// KOTOR 2: identical. Witnessed in its GetMGOArray twin @0x00740070, which is
+// literally `internal = [this+4]; return [internal+0]` — the same two hops.
+const size_t kClientInternalMgoArrayOffset = acc::off::Same(0x0);
+
+// A CSWTrackFollower (the swoop bike, the turret gun, and every racer /
+// obstacle rider) carries a CExoArrayList of model wrappers at +0x68. The
+// first model's vtable slot +0x64 is a GetPosition thunk that fills a
+// caller-supplied Vector. Reading the follower's own transform is not
+// equivalent — the model is what the engine actually renders and what the
+// spatial cues must track.
+//
+// KOTOR 2: both identical, and the identification is exact — its
+// CSWTrackFollower::GetPosition twin @0x00835f50 reads size at +0x6c, data at
+// +0x68, takes element [0], and calls the model's vtable[+0x64] to copy three
+// floats, instruction for instruction like KOTOR 1's @0x0066d5d0. (The list's
+// element STRIDE is 8 bytes in BOTH games — the engine's own PlayAnimation walk
+// indexes `data[i*8]` on each — so `data[0]` being the bare model pointer holds
+// either way. Only index 0 is ever read here.)
+const size_t kTrackFollowerModelsDataOffset = acc::off::Same(0x68);

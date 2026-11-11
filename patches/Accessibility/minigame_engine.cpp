@@ -7,42 +7,33 @@
 
 namespace acc::minigame {
 
+using acc::engine::ReadVirtual;
+
 void* ReadAreaMiniGame() {
     void* serverArea = acc::engine::GetCurrentArea();
     if (!serverArea) return nullptr;
     return ReadPtrOrNull(acc::engine::GetClientArea(serverArea), kClientAreaMiniGameOffset);
 }
 
-// ---- Minigame object array -------------------------------------------------
-
 void* ResolveMgoArray() {
-    void* clientInternal = acc::engine::GetClientAppInternal();
-    if (!clientInternal) return nullptr;
-    return ReadPtrOrNull(clientInternal, kClientInternalMgoArrayOffset);
+    return ReadPtrOrNull(acc::engine::GetClientAppInternal(), kClientInternalMgoArrayOffset);
+}
+
+void* ReadFollowerModelGob(void* follower) {
+    // The models list is a CExoArrayList of pointers to model wrappers; a null
+    // first element is the empty list, so its size never has to be read.
+    return ReadPtrOrNull(ReadPtrOrNull(follower, kTrackFollowerModelsDataOffset), 0);
 }
 
 bool ReadFollowerPosition(void* follower, Vector& out) {
-    if (!follower) return false;
+    typedef Vector* (__thiscall* PFN_GetPositionThunk)(void* this_, Vector* outBuf);
+    void* model = ReadFollowerModelGob(follower);
+    const auto getPosition = reinterpret_cast<PFN_GetPositionThunk>(
+        ReadVirtual(model, kModelVtableSlotGetPosition));
+    if (!getPosition) return false;
     __try {
-        // models is a CExoArrayList<undefined4>; data is its first member
-        // (offset 0) and holds 4-byte pointers to model wrapper objects,
-        // each with its own vtable. A null data[0] is the empty case, so
-        // the list size at +0x6c never has to be read.
-        void* modelsData = ReadPtrOrNull(follower,
-                                       kTrackFollowerModelsDataOffset);
-        if (!modelsData) return false;
-        void* model = *reinterpret_cast<void**>(modelsData);
-        if (!model) return false;
-        void* vtable = *reinterpret_cast<void**>(model);
-        if (!vtable) return false;
-        void* fn = *reinterpret_cast<void**>(
-            reinterpret_cast<unsigned char*>(vtable) +
-            kModelVtableSlotGetPosition);
-        if (!fn) return false;
-        typedef Vector* (__thiscall* PFN_GetPositionThunk)(void* this_,
-                                                           Vector* outBuf);
         Vector buf = {0.0f, 0.0f, 0.0f};
-        Vector* ret = reinterpret_cast<PFN_GetPositionThunk>(fn)(model, &buf);
+        const Vector* ret = getPosition(model, &buf);
         out = ret ? *ret : buf;
         return true;
     } __except (EXCEPTION_EXECUTE_HANDLER) {
@@ -50,28 +41,14 @@ bool ReadFollowerPosition(void* follower, Vector& out) {
     }
 }
 
-void* ReadFollowerModelGob(void* follower) {
-    if (!follower) return nullptr;
-    __try {
-        void* modelsData = ReadPtrOrNull(follower, kTrackFollowerModelsDataOffset);
-        if (!modelsData) return nullptr;
-        return *reinterpret_cast<void**>(modelsData);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return nullptr;
-    }
-}
-
 bool ReadGobBoundingBox(void* gob, Vector& mn, Vector& mx) {
-    if (!gob) return false;
+    typedef void (__thiscall* PFN_GetBBox)(void* this_, Vector* mn, Vector* mx);
+    const auto getBox = reinterpret_cast<PFN_GetBBox>(
+        ReadVirtual(gob, kGobVtableSlotGetBoundingBox));
+    if (!getBox) return false;
     __try {
-        void* vtable = *reinterpret_cast<void**>(gob);
-        if (!vtable) return false;
-        void* fn = *reinterpret_cast<void**>(
-            reinterpret_cast<unsigned char*>(vtable) + kGobVtableSlotGetBoundingBox);
-        if (!fn) return false;
-        typedef void (__thiscall* PFN_GetBBox)(void* this_, Vector* mn, Vector* mx);
         Vector a = {0.0f, 0.0f, 0.0f}, b = {0.0f, 0.0f, 0.0f};
-        reinterpret_cast<PFN_GetBBox>(fn)(gob, &a, &b);
+        getBox(gob, &a, &b);
         if (!(a.x <= b.x && a.y <= b.y && a.z <= b.z)) return false;  // NaN / empty
         mn = a; mx = b;
         return true;
@@ -81,27 +58,22 @@ bool ReadGobBoundingBox(void* gob, Vector& mn, Vector& mx) {
 }
 
 bool ReadGobPartBoundingBox(void* gob, const char* partName, Vector& mn, Vector& mx) {
-    if (!gob || !partName) return false;
+    typedef void* (__thiscall* PFN_GetPart)(void* this_, const char* name);
+    typedef void (__thiscall* PFN_PartMinBBox)(void* this_, Vector* mn, Vector* mx,
+                                               float scale);
+    if (!partName) return false;
+    const auto getPart = reinterpret_cast<PFN_GetPart>(
+        ReadVirtual(gob, kGobVtableSlotGetPart));
+    if (!getPart) return false;
     __try {
-        void* vtable = *reinterpret_cast<void**>(gob);
-        if (!vtable) return false;
-        void* fnPart = *reinterpret_cast<void**>(
-            reinterpret_cast<unsigned char*>(vtable) + kGobVtableSlotGetPart);
-        if (!fnPart) return false;
-        typedef void* (__thiscall* PFN_GetPart)(void* this_, const char* name);
-        void* part = reinterpret_cast<PFN_GetPart>(fnPart)(gob, partName);
-        if (!part) return false;
-        void* pvt = *reinterpret_cast<void**>(part);
-        if (!pvt) return false;
-        void* fnBox = *reinterpret_cast<void**>(
-            reinterpret_cast<unsigned char*>(pvt) + kPartVtableSlotGetMinBBox);
-        if (!fnBox) return false;
-        typedef void (__thiscall* PFN_PartMinBBox)(void* this_, Vector* mn,
-                                                   Vector* mx, float scale);
+        void* part = getPart(gob, partName);
+        const auto minBox = reinterpret_cast<PFN_PartMinBBox>(
+            ReadVirtual(part, kPartVtableSlotGetMinBBox));
+        if (!minBox) return false;
         // The engine folds vertices into the caller's running min/max.
         Vector a = { 3.4e38f,  3.4e38f,  3.4e38f};
         Vector b = {-3.4e38f, -3.4e38f, -3.4e38f};
-        reinterpret_cast<PFN_PartMinBBox>(fnBox)(part, &a, &b, 1.0f);
+        minBox(part, &a, &b, 1.0f);
         if (!(a.x <= b.x && a.y <= b.y && a.z <= b.z)) return false;  // untouched / NaN
         if (a.x < -1.0e6f || b.x > 1.0e6f) return false;              // still the sentinels
         mn = a; mx = b;
@@ -111,39 +83,15 @@ bool ReadGobPartBoundingBox(void* gob, const char* partName, Vector& mn, Vector&
     }
 }
 
-void* CallAsCast(void* obj, size_t vtableSlotOffset) {
-    if (!obj) return nullptr;
-    __try {
-        void* vt = *reinterpret_cast<void**>(obj);
-        if (!vt) return nullptr;
-        void* fn = *reinterpret_cast<void**>(
-            reinterpret_cast<unsigned char*>(vt) + vtableSlotOffset);
-        if (!fn) return nullptr;
-        typedef void* (__thiscall* PFN_AsCast)(void* this_);
-        return reinterpret_cast<PFN_AsCast>(fn)(obj);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return nullptr;
-    }
-}
-
 bool ReadOffsetVector(void* player, Vector& out) {
-    if (!player) return false;
-    __try {
-        out = *reinterpret_cast<Vector*>(
-            reinterpret_cast<unsigned char*>(player) +
-            kMiniPlayerOffsetVectorOffset);
-        return true;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return false;
-    }
+    return TryReadVector(player, kMiniPlayerOffsetVectorOffset, &out);
 }
 
 void WriteOffsetVector(void* player, const Vector& v) {
     if (!player) return;
     __try {
-        *reinterpret_cast<Vector*>(
-            reinterpret_cast<unsigned char*>(player) +
-            kMiniPlayerOffsetVectorOffset) = v;
+        *reinterpret_cast<Vector*>(reinterpret_cast<unsigned char*>(player) +
+                                   kMiniPlayerOffsetVectorOffset) = v;
     } __except (EXCEPTION_EXECUTE_HANDLER) {
     }
 }

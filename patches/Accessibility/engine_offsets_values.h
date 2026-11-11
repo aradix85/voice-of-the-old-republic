@@ -85,7 +85,37 @@ constexpr int       kAbilitiesPanelCodeChartUp        = 0x31;
 constexpr int       kAbilitiesPanelCodeChartDown      = 0x32;
 
 // The minigame object array has 255 slots, and CSWMiniGameObject's downcasts
-// are at these vtable byte offsets (kMgoArrayObjectsOffset has the witnesses).
-constexpr int    kMgoArraySlotCount    = 255;
-constexpr size_t kVtableSlotAsEnemy    = 0x1c;
-constexpr size_t kVtableSlotAsObstacle = 0x20;
+// are at these vtable slots, for CallDowncast (byte offsets 0x1c and 0x20;
+// kMgoArrayObjectsOffset has the witnesses).
+constexpr int kMgoArraySlotCount    = 255;
+constexpr int kVtableSlotAsEnemy    = 7;
+constexpr int kVtableSlotAsObstacle = 8;
+
+// HandleInputEvent's vtable slot on every GUI class, control and panel, in
+// both games.
+constexpr int kVtableSlotHandleInputEvent = 15;
+
+// The GetPosition thunk of a track follower's model, a vtable byte offset
+// (kTrackFollowerModelsDataOffset has the witnesses).
+constexpr size_t kModelVtableSlotGetPosition = 0x64;
+
+// Gob (render object) vtable slots, identical in both games — the RTTI slot map
+// (docs/llm-docs/re/k2/k2-vtable-slots.csv, class "Gob") pairs them exactly:
+//   slot  3 GetModelName()                       K1 0x0043F1C0 / K2 0x004615D0
+//   slot 59 GetBoundingBox(Vector* mn, Vector* mx) K1 0x0043E8C0 / K2 0x00459FB0
+//           (copies the member box — the model header's, MODEL-LOCAL, so the
+//           world box is gob position + local box for an unrotated object)
+//   slot 67 GetPart(const char* name) -> Part*   K1 0x004402F0 / K2 0x004587F0
+//           ("root" is the root part; anything else is FindPart by name)
+// Part vtable slot 29 GetMinimumBoundingBox(Vector* mn, Vector* mx, float scale)
+//           K1 0x00440960 / K2 0x0045C810 — walks the part's trimesh vertices
+//           and folds them into the CALLER-INITIALISED min/max, in the gob's
+//           local frame (it subtracts the gob position and un-rotates).
+// K1's CSWTrackFollower::DoObstacleHitCheck asks the obstacle's gob for its
+// "hitbump" part and hit-tests against that (the string is literal in the
+// decompile), so the part box is the true collision extent; the K2 swoop
+// tracks' obstacle models carry exactly one such mesh (offline atlas,
+// docs/llm-docs/swoop-k2-controls-and-jump.md section 7).
+constexpr size_t kGobVtableSlotGetBoundingBox = 59 * sizeof(void*);
+constexpr size_t kGobVtableSlotGetPart        = 67 * sizeof(void*);
+constexpr size_t kPartVtableSlotGetMinBBox    = 29 * sizeof(void*);

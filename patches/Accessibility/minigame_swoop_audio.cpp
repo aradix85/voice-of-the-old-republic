@@ -111,15 +111,11 @@ bool TrackAxisUsable(void* miniGame) {
 // Returns the CAurObject's name pointer (engine-owned, valid for the
 // lifetime of the object), or nullptr on any null link / SEH fault.
 const char* ReadAurObjectName(void* aurObject) {
-    if (!aurObject) return nullptr;
+    const auto getName = reinterpret_cast<PFN_GetAurName>(
+        acc::engine::ReadVirtual(aurObject, kAurVtableSlotGetName));
+    if (!getName) return nullptr;
     __try {
-        void* vtable = *reinterpret_cast<void**>(aurObject);
-        if (!vtable) return nullptr;
-        void* fn = *reinterpret_cast<void**>(
-            reinterpret_cast<unsigned char*>(vtable) +
-            kAurVtableSlotGetName);
-        if (!fn) return nullptr;
-        return reinterpret_cast<PFN_GetAurName>(fn)(aurObject);
+        return getName(aurObject);
     } __except (EXCEPTION_EXECUTE_HANDLER) {
         return nullptr;
     }

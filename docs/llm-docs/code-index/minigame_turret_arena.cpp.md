@@ -1,4 +1,4 @@
-# minigame_turret_arena.cpp (269 lines)
+# minigame_turret_arena.cpp (265 lines)
 
 Source: `patches/Accessibility/minigame_turret_arena.cpp`
 
@@ -16,6 +16,6 @@ The turret's world: the gun model and its aim line, the arena (tunnel bounds, bo
 - L195 `float HumCompression()`
 - L202 `float TargetSpeed(const TargetInfo* info, float measured)`: The speed the range model should use for a target: the engine's track speed for a fighter, else the measured one.
 - L214 `bool ReadAimLine(Vector& outDir, Vector& outOrigin)`: THE CROSSHAIR.
-- L242 `bool ReadOffset(float& azOut, float& elOut)`: Read / write the aim field (CSWMiniPlayer.offset +0x1c4): x = elevation°, z = azimuth°.
-- L251 `void WriteOffset(float az, float el)`
-- L262 `float AngleBetweenDeg(const Vector& a, const Vector& b)`: Angle (degrees) between the aim ray and the (already normalised) direction to a target.
+- L238 `bool ReadOffset(float& azOut, float& elOut)`: Read / write the aim field (CSWMiniPlayer.offset +0x1c4): x = elevation°, z = azimuth°.
+- L247 `void WriteOffset(float az, float el)`
+- L258 `float AngleBetweenDeg(const Vector& a, const Vector& b)`: Angle (degrees) between the aim ray and the (already normalised) direction to a target.

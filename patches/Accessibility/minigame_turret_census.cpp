@@ -80,7 +80,7 @@ void CensusFighters(Census& c, const Vector& listener) {
         void* slot = ReadPtrOrNull(mgoArray,
                                  kMgoArrayObjectsOffset +
                                  static_cast<size_t>(i) * sizeof(void*));
-        void* enemy = slot ? CallAsCast(slot, kVtableSlotAsEnemy) : nullptr;
+        void* enemy = slot ? CallDowncast(slot, kVtableSlotAsEnemy) : nullptr;
         if (!enemy) continue;
 
         // Alive in the pool — assign its stable number (idempotent) and note

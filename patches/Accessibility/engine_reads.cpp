@@ -16,14 +16,21 @@ typedef void* (__thiscall* PFN_Downcast)(void* this_);
 
 }  // namespace
 
-void* CallDowncast(void* control, int vtableIndex) {
-    if (!control) return nullptr;
+void* ReadVirtual(void* object, size_t slotOffset) {
+    return ReadPtrOrNull(reinterpret_cast<void*>(ReadVtable(object)), slotOffset);
+}
+
+PFN_GuiHandleInputEvent ReadHandleInputEvent(void* object) {
+    return reinterpret_cast<PFN_GuiHandleInputEvent>(
+        ReadVirtual(object, kVtableSlotHandleInputEvent * sizeof(void*)));
+}
+
+void* CallDowncast(void* object, int vtableIndex) {
+    const auto downcast = reinterpret_cast<PFN_Downcast>(
+        ReadVirtual(object, static_cast<size_t>(vtableIndex) * sizeof(void*)));
+    if (!downcast) return nullptr;
     __try {
-        void** vtable = *reinterpret_cast<void***>(control);
-        if (!vtable) return nullptr;
-        auto fn = reinterpret_cast<PFN_Downcast>(vtable[vtableIndex]);
-        if (!fn) return nullptr;
-        return fn(control);
+        return downcast(object);
     } __except (EXCEPTION_EXECUTE_HANDLER) {
         return nullptr;
     }

@@ -1,4 +1,4 @@
-# minigame_engine.cpp (152 lines)
+# minigame_engine.cpp (100 lines)
 
 Source: `patches/Accessibility/minigame_engine.cpp`
 
@@ -8,12 +8,11 @@ Both the swoop bike and the turret gun are a CSWMiniPlayer (extends CSWTrackFoll
 
 ## Declarations (in source order)
 
-- L10 `void* ReadAreaMiniGame()`
+- L12 `void* ReadAreaMiniGame()`
 - L18 `void* ResolveMgoArray()`
-- L24 `bool ReadFollowerPosition(void* follower, Vector& out)`
-- L53 `void* ReadFollowerModelGob(void* follower)`
-- L64 `bool ReadGobBoundingBox(void* gob, Vector& mn, Vector& mx)`
-- L83 `bool ReadGobPartBoundingBox(void* gob, const char* partName, Vector& mn, Vector& mx)`
-- L114 `void* CallAsCast(void* obj, size_t vtableSlotOffset)`
-- L129 `bool ReadOffsetVector(void* player, Vector& out)`
-- L141 `void WriteOffsetVector(void* player, const Vector& v)`
+- L22 `void* ReadFollowerModelGob(void* follower)`
+- L28 `bool ReadFollowerPosition(void* follower, Vector& out)`
+- L44 `bool ReadGobBoundingBox(void* gob, Vector& mn, Vector& mx)`
+- L60 `bool ReadGobPartBoundingBox(void* gob, const char* partName, Vector& mn, Vector& mx)`
+- L86 `bool ReadOffsetVector(void* player, Vector& out)`
+- L90 `void WriteOffsetVector(void* player, const Vector& v)`

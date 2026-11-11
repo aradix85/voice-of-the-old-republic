@@ -157,9 +157,7 @@ minigame_pazaak split into five (e5a4708) and made lean (7a0cc5f: named
 zones, helpers for the repeated speech lines). menus_pending: Drain's
 784-line switch first became one function per op kind (0bfcc90), then a
 split into four (204aab3) and lean (e5775cb: one Queue(), DrainActivate
-as named steps). Left for an F-family: menus_crafting_rows.cpp keeps its own
-vtable[15] HandleInputEvent typedef next to menus_pending's
-HandleInputEventOf. cycle_input split into three (81155d2) and made lean
+as named steps). cycle_input split into three (81155d2) and made lean
 (414bf1f, comments). menus.cpp made lean without a split
 (8cf60b1, 1018 to 672 lines). menus_internal: namespace prep (94b0f40),
 split into four (6d535b5), lean (37135ce5: one listbox drive with one
@@ -482,18 +480,22 @@ prefix (menus_listbox_picker.cpp).
   while one is up and resumes after), a swoop race and the turret game.
   minigame_aim is split, move only, into minigame_engine (the area's
   minigame, the object array, follower positions and boxes, the offset
-  field) and minigame_magnet (the engine-free pull curve). Its lean is
-  open, design: the read of a virtual function (vtable, slot, null
-  checks) is written out five times in minigame_engine.cpp and again
-  in minigame_swoop_audio (ReadAurObjectName), minigame_turret_arena
-  (ReadAimLine), CallDowncast of engine_reads, menus_crafting_rows
-  (FireActivate, with its own HandleInputEvent typedef) and
-  HandleInputEventOf of menus_pending_internal.h: one ReadVirtual in
-  engine_reads. CallAsCast is CallDowncast with a byte offset instead
-  of an index. The layout constants of minigame_engine.h belong in the
-  catalog headers, ReadOffsetVector can go through TryReadVector, and
-  the magnet gets unit tests. Run call_convention.py after it: the 11
-  unchecked virtual calls are these.
+  field) and minigame_magnet (the engine-free pull curve, unit tests).
+  Lean done with it: the read of a virtual function (vtable, slot, null
+  checks) was written out ten times; engine_reads has ReadVirtual(object,
+  slotOffset) and ReadHandleInputEvent(object) now, used by
+  minigame_engine, ReadAurObjectName, ReadAimLine, CallDowncast,
+  menus_crafting_rows and the three menus_pending drains (their
+  HandleInputEventOf read the vtable without a guard). CallAsCast was
+  CallDowncast with a byte offset and is gone: kVtableSlotAsEnemy and
+  kVtableSlotAsObstacle are slot indices now (7 and 8). The layout
+  constants of minigame_engine.h are in the catalog headers. Left as it
+  is: GetDeviceState in engine_keyboard_resync, a DirectInput device and
+  not an engine object. Seen on the way: the turret files have some
+  twenty lines over 100 columns, for their lean. In-game check: a swoop
+  race (obstacles, pads, the pull toward a pad), the turret game
+  (aim line, pull toward a fighter, hit telemetry), crafting on the
+  KOTOR 2 workbench, a slider in the options, Esc in the equip picker.
 - F6 done as far as it is a duplicate: the physical-key read
   `(GetAsyncKeyState(vk) & 0x8000) != 0` was written out in nine files
   and is acc::hotkeys::KeyDown now. The polls themselves differ on
@@ -541,8 +543,9 @@ prefix (menus_listbox_picker.cpp).
     dump-text, engine_image_k2.bin straight from swkotor2.exe). An
     address that goes through a local or a parameter is followed to the
     constants it can be. Both games: 184 calls fit, 0 mismatches. Not
-    checked, 13: 11 virtual calls read from a vtable at run time, one
-    member of the chargen layout table, one trampoline of our own. Of the
+    checked, 11: 9 virtual calls read from a vtable at run time (all but
+    the DirectInput one through ReadVirtual), one member of the chargen
+    layout table, one trampoline of our own. Of the
     virtual calls the two fixed slots were checked by hand against all 25
     vtables the sources name, in both games: slot 15 (HandleInputEvent)
     pops 8 on every GUI class, and the As* downcasts (slots 20 to 23) pop

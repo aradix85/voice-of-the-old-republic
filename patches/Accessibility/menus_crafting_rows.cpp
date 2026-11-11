@@ -28,9 +28,7 @@ namespace acc::menus::crafting {
 
 namespace {
 
-using PFN_ControlHandleInputEvent = void(__thiscall*)(void* self, int code, int state);
 using PFN_CraftCost = unsigned int(__thiscall*)(void* self, void* item);
-constexpr int kVtableHandleInputEvent = 15;
 
 // Makes `row` the selected row: what a mouse click leaves behind, minus the
 // click. Both halves matter:
@@ -93,11 +91,10 @@ float ReadSkillFactor(void* panel, bool medical) {
 // The control's own HandleInputEvent (vtable slot 15) with the activate
 // code, as a click would.
 bool FireActivate(void* control) {
-    if (!control) return false;
+    const auto handleInput = acc::engine::ReadHandleInputEvent(control);
+    if (!handleInput) return false;
     __try {
-        void** vt = *reinterpret_cast<void***>(control);
-        auto fn = reinterpret_cast<PFN_ControlHandleInputEvent>(vt[kVtableHandleInputEvent]);
-        fn(control, 0x27, 1);
+        handleInput(control, 0x27, 1);
         return true;
     } __except (EXCEPTION_EXECUTE_HANDLER) {
         return false;

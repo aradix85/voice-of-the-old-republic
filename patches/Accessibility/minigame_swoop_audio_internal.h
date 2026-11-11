@@ -28,7 +28,7 @@ using acc::engine::ReadU32Or0;
 using acc::engine::ReadFloatOr0;
 using acc::engine::TryReadVector;
 using acc::minigame::ResolveMgoArray;
-using acc::minigame::CallAsCast;
+using acc::engine::CallDowncast;
 using acc::minigame::ReadFollowerPosition;
 using acc::minigame::ReadFollowerModelGob;
 using acc::minigame::ReadGobBoundingBox;

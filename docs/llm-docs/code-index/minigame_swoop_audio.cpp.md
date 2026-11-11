@@ -1,4 +1,4 @@
-# minigame_swoop_audio.cpp (187 lines)
+# minigame_swoop_audio.cpp (183 lines)
 
 Source: `patches/Accessibility/minigame_swoop_audio.cpp`
 
@@ -10,6 +10,6 @@ The race lifecycle (entry/exit, gear watch, wall collision, acceleration speedom
 
 - L74 `bool TrackAxisUsable(void* miniGame)`
 - L113 `const char* ReadAurObjectName(void* aurObject)`: Returns the CAurObject's name pointer (engine-owned, valid for the lifetime of the object), or nullptr on any null link / SEH fault.
-- L132 `void TickSpatialAudio(void* miniGame)`
-- L140 `ParkedBar GetParkedBarSituation()`
-- L144 `void ResetSpatialAudio()`
+- L128 `void TickSpatialAudio(void* miniGame)`
+- L136 `ParkedBar GetParkedBarSituation()`
+- L140 `void ResetSpatialAudio()`

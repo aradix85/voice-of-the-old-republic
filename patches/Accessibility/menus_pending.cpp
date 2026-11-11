@@ -7,6 +7,7 @@
 
 #include "engine_manager.h"
 #include "engine_offsets.h"
+#include "engine_reads.h"
 #include "log.h"
 #include "menus_crafting.h"
 #include "menus_galaxymap.h"
@@ -109,7 +110,7 @@ void DrainClickAt(void* gm, const PendingOp& op) {
 // feedback sound. The focus monitor catches the cur_value change at +0x74
 // on the next tick.
 void DrainSliderInput(const PendingOp& op) {
-    auto fn = HandleInputEventOf(op.a);
+    auto fn = acc::engine::ReadHandleInputEvent(op.a);
     if (!fn) return;
     acclog::Write("Update", "slider HandleInputEvent target=%p code=%d", op.a, op.code);
     fn(op.a, op.code, 1);

@@ -5,6 +5,7 @@
 
 #include "engine_input.h"
 #include "engine_offsets.h"
+#include "engine_reads.h"
 #include "log.h"
 
 namespace acc::menus::pending {
@@ -96,7 +97,7 @@ void DrainEquipCommit(const PendingOp& op) {
 // it keeps the cancel keyed to the same constant the input log prints.
 void DrainEquipPickerCancel(const PendingOp& op) {
     void* panel = op.a;
-    auto fn = HandleInputEventOf(panel);
+    auto fn = acc::engine::ReadHandleInputEvent(panel);
     if (!fn) return;
     int code = acc::engine::ManagerTranslateCode(kInputEsc1);
     acclog::Write("Update", "EquipPickerCancel panel=%p "

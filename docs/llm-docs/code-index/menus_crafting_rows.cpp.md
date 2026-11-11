@@ -1,4 +1,4 @@
-# menus_crafting_rows.cpp (226 lines)
+# menus_crafting_rows.cpp (223 lines)
 
 Source: `patches/Accessibility/menus_crafting_rows.cpp`
 
@@ -6,12 +6,12 @@ Rows of the K2 workbench and crafting lists: the row commit (selection, is_activ
 
 ## Declarations (in source order)
 
-- L48 `bool SelectRow(void* listBox, void* row, int index)`: Makes `row` the selected row: what a mouse click leaves behind, minus the click.
-- L62 `bool IsRowCraftable(void* row)`: The engine's own "can make this" gate; true when unreadable, so a bad read never invents a refusal.
-- L73 `unsigned int CallCraftCost(uintptr_t fnAddr, void* panel, void* item)`: The engine's cost function (the two screens use different ones, see kAddrCraftComponentCost); 0 on a fault.
-- L84 `float ReadSkillFactor(void* panel, bool medical)`: The panel's ctor-cached skill factor, or 0 for a fault or a value outside (0, 1]: a yield that cannot be trusted is not quoted.
-- L95 `bool FireActivate(void* control)`: The control's own HandleInputEvent (vtable slot 15) with the activate code, as a click would.
-- L109 `bool ResolveRowCommit(void* panel, void* control, void** outListBox)`
-- L125 `void DispatchRowCommit(void* panel, void* listBox, void* row)`
-- L162 `void AnnounceChainStepSuffix(void* panel, void* control)`
-- L207 `void SyncSelectedRowFromChainFocus()`
+- L46 `bool SelectRow(void* listBox, void* row, int index)`: Makes `row` the selected row: what a mouse click leaves behind, minus the click.
+- L60 `bool IsRowCraftable(void* row)`: The engine's own "can make this" gate; true when unreadable, so a bad read never invents a refusal.
+- L71 `unsigned int CallCraftCost(uintptr_t fnAddr, void* panel, void* item)`: The engine's cost function (the two screens use different ones, see kAddrCraftComponentCost); 0 on a fault.
+- L82 `float ReadSkillFactor(void* panel, bool medical)`: The panel's ctor-cached skill factor, or 0 for a fault or a value outside (0, 1]: a yield that cannot be trusted is not quoted.
+- L93 `bool FireActivate(void* control)`: The control's own HandleInputEvent (vtable slot 15) with the activate code, as a click would.
+- L106 `bool ResolveRowCommit(void* panel, void* control, void** outListBox)`
+- L122 `void DispatchRowCommit(void* panel, void* listBox, void* row)`
+- L159 `void AnnounceChainStepSuffix(void* panel, void* control)`
+- L204 `void SyncSelectedRowFromChainFocus()`

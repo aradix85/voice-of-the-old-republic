@@ -24,7 +24,7 @@ using acc::engine::ReadU32Or0;
 using acc::engine::ReadFloatOr0;
 using acc::engine::TryReadVector;
 using acc::minigame::ResolveMgoArray;
-using acc::minigame::CallAsCast;
+using acc::engine::CallDowncast;
 using acc::minigame::ReadFollowerPosition;
 
 // ----- Range model (calibrated on KOTOR 1, scaled per area) -----

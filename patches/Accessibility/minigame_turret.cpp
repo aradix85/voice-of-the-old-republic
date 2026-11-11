@@ -104,7 +104,7 @@ constexpr int       kExitDebounceTicks     = 60;
 const size_t kHitEventImpactXOffset      = acc::off::Kotor1Only(0x54);  // float (world)
 const size_t kHitEventImpactYOffset      = acc::off::Kotor1Only(0x58);  // float (world)
 const size_t kHitEventImpactZOffset      = acc::off::Kotor1Only(0x5c);  // float (world)
-constexpr size_t kVtableSlotGetVictimFollower = 0x14; // OnHitBullet's vtable[0x14]
+constexpr int kVtableSlotGetVictimFollower = 5;  // OnHitBullet's vtable[0x14]
 
 // ============================================================================
 // SEH-guarded primitive reads (same pattern as engine_* / swoop_race).
@@ -293,7 +293,7 @@ extern "C" void __cdecl OnTurretBulletHit(void* hitEvent) {
     impact.y = ReadFloatOr0(hitEvent, kHitEventImpactYOffset);
     impact.z = ReadFloatOr0(hitEvent, kHitEventImpactZOffset);
 
-    void* follower = CallAsCast(hitEvent, kVtableSlotGetVictimFollower);
+    void* follower = CallDowncast(hitEvent, kVtableSlotGetVictimFollower);
     if (!follower) return;
 
     Vector centre;
