@@ -294,9 +294,7 @@ void MonitorEquipPickerSelection() {
     void* lb = acc::menus::detail::EquipPanelItemsListBox(equipPanel);
     if (!lb) return;
 
-    auto* lbList = reinterpret_cast<CExoArrayList*>(
-        reinterpret_cast<unsigned char*>(lb) + kListBoxControlsOffset);
-    int rowCount = (lbList && lbList->data) ? lbList->size : 0;
+    const int rowCount = acc::engine::ReadListBoxRowCount(lb);
 
     // One-shot cursor park: once the picker is armed and its LB_ITEMS has been
     // populated (rowCount > 0), warp the cursor off the list so the engine's
@@ -310,8 +308,7 @@ void MonitorEquipPickerSelection() {
         }
     }
 
-    short selIdx = *reinterpret_cast<short*>(
-        reinterpret_cast<unsigned char*>(lb) + kListBoxSelectionIndexOffset);
+    const short selIdx = static_cast<short>(acc::engine::ReadListBoxSelection(lb));
 
     if (s_equipSelState.listBox != lb) {
         s_equipSelState.listBox       = lb;
@@ -348,14 +345,12 @@ void MonitorEquipPickerSelection() {
                       "lb=%p", lb);
         return;
     }
-    if (!lbList || !lbList->data || selIdx >= lbList->size) {
-        acclog::Write("Menus.EquipPicker",
-                      "selection out of range: lb=%p sel=%d size=%d",
-                      lb, selIdx, lbList ? lbList->size : -1);
+    void* row = acc::engine::ReadListBoxRow(lb, selIdx);
+    if (!row) {
+        acclog::Write("Menus.EquipPicker", "no row at selection: lb=%p sel=%d size=%d",
+                      lb, selIdx, rowCount);
         return;
     }
-    void* row = lbList->data[selIdx];
-    if (!row) return;
 
     char rowText[256];
     const char* src = acc::menus::extract::FromControl(row, rowText,
@@ -414,57 +409,17 @@ void MonitorWorkbenchUpgradePicker() {
 
     if (!IsWorkbenchUpgradePickerArmed()) return;
 
-    // TEMPORARY DIAGNOSTIC (lightsabercrystalcrash investigation): trace the
-    // LB_ITEMS selection state every frame while the picker is armed, to find
-    // what reverts our DriveListBoxSelection write between keypresses. The
-    // crystal picker's selection never advances past row 2 in the field log —
-    // every "Down" reads selection_index==1 again — so something resets it.
-    // Trace folds a steady value to one line + "(repeated Nx more)"; only a
-    // flip emits a fresh line, so this adds no spam. Read it against the
-    // per-keypress "WorkbenchUpgrade: Down lb=.. sel=X->Y" logs:
-    //   * trace shows our stepped value (e.g. 2) then a separate revert to 1
-    //     => the engine reverts on a LATER frame (catchable, can re-assert).
-    //   * trace NEVER shows 2, only ever 1, while the keypress log says 1->2
-    //     => the revert happens within the same frame as our write (the engine
-    //     re-selects synchronously; we'd need to write later in the tick).
-    // rows/top/ipp included so a per-frame listbox REPOPULATION (rowCount or
-    // row pointers churning) is visible too — that would reset selection as a
-    // side effect. Remove once the mechanism is identified.
+    // One-shot cursor park: once the compatible-mods list is populated, warp
+    // the cursor off LB_ITEMS so the engine's hover-select stops reverting our
+    // SetSelectedControl writes. To the corner, not to BTN_BACK: on this panel
+    // the KOTOR 1 hit-test resolves warped coordinates offset from the
+    // extents, and a BTN_BACK park left the engine hovering crystal row 2, so
+    // that every keypress was hover-reverted there. The top-left corner is
+    // empty on every panel at any resolution.
     void* lb = acc::menus::detail::UpgradePanelItemsListBox(upgradePanel);
-    if (lb) {
-        auto* lbBase = reinterpret_cast<unsigned char*>(lb);
-        auto* lbList = reinterpret_cast<CExoArrayList*>(
-            lbBase + kListBoxControlsOffset);
-        int rowCount = (lbList && lbList->data) ? lbList->size : 0;
-        short sel = *reinterpret_cast<short*>(
-            lbBase + kListBoxSelectionIndexOffset);
-        short top = *reinterpret_cast<short*>(
-            lbBase + kListBoxTopVisibleIndexOffset);
-        short ipp = *reinterpret_cast<short*>(
-            lbBase + kListBoxItemsPerPageOffset);
-        void* selRow = (sel >= 0 && sel < rowCount && lbList && lbList->data)
-                           ? lbList->data[sel]
-                           : nullptr;
-        acclog::Trace("WorkbenchSel",
-                      "lb=%p sel=%d top=%d ipp=%d rows=%d selRow=%p",
-                      lb, sel, top, ipp, rowCount, selRow);
-
-        // One-shot cursor park: once the compatible-mods list is populated
-        // (rowCount > 0), warp the cursor off LB_ITEMS so the engine's
-        // hover-select stops reverting our SetSelectedControl writes.
-        // Corner park, NOT the BTN_BACK center: on this panel the K1
-        // hit-test resolves warped coordinates offset from the extents
-        // (patch-20260818-103126.log: every slot warp's mouseOver landed on
-        // a different control, and a BTN_BACK park left the engine
-        // hovering crystal ROW 2 — each keypress was hover-reverted there,
-        // so of 8 crystals only the two rows adjacent to it were ever
-        // reachable). The top-left corner is empty on every panel at any
-        // resolution — same fix the dialogue-reply picker ships.
-        if (s_workbenchUpgradeParkPending && rowCount > 0) {
-            if (acc::menus::detail::ParkCursorToCorner("WorkbenchUpgrade")) {
-                s_workbenchUpgradeParkPending = false;
-            }
-        }
+    if (s_workbenchUpgradeParkPending && acc::engine::ReadListBoxRowCount(lb) > 0 &&
+        acc::menus::detail::ParkCursorToCorner("WorkbenchUpgrade")) {
+        s_workbenchUpgradeParkPending = false;
     }
 }
 

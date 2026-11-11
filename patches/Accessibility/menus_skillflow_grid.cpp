@@ -59,14 +59,8 @@ const char* ReadStatusWord(void* flow, int col, unsigned* outStatus) {
 // panel's OnEnter has just filled.
 bool ReadDescription(void* listBox, char* out, size_t n) {
     out[0] = '\0';
-    void* rows = nullptr;
-    void* first = nullptr;
-    if (acc::engine::ReadListBoxRowCount(listBox) < 1 ||
-        !TryReadPtr(listBox, kListBoxControlsOffset, &rows) ||
-        !TryReadPtr(rows, 0, &first) || !first) {
-        return false;
-    }
-    return acc::engine::ReadLabelText(first, out, n);
+    void* first = acc::engine::ReadListBoxRow(listBox, 0);
+    return first && acc::engine::ReadLabelText(first, out, n);
 }
 
 }  // namespace

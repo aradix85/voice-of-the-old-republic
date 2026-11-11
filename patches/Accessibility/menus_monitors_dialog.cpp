@@ -140,15 +140,15 @@ void MonitorDialogReplies() {
         return;
     }
 
-    auto* lbList = reinterpret_cast<CExoArrayList*>(
-        reinterpret_cast<unsigned char*>(lb) + kListBoxControlsOffset);
+    const int rowCount = acc::engine::ReadListBoxRowCount(lb);
+    if (rowCount < 0) return;
 
     // One-shot cursor park: once the reply list is populated, warp the cursor
     // off it so the engine's hover-select stops overwriting our keyboard-driven
     // selection (see ParkDialogCursorOffReplies). Deferred to here (Update tick)
     // rather than the arm branch so it fires after the rows exist; runs before
     // the selection-change dedup so a stale hover-snap doesn't gate it.
-    if (s_dialogReplyParkPending && lbList->data && lbList->size > 0) {
+    if (s_dialogReplyParkPending && rowCount > 0) {
         if (ParkDialogCursorOffReplies(lb)) {
             s_dialogReplyParkPending = false;
         }
@@ -163,7 +163,7 @@ void MonitorDialogReplies() {
     // announced at all (the player only learns a choice is pending by pressing
     // Enter). Treat a change of the reply SET as an announce event too.
     int replyCount = acc::engine::ReadDialogReplyCount();
-    unsigned setSig = ComputeReplySetSignature(replyCount, lbList->size);
+    unsigned setSig = ComputeReplySetSignature(replyCount, rowCount);
     bool newSet = setSig != 0 && setSig != s_dialogReplyState.lastSetSignature;
     if (setSig != 0) {
         // Consume the event immediately: whatever the announce path below does
@@ -192,13 +192,13 @@ void MonitorDialogReplies() {
         return;
     }
 
-    if (!lbList->data || selIdx >= lbList->size) {
+    if (selIdx >= rowCount) {
         acclog::Write("Menus.DialogReply", "selection out of range: listbox=%p sel=%d "
-                      "size=%d", lb, selIdx, lbList->size);
+                      "size=%d", lb, selIdx, rowCount);
         return;
     }
 
-    void* row = lbList->data[selIdx];
+    void* row = acc::engine::ReadListBoxRow(lb, selIdx);
 
     // Authoritative source: the engine's render-independent reply-text array
     // on CGuiInGame (populated by SetReplyData per active reply). The reply
@@ -224,7 +224,7 @@ void MonitorDialogReplies() {
                       "sel=%d (was %d) src=%s size=%d replyCount=%d newSet=%d "
                       "text=\"%s\"",
                       dialogPanel, PanelKindName(dialogKind), lb, selIdx, prev, src,
-                      lbList->size,
+                      rowCount,
                       replyCount, newSet ? 1 : 0, text);
         // A reply is now readable/navigable — the entry's VO has ended and the
         // player can choose. This is the moment to pop the pending tutorial
@@ -239,7 +239,7 @@ void MonitorDialogReplies() {
         char msg[320];
         snprintf(msg, sizeof(msg),
                  acc::strings::Get(acc::strings::Id::FmtContainerItemAt),
-                 text, selIdx + 1, lbList->size);
+                 text, selIdx + 1, rowCount);
         acc::speech::Speak(msg, /*interrupt=*/false);
     } else {
         char vtbl[160];

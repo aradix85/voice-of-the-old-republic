@@ -61,9 +61,8 @@ int UpgradeItemListRows(void* panel) {
         void* c = controls->data[i];
         if (!c) continue;
         if (acc::engine::ReadControlId(c) != 0) continue;
-        auto* rows = reinterpret_cast<CExoArrayList*>(
-            reinterpret_cast<unsigned char*>(c) + kListBoxControlsOffset);
-        return rows->data ? rows->size : 0;
+        const int rows = acc::engine::ReadListBoxRowCount(c);
+        return rows > 0 ? rows : 0;
     }
     return 0;
 }

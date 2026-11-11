@@ -276,11 +276,10 @@ bool ReadK2SaveLoadSwapState(void* panel, void* lb, int* outIdx, int* outRows) {
             (charCount > 0 && idx >= charCount)) {
             return false;
         }
-        auto* list = reinterpret_cast<CExoArrayList*>(
-            reinterpret_cast<unsigned char*>(lb) + kListBoxControlsOffset);
-        if (list->size < 0 || list->size > 4096) return false;
+        const int rows = acc::engine::ReadListBoxRowCount(lb);
+        if (rows < 0) return false;
         *outIdx  = idx;
-        *outRows = list->size;
+        *outRows = rows;
         return true;
     } __except (EXCEPTION_EXECUTE_HANDLER) {
         return false;

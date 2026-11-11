@@ -1,4 +1,4 @@
-# menus_listbox_picker.cpp (512 lines)
+# menus_listbox_picker.cpp (467 lines)
 
 Source: `patches/Accessibility/menus_listbox_picker.cpp`
 
@@ -30,7 +30,7 @@ The cursor-park mechanism ------------------------- Both pickers set useEngineSe
 - L198 `void TraceEquipPickerOpenField(void* panel, bool armed)`: The equip panel's picker-open field, raw, for the diagnostic trace.
 - L220 `void SpeakStillEquippedAfterRefusal(void* panel, void* slotBtn)`: The engine refused to open the picker — its "no items for this slot" modal is what the user just heard (the ContentChange monitor speaks it).
 - L244 `void MonitorEquipPickerSelection()`: Equip picker: retire the arm latch, run the one-shot cursor park, and speak row changes.
-- L390 `void MonitorWorkbenchUpgradePicker()`: Workbench upgrade picker: retire the arm latch and run the one-shot cursor park.
-- L492 `bool RuleSuppressEquipPreviewFeedback(const char* text)`: Message-buffer rule: mute the engine's feedback while the equip picker is up.
-- L501 `void RegisterPickerMsgRules()`
-- L506 `void TickPickerMonitors()`
+- L385 `void MonitorWorkbenchUpgradePicker()`: Workbench upgrade picker: retire the arm latch and run the one-shot cursor park.
+- L447 `bool RuleSuppressEquipPreviewFeedback(const char* text)`: Message-buffer rule: mute the engine's feedback while the equip picker is up.
+- L456 `void RegisterPickerMsgRules()`
+- L461 `void TickPickerMonitors()`

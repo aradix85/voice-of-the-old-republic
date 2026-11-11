@@ -6,6 +6,7 @@
 
 #include "engine_input.h"
 #include "engine_offsets.h"
+#include "engine_reads.h"
 #include "engine_addr.h"
 #include "hotkeys.h"
 #include "log.h"
@@ -217,10 +218,8 @@ void PageDescriptionListBox(acc::engine::PanelKind kind, const PanelPeekInfo& in
         }
     }
 
-    void* lb = reinterpret_cast<unsigned char*>(panel) + info.descListBoxOffset;
-    auto* lbList = reinterpret_cast<CExoArrayList*>(
-        reinterpret_cast<unsigned char*>(lb) + kListBoxControlsOffset);
-    const int rowCount = (lbList && lbList->data) ? lbList->size : 0;
+    void* lb = acc::off::Ptr(panel, info.descListBoxOffset);
+    const int rowCount = acc::engine::ReadListBoxRowCount(lb);
     if (rowCount <= 0) {
         acclog::Write("Peek", "panel=%s lb=%p rowCount=0; silent",
                       acc::engine::PanelKindName(kind), lb);
@@ -228,7 +227,7 @@ void PageDescriptionListBox(acc::engine::PanelKind kind, const PanelPeekInfo& in
     }
 
     const int prev = StepBlockCursor(down, rowCount);
-    void* row = lbList->data[g_blockIdx];
+    void* row = acc::engine::ReadListBoxRow(lb, g_blockIdx);
     char text[8192];
     const char* src = row ? ReadRowText(row, text, sizeof(text)) : nullptr;
     if (src) {

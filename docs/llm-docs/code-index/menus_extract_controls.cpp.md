@@ -1,4 +1,4 @@
-# menus_extract_controls.cpp (286 lines)
+# menus_extract_controls.cpp (287 lines)
 
 Source: `patches/Accessibility/menus_extract_controls.cpp`
 
@@ -19,5 +19,5 @@ Text of the plain GUI controls: button, toggle button, label, slider (with its s
 - L196 `const char* TrySlider(void* control, void* owner, char* outBuf, size_t bufSize)`: CSWGuiSlider, found by vtable (there is no AsSlider).
 - L218 `const char* TryEditbox(void* control, char* outBuf, size_t bufSize)`: CSWGuiEditbox (chargen Name and the save-name popup), found by vtable: "{role}.
 - L232 `const char* TrySingleRowListBox(void* control, char* outBuf, size_t bufSize)`: A list box with exactly one row: many modals (OK/Cancel boxes, the quit confirmation, tutorial popups) put their message there.
-- L252 `const char* TryItemEntryRow(void* control, char* outBuf, size_t bufSize)`: An inventory, container or store row named from its ITEM when the row's own string is empty.
-- L270 `const char* TrySiblingLabel(void* control, void* owner, char* outBuf, size_t bufSize)`: Last resort for a chain-navigable control without text, such as the in-game menu's image-only icons: speak the nearest label as its name.
+- L253 `const char* TryItemEntryRow(void* control, char* outBuf, size_t bufSize)`: An inventory, container or store row named from its ITEM when the row's own string is empty.
+- L271 `const char* TrySiblingLabel(void* control, void* owner, char* outBuf, size_t bufSize)`: Last resort for a chain-navigable control without text, such as the in-game menu's image-only icons: speak the nearest label as its name.

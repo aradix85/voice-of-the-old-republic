@@ -400,13 +400,20 @@ prefix (menus_listbox_picker.cpp).
   menus_listbox(_saveload), menus_chargen_layout, menus_journal and
   menus_inventory (in-game checks: a computer terminal's rows are spoken,
   the journal description on Enter, the key-mapping list, the skills
-  list, Enter on an inventory item). Step 2, still to do: the pickers
+  list, Enter on an inventory item). Step 2 did the rest: the pickers
   (menus_listbox_equip, _workbench, _picker, _container),
   menus_monitors_dialog, menus_monitors_inventory, peek_description(_item),
   menus_extract_controls, menus_listbox_skillinfo, menus_skillflow_grid,
-  menus_pending_workbench, menus_chain_tabs. menus_chain_build and
-  menus_internal_listbox walk every row inside one guarded pass and can
-  stay. ReadCExoStringLocal (engine_actionbar) stays: it
+  menus_pending_workbench, menus_chain_tabs, menus_listbox_saveload. Most
+  of these read the array without any guard, in per-tick monitors. The
+  workbench picker's per-frame selection trace, marked temporary, is gone
+  (its question was answered by the corner park). In-game checks: the
+  equip picker (arrows speak the item and its place, Enter equips, Enter
+  on the worn item takes it off), a container's item count and rows, the
+  dialog replies, Shift+arrow descriptions on an item and in a menu, the
+  workbench. menus_chain_build and menus_internal_listbox walk every row
+  inside one guarded pass and stay; menus_powers_levelup takes the whole
+  array through TryReadPtr. ReadCExoStringLocal (engine_actionbar) stays: it
   reads to the NUL and ignores the length field, which ReadCExoString
   does not.
   combat.cpp is lean (312 to 104): its listbox poll only wrote log lines

@@ -167,17 +167,7 @@ void SkillInfoBoxEnrichRow(void* /*panel*/, const ListBoxNavResult& r) {
     // (the Batch 3 poison-pointer lesson).
     auto* fcpBase = reinterpret_cast<unsigned char*>(fcp);
     void* descLb  = acc::off::Ptr(fcpBase, kFeatsCharGenDescriptionListBoxOffset);
-    auto* descList = descLb ? reinterpret_cast<CExoArrayList*>(
-        reinterpret_cast<unsigned char*>(descLb) + kListBoxControlsOffset)
-                            : nullptr;
-    void* descRow = nullptr;
-    __try {
-        if (descList && descList->data && descList->size > 0) {
-            descRow = descList->data[0];
-        }
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        descRow = nullptr;
-    }
+    void* descRow = acc::engine::ReadListBoxRow(descLb, 0);
 
     char desc[1024];
     if (descRow && ReadLabelText(descRow, desc, sizeof(desc)) &&

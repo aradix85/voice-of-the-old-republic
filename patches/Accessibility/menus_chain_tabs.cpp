@@ -4,6 +4,7 @@
 #include "menus_chain_internal.h"
 
 #include "engine_offsets.h"
+#include "engine_reads.h"
 #include "engine_panels.h"
 #include "log.h"
 #include "menus_store.h"
@@ -70,9 +71,7 @@ bool DetectTabsCluster(void* panel, int& outStart, int& outCount) {
     void** vt = *reinterpret_cast<void***>(lb);
     if (reinterpret_cast<uintptr_t>(vt) != kVtableListBox) return false;
 
-    auto* lbList = reinterpret_cast<CExoArrayList*>(
-        reinterpret_cast<unsigned char*>(lb) + kListBoxControlsOffset);
-    if (!lbList->data || lbList->size <= 0) return false;
+    if (acc::engine::ReadListBoxRowCount(lb) <= 0) return false;
 
     int n = panelList->size > 256 ? 256 : panelList->size;
     int start = -1, end = -1;

@@ -137,12 +137,8 @@ void MonitorContainerSelection() {
     void* lb = ContainerPanelItemsListBox(containerPanel);
     if (!lb) return;
 
-    auto* lbList = reinterpret_cast<CExoArrayList*>(
-        reinterpret_cast<unsigned char*>(lb) + kListBoxControlsOffset);
-    int rowCount = (lbList && lbList->data) ? lbList->size : 0;
-
-    short selIdx = *reinterpret_cast<short*>(
-        reinterpret_cast<unsigned char*>(lb) + kListBoxSelectionIndexOffset);
+    const int rowCount = acc::engine::ReadListBoxRowCount(lb);
+    const short selIdx = static_cast<short>(acc::engine::ReadListBoxSelection(lb));
 
     if (s_containerSelState.listBox != lb) {
         s_containerSelState.listBox       = lb;
@@ -177,13 +173,12 @@ void MonitorContainerSelection() {
         acclog::Write("Menus.Container", "selection cleared: lb=%p prev=%d", lb, prev);
         return;
     }
-    if (!lbList || !lbList->data || selIdx >= lbList->size) {
-        acclog::Write("Menus.Container", "selection out of range: lb=%p sel=%d size=%d",
-                      lb, selIdx, lbList ? lbList->size : -1);
+    void* row = acc::engine::ReadListBoxRow(lb, selIdx);
+    if (!row) {
+        acclog::Write("Menus.Container", "no row at selection: lb=%p sel=%d size=%d",
+                      lb, selIdx, rowCount);
         return;
     }
-    void* row = lbList->data[selIdx];
-    if (!row) return;
 
     char rowText[256];
     const char* src = acc::menus::extract::FromControl(row, rowText, sizeof(rowText));

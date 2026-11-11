@@ -231,14 +231,15 @@ const char* TryEditbox(void* control, char* outBuf, size_t bufSize) {
 // and row navigation already reads them one at a time.
 const char* TrySingleRowListBox(void* control, char* outBuf, size_t bufSize) {
     if (!IsListBox(control)) return nullptr;
-    auto* rows = reinterpret_cast<CExoArrayList*>(
-        static_cast<unsigned char*>(control) + kListBoxControlsOffset);
-    if (!rows->data || rows->size != 1 || !rows->data[0]) return nullptr;
+    void* row = acc::engine::ReadListBoxRowCount(control) == 1
+                    ? acc::engine::ReadListBoxRow(control, 0)
+                    : nullptr;
+    if (!row) return nullptr;
     // kAnnounceTextMax: the row is the whole message, and tutorial popups
     // run far past 256 bytes. A cut one also stops matching its full TLK
     // copy in tutorial_hints and loses its keyboard hint.
     char rowText[kAnnounceTextMax];
-    if (!ReadRowText(rows->data[0], rowText, sizeof(rowText))) return nullptr;
+    if (!ReadRowText(row, rowText, sizeof(rowText))) return nullptr;
     const size_t len = strnlen(rowText, sizeof(rowText));
     if (len == 0 || len + 1 >= bufSize) return nullptr;
     memcpy(outBuf, rowText, len + 1);

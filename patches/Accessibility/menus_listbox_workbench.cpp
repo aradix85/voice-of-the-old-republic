@@ -198,22 +198,11 @@ bool WorkbenchUpgradeOnEnter(void* panel) {
     }
     void* lb  = acc::menus::detail::UpgradePanelItemsListBox(panel);
     void* btn = acc::menus::detail::UpgradePanelAssembleButton(panel);
-    void* row = nullptr;
-    void* removeRow = nullptr;  // row 0 — the 0x7f000000 remove entry (power slots)
-    short selIdx = -1;
-    int   rowCount = 0;
-    if (lb) {
-        auto* lbBase = reinterpret_cast<unsigned char*>(lb);
-        auto* lbList = reinterpret_cast<CExoArrayList*>(
-            lbBase + kListBoxControlsOffset);
-        rowCount = (lbList && lbList->data) ? lbList->size : 0;
-        selIdx = *reinterpret_cast<short*>(
-            lbBase + kListBoxSelectionIndexOffset);
-        if (lbList && lbList->data) {
-            if (selIdx >= 0 && selIdx < rowCount) row = lbList->data[selIdx];
-            if (rowCount >= 1) removeRow = lbList->data[0];
-        }
-    }
+    const int rowCount = acc::engine::ReadListBoxRowCount(lb);
+    const int selIdx = acc::engine::ReadListBoxSelection(lb);
+    void* const row = acc::engine::ReadListBoxRow(lb, selIdx);
+    // Row 0: the 0x7f000000 remove entry (power slots).
+    void* const removeRow = acc::engine::ReadListBoxRow(lb, 0);
 
     // KOTOR 2: the row's own activate handler installs or removes directly
     // and closes the picker — one engine call, no stage+assemble. The engine

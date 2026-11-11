@@ -5,6 +5,7 @@
 
 #include "engine_area.h"      // kItemLocNameOffset
 #include "engine_offsets.h"
+#include "engine_reads.h"
 #include "log.h"
 #include "menus_abilities.h"  // RefreshDetail (abilities description repaint)
 #include "menus_internal.h"   // panel-member control resolvers
@@ -297,13 +298,8 @@ const ItemTooltipPanelInfo* LookupItemTooltipPanel(acc::engine::PanelKind k) {
 // Shared by the Inventory/Store focused-row path and SpeakItemRowDescription.
 // Null on fault or when the control isn't an item row.
 void* ResolveRowItem(void* row) {
-    if (!row) return nullptr;
     uint32_t clientHandle = 0;
-    __try {
-        clientHandle = *reinterpret_cast<uint32_t*>(
-            reinterpret_cast<unsigned char*>(row) +
-            kItemEntryGameObjectIdOffset);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
+    if (!acc::engine::TryReadU32(row, kItemEntryGameObjectIdOffset, &clientHandle)) {
         return nullptr;
     }
     return acc::engine::ResolveItemFromClientHandle(clientHandle);
@@ -320,21 +316,8 @@ bool HandleItemTooltip(acc::engine::PanelKind kind,
                       acc::engine::PanelKindName(kind));
         return false;
     }
-    auto* lbList = reinterpret_cast<CExoArrayList*>(
-        reinterpret_cast<unsigned char*>(lb) + kListBoxControlsOffset);
-    int rowCount = 0;
-    short selIdx = -1;
-    __try {
-        rowCount = (lbList && lbList->data) ? lbList->size : 0;
-        selIdx = *reinterpret_cast<short*>(
-            reinterpret_cast<unsigned char*>(lb) +
-            kListBoxSelectionIndexOffset);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        acclog::Write("Peek.Item",
-                      "panel=%s lb=%p SEH reading listbox state",
-                      acc::engine::PanelKindName(kind), lb);
-        return false;
-    }
+    const int rowCount = acc::engine::ReadListBoxRowCount(lb);
+    const int selIdx = acc::engine::ReadListBoxSelection(lb);
 
     if (rowCount <= 0 || selIdx < info.minSel || selIdx >= rowCount) {
         acclog::Write("Peek.Item",
@@ -345,18 +328,10 @@ bool HandleItemTooltip(acc::engine::PanelKind kind,
         return false;
     }
 
-    void* row = nullptr;
+    void* row = acc::engine::ReadListBoxRow(lb, selIdx);
     uint32_t clientHandle = 0;
-    __try {
-        row = lbList->data[selIdx];
-        if (row) {
-            clientHandle = *reinterpret_cast<uint32_t*>(
-                reinterpret_cast<unsigned char*>(row) +
-                kItemEntryGameObjectIdOffset);
-        }
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        acclog::Write("Peek.Item",
-                      "panel=%s row=%p SEH reading item handle",
+    if (row && !acc::engine::TryReadU32(row, kItemEntryGameObjectIdOffset, &clientHandle)) {
+        acclog::Write("Peek.Item", "panel=%s row=%p item handle unreadable",
                       acc::engine::PanelKindName(kind), row);
         return false;
     }
@@ -410,12 +385,8 @@ bool HandleItemTooltip(acc::engine::PanelKind kind,
 bool SpeakItemRowDescription(void* row) {
     if (!row) return false;
     uint32_t clientHandle = 0;
-    __try {
-        clientHandle = *reinterpret_cast<uint32_t*>(
-            reinterpret_cast<unsigned char*>(row) +
-            kItemEntryGameObjectIdOffset);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        acclog::Write("Peek.Item", "row=%p SEH reading item handle", row);
+    if (!acc::engine::TryReadU32(row, kItemEntryGameObjectIdOffset, &clientHandle)) {
+        acclog::Write("Peek.Item", "row=%p item handle unreadable", row);
         return false;
     }
     void* item = acc::engine::ResolveItemFromClientHandle(clientHandle);

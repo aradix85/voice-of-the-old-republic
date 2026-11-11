@@ -4,6 +4,7 @@
 #include "menus_monitors_internal.h"
 
 #include "engine_offsets.h"
+#include "engine_reads.h"
 #include "menus_chain.h"
 #include "menus_inventory.h"
 
@@ -38,15 +39,8 @@ void* g_inventoryEmptyLatch = nullptr;
 // the panel can be mid-teardown — which the caller reads as "unknown, look
 // again next tick" rather than as "empty".
 int InventoryItemRowCount(void* panel) {
-    __try {
-        auto* rows = reinterpret_cast<CExoArrayList*>(
-            reinterpret_cast<unsigned char*>(panel) +
-            kInventoryItemListBoxOffset + kListBoxControlsOffset);
-        if (!rows->data) return 0;
-        return rows->size;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return -1;
-    }
+    return acc::engine::ReadListBoxRowCount(
+        acc::off::Ptr(panel, kInventoryItemListBoxOffset));
 }
 
 }  // namespace

@@ -1,4 +1,4 @@
-# menus_listbox_workbench.cpp (339 lines)
+# menus_listbox_workbench.cpp (328 lines)
 
 Source: `patches/Accessibility/menus_listbox_workbench.cpp`
 
@@ -19,5 +19,5 @@ The workbench: the item list and the upgrade picker (empty rows, the KOTOR 2 'no
 - L134 `void WorkbenchUpgradeAnnounce(void* /*lb*/, const ListBoxNavResult& r)`
 - L178 `int WorkbenchUpgradeMinSel(void* panel)`: Dynamic minSel: hide the row-0 remove entry on power slots (minSel 1); show every row on the colour slot (minSel 0).
 - L193 `bool WorkbenchUpgradeOnEnter(void* panel)`: Enter (armed): commit the currently-selected LB_ITEMS row via a single pending op that fires vtable[15] on the row (stage), then on BTN_ASSEMBLE (install).
-- L270 `bool WorkbenchUpgradeOnEsc(void* panel)`: Esc (armed): disarm only.
-- L289 `const char* WorkbenchUpgradeTitleOverride(void* panel)`: The generic title-walk would land on the first leftover placeholder label (id 19 "Item Property" — a design-time string the engine repopulates per slot at runtime, alongside id 20 "Slot Name" / id 21 "Lightsaber Slot ...
+- L259 `bool WorkbenchUpgradeOnEsc(void* panel)`: Esc (armed): disarm only.
+- L278 `const char* WorkbenchUpgradeTitleOverride(void* panel)`: The generic title-walk would land on the first leftover placeholder label (id 19 "Item Property" — a design-time string the engine repopulates per slot at runtime, alongside id 20 "Slot Name" / id 21 "Lightsaber Slot ...

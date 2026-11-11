@@ -1,4 +1,4 @@
-# menus_listbox_container.cpp (244 lines)
+# menus_listbox_container.cpp (239 lines)
 
 Source: `patches/Accessibility/menus_listbox_container.cpp`
 
@@ -12,4 +12,4 @@ The container screen (loot, give items): its list box, Enter and Escape, the sel
 - L79 `bool ContainerOnEnter(void* panel)`
 - L100 `bool ContainerOnEsc(void* panel)`
 - L125 `void MonitorContainerSelection()`
-- L220 `void PollContainerGiveModeKey()`
+- L215 `void PollContainerGiveModeKey()`

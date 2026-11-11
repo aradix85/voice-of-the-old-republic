@@ -3,6 +3,7 @@
 #include "menus_listbox_internal.h"
 
 #include "engine_offsets.h"
+#include "engine_reads.h"
 #include "engine_panels.h"
 #include "log.h"
 #include "menus_extract.h"
@@ -70,27 +71,14 @@ bool EquipPickerOnEnter(void* panel) {
     }
     void* lb  = acc::menus::detail::EquipPanelItemsListBox(panel);
     void* btn = acc::menus::detail::EquipPanelEquipButton(panel);
-    void* row       = nullptr;  // the user-selected row (an equippable item)
-    void* unequipRow = nullptr; // row 0 — the always-present 0x7f000000 entry
-    short selIdx = -1;
-    int   rowCount = 0;
-    if (lb) {
-        auto* lbBase = reinterpret_cast<unsigned char*>(lb);
-        auto* lbList = reinterpret_cast<CExoArrayList*>(
-            lbBase + kListBoxControlsOffset);
-        rowCount = (lbList && lbList->data) ? lbList->size : 0;
-        selIdx = *reinterpret_cast<short*>(
-            lbBase + kListBoxSelectionIndexOffset);
-        if (lbList && lbList->data) {
-            if (selIdx >= 1 && selIdx < rowCount)
-                row = lbList->data[selIdx];
-            // OnEnterSlot always inserts the "empty" entry (item id
-            // 0x7f000000) at row 0; it's hidden from our nav (minSel=1) but
-            // committing it drives the engine's unequip path.
-            if (rowCount >= 1)
-                unequipRow = lbList->data[0];
-        }
-    }
+    const int rowCount = acc::engine::ReadListBoxRowCount(lb);
+    const int selIdx = acc::engine::ReadListBoxSelection(lb);
+    // The selected row, an equippable item. Row 0 is not one: it is the
+    // "empty" entry (item id 0x7f000000) that OnEnterSlot always inserts,
+    // hidden from our navigation (minSel=1); committing it drives the
+    // engine's unequip path.
+    void* const row = selIdx >= 1 ? acc::engine::ReadListBoxRow(lb, selIdx) : nullptr;
+    void* const unequipRow = acc::engine::ReadListBoxRow(lb, 0);
 
     // Is the selected row the item currently equipped in this slot? OnEnterSlot
     // tags that row with field6_0x394 bit 0x2 (the same flag that appends
@@ -98,12 +86,10 @@ bool EquipPickerOnEnter(void* panel) {
     // item is a no-op in the engine, so we route the commit to the row-0 empty
     // entry, whose 0x7f000000 id sends OnItemSelected into its UnequipItem
     // branch. See docs/equip-flow-investigation.md.
-    bool selectedIsEquipped = false;
-    if (row) {
-        uint32_t flags = *reinterpret_cast<uint32_t*>(
-            reinterpret_cast<unsigned char*>(row) + kEquipItemEntryFlagsOffset);
-        selectedIsEquipped = (flags & kEquipItemEntryEquippedBit) != 0;
-    }
+    uint32_t flags = 0;
+    const bool selectedIsEquipped =
+        acc::engine::TryReadU32(row, kEquipItemEntryFlagsOffset, &flags) &&
+        (flags & kEquipItemEntryEquippedBit) != 0;
 
     // Gates OnItemSelected reads are satisfied for either committed entry:
     // the queue's drain raises the entry's is_active; description_listbox.

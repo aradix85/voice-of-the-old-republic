@@ -1,4 +1,4 @@
-# menus_skillflow_grid.cpp (240 lines)
+# menus_skillflow_grid.cpp (234 lines)
 
 Source: `patches/Accessibility/menus_skillflow_grid.cpp`
 
@@ -16,11 +16,11 @@ Moving onto a cell selects it in the engine: SetSelectedSkill on the chart for t
 - L34 `unsigned short ReadCellId(void* flow, int col)`
 - L42 `const char* ReadStatusWord(void* flow, int col, unsigned* outStatus)`: The chart's render status of a cell, the lowest byte of its status dword: 0 available, 1 already learned, 2 granted, 3 locked, 4 chosen.
 - L60 `bool ReadDescription(void* listBox, char* out, size_t n)`: The rendered text of the description list box's first row, which the panel's OnEnter has just filled.
-- L74 `unsigned short Grid::CurrentId() const`
-- L79 `void Grid::ReadRows(void* rows, int count)`: Rows without a single cell are left out.
-- L95 `void Grid::Bind(void* panel)`: The rows are read again on every event, so that a row pointer is never stale.
-- L116 `void Grid::SelectInEngine(void* panel, unsigned short id)`
-- L131 `void Grid::Announce(void* panel)`
-- L173 `void Grid::Move(void* panel, const char* key, int row, int col)`: Announces also when the cursor could not move: the repeat says that this is the edge.
-- L183 `void Grid::Activate(void* panel)`
-- L206 `bool Grid::HandleInput(void* panel, int code, int value, int& outRv)`
+- L68 `unsigned short Grid::CurrentId() const`
+- L73 `void Grid::ReadRows(void* rows, int count)`: Rows without a single cell are left out.
+- L89 `void Grid::Bind(void* panel)`: The rows are read again on every event, so that a row pointer is never stale.
+- L110 `void Grid::SelectInEngine(void* panel, unsigned short id)`
+- L125 `void Grid::Announce(void* panel)`
+- L167 `void Grid::Move(void* panel, const char* key, int row, int col)`: Announces also when the cursor could not move: the repeat says that this is the edge.
+- L177 `void Grid::Activate(void* panel)`
+- L200 `bool Grid::HandleInput(void* panel, int code, int value, int& outRv)`
