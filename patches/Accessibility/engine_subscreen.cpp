@@ -10,7 +10,7 @@
 #include "engine_manager.h"  // kAddrGuiManagerPtr, kMgrModalStackSizeOffset
 #include "engine_panels.h"   // HasActiveSubScreen, CallPrevSWInGameGui
 #include "engine_reads.h"
-#include "engine_rebase.h"
+#include "engine_addr.h"
 #include "log.h"
 #include "menus.h"           // ClearPendingAnnounce
 #include "menus_chain.h"     // InvalidateChain

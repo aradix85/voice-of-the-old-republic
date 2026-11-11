@@ -28,7 +28,7 @@
 #include "engine_offsets.h"
 #include "engine_panels.h"
 #include "engine_reads.h"
-#include "engine_rebase.h"
+#include "engine_addr.h"
 #include "strings.h"
 #include "tutorial_hints.h"
 #include "tutorial_popup.h"

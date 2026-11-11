@@ -16,7 +16,7 @@
                       // so keys pressed in another app while Alt+Tabbed out
                       // don't kill an in-flight autowalk silently.
 #include "log.h"
-#include "engine_rebase.h"
+#include "engine_addr.h"
 #include "engine_offsets_select.h"
 
 namespace acc::guidance {

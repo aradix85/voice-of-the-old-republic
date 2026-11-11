@@ -14,7 +14,7 @@
 #include <cstdint>
 
 #include "engine_offsets.h"  // Vector
-#include "engine_rebase.h"
+#include "engine_addr.h"
 
 namespace acc::audio {
 
@@ -117,7 +117,7 @@ void FillResRef(CResRef& out, const char* tag);
 // CExoSound facade. *kAddrCExoSoundPtr; nullptr in early DLL-attach.
 //
 // Deliberately NOT passed through acc::addr::R(): this is a .data global
-// pointer, and per engine_rebase.h the rebase seam covers .text only —
+// pointer, and per engine_addr.h the rebase seam covers .text only —
 // .data is byte-stable across the builds R() exists for. Same treatment as
 // kAddrGuiManagerPtr (engine_manager.h) and kAddrAppManagerPtr
 // (engine_player.h). Wrapping it would be wrong, not merely redundant.

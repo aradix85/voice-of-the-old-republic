@@ -23,7 +23,7 @@
 #include "engine_options.h"  // GetMouseLook
 #include "engine_panels.h"   // IsForegroundUiBlocking
 #include "engine_player.h"   // camera yaw and position, player position and facing
-#include "engine_rebase.h"
+#include "engine_addr.h"
 #include "hotkeys.h"         // IsForegroundGame
 #include "log.h"
 

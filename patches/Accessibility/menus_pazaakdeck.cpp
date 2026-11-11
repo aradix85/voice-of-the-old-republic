@@ -24,7 +24,7 @@
 #include "minigame_pazaak.h"          // FormatCardLabel, CardContext
 #include "speech.h"
 #include "strings.h"
-#include "engine_rebase.h"
+#include "engine_addr.h"
 #include "engine_offsets_select.h"
 
 namespace acc::menus::pazaakdeck {

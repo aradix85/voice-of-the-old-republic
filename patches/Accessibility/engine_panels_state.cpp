@@ -16,7 +16,7 @@
 
 #include "engine_panels.h"
 #include "engine_panels_internal.h"
-#include "engine_rebase.h"
+#include "engine_addr.h"
 
 #include <windows.h>  // SEH __try / __except
 #include <cstddef>

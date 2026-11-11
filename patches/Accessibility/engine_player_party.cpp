@@ -13,7 +13,7 @@
 #include "engine_game.h"    // IsKotor2 — GetPartyCreatureBySlotK2 gate
 #include "engine_reads.h"
 #include "log.h"
-#include "engine_rebase.h"
+#include "engine_addr.h"
 #include "engine_offsets_select.h"
 
 namespace acc::engine {

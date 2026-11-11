@@ -1,7 +1,7 @@
 #include "menus_inventory.h"
 
 #include "engine_offsets.h"
-#include "engine_rebase.h"
+#include "engine_addr.h"
 #include "log.h"
 
 #include <cstddef>

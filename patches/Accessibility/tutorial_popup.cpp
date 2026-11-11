@@ -6,7 +6,7 @@
 #include "engine_app.h"      // GetServerApp — SetPauseState `this`
 #include "engine_panels.h"   // ResolveGuiInGame, IdentifyPanel, PanelKind
 #include "log.h"
-#include "engine_rebase.h"
+#include "engine_addr.h"
 #include "engine_offsets_select.h"
 #include "engine_game.h"     // IsKotor2 — SetSoundMode signature split
 

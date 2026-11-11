@@ -27,7 +27,7 @@
 #include <cstdint>
 
 #include "engine_offsets_types.h"
-#include "engine_rebase.h"
+#include "engine_addr.h"
 
 // ---------------------------------------------------------------------------
 // .text functions and vtables - every one through acc::addr::R().
@@ -1026,7 +1026,7 @@ const uintptr_t kAddrJournalOnControlEntered = acc::addr::Pick(0x00645100, 0x007
 // ---------------------------------------------------------------------------
 // .data global pointers - deliberately NOT passed through acc::addr::R().
 //
-// R() covers .text only (engine_rebase.h) and .data is byte-stable across the
+// R() covers .text only (engine_addr.h) and .data is byte-stable across the
 // builds it exists for, so wrapping these would be wrong rather than merely
 // redundant. Upstream models them as the AddressDatabase `global_pointers`
 // table and already carries them by name for both K1 and K2. Same treatment as

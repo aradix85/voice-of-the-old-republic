@@ -6,7 +6,7 @@
 
 #include "engine_panels_internal.h"
 
-#include "engine_rebase.h"
+#include "engine_addr.h"
 #include "engine_offsets.h"
 
 namespace acc::engine {

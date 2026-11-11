@@ -1,6 +1,6 @@
-# engine_rebase.h (51 lines)
+# engine_addr.h (51 lines)
 
-Source: `patches/Accessibility/engine_rebase.h`
+Source: `patches/Accessibility/engine_addr.h`
 
 Engine addresses, one per game.
 

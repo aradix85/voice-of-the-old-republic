@@ -14,7 +14,7 @@
 #include "speech.h"
 #include "transitions.h"
 #include "unified_action_menu.h"
-#include "engine_rebase.h"
+#include "engine_addr.h"
 
 namespace acc::combat::queue {
 

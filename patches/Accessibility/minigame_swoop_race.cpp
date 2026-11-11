@@ -11,7 +11,7 @@
 #include "engine_area.h"
 #include "engine_game.h"
 #include "engine_keymap.h"
-#include "engine_rebase.h"
+#include "engine_addr.h"
 #include "hotkeys.h"
 #include "key_inject.h"
 #include "log.h"

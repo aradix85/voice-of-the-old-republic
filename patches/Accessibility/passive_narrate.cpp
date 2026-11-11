@@ -20,7 +20,7 @@
 #include "spectator_scene.h" // Endar Spire scripted spectator-battle cue
 #include "strings.h"
 #include "speech.h"
-#include "engine_rebase.h"
+#include "engine_addr.h"
 #include "engine_game.h"
 
 namespace acc::passive_narrate {

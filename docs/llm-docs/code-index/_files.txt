@@ -84,6 +84,7 @@ patches/Accessibility/endar_softlock.cpp
 patches/Accessibility/endar_softlock.h
 patches/Accessibility/engine_actionbar.cpp
 patches/Accessibility/engine_actionbar.h
+patches/Accessibility/engine_addr.h
 patches/Accessibility/engine_app.cpp
 patches/Accessibility/engine_app.h
 patches/Accessibility/engine_area.cpp
@@ -151,7 +152,6 @@ patches/Accessibility/engine_reads_items_desc.cpp
 patches/Accessibility/engine_reads_items_internal.h
 patches/Accessibility/engine_reads_objects.cpp
 patches/Accessibility/engine_reads_text.cpp
-patches/Accessibility/engine_rebase.h
 patches/Accessibility/engine_scriptvar.cpp
 patches/Accessibility/engine_scriptvar.h
 patches/Accessibility/engine_subscreen.cpp

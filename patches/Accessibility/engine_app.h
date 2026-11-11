@@ -36,10 +36,10 @@
 #include <cstddef>
 #include <cstdint>
 #include "engine_offsets_select.h"
-#include "engine_rebase.h"
+#include "engine_addr.h"
 
 // CAppManager* — a .data global, so PickGlobal rather than R(): .data is
-// byte-stable across the KOTOR 1 builds and is never rebased (engine_rebase.h,
+// byte-stable across the KOTOR 1 builds and is never rebased (engine_addr.h,
 // and the .data section note in engine_offsets_addresses.h).
 //
 // KOTOR 2 value from KPatchManager's seeded kotor2_steam_aspyr.db

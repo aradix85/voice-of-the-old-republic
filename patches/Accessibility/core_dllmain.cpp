@@ -20,7 +20,7 @@
 #include "speech.h"
 #include "save_crash_guard.h"
 #include "strings.h"
-#include "engine_rebase.h"
+#include "engine_addr.h"
 
 namespace {
 

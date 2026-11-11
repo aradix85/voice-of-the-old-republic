@@ -10,7 +10,7 @@
 #include "engine_subscreen.h" // Begin/EndOverlayPause — freeze the world like
                               // the action menu, WITHOUT opening a sub-screen
 #include "log.h"
-#include "engine_rebase.h"
+#include "engine_addr.h"
 #include "engine_offsets_select.h"
 
 namespace acc::engine_levelup {

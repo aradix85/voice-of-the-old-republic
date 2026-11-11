@@ -6,7 +6,7 @@
 
 #include "menus_extract_internal.h"
 
-#include "engine_rebase.h"  // R: the reference-build vtables
+#include "engine_addr.h"  // R: the reference-build vtables
 #include "log.h"
 
 namespace acc::menus::extract {

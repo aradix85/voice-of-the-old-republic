@@ -102,7 +102,7 @@ the `strings*` localisation tables, and the debounce/geometry/formatting
 logic generally.
 
 **The address seam.** Every engine address is declared once, with its value
-per game, through `acc::addr` (engine_rebase.h): `Pick(k1, k2)`, `PickGlobal`
+per game, through `acc::addr` (engine_addr.h): `Pick(k1, k2)`, `PickGlobal`
 for a .data global, `R(k1)` and `TodoGlobal` for a KOTOR 1 address whose
 KOTOR 2 twin has not been found (0 on KOTOR 2), `Kotor1Only` and
 `Kotor2Only`. Only the Steam builds are supported, so no address is ever

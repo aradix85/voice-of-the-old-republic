@@ -16,7 +16,7 @@
 #include "engine_player.h"      // SetPlayerInputEnabled, GetActiveLeaderName
 #include "engine_radial.h"      // diagnostics around the radial fallback
 #include "engine_reads.h"
-#include "engine_rebase.h"
+#include "engine_addr.h"
 #include "log.h"
 
 namespace {

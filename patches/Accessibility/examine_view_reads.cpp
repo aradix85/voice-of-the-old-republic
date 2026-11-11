@@ -8,7 +8,7 @@
 #include "engine_offsets.h"
 #include "engine_player.h"
 #include "engine_reads.h"    // TryRead*, LookupTlk
-#include "engine_rebase.h"
+#include "engine_addr.h"
 
 #include <windows.h>
 

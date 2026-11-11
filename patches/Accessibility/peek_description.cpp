@@ -6,7 +6,7 @@
 
 #include "engine_input.h"
 #include "engine_offsets.h"
-#include "engine_rebase.h"
+#include "engine_addr.h"
 #include "hotkeys.h"
 #include "log.h"
 #include "menus_abilities.h"

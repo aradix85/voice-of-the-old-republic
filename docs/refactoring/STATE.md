@@ -458,9 +458,7 @@ prefix (menus_listbox_picker.cpp).
   game. The 2004 relink of KOTOR 1 (Russian, Polish) and the GOG release
   of KOTOR 2 are out: their tables, hook files, kdev sigscan and the
   k2_gog re-scripts (54b3b0b7 and the two commits after it). acc::addr is
-  six inline one-liners in engine_rebase.h. Left for later: the header's
-  name no longer fits (engine_addr.h would; 48 includes, a move-only
-  commit); PickGlobal, TodoGlobal and Kotor1Only now do what Pick and R
+  six inline one-liners in engine_addr.h. The header is engine_addr.h now. Left for later: PickGlobal, TodoGlobal and Kotor1Only now do what Pick and R
   do and are kept for what they say at the declaration; Ok() guards that
   only existed for the relink can be judged per module. kdev dump-text
   stays: it makes the KOTOR 1 image for the two engine checks.

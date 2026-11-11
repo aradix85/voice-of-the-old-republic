@@ -8,7 +8,7 @@
 #include "engine_game.h"     // IsKotor2 — medpick probe is K2-only
 #include "engine_panels.h"   // ResolveGuiInGame, ResolveMainInterface
 #include "log.h"
-#include "engine_rebase.h"
+#include "engine_addr.h"
 #include "engine_offsets_select.h"
 
 namespace {

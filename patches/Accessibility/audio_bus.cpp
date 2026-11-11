@@ -9,7 +9,7 @@
 #include "engine_player.h"
 #include "log.h"
 #include "mod_settings_store.h"  // persist the cue-volume slider across launches
-#include "engine_rebase.h"
+#include "engine_addr.h"
 #include "engine_offsets_select.h"
 #include "engine_game.h"
 

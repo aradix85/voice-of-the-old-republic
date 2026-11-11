@@ -33,7 +33,7 @@
 #include <cstdint>
 
 #include "engine_offsets.h"  // Vector
-#include "engine_rebase.h"
+#include "engine_addr.h"
 #include "engine_offsets_select.h"
 #include "walkmesh_geometry.h"
 

@@ -25,7 +25,7 @@
 #include "menus_pending.h"       // QueueActivate (click-sim for OK/Cancel/Default)
 #include "speech.h"
 #include "strings.h"
-#include "engine_rebase.h"
+#include "engine_addr.h"
 #include "engine_offsets_select.h"
 
 using acc::menus::detail::DriveListBoxSelectionEngine;

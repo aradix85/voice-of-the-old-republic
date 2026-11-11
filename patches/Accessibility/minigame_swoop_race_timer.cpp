@@ -6,7 +6,7 @@
 #include "engine_app.h"
 #include "engine_area.h"
 #include "engine_game.h"
-#include "engine_rebase.h"
+#include "engine_addr.h"
 #include "log.h"
 #include "speech.h"
 #include "strings.h"

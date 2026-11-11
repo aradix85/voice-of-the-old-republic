@@ -16,7 +16,7 @@
 #include "engine_compass.h"
 #include "engine_keymap.h"    // TurnScancode: the bound turn key
 #include "engine_player.h"
-#include "engine_rebase.h"
+#include "engine_addr.h"
 #include "hotkeys.h"
 #include "key_inject.h"
 #include "log.h"

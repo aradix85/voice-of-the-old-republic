@@ -10,7 +10,7 @@
 #include <cstdio>
 
 #include "engine_area.h"
-#include "engine_rebase.h"
+#include "engine_addr.h"
 #include "engine_reads.h"
 #include "engine_offsets_select.h"
 

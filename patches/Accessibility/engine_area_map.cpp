@@ -22,7 +22,7 @@
 #include "engine_reads.h"
 #include "log.h"
 #include "map_note_renames.h"
-#include "engine_rebase.h"
+#include "engine_addr.h"
 
 namespace acc::engine {
 

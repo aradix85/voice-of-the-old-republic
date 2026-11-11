@@ -5,7 +5,7 @@
 
 #include "engine_app.h"     // GetClientApp
 #include "engine_offsets_select.h"
-#include "engine_rebase.h"
+#include "engine_addr.h"
 #include "log.h"
 
 namespace acc::engine {

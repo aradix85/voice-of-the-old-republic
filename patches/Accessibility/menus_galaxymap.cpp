@@ -9,7 +9,7 @@
 #include "engine_manager.h"   // kAddrGuiManagerPtr, kMgrPanels{Data,Size}Offset
 #include "engine_offsets.h"   // kLabelGuiStringPtrOffset
 #include "engine_panels.h"    // IdentifyPanel / PanelKind / PanelKindName
-#include "engine_rebase.h"    // acc::addr::R / Ok
+#include "engine_addr.h"    // acc::addr::R / Ok
 #include "engine_reads.h"     // ReadGuiString
 #include "log.h"
 #include "menus_pending.h"    // QueueGalaxyInput

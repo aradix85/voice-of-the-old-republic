@@ -6,7 +6,7 @@
 
 #include "code_patch.h"
 #include "log.h"
-#include "engine_rebase.h"
+#include "engine_addr.h"
 
 namespace acc::save_guard {
 

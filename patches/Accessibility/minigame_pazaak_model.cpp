@@ -5,7 +5,7 @@
 #include "minigame_pazaak_internal.h"
 
 #include "engine_game.h"
-#include "engine_rebase.h"
+#include "engine_addr.h"
 #include "log.h"
 
 namespace acc::pazaak {

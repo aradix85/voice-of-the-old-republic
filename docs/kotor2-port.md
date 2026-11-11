@@ -3339,7 +3339,7 @@ Controller support comes after the mod runs on K2 at all — see below.
 Before step 1, `acc::addr::R()` returned the *reference value* for any
 unrecognised build. On KOTOR 2 that would have handed out 267 KOTOR 1 addresses
 pointing into unrelated K2 code — silent jumps into the middle of other
-functions, which is precisely the failure mode `engine_rebase.h` warns about
+functions, which is precisely the failure mode `engine_addr.h` warns about
 for stale addresses.
 
 `R()` now returns **0** for KOTOR 2. That faults recognisably at address 0, and

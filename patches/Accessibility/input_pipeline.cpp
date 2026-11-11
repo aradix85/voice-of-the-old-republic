@@ -16,7 +16,7 @@
 #include "engine_player.h"
 #include "engine_radial.h"
 #include "engine_reads.h"
-#include "engine_rebase.h"
+#include "engine_addr.h"
 #include "examine_view.h"
 #include "floor_puzzle.h"
 #include "help.h"
