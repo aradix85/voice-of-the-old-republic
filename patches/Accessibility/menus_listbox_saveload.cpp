@@ -6,6 +6,7 @@
 
 #include "engine_game.h"     // IsKotor2 — K2 one-step upgrade install
 #include "engine_offsets.h"
+#include "engine_reads.h"
 #include "log.h"
 #include "menus.h"           // SpeakIfChanged (empty-state dedup)
 #include "menus_extract.h"
@@ -167,7 +168,7 @@ void MonitorK2SaveLoadSelection() {
     // Which row of the listbox is focused? Chain focus is just as likely to be
     // one of the action buttons, in which case there is nothing to sync and
     // the last row selection must stand — that is the save Load will act on.
-    int row = FindListBoxRowIndex(lb, focused);
+    int row = acc::engine::FindListBoxRow(lb, focused);
     if (row < 0) return;
 
     static void* s_lastLb  = nullptr;

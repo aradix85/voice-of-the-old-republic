@@ -12,6 +12,7 @@
 #include "engine_input.h"
 #include "engine_offsets.h"
 #include "engine_panels.h"
+#include "engine_reads.h"
 #include "log.h"
 #include "menus_extract.h"
 #include "strings.h"
@@ -29,18 +30,8 @@ namespace {
 // the skill index that OnEnterSkill consumes. SEH-guarded; null on empty list
 // or out-of-range selection.
 void* SelectedRow(void* panel) {
-    void* row = nullptr;
-    __try {
-        auto* lb = reinterpret_cast<unsigned char*>(panel) + kAbilitiesListBoxOffset;
-        short sel = *reinterpret_cast<short*>(lb + kListBoxSelectionIndexOffset);
-        auto* rows = reinterpret_cast<CExoArrayList*>(lb + kListBoxControlsOffset);
-        if (rows && rows->data && sel >= 0 && sel < rows->size) {
-            row = rows->data[sel];
-        }
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        row = nullptr;
-    }
-    return row;
+    return acc::engine::ReadListBoxSelectedRow(
+        acc::off::Ptr(panel, kAbilitiesListBoxOffset));
 }
 
 // CSWGuiInGameAbilities::OnEnterSkill(this, CSWGuiControl* row) — the engine's

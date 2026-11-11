@@ -1,4 +1,4 @@
-# menus_chargen_layout.cpp (247 lines)
+# menus_chargen_layout.cpp (236 lines)
 
 Source: `patches/Accessibility/menus_chargen_layout.cpp`
 
@@ -14,4 +14,4 @@ See menus_chargen_layout.h for purpose.
 - L119 `void CaptureLabels(const PanelDesc& d, void* panel)`
 - L144 `void LogBindingWord(const PanelDesc& d, void* panel, const char* when)`: Diagnostic: dump the panel's binding word and its neighbours.
 - L175 `bool AnnounceDescription(const PanelDesc& d, void* panel, void* control)`
-- L238 `bool IsDescriptionListbox(const PanelDesc& d, void* listBox)`
+- L227 `bool IsDescriptionListbox(const PanelDesc& d, void* listBox)`

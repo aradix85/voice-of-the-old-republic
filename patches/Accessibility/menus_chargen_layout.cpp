@@ -191,18 +191,7 @@ bool AnnounceDescription(const PanelDesc& d, void* panel, void* control) {
 
     // Read description_listbox.controls[0] — the row whose text the engine
     // just rewrote.
-    auto* base = reinterpret_cast<unsigned char*>(panel);
-    void* listBox = base + d.descListBoxOffset;
-    auto* lbList = reinterpret_cast<CExoArrayList*>(
-        reinterpret_cast<unsigned char*>(listBox) + kListBoxControlsOffset);
-    void* row = nullptr;
-    __try {
-        if (lbList && lbList->data && lbList->size > 0) {
-            row = lbList->data[0];
-        }
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return false;
-    }
+    void* row = acc::engine::ReadListBoxRow(acc::off::Ptr(panel, d.descListBoxOffset), 0);
     if (!row) return false;
 
     // Same two-path text read the row names use, via the shared engine

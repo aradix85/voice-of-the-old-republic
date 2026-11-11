@@ -32,24 +32,6 @@ using PFN_ControlHandleInputEvent = void(__thiscall*)(void* self, int code, int 
 using PFN_CraftCost = unsigned int(__thiscall*)(void* self, void* item);
 constexpr int kVtableHandleInputEvent = 15;
 
-// Index of `row` in the listbox's controls array, or -1: a pointer
-// comparison, nothing is read through the rows.
-int RowIndexIn(void* listBox, void* row) {
-    if (!listBox || !row) return -1;
-    __try {
-        auto* list = reinterpret_cast<CExoArrayList*>(
-            static_cast<unsigned char*>(listBox) + kListBoxControlsOffset);
-        if (!list->data || list->size <= 0) return -1;
-        const int n = list->size > 4096 ? 4096 : list->size;
-        for (int i = 0; i < n; ++i) {
-            if (list->data[i] == row) return i;
-        }
-        return -1;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return -1;
-    }
-}
-
 // Makes `row` the selected row: what a mouse click leaves behind, minus the
 // click. Both halves matter:
 //   * selection_index: BTN_Accept (component 0x008D2150, chemical
@@ -143,7 +125,7 @@ bool ResolveRowCommit(void* panel, void* control, void** outListBox) {
     } else {
         return false;
     }
-    if (!lb || RowIndexIn(lb, control) < 0) return false;
+    if (!lb || acc::engine::FindListBoxRow(lb, control) < 0) return false;
     *outListBox = lb;
     return true;
 }
@@ -151,7 +133,7 @@ bool ResolveRowCommit(void* panel, void* control, void** outListBox) {
 void DispatchRowCommit(void* panel, void* listBox, void* row) {
     // A tick has passed since the key: the list may have been repopulated
     // (a category switch racing the Enter), so a vanished row is a no-op.
-    const int idx = RowIndexIn(listBox, row);
+    const int idx = acc::engine::FindListBoxRow(listBox, row);
     if (idx < 0) {
         acclog::Write("Crafting", "row-commit dropped: row=%p no longer in lb=%p (panel=%p)",
                       row, listBox, panel);
@@ -191,7 +173,7 @@ void AnnounceChainStepSuffix(void* panel, void* control) {
     if (!IsCraftingKind(pk)) return;
     // Rows of the actionable list only; buttons and the resource row fall out.
     void* lb = FindActiveCraftList(panel);
-    if (!lb || RowIndexIn(lb, control) < 0) return;
+    if (!lb || acc::engine::FindListBoxRow(lb, control) < 0) return;
     void* item = ResolveRowItem(control);
     if (!item) {
         acclog::Write("Crafting", "chain-step suffix row=%p: item resolve failed", control);
@@ -239,7 +221,7 @@ void SyncSelectedRowFromChainFocus() {
     void* focused = g_chain[g_chainIndex].control;
     void* lb = FindActiveCraftList(panel);
     if (!lb || !focused) return;
-    const int idx = RowIndexIn(lb, focused);
+    const int idx = acc::engine::FindListBoxRow(lb, focused);
     if (idx < 0) return;  // a button or category, not an item row
     static void* s_lastRow = nullptr;
     if (!SelectRow(lb, focused, idx) || focused == s_lastRow) return;

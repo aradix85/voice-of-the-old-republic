@@ -1,4 +1,4 @@
-# menus_listbox.cpp (303 lines)
+# menus_listbox.cpp (285 lines)
 
 Source: `patches/Accessibility/menus_listbox.cpp`
 
@@ -16,7 +16,6 @@ The two armed pickers (equipment, workbench upgrade) keep their SPECS here with 
 - L165 `void LogStandard(int n, void* thisPtr, int param_1, int param_2, bool consumed)`
 - L188 `void SpeakRowAndPosition(const ListBoxNavResult& r)`: The plain " , N of M" announce.
 - L201 `bool TryHandleInput(int n, void* thisPtr, void* activePanel, int param_1, int param_2, int& outRv)`
-- L250 `int FindListBoxRowIndex(void* listbox, void* control)`: Index of `control` among the listbox's row children, or -1.
-- L270 `bool SetListBoxSelectedControl(void* listbox, int index)`: The engine's own selection commit — real row highlight, native scroll, and the onSelectionChanged work the preview labels depend on.
-- L282 `void TickListboxMonitors()`
-- L291 `const char* GetTitleOverride(void* panel)`
+- L252 `bool SetListBoxSelectedControl(void* listbox, int index)`: The engine's own selection commit — real row highlight, native scroll, and the onSelectionChanged work the preview labels depend on.
+- L264 `void TickListboxMonitors()`
+- L273 `const char* GetTitleOverride(void* panel)`

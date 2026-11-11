@@ -185,7 +185,6 @@ extern const ListBoxPanelSpec kScriptSelectSpec;
 
 // menus_listbox.cpp
 void SpeakRowAndPosition(const ListBoxNavResult& r);
-int FindListBoxRowIndex(void* listbox, void* control);
 bool SetListBoxSelectedControl(void* listbox, int index);
 
 // menus_listbox_container.cpp

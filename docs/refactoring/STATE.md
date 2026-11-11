@@ -392,10 +392,21 @@ prefix (menus_listbox_picker.cpp).
   clamped step of three lines. A shared model would cost more than it
   saves.
 - F5 memory readers outside engine_reads. Left: SafeRead in
-  camera_spin_guard and engine_navgraph, ReadListBoxRowCount in
-  dialog_speech, and the listbox rows: some 25 files walk the controls
-  array of a CSWGuiListBox themselves (row at an index, the selected row,
-  the index of a row). ReadCExoStringLocal (engine_actionbar) stays: it
+  camera_spin_guard and engine_navgraph, and the listbox rows. Files
+  walked the controls array of a CSWGuiListBox themselves; engine_reads
+  now has ReadListBoxRow, ReadListBoxSelection, ReadListBoxSelectedRow
+  and FindListBoxRow beside ReadListBoxRowCount. Step 1 uses them in
+  dialog_speech, menus_keymap, menus_abilities, menus_crafting_rows,
+  menus_listbox(_saveload), menus_chargen_layout, menus_journal and
+  menus_inventory (in-game checks: a computer terminal's rows are spoken,
+  the journal description on Enter, the key-mapping list, the skills
+  list, Enter on an inventory item). Step 2, still to do: the pickers
+  (menus_listbox_equip, _workbench, _picker, _container),
+  menus_monitors_dialog, menus_monitors_inventory, peek_description(_item),
+  menus_extract_controls, menus_listbox_skillinfo, menus_skillflow_grid,
+  menus_pending_workbench, menus_chain_tabs. menus_chain_build and
+  menus_internal_listbox walk every row inside one guarded pass and can
+  stay. ReadCExoStringLocal (engine_actionbar) stays: it
   reads to the NUL and ignores the length field, which ReadCExoString
   does not.
   combat.cpp is lean (312 to 104): its listbox poll only wrote log lines

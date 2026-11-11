@@ -5,6 +5,8 @@
 
 #include "engine_reads.h"
 
+#include <windows.h>
+#include <cstddef>
 #include <cstdio>
 
 namespace acc::engine {
@@ -63,6 +65,53 @@ int ReadListBoxRowCount(void* listBox) {
         return -1;
     }
     return static_cast<int>(size);
+}
+
+namespace {
+
+// The controls array's data pointer; false when unreadable or null.
+bool ReadListBoxRowArray(void* listBox, void** outData) {
+    return TryReadPtr(listBox, kListBoxControlsOffset + offsetof(CExoArrayList, data),
+                      outData) &&
+           *outData;
+}
+
+}  // namespace
+
+void* ReadListBoxRow(void* listBox, int index) {
+    void* data = nullptr;
+    void* row = nullptr;
+    if (index < 0 || index >= ReadListBoxRowCount(listBox) ||
+        !ReadListBoxRowArray(listBox, &data) ||
+        !TryReadPtr(data, static_cast<size_t>(index) * sizeof(void*), &row)) {
+        return nullptr;
+    }
+    return row;
+}
+
+int ReadListBoxSelection(void* listBox) {
+    uint16_t selection = 0;
+    if (!TryReadU16(listBox, kListBoxSelectionIndexOffset, &selection)) return -1;
+    return static_cast<int16_t>(selection);
+}
+
+void* ReadListBoxSelectedRow(void* listBox) {
+    return ReadListBoxRow(listBox, ReadListBoxSelection(listBox));
+}
+
+int FindListBoxRow(void* listBox, void* row) {
+    const int count = ReadListBoxRowCount(listBox);
+    void* data = nullptr;
+    if (!row || count <= 0 || !ReadListBoxRowArray(listBox, &data)) return -1;
+    __try {
+        void* const* rows = static_cast<void* const*>(data);
+        for (int i = 0; i < count; ++i) {
+            if (rows[i] == row) return i;
+        }
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        // An array that ends early holds no such row.
+    }
+    return -1;
 }
 
 bool ReadToggleState(void* toggle) {

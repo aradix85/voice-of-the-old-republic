@@ -61,20 +61,6 @@ DialogPanelMatch FindActiveDialogPanel() {
     return out;
 }
 
-int ReadListBoxRowCount(void* panel, size_t lbOffset) {
-    if (!panel) return 0;
-    __try {
-        void* lb = reinterpret_cast<unsigned char*>(panel) + lbOffset;
-        auto* lbList = reinterpret_cast<CExoArrayList*>(
-            reinterpret_cast<unsigned char*>(lb) +
-            kListBoxControlsOffset);
-        if (!lbList || !lbList->data) return 0;
-        return lbList->size;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return 0;
-    }
-}
-
 // The text of a panel's first child that has any. The bark bubble and the
 // camera feed each render a single text label.
 bool ReadFirstVisibleText(void* panel, char* outBuf, size_t bufSize) {
@@ -140,33 +126,16 @@ void TickComputerRows(void* panel) {
         s_lastComputerPanel = panel;
         s_lastComputerRows  = 0;
     }
-    int rows = ReadListBoxRowCount(panel,
-                                   kDialogComputerMessageListBoxOffset);
-    if (rows > s_lastComputerRows) {
-        __try {
-            void* lb = reinterpret_cast<unsigned char*>(panel) +
-                       kDialogComputerMessageListBoxOffset;
-            auto* lbList = reinterpret_cast<CExoArrayList*>(
-                reinterpret_cast<unsigned char*>(lb) +
-                kListBoxControlsOffset);
-            if (lbList && lbList->data) {
-                int cap = rows > lbList->size ? lbList->size : rows;
-                for (int i = s_lastComputerRows; i < cap; ++i) {
-                    void* row = lbList->data[i];
-                    if (!row) continue;
-                    char text[512];
-                    if (acc::menus::extract::FromControl(
-                            row, text, sizeof(text)) &&
-                        text[0] != '\0') {
-                        acc::speech::Speak(text, /*interrupt=*/false);
-                        acclog::Write("Dialog.Speech",
-                                      "computer row %d [%.200s]",
-                                      i, text);
-                    }
-                }
-            }
-        } __except (EXCEPTION_EXECUTE_HANDLER) {
-            // try again next tick
+    void* lb = acc::off::Ptr(panel, kDialogComputerMessageListBoxOffset);
+    int rows = acc::engine::ReadListBoxRowCount(lb);
+    if (rows < 0) rows = 0;
+    for (int i = s_lastComputerRows; i < rows; ++i) {
+        void* row = acc::engine::ReadListBoxRow(lb, i);
+        char text[512];
+        if (row && acc::menus::extract::FromControl(row, text, sizeof(text)) &&
+            text[0] != '\0') {
+            acc::speech::Speak(text, /*interrupt=*/false);
+            acclog::Write("Dialog.Speech", "computer row %d [%.200s]", i, text);
         }
     }
     if (rows < s_lastComputerRows) {

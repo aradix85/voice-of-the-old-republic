@@ -129,9 +129,19 @@ uint32_t ReadControlBitFlags(void* control);
 // pick the one on screen. False on fault.
 bool IsControlVisible(void* control);
 
-// Row count of a CSWGuiListBox (its controls array size), -1 on fault or an
-// implausible size. Reads no row pointers.
+// A CSWGuiListBox's rows. Every reader answers "nothing" for a null list
+// box, on a fault and for an implausible size; none reads through a row.
+//
+// The row count (the size of the controls array), -1 when unreadable.
 int ReadListBoxRowCount(void* listBox);
+// Row `index`, nullptr out of range.
+void* ReadListBoxRow(void* listBox, int index);
+// selection_index; -1 is also the engine's "no selection".
+int ReadListBoxSelection(void* listBox);
+// The selected row, nullptr without a selection.
+void* ReadListBoxSelectedRow(void* listBox);
+// The index of `row` among the rows, -1 when it is not one.
+int FindListBoxRow(void* listBox, void* row);
 
 // A CSWGuiEditbox's text. The length comes from strnlen: the engine does
 // not keep the CExoString length in sync on Backspace, but it terminates

@@ -135,19 +135,8 @@ short s_rowCursor      = -1;
 
 // Row control at `index`, or nullptr if the list is shorter than that.
 void* RowAt(void* panel, short index) {
-    void* row = nullptr;
-    __try {
-        void* lb = acc::menus::detail::KeyMapPanelEventListBox(panel);
-        if (!lb) return nullptr;
-        auto* rows = reinterpret_cast<CExoArrayList*>(
-            reinterpret_cast<unsigned char*>(lb) + kListBoxControlsOffset);
-        if (rows && rows->data && index >= 0 && index < rows->size) {
-            row = rows->data[index];
-        }
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        row = nullptr;
-    }
-    return row;
+    return acc::engine::ReadListBoxRow(
+        acc::menus::detail::KeyMapPanelEventListBox(panel), index);
 }
 
 // Force the listbox's selection_index back to OUR cursor before a step. The

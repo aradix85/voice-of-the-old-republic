@@ -1,4 +1,4 @@
-# engine_reads_controls.cpp (86 lines)
+# engine_reads_controls.cpp (135 lines)
 
 Source: `patches/Accessibility/engine_reads_controls.cpp`
 
@@ -6,14 +6,19 @@ What a GUI control is and its state: class predicates, id, flags, list box row c
 
 ## Declarations (in source order)
 
-- L15 `uintptr_t VtableOf(void* control)`: The control's vtable address, 0 on fault.
-- L23 `int ReadControlId(void* control)`
-- L28 `bool IsToggle(void* control)`
-- L32 `bool IsSlider(void* control)`
-- L36 `bool IsListBox(void* control)`
-- L42 `bool IsEditbox(void* control)`: CSWGuiSaveGameEditBox (the save-name popup) is a subclass with its own vtable and the same layout.
-- L48 `uint32_t ReadControlBitFlags(void* control)`
-- L54 `bool IsControlVisible(void* control)`
-- L58 `int ReadListBoxRowCount(void* listBox)`
-- L68 `bool ReadToggleState(void* toggle)`
-- L74 `void DumpControlVtable(void* control, char* out, size_t outSize)`
+- L17 `uintptr_t VtableOf(void* control)`: The control's vtable address, 0 on fault.
+- L25 `int ReadControlId(void* control)`
+- L30 `bool IsToggle(void* control)`
+- L34 `bool IsSlider(void* control)`
+- L38 `bool IsListBox(void* control)`
+- L44 `bool IsEditbox(void* control)`: CSWGuiSaveGameEditBox (the save-name popup) is a subclass with its own vtable and the same layout.
+- L50 `uint32_t ReadControlBitFlags(void* control)`
+- L56 `bool IsControlVisible(void* control)`
+- L60 `int ReadListBoxRowCount(void* listBox)`
+- L73 `bool ReadListBoxRowArray(void* listBox, void** outData)`: The controls array's data pointer; false when unreadable or null.
+- L81 `void* ReadListBoxRow(void* listBox, int index)`
+- L92 `int ReadListBoxSelection(void* listBox)`
+- L98 `void* ReadListBoxSelectedRow(void* listBox)`
+- L102 `int FindListBoxRow(void* listBox, void* row)`
+- L117 `bool ReadToggleState(void* toggle)`
+- L123 `void DumpControlVtable(void* control, char* out, size_t outSize)`

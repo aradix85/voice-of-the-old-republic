@@ -86,23 +86,9 @@ void SpeakDescription(void* panel, void* focusedRow) {
         }
     }
 
-    void* lb = reinterpret_cast<unsigned char*>(panel) +
-               kJournalDescriptionListBoxOffset;
-    auto* lbList = reinterpret_cast<CExoArrayList*>(
-        reinterpret_cast<unsigned char*>(lb) + kListBoxControlsOffset);
-
-    int rowCount = 0;
-    void* row = nullptr;
-    __try {
-        if (lbList && lbList->data) {
-            rowCount = lbList->size;
-            if (rowCount > 0) row = lbList->data[0];
-        }
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        acclog::Write("Menus.Journal",
-                      "description listbox read SEH (panel=%p)", panel);
-        return;
-    }
+    void* lb = acc::off::Ptr(panel, kJournalDescriptionListBoxOffset);
+    const int rowCount = acc::engine::ReadListBoxRowCount(lb);
+    void* row = acc::engine::ReadListBoxRow(lb, 0);
 
     if (!row) {
         acclog::Write("Menus.Journal",
@@ -201,13 +187,8 @@ void LogEntryCounts(void* panel) {
                 reinterpret_cast<unsigned char*>(gui) + 0xbc4) & 1;
         }
 
-        int listRows = -1;
-        if (panel) {
-            void* lb = reinterpret_cast<unsigned char*>(panel) + kJournalItemsListBoxOffset;
-            auto* lbList = reinterpret_cast<CExoArrayList*>(
-                reinterpret_cast<unsigned char*>(lb) + kListBoxControlsOffset);
-            if (lbList) listRows = lbList->size;
-        }
+        const int listRows = acc::engine::ReadListBoxRowCount(
+            acc::off::Ptr(panel, kJournalItemsListBoxOffset));
 
         acclog::Write("Menus.Journal",
                       "EntryCounts: active=%d done=%d (engine data) | "

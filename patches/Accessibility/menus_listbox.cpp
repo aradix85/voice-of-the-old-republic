@@ -245,24 +245,6 @@ bool TryHandleInput(int n, void* thisPtr, void* activePanel,
     return false;
 }
 
-// Index of `control` among the listbox's row children, or -1. SEH-guarded:
-// the chain can outlive a control by a tick.
-int FindListBoxRowIndex(void* listbox, void* control) {
-    if (!listbox || !control) return -1;
-    __try {
-        auto* list = reinterpret_cast<CExoArrayList*>(
-            reinterpret_cast<unsigned char*>(listbox) + kListBoxControlsOffset);
-        if (!list->data || list->size <= 0) return -1;
-        int n = list->size > 512 ? 512 : list->size;
-        for (int i = 0; i < n; ++i) {
-            if (list->data[i] == control) return i;
-        }
-        return -1;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return -1;
-    }
-}
-
 // The engine's own selection commit — real row highlight, native scroll, and
 // the onSelectionChanged work the preview labels depend on. playSound=0: the
 // chain step has already spoken the row, and the engine's click blip on top of
