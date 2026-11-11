@@ -25,6 +25,7 @@ using acc::engine::ReadFloatOr0;
 using acc::engine::TryReadVector;
 using acc::minigame::ResolveMgoArray;
 using acc::engine::CallDowncast;
+using acc::minigame::kExitDebounceTicks;
 using acc::minigame::ReadFollowerPosition;
 
 // ----- Range model (calibrated on KOTOR 1, scaled per area) -----
@@ -233,11 +234,8 @@ struct TargetInfo {
 };
 
 struct State {
-    bool      active           = false;
-    void*     latched_mini_game = nullptr;
-    void*     latched_vtable    = nullptr;
+    acc::minigame::Latch latch;  // which turret game is running
     ULONGLONG entered_at_ms     = 0;
-    int       ticks_since_lost  = 0;
     Arena     arena;
     // Area-target mode (107PER): the minigame declared no enemies, so the
     // census walks the area's hostile creatures and non-plot placeables.

@@ -4,6 +4,7 @@
 
 #include "engine_app.h"     // GetClientAppInternal
 #include "engine_area.h"
+#include "log.h"
 
 namespace acc::minigame {
 
@@ -13,6 +14,22 @@ void* ReadAreaMiniGame() {
     void* serverArea = acc::engine::GetCurrentArea();
     if (!serverArea) return nullptr;
     return ReadPtrOrNull(acc::engine::GetClientArea(serverArea), kClientAreaMiniGameOffset);
+}
+
+LatchStep TickLatch(Latch& latch, uint32_t type, const char* logTag) {
+    LatchInput in;
+    in.areaGame     = ReadAreaMiniGame();
+    in.areaVtable   = ReadPtrOrNull(in.areaGame, kMiniGameVtableOffset);
+    in.areaIsOurs   = in.areaGame && ReadU32Or0(in.areaGame, kMiniGameTypeOffset) == type;
+    in.latchedAlive = latch.vtable &&
+                      ReadPtrOrNull(latch.game, kMiniGameVtableOffset) == latch.vtable;
+    void* const before = latch.game;
+    const LatchStep step = StepLatch(latch, in);
+    if (step == LatchStep::Running && latch.game != before) {
+        acclog::Write(logTag, "re-latch: old=%p new=%p vtable=%p", before, latch.game,
+                      latch.vtable);
+    }
+    return step;
 }
 
 void* ResolveMgoArray() {

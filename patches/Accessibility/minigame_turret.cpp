@@ -69,11 +69,6 @@ namespace {
 // anything else on this struct is not ours.
 constexpr uint32_t kMiniGameTypeTurret     = 2;
 
-// Exit-debounce: same rationale as minigame_swoop_race.cpp — the entry/exit
-// transition flips the area chain for a few ticks, so only announce EXIT
-// once the latched struct has been gone for this many consecutive ticks.
-constexpr int       kExitDebounceTicks     = 60;
-
 // NOTE (RE + measured): sphere_radius is the value OUR cue subtends
 // against, but it is NOT the engine's hit primitive. The bullet-hit path is
 // CSWMiniGame::DoHitCheck -> CSWTrackFollower::DoBulletHitCheck ->
@@ -105,26 +100,6 @@ const size_t kHitEventImpactXOffset      = acc::off::Kotor1Only(0x54);  // float
 const size_t kHitEventImpactYOffset      = acc::off::Kotor1Only(0x58);  // float (world)
 const size_t kHitEventImpactZOffset      = acc::off::Kotor1Only(0x5c);  // float (world)
 constexpr int kVtableSlotGetVictimFollower = 5;  // OnHitBullet's vtable[0x14]
-
-// ============================================================================
-// SEH-guarded primitive reads (same pattern as engine_* / swoop_race).
-// ============================================================================
-
-// True iff `mg` is a live CSWMiniGame reporting the turret type.
-bool IsTurretMiniGame(void* mg) {
-    return mg && ReadU32Or0(mg, kMiniGameTypeOffset) == kMiniGameTypeTurret;
-}
-
-bool LatchedStillValid() {
-    if (!g_state.latched_mini_game || !g_state.latched_vtable) return false;
-    void* vt = ReadPtrOrNull(g_state.latched_mini_game, kMiniGameVtableOffset);
-    return vt == g_state.latched_vtable;
-}
-
-// ============================================================================
-// MGO-walk helpers (mirrors minigame_swoop_audio*.cpp — kept local so that
-// swoop TU isn't entangled with turret-specific cueing).
-// ============================================================================
 
 // ============================================================================
 // Approach cue. Only the nearest kFighterMaxConcurrent in-range fighters
@@ -167,12 +142,9 @@ void AnnounceExit() {
 // State transitions.
 // ============================================================================
 
-void HandleEnter(void* mg) {
-    g_state.active            = true;
-    g_state.latched_mini_game = mg;
-    g_state.latched_vtable    = ReadPtrOrNull(mg, kMiniGameVtableOffset);
+void HandleEnter() {
+    void* mg = g_state.latch.game;
     g_state.entered_at_ms     = GetTickCount64();
-    g_state.ticks_since_lost  = 0;
     g_state.selected_slot     = -1;
     g_state.last_enemy_count  = -1;
     g_state.last_selected_hp  = -1;
@@ -221,7 +193,7 @@ void HandleEnter(void* mg) {
     g_state.area_targets = (enemies == 0);
     acclog::Write("Turret",
                   "ENTER mini_game=%p vtable=%p type=%u enemies=%u%s",
-                  mg, g_state.latched_vtable,
+                  mg, g_state.latch.vtable,
                   ReadU32Or0(mg, kMiniGameTypeOffset), enemies,
                   g_state.area_targets ? " -> area-target mode" : "");
     ReadArena(mg);
@@ -265,10 +237,6 @@ void HandleExit() {
     }
 
     StopAllLoops();
-    g_state.active            = false;
-    g_state.latched_mini_game = nullptr;
-    g_state.latched_vtable    = nullptr;
-    g_state.ticks_since_lost  = 0;
     g_state.selected_slot     = -1;
     g_state.last_enemy_count  = -1;
     AnnounceExit();
@@ -286,7 +254,7 @@ void HandleExit() {
 // ============================================================================
 extern "C" void __cdecl OnTurretBulletHit(void* hitEvent) {
     if (!acc::game::HandlerEnabled()) return;  // KOTOR 1 only — no K2 hook (see the hit-event constants)
-    if (!hitEvent || !g_state.active) return;
+    if (!hitEvent || !g_state.latch.Active()) return;
 
     Vector impact;
     impact.x = ReadFloatOr0(hitEvent, kHitEventImpactXOffset);
@@ -305,7 +273,7 @@ extern "C" void __cdecl OnTurretBulletHit(void* hitEvent) {
     // Distinguish our shots landing on a fighter (the hitbox we care about)
     // from incoming fire on the player's own ship. CSWMiniPlayer.follower is
     // the first member, so the player follower pointer == the player pointer.
-    void* player = ReadPtrOrNull(g_state.latched_mini_game, kMiniGamePlayerOffset);
+    void* player = ReadPtrOrNull(g_state.latch.game, kMiniGamePlayerOffset);
 
     const bool victimIsPlayer = (follower == player);
 
@@ -327,57 +295,27 @@ extern "C" void __cdecl OnTurretBulletHit(void* hitEvent) {
 // this). Drives the session hits/shots accuracy line. ECX = CSWMiniPlayer (unused).
 extern "C" void __cdecl OnPlayerFire(void* /*player*/) {
     if (!acc::game::HandlerEnabled()) return;  // KOTOR 1 only — no K2 hook (see the hit-event constants)
-    if (!g_state.active) return;
+    if (!g_state.latch.Active()) return;
     ++g_state.shots_fired;
 }
 
-bool IsActive() { return g_state.active; }
+bool IsActive() { return g_state.latch.Active(); }
 
 void Tick() {
-    void* mgArea = acc::minigame::ReadAreaMiniGame();
-
-    if (!g_state.active) {
-        // Idle. Fire ENTER only for the turret minigame (type==2); swoop
-        // (type==1) is handled by minigame_swoop_race.cpp.
-        if (IsTurretMiniGame(mgArea)) HandleEnter(mgArea);
-        return;
-    }
-
-    // Active. Verify the latch is still alive (two truth sources — area
-    // chain and latched vtable; EXIT only when both say gone for
-    // kExitDebounceTicks). Mirrors minigame_swoop_race.cpp.
-    if (mgArea && mgArea != g_state.latched_mini_game) {
-        // Different struct mid-game (engine swap / fresh game). Only
-        // re-latch if it's still a turret; otherwise let the debounce
-        // run toward EXIT.
-        if (IsTurretMiniGame(mgArea)) {
-            void* vt = ReadPtrOrNull(mgArea, kMiniGameVtableOffset);
-            acclog::Write("Turret", "re-latch: old=%p new=%p vtable=%p",
-                          g_state.latched_mini_game, mgArea, vt);
-            g_state.latched_mini_game = mgArea;
-            g_state.latched_vtable    = vt;
-            g_state.ticks_since_lost  = 0;
-        } else {
-            ++g_state.ticks_since_lost;
-        }
-    } else if (mgArea && mgArea == g_state.latched_mini_game) {
-        g_state.ticks_since_lost = 0;
-    } else if (!mgArea && LatchedStillValid()) {
-        // Area chain lost visibility but the struct is intact — stay locked.
-        g_state.ticks_since_lost = 0;
-    } else {
-        ++g_state.ticks_since_lost;
-    }
-
-    if (g_state.ticks_since_lost >= kExitDebounceTicks) {
-        HandleExit();
-        return;
+    using acc::minigame::LatchStep;
+    // A swoop race is another type on the same struct;
+    // minigame_swoop_race.cpp handles it.
+    switch (acc::minigame::TickLatch(g_state.latch, kMiniGameTypeTurret, "Turret")) {
+        case LatchStep::Idle:    return;
+        case LatchStep::Entered: HandleEnter(); return;
+        case LatchStep::Exited:  HandleExit(); return;
+        case LatchStep::Running: break;
     }
 
     // Surface kills: when CSWMiniGame.enemy_count drops, a fighter was
     // destroyed (vs. merely leaving cue range, which leaves the count alone).
     const int enemyCount =
-        static_cast<int>(ReadU32Or0(g_state.latched_mini_game,
+        static_cast<int>(ReadU32Or0(g_state.latch.game,
                                      kMiniGameEnemyCountOffset));
     if (enemyCount != g_state.last_enemy_count) {
         acclog::Write("Turret", "enemy_count %d -> %d",
@@ -396,7 +334,7 @@ void Tick() {
     // The gun bank / tunnel can still be under construction on the first
     // ticks; keep reading until both halves of the arena are in.
     if (!g_state.arena.ballistics_read || !g_state.arena.limits_read) {
-        ReadArena(g_state.latched_mini_game);
+        ReadArena(g_state.latch.game);
     }
 
     // Aiming (WASD) and firing (Space/Enter) are native keyboard actions.

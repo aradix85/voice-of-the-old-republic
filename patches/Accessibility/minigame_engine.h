@@ -18,6 +18,7 @@
 
 #include "engine_offsets.h"  // Vector
 #include "engine_reads.h"
+#include "minigame_latch.h"
 
 namespace acc::minigame {
 
@@ -32,6 +33,11 @@ using acc::engine::TryReadVector;
 // moment of detection; a caller latches it, because this chain churns
 // during the transition into and out of a minigame.
 void* ReadAreaMiniGame();
+
+// One tick of `latch` for the minigame of `type` (CSWMiniGame.type), with
+// both truth sources read from the engine. A re-latch is logged under
+// `logTag`.
+LatchStep TickLatch(Latch& latch, uint32_t type, const char* logTag);
 
 // The minigame object array (obstacles, accelerator pads, track followers),
 // or nullptr when no minigame is live.

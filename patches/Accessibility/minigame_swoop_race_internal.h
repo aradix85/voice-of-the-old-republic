@@ -21,6 +21,7 @@ using acc::engine::ReadPtrOrNull;
 using acc::engine::ReadU32Or0;
 using acc::engine::ReadFloatOr0;
 using acc::engine::TryReadVector;
+using acc::minigame::kExitDebounceTicks;
 
 // CSWMiniGame.type of a swoop race.
 constexpr uint32_t kMiniGameTypeSwoop = 1;
@@ -55,11 +56,6 @@ constexpr int kGearGlobalMin = 0;
 constexpr int kGearGlobalMax = 5;
 constexpr const char* kGearGlobalName = "MIN_RACE_GEAR";
 
-// Exit debounce: after the latched pointer is lost, wait this many
-// consecutive ticks before announcing the exit. The race-start transition
-// flips the area chain in < 5 ticks, so 60 ticks (~2 s at 30 fps) is well
-// past that without making a true exit feel laggy.
-constexpr int   kExitDebounceTicks        = 60;
 // The finish-line time is spoken this long after the finish, so the engine's
 // race-end sound, which is louder than the speech, has faded under it.
 // Inside the exit debounce; the exit path flushes it regardless. A wreck is
@@ -69,18 +65,10 @@ constexpr ULONGLONG kRaceEndSpeakDelayMs  = 1200;
 // The module state. Single-threaded under the engine OnUpdate tick; a fresh
 // State{} on every entry and exit.
 struct State {
-    // True iff the entry was announced and the exit not yet.
-    bool          active                  = false;
-    // The CSWMiniGame pointer latched at entry, re-verified every tick by
-    // its vtable; the only way to stay locked through the race-start
-    // transition.
-    void*         latched_mini_game       = nullptr;
-    void*         latched_vtable          = nullptr;
+    // Which race is running (minigame_latch.h).
+    acc::minigame::Latch latch;
     ULONGLONG     entered_at_ms           = 0;
     ULONGLONG     last_diag_log_ms        = 0;
-    // Ticks since the latch stopped validating; the exit is announced when
-    // this reaches kExitDebounceTicks.
-    int           ticks_since_lost        = 0;
     // Gear tracking.
     //
     // Engine model for the plateau heuristic: each manual shift WIDENS the

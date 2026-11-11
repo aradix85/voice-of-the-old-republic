@@ -1,4 +1,4 @@
-# minigame_swoop_race_internal.h (172 lines)
+# minigame_swoop_race_internal.h (160 lines)
 
 Source: `patches/Accessibility/minigame_swoop_race_internal.h`
 
@@ -6,16 +6,16 @@ Internal to the minigame_swoop_race module (minigame_swoop_race*.cpp); no other 
 
 ## Declarations (in source order)
 
-- L71 `struct State`: The module state.
-- L156 `void TickRaceTimer(void* miniGame)`: minigame_swoop_race_timer.cpp
-- L157 `void SpeakRaceEndMessage()`
-- L158 `void FlushRaceEndSpeech(bool force)`
-- L161 `void TickGearWatch(void* miniGame)`: minigame_swoop_race_cues.cpp
-- L162 `void TickHitPoints(void* miniGame)`
-- L163 `void TickStuckHint(void* miniGame)`
-- L164 `void TickJumpWatch(void* miniGame)`
-- L165 `void TickShiftReady(void* miniGame)`
-- L168 `void EmitEntrySummary(void* miniGame)`: minigame_swoop_race_diag.cpp
-- L169 `void EmitDiagSnapshot(void* miniGame)`
+- L67 `struct State`: The module state.
+- L144 `void TickRaceTimer(void* miniGame)`: minigame_swoop_race_timer.cpp
+- L145 `void SpeakRaceEndMessage()`
+- L146 `void FlushRaceEndSpeech(bool force)`
+- L149 `void TickGearWatch(void* miniGame)`: minigame_swoop_race_cues.cpp
+- L150 `void TickHitPoints(void* miniGame)`
+- L151 `void TickStuckHint(void* miniGame)`
+- L152 `void TickJumpWatch(void* miniGame)`
+- L153 `void TickShiftReady(void* miniGame)`
+- L156 `void EmitEntrySummary(void* miniGame)`: minigame_swoop_race_diag.cpp
+- L157 `void EmitDiagSnapshot(void* miniGame)`
 
 Also 13 constants or variables at namespace scope.

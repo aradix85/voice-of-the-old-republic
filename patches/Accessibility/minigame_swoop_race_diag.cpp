@@ -26,7 +26,7 @@ void EmitEntrySummary(void* miniGame) {
     acclog::Write("SwoopRace",
                   "ENTER mini_game=%p vtable=%p type=%u enemies=%u "
                   "obstacles=%u obstacles_ptr=%p player=%p",
-                  miniGame, g_state.latched_vtable, type, enemies, obstacles,
+                  miniGame, g_state.latch.vtable, type, enemies, obstacles,
                   obstData, player);
 }
 

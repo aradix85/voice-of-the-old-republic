@@ -48,16 +48,6 @@ typedef void (__thiscall* PFN_RunFollowerSlotScript)(void* follower, int flag);
 constexpr int kK1MGShootActionId = 217;
 constexpr int kDikSpace          = 0x39;
 
-// True iff the latched CSWMiniGame is still readable and its vtable is the
-// one captured at latch time. The engine frees CSWMiniGame at race end and
-// the heap slot tends to get reused, so a vtable mismatch is a reliable
-// "no longer the same struct" signal.
-bool LatchedStillValid() {
-    if (!g_state.latched_mini_game || !g_state.latched_vtable) return false;
-    void* vt = ReadPtrOrNull(g_state.latched_mini_game, kMiniGameVtableOffset);
-    return vt == g_state.latched_vtable;
-}
-
 // The opener and the key list go out as ONE interrupting utterance, so the
 // second half cannot cut off the first.
 void AnnounceEntry() {
@@ -74,19 +64,18 @@ void AnnounceEntry() {
     acclog::Write("SwoopRace", "spoke entry: [%s]", buf);
 }
 
-void HandleEnter(void* mg) {
+void HandleEnter() {
+    const acc::minigame::Latch latch = g_state.latch;
     g_state = State{};
-    g_state.active            = true;
-    g_state.latched_mini_game = mg;
-    g_state.latched_vtable    = ReadPtrOrNull(mg, kMiniGameVtableOffset);
-    g_state.entered_at_ms     = GetTickCount64();
+    g_state.latch         = latch;
+    g_state.entered_at_ms = GetTickCount64();
     // Loops left over from an earlier race must not survive into this one.
     ResetSpatialAudio();
 
     // Speak before logging, so the utterance is queued before the next
     // tick's cues can pile onto the same audio frame.
     AnnounceEntry();
-    EmitEntrySummary(mg);
+    EmitEntrySummary(latch.game);
 }
 
 void HandleExit() {
@@ -104,8 +93,8 @@ void HandleExit() {
 // runner, with the guards the client input handler applies (a live
 // swoop-type minigame with a player). False = nothing ran.
 bool RunPlayerSlotScript(uintptr_t runner, const char* what) {
-    if (!acc::game::IsKotor2() || !g_state.active) return false;
-    void* mg = g_state.latched_mini_game;
+    if (!acc::game::IsKotor2() || !g_state.latch.Active()) return false;
+    void* mg = g_state.latch.game;
     if (!mg || runner == 0) return false;
     if (ReadU32Or0(mg, kMiniGameTypeOffset) != kMiniGameTypeSwoop) return false;
     void* player = ReadPtrOrNull(mg, kMiniGamePlayerOffset);
@@ -123,7 +112,7 @@ bool RunPlayerSlotScript(uintptr_t runner, const char* what) {
 
 }  // namespace
 
-bool IsActive() { return g_state.active; }
+bool IsActive() { return g_state.latch.Active(); }
 
 bool TryShift() {
     if (acc::game::IsKotor2()) {
@@ -136,7 +125,7 @@ bool TryShift() {
     // the engine's guards on that case (module + area present, not paused)
     // stay the engine's. The press reaches the client input hook as 0xd9,
     // where TryJump declines on KOTOR 1 and the engine shifts.
-    if (!g_state.active || !g_state.latched_mini_game) return false;
+    if (!g_state.latch.Active()) return false;
     int scan = acc::engine_keymap::GameActionScancode(kK1MGShootActionId);
     if (scan == 0) scan = kDikSpace;
     acc::key_inject::Tap(scan);
@@ -151,48 +140,15 @@ bool TryJump() {
 }
 
 void Tick() {
-    void* mgArea = acc::minigame::ReadAreaMiniGame();
-
-    if (!g_state.active) {
-        // Enter only for a swoop race (type 1). The turret / gunner minigame
-        // shares this struct and vtable but reports type 2 and is handled by
-        // minigame_turret.cpp. The type is set by the time the area chain
-        // exposes mini_game.
-        if (mgArea && ReadU32Or0(mgArea, kMiniGameTypeOffset) == kMiniGameTypeSwoop) {
-            HandleEnter(mgArea);
-        }
-        return;
+    using acc::minigame::LatchStep;
+    // The turret / gunner minigame shares the struct and its vtable but
+    // reports another type; minigame_turret.cpp handles it.
+    switch (acc::minigame::TickLatch(g_state.latch, kMiniGameTypeSwoop, "SwoopRace")) {
+        case LatchStep::Idle:    return;
+        case LatchStep::Entered: HandleEnter(); return;
+        case LatchStep::Exited:  HandleExit(); return;
+        case LatchStep::Running: break;
     }
-
-    // Two truth sources: the area chain still reports a mini_game (the same
-    // pointer or a fresh one), and the latched pointer's vtable still reads
-    // the expected value. Exit only when BOTH say "gone" for
-    // kExitDebounceTicks in a row.
-    if (mgArea && mgArea != g_state.latched_mini_game) {
-        // A different minigame mid-race (engine swap, injected reset):
-        // re-latch so later reads track it.
-        void* vt = ReadPtrOrNull(mgArea, kMiniGameVtableOffset);
-        acclog::Write("SwoopRace",
-                      "re-latch: old=%p new=%p vtable=%p",
-                      g_state.latched_mini_game, mgArea, vt);
-        g_state.latched_mini_game = mgArea;
-        g_state.latched_vtable    = vt;
-        g_state.ticks_since_lost  = 0;
-    } else if (mgArea || LatchedStillValid()) {
-        // The chain agrees with the latch, or it dropped to null (the
-        // race-start transition does this) while the latched struct is
-        // still the one from the entry.
-        g_state.ticks_since_lost = 0;
-    } else {
-        // Both say gone; wait out a transient reallocation first.
-        ++g_state.ticks_since_lost;
-        if (g_state.ticks_since_lost >= kExitDebounceTicks) {
-            HandleExit();
-            return;
-        }
-    }
-
-    if (!g_state.latched_mini_game) return;
 
     // Keyboard shift: the bare W hotkey, on BOTH games so the muscle memory
     // carries between them (KOTOR 1's Space still shifts too). On KOTOR 2
@@ -203,20 +159,20 @@ void Tick() {
         TryShift();
     }
 
-    TickGearWatch(g_state.latched_mini_game);
-    TickShiftReady(g_state.latched_mini_game);
-    TickJumpWatch(g_state.latched_mini_game);
-    TickHitPoints(g_state.latched_mini_game);   // log only; see DecideWreckAtFinish
+    TickGearWatch(g_state.latch.game);
+    TickShiftReady(g_state.latch.game);
+    TickJumpWatch(g_state.latch.game);
+    TickHitPoints(g_state.latch.game);   // log only; see DecideWreckAtFinish
     // TickRaceTimer first so have_start_ms is current this tick: it flips true
     // at the "Go!" launch (actual speed > 1 + fresh MIN_TIME stamp). The
     // obstacle and pad cues stay silent through the countdown until then.
-    TickRaceTimer(g_state.latched_mini_game);
+    TickRaceTimer(g_state.latch.game);
     if (g_state.have_start_ms) {
-        TickSpatialAudio(g_state.latched_mini_game);
+        TickSpatialAudio(g_state.latch.game);
     }
-    TickStuckHint(g_state.latched_mini_game);
+    TickStuckHint(g_state.latch.game);
     FlushRaceEndSpeech(/*force=*/false);
-    EmitDiagSnapshot(g_state.latched_mini_game);
+    EmitDiagSnapshot(g_state.latch.game);
 }
 
 }  // namespace acc::swoop_race

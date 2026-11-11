@@ -98,7 +98,7 @@ void* ResolveGunBank0(void* miniGame) {
 
 // Resolve the player's first gun model (CAurObject*) for the bullethook read.
 void* ResolveGunModel() {
-    void* bank0 = ResolveGunBank0(g_state.latched_mini_game);
+    void* bank0 = ResolveGunBank0(g_state.latch.game);
     if (!bank0) return nullptr;
     if (ReadU32Or0(bank0, kGunBankGunCountOffset) == 0) return nullptr;
     void* gunsData = ReadPtrOrNull(bank0, kGunBankGunsDataOffset);    // CAurObject*[]
@@ -236,7 +236,7 @@ bool ReadAimLine(Vector& outDir, Vector& outOrigin) {
 // Read / write the aim field (CSWMiniPlayer.offset +0x1c4): x = elevation°,
 // z = azimuth°. Writing it steers the gun (the engine re-integrates next tick).
 bool ReadOffset(float& azOut, float& elOut) {
-    void* player = ReadPtrOrNull(g_state.latched_mini_game, kMiniGamePlayerOffset);
+    void* player = ReadPtrOrNull(g_state.latch.game, kMiniGamePlayerOffset);
     Vector v;
     if (!acc::minigame::ReadOffsetVector(player, v)) return false;
     elOut = v.x;   // offset.x = elevation
@@ -245,7 +245,7 @@ bool ReadOffset(float& azOut, float& elOut) {
 }
 
 void WriteOffset(float az, float el) {
-    void* player = ReadPtrOrNull(g_state.latched_mini_game, kMiniGamePlayerOffset);
+    void* player = ReadPtrOrNull(g_state.latch.game, kMiniGamePlayerOffset);
     Vector v;
     if (!acc::minigame::ReadOffsetVector(player, v)) return;  // preserve offset.y
     v.x = el;   // offset.x = elevation

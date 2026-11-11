@@ -474,8 +474,7 @@ prefix (menus_listbox_picker.cpp).
   tools/analysis/engine_constants.py checks it (exit 1 on a constant
   defined twice): run it with the other checks after every commit. Its
   --all mode lists plain constants that share a name across files, for
-  review; the one real duplicate it still shows is kExitDebounceTicks
-  (swoop and turret: F9).
+  review; it shows no real duplicate now.
   In-game check: the tutorial popups in the Endar Spire (the game pauses
   while one is up and resumes after), a swoop race and the turret game.
   minigame_aim is split, move only, into minigame_engine (the area's
@@ -507,8 +506,19 @@ prefix (menus_listbox_picker.cpp).
   the two files is the one-line call into it, AnnounceValueChange differs
   in substance (the attribute screen tracks modifier and cost), and
   AnnounceChainStepSuffix is one name for four different suffixes.
-- F9 minigames: HandleEnter/HandleExit/AnnounceEntry, and the exit
-  debounce both have (kExitDebounceTicks, "mirrors minigame_swoop_race").
+- F9 done for what was the same: the swoop race and the turret game each
+  had the latch on CSWMiniGame written out (enter, re-latch, the two
+  truth sources, the exit debounce, LatchedStillValid, five state
+  fields). It is minigame_latch now, engine-free with unit tests, and
+  TickLatch in minigame_engine reads the engine for it; each Tick opens
+  with one switch on its result. One difference in behaviour: the swoop
+  race re-latched to any new struct, also one of another kind; it now
+  does what the turret did and lets the debounce run. HandleEnter,
+  HandleExit and AnnounceEntry themselves differ in substance and stay.
+  For the turret's lean: HandleEnter resets some forty state fields by
+  hand where the swoop race assigns State{}. In-game check: a swoop
+  race and the turret game start with their opener, and end with the
+  race time or "turret game ended" once.
 - Bridge: a party/equipment/inventory path; check what K2 needs (all
   but /health, /spoken, /state, /menu, say and key are KOTOR 1 only);
   live check of /objects with creatures and kotor.py kaart --personen
