@@ -47,6 +47,9 @@ constexpr uint32_t kCloseButtonStrRef = 1582;
 // Engine sentinel for "no object" in AI-queue object-id slots. Distinct
 // from CGameObjectArray's removed-handle sentinel (0xFFFFFFFF).
 constexpr uint32_t kInvalidObjectId = 0x7F000000u;
+// The object id of the player character's own creature, whoever is in control:
+// the engine numbers player objects from here down, and there is one player.
+constexpr uint32_t kPlayerCharacterObjectId = 0x7FFFFFFFu;
 
 // A TLK strref that names no string.
 constexpr uint32_t kNoStrref = 0xFFFFFFFFu;

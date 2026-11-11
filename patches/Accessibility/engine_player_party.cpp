@@ -224,7 +224,11 @@ int GetPartyMembers(uint32_t* outHandles, int maxCount) {
     }
     // pt_member_ids holds roster slot indices; each resolves to the live
     // creature's object id, comparable to GetObjectHandle. Slots without a
-    // live creature are skipped.
+    // live creature are skipped, and logged once per slot and id: a companion
+    // went unlisted from joining until the next load (Mission, Taris
+    // Undercity) and the id it had then is not known yet.
+    static uint32_t s_unresolvedSlot = 0xFFFFFFFFu;
+    static uint32_t s_unresolvedId   = 0;
     int written = 0;
     for (uint32_t i = 0; i < numMembers && written < maxCount; ++i) {
         uint32_t slot = 0;
@@ -233,7 +237,22 @@ int GetPartyMembers(uint32_t* outHandles, int maxCount) {
             break;
         }
         const uint32_t id = NpcObjectId(table, static_cast<int>(slot));
-        if (id != 0) outHandles[written++] = id;
+        if (id != 0 && id != kInvalidObjectId && ResolveServerObjectHandle(id)) {
+            outHandles[written++] = id;
+        } else if (slot != s_unresolvedSlot || id != s_unresolvedId) {
+            s_unresolvedSlot = slot;
+            s_unresolvedId   = id;
+            acclog::Write("Party", "member %u of %u: roster slot %u has no live creature "
+                          "(object id 0x%08x)", i, numMembers, slot, id);
+        }
+    }
+    // With a companion in control (Tab) the player character follows like any
+    // member, and the member table never lists it.
+    void* controlled = GetPlayerServerCreature();
+    if (written < maxCount && controlled &&
+        GetObjectHandle(controlled) != kPlayerCharacterObjectId &&
+        ResolveServerObjectHandle(kPlayerCharacterObjectId)) {
+        outHandles[written++] = kPlayerCharacterObjectId;
     }
     return written;
 }

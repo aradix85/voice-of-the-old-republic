@@ -169,7 +169,10 @@ int GetPlayerActionQueueDepth();
 // Each slot index is resolved to the live creature's object handle via
 // CSWPartyTable::GetNPCObject, so outHandles are real handles comparable to
 // GetObjectHandle(). Slots that don't resolve to a live creature are
-// skipped. Returns count written; 0 on early-init / SEH / empty roster.
+// skipped. With a companion in control the player character's creature is
+// added, so the result is every companion, the controlled one included, and
+// the player character when it follows.
+// Returns count written; 0 on early-init / SEH / empty roster.
 int GetPartyMembers(uint32_t* outHandles, int maxCount);
 
 // Active CSWPartyTable*. Exposed so callers that need NPC-slot

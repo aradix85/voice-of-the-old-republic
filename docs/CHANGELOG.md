@@ -118,6 +118,8 @@ installer, as the pre-release `bridge-latest`.
   accelerator pads, around the obstacles, and shifts by itself (KOTOR 1).
 - KOTOR 1 swoop race: the obstacle warning sounds where the buoy stands.
 - A quick Ctrl+L no longer opens the game's Quests screen as well.
+- With a companion in control, your own character counts as a party member:
+  Ctrl+H names everyone.
 - Enter on an open door walks through it.
 - Tab says the name of the character you now control once, and no longer
   the previous one first.
@@ -394,6 +396,15 @@ installer, as the pre-release `bridge-latest`.
   Ctrl already up and open the Quests screen while the walk to the loot
   started. The key of a combo the mod has just seen is now taken from the
   game once, within half a second.
+- With a companion in control (Tab), the player character was in no party
+  list: the engine's member table holds the companions only. Ctrl+H named two
+  of three, the bridge's /state left the player character out, and whatever
+  else asks who is in the party (the Q and E ring, the trap watch) could take
+  the player character for a stranger. The party list now adds the player
+  character's own creature whenever someone else is in control. A companion whose roster slot
+  has no live creature is logged once ("Party: member ..."): Mission went
+  unlisted from the moment she joined until the next load, and that is not
+  solved yet.
 
 <h3>Help:</h3>
 

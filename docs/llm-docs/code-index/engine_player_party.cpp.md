@@ -1,4 +1,4 @@
-# engine_player_party.cpp (378 lines)
+# engine_player_party.cpp (397 lines)
 
 Source: `patches/Accessibility/engine_player_party.cpp`
 
@@ -16,12 +16,12 @@ Who is in the party, who is leading, and what they are called: leader and creatu
 - L148 `bool GetActiveLeaderName(char* outBuf, size_t bufSize)`: The name of the CURRENTLY CONTROLLED leader: Tab re-wires CClientExoApp::GetPlayerCreature to the new one.
 - L197 `bool GetPlayerCharacterName(char* outBuf, size_t bufSize)`
 - L216 `int GetPartyMembers(uint32_t* outHandles, int maxCount)`
-- L241 `void* GetServerPartyTable()`
-- L249 `bool GetSoloMode()`
-- L262 `int PartyRosterSlotCount()`
-- L266 `bool IsPartyPortrait(void* control)`
-- L270 `bool ReadPartyPortrait(void* control, PartyPortrait* out)`
-- L292 `int PartySelectionChosenCount(void* panel)`
-- L298 `bool PartyTableIsNPCAvailable(int npcSlot)`
-- L311 `bool PartyTableIsNPCSelectable(int npcSlot)`
-- L338 `bool GetPartyNpcNameForSlot(int npcSlot, char* outBuf, size_t bufSize)`
+- L260 `void* GetServerPartyTable()`
+- L268 `bool GetSoloMode()`
+- L281 `int PartyRosterSlotCount()`
+- L285 `bool IsPartyPortrait(void* control)`
+- L289 `bool ReadPartyPortrait(void* control, PartyPortrait* out)`
+- L311 `int PartySelectionChosenCount(void* panel)`
+- L317 `bool PartyTableIsNPCAvailable(int npcSlot)`
+- L330 `bool PartyTableIsNPCSelectable(int npcSlot)`
+- L357 `bool GetPartyNpcNameForSlot(int npcSlot, char* outBuf, size_t bufSize)`

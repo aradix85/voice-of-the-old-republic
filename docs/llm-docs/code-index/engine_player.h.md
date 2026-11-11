@@ -1,4 +1,4 @@
-# engine_player.h (361 lines)
+# engine_player.h (364 lines)
 
 Source: `patches/Accessibility/engine_player.h`
 
@@ -32,16 +32,16 @@ All functions return false/nullptr cleanly on null at any chain link or SEH faul
 - L153 `void TickPlayerInputRestore()`: Restore tick — queue-drain / ceiling driven.
 - L157 `void TickActionQueueDiag()`: Diagnostic tick — logs player action-queue depth changes (delta only).
 - L161 `int GetPlayerActionQueueDepth()`: Player's pending AI-action count (CSWSObject.action_nodes).
-- L173 `int GetPartyMembers(uint32_t* outHandles, int maxCount)`: Walks CServerExoApp.party_table @+0x1b770 (via GetServerPartyTable): +0x0 pt_num_members (active followers, 0..2 in normal play — the PC is the implicit leader and is NOT counted here) +0x4 pt_member_ids[] (NPC *roste...
-- L177 `void* GetServerPartyTable()`: Active CSWPartyTable*.
-- L182 `bool GetSoloMode()`: CSWPartyTable.pt_solomode @+0x190 — the flag the engine's own ExecuteCommandGetSoloMode @0x00546af0 returns and SetSoloMode @0x00565500 writes (both decompiled 2026-07-16).
-- L186 `bool PartyTableIsNPCAvailable(int npcSlot)`: CSWPartyTable::GetIsNPCAvailable @0x005636B0.
-- L190 `bool PartyTableIsNPCSelectable(int npcSlot)`: CSWPartyTable::GetNPCSelectability @0x005637C0.
-- L195 `int PartyRosterSlotCount()`: Roster size the party-select screen renders: 9 on KOTOR 1, 12 on KOTOR 2 (its CSWGuiPartySelection ctor builds 12 party_data elements, and GetIsNPCAvailable bounds-checks `< 0xc`).
-- L199 `struct PartyPortrait`: One party-select roster portrait (CSWGuiPartySelectionButton), read through the per-game member offsets in this header.
-- L208 `bool IsPartyPortrait(void* control)`: True iff `control` is a party-select portrait.
-- L212 `bool ReadPartyPortrait(void* control, PartyPortrait* out)`: Reads a portrait's fields.
-- L216 `int PartySelectionChosenCount(void* panel)`: The panel's count of companions currently chosen (the engine refuses an add once it reaches 2).
-- L229 `bool GetPartyNpcNameForSlot(int npcSlot, char* outBuf, size_t bufSize)`: Resolves a PartySelection roster slot to a display name.
+- L176 `int GetPartyMembers(uint32_t* outHandles, int maxCount)`: Walks CServerExoApp.party_table @+0x1b770 (via GetServerPartyTable): +0x0 pt_num_members (active followers, 0..2 in normal play — the PC is the implicit leader and is NOT counted here) +0x4 pt_member_ids[] (NPC *roste...
+- L180 `void* GetServerPartyTable()`: Active CSWPartyTable*.
+- L185 `bool GetSoloMode()`: CSWPartyTable.pt_solomode @+0x190 — the flag the engine's own ExecuteCommandGetSoloMode @0x00546af0 returns and SetSoloMode @0x00565500 writes (both decompiled 2026-07-16).
+- L189 `bool PartyTableIsNPCAvailable(int npcSlot)`: CSWPartyTable::GetIsNPCAvailable @0x005636B0.
+- L193 `bool PartyTableIsNPCSelectable(int npcSlot)`: CSWPartyTable::GetNPCSelectability @0x005637C0.
+- L198 `int PartyRosterSlotCount()`: Roster size the party-select screen renders: 9 on KOTOR 1, 12 on KOTOR 2 (its CSWGuiPartySelection ctor builds 12 party_data elements, and GetIsNPCAvailable bounds-checks `< 0xc`).
+- L202 `struct PartyPortrait`: One party-select roster portrait (CSWGuiPartySelectionButton), read through the per-game member offsets in this header.
+- L211 `bool IsPartyPortrait(void* control)`: True iff `control` is a party-select portrait.
+- L215 `bool ReadPartyPortrait(void* control, PartyPortrait* out)`: Reads a portrait's fields.
+- L219 `int PartySelectionChosenCount(void* panel)`: The panel's count of companions currently chosen (the engine refuses an add once it reaches 2).
+- L232 `bool GetPartyNpcNameForSlot(int npcSlot, char* outBuf, size_t bufSize)`: Resolves a PartySelection roster slot to a display name.
 
 Also 22 constants or variables at namespace scope.

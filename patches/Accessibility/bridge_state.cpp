@@ -63,30 +63,10 @@ std::string CreatureJson(void* serverCreature) {
     return s + "}";
 }
 
-// The player character found in the area by its chargen name.
-void* FindPlayerCharacter(void* area) {
-    char pcName[128] = {0};
-    if (!area || !acc::engine::GetPlayerCharacterName(pcName, sizeof(pcName)) ||
-        !pcName[0]) {
-        return nullptr;
-    }
-    acc::engine::AreaObjectIterator it(area);
-    while (void* obj = it.Next()) {
-        if (acc::engine::GetObjectKind(obj) !=
-            static_cast<int>(acc::engine::GameObjectKind::Creature)) {
-            continue;
-        }
-        char nm[128] = {0};
-        if (acc::engine::GetObjectName(obj, nm, sizeof(nm)) && _stricmp(nm, pcName) == 0)
-            return obj;
-    }
-    return nullptr;
-}
-
-// The controlled creature plus the NPC members, each once. With a companion
-// as leader (Tab) the controlled creature is that companion and the member
-// table can list it again, while the player character is in neither list.
-std::string PartyJson(void* area) {
+// The controlled creature plus the other members, each once. With a companion
+// as leader (Tab) the controlled creature is that companion, and
+// GetPartyMembers lists it again.
+std::string PartyJson() {
     std::string s;
     std::vector<uint32_t> listed;
     auto add = [&](void* obj) {
@@ -101,7 +81,6 @@ std::string PartyJson(void* area) {
     uint32_t handles[kMaxPartyHandles] = {0};
     const int n = acc::engine::GetPartyMembers(handles, kMaxPartyHandles);
     for (int i = 0; i < n; ++i) add(acc::engine::ResolveServerObjectHandle(handles[i]));
-    add(FindPlayerCharacter(area));
     return "[" + s + "]";
 }
 
@@ -168,7 +147,7 @@ std::string BuildSnapshot() {
     if (acc::engine::GetActiveLeaderName(buf, sizeof(buf)))
         s += ",\"leader\":" + JsonGame(buf);
 
-    s += ",\"party\":" + PartyJson(area);
+    s += ",\"party\":" + PartyJson();
     s += ",\"in_combat\":";
     s += acc::engine::IsAnyPartyMemberInCombat() ? "true" : "false";
     s += ScreenField(panel);
