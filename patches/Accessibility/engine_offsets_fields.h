@@ -2433,7 +2433,7 @@ const size_t kFollowerMaxHpOffset           = acc::off::Same(0x90);
 // from CSWTrackFollower::Load's "Sphere_Radius" read, writes [this+0x84].
 const size_t kFollowerSphereRadiusOffset    = acc::off::Same(0x84);  // float
 
-// CSWMiniPlayer.offset — the per-tick-integrated aim/lane field. minigame_aim.h has the
+// CSWMiniPlayer.offset — the per-tick-integrated aim/lane field. minigame_engine.h has the
 // per-game interpretation of its components.
 //
 // KOTOR 2 = +0x1f4, i.e. KOTOR 1 + 0x30. That delta is CSWTrackFollower's, not

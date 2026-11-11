@@ -4,6 +4,7 @@
 #include "minigame_turret_internal.h"
 
 #include "log.h"
+#include "minigame_magnet.h"
 
 namespace acc::turret_game {
 
@@ -199,7 +200,7 @@ bool SteerGun(bool steer, float offAz, float offEl, float angle, float errAz,
         newAz = offAz - errAzOff * gain;
         newEl = offEl - errElOff * gain;
     } else {
-        // Magnetism (shared facility, minigame_aim.h): proximity-ramped
+        // Magnetism (minigame_magnet.h): proximity-ramped
         // (t=0 at the engage edge, 1 dead-on), per-tick-capped pull blended
         // on top of the player's own WASD swing.
         const acc::minigame::MagnetParams mp{

@@ -53,7 +53,8 @@ carry meaning — trust them when deciding whether code is safe to remove.
   their investigation-era names after becoming fixes.
 - **`minigame_*`** — the minigame family: `minigame_turret`,
   `minigame_swoop_race`, `minigame_swoop_audio`, `minigame_pazaak`, plus
-  `minigame_aim` for the primitives shared across them.
+  `minigame_engine` for the engine primitives shared across them and
+  `minigame_magnet` for the aim-assist curve.
 - **`menus_*`** — everything menu-side, including `menus_speak`.
 - **`wall_probe` vs `room_topology`** — two systems that used to share the
   name `wall_topology`. `wall_probe` answers "is there a wall, how far"
@@ -95,7 +96,7 @@ three extra script slots; CPazaakCard 8 -> 12 bytes). Full ledger in
   in KOTOR 2" claim recorded here on 2026-07-29 was wrong). Ballistics and
   aim limits are read per area, K1's distances became a K1-calibrated range
   model, and 107PER runs an area-target mode. See `k2-turret-model.md`.
-- `minigame_aim` — the shared primitives, fully ported. Its one Pick is
+- `minigame_engine` — the shared primitives, fully ported. Its one Pick is
   CSWMiniPlayer.offset (0x1c4 -> 0x1f4).
 
 **Ports for free — no engine dependency.** `strfmt.h`, `announce_facing`,

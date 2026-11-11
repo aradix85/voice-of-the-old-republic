@@ -233,7 +233,7 @@ robust discriminator is the model name. Round 2's first two hits were mines
 the pad co-pilot had locked onto (`mag=1 slot=126/127`, `fwdGap 3.9 / 3.3` at
 the gear drop).
 
-**Runtime geometry** (both games, `minigame_aim.h`): Gob vtable slot 59
+**Runtime geometry** (both games, `minigame_engine.h`): Gob vtable slot 59
 `GetBoundingBox(min,max)` copies the model-local box; slot 67
 `GetPart("hitbump")` + Part slot 29 `GetMinimumBoundingBox(min,max,scale)`
 folds that part's vertices into a caller-initialised local box (K1

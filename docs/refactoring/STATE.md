@@ -480,9 +480,20 @@ prefix (menus_listbox_picker.cpp).
   (swoop and turret: F9).
   In-game check: the tutorial popups in the Endar Spire (the game pauses
   while one is up and resumes after), a swoop race and the turret game.
-  minigame_aim.h holds more than aim now (the object array, the area's
-  minigame, follower positions): a split into the engine side and the
-  aim assist would be a move-only commit.
+  minigame_aim is split, move only, into minigame_engine (the area's
+  minigame, the object array, follower positions and boxes, the offset
+  field) and minigame_magnet (the engine-free pull curve). Its lean is
+  open, design: the read of a virtual function (vtable, slot, null
+  checks) is written out five times in minigame_engine.cpp and again
+  in minigame_swoop_audio (ReadAurObjectName), minigame_turret_arena
+  (ReadAimLine), CallDowncast of engine_reads, menus_crafting_rows
+  (FireActivate, with its own HandleInputEvent typedef) and
+  HandleInputEventOf of menus_pending_internal.h: one ReadVirtual in
+  engine_reads. CallAsCast is CallDowncast with a byte offset instead
+  of an index. The layout constants of minigame_engine.h belong in the
+  catalog headers, ReadOffsetVector can go through TryReadVector, and
+  the magnet gets unit tests. Run call_convention.py after it: the 11
+  unchecked virtual calls are these.
 - F6 done as far as it is a duplicate: the physical-key read
   `(GetAsyncKeyState(vk) & 0x8000) != 0` was written out in nine files
   and is acc::hotkeys::KeyDown now. The polls themselves differ on

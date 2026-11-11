@@ -5,7 +5,7 @@
 
 #include "minigame_swoop_race.h"
 
-#include "minigame_aim.h"
+#include "minigame_engine.h"
 
 #include <windows.h>
 #include <cstdint>
@@ -16,7 +16,7 @@
 
 namespace acc::swoop_race {
 
-// The SEH reads the minigame files share (minigame_aim.h).
+// The guarded reads the minigame files use (engine_reads.h).
 using acc::engine::ReadPtrOrNull;
 using acc::engine::ReadU32Or0;
 using acc::engine::ReadFloatOr0;

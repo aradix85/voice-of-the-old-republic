@@ -15,14 +15,14 @@
                               //     and live race fire the same samples)
 #include "audio_loop.h"       // LoopSource — sustained warning per
                               //     obstacle / nearest-pad cue
-#include "minigame_aim.h"     // shared offset read/write + magnetism (the
-                              //     turret aim-assist port — lateral steering)
+#include "minigame_engine.h"  // the object array, follower positions and
+                              //     the offset field that steers the bike
 #include "engine_offsets_select.h"
 #include "minigame_swoop_audio_tuning.h"
 
 namespace acc::swoop_race {
 
-// Shared SEH reads and minigame-object-array helpers (minigame_aim.h).
+// The guarded reads (engine_reads.h) and the shared helpers (minigame_engine.h).
 using acc::engine::ReadPtrOrNull;
 using acc::engine::ReadU32Or0;
 using acc::engine::ReadFloatOr0;

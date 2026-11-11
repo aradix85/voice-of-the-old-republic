@@ -339,8 +339,10 @@ patches/Accessibility/menus_speak.cpp
 patches/Accessibility/menus_speak.h
 patches/Accessibility/menus_store.cpp
 patches/Accessibility/menus_store.h
-patches/Accessibility/minigame_aim.cpp
-patches/Accessibility/minigame_aim.h
+patches/Accessibility/minigame_engine.cpp
+patches/Accessibility/minigame_engine.h
+patches/Accessibility/minigame_magnet.cpp
+patches/Accessibility/minigame_magnet.h
 patches/Accessibility/minigame_pazaak.cpp
 patches/Accessibility/minigame_pazaak.h
 patches/Accessibility/minigame_pazaak_input.cpp

@@ -62,7 +62,7 @@ namespace {
 //   offset.x = elevation° (W/S axis), offset.z = azimuth° (A/D axis), y unused.
 // WASD drives it natively. We aim-assist by WRITING this field (the engine
 // re-integrates it next tick, so a per-tick write sticks); see AimAssist below.
-// The field address + the read/write primitives live in minigame_aim.h
+// The field address + the read/write primitives live in minigame_engine.h
 // (acc::minigame::kMiniPlayerOffsetVectorOffset); here offset.x = elevation,
 // offset.z = azimuth.
 // The turret minigame type discriminator. swoop is type 1 (minigame_swoop_race.cpp);

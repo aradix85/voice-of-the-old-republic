@@ -12,14 +12,13 @@
 #include <cstring>
 
 #include "audio_loop.h"       // LoopSource — per-fighter 3D engine loop
-#include "minigame_aim.h"     // shared offset read/write + magnetism math
+#include "minigame_engine.h"  // the object array, follower positions, the offset field
 #include "engine_offsets_select.h"
 
 namespace acc::turret_game {
 
-// SEH read primitives + minigame-object-array resolution are shared across
-// the minigame TUs (see minigame_aim.h). Brought into unqualified scope so
-// the dense reads below read as they did when each file had its own copy.
+// The guarded reads (engine_reads.h) and the shared minigame helpers
+// (minigame_engine.h), unqualified because the reads below are dense.
 using acc::engine::ReadPtrOrNull;
 using acc::engine::ReadU32Or0;
 using acc::engine::ReadFloatOr0;

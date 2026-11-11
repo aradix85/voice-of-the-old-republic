@@ -6,6 +6,7 @@
 #include "engine_area.h"  // ReadGlobalNumber: MIN_RACE_GEAR
 #include "engine_game.h"
 #include "log.h"
+#include "minigame_magnet.h"
 
 namespace acc::swoop_race {
 
