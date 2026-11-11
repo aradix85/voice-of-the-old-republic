@@ -24,10 +24,8 @@ using S = acc::strings::Id;
 const char* T(S id) { return acc::strings::Get(id); }
 
 // ----- Catalog --------------------------------------------------------------
-// Each rebindable Action paired with its localised display name. Grouped into
-// the five configurator categories; every user-rebindable Action appears
-// exactly once (the diagnostic probes are excluded by
-// hotkeys::IsUserRebindable and intentionally absent here).
+// Each rebindable Action paired with its display name, grouped into the five
+// configurator categories; an Action appears once.
 struct ActionEntry { A action; S name; };
 
 constexpr ActionEntry kWorld[] = {

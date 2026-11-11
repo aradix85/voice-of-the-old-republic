@@ -64,11 +64,10 @@ constexpr float kBarLaneMarginU     = 2.5f;   // bike sphere radius 2 + slack
 // REAL seconds through this factor.
 constexpr float kSpeedToWorldPerSec = 0.665f;
 // Jump physics (onjump.ncs: SWMG_SetJumpSpeed(30), gravity 45.8): the arc
-// z(t) = 30t - 22.9t^2 lands at kJumpAirSec and is above a 6.3-unit bar for
+// z(t) = 30t - 22.9t^2 lands after 1.31 s and is above a 6.3-unit bar for
 // t in [kJumpOverBarFromSec, kJumpOverBarUntilSec] after the press. Round 12
 // logged 21 flights of 1.297–1.328 s at every speed.
 constexpr float kJumpGravity          = 45.8f;
-constexpr float kJumpAirSec           = 1.31f;
 constexpr float kJumpOverBarFromSec   = 0.26f;
 constexpr float kJumpOverBarUntilSec  = 1.05f;
 constexpr float kAirborneZ            = 0.25f;  // offset.z above this = in the air

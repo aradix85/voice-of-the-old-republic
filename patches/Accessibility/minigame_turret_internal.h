@@ -28,19 +28,6 @@ using acc::minigame::ResolveMgoArray;
 using acc::minigame::CallAsCast;
 using acc::minigame::ReadFollowerPosition;
 
-// CSWTrackFollower fields the turret reads for its diagnostics (a CSWMiniEnemy
-// is a single follower at offset 0): sphere_radius, the hitbox radius, so the
-// half-angle the gun must fall inside is atan(radius / dist); hp and max_hp,
-// where a drop in hp is a hit the engine scored this tick; and the
-// invulnerability timer below, nonzero while hits do not register.
-//
-// The timer is at +0x9c in both games (the live timer that K1's
-// GetIsInvulnerable @0x005CB440 tests): it is bracketed by two witnessed
-// neighbours, speed +0x98 below it and the invince period +0xa0 above it,
-// which each game's setter writes at the same offset (K1 SetInvincibility
-// @0x0066C920, K2's "Invince_Period" setter @0x00835650). Log-only read.
-const size_t kFollowerInvulnOffset       = acc::off::Same(0x9c);  // float
-
 // ----- Range model (calibrated on KOTOR 1, scaled per area) -----
 // The distances the cues use were tuned on KOTOR 1: a 600 m census, a 130 m
 // "killable" range cue, a 1.6 s bolt-flight limit (480 m at the K1 bolt

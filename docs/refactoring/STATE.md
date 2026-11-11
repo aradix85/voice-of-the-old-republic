@@ -438,9 +438,23 @@ prefix (menus_listbox_picker.cpp).
   ReadU32 is gone; its 8 callers read guarded now. In-game check: a swoop
   race, the turret game, pazaak (the board and the side-deck builder),
   the action menu.
-  Question for Anouk: probe_camera_state and probe_camera_distance are
-  developer probes on F12, Ctrl+F12 and Ctrl+F11 (the last one writes the
-  camera distance). Keep them in the mod or remove them?
+  The two camera probes (probe_camera_state, probe_camera_distance: F12,
+  Ctrl+F12 and Ctrl+F11, the last one wrote the camera distance) are out
+  of the mod (Anouk, 2026-11-11), with their three hotkey actions and
+  IsUserRebindable, which only existed to hide them.
+  Looked for what the probes left unused: no function. A scan for
+  constants that are defined and never used finds 95, nearly all in the
+  catalog headers (engine_offsets_fields.h some 60, _addresses.h some
+  20, _values.h 10, audio_bus.h 6): engine layout that was worked out
+  and has no reader in the mod. Judged: they stay, the catalog is also
+  the record of the engine, with the KOTOR 2 witnesses. Outside the
+  catalog two unused constants went (kFollowerInvulnOffset,
+  kJumpAirSec); four label offsets in menus_charsheet (fortitude,
+  reflex, will, defense) are unused: the character sheet does not
+  read those rows. acclog::Shutdown has no caller but its unit test:
+  DllMain handles the attach only, so the log is never closed and a
+  pending repeat count is lost at exit; wiring it into the detach
+  needs care (a lock held by a thread that is already gone).
 - F7: analyse.py now finds 3 cloned blocks of 10+ lines, none across
   files (the baseline had 45), and analyse2.py one near-copy pair. The
   helpers with the same name in two files are one now:
@@ -515,8 +529,8 @@ prefix (menus_listbox_picker.cpp).
     (build/analysis/engine_image_k1.bin from a Steamless copy or kdev
     dump-text, engine_image_k2.bin straight from swkotor2.exe). An
     address that goes through a local or a parameter is followed to the
-    constants it can be. Both games: 190 calls fit, 0 mismatches. Not
-    checked, 15: 13 virtual calls read from a vtable at run time, one
+    constants it can be. Both games: 184 calls fit, 0 mismatches. Not
+    checked, 13: 11 virtual calls read from a vtable at run time, one
     member of the chargen layout table, one trampoline of our own. Of the
     virtual calls the two fixed slots were checked by hand against all 25
     vtables the sources name, in both games: slot 15 (HandleInputEvent)
@@ -527,14 +541,14 @@ prefix (menus_listbox_picker.cpp).
   - engine_twins.py: is the KOTOR 2 address of a Pick(k1, k2) the same
     method as the KOTOR 1 one? Compares the calls, engine globals and
     strings both functions use; a call that agrees counts for the caller
-    and the callee. It catches the old popup address. Now: 162 function
-    pairs, 110 agree, 0 disagree, 3 mixed, 49 unproven (small accessors
+    and the callee. It catches the old popup address. Now: 159 function
+    pairs, 110 agree, 0 disagree, 3 mixed, 46 unproven (small accessors
     and the CExoSoundSource setters: nothing to compare). The 3 mixed
     were looked at: 3, 7 and 14 points agree; what KOTOR 1 uses and
     KOTOR 2 does not is the party table in the inventory and abilities
     screens and the screenshot file names in the input handler, which
     fits screens that differ between the games. Two pairs read by hand
-    are in engine_twins_reviewed.txt. To prove more of the 49: compare
+    are in engine_twins_reviewed.txt. To prove more of the 46: compare
     immediate constants.
 - Done (Anouk, 2026-11-11: Steam only, English only): one executable per
   game. The 2004 relink of KOTOR 1 (Russian, Polish) and the GOG release

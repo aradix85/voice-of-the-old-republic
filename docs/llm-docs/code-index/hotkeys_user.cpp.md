@@ -1,4 +1,4 @@
-# hotkeys_user.cpp (115 lines)
+# hotkeys_user.cpp (101 lines)
 
 Source: `patches/Accessibility/hotkeys_user.cpp`
 
@@ -10,7 +10,6 @@ User rebinding: the overrides in acc_settings.ini, conflicts, and which actions 
 - L23 `bool ParseBinding(const char* s, Binding& out)`
 - L35 `void Persist(Action a, const Binding& b)`
 - L47 `void EnsureOverridesLoaded()`: Retries every tick until the settings path is known, so an early call does not lock in the defaults.
-- L70 `void SetUserBinding(Action a, Binding b)`
-- L79 `void ResetUserBindings()`: The defaults are written back too, so no stale override stays in the file.
-- L90 `Action FindConflict(Action self, int vk, uint32_t mods)`
-- L103 `bool IsUserRebindable(Action a)`: The developer probes stay out of the configurator.
+- L69 `void SetUserBinding(Action a, Binding b)`
+- L78 `void ResetUserBindings()`: The defaults are written back too, so no stale override stays in the file.
+- L88 `Action FindConflict(Action self, int vk, uint32_t mods)`

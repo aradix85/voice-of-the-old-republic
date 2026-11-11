@@ -41,8 +41,6 @@
 #include "party_leader_announce.h"
 #include "passive_narrate.h"
 #include "minigame_pazaak.h"
-#include "probe_camera_distance.h"
-#include "probe_camera_state.h"
 #include "engine_input.h"
 #include "spatial_wall_surfaces.h"
 #include "speech_clipboard.h"
@@ -230,13 +228,6 @@ void Dispatch() {
 
     // Shift+N drops a map marker.
     PHASE("map_user_markers", acc::map_user_markers::PollWin32());
-
-    if (k1) {
-        // F12 / Ctrl+F12 camera diagnostics; their camera offsets are
-        // unported.
-        PHASE("probe_camera_state", acc::probe_camera_state::PollWin32());
-        PHASE("probe_camera_distance", acc::probe_camera_distance::Tick());
-    }
 
     // Cycle keys (`,` `.` `-`) and AltGr: the engine drops unbound scancodes.
     PHASE("cycle_input", acc::cycle_input::PollWin32());

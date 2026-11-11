@@ -114,12 +114,6 @@ enum class Action : int {
     HelpMenuOpen,              // F1 — toggle the global keybind list (works everywhere)
     HelpContext,               // Ctrl+F1 — speak the keys for the current screen
 
-
-    // ----- Diagnostic probes (NOT user-rebindable) -----
-    ProbeCameraDump,           // F12    (Ctrl forbidden)
-    ProbeCameraDistDump,       // Ctrl+F12 — Option-B camera-distance snapshot
-    ProbeCameraDistClampToggle,// Ctrl+F11 — cycle distance clamp modes
-
     // ----- Pazaak minigame (polled only while the board is foreground) -----
     PazaakStand,           // S
     PazaakEndTurn,         // E
@@ -208,21 +202,18 @@ bool ModifiedComboOwns(int vk);
 
 bool IsForegroundGame();
 
-// IsUserRebindable returns false for diagnostic probes (excluded from
-// the rebind UI).
 Binding  Get(Action a);
 void     Set(Action a, Binding b);
-bool     IsUserRebindable(Action a);
 
 // Apply a user rebind: update the live binding AND persist it to
 // acc_settings.ini so it survives a relaunch. Resets the action's edge state.
 void     SetUserBinding(Action a, Binding b);
 
-// Reset every user-rebindable action to its factory default and rewrite the
+// Reset every action to its factory default and rewrite the
 // persisted overrides to match.
 void     ResetUserBindings();
 
-// Conflict scan for the configurator. Returns the first OTHER user-rebindable
+// Conflict scan for the configurator. Returns the first OTHER
 // action whose binding would ALSO fire on physical key `vk` with modifier mask
 // `mods` held (the double-fire condition) — i.e. choosing this combo clashes.
 // Returns Action::COUNT when there is no mod-side conflict. `self` is excluded.

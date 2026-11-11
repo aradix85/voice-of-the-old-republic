@@ -52,7 +52,6 @@ void EnsureOverridesLoaded() {
     int applied = 0;
     for (int i = 0; i < static_cast<int>(Action::COUNT); ++i) {
         const Action a = static_cast<Action>(i);
-        if (!IsUserRebindable(a)) continue;
         char key[64];
         BindKey(a, key, sizeof(key));
         char val[64];
@@ -80,7 +79,6 @@ void ResetUserBindings() {
     InitDefaults();
     for (int i = 0; i < static_cast<int>(Action::COUNT); ++i) {
         const Action a = static_cast<Action>(i);
-        if (!IsUserRebindable(a)) continue;
         Set(a, g_defaults[i]);
         Persist(a, g_defaults[i]);
     }
@@ -92,23 +90,11 @@ Action FindConflict(Action self, int vk, uint32_t mods) {
     if (vk == 0) return Action::COUNT;
     for (int i = 0; i < static_cast<int>(Action::COUNT); ++i) {
         const Action a = static_cast<Action>(i);
-        if (a == self || !IsUserRebindable(a)) continue;
+        if (a == self) continue;
         // The other binding would fire on this combo as well.
         if (UsesKey(g_bindings[i], vk) && ModsSatisfy(g_bindings[i], mods)) return a;
     }
     return Action::COUNT;
-}
-
-// The developer probes stay out of the configurator.
-bool IsUserRebindable(Action a) {
-    switch (a) {
-    case Action::ProbeCameraDump:
-    case Action::ProbeCameraDistDump:
-    case Action::ProbeCameraDistClampToggle:
-        return false;
-    default:
-        return true;
-    }
 }
 
 }  // namespace acc::hotkeys

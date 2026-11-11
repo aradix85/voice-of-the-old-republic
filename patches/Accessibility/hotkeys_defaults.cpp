@@ -130,13 +130,6 @@ void InitDefaults() {
     bind(Action::HelpMenuOpen,         VK_F1, 0, 0,        kAnyMod);
     bind(Action::HelpContext,          VK_F1, 0, kModCtrl, kModShift | kModAlt | kModAltGr);
 
-    // ----- Diagnostic probes -----
-    // Bare F12 forbids Ctrl so the Ctrl+F12 camera-distance probe
-    // (probe_camera_distance.h) does not fire it too.
-    bind(Action::ProbeCameraDump,            VK_F12, 0, 0, kModCtrl);
-    bind(Action::ProbeCameraDistDump,        VK_F12, 0, kModCtrl, 0);
-    bind(Action::ProbeCameraDistClampToggle, VK_F11, 0, kModCtrl, 0);
-
     // ----- Pazaak (polled while the board is foreground) -----
     // The tick Consume()s the world and menu actions on the shared keys.
     bind(Action::PazaakStand,       'S',       0, 0,         kAnyMod);

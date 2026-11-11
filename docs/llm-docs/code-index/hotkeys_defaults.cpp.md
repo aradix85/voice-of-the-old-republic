@@ -1,4 +1,4 @@
-# hotkeys_defaults.cpp (183 lines)
+# hotkeys_defaults.cpp (176 lines)
 
 Source: `patches/Accessibility/hotkeys_defaults.cpp`
 
