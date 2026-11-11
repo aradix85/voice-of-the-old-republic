@@ -155,6 +155,7 @@ Options (O), then Mod settings at the bottom of the list. Up / Down move, Enter 
 - Read voiced-speaker subtitles — also speak the subtitles of voiced lines
 - Q and E: everything around you — see [Finding your way](#finding-your-way)
 - Autoaiming — aim assist in the turret minigame
+- Swoop race: automatic pilot — the bike steers to the accelerator pads and shifts by itself (KOTOR 1)
 - Skip launch intro movies — from the next start
 - Hint sound volume — the volume of the minigame cues
 - Key bindings — re-bind the keys the mod adds

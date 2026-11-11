@@ -23,6 +23,7 @@ enum class Option {
     HumanSubtitles,
     QEAllAround,      // Q/E cycle everything around the player (qe_ring)
     TurretAutoAim,    // the turret auto-tracks the selected fighter
+    SwoopAutopilot,   // the swoop bike steers and shifts by itself (KOTOR 1)
     SkipIntros,       // state is biologo.bik vs biologo.bik.disabled
     CueVolume,        // slider; audio_bus owns the value
     Keybindings,      // submenu: the keybind configurator (menus_keybinds)

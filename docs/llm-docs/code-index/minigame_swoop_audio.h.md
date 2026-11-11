@@ -1,4 +1,4 @@
-# minigame_swoop_audio.h (41 lines)
+# minigame_swoop_audio.h (46 lines)
 
 Source: `patches/Accessibility/minigame_swoop_audio.h`
 
@@ -8,5 +8,6 @@ Swoop race spatial-audio: continuous obstacle + accelerator-pad proximity cues. 
 
 - L18 `void TickSpatialAudio(void* miniGame)`: Drive obstacle + accelpad proximity loops for the active race.
 - L23 `void ResetSpatialAudio()`: Stop every active loop and clear the per-race diagnostic guards.
-- L37 `enum class ParkedBar`: KOTOR 2: what the parked bike is stuck against, as seen by the obstacle sweep (gear 0, inside a low bar's lateral span, the bar just ahead).
-- L38 `ParkedBar GetParkedBarSituation()`
+- L28 `bool AutopilotOn()`: The mod setting "Swoop race: automatic pilot": the bike steers to the accelerator pads and shifts by itself.
+- L42 `enum class ParkedBar`: KOTOR 2: what the parked bike is stuck against, as seen by the obstacle sweep (gear 0, inside a low bar's lateral span, the bar just ahead).
+- L43 `ParkedBar GetParkedBarSituation()`

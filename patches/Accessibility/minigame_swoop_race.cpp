@@ -53,9 +53,10 @@ constexpr int kDikSpace          = 0x39;
 void AnnounceEntry() {
     // KOTOR 2 rebinds the race: Space is the jump and W the shift (see
     // kAddrK2RunOnAccelerateScript).
-    const acc::strings::Id controls = acc::game::IsKotor2()
-        ? acc::strings::Id::SwoopRaceControlsK2
-        : acc::strings::Id::SwoopRaceControls;
+    const acc::strings::Id controls =
+        AutopilotOn()           ? acc::strings::Id::SwoopRaceAutopilot
+        : acc::game::IsKotor2() ? acc::strings::Id::SwoopRaceControlsK2
+                                : acc::strings::Id::SwoopRaceControls;
     char buf[512];
     std::snprintf(buf, sizeof(buf), "%s %s",
                   acc::strings::Get(acc::strings::Id::SwoopRaceStarted),
@@ -161,6 +162,7 @@ void Tick() {
 
     TickGearWatch(g_state.latch.game);
     TickShiftReady(g_state.latch.game);
+    TickAutoShift();
     TickJumpWatch(g_state.latch.game);
     TickHitPoints(g_state.latch.game);   // log only; see DecideWreckAtFinish
     // TickRaceTimer first so have_start_ms is current this tick: it flips true

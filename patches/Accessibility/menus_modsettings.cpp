@@ -27,6 +27,7 @@ bool s_toggles[static_cast<int>(Option::Count)] = {
     /* HumanSubtitles  */ false,  // humans and droids have voice-over that TTS would clash with
     /* QEAllAround     */ false,  // ON: Q/E cycle everything around, not only the camera view
     /* TurretAutoAim   */ false,  // ON: the turret locks onto the selected fighter
+    /* SwoopAutopilot  */ false,  // ON: the swoop bike steers and shifts by itself
     /* SkipIntros      */ false,
     /* CueVolume       */ false,
     /* Keybindings     */ false,

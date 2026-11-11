@@ -61,16 +61,20 @@ float WallEdgeOffsetU() {
 // world error, sign +1. No pull in gear 0: after a KOTOR 2 collision the bike
 // waits there in front of what it hit, and the magnet dragged every relaunch
 // back into the same bar; both games' scripts keep MIN_RACE_GEAR.
+//
+// With the automatic pilot the magnet has no engage gap and is fully sticky
+// from any distance: it steers the whole race.
 void ApplyMagnet(PadTick& t) {
     t.inGear = acc::engine::ReadGlobalNumber("MIN_RACE_GEAR") >= 1;
     if (!t.haveTarget || !t.bikeOk || !t.tunOk || !t.player || !t.inGear) return;
     if (t.virtualTarget && t.mineDetourSlot < 0) return;
     if (!(t.bikeSpeed > kSwoopMinRaceSpeed)) return;
-    if (!(std::fabs(t.guideErr) <= MagnetEngageU())) return;
+    const bool pilot = AutopilotOn();
+    if (!pilot && !(std::fabs(t.guideErr) <= MagnetEngageU())) return;
 
     const acc::minigame::MagnetParams mp{
         kSwoopMagnetGainFar, kSwoopMagnetGainNear, kSwoopMagnetMaxStepU};
-    float s = 1.0f - std::fabs(t.guideErr) / MagnetEngageU();
+    float s = pilot ? 1.0f : 1.0f - std::fabs(t.guideErr) / MagnetEngageU();
     if (s < 0.0f) s = 0.0f;
     // Hold through the crossing: in the last kSwoopMagnetHoldSec before the
     // gate the pull ramps to fully sticky, so drift toward the next gate cannot
@@ -97,9 +101,10 @@ void ApplyMagnet(PadTick& t) {
     if (t.now - g_state.last_magnet_log_ms >= 1000) {
         g_state.last_magnet_log_ms = t.now;
         acclog::Write("SwoopAssist",
-                      "magnet slot=%d padErr=%.2f vel=%.2f brakedErr=%.2f "
+                      "magnet%s slot=%d padErr=%.2f vel=%.2f brakedErr=%.2f "
                       "gain=%.2f offX %.2f->%.2f bikeX=%.2f padX=%.2f fwdGap=%.1f",
-                      t.aheadSlot, t.padErr, g_state.smoothed_vel, brakedErr,
+                      pilot ? " (pilot)" : "", t.aheadSlot, t.padErr,
+                      g_state.smoothed_vel, brakedErr,
                       gain, t.tunnel.x, newOffX,
                       t.bikePos.x, t.aheadPos.x, t.fwdGap);
     }

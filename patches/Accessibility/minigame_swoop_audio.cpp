@@ -8,7 +8,9 @@
 
 #include "minigame_swoop_audio_internal.h"
 
+#include "engine_game.h"
 #include "log.h"
+#include "menus_modsettings.h"
 
 namespace acc::swoop_race {
 
@@ -135,6 +137,12 @@ void TickSpatialAudio(void* miniGame) {
 
 ParkedBar GetParkedBarSituation() {
     return g_state.parked_bar;
+}
+
+bool AutopilotOn() {
+    return acc::game::IsKotor1() &&
+           acc::menus::modsettings::GetToggle(
+               acc::menus::modsettings::Option::SwoopAutopilot);
 }
 
 void ResetSpatialAudio() {

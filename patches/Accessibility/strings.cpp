@@ -471,6 +471,8 @@ const char* Get(Id id) {
             // KOTOR 2: Space jumps (the engine's own binding); the shift, which
             // the engine only has on the left mouse button, gets W — see strings.h.
             return "Press W to shift up on the audio cue and space to jump over an obstacle. Steer with A and D. Avoid the obstacles and hit the accelerator pads to beat the time.";
+        case Id::SwoopRaceAutopilot:
+            return "Automatic pilot on. The bike steers and shifts by itself.";
         case Id::SwoopRaceStuckHint:
             return "Steer aside, then W and Space.";
         case Id::SwoopRaceStuckHintLeft:
@@ -531,6 +533,7 @@ const char* Get(Id id) {
         case Id::ModSettingRoomShapes:        return "Room shape descriptions";
         case Id::ModSettingHumanSubtitles:    return "Read voiced-speaker subtitles";
         case Id::ModSettingTurretAutoAim:     return "Autoaiming";
+        case Id::ModSettingSwoopAutopilot:    return "Swoop race: automatic pilot";
         case Id::ModSettingSkipIntros:        return "Skip launch intro movies";
         case Id::ModSettingSkipIntrosOnNextLaunch: return "Intros will be skipped on next launch.";
         case Id::ModSettingPlayIntrosOnNextLaunch: return "Intros will play on next launch.";

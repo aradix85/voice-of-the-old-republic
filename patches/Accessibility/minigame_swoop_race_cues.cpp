@@ -52,6 +52,7 @@ constexpr float kShiftGateSpeed[]         = { 0.0f, 60.0f, 100.0f, 150.0f,
 constexpr int   kFirstGatedGear           = 1;
 constexpr int   kLastGatedGear            = 4;
 constexpr ULONGLONG kShiftReadyHoldMs     = 800;   // see TickShiftReady
+constexpr ULONGLONG kAutoShiftRetryMs     = 400;   // see TickAutoShift
 
 // Resref centralised in audio_cues.h so the audio glossary auditions the same
 // sample.
@@ -280,6 +281,20 @@ void TickShiftReady(void* miniGame) {
     acclog::Write("SwoopRace",
                   "shift-ready cue: gear=%d speed=%.2f > gate=%.2f (max=%.2f)",
                   gear, speed, gate, maxSpeed);
+}
+
+// The automatic pilot's shifts: the launch out of gear 0, and each gear as
+// soon as TickShiftReady has seen its gate. A press can be lost, so it is
+// repeated every kAutoShiftRetryMs until the gear has changed.
+void TickAutoShift() {
+    if (!AutopilotOn() || !g_state.have_start_ms || g_state.have_race_time) return;
+    const bool launch = g_state.gear_from_global && g_state.gear == 0;
+    if (!launch && !g_state.shift_ready_announced) return;
+    const ULONGLONG now = GetTickCount64();
+    if (now - g_state.last_auto_shift_ms < kAutoShiftRetryMs) return;
+    g_state.last_auto_shift_ms = now;
+    acclog::Write("SwoopRace", "pilot: shift out of gear %d", g_state.gear);
+    TryShift();
 }
 
 }  // namespace acc::swoop_race

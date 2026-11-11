@@ -114,6 +114,8 @@ installer, as the pre-release `bridge-latest`.
   KOTOR 2 no longer are.
 - Keyboard only: the mod's gamepad support is gone.
 - View mode (B) is gone.
+- New setting "Swoop race: automatic pilot": the bike steers and shifts by
+  itself (KOTOR 1).
 - Enter on an open door walks through it.
 - Tab says the name of the character you now control once, and no longer
   the previous one first.
@@ -369,6 +371,11 @@ installer, as the pre-release `bridge-latest`.
   is unchanged.
 - View mode is gone: B does nothing, and its line in F1 and its row in the key
   settings went with it.
+- New setting "Swoop race: automatic pilot" in Mod settings, off by default
+  (KOTOR 1). With it on, the steering magnet works from any distance and the
+  mod presses the shift at the launch and at every shift-ready moment, so the
+  race drives itself; the cues still sound. It follows the accelerator pads
+  and does not steer round the obstacles. It has not been raced yet.
 
 <h3>Help:</h3>
 

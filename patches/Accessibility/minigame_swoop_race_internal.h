@@ -87,6 +87,7 @@ struct State {
     // gear; every detected shift re-arms it. See TickShiftReady.
     bool          shift_ready_announced   = false;
     ULONGLONG     last_gear_change_ms     = 0;   // see kShiftReadyHoldMs
+    ULONGLONG     last_auto_shift_ms      = 0;   // the automatic pilot's last press
     // ---- Hit points (CSWTrackFollower +0x8c / +0x90). K2's hit scripts take
     //      50 (obstacle) / 100 (mine) of the bike's 600 and the heartbeat ends
     //      the race at 0. Drops are logged only (per-hit speech was too
@@ -151,6 +152,7 @@ void TickHitPoints(void* miniGame);
 void TickStuckHint(void* miniGame);
 void TickJumpWatch(void* miniGame);
 void TickShiftReady(void* miniGame);
+void TickAutoShift();
 
 // minigame_swoop_race_diag.cpp
 void EmitEntrySummary(void* miniGame);

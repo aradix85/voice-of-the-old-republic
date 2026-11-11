@@ -1488,6 +1488,8 @@ enum class Id : int {
     // shift is on the accelerate input named in the string. K1 sends both
     // 0x19 and 0xd9 to CSWMiniPlayer::Fire, which is why Space shifts there.
     SwoopRaceControlsK2,
+    // In place of the key list when the automatic pilot is on.
+    SwoopRaceAutopilot,
     // Spoken once when the bike has made no forward progress for several
     // seconds in gear 0 after the race started — the KOTOR 2 "pinned against
     // a lane-edge post / low bar, every relaunch hits it again" loop seen in
@@ -1599,6 +1601,7 @@ enum class Id : int {
     ModSettingRoomShapes,
     ModSettingHumanSubtitles,
     ModSettingTurretAutoAim,              // toggle label — turret easy-mode auto-aim
+    ModSettingSwoopAutopilot,             // toggle label — the swoop race drives itself
     ModSettingSkipIntros,                 // toggle label — "Skip intro movies"
     ModSettingStateOn,
     ModSettingStateOff,
