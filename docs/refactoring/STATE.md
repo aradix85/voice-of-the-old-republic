@@ -101,15 +101,12 @@ SnapshotDoors loop, includes per file, history out of its comments.
 menus_extract split into six files (936c320) and made lean: includes per
 file, history out of comments, four cloned guarded row calls folded into
 one GuardedRow. minigame_turret split into five files (bfbb7c4) and made
-lean (2d11e0f); DriveSelectedPeg (700 lines, complexity 172) sits alone in
-minigame_turret_peg.cpp: a P5 candidate, but only with an in-game test of
-the turret game. menus_listbox split by panel into nine files (e7ea186),
+lean (2d11e0f). menus_listbox split by panel into nine files (e7ea186),
 each panel's spec defined in its file and declared extern, then lean
 (1815b86). minigame_swoop_audio split into five files (879e9ff) and made
 lean (8837b88): dead probe and co-pilot code out; the retired steering
 ticks and the forwarding GetNavCueResrefForGame removed (8c1b675).
-TickAccelpadCues and TickObstacleCues stay whole: P5 candidates, only
-with an in-game test of the swoop race. bridge reviewed with kotor_kaart:
+bridge reviewed with kotor_kaart:
 split into six files (1531ef0) and made lean (a37835f): one route table,
 /state built on request instead of every 250 ms, engine-free bridge_http
 with unit tests (exact token header, no NUL from a bad %XX), creatures and
@@ -149,9 +146,7 @@ into five (c52c540) and made lean (e240b6d); menus_chain_input.cpp (824)
 stays for its turn on the size list. minigame_swoop_race split into five
 (d61ecd3), a fix (92a3bbf: a race time still due at exit was spoken at the
 start of the next race) and lean (e757a7e: one State{} reset, the offset
-byte dump and acclog::WriteHex gone, one shift-gate table). Stale doc for
-the llm-docs pass: swoop-k2-controls-and-jump.md still describes pad B ->
-TryShift, per-game gate ladders and seven languages. map_ui_cursor split
+byte dump and acclog::WriteHex gone, one shift-gate table). map_ui_cursor split
 into four (68545dd) and made lean (1cd1118: Tick from 534 lines to a flow
 of named steps, one Nearest struct for the three hover scans, the map
 transform offsets now in engine_area.h). kdev links through a response
@@ -162,11 +157,10 @@ minigame_pazaak split into five (e5a4708) and made lean (7a0cc5f: named
 zones, helpers for the repeated speech lines). menus_pending: Drain's
 784-line switch first became one function per op kind (0bfcc90), then a
 split into four (204aab3) and lean (e5775cb: one Queue(), DrainActivate
-as named steps). Left for an F-family: menus_crafting.cpp keeps its own
+as named steps). Left for an F-family: menus_crafting_rows.cpp keeps its own
 vtable[15] HandleInputEvent typedef next to menus_pending's
 HandleInputEventOf. cycle_input split into three (81155d2) and made lean
-(414bf1f, comments; F7 note: GuidancePreRollFor still mirrors
-interact_hotkey's PreRollFor). menus.cpp made lean without a split
+(414bf1f, comments). menus.cpp made lean without a split
 (8cf60b1, 1018 to 672 lines). menus_internal: namespace prep (94b0f40),
 split into four (6d535b5), lean (37135ce5: one listbox drive with one
 clamp, unused equip slot-button ids and the empty internal header gone,
@@ -180,9 +174,7 @@ RecordTutorialLine/SilenceLine). CI note: the core_tick lean run failed
 only on a transient HTTP 500 while publishing bridge-latest.
 engine_radial: namespace prep (4d0bacca), diagnostics split off
 (9148dd48), lean (4efbbed0: engine_reads instead of local readers,
-shared action-list access). Left for an F-family (F5): the
-CSWGuiInterfaceAction descriptor layout (kIfAction*) and a local
-ReadInt32 are restated in engine_actionbar.cpp and engine_picker.cpp.
+shared action-list access).
 engine_panels: split into three (4da4778e; the existing internal header
 was merged by hand, and includes_split.py also touched the old
 engine_panels_state.cpp, reverted), lean (bc631a99: one vtable table
@@ -349,11 +341,29 @@ prefix (menus_listbox_picker.cpp).
   clockwise like engine_compass, which would also simplify
   kOctantEmitOrder). 39 of 55 functions are shared through the internal
   header: the pipeline really is one; accept.
-- F12 engine yaw of a vector: `atan2(dy, dx) * 57.29...` written out in
-  about 15 files with four spellings of the constant, often followed by
-  EngineYawToCompass/CompassToSector/SectorString. One helper in
-  engine_compass (bearing of a vector, and its compass word). kRadToDeg is
-  defined in many files: one constant with it.
+- F12 engine yaw of a vector, started, nothing edited yet.
+  `atan2(dy, dx) * 57.29...` is written out in about 15 files with four
+  spellings of the constant, often followed by EngineYawToCompass /
+  CompassToSector / SectorString. Design: kPi, kRadToDeg and kDegToRad
+  once, at global scope in engine_offsets_types.h, with the literals of
+  today so no float changes. Every other definition goes, because a
+  local that hides a global is C4459 under /WX: announce_facing,
+  camera_announce, camera_spin_guard, engine_compass, engine_player,
+  guidance_description, guidance_approach_rescue, room_topology_words,
+  camera_orient_pick.h (kTwoPi stays there), kRad2Deg of
+  minigame_turret_peg, and the bare literals in bridge_describe,
+  qe_ring, exit_memory_graph and minigame_turret_arena. In
+  engine_compass, pure and tested in test_geometry:
+  `float VectorEngineYaw(float dx, float dy)` (degrees, 0 = east,
+  counter-clockwise) and `int VectorSector(float dx, float dy)` (0 = N
+  to 7 = NW); CompassSectorOf of guidance_description, exit_memory_graph
+  and guidance_approach_rescue take VectorSector. camera_announce
+  repeats kSectorSize and kHalfSector of engine_compass.
+  OctantFromVector of room_topology_words has its own east-based
+  octants: a candidate for VectorSector with SectorString.
+  After it, the other real duplicates of engine_constants.py --all:
+  kNoStrref (3 files), kSkillSecurity (2), kExitDebounceTicks (swoop,
+  turret).
 - Goal (Anouk, 2026-11-10): split every file above 600 lines where that is
   possible; for files above 500 lines, judge whether a split into modules of
   things that belong together makes sense, and do it where it does.
@@ -563,7 +573,13 @@ prefix (menus_listbox_picker.cpp).
   Run clang_tidy.py FILE on every file a lean rewrites: it caught an
   index of -1 in the first one it was used on (room_topology_doors).
   A check for docs: every `name.cpp` / `name.h` a .md mentions should
-  exist in patches/Accessibility (history sections excepted).
+  exist in patches/Accessibility (history sections excepted). Done by
+  hand on 2026-11-11, together with the names of removed things:
+  SECURITY.md described the updater and is rewritten for the fork, the
+  developer-probe keys left docs/controls-and-input.md, a few stale
+  file names in the llm-docs. Left as history: kotor2-port.md under
+  its fork note, audio-internals and persistence-scriptvartable where
+  they name a removed probe as removed.
   cppcheck is not in CI: the packages a runner can install are old
   versions and would not give our results.
 - F15 judged, no change: GetTickCount and acc::tick::NowMs are two clocks

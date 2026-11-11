@@ -436,7 +436,7 @@ The file-name prefix tells you the role. Add a new file under the right prefix.
   `msg_router`, `party_*`, `stealth_watch`, `trap_watch`, `transitions`,
   `tutorial_*`, `intro_skip`, `dialog_speech`, plus area-specific fixes
   (`endar_softlock`, `spectator_scene`, `locked_recall`, `save_crash_guard`).
-- **`probe_*`** / **`diag_*`** — diagnostic instruments, not shipped behaviour.
+- **`diag_*`** — diagnostic instruments, not shipped behaviour.
   Handy when investigating; don't build features on them.
 - **`strings`** — the spoken-text table (English). **`speech`** — the NVDA
   controller client: every line spoken and brailled.

@@ -273,14 +273,6 @@ Pre-game screens (generic chain + per-kind labelling, not a dedicated navigator)
 - Wager popup (`CSWGuiWagerPopup`) — a virtual top-of-chain row reads the live wager + table maximum + credits (analogue of the inventory credits row); the text-less BTN_LESS / BTN_MORE speed buttons are labelled "decrease / increase wager", and the live amount is announced on each step.
 - Side-deck builder (`CSWGuiPazaakStart`) — card grid + chosen-slot widgets labelled via `menus_pazaakdeck`.
 
-### Diagnostic probes (developer keys — NOT user-rebindable)
-
-These are intentionally outside the rebindable set and stay on direct Win32 polling. They emit log lines, not speech / gameplay effects:
-
-- F9 — Pathfind probe (dump path_points / path_connections region across a tick cascade).
-- F12 — Camera-state dump (engine yaw vs character yaw vs dead-reckoned compass).
-- Shift+AltGr — Toggle the engine's `CClientOptions.mouse_look` bit (mouse-look ON probe + synthetic mouse-sweep state machine).
-
 ### Layout notes (QWERTZ vs QWERTY)
 
 - `,` and `.` are at the same VK on both layouts (`VK_OEM_COMMA` / `VK_OEM_PERIOD`).

@@ -7,6 +7,11 @@ extracted area GFFs + disassembled scripts (`211TEL`, `371NAR`, `510OND`; scratc
 copies were made with `unrim` / `gff2xml` / `ncsdis --kotor2`). When in doubt this
 document and the decompile win over runtime theories.
 
+> **Fork note (v0.9.1+bridge).** This fork is keyboard only and English
+> only. Where this document has the mod handle pad A or pad B, or names
+> strings in seven languages, it describes the mod as it was when written.
+> The engine facts stand.
+
 Why it exists: the first K2 swoop round (patch-20260914-143533) ended with the
 bike parked at speed 0 for twelve seconds while the player pressed Space three
 times. The mod had not swallowed anything — the engine received all three

@@ -245,6 +245,7 @@ On Anouk's machine; the scripts find them at these default paths.
 - **Python 3.12** with lizard, radon, ruff, mypy, pytest and coverage, for `tools/analysis/*.py`.
 
 - **capstone and minidump** (pip) for `python tools/analysis/call_convention.py`: it compares the argument bytes of every engine function-pointer typedef with the `ret N` of the engine function itself, read from a memory image of the running game (`--from-dump` cuts one out of a process dump). One argument too many crashed the game on 2026-11-11. `python tools/analysis/engine_twins.py` checks the other half: that the KOTOR 2 address of each `Pick(k1, k2)` is the same method as the KOTOR 1 one, by comparing the calls, engine globals and strings the two functions use.
+- `python tools/analysis/engine_constants.py` needs nothing beyond Python: it fails when an engine address or offset is defined in more than one file, and `--all` lists plain constants that share a name across files, for review.
 
 Reports land in `build/analysis/`. The current baselines are in `docs/refactoring/STATE.md` while the refactoring runs.
 

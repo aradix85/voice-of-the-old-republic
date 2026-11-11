@@ -161,7 +161,7 @@ you Win32-poll Enter and let the engine deliver it too, BOTH fire (the chain
 activates a button AND your custom handler runs). So a custom panel navigator
 must intercept at the manager hook via a `TryHandleInput(panel, code, val, &rv)`
 that returns "consumed" BEFORE the generic chain handlers run. See how
-`pazaak.cpp`, `menus_galaxymap.cpp`, `menus_abilities.cpp` register ahead of the
+`minigame_pazaak_input.cpp`, `menus_galaxymap.cpp`, `menus_abilities.cpp` register ahead of the
 chain in `OnHandleInputEvent`. Win32 polling is only safe for scancodes the
 engine drops entirely (letters, punctuation).
 

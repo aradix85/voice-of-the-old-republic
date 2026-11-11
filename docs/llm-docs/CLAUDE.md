@@ -34,7 +34,8 @@ carry meaning — trust them when deciding whether code is safe to remove.
 
 - **`probe_*`** — throwaway reverse-engineering tooling. One-shot or
   hotkey-triggered dumps that log engine state and change nothing. Safe to
-  treat as disposable once the question they answered is settled.
+  treat as disposable once the question they answered is settled. None is
+  in the tree now.
   **Caveat:** a file name is not always the namespace. `minigame_turret.cpp`
   lives in `acc::turret_game`, so a grep for `minigame_turret::` finds
   nothing even though `core_tick.cpp` calls it every tick. Always grep the

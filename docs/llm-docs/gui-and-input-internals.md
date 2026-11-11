@@ -519,7 +519,7 @@ Reference impl: `acc::cycle_input::PollWin32` in `patches/Accessibility/cycle_in
 
 The OnHandleInputEvent path can stay in place as a backup for users who do bind the keys via kotor.ini — share per-action handlers between paths so behaviour is identical regardless of ingestion source.
 
-**Applies to in-world Enter + arrows when our radial is armed too** (verified 2026-05-05 `patch-20260505-101621.log`): Enter and Up/Down/Left/Right are unbound in-world, so when the radial is mounted via `CSWGuiMainInterface::PopulateMenus` they never reach the manager hook in `menus.cpp`. `interact_hotkey::PollHotkey` Win32-polls all five with rising-edge detection and routes them straight into `radial_menu::HandleInputEvent(kInputEnter1 / kInputNav*)`. Esc IS bound (pause/options) and reaches the manager normally — keep its existing route to avoid double-fire.
+**Applies to in-world Enter + arrows when our radial is armed too** (verified 2026-05-05 `patch-20260505-101621.log`): Enter and Up/Down/Left/Right are unbound in-world, so when the radial is mounted via `CSWGuiMainInterface::PopulateMenus` they never reach the manager hook in `menus_dispatch.cpp`. `acc::input_poll::PollHotkey` (`input_poll_router.cpp`) Win32-polls all five with rising-edge detection and routes them straight into `acc::unified_menu::HandleInputEvent(kInputEnter1 / kInputNav*)`. Esc IS bound (pause/options) and reaches the manager normally — keep its existing route to avoid double-fire.
 
 **OEM VK codes are layout-dependent.** The physical key right of `.` is `VK_OEM_2` on US QWERTY (`/`) but `VK_OEM_MINUS` on German QWERTZ (`-`). Listen for both if you want a layout-portable "row of cycle keys" (`,` `.` `-`/`/`).
 

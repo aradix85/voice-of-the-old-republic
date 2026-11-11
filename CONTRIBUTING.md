@@ -40,6 +40,7 @@ Other commands:
 - `pwsh -File tools/tests/run_unit_tests.ps1` — the unit tests. `-Mode asan` runs them under AddressSanitizer, `-Mode coverage` reports line coverage.
 - `python tools/analysis/call_convention.py` — after adding or changing a call into the engine: checks that the typedef pushes as many bytes as the engine function pops. Needs a memory image of the game once (see the top of the script).
 - `python tools/analysis/engine_twins.py` — after adding or changing a KOTOR 2 address: checks that it is the twin of the KOTOR 1 address beside it.
+- `python tools/analysis/engine_constants.py` — after adding an engine address or offset: fails when one is defined in more than one file.
 - `python tools/analysis/code_index.py` — regenerate `docs/llm-docs/code-index/` after changing code.
 - `kdev apply` — install the most recent build into the game (game closed).
 - `kdev launch` — start the game with the current install. Skip `--monitor`; it has a crash-after-inject bug. Read the patch log directly.

@@ -100,7 +100,7 @@ void InitDefaults() {
                                        kModAltGr);
 
     // ----- Orientation and party -----
-    // AltGr alone; Shift+AltGr belongs to the mouse-look probe.
+    // AltGr alone, not with Shift.
     bind(Action::AnnounceDegrees,      VK_RMENU, 0, 0, kModShift);
     bind(Action::PartyLeaderAnnounce,  VK_TAB,   0, 0, 0);
     // N has no engine binding. N faces the region's exits, Shift+N drops a map

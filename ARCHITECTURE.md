@@ -32,8 +32,8 @@ Native C++17 (MSVC x86), built by `kdev build` into a `.kpatch` archive. Files a
 - **`minigame_*`, `floor_puzzle`** — turret, swoop race, pazaak and puzzles. The swoop and turret cues are the only sounds the mod plays.
 - **`audio_*`** — the audio bus for those cues, looping sources, pitch, and footstep suppression when the player is stuck.
 - **`bridge_*`** — the local HTTP bridge (see below).
-- **`hotkeys`, `input_*`, `key_inject`, `msg_router`, `help`, `tutorial_*`, `binding_hints`** — the input layer, key bindings, F1 help and the tutorial hints.
-- **`diag_*`, `probe_*`** — diagnostics: logging only, no behaviour.
+- **`hotkeys`, `input_*`, `key_inject`, `msg_router`, `help`, `tutorial_*`** — the input layer, key bindings, F1 help and the tutorial hints.
+- **`diag_*`** — diagnostics: logging only, no behaviour.
 
 `hooks.toml` (and `kotor2.hooks.toml`) declare the engine functions we detour. Most hooks are mid-function with register-source arguments: the framework's stack-source path has a known LEA-vs-MOV bug (`docs/upstream-prs.md`, PR-2).
 
@@ -44,7 +44,7 @@ Doctest tests for the engine-free code (HTTP parsing of the bridge, shortest pat
 ### `tools/`
 
 - **`tools/kdev/`** — the dev CLI (.NET 10): `status`, `build`, `apply`, `launch`, `dev`, `kill`, `logs`, `analyze-dump`, and offline walkmesh analyses.
-- **`tools/analysis/`** — measures the patch source (function length and complexity, clones, include cycles), plans and performs file splits (`split_file.py`), generates `docs/llm-docs/code-index/` (`code_index.py`), and runs the static checkers: cppcheck (`cppcheck.ps1`), clang-tidy (`clang_tidy.py`, checks in `.clang-tidy`) and the Microsoft compiler at level 4 or with its analyzer (`msvc_check.ps1`).
+- **`tools/analysis/`** — measures the patch source (function length and complexity, clones, include cycles), plans and performs file splits (`split_file.py`), generates `docs/llm-docs/code-index/` (`code_index.py`), and runs the static checkers: cppcheck (`cppcheck.ps1`), clang-tidy (`clang_tidy.py`, checks in `.clang-tidy`) and the Microsoft compiler at level 4 or with its analyzer (`msvc_check.ps1`). Three checks guard the engine catalog: `call_convention.py` (an engine call passes as many argument bytes as the engine function pops), `engine_twins.py` (a KOTOR 2 address is the same function as the KOTOR 1 address beside it) and `engine_constants.py` (an engine address or offset is defined once).
 - **`tools/ghidra-scripts/`** — headless Ghidra scripts for decompiles and byte dumps.
 
 ### `third_party/`

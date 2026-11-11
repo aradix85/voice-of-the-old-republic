@@ -2,60 +2,55 @@
 
 ## Scope
 
-Voice of the Old Republic is a local accessibility mod for Star Wars: Knights of
-the Old Republic 1. It:
+This is a personal fork (aradix85, branch `bridge`) of Voice of the Old
+Republic, a local accessibility mod for Star Wars: Knights of the Old Republic
+1 and 2. The mod:
 
 - Injects a DLL into the game process to read the game's in-memory UI and world
-  state and expose it to a screen reader.
+  state and pass it to NVDA as speech and braille.
 - Sends no telemetry, no user data, and no logs anywhere. Logs are written only
   to local files on your own machine.
-- Makes exactly one kind of outbound network call: a request to the GitHub
-  Releases API to check whether a newer version of the mod is available.
+- Makes no outbound network call. The original mod's update check is gone.
+- Runs a local HTTP bridge for helper tools. It listens on 127.0.0.1 only. Its
+  port and a token that is new for every game session are written to
+  `bridge.json` next to the game executable, and every request must carry the
+  token in the `X-Kotor-Bridge` header. With the token a local program can read
+  what the mod knows (area, party, objects, the spoken lines) and make the game
+  act (set the target, walk, use an object, press a key, speak a line).
+
+The installer is the part that downloads: the mod from this fork's
+`bridge-latest` pre-release on GitHub, and the community patches it offers from
+GitHub and DeadlyStream, pinned in `Resources/sources.json` (see
+`docs/installer.md`). It asks for administrator rights.
 
 There is no server component, no account system, and no credentials handled by
 the mod.
 
 ## Reporting a vulnerability
 
-If you find a security issue, please report it privately before posting
-publicly, so it can be fixed before bad actors notice:
-
-- Email: fabian@nordwiesen30.de
-
-Use "Voice of the Old Republic security" in the subject. You can expect a first
-reply within a few days. I will credit you in the release notes when the fix
-ships, unless you prefer to stay anonymous.
+Issues are switched off on this fork and GitHub's private vulnerability
+reporting is not enabled. Reach the owner through her GitHub profile:
+https://github.com/aradix85. A problem that is also in the original mod belongs
+with its maker: https://github.com/JeanStiletto/voice-of-the-old-republic.
 
 ## Realistic attack surface
 
-The one place where a security researcher might find something worth reporting is
-the **auto-update flow** (F5 from the main menu / a background check when the
-main menu loads):
-
-1. The mod queries the GitHub Releases API over HTTPS for the latest published
-   version.
-2. If a newer version is available, it downloads the installer over HTTPS.
-3. It writes a small batch script to the temp folder that waits for the game to
-   exit, launches the installer (which requests UAC elevation to deploy files),
-   and relaunches the game.
-
-If any of those steps could be tricked into downloading or executing a file that
-isn't the legitimate release — a spoofed release response, a hijacked download
-URL, a writable temp path an attacker could pre-seed — that would be a real
-issue and I want to hear about it.
+- **The bridge.** Any program that runs as the same Windows user can read
+  `bridge.json` and drive the game; that crosses no boundary. A real issue
+  would be a way to reach the bridge from another machine or from a web page,
+  or to make it answer or act without the token.
+- **The installer's downloads.** It fetches over HTTPS and installs with
+  administrator rights. A real issue would be a way to make it install a file
+  that is not the published one: a spoofed release response, a hijacked
+  download URL, a writable path an attacker could pre-seed.
 
 ## Things that are explicitly out of scope
 
 - **Data exfiltration** — the mod contains no code that sends your data
-  anywhere. The only outbound request is the version check described above.
+  anywhere.
 - **Anti-cheat / account bypass** — the mod only reads and narrates state the
   game has already computed for a single-player, offline RPG. There is no
   multiplayer or account system to attack.
 - **Windows SmartScreen / "unknown publisher" warnings** on the unsigned
   installer and DLL are a code-signing cost issue, not a security
-  vulnerability. Code-signing certificates cost hundreds of euros per year,
-  which isn't realistic for a free accessibility project. Each release publishes
-  SHA-256 checksums so you can verify the files you downloaded match the ones
-  published on GitHub:
-  - PowerShell: `Get-FileHash <filename> -Algorithm SHA256`
-  - Command Prompt: `certutil -hashfile <filename> SHA256`
+  vulnerability.

@@ -12,6 +12,7 @@ result especially — but whose cost estimate predates the RTTI finding below.
 > was when they were written. The same goes for `kdev sigscan`, the 2004
 > relink of KOTOR 1 and the GOG release of KOTOR 2: the fork supports the
 > Steam builds only. They are kept as history, not as current state.
+> `engine_rebase.h` is `engine_addr.h` now.
 
 ## WHERE TO RESUME (read this first)
 
