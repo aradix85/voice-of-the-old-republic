@@ -1,4 +1,4 @@
-# strfmt.h (102 lines)
+# strfmt.h (93 lines)
 
 Source: `patches/Accessibility/strfmt.h`
 
@@ -12,7 +12,5 @@ Header-only; no TU. Two-pass vsnprintf: measure, then fill. Also the bounded app
 - L40 `inline std::string Format(const char* fmt, ...)`: printf-style, unbounded.
 - L51 `struct FixedText`: printf-style appends to a caller's fixed buffer.
 - L71 `inline char AsciiLower(char c)`: ASCII-only case folding.
-- L75 `inline char AsciiUpper(char c)`
-- L79 `inline std::string ToLowerAscii(std::string s)`
-- L84 `inline std::string ToUpperAscii(std::string s)`
-- L90 `inline bool ContainsNoCase(const char* hay, const char* needle)`: ASCII case-insensitive substring test; false for a null or empty needle.
+- L75 `inline std::string ToLowerAscii(std::string s)`
+- L81 `inline bool ContainsNoCase(const char* hay, const char* needle)`: ASCII case-insensitive substring test; false for a null or empty needle.

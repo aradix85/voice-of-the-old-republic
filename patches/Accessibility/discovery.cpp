@@ -11,7 +11,7 @@
 #include "engine_scriptvar.h" // the save variables
 #include "filter_objects.h"   // ObjectMatches / CycleCategory
 #include "log.h"
-#include "strfmt.h"           // ToLowerAscii / ToUpperAscii
+#include "strfmt.h"           // ToLowerAscii
 
 namespace acc::discovery {
 
@@ -20,8 +20,7 @@ namespace {
 // One save var per area, named "ACC_DISC_<areaTag>", holding the discovered
 // keys for that area joined by ';'. The in-memory mirror is rebuilt on area
 // change (deferred load) and re-serialized on each new discovery.
-std::string              g_areaTag;     // normalized (lower-case) module resref
-std::string              g_rawAreaTag;  // engine spelling — legacy var lookup
+std::string              g_areaTag;     // module resref, lower case
 std::string              g_varName;
 std::vector<std::string> g_keys;
 void*                    g_area    = nullptr;
@@ -32,16 +31,12 @@ acc::engine::PlayerVarsSettle g_settle;
 // keys × ~35 chars stays well under the 16 KB ReadPlayerVar returns.
 constexpr size_t kMaxKeys = 400;
 
-// ASCII case folds for the area key. GetCurrentAreaResName returns the module
-// resref exactly as the transition that loaded it spelled it, and the game's
-// own data is not consistent about that: Peragus reaches the hangar as
-// "106PER" coming from the administration level and as "106per" coming from
-// the fuel depot, so an un-normalized name silently gives ONE module TWO
-// independent discovery sets. Folding to lower case is the canonical form;
-// the upper fold exists only to locate pre-normalization sets during the
-// one-time migration in LoadFromSave.
+// The area key is folded to lower case. GetCurrentAreaResName returns the
+// module resref as the transition that loaded it spelled it, and the game's
+// data is not consistent about that: Peragus reaches the hangar as "106PER"
+// from the administration level and as "106per" from the fuel depot, so an
+// unfolded name gives one module two discovery sets.
 using acc::strfmt::ToLowerAscii;
-using acc::strfmt::ToUpperAscii;
 
 // North-to-south total order — mirrors cycle_input::PositionLess so the
 // discovery ordinal matches the spoken "north path 3" numbering the player
@@ -134,12 +129,8 @@ bool Contains(const std::string& key) {
     return false;
 }
 
-void Persist();
-
-// Read one save var and append its ';'-separated keys to g_keys, skipping
-// duplicates and honouring the cap. Returns the number of NEW keys added, so
-// the caller can tell a legacy variant that contributed something from one
-// that was empty or wholly redundant.
+// Reads one save variable and appends its ';'-separated keys to g_keys,
+// without duplicates and up to the cap. Returns how many it added.
 int MergeVar(const std::string& varName) {
     const std::string value = acc::engine::ReadPlayerVar(varName);
     int added = 0;
@@ -163,33 +154,9 @@ void LoadFromSave() {
     g_keys.clear();
     if (g_varName.empty()) { g_loaded = true; return; }
 
-    int parsed = MergeVar(g_varName);
-
-    // One-time migration. Until 2026-08-08 the var name inherited the engine's
-    // module-name case, so a module entered from two directions ended up with
-    // two independent sets — Peragus's hangar held 16 keys under
-    // ACC_DISC_106PER while ACC_DISC_106per was read and came back empty. Fold
-    // any surviving case variant into the canonical var and write the union
-    // back, so the split heals on the first revisit and never recurs. Both the
-    // all-upper fold and the engine's own spelling are tried: mixed-case
-    // resrefs exist (K1's "STUNT_50a"), where neither fold reproduces the name.
-    int migrated = 0;
-    const std::string alts[2] = {ToUpperAscii(g_areaTag), g_rawAreaTag};
-    for (int i = 0; i < 2; ++i) {
-        if (alts[i].empty() || alts[i] == g_areaTag) continue;
-        if (i == 1 && alts[1] == alts[0]) continue;  // already read as the upper fold
-        migrated += MergeVar("ACC_DISC_" + alts[i]);
-    }
-
+    const int parsed = MergeVar(g_varName);
     g_loaded = true;
-    if (migrated > 0) {
-        Persist();
-        acclog::Write("Discovery",
-                      "migrated %d key(s) from a legacy case-variant var into %s",
-                      migrated, g_varName.c_str());
-    }
-    acclog::Write("Discovery", "loaded set var=%s keys=%zu (own=%d migrated=%d)",
-                  g_varName.c_str(), g_keys.size(), parsed, migrated);
+    acclog::Write("Discovery", "loaded set var=%s keys=%d", g_varName.c_str(), parsed);
 }
 
 void Persist() {
@@ -281,19 +248,14 @@ void OnAreaChanged(void* area) {
         haveKey = acc::engine::GetAreaTag(area, key, sizeof(key)) && key[0] != '\0';
     }
 
-    // Normalize the case before it reaches the var name — the engine returns
-    // whatever spelling the transition supplied, and the same module can arrive
-    // spelled two ways (see ToLowerAscii). The engine spelling is kept only so
-    // LoadFromSave can find a pre-normalization set and fold it in.
     const std::string raw   = haveKey ? key : "";
-    const std::string canon = ToLowerAscii(raw);
+    const std::string canon = ToLowerAscii(raw);  // see ToLowerAscii above
 
     // Idempotent: same area pointer + same key → nothing to do.
     if (g_area == area && g_areaTag == canon) return;
 
     g_area       = area;
     g_areaTag    = canon;
-    g_rawAreaTag = raw;
     g_keys.clear();
     g_settle.Reset();
 

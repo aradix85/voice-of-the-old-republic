@@ -1,4 +1,4 @@
-# discovery.cpp (372 lines)
+# discovery.cpp (334 lines)
 
 Source: `patches/Accessibility/discovery.cpp`
 
@@ -14,15 +14,15 @@ Access: discovery is the DEFAULT filter for the in-world cycle. The existing "Ex
 
 ## Declarations (in source order)
 
-- L49 `bool PositionLess(const Vector& a, const Vector& b)`: North-to-south total order — mirrors cycle_input::PositionLess so the discovery ordinal matches the spoken "north path 3" numbering the player already hears.
-- L64 `acc::filter::CycleCategory Classify(void* obj)`
-- L74 `bool DeriveKey(void* obj, void* area, std::string& outKey)`: Derive the locale-independent per-area key for `obj`, or return false when the object is ineligible (item / non-nav / non-unique NPC / no tag).
-- L130 `bool Contains(const std::string& key)`
-- L143 `int MergeVar(const std::string& varName)`: Read one save var and append its ';'-separated keys to g_keys, skipping duplicates and honouring the cap.
-- L162 `void LoadFromSave()`
-- L195 `void Persist()`
-- L240 `void ApplySeeds()`: Record every area object whose tag is on the current area's seed list.
-- L271 `void OnAreaChanged(void* area)`
-- L316 `void Tick()`
-- L323 `void Record(void* gameObject)`
-- L355 `bool IsDiscovered(void* gameObject)`
+- L44 `bool PositionLess(const Vector& a, const Vector& b)`: North-to-south total order — mirrors cycle_input::PositionLess so the discovery ordinal matches the spoken "north path 3" numbering the player already hears.
+- L59 `acc::filter::CycleCategory Classify(void* obj)`
+- L69 `bool DeriveKey(void* obj, void* area, std::string& outKey)`: Derive the locale-independent per-area key for `obj`, or return false when the object is ineligible (item / non-nav / non-unique NPC / no tag).
+- L125 `bool Contains(const std::string& key)`
+- L134 `int MergeVar(const std::string& varName)`: Reads one save variable and appends its ';'-separated keys to g_keys, without duplicates and up to the cap.
+- L153 `void LoadFromSave()`
+- L162 `void Persist()`
+- L207 `void ApplySeeds()`: Record every area object whose tag is on the current area's seed list.
+- L238 `void OnAreaChanged(void* area)`
+- L278 `void Tick()`
+- L285 `void Record(void* gameObject)`
+- L317 `bool IsDiscovered(void* gameObject)`

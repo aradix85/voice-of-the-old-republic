@@ -10,7 +10,6 @@ using acc::strfmt::ContainsNoCase;
 using acc::strfmt::FixedText;
 using acc::strfmt::Format;
 using acc::strfmt::ToLowerAscii;
-using acc::strfmt::ToUpperAscii;
 
 TEST_CASE("Format fills a string of exactly the right length") {
     CHECK(Format("%s %d", "Door", 2) == "Door 2");
@@ -36,7 +35,6 @@ TEST_CASE("FixedText appends until the buffer is full and stays terminated") {
 
 TEST_CASE("The case folds change ASCII letters only") {
     CHECK(ToLowerAscii("106PER") == "106per");
-    CHECK(ToUpperAscii("po_pmha01") == "PO_PMHA01");
     CHECK(ToLowerAscii("Matrik's Apartment") == "matrik's apartment");
     CHECK(ToLowerAscii("\xC4\xD6") == "\xC4\xD6");  // non-ASCII bytes untouched
     CHECK(AsciiLower('Z') == 'z');
