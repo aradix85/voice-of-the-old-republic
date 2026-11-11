@@ -484,7 +484,6 @@ tools/kdev/Commands/KillCommand.cs
 tools/kdev/Commands/LaunchCommand.cs
 tools/kdev/Commands/LogsCommand.cs
 tools/kdev/Commands/ReCommand.cs
-tools/kdev/Commands/SigScanCommand.cs
 tools/kdev/Commands/SoundScoreCommand.cs
 tools/kdev/Commands/StatusCommand.cs
 tools/kdev/Commands/StripDumpCommand.cs
@@ -493,10 +492,8 @@ tools/kdev/Commands/WalkmeshGeometryAuditCommand.cs
 tools/kdev/Commands/WalkmeshStatsCommand.cs
 tools/kdev/Core/BwmFile.cs
 tools/kdev/Core/Config.cs
-tools/kdev/Core/EngineAddresses.cs
 tools/kdev/Core/GameProcess.cs
 tools/kdev/Core/PeInfo.cs
-tools/kdev/Core/Signatures.cs
 tools/kdev/Core/SoundScore.cs
 tools/kdev/Core/WalkmeshGeometryAnalysis.cs
 tools/kdev/Core/WavAnalysis.cs

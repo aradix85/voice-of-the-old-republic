@@ -3,20 +3,8 @@
 // Part of the engine_offsets.h family - see engine_offsets_types.h for the
 // split rationale and the full file list.
 //
-// Two upstream AddressDatabase tables live here and they behave differently:
-//
-//   functions and vtables (.text / .rdata) - EVERY one goes through
-//     acc::addr::R(). The Allard Russian build is the same BioWare source
-//     relinked, so these move by -320..+640 bytes each, per function and not
-//     monotonically (engine_rebase.h). Of the 214 addresses `kdev sigscan`
-//     resolved against that build, zero kept their reference value. Declaring
-//     a .text address here without R() therefore does not degrade gracefully:
-//     it calls into the middle of an unrelated function.
-//
-//   global pointers (.data) - never through R(): .data is byte-stable across
-//     the KOTOR 1 builds, so it is not rebased, and feeding it to R() would
-//     resolve it to 0 on the relink. They have their own section at the bottom
-//     of this file.
+// Functions and vtables (.text / .rdata) come first; the global pointers
+// (.data) have their own section at the bottom of this file.
 //
 // Every constant here is `const uintptr_t`, not `constexpr` - the marker is a
 // runtime call resolved at load time against the detected game.
@@ -1020,9 +1008,6 @@ const uintptr_t kAddrJournalPopulateItemListBox = acc::addr::Pick(0x00645330, 0x
 // then clears bit_flags bit 0 so the next Draw won't repopulate again. The
 // filter button ("Show: …") only raises that bit, so calling this makes the
 // new list final before we re-bind the chain to it.
-// NOT in the 2004-relink rebase table (no known-good bytes to sigscan for);
-// R() returns 0 there and inventory::ForceRepopulate self-skips via
-// acc::addr::Ok, leaving that build on the pre-existing lazy behaviour.
 // K2 twin 0x008A7BA0: the populate loop calling CheckFilter (0x008A8DF0,
 // which switches on the filter byte at CGuiInGame+0xfc1) and CreateItemEntry
 // (0x008A75F0), then ListBox::SetSelectedControl — K1's exact structure.

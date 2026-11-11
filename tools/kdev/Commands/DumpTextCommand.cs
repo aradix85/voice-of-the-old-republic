@@ -10,30 +10,15 @@ namespace Kdev.Commands;
 /// <summary>
 /// Capture the running game's decrypted image from memory.
 ///
-/// Why this exists
-/// ---------------
-/// Our hook addresses and the ~260 `constexpr uintptr_t kAddr*` engine
-/// constants were all derived against the Steam 1.0.3 layout, but the Steam
-/// swkotor.exe is SteamStub-encrypted ON DISK — it carries a `.bind` section
-/// and its `.text` reads as ciphertext until the loader decrypts it. So there
-/// is no offline byte-reference for those addresses.
-///
-/// Supporting another build (the Allard Russian exe, a future GoG re-pack,
-/// anything) means locating each of our addresses in the other binary, and
-/// that needs known-good bytes to search for. This command produces them: it
-/// reads the mapped image straight out of the live process, where it is
-/// decrypted and sitting at its link-time base (the exe has no ASLR —
-/// DllCharacteristics is 0 and ImageBase is 0x400000 — so an address in the
-/// dump is the same address we hardcode).
+/// The Steam swkotor.exe is SteamStub-encrypted on disk: it carries a `.bind`
+/// section and its `.text` reads as ciphertext until the loader decrypts it.
+/// The live process has it decrypted and at its link-time base (no ASLR:
+/// DllCharacteristics is 0 and ImageBase is 0x400000), so an address in the
+/// dump is the address the mod hardcodes. tools/analysis/call_convention.py
+/// and engine_twins.py read such an image (pass it with --image).
 ///
 /// One launch is enough, and it does not need our DLL: SteamStub decrypts
 /// before the entry point runs, so any moment after the process starts works.
-///
-/// Usage
-/// -----
-///   1. Start the game (kdev launch, or just run it).
-///   2. kdev dump-text                       # writes build/re/imagedump/
-///   3. kdev sigscan ...                     # consumes the dump
 ///
 /// Output (build/re/imagedump/ by default, gitignored):
 ///   swkotor-image.bin   the mapped image, SizeOfImage bytes from ImageBase.

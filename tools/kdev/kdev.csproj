@@ -33,11 +33,6 @@
     <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
     <PackageReference Include="Tomlyn" Version="0.19.0" />
     <PackageReference Include="Microsoft.Diagnostics.Runtime" Version="3.1.456101" />
-    <!-- x86 decoder for `kdev sigscan`. Needed to find the byte offsets of
-         relative-branch and code-pointer operands so they can be wildcarded:
-         those operands legitimately differ between two builds of the engine,
-         and a byte-exact signature containing one can never match. -->
-    <PackageReference Include="Iced" Version="1.21.0" />
   </ItemGroup>
 
   <ItemGroup>

@@ -34,7 +34,6 @@ internal static class Program
             SoundScoreCommand.Build(),
             ReCommand.Build(),
             DumpTextCommand.Build(),
-            SigScanCommand.Build(),
         };
 
         return await root.InvokeAsync(args);

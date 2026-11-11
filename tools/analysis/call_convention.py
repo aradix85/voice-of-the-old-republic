@@ -13,10 +13,11 @@ from the cause.
 The check reads the game's code as it sits in memory, from
 build/analysis/engine_image_<game>.bin. `--from-exe` makes that file from
 the executable on disk. Steam's KOTOR 1 executable is encrypted there (a
-.bind section): unpack a copy with Steamless first, or use `--from-dump`,
-which cuts the image out of a full process dump (Task Manager, "Create dump
-file", or a crash dump under %LOCALAPPDATA%\\CrashDumps). Findings go to
-build/analysis/call_convention.txt.
+.bind section). Three ways around that: `kdev dump-text` with the game
+running (pass its swkotor-image.bin with `--image`), a copy unpacked with
+Steamless, or `--from-dump`, which cuts the image out of a full process dump
+(Task Manager, "Create dump file", or a crash dump under
+%LOCALAPPDATA%\\CrashDumps). Findings go to build/analysis/call_convention.txt.
 
 Needs capstone; --from-dump also needs minidump (pip install capstone minidump).
 """
