@@ -69,6 +69,30 @@ void FormatCategory(void* tam, void* mi, const Cat& c, int count, int idx,
     }
 }
 
+// The other populated target rows of a door or container, by their selected
+// entry: a locked one has Bash in one row and Security in the next, and the
+// open announcement otherwise names only the row the menu lands on.
+void AppendOtherTargetRows(void* tam, void* mi, char* msg, size_t n) {
+    char rows[192] = "";
+    for (int i = 0; i < g.catCount; ++i) {
+        const Cat& c = g.cats[i];
+        if (i == g.curCat || c.kind != CatKind::Target) continue;
+        const int count = CountForCat(tam, mi, c);
+        if (count <= 0) continue;
+        char label[96] = "";
+        ReadLabel(tam, mi, c, ClampInt(ShadowFor(c), 0, count - 1), label, sizeof(label));
+        if (!label[0]) continue;
+        const size_t len = strnlen(rows, sizeof(rows));
+        std::snprintf(rows + len, sizeof(rows) - len, "%s%s", len ? ", " : "", label);
+    }
+    if (!rows[0]) return;
+    const size_t len = strnlen(msg, n);
+    if (len + 2 >= n) return;
+    std::snprintf(msg + len, n - len, ". ");
+    std::snprintf(msg + len + 2, n - len - 2,
+                  acc::strings::Get(acc::strings::Id::FmtMenuOtherRows), rows);
+}
+
 }  // namespace
 
 // Speak the current category in full. `prefix` (e.g. "action menu, X") is
@@ -86,6 +110,9 @@ void SpeakCategory(void* tam, void* mi, const char* prefix) {
     char msg[320];
     if (prefix && prefix[0]) {
         std::snprintf(msg, sizeof(msg), "%s. %s", prefix, cat);
+        if (g.hasTargetBlock && !g.creature) {
+            AppendOtherTargetRows(tam, mi, msg, sizeof(msg));
+        }
     } else {
         std::snprintf(msg, sizeof(msg), "%s", cat);
     }

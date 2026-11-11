@@ -335,6 +335,10 @@ enum class Id : int {
     FmtMenuCatMulti,
     FmtMenuCatSingle,
     FmtMenuPlainMulti,
+    //      `FmtMenuOtherRows` — closes the open announcement on a door or
+    //                           container with more than one row. Arg: the
+    //                           other rows' entries (`%s`, "Security").
+    FmtMenuOtherRows,
     //      `FmtMenuCategoryEmpty` — the requested category has no entries
     //      (e.g. Shift+4 self-powers on a non-Jedi, Shift+6 explosives with
     //      no grenades). Arg: category name (`%s`). Spoken instead of
