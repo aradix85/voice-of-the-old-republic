@@ -43,11 +43,6 @@ bool MaybeDrivePassiveSelection() {
     const size_t kFadeAlphaOffset      = acc::off::Pick(0x4c, 0x50);  // CSWGuiFade.panel.alpha
     const size_t kInputClassOffset     = acc::off::Same(0x9c);   // internal.input_class
     const size_t kAreaNotReadyOffset   = acc::off::Same(0x288);  // internal.area_not_ready
-    // The two address lookups below run every tick: a binary search over a
-    // small sorted table, below the noise floor. Caching them does not pay:
-    // a function-local `static` needs a thread-safe init guard, which trips
-    // C2712 in this SEH function, and a namespace-scope one would depend on
-    // static-init order against CurrentBuild().
     // K2 twins at the K2 MainLoop gate (FUN_00781be0):
     // `if (!FUN_007cbc40()) if (!FUN_007cbc70()) FUN_0079a4c0(dt);` — the
     // same IsGlobalFading -> IsGlobalFadeObscuring -> DoPassiveSelection

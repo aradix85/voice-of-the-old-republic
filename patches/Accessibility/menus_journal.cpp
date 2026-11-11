@@ -72,7 +72,7 @@ void SpeakDescription(void* panel, void* focusedRow) {
         acclog::Write("Menus.Journal",
                       "OnControlEntered skipped (unresolved on build %s); reading "
                       "whatever the description listbox already held",
-                      acc::addr::ActiveBuildName());
+                      acc::game::TitleName());
     } else {
         __try {
             auto fn = reinterpret_cast<PFN_PanelOnControl>(
@@ -181,7 +181,7 @@ void LogEntryCounts(void* panel) {
     const std::uintptr_t addrGetInGameGui    = acc::addr::R(0x005ed690);
     if (!acc::addr::Ok(addrGetQuestJournal) || !acc::addr::Ok(addrGetInGameGui)) {
         acclog::Write("Menus.Journal", "entry-count diagnostic skipped: "
-                      "address unresolved on build %s", acc::addr::ActiveBuildName());
+                      "address unresolved on build %s", acc::game::TitleName());
         return;
     }
     void* client = acc::engine::GetClientApp();
@@ -229,7 +229,7 @@ void ForceRepopulate(void* panel) {
     if (!acc::addr::Ok(kAddrJournalPopulateItemListBox)) {
         acclog::Write("Menus.Journal",
                       "ForceRepopulate skipped (unresolved on build %s)",
-                      acc::addr::ActiveBuildName());
+                      acc::game::TitleName());
         return;
     }
     __try {

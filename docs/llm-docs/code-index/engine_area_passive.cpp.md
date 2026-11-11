@@ -1,4 +1,4 @@
-# engine_area_passive.cpp (114 lines)
+# engine_area_passive.cpp (109 lines)
 
 Source: `patches/Accessibility/engine_area_passive.cpp`
 

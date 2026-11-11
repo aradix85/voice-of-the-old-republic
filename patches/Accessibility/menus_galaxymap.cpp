@@ -160,7 +160,7 @@ void DispatchInput(void* panel, int engineCode, bool announcePlanet) {
     const std::uintptr_t kAddrGalaxyHandleInput = acc::addr::Pick(0x00695980, 0x00898010);
     if (!acc::addr::Ok(kAddrGalaxyHandleInput)) {
         acclog::Write("GalaxyMap", "DispatchInput skipped: address unresolved on build %s",
-                      acc::addr::ActiveBuildName());
+                      acc::game::TitleName());
         return;
     }
     auto fn = reinterpret_cast<PFN_GalaxyHandleInput>(kAddrGalaxyHandleInput);

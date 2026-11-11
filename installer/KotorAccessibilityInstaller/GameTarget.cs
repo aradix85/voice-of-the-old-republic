@@ -44,14 +44,19 @@ namespace KotorAccessibilityInstaller
         /// GOG product id, used to find GOG installs via the registry key both
         /// GOG Galaxy and GOG's offline installers write
         /// (<c>HKLM\SOFTWARE\GOG.com\Games\&lt;id&gt;</c>, value <c>path</c>).
-        /// Ids verified against gogdb.org.
+        /// Ids verified against gogdb.org. Null for KOTOR 2: its GOG release is
+        /// a different executable from the Steam one, and the mod supports
+        /// only the Steam one.
         /// </summary>
         public string GogProductId { get; private init; }
 
         /// <summary>Human-facing name for dialogs and summaries.</summary>
         public string DisplayName { get; private init; }
 
-        /// <summary>Store pages, offered when this game is selected but not found.</summary>
+        /// <summary>
+        /// Store pages, offered when this game is selected but not found. The
+        /// GOG page is null where <see cref="GogProductId"/> is.
+        /// </summary>
         public string StorePageSteam { get; private init; }
         public string StorePageGog { get; private init; }
 
@@ -170,7 +175,7 @@ namespace KotorAccessibilityInstaller
         };
 
         /// <summary>
-        /// KOTOR 2, Aspyr's 2015 rebuild (Steam and GOG share the build).
+        /// KOTOR 2, Aspyr's 2015 rebuild as Steam ships it.
         ///
         /// <para>Ini deltas from KOTOR 1, all confirmed against a shipped
         /// swkotor2.ini: the vertex-buffer key is spelled without spaces;
@@ -199,10 +204,8 @@ namespace KotorAccessibilityInstaller
             ProcessName = "swkotor2",
             IniFileName = "swkotor2.ini",
             SteamAppId = "208580",
-            GogProductId = "1421404581",
             DisplayName = "KOTOR 2",
             StorePageSteam = "https://store.steampowered.com/app/208580/",
-            StorePageGog = "https://www.gog.com/game/star_wars_knights_of_the_old_republic_ii_the_sith_lords",
             RegistryKeyName = "KotorAccessibility_K2",
             VanillaPriorityGroupResource = "prioritygroups_k2.2da",
 

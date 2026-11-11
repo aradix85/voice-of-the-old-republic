@@ -1,4 +1,4 @@
-# core_dllmain.cpp (190 lines)
+# core_dllmain.cpp (189 lines)
 
 Source: `patches/Accessibility/core_dllmain.cpp`
 

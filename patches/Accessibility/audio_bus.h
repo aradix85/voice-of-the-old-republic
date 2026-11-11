@@ -159,11 +159,9 @@ const uintptr_t kAddrCExoSoundSetListenerPosition = acc::addr::Pick(0x005D5DF0, 
 // HRTF response per fire, degrading spatial localisation and breaking
 // per-cue identification.
 //
-// Nothing reads this constant: the detour is declared in hooks.toml (and
-// rebased for the 2004-03-05 build in relink2004.hooks.toml), and the patcher resolves
-// hook sites itself. It is kept because the address belongs next to the rest of
-// the CExoSound surface, and R()-wrapped like every other .text address here so
-// that the file has one rule rather than an exception someone has to explain.
+// Nothing reads this constant: the detour is declared in hooks.toml and the
+// patcher resolves hook sites itself. It is kept because the address belongs
+// next to the rest of the CExoSound surface.
 // K2 twin 0x00710550 — the only rand() caller in the K2 sound TU; jitters
 // the applied-rate field [internal+0x5c] from variance [internal+0x7c] and
 // base frequency [internal+0x50]. NOTE its K2 callers ignore EAX and re-read

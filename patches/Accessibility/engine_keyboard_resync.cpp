@@ -286,7 +286,7 @@ void InstallKeyboardStreamResync() {
         !acc::addr::Ok(kAddrGetEventsKeyboardCall)) {
         acclog::Write("KeyboardResync",
             "no address for this build (%s); not installed — stranded keys "
-            "stay stranded until pressed again", acc::addr::ActiveBuildName());
+            "stay stranded until pressed again", acc::game::TitleName());
         return;
     }
 

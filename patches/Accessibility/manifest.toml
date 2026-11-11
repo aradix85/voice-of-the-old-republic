@@ -17,42 +17,18 @@ kotor1_steam_103 = "34E6D971C034222A417995D8E1E8FDD9F8781795C9C289BD86C499A439F3
 kotor1_gog_103 = "9C10E0450A6EECA417E036E3CDE7474FED1F0A92AAB018446D156944DEA91435"
 kotor1_gog_103_cdrepack = "761F9466F456A83909036BAEBB5C43167D722387BE66E54617BA20A8C49E9886"
 
-# The 2004-03-05 relink (PE link timestamp 0x4047CD47). Same BioWare source as
-# the three above, relinked: the engine code is byte-identical but relocated
-# (-320..+640 bytes, per function). Hook addresses come from relink2004.hooks.toml;
-# the in-DLL constants are remapped at runtime by acc::addr::R
-# (engine_rebase.cpp), which identifies the build from that timestamp.
-#
-# Two distributions ship this build, and they are the SAME binary for our
-# purposes -- .text, .data and .rsrc are byte-identical between them and only
-# 16 bytes of .rdata differ (Allard translated the hardcoded "Points Remaining"
-# string). Both therefore use one hooks file and one rebase table; only the
-# hashes differ.
-kotor1_allard_ru_172 = "7B961A140667336D22B06686CBDCBE2DDDF8A0EA13C20A27B63BDC57A75D7628"
 # KOTOR 2, Aspyr's 2015 rebuild — a supported game since v0.7.0. The port is
 # not finished: the minigames and the tutorial messages are not covered, and
 # no playthrough has reached the end yet.
 #
-# Declaring these hashes makes the framework willing to install into KOTOR 2.
+# Declaring this hash makes the framework willing to install into KOTOR 2.
 # Its hooks live in kotor2.hooks.toml, whose target_versions cover exactly
-# these two SHAs; the two KOTOR 1 hooks files exclude them, so no KOTOR 1
-# hook can ever land in the KOTOR 2 binary.
+# this SHA; hooks.toml excludes it, so no KOTOR 1 hook can ever land in the
+# KOTOR 2 binary.
 #
 # A hook may only be added to kotor2.hooks.toml once its handler's whole
 # read/call chain is verified against KOTOR 2 — every other handler
 # default-denies via acc::game::HandlerEnabled(), and unresolved addresses
 # (acc::addr::R) deliberately resolve to 0 there so they fault recognisably
 # rather than jumping into unrelated code.
-#
-# The two releases are NOT the same binary: GOG is the same Aspyr compile
-# RE-LINKED in 2021 (PE timestamp 0x61395EE0), with every section reordered —
-# the KOTOR 1 relink situation again, at ±4 MB scale. Steam installs from
-# kotor2.hooks.toml, GOG from the generated kotor2-gog.hooks.toml, and the
-# in-DLL Steam-K2 constants are remapped at runtime by the K2 tables in
-# engine_rebase.cpp. See docs/kotor2-port.md "GOG build (2021 relink)".
 kotor2_steam_aspyr = "6A522E71631DCEE93467BD2010F3B23D9145326E1E2E89305F13AB104DBBFFEF"
-kotor2_gog_aspyr = "777BEE235A9E8BDD9863F6741BC3AC54BB6A113B62B1D2E4D12BBE6DB963A914"
-# Official Polish edition by Licomp Empik Multimedia (LEM), 2004. Stock, unmodified
-# LEM retail exe -- verified 2026-07-31: all 25 rebased hook signatures match it
-# byte-for-byte, none of the vanilla-layout ones do.
-kotor1_lem_pl_103 = "F96AC62BEE256DAC66B3F7DA3ED62DA4005B4710868E33FD0DB51164015D8137"

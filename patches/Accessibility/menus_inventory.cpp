@@ -54,7 +54,7 @@ void SyncListBoxSelection(void* panel, void* row) {
     if (!acc::addr::Ok(kAddrCSWGuiListBoxSetSelectedControl)) {
         acclog::Write("Menus.Inventory",
                       "SyncListBoxSelection skipped (unresolved on build %s)",
-                      acc::addr::ActiveBuildName());
+                      acc::game::TitleName());
         return;
     }
     __try {
@@ -100,7 +100,7 @@ void ForceRepopulate(void* panel) {
     if (!acc::addr::Ok(kAddrInventoryPopulateItemListBox)) {
         acclog::Write("Menus.Inventory",
                       "ForceRepopulate skipped (unresolved on build %s)",
-                      acc::addr::ActiveBuildName());
+                      acc::game::TitleName());
         return;
     }
     __try {

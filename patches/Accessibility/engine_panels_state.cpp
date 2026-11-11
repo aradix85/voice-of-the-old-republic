@@ -72,7 +72,7 @@ typedef void (__thiscall* PFN_PrevSWInGameGui)(void* gui);
 bool CallPrevSWInGameGui() {
     if (!acc::addr::Ok(kAddrPrevSWInGameGui)) {
         acclog::Write("PrevSWInGameGui", "skipped: address unresolved on build %s",
-                      acc::addr::ActiveBuildName());
+                      acc::game::TitleName());
         return false;
     }
     void* gui = ResolveGuiInGame();
@@ -115,7 +115,7 @@ typedef void (__thiscall* PFN_SetGlobalDialogState)(void* gui, int state);
 bool SetGlobalDialogState(int state) {
     if (!acc::addr::Ok(kAddrSetGlobalDialogState)) {
         acclog::Write("GlobalDialogState", "skipped: address unresolved on build %s",
-                      acc::addr::ActiveBuildName());
+                      acc::game::TitleName());
         return false;
     }
     void* gui = ResolveGuiInGame();
@@ -151,7 +151,7 @@ bool CloseInGameMenuToWorld() {
     // if either address is unresolved, do neither.
     if (!acc::addr::Ok(kAddrHideSWInGameGui) || !acc::addr::Ok(kAddrSetInputClass)) {
         acclog::Write("CloseInGameMenu", "skipped: address unresolved on build %s",
-                      acc::addr::ActiveBuildName());
+                      acc::game::TitleName());
         return false;
     }
     void* gui = ResolveGuiInGame();
@@ -218,7 +218,7 @@ bool SetGuiInputClass(int klass) {
     if (!acc::addr::Ok(kAddrSetInputClass)) {
         acclog::Write("InputClass",
                       "SetGuiInputClass(%d) skipped: address unresolved on "
-                      "build %s", klass, acc::addr::ActiveBuildName());
+                      "build %s", klass, acc::game::TitleName());
         return false;
     }
     void* client = GetClientApp();

@@ -150,6 +150,7 @@ namespace KotorAccessibilityInstaller
         /// </summary>
         private static string TryReadGogInstallPath(GameTarget target)
         {
+            if (target.GogProductId == null) return null;
             string subKey = @"SOFTWARE\GOG.com\Games\" + target.GogProductId;
 
             foreach (var view in new[] { RegistryView.Registry32, RegistryView.Registry64 })

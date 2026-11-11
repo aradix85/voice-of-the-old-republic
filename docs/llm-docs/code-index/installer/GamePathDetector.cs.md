@@ -1,4 +1,4 @@
-# GamePathDetector.cs (213 lines)
+# GamePathDetector.cs (214 lines)
 
 Source: `installer/KotorAccessibilityInstaller/GamePathDetector.cs`
 
@@ -11,8 +11,8 @@ Source: `installer/KotorAccessibilityInstaller/GamePathDetector.cs`
 - L106 `private static string SteamLibraryFolderName(GameTarget target)`: Folder name Steam installs each game under inside a library.
 - L126 `private static string TryReadSteamAppInstallPath(GameTarget target)`: Steam's own per-app uninstall key, which carries InstallLocation.
 - L151 `private static string TryReadGogInstallPath(GameTarget target)`: GOG's per-product key, written by both GOG Galaxy and the offline installers.
-- L169 `public static bool IsValidKotor2GamePath(string path)`
-- L171 `public static bool IsValidGamePath(string path)`
-- L173 `public static bool IsValidGamePath(GameTarget target, string path)`
-- L191 `public static bool IsSteamPath(GameTarget target, string gamePath)`: True iff is the install path Steam has registered for this game.
-- L200 `private static string NormalizePath(string p)`
+- L170 `public static bool IsValidKotor2GamePath(string path)`
+- L172 `public static bool IsValidGamePath(string path)`
+- L174 `public static bool IsValidGamePath(GameTarget target, string path)`
+- L192 `public static bool IsSteamPath(GameTarget target, string gamePath)`: True iff is the install path Steam has registered for this game.
+- L201 `private static string NormalizePath(string p)`

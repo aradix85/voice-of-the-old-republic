@@ -212,7 +212,7 @@ void InstallDirectInputMouseGuard() {
         (!k2 && !acc::addr::Ok(kAddrInitMouseFailEpilogue))) {
         acclog::Write("EngineInput",
             "DirectInput mouse guard: no address for this build (%s); skipped",
-            acc::game::BuildName());
+            acc::game::TitleName());
         return;
     }
 
@@ -329,7 +329,7 @@ void InstallMouseTeardownBlock() {
         !acc::addr::Ok(kAddrShutDownDirectInput)) {
         acclog::Write("EngineInput",
             "MouseTeardownBlock: no address for this build (%s); skipped",
-            acc::game::BuildName());
+            acc::game::TitleName());
         return;
     }
 

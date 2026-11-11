@@ -98,18 +98,21 @@ namespace KotorAccessibilityInstaller
                 var steamUrl = target.StorePageSteam;
                 steamButton.Click += (s, e) => OpenUrl(steamUrl);
 
-                var gogButton = new Button
-                {
-                    Text = InstallerLocale.Format("GameLinks_GogButton_Format", target.DisplayName),
-                    Location = new Point(270, y + 24),
-                    Size = new Size(240, 32)
-                };
-                var gogUrl = target.StorePageGog;
-                gogButton.Click += (s, e) => OpenUrl(gogUrl);
-
                 Controls.Add(gameLabel);
                 Controls.Add(steamButton);
-                Controls.Add(gogButton);
+
+                var gogUrl = target.StorePageGog;
+                if (gogUrl != null)
+                {
+                    var gogButton = new Button
+                    {
+                        Text = InstallerLocale.Format("GameLinks_GogButton_Format", target.DisplayName),
+                        Location = new Point(270, y + 24),
+                        Size = new Size(240, 32)
+                    };
+                    gogButton.Click += (s, e) => OpenUrl(gogUrl);
+                    Controls.Add(gogButton);
+                }
                 y += 90;
             }
 

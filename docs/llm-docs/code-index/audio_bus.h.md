@@ -1,4 +1,4 @@
-# audio_bus.h (214 lines)
+# audio_bus.h (212 lines)
 
 Source: `patches/Accessibility/audio_bus.h`
 

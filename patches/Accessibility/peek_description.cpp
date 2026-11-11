@@ -51,7 +51,7 @@ void RefreshJournal(void* panel, void* focused) {
     if (!panel || !focused) return;
     if (!acc::addr::Ok(kAddrJournalOnControlEntered)) {
         acclog::Write("Peek", "RefreshJournal skipped: address unresolved on build %s",
-                      acc::addr::ActiveBuildName());
+                      acc::game::TitleName());
         return;
     }
     auto fn = reinterpret_cast<PFN_PanelOnControl>(
@@ -122,7 +122,7 @@ void CallOnControlEnteredWithActive(std::uintptr_t addr, void* panel, void* focu
     // restores it.
     if (!acc::addr::Ok(addr)) {
         acclog::Write("Peek", "OnControlEntered skipped: address unresolved on build %s",
-                      acc::addr::ActiveBuildName());
+                      acc::game::TitleName());
         return;
     }
 

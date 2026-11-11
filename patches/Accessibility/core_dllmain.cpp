@@ -150,8 +150,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD reason, LPVOID) {
         // deliberately here rather than in the startup snapshot so it appears
         // even when NO hooks are installed — which is exactly the state the
         // KOTOR 2 bring-up runs in.
-        acclog::Write("Game.Identity", "title=%s build=%s",
-                      acc::game::TitleName(), acc::game::BuildName());
+        acclog::Write("Game.Identity", "title=%s", acc::game::TitleName());
         // No-mouse crash guard, KOTOR 2 only. It has to go here for the same
         // reason the identity line above does: KOTOR 2 has no rules-init hook,
         // and this must be in place even in a session where no hook ever fires.

@@ -41,8 +41,6 @@ constexpr uint32_t kMountDefaultK2 = 0x7f000000u;
 // the virtual SetMessage(CExoString) at vtable +0x74, ret 4). KOTOR 2's panel
 // base class has one virtual more, so K1's slot 27 is K2's slot 28; the slot
 // map's own slot 27 (0x0040FFB0) is that new virtual and takes no argument.
-// Not in the GOG relocation table: Ok() is false there and the box keeps its
-// row's text.
 using PFN_SetMessageStrref = void(__thiscall*)(void* box, uint32_t strref);
 const uintptr_t kAddrSetMessageStrref = acc::addr::Pick(0x006249d0, 0x0075BDE0);
 
@@ -170,7 +168,7 @@ void FirePopup(uint32_t strref, const char* hint) {
             *reinterpret_cast<uint8_t*>(
                 reinterpret_cast<unsigned char*>(box) + kTutorialBoxRowOffset) =
                 static_cast<uint8_t>(kSyntheticReason);
-            if (strref && acc::addr::Ok(kAddrSetMessageStrref))
+            if (strref)
                 reinterpret_cast<PFN_SetMessageStrref>(kAddrSetMessageStrref)(box, strref);
         }
         acclog::Write("TutorialPopup",
