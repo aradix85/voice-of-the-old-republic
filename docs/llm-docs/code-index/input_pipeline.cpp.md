@@ -1,4 +1,4 @@
-# input_pipeline.cpp (395 lines)
+# input_pipeline.cpp (409 lines)
 
 Source: `patches/Accessibility/input_pipeline.cpp`
 
@@ -25,11 +25,11 @@ The engine's in-world input route, CClientExoAppInternal::HandleInputEvent (both
 - L209 `bool TrySwoopJump(const InputEvent& ev)`: KOTOR 2 swoop race: Space (event 0xd9) is the engine's jump, and the mod's runner takes it so every jump is logged beside the race state.
 - L220 `bool TryPuzzleBareR(const InputEvent& ev)`: In the Rakatan floor-plate room bare R reads the board (floor_puzzle), so the engine's DefaultAction on the same press is swallowed.
 - L237 `bool TryModifierReservation(const InputEvent& ev)`: The engine reads modifier-blind scancodes and has no combos of its own: Shift+4 still fires bare 4.
-- L262 `bool TryOverlayEsc(const InputEvent& ev)`: The mod's in-world overlays (action menus, queue, examine, help) have no engine panel, so Esc lands here, where the engine would open the pause menu while the overlay's own poll closes it.
-- L282 `void PrepareBareActionKey(const InputEvent& ev)`: Bare 1..7: the engine rebuilds its action lists only on a combat-mode flip, a sub-screen close or mouse hover, not on a Q/E target change, so between rounds they hold a stale creature_id (grenades at friends).
-- L307 `bool TryQE(const InputEvent& ev)`: Q (205) / E (204).
-- L323 `void ForwardModalArrows(const InputEvent& ev)`: A MessageBox goes on the modal stack without changing sw_gui_status, so the arrow codes are routed here, where nothing handles them, instead of to the manager: the user could not move between the popup's buttons.
-- L344 `int HandleClientInputEvent(void* this_ptr, void* p1_addr, void* p2_addr)`: 1 consumes the event (the hook's consumed exit), 0 lets the engine run.
-- L374 `extern "C" void __cdecl OnProcessInput(void* /*this_ptr*/)`: CClientExoAppInternal::ProcessInput (K1 hook 0x006227fb, K2 0x007B0EAB): the frame boundary, kept as a gap in the sequence of the input logs.
-- L382 `extern "C" int __cdecl OnClientHandleInputEvent(void* this_ptr, void* p1_addr, void* p2_addr)`: CClientExoAppInternal::HandleInputEvent, hooked at its entry (K1 0x00621210): every event ProcessInput sends the client-app way (in-world hotkeys, pause, party cycle, target actions, Esc).
-- L390 `extern "C" int __cdecl OnClientHandleInputEventK2(void* this_ptr, void* frame_ebp)`: KOTOR 2 (0x007B12C0, hooked at 0x007B12EE): ecx = this, ebp = the engine's frame with the args at [ebp+8]/[ebp+0xc] and the return address at [ebp+4], the same slot layout as K1, so the shared handler runs unchanged.
+- L276 `bool TryOverlayEsc(const InputEvent& ev)`: The mod's in-world overlays (action menus, queue, examine, help) have no engine panel, so Esc lands here, where the engine would open the pause menu while the overlay's own poll closes it.
+- L296 `void PrepareBareActionKey(const InputEvent& ev)`: Bare 1..7: the engine rebuilds its action lists only on a combat-mode flip, a sub-screen close or mouse hover, not on a Q/E target change, so between rounds they hold a stale creature_id (grenades at friends).
+- L321 `bool TryQE(const InputEvent& ev)`: Q (205) / E (204).
+- L337 `void ForwardModalArrows(const InputEvent& ev)`: A MessageBox goes on the modal stack without changing sw_gui_status, so the arrow codes are routed here, where nothing handles them, instead of to the manager: the user could not move between the popup's buttons.
+- L358 `int HandleClientInputEvent(void* this_ptr, void* p1_addr, void* p2_addr)`: 1 consumes the event (the hook's consumed exit), 0 lets the engine run.
+- L388 `extern "C" void __cdecl OnProcessInput(void* /*this_ptr*/)`: CClientExoAppInternal::ProcessInput (K1 hook 0x006227fb, K2 0x007B0EAB): the frame boundary, kept as a gap in the sequence of the input logs.
+- L396 `extern "C" int __cdecl OnClientHandleInputEvent(void* this_ptr, void* p1_addr, void* p2_addr)`: CClientExoAppInternal::HandleInputEvent, hooked at its entry (K1 0x00621210): every event ProcessInput sends the client-app way (in-world hotkeys, pause, party cycle, target actions, Esc).
+- L404 `extern "C" int __cdecl OnClientHandleInputEventK2(void* this_ptr, void* frame_ebp)`: KOTOR 2 (0x007B12C0, hooked at 0x007B12EE): ecx = this, ebp = the engine's frame with the args at [ebp+8]/[ebp+0xc] and the return address at [ebp+4], the same slot layout as K1, so the shared handler runs unchanged.

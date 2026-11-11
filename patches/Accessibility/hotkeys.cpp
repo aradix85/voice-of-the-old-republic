@@ -2,6 +2,7 @@
 // See hotkeys.h for the API contract.
 
 #include "hotkeys_internal.h"
+#include "hotkeys_chord_latch.h"
 
 #include <windows.h>
 
@@ -30,6 +31,8 @@ struct EdgeState {
     bool claimed;
 };
 EdgeState g_edge[static_cast<int>(Action::COUNT)] = {};
+
+ChordLatch g_chordLatch;
 
 bool AnyDown(int a, int b, int c) {
     return KeyDown(a) || KeyDown(b) || KeyDown(c);
@@ -63,10 +66,24 @@ void BeginTick() {
     InitDefaults();
     EnsureOverridesLoaded();
     const uint32_t mods = ReadModifiers();
+    const uint64_t nowMs = GetTickCount64();
     for (int i = 0; i < static_cast<int>(Action::COUNT); ++i) {
-        g_edge[i].keyNow = BindingKeyDown(g_bindings[i]);
-        g_edge[i].now    = g_edge[i].keyNow && ModsSatisfy(g_bindings[i], mods);
+        const Binding& b = g_bindings[i];
+        EdgeState& e = g_edge[i];
+        e.keyNow = BindingKeyDown(b);
+        e.now    = e.keyNow && ModsSatisfy(b, mods);
+        if (b.modsRequired != 0 && e.now && !e.last && !e.keyLast) {
+            g_chordLatch.ChordDown(KeyDown(b.vk) ? b.vk : b.altVk, nowMs);
+        }
     }
+}
+
+void ChordPressSwallowed(int vk) {
+    g_chordLatch.EngineSwallowed(vk, GetTickCount64());
+}
+
+bool TakeChordPress(int vk) {
+    return g_chordLatch.TakeEnginePress(vk, GetTickCount64());
 }
 
 void EndTick() {

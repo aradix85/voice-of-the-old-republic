@@ -1,4 +1,4 @@
-# hotkeys.h (236 lines)
+# hotkeys.h (243 lines)
 
 Source: `patches/Accessibility/hotkeys.h`
 
@@ -22,12 +22,14 @@ We don't piggyback on the engine's [Keymapping] because it's bare DIK→Action w
 - L189 `bool KeyDown(int vk)`: The physical key `vk` is down right now; false for vk 0.
 - L193 `uint32_t CurrentModifiers()`: Current OS modifier mask (kMod* bits) — the same read BeginTick uses for edge matching.
 - L201 `bool ModifiedComboOwns(int vk)`: True iff some registered binding on `vk` (primary or alt key) REQUIRES at least one modifier and currently matches the live keyboard (its key is down, every required modifier is held, no forbidden modifier is held).
-- L203 `bool IsForegroundGame()`
-- L205 `Binding Get(Action a)`
-- L206 `void Set(Action a, Binding b)`
-- L210 `void SetUserBinding(Action a, Binding b)`: Apply a user rebind: update the live binding AND persist it to acc_settings.ini so it survives a relaunch.
-- L214 `void ResetUserBindings()`: Reset every action to its factory default and rewrite the persisted overrides to match.
-- L222 `Action FindConflict(Action self, int vk, uint32_t mods)`: Conflict scan for the configurator.
-- L226 `const char* Name(Action a)`: Describe(a) goes into a rotating static buffer so multiple calls in one log line stay valid (acclog::FmtPtr convention).
-- L227 `const char* Describe(Action a)`
-- L233 `const char* VkLabel(int vk)`: Spoken/printable label for a bare VK ("V", "F5", "Enter", ...).
+- L207 `void ChordPressSwallowed(int vk)`: The input hooks' side of hotkeys_chord_latch.h; `vk` is the physical key of an engine press.
+- L208 `bool TakeChordPress(int vk)`
+- L210 `bool IsForegroundGame()`
+- L212 `Binding Get(Action a)`
+- L213 `void Set(Action a, Binding b)`
+- L217 `void SetUserBinding(Action a, Binding b)`: Apply a user rebind: update the live binding AND persist it to acc_settings.ini so it survives a relaunch.
+- L221 `void ResetUserBindings()`: Reset every action to its factory default and rewrite the persisted overrides to match.
+- L229 `Action FindConflict(Action self, int vk, uint32_t mods)`: Conflict scan for the configurator.
+- L233 `const char* Name(Action a)`: Describe(a) goes into a rotating static buffer so multiple calls in one log line stay valid (acclog::FmtPtr convention).
+- L234 `const char* Describe(Action a)`
+- L240 `const char* VkLabel(int vk)`: Spoken/printable label for a bare VK ("V", "F5", "Enter", ...).

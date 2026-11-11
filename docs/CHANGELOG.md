@@ -117,6 +117,7 @@ installer, as the pre-release `bridge-latest`.
 - New setting "Swoop race: automatic pilot": the bike steers to the
   accelerator pads, around the obstacles, and shifts by itself (KOTOR 1).
 - KOTOR 1 swoop race: the obstacle warning sounds where the buoy stands.
+- A quick Ctrl+L no longer opens the game's Quests screen as well.
 - Enter on an open door walks through it.
 - Tab says the name of the character you now control once, and no longer
   the previous one first.
@@ -387,6 +388,12 @@ installer, as the pre-release `bridge-latest`.
   stands elsewhere: on Taris 8 of the 22 buoys, on Tatooine 21 and on Manaan
   all 22, up to 388 units along the track and 34 to the side. The first sweep
   of a race logs each box.
+- A hotkey with a modifier no longer lets its key through to the game when the
+  modifier is released first. The game reads buffered key presses and the mod
+  the live keyboard, so after a quick Ctrl+L the game's L could arrive with
+  Ctrl already up and open the Quests screen while the walk to the loot
+  started. The key of a combo the mod has just seen is now taken from the
+  game once, within half a second.
 
 <h3>Help:</h3>
 

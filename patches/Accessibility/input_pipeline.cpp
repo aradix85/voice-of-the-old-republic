@@ -236,14 +236,28 @@ bool TryPuzzleBareR(const InputEvent& ev) {
 // are rebuilt here as for a bare press.
 bool TryModifierReservation(const InputEvent& ev) {
     if (ev.value == 0) return false;
-    const uint32_t m = acc::hotkeys::CurrentModifiers();
-    if ((m & kReservedMods) == 0) return false;
     if (ev.code == kInputEsc1 || ev.code == kInputEsc2 || IsGuiNavForward(ev.code)) return false;
 
     int vks[4];
     const int nv = acc::engine_keymap::VksForCode(ev.code, vks, 4);
+    const uint32_t m = acc::hotkeys::CurrentModifiers();
+    if ((m & kReservedMods) == 0) {
+        // The engine's press is buffered: a hotkey's modifier can be up again
+        // by the time its key arrives here (hotkeys_chord_latch.h).
+        for (int i = 0; i < nv; ++i) {
+            if (!acc::hotkeys::TakeChordPress(vks[i])) continue;
+            acclog::Write("Diag.ModShadow", "seq=%u code=%s(%d) CONSUMED — the key of a mod "
+                          "hotkey whose modifier is already released",
+                          ev.seq, acc::engine::InputIndexName(ev.code), ev.code);
+            return true;
+        }
+        return false;
+    }
     bool owned = false;
-    for (int i = 0; i < nv && !owned; ++i) owned = acc::hotkeys::ModifiedComboOwns(vks[i]);
+    for (int i = 0; i < nv && !owned; ++i) {
+        owned = acc::hotkeys::ModifiedComboOwns(vks[i]);
+        if (owned) acc::hotkeys::ChordPressSwallowed(vks[i]);
+    }
     acclog::Write("Diag.ModShadow", "seq=%u code=%s(%d) mods=0x%x CONSUMED — %s",
         ev.seq, acc::engine::InputIndexName(ev.code), ev.code, m,
         owned ? "mod hotkey owns this combo; engine action suppressed"
