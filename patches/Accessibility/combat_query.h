@@ -6,6 +6,8 @@
 
 #pragma once
 
+#include "strings.h"
+
 #include <cstddef>
 
 namespace acc::combat::query {
@@ -26,5 +28,8 @@ void PollWin32SelfStatusHotkey();
 bool ReadEquippedItemName(void* serverCreature, size_t slotHandleOffset,
                           const char* slotLabel,
                           char* outBuf, size_t outBufSize);
+
+// The string for ReadObjectDamageLevel's 0..5 bucket.
+acc::strings::Id DamageLevelStringId(int level);
 
 }  // namespace acc::combat::query

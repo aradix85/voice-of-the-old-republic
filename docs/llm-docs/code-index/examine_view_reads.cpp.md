@@ -1,4 +1,4 @@
-# examine_view_reads.cpp (191 lines)
+# examine_view_reads.cpp (178 lines)
 
 Source: `patches/Accessibility/examine_view_reads.cpp`
 
@@ -16,12 +16,11 @@ Reading a creature for the examine panel: hit points, level, faction, flags, and
 - L78 `int ReadLevel(void* serverCreature)`
 - L89 `int ReadDamageLevel(void* obj)`
 - L96 `bool ReadBlindFlag(void* serverCreature)`: No invisible flag on purpose: CSWSCreature::GetInvisible is not a pure read (its Sanctuary branch rolls a save and changes perception), and the effect rows already name an active invisibility read-only.
-- L100 `acc::strings::Id DamageLevelStringId(int level)`
-- L113 `int ReadFactionId(void* serverCreature)`
-- L120 `acc::strings::Id FactionWordIdFor(int factionId)`
-- L144 `int Read2DDistanceMeters(void* obj)`
-- L153 `uint32_t ReadLastTargetHandle()`
-- L163 `bool IsCreatureDead(void* serverCreature)`
-- L170 `bool IsHostileCreature(void* serverObject)`: The faction table of the examine panel's Faction row, so "hostile" means the same everywhere.
-- L176 `bool ResolveSpellName(int spellId, char* outBuf, size_t outBufSize)`
-- L183 `bool ResolveFeatName(unsigned short featIdx, char* outBuf, size_t outBufSize)`
+- L100 `int ReadFactionId(void* serverCreature)`
+- L107 `acc::strings::Id FactionWordIdFor(int factionId)`
+- L131 `int Read2DDistanceMeters(void* obj)`
+- L140 `uint32_t ReadLastTargetHandle()`
+- L150 `bool IsCreatureDead(void* serverCreature)`
+- L157 `bool IsHostileCreature(void* serverObject)`: The faction table of the examine panel's Faction row, so "hostile" means the same everywhere.
+- L163 `bool ResolveSpellName(int spellId, char* outBuf, size_t outBufSize)`
+- L170 `bool ResolveFeatName(unsigned short featIdx, char* outBuf, size_t outBufSize)`

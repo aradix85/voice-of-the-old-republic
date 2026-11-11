@@ -110,16 +110,6 @@ constexpr size_t kVtableSlotGetVictimFollower = 0x14; // OnHitBullet's vtable[0x
 // SEH-guarded primitive reads (same pattern as engine_* / swoop_race).
 // ============================================================================
 
-// Read CSWCArea.mini_game via the player-area chain. Source of truth at
-// the moment of detection; latched thereafter (the chain churns during
-// the entry transition — see minigame_swoop_race.cpp).
-void* ReadMiniGameViaArea() {
-    void* serverArea = acc::engine::GetCurrentArea();
-    if (!serverArea) return nullptr;
-    void* clientArea = acc::engine::GetClientArea(serverArea);
-    return ReadPtrOrNull(clientArea, kClientAreaMiniGameOffset);
-}
-
 // True iff `mg` is a live CSWMiniGame reporting the turret type.
 bool IsTurretMiniGame(void* mg) {
     return mg && ReadU32Or0(mg, kMiniGameTypeOffset) == kMiniGameTypeTurret;
@@ -344,7 +334,7 @@ extern "C" void __cdecl OnPlayerFire(void* /*player*/) {
 bool IsActive() { return g_state.active; }
 
 void Tick() {
-    void* mgArea = ReadMiniGameViaArea();
+    void* mgArea = acc::minigame::ReadAreaMiniGame();
 
     if (!g_state.active) {
         // Idle. Fire ENTER only for the turret minigame (type==2); swoop

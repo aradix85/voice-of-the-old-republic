@@ -206,6 +206,12 @@ uint32_t ClientToServerObjectId(uint32_t clientHandle);
 // with SEH per hop. Null on any failure.
 void* ResolveItemFromClientHandle(uint32_t clientHandle);
 
+// The CSWSItem* behind an inventory, container, store or crafting row: the
+// row's obj_id (kStoreItemEntryObjIdOffset, the same on every row class)
+// resolved as a client handle. Null for a null row, an unreadable one and
+// an unresolved handle. It does not check that the control is a row.
+void* ResolveItemFromRow(void* rowControl);
+
 // Multi-line property description (damage / range / on-hit / defence /
 // base description). Engine allocates a heap c_string per call which
 // we deliberately leak (CRT-mismatch — same pattern as LookupTlk).

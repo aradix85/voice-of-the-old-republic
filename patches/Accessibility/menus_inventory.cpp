@@ -16,21 +16,10 @@ namespace {
 
 typedef void (__thiscall* PFN_PanelThiscall)(void* panel);
 
-// Embedded button objects live AT panel+offset (the ctor constructs them in
-// place via &this->useitem_button etc.), so the chain captures &button == that
-// address. Same identification the journal module uses for its Sort/Swap
-// buttons — locale-independent, and immune to the caption changing under us
-// (which the filter button's does on every activation).
-bool IsButtonAtOffset(void* panel, void* control, std::size_t offset) {
-    if (!panel || !control) return false;
-    return reinterpret_cast<unsigned char*>(panel) + offset ==
-           reinterpret_cast<unsigned char*>(control);
-}
-
 }  // namespace
 
 bool IsUseItemButton(void* panel, void* control) {
-    return IsButtonAtOffset(panel, control, kInventoryUseItemButtonOffset);
+    return acc::off::IsAt(panel, kInventoryUseItemButtonOffset, control);
 }
 
 bool IsFilterButton(void* panel, void* control) {
@@ -47,7 +36,7 @@ bool IsFilterButton(void* panel, void* control) {
         return ((c - base) - kInventoryFilterFirstButtonOffset) %
                    kInventoryFilterButtonStride == 0;
     }
-    return IsButtonAtOffset(panel, control, kInventoryFilterButtonOffset);
+    return acc::off::IsAt(panel, kInventoryFilterButtonOffset, control);
 }
 
 void SyncListBoxSelection(void* panel, void* row) {

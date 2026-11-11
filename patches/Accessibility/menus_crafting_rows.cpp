@@ -57,14 +57,6 @@ bool SelectRow(void* listBox, void* row, int index) {
     return true;
 }
 
-// The CSWSItem* behind a row: the same two hops the engine's create and
-// breakdown workers take on the row's object id.
-void* ResolveRowItem(void* row) {
-    uint32_t handle = 0;
-    if (!TryReadU32(row, kStoreItemEntryObjIdOffset, &handle) || !handle) return nullptr;
-    return acc::engine::ResolveItemFromClientHandle(handle);
-}
-
 // The engine's own "can make this" gate; true when unreadable, so a bad read
 // never invents a refusal.
 bool IsRowCraftable(void* row) {
@@ -174,7 +166,7 @@ void AnnounceChainStepSuffix(void* panel, void* control) {
     // Rows of the actionable list only; buttons and the resource row fall out.
     void* lb = FindActiveCraftList(panel);
     if (!lb || acc::engine::FindListBoxRow(lb, control) < 0) return;
-    void* item = ResolveRowItem(control);
+    void* item = acc::engine::ResolveItemFromRow(control);
     if (!item) {
         acclog::Write("Crafting", "chain-step suffix row=%p: item resolve failed", control);
         return;

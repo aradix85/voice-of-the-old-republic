@@ -1,4 +1,4 @@
-# peek_description_internal.h (52 lines)
+# peek_description_internal.h (51 lines)
 
 Source: `patches/Accessibility/peek_description_internal.h`
 
@@ -15,7 +15,6 @@ Internal to the peek_description module (peek_description*.cpp); no other file i
 - L44 `bool HandleEquipSlotTooltip(void* panel, int slotIdx, bool down)`
 - L45 `bool HandleWorkbenchSlotTooltip(void* panel, void* control, bool down)`
 - L46 `const ItemTooltipPanelInfo* LookupItemTooltipPanel(acc::engine::PanelKind k)`
-- L47 `void* ResolveRowItem(void* row)`
-- L48 `bool HandleItemTooltip(acc::engine::PanelKind kind, const ItemTooltipPanelInfo& info, void* activePanel, bool down)`
+- L47 `bool HandleItemTooltip(acc::engine::PanelKind kind, const ItemTooltipPanelInfo& info, void* activePanel, bool down)`
 
 Also 2 constants or variables at namespace scope.

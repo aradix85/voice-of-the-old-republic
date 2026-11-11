@@ -1,4 +1,4 @@
-# engine_offsets_select.h (114 lines)
+# engine_offsets_select.h (122 lines)
 
 Source: `patches/Accessibility/engine_offsets_select.h`
 
@@ -25,5 +25,6 @@ Expected shape of the KOTOR 2 answers ------------------------------------- Meas
 - L88 `inline size_t Kotor2Only(size_t kotor2)`: Mirror of Kotor1Only: a field only KOTOR 2 has (or that only a KOTOR-2-only code path reads).
 - L102 `inline bool Ok(size_t off)`: Is this offset usable on the running game?
 - L108 `inline void* Ptr(void* base, size_t off)`: Form an interior pointer, or nullptr when the offset is unported.
+- L117 `inline bool IsAt(void* base, size_t off, void* object)`: `object` is the one embedded at base+off.
 
 Also 1 constants or variables at namespace scope.

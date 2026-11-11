@@ -42,6 +42,23 @@ using acc::engine::ReadPtrOrNull;
 using acc::engine::ReadU32Or0;
 using acc::engine::TryReadVector;
 
+// CSWCArea.mini_game (swkotor.exe.h line 8726, after rooms at +0x260).
+//
+// KOTOR 2 = +0x268, witnessed as a write: the K2 area's minigame-load path
+// @0x007A2FB0 allocates 0x11c bytes, runs the CSWMiniGame ctor @0x00839260 on
+// it and stores the result with `mov [ecx+0x268], edx`; the reader at
+// 0x007AA940 loads the same slot. The +4 shift matches the map-pin array's
+// (kClientAreaMapPinsOffset, 0x1c4 -> 0x1c8): CSWCArea gained one dword low
+// down and everything above moved together. The same delta shows at the tail
+// of the CSWMiniGame ctor, which takes the area's resref from area+0x110 on K2
+// where KOTOR 1 takes it from +0x10c.
+const size_t kClientAreaMiniGameOffset = acc::off::Pick(0x264, 0x268);
+
+// CSWCArea.mini_game of the player's area, or nullptr. The truth at the
+// moment of detection; a caller latches it, because this chain churns
+// during the transition into and out of a minigame.
+void* ReadAreaMiniGame();
+
 // ---- Minigame object array -------------------------------------------------
 // CClientExoAppInternal holds the minigame object array (obstacles, accelerator
 // pads, track followers) at offset 0. Resolution walks

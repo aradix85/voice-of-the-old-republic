@@ -116,16 +116,6 @@ bool BuildEffectsSummary(void* serverCreature, char* outBuf, size_t outBufSize) 
     return JoinEffectNames(ids, n, acc::examine_view::EffectName, outBuf, outBufSize);
 }
 
-// level is 1..5; healthy (0) is never spoken.
-acc::strings::Id DamageLevelStringId(int level) {
-    using S = acc::strings::Id;
-    static const S kIds[] = {
-        S::DamageLevel0Healthy, S::DamageLevel1Light, S::DamageLevel2Wounded,
-        S::DamageLevel3Badly,   S::DamageLevel4Dying, S::DamageLevel5Dead,
-    };
-    return kIds[level];
-}
-
 struct Loadout {
     char effects[192] = "";
     char mainWpn[96]  = "";
@@ -198,6 +188,15 @@ void SpeakSelfStatus() {
 }
 
 }  // namespace
+
+acc::strings::Id DamageLevelStringId(int level) {
+    using S = acc::strings::Id;
+    static const S kIds[] = {
+        S::DamageLevel0Healthy, S::DamageLevel1Light, S::DamageLevel2Wounded,
+        S::DamageLevel3Badly,   S::DamageLevel4Dying, S::DamageLevel5Dead,
+    };
+    return kIds[level >= 0 && level <= 5 ? level : 0];
+}
 
 bool BuildTargetCombatBrief(void* targetServerObject, const char* targetName,
                             char* outBuf, size_t outBufSize) {

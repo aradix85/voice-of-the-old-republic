@@ -20,16 +20,6 @@ namespace {
 typedef void (__thiscall* PFN_PanelOnControl)(void* panel, void* control);
 typedef void (__thiscall* PFN_PanelThiscall)(void* panel);
 
-// Embedded button objects live AT panel+offset (the ctor constructs them in
-// place via &this->sort_button etc.), so the chain captures &button == that
-// address. Identifying by struct offset is locale-independent and was verified
-// live (sort = panel+0xc2c, swap = panel+0xa68 in patch-20260603-090028.log).
-bool IsButtonAtOffset(void* panel, void* control, std::size_t offset) {
-    if (!panel || !control) return false;
-    return reinterpret_cast<unsigned char*>(panel) + offset ==
-           reinterpret_cast<unsigned char*>(control);
-}
-
 bool ReadRowText(void* row, char* outBuf, std::size_t bufSize) {
     if (!row || !outBuf || bufSize < 2) return false;
     // gui_string is the rendered text; SetText updates it synchronously
@@ -130,15 +120,15 @@ bool IsSortButton(void* panel, void* control) {
     // buttons (time / name / planet). Any of them changes the list order,
     // so all three get the repopulate-then-invalidate treatment.
     if (acc::game::IsKotor2()) {
-        return IsButtonAtOffset(panel, control, kJournalFilterTimeButtonOffset) ||
-               IsButtonAtOffset(panel, control, kJournalFilterNameButtonOffset) ||
-               IsButtonAtOffset(panel, control, kJournalFilterPlanetButtonOffset);
+        return acc::off::IsAt(panel, kJournalFilterTimeButtonOffset, control) ||
+               acc::off::IsAt(panel, kJournalFilterNameButtonOffset, control) ||
+               acc::off::IsAt(panel, kJournalFilterPlanetButtonOffset, control);
     }
-    return IsButtonAtOffset(panel, control, kJournalSortButtonOffset);
+    return acc::off::IsAt(panel, kJournalSortButtonOffset, control);
 }
 
 bool IsSwapButton(void* panel, void* control) {
-    return IsButtonAtOffset(panel, control, kJournalSwapTextButtonOffset);
+    return acc::off::IsAt(panel, kJournalSwapTextButtonOffset, control);
 }
 
 void LogEntryCounts(void* panel) {

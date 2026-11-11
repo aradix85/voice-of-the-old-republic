@@ -37,7 +37,6 @@ int ReadHpMax(void* serverCreature);
 int ReadLevel(void* serverCreature);
 int ReadDamageLevel(void* obj);
 bool ReadBlindFlag(void* serverCreature);
-acc::strings::Id DamageLevelStringId(int level);
 int ReadFactionId(void* serverCreature);
 acc::strings::Id FactionWordIdFor(int factionId);
 int Read2DDistanceMeters(void* obj);

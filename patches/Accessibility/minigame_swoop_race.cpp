@@ -22,18 +22,6 @@ namespace acc::swoop_race {
 
 namespace {
 
-// CSWCArea.mini_game (swkotor.exe.h line 8726, after rooms@+0x260).
-//
-// KOTOR 2 = +0x268. Witnessed as a WRITE, not inferred: the K2 area's
-// minigame-load path @0x007A2FB0 allocates 0x11c bytes, runs the CSWMiniGame
-// ctor @0x00839260 on it, and stores the result with `mov [ecx+0x268], edx`;
-// the reader at 0x007AA940 loads the same slot. The +4 shift matches the map-pin
-// array's (kClientAreaMapPinsOffset, 0x1c4 -> 0x1c8) — CSWCArea gained one dword
-// low down and everything above moved together. Same delta again at the tail of
-// the CSWMiniGame ctor, which takes the area's resref from area+0x110 on K2
-// where KOTOR 1 takes it from +0x10c.
-const size_t kClientAreaMiniGameOffset      = acc::off::Pick(0x264, 0x268);
-
 // KOTOR 2 ONLY — the two per-slot script runners the client input handler
 // (CClientExoAppInternal::HandleInputEvent twin @0x007b12c0) calls on the
 // player bike. 173-byte twins of KOTOR 1's CSWMiniGameObject::OnHitFollower
@@ -59,16 +47,6 @@ typedef void (__thiscall* PFN_RunFollowerSlotScript)(void* follower, int flag);
 // (event 0xd9), Space when the ini has no line for it. See TryShift.
 constexpr int kK1MGShootActionId = 217;
 constexpr int kDikSpace          = 0x39;
-
-// CSWCArea.mini_game via the player-area chain. Ground truth at the moment of
-// detection; the result is latched so churn in this chain during transitions
-// does not drop the race.
-void* ReadMiniGameViaArea() {
-    void* serverArea = acc::engine::GetCurrentArea();
-    if (!serverArea) return nullptr;
-    void* clientArea = acc::engine::GetClientArea(serverArea);
-    return ReadPtrOrNull(clientArea, kClientAreaMiniGameOffset);
-}
 
 // True iff the latched CSWMiniGame is still readable and its vtable is the
 // one captured at latch time. The engine frees CSWMiniGame at race end and
@@ -173,7 +151,7 @@ bool TryJump() {
 }
 
 void Tick() {
-    void* mgArea = ReadMiniGameViaArea();
+    void* mgArea = acc::minigame::ReadAreaMiniGame();
 
     if (!g_state.active) {
         // Enter only for a swoop race (type 1). The turret / gunner minigame

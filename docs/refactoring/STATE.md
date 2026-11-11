@@ -442,11 +442,18 @@ prefix (menus_listbox_picker.cpp).
   developer probes on F12, Ctrl+F12 and Ctrl+F11 (the last one writes the
   camera distance). Keep them in the mod or remove them?
 - F7: analyse.py now finds 3 cloned blocks of 10+ lines, none across
-  files (the baseline had 45), and analyse2.py one near-copy pair. What
-  is left are helpers with the same name in two files: DamageLevelStringId
-  (combat_query, examine_view_reads), ReadMiniGameViaArea (swoop, turret),
-  ReadRowText (three different readers, judge), IsButtonAtOffset
-  (inventory, journal), ResolveRowItem (crafting, peek).
+  files (the baseline had 45), and analyse2.py one near-copy pair. The
+  helpers with the same name in two files are one now:
+  DamageLevelStringId (combat_query), ReadAreaMiniGame (minigame_aim),
+  acc::off::IsAt for the control embedded at an offset, and
+  acc::engine::ResolveItemFromRow. ReadRowText stays three functions:
+  they read different row shapes.
+  Found on the way: engine constants defined in more than one file, 21
+  names (the minigame headers mirror each other's struct offsets, the
+  tutorial popup repeats the pause addresses of engine_subscreen and its
+  pause code, kAddrSetMainInterfaceTarget, kCSWCCreatureCombatModeOffset
+  three times, the kIfAction* offsets, kTutorialBoxRowOffset). Next: one
+  definition each, and a check for it in tools/analysis.
 - F6 done as far as it is a duplicate: the physical-key read
   `(GetAsyncKeyState(vk) & 0x8000) != 0` was written out in nine files
   and is acc::hotkeys::KeyDown now. The polls themselves differ on

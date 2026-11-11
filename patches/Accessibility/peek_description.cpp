@@ -290,7 +290,7 @@ bool HandleShiftArrow(int param_1, int param_2, void* activePanel,
     // Walk the focused item's categorised blocks instead of the single-row
     // description the engine renders; a row without an item falls through.
     if (IsChainItemRow(kind, activePanel, focusedControl)) {
-        if (void* item = ResolveRowItem(focusedControl)) {
+        if (void* item = acc::engine::ResolveItemFromRow(focusedControl)) {
             acclog::Write("Peek.Blocks", "panel=%s row item=%p -> block nav",
                           acc::engine::PanelKindName(kind), item);
             if (SpeakItemBlocks(item, down)) return true;

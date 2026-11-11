@@ -1,4 +1,4 @@
-# minigame_aim.cpp (163 lines)
+# minigame_aim.cpp (170 lines)
 
 Source: `patches/Accessibility/minigame_aim.cpp`
 
@@ -6,13 +6,14 @@ Shared minigame aim-assist facility — see minigame_aim.h for the design and th
 
 ## Declarations (in source order)
 
-- L15 `void* ResolveMgoArray()`
-- L21 `bool ReadFollowerPosition(void* follower, Vector& out)`
-- L50 `void* ReadFollowerModelGob(void* follower)`
-- L61 `bool ReadGobBoundingBox(void* gob, Vector& mn, Vector& mx)`
-- L80 `bool ReadGobPartBoundingBox(void* gob, const char* partName, Vector& mn, Vector& mx)`
-- L111 `void* CallAsCast(void* obj, size_t vtableSlotOffset)`
-- L126 `bool ReadOffsetVector(void* player, Vector& out)`
-- L138 `void WriteOffsetVector(void* player, const Vector& v)`
-- L148 `float MagnetGain(float t, const MagnetParams& p)`
-- L154 `float MagnetStep(float offsetVal, float mappedErr, float gain, const MagnetParams& p)`
+- L14 `void* ReadAreaMiniGame()`
+- L22 `void* ResolveMgoArray()`
+- L28 `bool ReadFollowerPosition(void* follower, Vector& out)`
+- L57 `void* ReadFollowerModelGob(void* follower)`
+- L68 `bool ReadGobBoundingBox(void* gob, Vector& mn, Vector& mx)`
+- L87 `bool ReadGobPartBoundingBox(void* gob, const char* partName, Vector& mn, Vector& mx)`
+- L118 `void* CallAsCast(void* obj, size_t vtableSlotOffset)`
+- L133 `bool ReadOffsetVector(void* player, Vector& out)`
+- L145 `void WriteOffsetVector(void* player, const Vector& v)`
+- L155 `float MagnetGain(float t, const MagnetParams& p)`
+- L161 `float MagnetStep(float offsetVal, float mappedErr, float gain, const MagnetParams& p)`

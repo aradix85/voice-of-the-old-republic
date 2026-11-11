@@ -35,7 +35,6 @@ using acc::minigame::ReadFollowerPosition;
 // the matching declarations in minigame_swoop_race.cpp (same struct, same
 // fields); turret-only fields carry their own below.
 // ============================================================================
-const size_t kClientAreaMiniGameOffset = acc::off::Pick(0x264, 0x268);  // CSWCArea.mini_game
 const size_t kMiniGameVtableOffset     = acc::off::Same(0x00);
 const size_t kMiniGamePlayerOffset     = acc::off::Same(0x24);   // CSWMiniPlayer*
 const size_t kMiniGameEnemyCountOffset = acc::off::Same(0x30);

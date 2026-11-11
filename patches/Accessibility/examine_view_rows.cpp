@@ -89,7 +89,7 @@ void AddCreatureStatRows(void* obj, int& idx) {
     const int dl = ReadDamageLevel(obj);
     if (dl >= 0) {
         AddRow(idx, acc::strings::Get(S::FmtExamineRowCondition),
-               acc::strings::Get(DamageLevelStringId(dl)));
+               acc::strings::Get(acc::combat::query::DamageLevelStringId(dl)));
     }
     const int hpCur = acc::engine::ReadObjectCurrentHitPoints(obj);
     const int hpMax = ReadHpMax(obj);

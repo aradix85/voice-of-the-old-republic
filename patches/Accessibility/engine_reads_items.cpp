@@ -51,6 +51,14 @@ bool ReadItemChargesRaw(void* item, int* outCharges) {
 
 }  // namespace
 
+void* ResolveItemFromRow(void* rowControl) {
+    uint32_t handle = 0;
+    if (!TryReadU32(rowControl, kStoreItemEntryObjIdOffset, &handle) || !handle) {
+        return nullptr;
+    }
+    return ResolveItemFromClientHandle(handle);
+}
+
 uint32_t ClientToServerObjectId(uint32_t clientHandle) {
     if (clientHandle == 0 || clientHandle == 0xffffffff) return 0;
     void* serverApp = GetServerApp();

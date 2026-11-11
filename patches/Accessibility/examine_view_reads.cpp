@@ -97,19 +97,6 @@ bool ReadBlindFlag(void* serverCreature) {
     return CallFlag(serverCreature, kAddrCSWSCreatureGetBlind);
 }
 
-acc::strings::Id DamageLevelStringId(int level) {
-    using S = acc::strings::Id;
-    switch (level) {
-        case 0:  return S::DamageLevel0Healthy;
-        case 1:  return S::DamageLevel1Light;
-        case 2:  return S::DamageLevel2Wounded;
-        case 3:  return S::DamageLevel3Badly;
-        case 4:  return S::DamageLevel4Dying;
-        case 5:  return S::DamageLevel5Dead;
-        default: return S::DamageLevel0Healthy;
-    }
-}
-
 int ReadFactionId(void* serverCreature) {
     void* stats = ReadCreatureStats(serverCreature);
     uint16_t raw = 0;

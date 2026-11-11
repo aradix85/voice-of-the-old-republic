@@ -1,4 +1,4 @@
-# examine_view_internal.h (50 lines)
+# examine_view_internal.h (49 lines)
 
 Source: `patches/Accessibility/examine_view_internal.h`
 
@@ -13,11 +13,10 @@ Internal to the examine_view module (examine_view*.cpp); no other file includes 
 - L37 `int ReadLevel(void* serverCreature)`
 - L38 `int ReadDamageLevel(void* obj)`
 - L39 `bool ReadBlindFlag(void* serverCreature)`
-- L40 `acc::strings::Id DamageLevelStringId(int level)`
-- L41 `int ReadFactionId(void* serverCreature)`
-- L42 `acc::strings::Id FactionWordIdFor(int factionId)`
-- L43 `int Read2DDistanceMeters(void* obj)`
-- L44 `uint32_t ReadLastTargetHandle()`
-- L47 `int BuildRows()`: examine_view_rows.cpp
+- L40 `int ReadFactionId(void* serverCreature)`
+- L41 `acc::strings::Id FactionWordIdFor(int factionId)`
+- L42 `int Read2DDistanceMeters(void* obj)`
+- L43 `uint32_t ReadLastTargetHandle()`
+- L46 `int BuildRows()`: examine_view_rows.cpp
 
 Also 2 constants or variables at namespace scope.

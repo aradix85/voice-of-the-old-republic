@@ -110,4 +110,12 @@ inline void* Ptr(void* base, size_t off) {
     return static_cast<unsigned char*>(base) + off;
 }
 
+// `object` is the one embedded at base+off. A panel's buttons are constructed
+// in place, so the address is the identity: it does not depend on the
+// language, nor on a caption that changes (a filter button's does on every
+// activation).
+inline bool IsAt(void* base, size_t off, void* object) {
+    return object && Ptr(base, off) == object;
+}
+
 }  // namespace acc::off

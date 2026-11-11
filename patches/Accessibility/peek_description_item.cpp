@@ -16,13 +16,6 @@ namespace acc::peek {
 
 namespace {
 
-// CSWGuiInGameItemEntry.item_game_object_id — right after the embedded
-// CSWGuiButton, whose size grew 0x1c4 -> 0x1d0 on K2. Witnessed by the K2
-// entry ctor 0x008B0A60 initialising [entry+0x1d0] = 0x7f000000 and by all
-// three K2 OnControlEntered twins reading [row+0x1d0]. Same value as
-// kStoreItemEntryObjIdOffset — the store row shares the layout.
-const std::size_t kItemEntryGameObjectIdOffset = acc::off::Pick(0x1c4, 0x1d0);
-
 // Defined below (uses ReadRowText). Builds the workbench picker description
 // via the engine's own hover handler for saber upgrades.
 bool TryReadWorkbenchSaberDescription(void* panel, void* row,
@@ -294,17 +287,6 @@ const ItemTooltipPanelInfo* LookupItemTooltipPanel(acc::engine::PanelKind k) {
     return nullptr;
 }
 
-// Read an item entry row's client handle (+0x1c4) and resolve it to a CSWSItem*.
-// Shared by the Inventory/Store focused-row path and SpeakItemRowDescription.
-// Null on fault or when the control isn't an item row.
-void* ResolveRowItem(void* row) {
-    uint32_t clientHandle = 0;
-    if (!acc::engine::TryReadU32(row, kItemEntryGameObjectIdOffset, &clientHandle)) {
-        return nullptr;
-    }
-    return acc::engine::ResolveItemFromClientHandle(clientHandle);
-}
-
 // Caller consumes the key regardless of return (predictable behaviour).
 bool HandleItemTooltip(acc::engine::PanelKind kind,
                        const ItemTooltipPanelInfo& info,
@@ -330,7 +312,7 @@ bool HandleItemTooltip(acc::engine::PanelKind kind,
 
     void* row = acc::engine::ReadListBoxRow(lb, selIdx);
     uint32_t clientHandle = 0;
-    if (row && !acc::engine::TryReadU32(row, kItemEntryGameObjectIdOffset, &clientHandle)) {
+    if (row && !acc::engine::TryReadU32(row, kStoreItemEntryObjIdOffset, &clientHandle)) {
         acclog::Write("Peek.Item", "panel=%s row=%p item handle unreadable",
                       acc::engine::PanelKindName(kind), row);
         return false;
@@ -385,7 +367,7 @@ bool HandleItemTooltip(acc::engine::PanelKind kind,
 bool SpeakItemRowDescription(void* row) {
     if (!row) return false;
     uint32_t clientHandle = 0;
-    if (!acc::engine::TryReadU32(row, kItemEntryGameObjectIdOffset, &clientHandle)) {
+    if (!acc::engine::TryReadU32(row, kStoreItemEntryObjIdOffset, &clientHandle)) {
         acclog::Write("Peek.Item", "row=%p item handle unreadable", row);
         return false;
     }

@@ -7,8 +7,15 @@
 #include <windows.h>
 
 #include "engine_app.h"     // GetClientAppInternal
+#include "engine_area.h"
 
 namespace acc::minigame {
+
+void* ReadAreaMiniGame() {
+    void* serverArea = acc::engine::GetCurrentArea();
+    if (!serverArea) return nullptr;
+    return ReadPtrOrNull(acc::engine::GetClientArea(serverArea), kClientAreaMiniGameOffset);
+}
 
 // ---- Minigame object array -------------------------------------------------
 

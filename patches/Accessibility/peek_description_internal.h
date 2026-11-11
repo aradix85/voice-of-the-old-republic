@@ -44,7 +44,6 @@ bool SpeakItemBlocks(void* item, bool down);
 bool HandleEquipSlotTooltip(void* panel, int slotIdx, bool down);
 bool HandleWorkbenchSlotTooltip(void* panel, void* control, bool down);
 const ItemTooltipPanelInfo* LookupItemTooltipPanel(acc::engine::PanelKind k);
-void* ResolveRowItem(void* row);
 bool HandleItemTooltip(acc::engine::PanelKind kind, const ItemTooltipPanelInfo& info,
                        void* activePanel, bool down);
 
