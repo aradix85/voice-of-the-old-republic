@@ -6,6 +6,7 @@
 #include "audio_footstep_suppress.h"
 #include "bridge.h"
 #include "exit_memory.h"
+#include "key_inject.h"
 #include "party_status.h"
 #include "camera_announce.h"
 #include "camera_orient.h"
@@ -341,6 +342,7 @@ void Dispatch() {
     // Before the pending-op drain so a bridge action that queues menu work is
     // handled this same tick.
     PHASE("bridge", acc::bridge::Tick());
+    PHASE("key_inject", acc::key_inject::Tick());
 
     // Visited regions: this area's set from the save, once settled.
     PHASE("exit_memory", acc::exit_memory::Tick());

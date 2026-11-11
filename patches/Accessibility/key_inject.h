@@ -32,4 +32,13 @@ void Send(int scancode, bool down, bool extended = false);
 // Press and release in one call, for a key that only needs to fire once.
 void Tap(int scancode, bool extended = false);
 
+// Press now and release on a later tick, kHeldTapMs on: a game screen polls
+// the keyboard once a frame and does not see a key that went down and up
+// between two polls. Takes a DIK code as well: 0xD0 is Down, sent as 0x50
+// extended. One key at a time; a second call releases the first.
+void TapHeld(int scancode, bool extended = false);
+
+// Once per frame: releases the key of TapHeld when its time is up.
+void Tick();
+
 }  // namespace acc::key_inject

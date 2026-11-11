@@ -29,6 +29,8 @@
 //   GET /do?action=walk&x=<f>&y=<f>
 //   GET /do?action=say&text=<utf-8, url-encoded>
 //   GET /do?action=key&scancode=<dec or 0x..>[&extended=1]
+//       held for a moment, so that game screens see it; a DirectInput code
+//       with the high bit (0xD0 = Down) is sent as its extended key
 // All but /health, /spoken, /state, /menu and the say and key actions are
 // KOTOR 1 only for now.
 

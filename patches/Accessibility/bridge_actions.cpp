@@ -63,7 +63,7 @@ std::string RunAction(const Params& params) {
     if (action == "key") {
         const std::string sc = Param(params, "scancode");
         if (sc.empty()) return Error("scancode missing");
-        acc::key_inject::Tap(static_cast<int>(std::strtol(sc.c_str(), nullptr, 0)),
+        acc::key_inject::TapHeld(static_cast<int>(std::strtol(sc.c_str(), nullptr, 0)),
                              Param(params, "extended") == "1");
         return kOk;
     }
