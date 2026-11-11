@@ -1712,8 +1712,8 @@ The first test round surfaced two crash classes, both fixed and re-verified:
 - **Unguarded engine reads in a K2-only diagnostic path.** AnnounceFocus read
   control captions via ReadCExoString/ReadU32 (guard-free by design) with no
   SEH — a garbage caption pointer crashed the process inside memcpy, including
-  in a PRE-batch session. The probe now runs in one SEH-guarded pass
-  (FocusProbe in menus_focus_k2.cpp) and an unreadable control is skipped, not
+  in a PRE-batch session. The path now reads through the guarded
+  engine_reads helpers only, and an unreadable control is skipped, not
   announced. Lesson: the audit tool only sweeps files it is pointed at —
   K2-only TUs must be audited too, not just the shared chain.
 - **The CGuiInGame slot walk ran on KOTOR 2.** IdentifyPanel's slot-table walk
@@ -1801,8 +1801,9 @@ build worth testing:
    `IsLoadingSaveGame` → null-pointer trap from the first session, and it is
    what "clear the gate" actually costs. `port_worklist.py` drives this, but
    expect it to pull in constants outside the nine files currently listed.
-2. Swap the `SetCursorPos` stand-in in `menus_focus_k2.cpp` for the real
-   `MoveMouseToPosition`, now resolved.
+2. Keep the `SetCursorPos` warp in `menus_focus_k2.cpp`: the resolved
+   `MoveMouseToPosition` was tried in its place and brought the focus
+   snap-back straight back (see WarpCursorToControl).
 3. Act on the three CODE divergences listed under "Divergences that are CODE"
    below. They will not appear in any constant count and each misbehaves
    silently if KOTOR 1's logic is reused.
@@ -1815,9 +1816,6 @@ rather than take an interim test round: on KOTOR 2 the surrounding machinery is
 what makes a sub-panel reachable at all, so a half-ported subsystem is both hard
 to navigate to and likely to fault on arrival. Spend a test round only when its
 result would settle or change how the remaining investigation is done.
-
-`MoveMouseToPosition` is now resolved and should replace the `SetCursorPos`
-stand-in in `menus_focus_k2.cpp` when the menu path is enabled.
 
 **Do not** repeat the minimal-slice approach — see THE METHOD.
 

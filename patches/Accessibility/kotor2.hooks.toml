@@ -1,19 +1,12 @@
-# KOTOR 2 (Aspyr 2015 rebuild) — the port's first installed hook.
+# KOTOR 2 (Aspyr, Steam) hooks.
 #
-# This file was deliberately EMPTY until 2026-07-31. It is still nearly empty,
-# and that is the design: a hook may only be added here once its handler's whole
-# read/call chain has been verified against the KOTOR 2 binary. Every other
-# handler still default-denies via acc::game::HandlerEnabled(), so adding a hook
-# whose chain is not ready would be a null-pointer call on first fire, not a
-# degraded feature.
+# A hook may only be added here once its handler's whole read/call chain has
+# been verified against the KOTOR 2 binary. Every other handler default-denies
+# via acc::game::HandlerEnabled(), so a hook whose chain is not ready would be
+# a null-pointer call on first fire, not a degraded feature.
 #
-# Why so few, concretely: OnSetActiveControl's KOTOR 1 body calls
-# IsLoadingSaveGame, which dispatches through CServerExoApp::GetLoadFromSaveGame
-# — an address that resolves to 0 on KOTOR 2 — and IdentifyPanel, which needs
-# the CGuiInGame slot table (a description of one binary's layout, almost
-# certainly reordered in a game with screens KOTOR 1 lacks). So KOTOR 2 does not
-# run that handler at all; it runs OnSetActiveControlK2, a separate minimal path
-# that touches only verified constants. See menus_focus_k2.cpp.
+# The GUI hooks land in the *K2 wrappers of menus_focus_k2.cpp, which read the
+# arguments from the frame and then run the handlers KOTOR 1 hooks directly.
 #
 # See docs/kotor2-port.md.
 

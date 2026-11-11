@@ -280,7 +280,6 @@ patches/Accessibility/menus_extract_workbench.cpp
 patches/Accessibility/menus_focus.cpp
 patches/Accessibility/menus_focus.h
 patches/Accessibility/menus_focus_k2.cpp
-patches/Accessibility/menus_focus_k2.h
 patches/Accessibility/menus_galaxymap.cpp
 patches/Accessibility/menus_galaxymap.h
 patches/Accessibility/menus_internal.cpp

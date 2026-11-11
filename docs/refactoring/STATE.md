@@ -358,7 +358,10 @@ prefix (menus_listbox_picker.cpp).
   possible; for files above 500 lines, judge whether a split into modules of
   things that belong together makes sense, and do it where it does.
 - Next file, by size (2026-11-10 21:15, strings*.cpp excepted):
-  to judge: menus_focus_k2 520, help 520 (help belongs to F4). Judged
+  to judge: help 520 (belongs to F4). menus_focus_k2 is lean now (239;
+  its header is gone, the K2.Focus line keeps prev, id, vtable, caller;
+  in-game check on KOTOR 2: the arrows in the main menu speak each button
+  once and focus does not snap back). Judged
   and left whole: menus_listbox_picker (512): one concern, the equip
   picker and the workbench upgrade picker with their latches and
   monitors; a lean could give the two latches one struct. Judged and left whole: minigame_turret_peg 536, one
@@ -434,8 +437,8 @@ prefix (menus_listbox_picker.cpp).
   - engine_twins.py: is the KOTOR 2 address of a Pick(k1, k2) the same
     method as the KOTOR 1 one? Compares the calls, engine globals and
     strings both functions use; a call that agrees counts for the caller
-    and the callee. It catches the old popup address. Now: 163 function
-    pairs, 111 agree, 0 disagree, 3 mixed, 49 unproven (small accessors
+    and the callee. It catches the old popup address. Now: 162 function
+    pairs, 110 agree, 0 disagree, 3 mixed, 49 unproven (small accessors
     and the CExoSoundSource setters: nothing to compare). The 3 mixed
     were looked at: 3, 7 and 14 points agree; what KOTOR 1 uses and
     KOTOR 2 does not is the party table in the inventory and abilities
