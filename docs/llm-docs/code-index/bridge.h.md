@@ -1,4 +1,4 @@
-# bridge.h (47 lines)
+# bridge.h (49 lines)
 
 Source: `patches/Accessibility/bridge.h`
 
@@ -8,9 +8,9 @@ Every request must carry the header "X-Kotor-Bridge: <token>". The token is rand
 
 Threading: a background thread owns the socket. Engine state is only read on the main thread, inside Tick() (called from core_tick's Dispatch). /health and /spoken are answered on the socket thread; every other path queues a job that the next Tick() runs, and the socket thread waits up to 2 s for it (the game does not tick while it is minimised, so a timeout answers with an error instead of hanging).
 
-Endpoints: GET /health GET /spoken?since=<id>&max=<n>      lines the mod spoke, oldest first GET /state                          area, position, party, screen, target GET /menu                           the open menu as the mod walks it GET /nearby?radius=<metres>         what the mod's cycle lists, nearest first GET /overview                       regions explored, nearest unexplored, loot left GET /objects                        every door, container, item and creature with tag and live state, for kotor_kaart.py GET /rooms                          the mod's room graph of the area GET /do?action=select|interact|use&handle=<hex or dec> GET /do?action=walk&x=<f>&y=<f> GET /do?action=say&text=<utf-8, url-encoded> GET /do?action=key&scancode=<dec or 0x..>[&extended=1] All but /health, /spoken, /state, /menu and the say and key actions are KOTOR 1 only for now.
+Endpoints: GET /health GET /spoken?since=<id>&max=<n>      lines the mod spoke, oldest first GET /state                          area, position, party, screen, target GET /menu                           the open menu as the mod walks it GET /nearby?radius=<metres>         what the mod's cycle lists, nearest first GET /overview                       regions explored, nearest unexplored, loot left GET /objects                        every door, container, item and creature with tag and live state, for kotor_kaart.py GET /rooms                          the mod's room graph of the area GET /do?action=select|interact|use&handle=<hex or dec> GET /do?action=walk&x=<f>&y=<f> GET /do?action=say&text=<utf-8, url-encoded> GET /do?action=key&scancode=<dec or 0x..>[&extended=1] held for a moment, so that game screens see it; a DirectInput code with the high bit (0xD0 = Down) is sent as its extended key All but /health, /spoken, /state, /menu and the say and key actions are KOTOR 1 only for now.
 
 ## Declarations (in source order)
 
-- L40 `void Tick()`: Main thread, once per frame.
-- L44 `void RecordSpoken(const char* text)`: Record one utterance (game codepage) into the ring buffer.
+- L42 `void Tick()`: Main thread, once per frame.
+- L46 `void RecordSpoken(const char* text)`: Record one utterance (game codepage) into the ring buffer.

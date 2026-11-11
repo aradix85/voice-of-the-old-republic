@@ -1,4 +1,4 @@
-# key_inject.cpp (26 lines)
+# key_inject.cpp (61 lines)
 
 Source: `patches/Accessibility/key_inject.cpp`
 
@@ -12,3 +12,6 @@ Deliberately policy-free ------------------------ No foreground gate, no edge tr
 
 - L9 `void Send(int scancode, bool down, bool extended)`
 - L20 `void Tap(int scancode, bool extended)`
+- L33 `void ReleaseHeld()`
+- L41 `void TapHeld(int scancode, bool extended)`
+- L56 `void Tick()`

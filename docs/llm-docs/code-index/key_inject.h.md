@@ -1,4 +1,4 @@
-# key_inject.h (36 lines)
+# key_inject.h (45 lines)
 
 Source: `patches/Accessibility/key_inject.h`
 
@@ -12,3 +12,5 @@ Deliberately policy-free ------------------------ No foreground gate, no edge tr
 
 - L30 `void Send(int scancode, bool down, bool extended = false)`: Press (down = true) or release one DIK scancode.
 - L33 `void Tap(int scancode, bool extended = false)`: Press and release in one call, for a key that only needs to fire once.
+- L39 `void TapHeld(int scancode, bool extended = false)`: Press now and release on a later tick, kHeldTapMs on: a game screen polls the keyboard once a frame and does not see a key that went down and up between two polls.
+- L42 `void Tick()`: Once per frame: releases the key of TapHeld when its time is up.

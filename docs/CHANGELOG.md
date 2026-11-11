@@ -143,6 +143,7 @@ installer, as the pre-release `bridge-latest`.
   this fork, and no longer updates itself.
 - Every build publishes the installer next to the mod.
 - Using an object through the bridge no longer crashes the game.
+- A key sent through the bridge also works in the game's screens.
 - The code is reorganised into small files with one job each, with less
   duplication and with unit tests; play is meant to stay the same.
 - Log only: the patch log can be read while the game runs; lock lines name a
@@ -475,6 +476,11 @@ installer, as the pre-release `bridge-latest`.
 - The `use` action no longer crashes the game. The call that queues a use
   passed KOTOR 1 one argument too many, which left the caller with garbage
   registers after every use; the bridge was the caller that died of it.
+- The key action holds its key for 80 milliseconds and releases it on a later
+  frame. Pressed and released in one call, the key worked in the world and in
+  a conversation but not in a screen such as a container's contents, which
+  polls the keyboard once a frame. A DirectInput code with the high bit (0xD0,
+  Down) is sent as the extended key it stands for.
 
 <h3>Installer:</h3>
 
