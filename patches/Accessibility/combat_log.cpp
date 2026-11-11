@@ -13,6 +13,7 @@
 
 #include "combat_log_internal.h"
 
+#include "combat.h"           // NoteKillLine
 #include "combat_strings.h"
 #include "engine_compass.h"   // ClockPosition
 #include "msg_router.h"
@@ -31,6 +32,7 @@ namespace {
 // waiting behind it.
 bool RuleKill(const char* text) {
     if (!strstr(text, acc::combat::loc::Get().kill_marker)) return false;
+    NoteKillLine(text);
     acc::speech::Speak(text, /*interrupt=*/true);
     return true;  // claimed: speech handled here
 }

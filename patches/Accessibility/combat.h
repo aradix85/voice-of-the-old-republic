@@ -18,6 +18,10 @@ bool IsPartyInCombat();
 
 void TickCombatMode();
 
+// A kill line of the combat log ("<actor> killed <target>: N XP"), kept for
+// the summary that "Combat ends" speaks.
+void NoteKillLine(const char* line);
+
 // Flushes a debounced burst of damage-absorption lines into one spoken
 // total. Cheap and idle when no absorb burst is pending.
 void TickCombatAbsorb();

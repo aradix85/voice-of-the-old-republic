@@ -1,14 +1,19 @@
-// Combat mode: "Combat begins", "Combat ends" and the leader at peace while
-// the party still fights.
+// Combat mode: "Combat begins", "Combat ends" with who died and how the party
+// stands, and the leader at peace while the party still fights.
 
 #include "combat.h"
 
 #include <windows.h>
+#include <cstdio>
+#include <string>
 
+#include "combat_kills.h"
+#include "combat_strings.h"       // the kill marker
 #include "engine_app.h"           // GetClientApp
 #include "engine_offsets.h"
 #include "engine_player.h"        // IsAnyPartyMemberInCombat
 #include "log.h"
+#include "party_status.h"         // HealthLine
 #include "speech.h"
 #include "stable_flag.h"
 #include "strings.h"
@@ -37,13 +42,49 @@ bool ReadCombatMode(int& outMode) {
 
 constexpr uint32_t kCombatModeQuietMs = 200;  // collapses oscillation at the edges
 
-void Announce(acc::strings::Id id) {
-    const char* phrase = acc::strings::Get(id);
+// A kill this long before a fight begins is not part of that fight.
+constexpr DWORD kStaleKillMs = 5000;
+
+KillTally g_kills;
+DWORD     g_lastKillAt = 0;
+
+void Announce(const char* phrase) {
     acc::speech::Speak(phrase, /*interrupt=*/false);
     acclog::Write("Combat.Mode", "-> [%s]", phrase);
 }
 
+void Announce(acc::strings::Id id) {
+    Announce(acc::strings::Get(id));
+}
+
+// "Combat ends", after a fight with kills followed by who died and how the
+// party stands. In a fast fight every interrupting announcement cuts the
+// lines of the single blows off; this line comes after them.
+void AnnounceEnd() {
+    if (g_kills.Empty()) {
+        Announce(acc::strings::Id::CombatEnds);
+        return;
+    }
+    char buf[512];
+    std::snprintf(buf, sizeof(buf),
+                  acc::strings::Get(acc::strings::Id::FmtCombatEndsKilled),
+                  g_kills.List().c_str());
+    std::string line = buf;
+    g_kills.Clear();
+    const std::string health = acc::party_status::HealthLine(/*withLevelUp=*/false);
+    if (!health.empty()) {
+        line += ". ";
+        line += health;
+    }
+    Announce(line.c_str());
+}
+
 }  // namespace
+
+void NoteKillLine(const char* line) {
+    g_kills.Note(KillTarget(line, acc::combat::loc::Get().kill_marker));
+    g_lastKillAt = GetTickCount();
+}
 
 bool IsCombatActive() {
     int mode = 0;
@@ -79,7 +120,12 @@ void TickCombatMode() {
 
     if (s_party.Update(partyInCombat, now)) {
         const bool began = s_party.Settled();
-        Announce(began ? acc::strings::Id::CombatBegins : acc::strings::Id::CombatEnds);
+        if (began) {
+            if (now - g_lastKillAt > kStaleKillMs) g_kills.Clear();
+            Announce(acc::strings::Id::CombatBegins);
+        } else {
+            AnnounceEnd();
+        }
         // The action menu is a paused queueing surface: left open across the
         // end of a fight, the first Enter afterwards lands on a menu entry
         // and not on the world object the player meant.
