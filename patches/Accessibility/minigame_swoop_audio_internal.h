@@ -80,8 +80,8 @@ struct SpatialAudioState {
     // entry per race describing every obstacle / accelpad seen.
     bool obstacle_diag_emitted = false;
     bool accelpad_diag_emitted = false;
-    // KOTOR 2 hazard geometry, resolved once per obstacle slot per race (the
-    // boxes are static; the part walk touches mesh vertices, not per-tick
+    // Hazard geometry, resolved once per obstacle slot per race (the boxes
+    // are static; the part walk touches mesh vertices, not per-tick
     // material). POD — this file is SEH-heavy.
     HazardInfo hazards[kMgoArraySlotCount];
     // KOTOR 2 mines: enemies (CSWMiniEnemy, model mgf_mine*) that sit still in
@@ -188,7 +188,7 @@ struct ObstacleTick {
     int postsSkipped = 0, scenerySkipped = 0, barsSeen = 0, minesInRange = 0;
 };
 
-// One obstacle as the steps see it. K2 boxes are unrotated on straight +Y
+// One obstacle as the steps see it. The boxes are unrotated on straight +Y
 // tracks (the axis probe has asserted +Y), so the world box is the origin
 // plus the local box.
 struct ObstacleView {

@@ -51,8 +51,15 @@ namespace acc::swoop_race {
 // (Gob part "hitbump", the very part K1's DoObstacleHitCheck tests; whole-gob
 // box as the fallback) in world space = origin + local box. Boxes that lie
 // entirely beyond |x| >= kLaneEdgeSkipU are posts and are skipped; height <=
-// kJumpableHeightU is a bar; everything else a block. K1 keeps its tested
-// position-based path (its rocks are their own origin).
+// kJumpableHeightU is a bar; everything else a block.
+//
+// KOTOR 1's obstacles are buoys, 17 units tall, and all blocks: it has no jump
+// and no posts. They are placed by the same box, because the buoy does not
+// always stand on its object's origin (the track models from the game files):
+// on Taris eight of the 22 stand 36 to 209 units before or behind it (MGO04's
+// origin is at y 3163, the buoy at y 2954 and 20 units to the left), on
+// Tatooine 21 of 22 and on Manaan all 22, up to 388 units along the track and
+// 34 to the side.
 constexpr float kLaneHalfWidthU     = 20.0f;  // tunnel clamp (SWMG_SetPlayerTunnelPos x)
 constexpr float kLaneEdgeSkipU      = 17.0f;  // box wholly beyond this = edge post
 constexpr float kJumpableHeightU    = 8.0f;   // jump apex ~9.8 (v0 30, g 45.8)

@@ -1,7 +1,8 @@
 // Obstacle cues of the swoop race: each tick sweeps the minigame's objects,
-// classifies the hazards by their collision box (K2: scenery, posts, bars,
-// blocks), hands the bars to minigame_swoop_audio_bars.cpp, and sounds a
-// panned warn loop for the nearest blocks, rocks and mines.
+// places each hazard by its collision box, classifies it (K2: scenery, posts,
+// bars, blocks; K1: every buoy is a block), hands the bars to
+// minigame_swoop_audio_bars.cpp, and sounds a panned warn loop for the nearest
+// blocks and mines.
 
 #include "minigame_swoop_audio_internal.h"
 
@@ -49,9 +50,9 @@ bool IsSceneryObstacleName(const char* name) {
     return false;
 }
 
-// Resolve and classify one obstacle's collision box (KOTOR 2). Fills `hz`
-// once; later ticks reuse it. Falls back to "failed" (= position-based cue,
-// the K1 behaviour) when neither the part nor the gob box reads sanely.
+// Resolve and classify one obstacle's collision box. Fills `hz` once; later
+// ticks reuse it. Falls back to "failed" (= the cue sits on the object's
+// origin) when neither the part nor the gob box reads sanely.
 void ResolveHazardBox(void* aur, const char* name, HazardInfo& hz) {
     Vector mn = {0, 0, 0}, mx = {0, 0, 0};
     bool ok = ReadGobPartBoundingBox(aur, "hitbump", mn, mx);
@@ -70,6 +71,8 @@ void ResolveHazardBox(void* aur, const char* name, HazardInfo& hz) {
     if (!ok) { hz.state = kHazardFailed; return; }
     hz.state = kHazardOk;
     hz.mn = mn; hz.mx = mx;
+    // KOTOR 1 has no jump and no scenery objects: every buoy is steered around.
+    if (!acc::game::IsKotor2()) { hz.cls = kHazardBlock; return; }
     if (IsSceneryObstacleName(name)) { hz.cls = kHazardScenery; return; }
     hz.cls = ((mx.z - mn.z) <= kJumpableHeightU) ? kHazardBar : kHazardBlock;
 }
@@ -117,25 +120,28 @@ bool ReadObstacle(void* mgoArray, int i, ObstacleTick& t, ObstacleView& v) {
     ++t.obstaclesFound;
     void* aur = ReadPtrOrNull(v.obstacle, kObstacleAurObjectOffset);
     if (!aur || !TryReadVector(aur, kAurObjectPositionOffset, &v.pos)) return false;
-    // For the inventory log and the K2 classification (rocks and accelpads
-    // are in different engine pools).
+    // For the inventory log and the K2 classification (obstacles and
+    // accelpads are in different engine pools).
     v.name = ReadAurObjectName(aur);
 
     HazardInfo& hz = g_state.hazards[i];
-    if (t.k2 && hz.state == kHazardUntried) ResolveHazardBox(aur, v.name, hz);
-    v.haveBox = t.k2 && hz.state == kHazardOk;
+    if (hz.state == kHazardUntried) ResolveHazardBox(aur, v.name, hz);
+    v.haveBox = hz.state == kHazardOk;
     v.x0 = v.haveBox ? v.pos.x + hz.mn.x : v.pos.x;
     v.x1 = v.haveBox ? v.pos.x + hz.mx.x : v.pos.x;
     v.y0 = v.haveBox ? v.pos.y + hz.mn.y : v.pos.y;
     v.y1 = v.haveBox ? v.pos.y + hz.mx.y : v.pos.y;
     v.z0 = v.haveBox ? v.pos.z + hz.mn.z : v.pos.z;
     v.scenery = v.haveBox && hz.cls == kHazardScenery;
-    v.post = v.haveBox && !v.scenery && (v.x0 >= kLaneEdgeSkipU || v.x1 <= -kLaneEdgeSkipU);
+    // KOTOR 2's lane is centred on world x = 0; KOTOR 1's is not (Taris: 100)
+    // and has no posts.
+    v.post = t.k2 && v.haveBox && !v.scenery &&
+             (v.x0 >= kLaneEdgeSkipU || v.x1 <= -kLaneEdgeSkipU);
     v.hazardPos = v.pos;
     if (v.haveBox) {
         float cx = 0.5f * (v.x0 + v.x1);
-        if (cx >  kLaneHalfWidthU) cx =  kLaneHalfWidthU;
-        if (cx < -kLaneHalfWidthU) cx = -kLaneHalfWidthU;
+        if (t.k2 && cx >  kLaneHalfWidthU) cx =  kLaneHalfWidthU;
+        if (t.k2 && cx < -kLaneHalfWidthU) cx = -kLaneHalfWidthU;
         v.hazardPos.x = cx;
         v.hazardPos.y = v.y0;
         v.hazardPos.z = v.z0;
@@ -143,9 +149,9 @@ bool ReadObstacle(void* mgoArray, int i, ObstacleTick& t, ObstacleView& v) {
     return true;
 }
 
-// First sweep only: every obstacle's slot and name (and the K2 box and
-// class), so the per-track inventory is in the log once.
-void LogObstacleInventory(int i, const ObstacleView& v, const HazardInfo& hz, bool k2) {
+// First sweep only: every obstacle's slot and name (and its box and class),
+// so the per-track inventory is in the log once.
+void LogObstacleInventory(int i, const ObstacleView& v, const HazardInfo& hz) {
     void* vt = ReadPtrOrNull(v.obstacle, 0);
     if (v.haveBox) {
         acclog::Write("SwoopRace",
@@ -164,11 +170,11 @@ void LogObstacleInventory(int i, const ObstacleView& v, const HazardInfo& hz, bo
                       "pos=(%.2f,%.2f,%.2f)%s",
                       i, v.obstacle, vt, v.name ? v.name : "(null)",
                       v.pos.x, v.pos.y, v.pos.z,
-                      (k2 && hz.state == kHazardFailed) ? " box=FAILED" : "");
+                      hz.state == kHazardFailed ? " box=FAILED" : "");
     }
 }
 
-// A hazard that warns through the loop (K1 rocks, K2 blocks and mines):
+// A hazard that warns through the loop (K1 buoys, K2 blocks and mines):
 // ahead of the listener within the margin, and inside range. Track Y is the
 // forward axis (low to high), confirmed live on K1 and asserted per race on
 // K2 by the axis probe.
@@ -271,7 +277,7 @@ void TickObstacleCues(void* miniGame) {
         ObstacleView v;
         if (!ReadObstacle(mgoArray, i, t, v)) continue;
         HazardInfo& hz = g_state.hazards[i];
-        if (!g_state.obstacle_diag_emitted) LogObstacleInventory(i, v, hz, t.k2);
+        if (!g_state.obstacle_diag_emitted) LogObstacleInventory(i, v, hz);
         if (v.post)    { ++t.postsSkipped;   continue; }  // the wall cue covers these
         if (v.scenery) { ++t.scenerySkipped; continue; }  // phantom boxes, never hit
         if (v.haveBox && hz.cls == kHazardBar) {

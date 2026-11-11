@@ -116,6 +116,7 @@ installer, as the pre-release `bridge-latest`.
 - View mode (B) is gone.
 - New setting "Swoop race: automatic pilot": the bike steers and shifts by
   itself (KOTOR 1).
+- KOTOR 1 swoop race: the obstacle warning sounds where the buoy stands.
 - Enter on an open door walks through it.
 - Tab says the name of the character you now control once, and no longer
   the previous one first.
@@ -376,6 +377,11 @@ installer, as the pre-release `bridge-latest`.
   mod presses the shift at the launch and at every shift-ready moment, so the
   race drives itself; the cues still sound. It follows the accelerator pads
   and does not steer round the obstacles. It has not been raced yet.
+- KOTOR 1 swoop race: the obstacle warning is placed by the buoy's collision
+  box, as on KOTOR 2, and no longer by the object's origin. The buoy often
+  stands elsewhere: on Taris 8 of the 22 buoys, on Tatooine 21 and on Manaan
+  all 22, up to 388 units along the track and 34 to the side. The first sweep
+  of a race logs each box.
 
 <h3>Help:</h3>
 
