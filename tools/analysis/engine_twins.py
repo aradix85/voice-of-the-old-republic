@@ -13,6 +13,9 @@ compares what the two functions use:
   - strings: text literals the KOTOR 1 function refers to should turn up in
     the KOTOR 2 function.
 
+A call that agrees speaks for both ends: for the caller's pair and for the
+pair of the function called.
+
 KOTOR 1 is optimised and KOTOR 2 is not. KOTOR 2 calling more than KOTOR 1
 is therefore normal, and what KOTOR 1 has inlined KOTOR 2 reaches through a
 call: only what KOTOR 1 uses and KOTOR 2 does not reach within two calls
@@ -163,7 +166,7 @@ def read_pairs() -> tuple[dict[int, tuple[int, str]], dict[int, int]]:
 
 
 def compare(k1: Engine, k2: Engine, a1: int, a2: int, functions: dict[int, tuple[int, str]],
-            data: dict[int, int], hops: int = 3) -> tuple[list[str], int]:
+            data: dict[int, int], called: set[int], hops: int = 3) -> tuple[list[str], int]:
     """What KOTOR 1's function uses and KOTOR 2's does not reach, and the agreeing points."""
     calls1, refs1, strings1 = k1.uses(a1)
     own2 = k2.uses(a2)[0]
@@ -174,6 +177,7 @@ def compare(k1: Engine, k2: Engine, a1: int, a2: int, functions: dict[int, tuple
             twin = functions[callee][0]
             if twin in calls2:
                 agreeing += 1
+                called.add(callee)  # the same point speaks for the callee's pair
             else:
                 missing.append(f"calls 0x{callee:08x}, its twin 0x{twin:08x} is not called")
     for ref in sorted(refs1):
@@ -190,9 +194,10 @@ def compare(k1: Engine, k2: Engine, a1: int, a2: int, functions: dict[int, tuple
     # function itself, or of the one function that forwards to in turn.
     if hops and not missing and not agreeing and len(calls1) == 1:
         target = next(iter(calls1))
-        tries = [compare(k1, k2, target, a2, functions, data, 0)]
+        tries = [compare(k1, k2, target, a2, functions, data, called, 0)]
         if len(own2) == 1:
-            tries.append(compare(k1, k2, target, next(iter(own2)), functions, data, hops - 1))
+            tries.append(compare(k1, k2, target, next(iter(own2)), functions, data, called,
+                                 hops - 1))
         return min(tries, key=lambda t: (len(t[0]), -t[1]))
     return missing, agreeing
 
@@ -202,7 +207,9 @@ def main() -> int:
     functions, data = read_pairs()
     with open(REVIEWED, encoding="utf-8") as f:
         reviewed = {line.split(":")[0].strip() for line in f if ":" in line}
-    wrong, mixed, proven, unproven, inside = [], [], 0, [], 0
+    wrong, mixed, proven, inside = [], [], 0, 0
+    unproven: list[tuple[int, str]] = []
+    called: set[int] = set()
     for a1, (a2, where) in sorted(functions.items(), key=lambda kv: kv[1][1]):
         label = f"{where} 0x{a1:08x} / 0x{a2:08x}"
         if a1 not in k1.text or a2 not in k2.text:
@@ -210,7 +217,7 @@ def main() -> int:
         if not k1.starts_function(a1) or not k2.starts_function(a2):
             inside += 1  # a hook site inside a function
             continue
-        missing, agreeing = compare(k1, k2, a1, a2, functions, data)
+        missing, agreeing = compare(k1, k2, a1, a2, functions, data, called)
         if where.split()[-1] in reviewed:
             proven += 1
         elif missing and agreeing:
@@ -220,21 +227,25 @@ def main() -> int:
         elif agreeing:
             proven += 1
         else:
-            unproven.append(label)
+            unproven.append((a1, label))
+    by_caller = sum(1 for a1, _ in unproven if a1 in called)
+    proven += by_caller
+    unproven_rows = [label for a1, label in unproven if a1 not in called]
 
     os.makedirs(OUT, exist_ok=True)
     report = os.path.join(OUT, "engine_twins.txt")
     with open(report, "w", encoding="utf-8") as f:
         for title, rows in (("DISAGREE", wrong), ("MIXED", mixed),
-                            ("UNPROVEN (nothing to compare)", unproven)):
+                            ("UNPROVEN (nothing to compare)", unproven_rows)):
             f.write(f"== {title}: {len(rows)}\n")
             f.writelines(row + "\n" for row in rows)
     for row in wrong:
         print("DISAGREE", row)
     for row in mixed:
         print("MIXED", row)
-    print(f"{proven + len(wrong) + len(mixed) + len(unproven)} function pairs: {proven} agree, "
-          f"{len(wrong)} disagree, {len(mixed)} mixed, {len(unproven)} unproven; "
+    print(f"{proven + len(wrong) + len(mixed) + len(unproven_rows)} function pairs: "
+          f"{proven} agree ({by_caller} of them through a caller), "
+          f"{len(wrong)} disagree, {len(mixed)} mixed, {len(unproven_rows)} unproven; "
           f"{inside} addresses inside a function skipped -> {report}")
     return 1 if wrong else 0
 

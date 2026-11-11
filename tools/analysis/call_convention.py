@@ -40,9 +40,12 @@ TYPE = re.compile(
     r"|using\s+(?P<name2>\w+)\s*=\s*(?P<ret2>[^;(){}=]+?)\s*\(\s*__(?P<cc2>\w+)\s*\*\s*\))"
     r"\s*\((?P<params>[^;{}]*?)\)\s*;", re.DOTALL)
 CAST = re.compile(r"reinterpret_cast<\s*(\w+)\s*>\s*\(")
-CONST = re.compile(r"\b(k\w+)\s*=\s*acc::addr::(Pick|R|Kotor1Only|Kotor2Only)\(\s*"
+CONST = re.compile(r"\b(\w+)\s*=\s*acc::addr::(Pick|R|Kotor1Only|Kotor2Only)\(\s*"
                    r"(0x[0-9A-Fa-f]+)\s*(?:,\s*(0x[0-9A-Fa-f]+)\s*)?\)")
 INCLUDE = re.compile(r'#include\s+"([\w.]+)"')
+FUNCTION = re.compile(r"\b(\w+)\s*\(([^(){};]*)\)\s*(?:const\s*)?\{")
+EXPORT = re.compile(r'GetProcAddress\([^,]+,\s*"\w+@(\d+)"')
+NOT_FUNCTIONS = {"if", "for", "while", "switch", "catch"}
 BY_VALUE = {"Vector": 12, "CExoString": 8, "CResRef": 16, "double": 8,
             "int64_t": 8, "uint64_t": 8, "__int64": 8}
 FOUR_BYTES = {
@@ -105,6 +108,16 @@ def close_paren(text: str, start: int) -> int:
     return i - 1
 
 
+def split_args(args: str) -> list[str]:
+    parts, depth, start = [], 0, 0
+    for i, c in enumerate(args):
+        depth += {"(": 1, "[": 1, "{": 1, ")": -1, "]": -1, "}": -1}.get(c, 0)
+        if c == "," and depth == 0:
+            parts.append(args[start:i])
+            start = i + 1
+    return [part.strip() for part in [*parts, args[start:]]]
+
+
 def address_for(game: str, m: re.Match) -> int | None:
     """The constant's address in this game; None when it is the other game's."""
     kind, first, second = m.group(2), m.group(3), m.group(4)
@@ -124,18 +137,71 @@ def reachable(name: str, includes: dict[str, list[str]]) -> list[str]:
     return order
 
 
-def scan_sources(game: str) -> tuple[list[Use], list[str]]:
-    texts = {}
-    for name in sorted(os.listdir(SRC)):
-        if name.endswith((".cpp", ".h", ".inc")):
-            with open(os.path.join(SRC, name), encoding="latin-1") as f:
-                texts[name] = strip_comments(f.read())
-    includes = {name: INCLUDE.findall(text) for name, text in texts.items()}
+class Sources:
+    """The sources without comments, and the address constants each file can see."""
 
-    consts: dict[str, dict[str, int | None]] = {}
+    def __init__(self, game: str):
+        self.texts: dict[str, str] = {}
+        for name in sorted(os.listdir(SRC)):
+            if name.endswith((".cpp", ".h", ".inc")):
+                with open(os.path.join(SRC, name), encoding="latin-1") as f:
+                    self.texts[name] = strip_comments(f.read())
+        self.includes = {name: INCLUDE.findall(text) for name, text in self.texts.items()}
+        self.consts = {name: {m.group(1): address_for(game, m) for m in CONST.finditer(text)}
+                       for name, text in self.texts.items()}
+
+    def known(self, name: str) -> dict[str, int | None]:
+        files = reachable(name, self.includes)
+        return {k: v for f in reversed(files) for k, v in self.consts[f].items()}
+
+    def constants(self, name: str, pos: int, expr: str, hops: int = 3) -> list[str] | str:
+        """The address constants `expr` can stand for at `pos`, or why not."""
+        known = self.known(name)
+        found = [w for w in re.findall(r"\b[A-Za-z_]\w*", expr) if w in known]
+        var = expr.strip()
+        if found or not re.fullmatch(r"[A-Za-z_]\w*", var) or not hops:
+            return found or "not a constant"
+        text = self.texts[name]
+        function = None
+        for m in FUNCTION.finditer(text, 0, pos):
+            if m.group(1) not in NOT_FUNCTIONS:
+                function = m
+        if function is None:
+            return "not inside a function"
+        params = split_args(function.group(2))
+        index = next((i for i, prm in enumerate(params) if re.search(rf"\b{var}$", prm)), None)
+        if index is None:  # a local: what it is assigned from
+            assigned = re.findall(rf"\b{var}\s*=\s*([^;]+);", text[function.end():pos])
+            if any("reinterpret_cast<void**>" in a for a in assigned):
+                return "read from a vtable at run time"
+            return [w for a in assigned for w in re.findall(r"\b[A-Za-z_]\w*", a)
+                    if w in known] or "not a constant"
+        # A parameter: what the callers pass, in this file or else anywhere.
+        call = re.compile(rf"\b{function.group(1)}\s*\(")
+        for files in ([name], [f for f in self.texts if f != name]):
+            out: list[str] = []
+            for other in files:
+                for m in call.finditer(self.texts[other]):
+                    if other == name and m.start() == function.start(1):
+                        continue
+                    other_text = self.texts[other]
+                    args = split_args(other_text[m.end():close_paren(other_text, m.end())])
+                    passed = self.constants(other, m.start(), args[index], hops - 1) \
+                        if index < len(args) else []
+                    out += passed if isinstance(passed, list) else []
+            if out:
+                return out
+        return "no caller passes a constant"
+
+
+def scan_sources(game: str) -> tuple[list[Use], list[str], list[Use]]:
+    sources = Sources(game)
+    texts = sources.texts
+    includes = sources.includes
+    consts = sources.consts
+    externals: list[Use] = []
     types: dict[str, list[tuple[int, str, Fn]]] = {}
     for name, text in texts.items():
-        consts[name] = {m.group(1): address_for(game, m) for m in CONST.finditer(text)}
         types[name] = [
             (m.start(), m.group("name1") or m.group("name2"),
              Fn(m.group("cc1") or m.group("cc2"),
@@ -160,24 +226,27 @@ def scan_sources(game: str) -> tuple[list[Use], list[str]]:
                 continue  # not a function-pointer type, or the other game's call
             line = text.count("\n", 0, m.start()) + 1
             expr = text[m.end():close_paren(text, m.end())]
-            known = {k: v for f in reversed(files) for k, v in consts[f].items()}
-            idents = [w for w in re.findall(r"\b[A-Za-z_]\w*", expr) if w in known]
             literal = re.search(r"\b0x00[4-9A-Fa-f][0-9A-Fa-f]{5}\b", expr)
-            if idents:
-                if known[idents[0]] is not None:
-                    uses.append(Use(name, line, type_name, fn,
-                                    (idents[0], known[idents[0]])))
+            export = EXPORT.search(expr)
+            found = sources.constants(name, m.start(), expr)
+            if export:  # a DLL export: its decorated name carries the byte count
+                externals.append(Use(name, line, type_name, fn, (expr, int(export.group(1)))))
             elif literal:
                 uses.append(Use(name, line, type_name, fn,
                                 (literal.group(0), int(literal.group(0), 16))))
+            elif isinstance(found, list):
+                known = sources.known(name) | {k: v for c in consts.values() for k, v in c.items()}
+                uses += [Use(name, line, type_name, fn, (const, known[const]))
+                         for const in dict.fromkeys(found) if known[const] is not None]
             else:
-                skipped.append(f"{name}:{line}: {type_name}({' '.join(expr.split())[:60]})")
+                skipped.append(f"{name}:{line}: {type_name}({' '.join(expr.split())[:60]}): "
+                               f"{found}")
     # Where the games differ the code branches on the game, with a typedef
     # named for KOTOR 2 beside the plain one: the plain one is KOTOR 1's call.
     split = {(u.file, u.where[0]) for u in uses if "K2" in u.type}
     if game == "k2":
         uses = [u for u in uses if "K2" in u.type or (u.file, u.where[0]) not in split]
-    return uses, skipped
+    return uses, skipped, externals
 
 
 class Image:
@@ -298,8 +367,15 @@ def main() -> int:
         sys.exit(f"no image at {image_path}; make one with --from-exe or --from-dump")
     image = Image(image_path)
 
-    uses, skipped = scan_sources(args.game)
+    uses, skipped, externals = scan_sources(args.game)
     wrong, unsure, ok = [], [], 0
+    for u in externals:
+        want, _ = pushed_bytes(u.fn)
+        if want == u.where[1]:
+            ok += 1
+        else:
+            wrong.append(f"{u.file}:{u.line}: {u.type}: {u.fn.cc} pushes {want} bytes, "
+                         f"the export's name says {u.where[1]}")
     for u in uses:
         name, addr = u.where
         want, note = pushed_bytes(u.fn)
@@ -321,12 +397,13 @@ def main() -> int:
     report = os.path.join(OUT, "call_convention.txt")
     with open(report, "w", encoding="utf-8") as f:
         for title, rows in (("MISMATCH", wrong), ("UNSURE", unsure),
-                            ("NOT CHECKED (address is not a constant)", skipped)):
+                            ("NOT CHECKED", skipped)):
             f.write(f"== {title}: {len(rows)}\n")
             f.writelines(row + "\n" for row in sorted(set(rows)))
     for row in sorted(set(wrong)):
         print(row)
-    print(f"{args.game}: {len(uses)} calls, {ok} fit, {len(set(wrong))} mismatches, "
+    print(f"{args.game}: {len(uses) + len(externals)} calls, {ok} fit, "
+          f"{len(set(wrong))} mismatches, "
           f"{len(set(unsure))} unsure, {len(skipped)} not checked -> {report}")
     return 1 if wrong else 0
 

@@ -132,7 +132,7 @@ bool CallerIsFocusChange(void* caller) {
 // control on all 51 subsequent events. manager+8 only moves when the hit test
 // actually runs, which is precisely the step MoveMouseToPosition performs after
 // setting the coordinates.
-constexpr uintptr_t kAddrK2ManagerRehover = 0x00413C50;
+const uintptr_t kAddrK2ManagerRehover = acc::addr::Kotor2Only(0x00413C50);
 typedef void(__thiscall* PFN_Rehover)(void*);
 
 // NOTE for anyone extending this: control extents in KOTOR 2 are already in

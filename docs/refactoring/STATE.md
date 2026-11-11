@@ -407,22 +407,31 @@ prefix (menus_listbox_picker.cpp).
   - clang-cl -fsyntax-only -Wno-everything -Wunused-* per file, for
     unused code.
   - call_convention.py: every engine function-pointer typedef against
-    the engine's own `ret N`, from a memory image of the running game
-    (build/analysis/engine_image_k1.bin, cut from a dump). KOTOR 1: 159
-    calls fit, 0 mismatches after 4c91ad0d. KOTOR 2 (image straight from
-    swkotor2.exe with --from-exe): 154 fit after 9b6fcb1b, which fixed
-    the one mismatch (SetMessage(strref), a slot-map error; the trap is
-    described in docs/kotor2-port.md). Run it for both games after
-    adding or changing an engine call. Open: 30 calls whose address goes
-    through a variable or a vtable slot are not checked.
+    the engine's own `ret N`, read from an image of each game
+    (build/analysis/engine_image_k1.bin from a Steamless copy or kdev
+    dump-text, engine_image_k2.bin straight from swkotor2.exe). An
+    address that goes through a local or a parameter is followed to the
+    constants it can be. Both games: 190 calls fit, 0 mismatches. Not
+    checked, 15: 13 virtual calls read from a vtable at run time, one
+    member of the chargen layout table, one trampoline of our own. Of the
+    virtual calls the two fixed slots were checked by hand against all 25
+    vtables the sources name, in both games: slot 15 (HandleInputEvent)
+    pops 8 on every GUI class, and the As* downcasts (slots 20 to 23) pop
+    0 on every control class. On a PANEL those slots are other methods
+    that pop 4: CallDowncast must only ever get a control.
+    Run it for both games after adding or changing an engine call.
   - engine_twins.py: is the KOTOR 2 address of a Pick(k1, k2) the same
     method as the KOTOR 1 one? Compares the calls, engine globals and
-    strings both functions use. It catches the old popup address. Now:
-    163 function pairs, 91 agree, 0 disagree, 3 mixed (3 to 14 points
-    agree and one or two do not; not read by hand yet), 69 unproven:
-    nothing to compare, mostly small accessors. Two pairs read by hand
-    are in engine_twins_reviewed.txt. To prove more of the 69: compare
-    distinctive constants, or the callers of both.
+    strings both functions use; a call that agrees counts for the caller
+    and the callee. It catches the old popup address. Now: 163 function
+    pairs, 111 agree, 0 disagree, 3 mixed, 49 unproven (small accessors
+    and the CExoSoundSource setters: nothing to compare). The 3 mixed
+    were looked at: 3, 7 and 14 points agree; what KOTOR 1 uses and
+    KOTOR 2 does not is the party table in the inventory and abilities
+    screens and the screenshot file names in the input handler, which
+    fits screens that differ between the games. Two pairs read by hand
+    are in engine_twins_reviewed.txt. To prove more of the 49: compare
+    immediate constants.
 - Done (Anouk, 2026-11-11: Steam only, English only): one executable per
   game. The 2004 relink of KOTOR 1 (Russian, Polish) and the GOG release
   of KOTOR 2 are out: their tables, hook files, kdev sigscan and the
