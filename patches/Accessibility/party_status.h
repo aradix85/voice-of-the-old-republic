@@ -29,6 +29,10 @@ namespace acc::party_status {
 // Ctrl+H (Action::PartyStatusAnnounce). Called from the input poll router.
 void PollHotkey();
 
+// "Korasha 10 of 13; Trask 27 of 36", with ", can level up" after a member
+// when asked for. Empty when no party member can be read.
+std::string HealthLine(bool withLevelUp);
+
 // Once per frame (core_tick): the level-up notice.
 void Tick();
 

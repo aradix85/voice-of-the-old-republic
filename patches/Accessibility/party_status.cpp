@@ -93,9 +93,7 @@ bool InWorldAndFree() {
 
 }  // namespace
 
-void PollHotkey() {
-    if (!acc::hotkeys::Pressed(acc::hotkeys::Action::PartyStatusAnnounce)) return;
-    if (!InWorldAndFree()) return;
+std::string HealthLine(bool withLevelUp) {
     std::string text;
     for (const Member& m : PartyMembers()) {
         const int hp    = acc::engine::ReadCreatureCurrentHitPoints(m.obj);
@@ -105,13 +103,20 @@ void PollHotkey() {
                       acc::strings::Get(acc::strings::Id::FmtPartyMemberHp),
                       NameOf(m.obj).c_str(), hp, maxHp);
         std::string entry = buf;
-        if (acc::engine_levelup::CreatureCanLevelUp(m.obj)) {
+        if (withLevelUp && acc::engine_levelup::CreatureCanLevelUp(m.obj)) {
             entry += ", ";
             entry += acc::strings::Get(acc::strings::Id::PartyCanLevelUp);
         }
         if (!text.empty()) text += "; ";
         text += entry;
     }
+    return text;
+}
+
+void PollHotkey() {
+    if (!acc::hotkeys::Pressed(acc::hotkeys::Action::PartyStatusAnnounce)) return;
+    if (!InWorldAndFree()) return;
+    const std::string text = HealthLine(/*withLevelUp=*/true);
     if (text.empty()) return;
     acc::speech::Speak(text.c_str(), /*interrupt=*/true);
     acclog::Write("PartyStatus", "Ctrl+H: %s", text.c_str());
