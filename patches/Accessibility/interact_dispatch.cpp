@@ -33,6 +33,8 @@ namespace {
 constexpr uint32_t kActionUse  = 0x3f7;
 constexpr uint32_t kActionTalk = 0x3ea;
 
+uint32_t g_lastUseHandle = 0;  // the target of the last AddUseObjectAction
+
 const char* KeyName(bool forceRadial) {
     return forceRadial ? "Shift+Enter" : "Enter";
 }
@@ -209,15 +211,31 @@ bool UseWithInputDisabled(uint32_t handle, bool* inputDisabled) {
     return false;
 }
 
+// A use the engine accepted and never acted on, on this target, the press
+// before: a container that was bashed open takes AddUseObjectAction and does
+// nothing with it.
+bool LastUseDidNothing(uint32_t handle) {
+    return g_lastUseHandle == handle && acc::engine::LastInputSessionDidNothing();
+}
+
 // Dispatch the picked verb. Use goes through AddUseObjectAction (robust over
 // rough terrain), talk through ActionInitiateDialog with input enabled (the
 // engine walks, then talks), and everything else, or a failed use or talk,
-// through the engine's click pipeline.
+// through the engine's click pipeline. A use that did nothing goes through
+// the click pipeline on the next press.
 bool DispatchVerb(acc::picker::ActionSnapshot& snap, uint32_t dispatchHandle,
                   const char* name, void* target, bool forceRadial) {
-    if (snap.action_id == kActionUse) {
+    const bool useDidNothing =
+        snap.action_id == kActionUse && LastUseDidNothing(dispatchHandle);
+    g_lastUseHandle = 0;
+    if (useDidNothing) {
+        acclog::Write("Interact", "the last use of 0x%08x did nothing; "
+            "trying the engine's click", dispatchHandle);
+    }
+    if (snap.action_id == kActionUse && !useDidNothing) {
         bool inputDisabled = false;
         if (UseWithInputDisabled(dispatchHandle, &inputDisabled)) {
+            g_lastUseHandle = dispatchHandle;
             acclog::Write("Interact", "use-verb dispatched via UseObject "
                 "(action_id=0x%x input_disabled=%d) target=0x%08x",
                 snap.action_id, inputDisabled ? 1 : 0, dispatchHandle);

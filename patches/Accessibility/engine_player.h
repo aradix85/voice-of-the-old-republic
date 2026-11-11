@@ -152,6 +152,11 @@ bool SetPlayerInputEnabled(bool enabled);
 // check); reads the action queue only while a disable session is active.
 void TickPlayerInputRestore();
 
+// True when the last input-disabled session ended with nothing ever on the
+// action queue and no screen in front: the engine accepted the dispatch and
+// did not act on it.
+bool LastInputSessionDidNothing();
+
 // Diagnostic tick — logs player action-queue depth changes (delta only).
 // Used to validate queue behaviour across combat / autowalk / dialog.
 void TickActionQueueDiag();

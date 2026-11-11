@@ -21,6 +21,7 @@
 #include <windows.h>
 #include <cstdint>
 
+#include "engine_panels.h"   // IsForegroundUiBlocking
 #include "engine_reads.h"
 #include "log.h"
 
@@ -54,6 +55,7 @@ bool   g_disableActive    = false;
 DWORD  g_disableExpiresAt = 0;
 DWORD  g_disableArmedAt   = 0;
 bool   g_sawPending       = false;
+bool   g_enqueuedNothing  = false;  // how the last session ended
 bool   g_haveProgress     = false;
 Vector g_progressPos      = {0.0f, 0.0f, 0.0f};
 DWORD  g_progressAt       = 0;
@@ -115,6 +117,7 @@ bool SetPlayerInputEnabled(bool enabled) {
             g_disableArmedAt = GetTickCount();
             g_disableExpiresAt = g_disableArmedAt + kUnreadableCeilingMs;
             g_sawPending = false;
+            g_enqueuedNothing = false;
             g_haveProgress = false;
         }
     }
@@ -133,6 +136,7 @@ void TickPlayerInputRestore() {
     int depth = GetPlayerActionQueueDepth();
 
     bool restore = false;
+    bool enqueuedNothing = false;
     const char* reason = nullptr;
     if (depth > 0) {
         // Engine action genuinely in flight (walk-to-target / use). Latch
@@ -167,6 +171,7 @@ void TickPlayerInputRestore() {
             // no-op (e.g. out-of-range talk that didn't walk) or completed
             // within one tick. Don't sit frozen waiting on a phantom action.
             restore = true;
+            enqueuedNothing = true;
             reason = "no action enqueued (grace)";
         }
     } else if (now >= g_disableExpiresAt) {
@@ -183,6 +188,13 @@ void TickPlayerInputRestore() {
         depth, g_sawPending ? 1 : 0,
         static_cast<unsigned long>(g_progressAt));
     SetPlayerInputEnabled(true);  // flips g_disableActive false on success
+    // A use that completed within one tick enqueues nothing either, and
+    // leaves its screen (a container's contents) in front.
+    g_enqueuedNothing = enqueuedNothing && !IsForegroundUiBlocking();
+}
+
+bool LastInputSessionDidNothing() {
+    return g_enqueuedNothing;
 }
 
 void TickActionQueueDiag() {
