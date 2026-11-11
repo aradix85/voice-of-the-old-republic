@@ -1,4 +1,4 @@
-# engine_scriptvar.h (34 lines)
+# engine_scriptvar.h (47 lines)
 
 Source: `patches/Accessibility/engine_scriptvar.h`
 
@@ -10,5 +10,6 @@ Variable identity: keyed by (name AND type) together. An int "FOO" and a string 
 
 ## Declarations (in source order)
 
-- L27 `bool GetPlayerVarString(const char* name, char* outBuf, size_t bufSize)`: Read a named string var into outBuf (always NUL-terminated on entry).
-- L31 `bool SetPlayerVarString(const char* name, const char* value)`: Write a named string var (copied into the table-owned CExoString).
+- L25 `std::string ReadPlayerVar(const std::string& name)`: The value of a named string variable; empty when it is absent or empty, when there is no creature and on a fault.
+- L29 `bool WritePlayerVar(const std::string& name, const std::string& value)`: Writes a named string variable (copied into the table's own CExoString).
+- L36 `class PlayerVarsSettle`: The wait before the variables can be trusted: the player creature has to have been the same object for about a second.

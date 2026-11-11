@@ -36,12 +36,8 @@ std::string SumVarName(const std::string& key)  { return "ACC_SUM_" + key; }
 // The door spots of `areaKey` with the module each leads to.
 std::vector<Spot> ReadExits(const std::string& areaKey) {
     if (areaKey.empty()) return {};
-    static char buf[4096];
-    if (!acc::engine::GetPlayerVarString(ExitVarName(areaKey).c_str(), buf,
-                                         sizeof(buf))) {
-        return {};
-    }
-    return acc::save_points::Parse(buf);
+    return acc::save_points::Parse(
+        acc::engine::ReadPlayerVar(ExitVarName(areaKey)).c_str());
 }
 
 // Remember that the door at `pos` in `areaKey` leads to module `toKey`,
@@ -52,8 +48,7 @@ void RecordExit(const std::string& areaKey, const Vector& pos,
     std::vector<Spot> all = ReadExits(areaKey);
     acc::save_points::Put(all, acc::save_points::At(pos, toKey), kSameSpotM,
                           kMaxExitEntries);
-    acc::engine::SetPlayerVarString(ExitVarName(areaKey).c_str(),
-                                    acc::save_points::Format(all).c_str());
+    acc::engine::WritePlayerVar(ExitVarName(areaKey), acc::save_points::Format(all));
 }
 
 // The module remembered for the door spot nearest `doorPos`, empty if none.
@@ -108,12 +103,7 @@ std::string TransitionDoorMemory(const Vector& doorPos) {
     if (g_areaKey.empty()) return std::string();
     const std::string to = ExitTargetAt(g_areaKey, doorPos);
     if (to.empty() || to == g_areaKey) return std::string();
-    char buf[512] = {0};
-    if (!acc::engine::GetPlayerVarString(SumVarName(to).c_str(), buf,
-                                         sizeof(buf))) {
-        return std::string();
-    }
-    return buf;
+    return acc::engine::ReadPlayerVar(SumVarName(to));
 }
 
 // Per tick: the player's spot (for the door left by), the arrival check
@@ -155,7 +145,7 @@ void TickAreaMemory() {
     const std::string s = CurrentAreaSummary(g_area);
     if (s.empty() || s == g_summarySaved) return;
     g_summarySaved = s;
-    acc::engine::SetPlayerVarString(SumVarName(g_areaKey).c_str(), s.c_str());
+    acc::engine::WritePlayerVar(SumVarName(g_areaKey), s);
     acclog::Write("ExitMemory", "%s: notes %s", g_areaKey.c_str(), s.c_str());
 }
 

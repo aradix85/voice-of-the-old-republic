@@ -377,7 +377,15 @@ prefix (menus_listbox_picker.cpp).
 - F13 done: one WriteJmpRel32, in code_patch.h. The three installers
   (mouse guard, keyboard resync, save guard) still each do their own
   VirtualProtect / write / restore / flush around it.
-- F2b: share the save-variable code of exit_memory with discovery.cpp.
+- F2b done: what discovery and exit_memory shared around the save
+  variables is in engine_scriptvar: ReadPlayerVar and WritePlayerVar on
+  std::string (four static buffers of four sizes are gone, and a map-note
+  summary over 512 characters no longer reads as empty), and
+  PlayerVarsSettle, the one-second wait on a stable player creature that
+  both had written out. The payloads differ (keys against points) and
+  stay with their modules. In-game check: after loading a save, the
+  visited regions, "visited" on doors and the , / . lists are as
+  before the save.
 - F3 done: the feat chart and the Force-power chart share
   menus_skillflow_grid (one Grid per screen, a Screen record for what
   differs); the two files went from 561 and 510 lines to 97 and 96,

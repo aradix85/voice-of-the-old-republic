@@ -8,7 +8,7 @@
 #include "engine_area.h"      // tag / kind / position / iterator
 #include "engine_offsets.h"   // Vector
 #include "engine_player.h"    // GetPlayerServerCreature
-#include "engine_scriptvar.h" // Get/SetPlayerVarString
+#include "engine_scriptvar.h" // the save variables
 #include "filter_objects.h"   // ObjectMatches / CycleCategory
 #include "log.h"
 #include "strfmt.h"           // ToLowerAscii / ToUpperAscii
@@ -26,19 +26,11 @@ std::string              g_varName;
 std::vector<std::string> g_keys;
 void*                    g_area    = nullptr;
 bool                     g_loaded  = false;
-void*                    g_creature = nullptr;  // last-seen player creature (stability tracking)
-int                      g_settle  = 0;
+acc::engine::PlayerVarsSettle g_settle;
 
-// Wait this many continuous ticks of player-creature availability before
-// reading the save var. A read on the exact save-load tick can race the
-// engine's CSWSObject::LoadObjectState (proven by the scriptvar self-test
-// failing there). ~1s at 60fps — long after the table settles, well before
-// the player could meaningfully cycle.
-constexpr int    kSettleTicks = 60;
 // Hard cap so a pathological area can't grow the save var unbounded. ~400
-// keys × ~35 chars stays well under the 16 KB read buffer.
-constexpr size_t kMaxKeys     = 400;
-constexpr size_t kReadBufSize = 16384;
+// keys × ~35 chars stays well under the 16 KB ReadPlayerVar returns.
+constexpr size_t kMaxKeys = 400;
 
 // ASCII case folds for the area key. GetCurrentAreaResName returns the module
 // resref exactly as the transition that loaded it spelled it, and the game's
@@ -148,15 +140,11 @@ void Persist();
 // duplicates and honouring the cap. Returns the number of NEW keys added, so
 // the caller can tell a legacy variant that contributed something from one
 // that was empty or wholly redundant.
-int MergeVar(const char* varName) {
-    static char buf[kReadBufSize];
-    if (!acc::engine::GetPlayerVarString(varName, buf, sizeof(buf)) ||
-        buf[0] == '\0') {
-        return 0;
-    }
+int MergeVar(const std::string& varName) {
+    const std::string value = acc::engine::ReadPlayerVar(varName);
     int added = 0;
     std::string cur;
-    for (const char* p = buf;; ++p) {
+    for (const char* p = value.c_str();; ++p) {
         if (*p == ';' || *p == '\0') {
             if (!cur.empty() && !Contains(cur) && g_keys.size() < kMaxKeys) {
                 g_keys.push_back(cur);
@@ -175,7 +163,7 @@ void LoadFromSave() {
     g_keys.clear();
     if (g_varName.empty()) { g_loaded = true; return; }
 
-    int parsed = MergeVar(g_varName.c_str());
+    int parsed = MergeVar(g_varName);
 
     // One-time migration. Until 2026-08-08 the var name inherited the engine's
     // module-name case, so a module entered from two directions ended up with
@@ -190,7 +178,7 @@ void LoadFromSave() {
     for (int i = 0; i < 2; ++i) {
         if (alts[i].empty() || alts[i] == g_areaTag) continue;
         if (i == 1 && alts[1] == alts[0]) continue;  // already read as the upper fold
-        migrated += MergeVar((std::string("ACC_DISC_") + alts[i]).c_str());
+        migrated += MergeVar("ACC_DISC_" + alts[i]);
     }
 
     g_loaded = true;
@@ -210,7 +198,7 @@ void Persist() {
         if (i) val.push_back(';');
         val += g_keys[i];
     }
-    acc::engine::SetPlayerVarString(g_varName.c_str(), val.c_str());
+    acc::engine::WritePlayerVar(g_varName, val);
 }
 
 // ---- Auto-discovery seeds -------------------------------------------------
@@ -307,8 +295,7 @@ void OnAreaChanged(void* area) {
     g_areaTag    = canon;
     g_rawAreaTag = raw;
     g_keys.clear();
-    g_creature = nullptr;
-    g_settle   = 0;
+    g_settle.Reset();
 
     if (!haveKey) {
         // No stable area key — treat as an empty, already-loaded set so
@@ -327,20 +314,8 @@ void OnAreaChanged(void* area) {
 }
 
 void Tick() {
-    if (g_loaded) return;
-    if (!g_area) return;
-    // Read the save var only once the player creature has been the SAME
-    // non-null pointer for the full settle window. On save-load the creature
-    // is reconstructed (pointer churns) and its var table is populated by
-    // CSWSObject::LoadObjectState slightly after — waiting for a stable
-    // pointer + settle clears that race (a read on the load tick returns an
-    // empty table; the self-test proved writes don't even stick there). On a
-    // normal walk-transition the creature is already stable, so this just
-    // costs the settle delay.
-    void* cre = acc::engine::GetPlayerServerCreature();
-    if (!cre) { g_creature = nullptr; g_settle = 0; return; }
-    if (cre != g_creature) { g_creature = cre; g_settle = 1; return; }
-    if (++g_settle < kSettleTicks) return;
+    if (g_loaded || !g_area) return;
+    if (!g_settle.Tick()) return;
     LoadFromSave();
     ApplySeeds();
 }

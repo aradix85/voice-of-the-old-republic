@@ -18,13 +18,8 @@ std::string   g_varName;   // ACC_VISIT_<areaKey>, empty = not persisted
 
 std::string g_areaName;               // display name of g_area
 
-// Save-var reconciliation, like discovery: read only once the player
-// creature has been the same pointer for a settle window (a read on the
-// save-load tick races the engine restoring the var table).
+acc::engine::PlayerVarsSettle g_settle;
 
-void* g_settleCreature = nullptr;
-int   g_settleTicks    = 0;
-constexpr int    kSettleTicks     = 60;
 constexpr size_t kMaxSavedRegions = 300;
 // A saved region centre matches a live region whose centre is this close.
 constexpr float  kSavedMatchM     = 2.5f;
@@ -46,8 +41,7 @@ void Persist() {
         spots.push_back(acc::save_points::At(info.centre));
         if (spots.size() >= kMaxSavedRegions) break;
     }
-    acc::engine::SetPlayerVarString(g_varName.c_str(),
-                                    acc::save_points::Format(spots).c_str());
+    acc::engine::WritePlayerVar(g_varName, acc::save_points::Format(spots));
 }
 
 void RecordVisit(int id) {
@@ -58,24 +52,22 @@ void RecordVisit(int id) {
 void LoadVisited() {
     std::vector<ClusterSummary> clusters;
     acc::room_topology::ListClusters(g_area, clusters);
-    static char buf[8192];
     std::set<int> saved;
     int entries = 0;
-    if (acc::engine::GetPlayerVarString(g_varName.c_str(), buf, sizeof(buf))) {
-        for (const acc::save_points::Spot& s : acc::save_points::Parse(buf)) {
-            ++entries;
-            const Vector at{static_cast<float>(s.x), static_cast<float>(s.y), 0.0f};
-            int   best   = kClusterIdNone;
-            float bestSq = kSavedMatchM * kSavedMatchM;
-            for (const ClusterSummary& c : clusters) {
-                const float d2 = DistXYSq(c.centre, at);
-                if (d2 <= bestSq) {
-                    bestSq = d2;
-                    best   = c.id;
-                }
+    const std::string text = acc::engine::ReadPlayerVar(g_varName);
+    for (const acc::save_points::Spot& s : acc::save_points::Parse(text.c_str())) {
+        ++entries;
+        const Vector at{static_cast<float>(s.x), static_cast<float>(s.y), 0.0f};
+        int   best   = kClusterIdNone;
+        float bestSq = kSavedMatchM * kSavedMatchM;
+        for (const ClusterSummary& c : clusters) {
+            const float d2 = DistXYSq(c.centre, at);
+            if (d2 <= bestSq) {
+                bestSq = d2;
+                best   = c.id;
             }
-            if (best >= 0) saved.insert(best);
         }
+        if (best >= 0) saved.insert(best);
     }
     bool newSinceEntry = false;
     for (int id : g_visited) {
@@ -152,8 +144,7 @@ void OnAreaEntered(void* area) {
     g_current  = kClusterIdNone;
     g_previous = kClusterIdNone;
     g_saveLoaded     = false;
-    g_settleCreature = nullptr;
-    g_settleTicks    = 0;
+    g_settle.Reset();
     g_chain          = ExploreChain{};
     acclog::Write("ExitMemory", "area %s entered (save var %s, load deferred)",
                   g_areaKey.c_str(), g_varName.c_str());
@@ -182,18 +173,7 @@ void Tick() {
     }
     if (acc::engine::GetCurrentArea() != g_area) return;
     if (!acc::room_topology::HasGraphForArea(g_area)) return;
-    void* cre = acc::engine::GetPlayerServerCreature();
-    if (!cre) {
-        g_settleCreature = nullptr;
-        g_settleTicks = 0;
-        return;
-    }
-    if (cre != g_settleCreature) {
-        g_settleCreature = cre;
-        g_settleTicks = 1;
-        return;
-    }
-    if (++g_settleTicks < kSettleTicks) return;
+    if (!g_settle.Tick()) return;
     LoadVisited();
 }
 

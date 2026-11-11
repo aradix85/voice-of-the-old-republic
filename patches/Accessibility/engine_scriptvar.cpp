@@ -1,11 +1,6 @@
-// Promoted from the throwaway scriptvar_poc — the in-save named-variable
-// primitive (player creature's CSWSScriptVarTable at +0x100). See the header
-// and docs/llm-docs/persistence-scriptvartable.md for the model and the
-// end-to-end save/reload proof.
-//
-// (This line said +0x110 until 2026-07-31. That is precisely the Ghidra
-// mislabelling the block above kScriptVarTableOffset exists to warn about, so
-// the file was documenting the trap and repeating it in the same breath.)
+// The player's script variables: the engine accessors behind ReadPlayerVar
+// and WritePlayerVar, and the settle wait. The model and the save / reload
+// proof are in docs/llm-docs/persistence-scriptvartable.md.
 
 #include "engine_scriptvar.h"
 
@@ -74,6 +69,10 @@ void ExoFree(ExoStr* s) {
     reinterpret_cast<PFN_ExoDtor>(kAddrExoDtor)(s);
 }
 
+// About a second at 60 fps: long after the table is filled, well before the
+// player could do anything that reads it.
+constexpr int kSettleTicks = 60;
+
 // creature+0x100, or nullptr when no server-side player creature is loaded.
 void* PlayerVarTable() {
     // acc::off::Ptr, not raw addition: kScriptVarTableOffset is still Todo on
@@ -82,8 +81,7 @@ void* PlayerVarTable() {
     return acc::off::Ptr(GetPlayerServerCreature(), kScriptVarTableOffset);
 }
 
-}  // namespace
-
+// Reads into outBuf, always NUL-terminated; true for a non-empty value.
 bool GetPlayerVarString(const char* name, char* outBuf, size_t bufSize) {
     if (outBuf && bufSize > 0) outBuf[0] = '\0';
     void* table = PlayerVarTable();
@@ -121,5 +119,29 @@ bool SetPlayerVarString(const char* name, const char* value) {
     }
 }
 
+}  // namespace
+
+std::string ReadPlayerVar(const std::string& name) {
+    static char buf[16384];
+    return GetPlayerVarString(name.c_str(), buf, sizeof(buf)) ? buf : "";
+}
+
+bool WritePlayerVar(const std::string& name, const std::string& value) {
+    return SetPlayerVarString(name.c_str(), value.c_str());
+}
+
+void PlayerVarsSettle::Reset() {
+    creature_ = nullptr;
+    ticks_    = 0;
+}
+
+bool PlayerVarsSettle::Tick() {
+    void* creature = GetPlayerServerCreature();
+    if (creature != creature_) {
+        creature_ = creature;
+        ticks_    = 0;
+    }
+    return creature && ++ticks_ >= kSettleTicks;
+}
 
 }  // namespace acc::engine
