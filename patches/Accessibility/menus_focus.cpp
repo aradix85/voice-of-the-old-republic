@@ -43,179 +43,77 @@ using acc::menus::detail::ClassLabelCacheStore;
 using acc::menus::chain::WalkChildren;
 using acc::menus::chain::FindAdjacentArrow;
 
-// Tracks the last panel for which we spoke the title (AnnouncePanelTitle).
-// Re-entering the same panel pointer must not re-announce. A distinct static
-// from the s_lastPanel inside OnSetActiveControl — that one drives the
-// diagnostic WalkChildren logging.
+// The last panel whose title was spoken. Focus coming back to the same panel
+// pointer must not announce it again.
 static void* g_lastTitledPanel = nullptr;
 
-// First focus into a panel speaks the panel's "title" — the first label-like
-// child we can find — so the user knows which menu they're in. Subsequent
-// per-control announcements still fire from OnSetActiveControl as the user
-// navigates, so this is just the entry banner, not a layout dump.
+namespace {
+
+// A title one of the screen modules supplies itself, where the first label of
+// the .gui file is wrong (a placeholder, or the header of another screen).
+// `source` names the module for the log.
+const char* TitleOverride(void* panel, const char** source) {
+    if (const char* title = acc::menus::listbox::GetTitleOverride(panel)) {
+        *source = "spec";
+        return title;
+    }
+    if (const char* title = acc::menus::editbox::GetTitleOverride(panel)) {
+        *source = "editbox spec";
+        return title;
+    }
+    if (const char* title = acc::menus::powers_levelup::GetTitleOverride(panel)) {
+        *source = "powers_levelup";
+        return title;
+    }
+    return nullptr;
+}
+
+// On a fresh launch the engine reaches the main menu with its DirectInput
+// keyboard unacquired: menu input is dead until an alt-tab forces a
+// SetActive(0) -> (1) edge. The main menu's first sight is the first moment
+// the game is certainly interactive, so the edge is made here.
 //
-// Heuristic: walk panel.controls in order, return the text of the first
-// CSWGuiLabel / CSWGuiLabelHilight child with announceable text. Buttons and
-// other interactive controls are skipped — they get announced through the
-// regular focus path. If no label exists we stay silent and rely on the
-// SetActiveControl announcement of the focused child to orient the user.
-static void AnnouncePanelTitle(void* panel) {
-    if (!panel) return;
-
-    // Diagnostic: one-shot dump of CSWGuiFeatsCharGen structure (chart
-    // rows × cols, the four feat lists). No-ops on non-feat panels +
-    // dedups per panel pointer. Used to plan main-panel accessibility
-    // before the picker spec gets extended.
-    acc::diag::chargen_feats::DumpStructureIfNeeded(panel);
-
-    // K2 workbench family: the workbench dialog reply pushes Select +
-    // Items + Upgrade STACKED in one tick (construction-time first-sight
-    // spoke four titles in a row — live log 2026-08-12 13:13:19), and the
-    // pre-built panels are reused so a pointer-keyed first-sight never
-    // fires again on re-entry. menus_crafting::Tick announces these
-    // titles on the foreground edge instead; stay silent here. KOTOR 1
-    // returns false and keeps the normal paths below.
-    if (acc::menus::crafting::OwnsPanelTitle(panel)) {
-        acclog::Write("Menus.PanelWalk",
-                      "title parent=%p suppressed (crafting fg-edge owns it)",
-                      panel);
-        return;
+// It has to be the full 0 -> 1 cycle. On some machines the engine arrives
+// with the active flag a stale 1 (set, devices not acquired) and a bare
+// SetActive(1) does nothing against it.
+//
+// Only while the game owns the foreground: input mirrors the foreground, and
+// acquiring behind another window would send its keys into the game. If the
+// game is not in front yet, the focus-regain edge acquires when it is.
+void WakeInputAtMainMenu() {
+    acclog::BringupMark("main_menu_first_sight");
+    if (acc::focus_guard::GameOwnsForeground()) {
+        acc::engine::ForceReacquireInput();
+    } else {
+        acclog::Write("EngineInput",
+            "cold-start acquire skipped: game not foreground at "
+            "first-sight; the focus-regain edge will acquire");
     }
+    // Normally started at rules init already; a second start is a no-op.
+    acc::focus_guard::StartFocusProbe();
+}
 
-    // Listbox-spec title override: any spec in menus_listbox.cpp can
-    // declare its own title speech (used when the panel's .gui-baked
-    // title is wrong — e.g. SkillInfoBox carries a BioWare placeholder
-    // the chargen flow doesn't overwrite). Returns nullptr when no spec
-    // matches or the matched spec has no override, in which case the
-    // generic label-walk below runs.
-    if (const char* override =
-            acc::menus::listbox::GetTitleOverride(panel)) {
-        acclog::Write("Menus.PanelWalk",
-                      "title parent=%p (spec override) text=\"%s\"",
-                      panel, override);
-        acc::speech::Speak(override, /*interrupt=*/false);
-        return;
-    }
+// Why a label's text cannot be a panel title, or nullptr when it can.
+const char* NotATitle(const char* text) {
+    // Tab indicators ("1".."6") and stat values: up to three digits.
+    size_t digits = 0;
+    while (text[digits] >= '0' && text[digits] <= '9') ++digits;
+    if (digits > 0 && digits <= 3 && text[digits] == '\0') return "short numeric";
 
-    // Same hook for editbox-owning panels — CSWGuiNameChargen substitutes
-    // subtitle_label ("Name") for the stale main_title_label
-    // (the stale chargen header) that the generic walk would otherwise pick.
-    if (const char* override =
-            acc::menus::editbox::GetTitleOverride(panel)) {
-        acclog::Write("Menus.PanelWalk",
-                      "title parent=%p (editbox spec override) text=\"%s\"",
-                      panel, override);
-        acc::speech::Speak(override, /*interrupt=*/false);
-        return;
-    }
+    // KOTOR 2's chargen Feats panel leads with a leftover of the container
+    // screen, "Items Available to Place in Container and blah blah blah",
+    // untranslated in every localisation: matched by its tail.
+    if (strstr(text, "blah blah blah") != nullptr) return "dev placeholder";
+    return nullptr;
+}
 
-    // CSWGuiPowersLevelUp shares the pwrlvlup.gui placeholder
-    // (the chargen header at id 0) — same problem chargen Name had.
-    // Substitute the sub_title_label (the powers title at id 1).
-    if (const char* override =
-            acc::menus::powers_levelup::GetTitleOverride(panel)) {
-        acclog::Write("Menus.PanelWalk",
-                      "title parent=%p (powers_levelup override) text=\"%s\"",
-                      panel, override);
-        acc::speech::Speak(override, /*interrupt=*/false);
-        return;
-    }
-
-    // Title-screen main menu: the only label-like child is the optional
-    // "New downloadable content is available…" Steam notice, which the
-    // generic walk would pick. User-reported in
-    // patch-20260530-191714.log — the DLC notice spoke instead of any
-    // useful panel title, leaving the user disoriented on entry.
-    //
-    // This is also the bringup gate for the deferred background update
-    // check: the engine is demonstrably past intro movies + DirectInput
-    // init by the time MainMenu first-sights, so it's safe to start
-    // WinHTTP I/O without racing Bink playback for COM/message-loop
-    // state. The mark + StartBackgroundCheck calls are idempotent on
-    // re-entry (we land here once per launch in practice; both functions
-    // self-guard against repeats).
-    if (IdentifyPanel(panel) == PanelKind::MainMenu) {
-        acclog::BringupMark("main_menu_first_sight");
-        // Cold-start DirectInput wake-up. On a fresh launch the engine reaches
-        // the main menu with its DirectInput keyboard unacquired, so menu input
-        // is dead until the user alt-tabs (which forces a SetActive(0)->(1)
-        // edge). We replicate that edge here, at the first guaranteed-
-        // interactive post-load moment.
-        //
-        // Must be the full 0->1 CYCLE, not a bare SetActive(1): on some
-        // machines the engine arrives with active already a STALE 1 (flag set,
-        // devices not actually acquired). A plain SetActive(1) no-ops against
-        // the stuck flag and the keyboard stays dead — observed on tester
-        // kenny's en-US build (patch-20260612-164351.log): EnsureInputAcquired
-        // fired at first-sight yet the input pump did not go live for ~20s,
-        // until his own alt-tab drove the 0->1 edge. ForceReacquireInput's
-        // leading SetActive(0) guarantees the edge regardless of the prior flag
-        // state, so the keyboard acquires immediately without an alt-tab.
-        //
-        // This is the cold-start edge only. Gate it on actually owning the
-        // foreground: input must mirror foreground (the game holds the keyboard
-        // only while it's in front), so acquiring here while an overlay/another
-        // window is in front would bleed nav keys into the background game. If
-        // we're not foreground yet, the regain edge (WM_ACTIVATEAPP active=1 ->
-        // RequestInputReacquire) acquires when the game actually comes forward.
-        if (acc::focus_guard::GameOwnsForeground()) {
-            acc::engine::ForceReacquireInput();
-        } else {
-            acclog::Write("EngineInput",
-                "cold-start acquire skipped: game not foreground at "
-                "first-sight; the focus-regain edge will acquire");
-        }
-        // Belt-and-braces — the polling thread spawned at OnRulesInit
-        // should already have subclassed every game window by now, but
-        // re-calling is a no-op and keeps the safety net in place in
-        // case the thread didn't start (CreateThread failure logged).
-        acc::focus_guard::StartFocusProbe();
-        // Foreground-reclaim guard retired: input now mirrors foreground
-        // (acquire on the regain edge, release on focus-loss — see
-        // engine_input.h ReleaseInput / RequestInputRelease), so the keyboard
-        // recovers on its own when the user returns to the game, with no need
-        // to forcibly steal the window back. Stealing foreground also fought
-        // screen-reader users who deliberately switch to another window. The
-        // overlay-at-launch case (Game Bar) self-heals: while the overlay is in
-        // front the game stays released (correct), and re-acquires the moment
-        // it regains the foreground. ArmStartupForegroundGuard is intentionally
-        // no longer called.
-        const char* title = acc::strings::Get(acc::strings::Id::PanelTitleMainMenu);
-        acclog::Write("Menus.PanelWalk",
-                      "title parent=%p (main menu override) text=\"%s\"",
-                      panel, title);
-        acc::speech::Speak(title, /*interrupt=*/false);
-        return;
-    }
-
-    // Skip short numeric labels (tab indicators "1".."6", stat values "12",
-    // skill values, etc.). They're never panel titles and pre-empt the real
-    // ones — patch-20260519-154827.log frame 12586 hit this on the chargen
-    // tab strip (1484E768): the first label child was "1" (the tab number
-    // next to "Portrait"), so the user heard just "1" after submitting the
-    // name. Bound: text up to 3 chars, every byte ASCII-digit.
-    // KOTOR 2's chargen Feats panel leads with a leftover from the container
-    // transfer screen — "Items Available to Place in Container and blah blah
-    // blah" — and being the first label child it won the title slot and was
-    // read out on entry (beta log 17:50:31). It is a developer placeholder,
-    // untranslated in every K2 localisation we have seen, so match it by its
-    // distinctive tail rather than in full.
-    auto isDevPlaceholder = [](const char* s) {
-        return strstr(s, "blah blah blah") != nullptr;
-    };
-
-    auto isShortNumeric = [](const char* s) {
-        size_t n = 0;
-        for (; s[n]; ++n) {
-            if (n >= 3 || s[n] < '0' || s[n] > '9') return false;
-        }
-        return n > 0;
-    };
-
+// The panel's first label with text that can be a title. Buttons and other
+// interactive controls are left to the focus announcements.
+void SpeakFirstLabelAsTitle(void* panel) {
     auto* list = reinterpret_cast<CExoArrayList*>(
         reinterpret_cast<unsigned char*>(panel) + kPanelControlsOffset);
     if (!list->data || list->size <= 0) return;
-    int n = list->size > 256 ? 256 : list->size;
+    const int n = list->size > 256 ? 256 : list->size;
     for (int i = 0; i < n; ++i) {
         void* child = list->data[i];
         if (!child) continue;
@@ -224,50 +122,64 @@ static void AnnouncePanelTitle(void* panel) {
             continue;
         }
         char text[256];
-        if (acc::menus::extract::FromControl(child, text, sizeof(text), panel)) {
-            if (isShortNumeric(text)) {
-                acclog::Write("Menus.PanelWalk",
-                              "title parent=%p label=%p text=\"%s\" "
-                              "(skipped: short numeric)",
-                              panel, child, text);
-                continue;
-            }
-            if (isDevPlaceholder(text)) {
-                acclog::Write("Menus.PanelWalk",
-                              "title parent=%p label=%p text=\"%s\" "
-                              "(skipped: dev placeholder)",
-                              panel, child, text);
-                continue;
-            }
-            // DO NOT filter title candidates on the visible bit. Tried and
-            // reverted the same day (2026-08-13): on KOTOR 2 the flag word at
-            // kControlBitFlagsOffset reads garbage for LABELS — five labels on
-            // the K2 load screen came back 0x2130140a, 0x965b7e8a, 0x3d5c210a,
-            // 0x272f1d0a, 0x6375920a, all with a consistent low byte and noise
-            // above it — so every real panel title, "Load Game" included, was
-            // suppressed as invisible. The offset is game-selected and works
-            // for BUTTONS on both games; labels are evidently laid out
-            // differently on K2 and would need their own witness first.
-            //
-            // Logged so a future pass has the data rather than a guess. The
-            // problem this was meant to solve — K2's chargen Feats panel
-            // leading with a leftover container-screen string — is handled by
-            // the placeholder check above instead.
-            uint32_t flags = 0;
-            __try {
-                flags = *reinterpret_cast<uint32_t*>(
-                    reinterpret_cast<unsigned char*>(child) +
-                    kControlBitFlagsOffset);
-            } __except (EXCEPTION_EXECUTE_HANDLER) {
-                flags = 0;
-            }
-            acclog::Write("Menus.PanelWalk", "title parent=%p label=%p "
-                          "text=\"%s\" bit_flags=0x%x",
-                          panel, child, text, flags);
-            acc::speech::Speak(text, /*interrupt=*/false);
-            return;
+        if (!acc::menus::extract::FromControl(child, text, sizeof(text), panel)) continue;
+        if (const char* why = NotATitle(text)) {
+            acclog::Write("Menus.PanelWalk",
+                          "title parent=%p label=%p text=\"%s\" (skipped: %s)",
+                          panel, child, text, why);
+            continue;
         }
+        // Do NOT filter on the visible bit. On KOTOR 2 the flag word at
+        // kControlBitFlagsOffset reads garbage for labels (it is right for
+        // buttons on both games), and with the filter every real title,
+        // "Load Game" included, was dropped as invisible. The flags are
+        // logged so that a later attempt has data.
+        acclog::Write("Menus.PanelWalk",
+                      "title parent=%p label=%p text=\"%s\" bit_flags=0x%x",
+                      panel, child, text, ReadControlBitFlags(child));
+        acc::speech::Speak(text, /*interrupt=*/false);
+        return;
     }
+}
+
+}  // namespace
+
+// The first focus into a panel speaks its title, so that the user knows
+// which menu this is. With no usable label it stays silent and the
+// announcement of the focused control has to do.
+static void AnnouncePanelTitle(void* panel) {
+    if (!panel) return;
+
+    // One dump of the CSWGuiFeatsCharGen structure per panel pointer; nothing
+    // for other panels.
+    acc::diag::chargen_feats::DumpStructureIfNeeded(panel);
+
+    // KOTOR 2's workbench pushes Select, Items and Upgrade stacked in one
+    // tick and reuses the panels afterwards, so first sight would speak
+    // several titles at once and never again. menus_crafting announces them
+    // on the foreground edge instead.
+    if (acc::menus::crafting::OwnsPanelTitle(panel)) {
+        acclog::Write("Menus.PanelWalk",
+                      "title parent=%p suppressed (crafting fg-edge owns it)", panel);
+        return;
+    }
+
+    const char* source = nullptr;
+    const char* title = TitleOverride(panel, &source);
+    if (!title && IdentifyPanel(panel) == PanelKind::MainMenu) {
+        // The main menu's only label is the optional Steam notice about
+        // downloadable content, which the label walk would take.
+        WakeInputAtMainMenu();
+        title = acc::strings::Get(acc::strings::Id::PanelTitleMainMenu);
+        source = "main menu";
+    }
+    if (title) {
+        acclog::Write("Menus.PanelWalk", "title parent=%p (%s override) text=\"%s\"",
+                      panel, source, title);
+        acc::speech::Speak(title, /*interrupt=*/false);
+        return;
+    }
+    SpeakFirstLabelAsTitle(panel);
 }
 
 // Chargen class-icon cache pump. The hook fires at the very entry of
