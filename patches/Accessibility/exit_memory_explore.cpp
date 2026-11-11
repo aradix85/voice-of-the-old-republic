@@ -34,6 +34,17 @@ void StopChain(const char* why) {
                   g_chain.hops, g_chain.goal, why);
 }
 
+// The closed door on the link from the player's region to the region `hopId`
+// next to it, or null.
+void* ClosedDoorOnHop(const Graph& g, void* area, int hopId) {
+    for (const ClusterLink& l : g.links) {
+        const bool thisLink = (l.a == g.start && l.b == hopId) ||
+                              (l.b == g.start && l.a == hopId);
+        if (thisLink && l.viaDoor) return ClosedDoorNear(area, l.doorPos);
+    }
+    return nullptr;
+}
+
 // One hop of the explore walk: from the player's region to the next region on
 // the open way to the goal — through the closed door on that link (walked to
 // and opened like Shift+- on it) or to the next region's centre. False when
@@ -49,14 +60,7 @@ bool ChainStep() {
     if (g.distOpen[t] >= kFar || g.hopOpen[t] < 0) return false;
     const int hop   = g.hopOpen[t];
     const int hopId = g.nodes[hop].id;
-    void* door = nullptr;
-    for (const ClusterLink& l : g.links) {
-        const bool thisLink = (l.a == g.start && l.b == hopId) ||
-                              (l.b == g.start && l.a == hopId);
-        if (!thisLink || !l.viaDoor) continue;
-        door = ClosedDoorNear(area, l.doorPos);
-        break;
-    }
+    void* door = ClosedDoorOnHop(g, area, hopId);
     uint32_t before = 0;
     acc::guidance::LastApproachOutcome(&before);
     if (door) {
