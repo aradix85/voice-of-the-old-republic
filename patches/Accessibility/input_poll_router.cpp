@@ -270,11 +270,11 @@ bool EnterMayActInWorld(const char* keyTag) {
     // Any other kind here means a screen routes its own keys AND we queue an
     // engine action on the same press: the shape that cost KOTOR 2's
     // prologue its module transition (the galaxy map).
-    if (!acc::engine::IsWorldLevelForegroundKind(ui.fgKind)) {
+    if (acc::engine::WorldInputOver(ui.fgKind) == acc::engine::WorldInput::Unlisted) {
         acclog::Write("Interact",
                       "%s GATE GAP? -- dispatching in-world over fg=%p kind=%s "
                       "(not a world-level surface; if this press also drove the "
-                      "panel, that kind belongs in IsForegroundUiBlocking)",
+                      "panel, that kind belongs under Blocks in WorldInputOver)",
                       keyTag, ui.fgPanel, PanelKindName(ui.fgKind));
     }
     return true;

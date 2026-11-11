@@ -320,17 +320,9 @@ int GetInputClass();
 // full ShowSWInGameGui (see the freeze investigation in engine_levelup.cpp).
 bool SetGuiInputClass(int klass);
 
-// True iff foreground UI is capturing input. Blacklist (not whitelist):
-// panels[] keeps stale entries (closed Fade overlays, dismissed Options
-// menus) at the top for seconds, so a whitelist of in-world overlays
-// underblocks.
-//
-// Triggers: a CSWGuiDialog* in panels[]; foreground = modal_stack[top];
-// foreground kind ∈ {Container, Store, Examine, Dialog*, TutorialBox,
-// MessageBoxModal, StatusSummary, InGameMenu (the strip stays fg while any
-// sub-screen is drilled), InGameGalaxyMap}. The AreaTransition banner (the
-// destination's name while the player stands at a transition) blocks only
-// when it is the modal on top.
+// True iff foreground UI is capturing input: a CSWGuiDialog* in panels[],
+// the foreground panel on top of modal_stack, or a foreground kind that
+// WorldInputOver says blocks.
 enum class UiBlockReason {
     NotBlocked,
     DialogInStack,
@@ -348,17 +340,21 @@ struct UiBlockState {
 // outState (optional) carries diagnostic detail for the log line.
 bool IsForegroundUiBlocking(UiBlockState* outState = nullptr);
 
-// True for the handful of foreground kinds that coexist with normal in-world
-// play — the HUD, the pause overlay, a bark bubble, a fade, and the
-// unclassified Unknown. Every other kind is a screen or a popup that routes
-// its own keys, so a world-hotkey dispatch running over one is a gate gap of
-// the class the galaxy-map Enter double-fire belonged to.
+// How a foreground panel kind stands to the world keys. The one list answers
+// both questions: may a world key act (everything but Blocks), and is a press
+// over this kind worth a log line (Unlisted).
 //
-// This is the AUDIT half of IsForegroundUiBlocking, not a second gate: the
-// blocking predicate stays a blacklist (a mis-identified panel must not cost
-// the player their interact key), while this one is the whitelist the log
-// lines are checked against, so a leak shows up in a tester log as a named
-// kind instead of going unnoticed until it breaks a module transition.
-bool IsWorldLevelForegroundKind(PanelKind k);
+// Only kinds known to take the keys block. panels[] keeps stale entries
+// (closed Fade overlays, dismissed Options menus) on top for seconds, and a
+// mis-identified panel must not cost the player their interact key, so an
+// unlisted kind lets the key through. The caller logs that press, so a
+// screen that routes its own keys shows up in a tester log by name instead of
+// going unnoticed until it breaks a module transition.
+enum class WorldInput {
+    Blocks,    // a screen or popup that takes the keys
+    Free,      // coexists with play: HUD, pause overlay, bark, fade, Unknown
+    Unlisted,  // not known to block: the key goes through and is logged
+};
+WorldInput WorldInputOver(PanelKind k);
 
 }  // namespace acc::engine

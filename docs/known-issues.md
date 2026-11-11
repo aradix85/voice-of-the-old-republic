@@ -362,14 +362,11 @@ None is reproduced in a log; all three are the same *shape* as the galaxy-map
 fault (one press, two consumers, one of them the world) and each would cost a
 test round to change, so they are listed rather than fixed. The detector for
 the rest is now in the log: `Interact: <key> GATE GAP?` fires whenever an
-in-world dispatch runs over a foreground panel that is not a world-level
-surface (`IsWorldLevelForegroundKind` — HUD, pause, bark, fade, Unknown). Grep
-tester bundles for `GATE GAP` before adding kinds by guesswork.
-
-Also open: two separate lists describe "is the UI in the way" —
-`IsForegroundUiBlocking`'s blacklist and the world-level allow-list. They
-agree today (both were updated together); they are a consolidation
-candidate, not a bug.
+in-world dispatch runs over a foreground panel whose kind `WorldInputOver`
+calls Unlisted (it neither blocks nor is one of the free kinds: HUD, pause,
+bark, fade, Unknown). Grep tester bundles for `GATE GAP` before adding kinds
+by guesswork. The AreaTransition banner is Unlisted on purpose, so a press
+at an area transition logs one such line.
 
 ### Grass crash — worked around with `Grass=0`, root cause not fully pinned
 

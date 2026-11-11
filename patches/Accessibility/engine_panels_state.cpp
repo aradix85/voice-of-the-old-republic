@@ -319,18 +319,16 @@ bool IsForegroundUiBlocking(UiBlockState* outState) {
         return true;
     }
 
-    // (3) Foreground kind blacklist. InGameMenu strip stays foreground while
-    // any sub-screen (Inventory / Map / Equip / …) is drilled — covers them
-    // transitively. Strip itself routes Enter to its chain handler in
-    // menus_chain_input_enter.cpp; in-world hotkeys never make sense while a menu is open.
-    //
-    // AreaTransition is not in the list: it is the banner with the
-    // destination's name that stays in the foreground for as long as the
-    // player stands at an area transition. It takes no input, and blocking on
-    // it left Enter dead exactly where the player wants to go through. When
-    // the engine does push it as a modal, (2) blocks. It stays out of
-    // IsWorldLevelForegroundKind, so a press over it is still logged.
-    switch (fgKind) {
+    // (3) The foreground kind itself takes the keys.
+    if (WorldInputOver(fgKind) == WorldInput::Blocks) {
+        if (outState) outState->reason = UiBlockReason::ForegroundBlockingKind;
+        return true;
+    }
+    return false;
+}
+
+WorldInput WorldInputOver(PanelKind k) {
+    switch (k) {
     case PanelKind::Container:
     case PanelKind::Store:
     case PanelKind::Examine:
@@ -341,6 +339,9 @@ bool IsForegroundUiBlocking(UiBlockState* outState) {
     case PanelKind::TutorialBox:
     case PanelKind::MessageBoxModal:
     case PanelKind::StatusSummary:
+    // The strip stays foreground while any sub-screen (Inventory / Map /
+    // Equip / …) is drilled, so it covers them too. It routes Enter to its
+    // chain handler in menus_chain_input_enter.cpp.
     case PanelKind::InGameMenu:
     // The star map is opened from the world, not from the menu strip, and the
     // engine does not push it onto modal_stack — so neither (2) nor the
@@ -351,33 +352,27 @@ bool IsForegroundUiBlocking(UiBlockState* outState) {
     // that ends in the module change: the movie played, the map re-opened, and
     // the player stayed on the Ebon Hawk with no transition ever requested
     // (k2-patch-20260820-143622.log, three attempts 14:49-14:51 — no
-    // "Transition: pre-load" line for any of them). Unlike the stale Fade /
-    // dismissed-Options overlays this blacklist exists to tolerate, the panel
-    // is dropped from panels[] the moment it closes (fg goes straight back to
-    // MainInterface), so blocking on it cannot strand in-world input.
+    // "Transition: pre-load" line for any of them). Unlike a stale Fade or a
+    // dismissed Options overlay, the panel is dropped from panels[] the moment
+    // it closes (fg goes straight back to MainInterface), so blocking on it
+    // cannot strand in-world input.
     case PanelKind::InGameGalaxyMap:
-        if (outState) outState->reason = UiBlockReason::ForegroundBlockingKind;
-        return true;
-    default:
-        return false;
-    }
-}
-
-bool IsWorldLevelForegroundKind(PanelKind k) {
-    switch (k) {
-    // Unknown is deliberately world-level: an unclassified foreground panel
-    // must never cost the player their interact key (see the blacklist-not-
-    // whitelist note in engine_panels.h). It is still audit-worthy — the
-    // save-name popup that queued a phantom dialogue action classified as
-    // Unknown — so callers log it, they just don't block on it.
+        return WorldInput::Blocks;
+    // Unknown is free: an unclassified foreground panel must never cost the
+    // player their interact key.
     case PanelKind::Unknown:
     case PanelKind::MainInterface:
     case PanelKind::InGamePause:
     case PanelKind::BarkBubble:
     case PanelKind::Fade:
-        return true;
+        return WorldInput::Free;
+    // AreaTransition is here on purpose: it is the banner with the
+    // destination's name that stays in the foreground for as long as the
+    // player stands at an area transition. It takes no input, and blocking on
+    // it left Enter dead exactly where the player wants to go through. When
+    // the engine pushes it as a modal, the modal_stack check blocks.
     default:
-        return false;
+        return WorldInput::Unlisted;
     }
 }
 }  // namespace acc::engine
