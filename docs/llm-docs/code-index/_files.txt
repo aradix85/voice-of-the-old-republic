@@ -33,6 +33,7 @@ patches/Accessibility/camera_orient_pick.h
 patches/Accessibility/camera_orient_turn.cpp
 patches/Accessibility/camera_spin_guard.cpp
 patches/Accessibility/camera_spin_guard.h
+patches/Accessibility/code_patch.h
 patches/Accessibility/combat.cpp
 patches/Accessibility/combat.h
 patches/Accessibility/combat_diag.cpp

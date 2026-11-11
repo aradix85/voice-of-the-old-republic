@@ -3,6 +3,7 @@
 
 #include "engine_input_internal.h"
 
+#include "code_patch.h"
 #include "engine_game.h"
 #include "log.h"
 
@@ -143,14 +144,6 @@ const char* TeardownSiteName(int index, int total) {
     return "unknown step";
 }
 
-// JMP rel32 from `at` to `target`.
-void WriteJmpRel32(uint8_t* at, uintptr_t target) {
-    at[0] = 0xe9;
-    int32_t rel = static_cast<int32_t>(
-        target - (reinterpret_cast<uintptr_t>(at) + 5));
-    memcpy(at + 1, &rel, 4);
-}
-
 // Stand-in for CExoRawInputInternal::ShutDownDirectInput, reached only from the
 // failure branches of InitializeDirectInputMouse (the engine's own shutdown
 // path still calls the real thing). __fastcall with an unused second parameter
@@ -276,7 +269,7 @@ void InstallDirectInputMouseGuard() {
         *p++ = 0x74; *p++ = 0x0b;               // JZ +11 -> the XOR below
         memcpy(p, kInitMousePrologueK2, sizeof(kInitMousePrologueK2));
         p += sizeof(kInitMousePrologueK2);
-        WriteJmpRel32(p, kAddrInitMouseContinue); p += 5;
+        acc::code_patch::WriteJmpRel32(p, kAddrInitMouseContinue); p += 5;
         // Failure stub. Shared with the latch above: both arrive with the
         // entry's register state intact, so both want this exact answer.
         *latchRel8 = static_cast<uint8_t>(p - (latchRel8 + 1));
@@ -291,8 +284,8 @@ void InstallDirectInputMouseGuard() {
         *p++ = 0x8b; *p++ = 0x47; *p++ = 0x1c;  // MOV EAX, [EDI+0x1c]
         *p++ = 0x85; *p++ = 0xc0;               // TEST EAX, EAX
         *p++ = 0x74; *p++ = 0x05;               // JZ +5 -> the fail JMP
-        WriteJmpRel32(p, kAddrInitMouseContinue); p += 5;
-        WriteJmpRel32(p, kAddrInitMouseFailEpilogue); p += 5;
+        acc::code_patch::WriteJmpRel32(p, kAddrInitMouseContinue); p += 5;
+        acc::code_patch::WriteJmpRel32(p, kAddrInitMouseFailEpilogue); p += 5;
         // The latch cannot share KOTOR 1's failure exit: that epilogue pops the
         // ESI/EDI the displaced prologue pushed, and the latch answers before
         // the prologue has run. Its own stub returns from the entry state.
@@ -307,7 +300,7 @@ void InstallDirectInputMouseGuard() {
             "DirectInput mouse guard install failed: VirtualProtect entry");
         return;
     }
-    WriteJmpRel32(entry, reinterpret_cast<uintptr_t>(tramp));
+    acc::code_patch::WriteJmpRel32(entry, reinterpret_cast<uintptr_t>(tramp));
     DWORD ignored = 0;
     VirtualProtect(entry, 5, oldProtect, &ignored);
 

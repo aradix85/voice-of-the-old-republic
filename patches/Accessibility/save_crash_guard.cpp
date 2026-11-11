@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <cstring>
 
+#include "code_patch.h"
 #include "log.h"
 #include "engine_rebase.h"
 
@@ -78,13 +79,6 @@ void* __cdecl ImageScaleGuard(unsigned char* src, int srcW, int srcH,
     return buf;
 }
 
-void WriteRel32Jmp(uint8_t* at, uintptr_t target) {
-    at[0] = 0xe9;
-    int32_t rel = static_cast<int32_t>(
-        target - (reinterpret_cast<uintptr_t>(at) + 5));
-    std::memcpy(at + 1, &rel, 4);
-}
-
 }  // namespace
 
 void InstallSaveScreenshotGuard() {
@@ -134,7 +128,7 @@ void InstallSaveScreenshotGuard() {
 
     // Trampoline: relocated prologue, then JMP to entry+8.
     std::memcpy(block + kTrampOff, kPrologue, sizeof(kPrologue));
-    WriteRel32Jmp(block + kTrampOff + sizeof(kPrologue), kImageScaleContinue);
+    acc::code_patch::WriteJmpRel32(block + kTrampOff + sizeof(kPrologue), kImageScaleContinue);
     g_origImageScale = reinterpret_cast<PFN_ImageScale>(block + kTrampOff);
 
     // Wrapper stub: JMP DWORD PTR [pWrapper]. Absolute indirect so the DLL
@@ -156,7 +150,7 @@ void InstallSaveScreenshotGuard() {
             "save-crash guard install failed: VirtualProtect entry");
         return;
     }
-    WriteRel32Jmp(static_cast<uint8_t*>(entry),
+    acc::code_patch::WriteJmpRel32(static_cast<uint8_t*>(entry),
                   reinterpret_cast<uintptr_t>(block + kStubOff));
     DWORD ignored = 0;
     VirtualProtect(entry, 5, oldProtect, &ignored);

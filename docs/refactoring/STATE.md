@@ -366,8 +366,9 @@ prefix (menus_listbox_picker.cpp).
   touched again. menus_focus is 422 after AnnouncePanelTitle got named
   steps. The catalog headers (engine_offsets_fields.h
   2318, engine_offsets_addresses.h 1060, engine_area.h 789) stay as they are.
-- F13 WriteJmpRel32 (engine_input_mouseguard) and WriteRel32Jmp
-  (save_crash_guard) are the same four lines: one shared helper.
+- F13 done: one WriteJmpRel32, in code_patch.h. The three installers
+  (mouse guard, keyboard resync, save guard) still each do their own
+  VirtualProtect / write / restore / flush around it.
 - F2b: share the save-variable code of exit_memory with discovery.cpp.
 - F3 done: the feat chart and the Force-power chart share
   menus_skillflow_grid (one Grid per screen, a Screen record for what

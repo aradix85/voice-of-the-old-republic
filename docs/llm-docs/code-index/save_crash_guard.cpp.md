@@ -1,4 +1,4 @@
-# save_crash_guard.cpp (173 lines)
+# save_crash_guard.cpp (167 lines)
 
 Source: `patches/Accessibility/save_crash_guard.cpp`
 
@@ -10,6 +10,5 @@ We install an inline trampoline detour over ImageScale: when the source area is 
 
 ## Declarations (in source order)
 
-- L47 `void* __cdecl ImageScaleGuard(unsigned char* src, int srcW, int srcH, int bpp, int dstW, int dstH)`: Our replacement.
-- L81 `void WriteRel32Jmp(uint8_t* at, uintptr_t target)`
-- L90 `void InstallSaveScreenshotGuard()`
+- L48 `void* __cdecl ImageScaleGuard(unsigned char* src, int srcW, int srcH, int bpp, int dstW, int dstH)`: Our replacement.
+- L84 `void InstallSaveScreenshotGuard()`
