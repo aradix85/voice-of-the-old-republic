@@ -1,4 +1,4 @@
-# menus_skillflow_grid.cpp (234 lines)
+# menus_skillflow_grid.cpp (244 lines)
 
 Source: `patches/Accessibility/menus_skillflow_grid.cpp`
 
@@ -21,6 +21,6 @@ Moving onto a cell selects it in the engine: SetSelectedSkill on the chart for t
 - L89 `void Grid::Bind(void* panel)`: The rows are read again on every event, so that a row pointer is never stale.
 - L110 `void Grid::SelectInEngine(void* panel, unsigned short id)`
 - L125 `void Grid::Announce(void* panel)`
-- L167 `void Grid::Move(void* panel, const char* key, int row, int col)`: Announces also when the cursor could not move: the repeat says that this is the edge.
-- L177 `void Grid::Activate(void* panel)`
-- L200 `bool Grid::HandleInput(void* panel, int code, int value, int& outRv)`
+- L177 `void Grid::Move(void* panel, const char* key, int row, int col)`: Announces also when the cursor could not move: the repeat says that this is the edge.
+- L187 `void Grid::Activate(void* panel)`
+- L210 `bool Grid::HandleInput(void* panel, int code, int value, int& outRv)`

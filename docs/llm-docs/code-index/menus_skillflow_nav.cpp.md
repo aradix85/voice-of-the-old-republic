@@ -1,4 +1,4 @@
-# menus_skillflow_nav.cpp (37 lines)
+# menus_skillflow_nav.cpp (45 lines)
 
 Source: `patches/Accessibility/menus_skillflow_nav.cpp`
 
@@ -10,3 +10,4 @@ Source: `patches/Accessibility/menus_skillflow_nav.cpp`
 - L13 `int FirstFilledCol(const unsigned short* cells)`
 - L20 `int NearestFilledCol(const unsigned short* cells, int want)`
 - L29 `int StepCol(const unsigned short* cells, int from, int step)`
+- L36 `int FilledBeyond(const unsigned short* cells, int from, int step)`

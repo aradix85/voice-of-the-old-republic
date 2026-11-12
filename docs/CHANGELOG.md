@@ -99,6 +99,8 @@ installer, as the pre-release `bridge-latest`.
   level up" is announced on its own.
 - Shift+Enter on a door or container names the other rows of its action menu,
   such as Security next to Bash.
+- The feat and Force power charts say how many feats of a chain stand to the
+  right.
 - Q/E say the clock direction and distance of each object.
 - New setting: Q and E step through everything within 30 metres instead of
   only what the camera sees.
@@ -360,6 +362,10 @@ installer, as the pre-release `bridge-latest`.
   of the other rows: "Action menu, Weapons Locker. Bash. Left or Right:
   Security". Only the row the menu lands on was named, so a lock looked as if
   it could only be bashed.
+- In the feat chart and the Force power chart, a cell with more of its chain
+  to the right ends with their number: "Flurry, already learned. Right: 2
+  more". Up and Down step through the first feat of each chain, so the chart
+  sounded like one list and the improved and master feats went unnoticed.
 
 <h3>Endar Spire:</h3>
 
