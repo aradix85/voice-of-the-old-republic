@@ -20,4 +20,7 @@ int NearestFilledCol(const unsigned short* cells, int want);
 // `from` itself at the end of the row.
 int StepCol(const unsigned short* cells, int from, int step);
 
+// How many filled cells the row has beyond `from` in direction `step`.
+int FilledBeyond(const unsigned short* cells, int from, int step);
+
 }  // namespace acc::menus::skillflow_nav

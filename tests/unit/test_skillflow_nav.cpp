@@ -47,3 +47,15 @@ TEST_CASE("left and right step over gaps and stop at the ends of the row") {
     const unsigned short baseOnly[] = {10, E, E};
     CHECK(StepCol(baseOnly, 0, +1) == 0);
 }
+
+TEST_CASE("the cells of a chain further along the row are counted") {
+    const unsigned short full[]     = {10, 11, 12};
+    const unsigned short ends[]     = {10, E, 12};
+    const unsigned short baseOnly[] = {10, E, E};
+    CHECK(FilledBeyond(full, 0, +1) == 2);
+    CHECK(FilledBeyond(full, 1, +1) == 1);
+    CHECK(FilledBeyond(full, 2, +1) == 0);
+    CHECK(FilledBeyond(full, 2, -1) == 2);
+    CHECK(FilledBeyond(ends, 0, +1) == 1);
+    CHECK(FilledBeyond(baseOnly, 0, +1) == 0);
+}

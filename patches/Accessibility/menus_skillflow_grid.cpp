@@ -148,9 +148,19 @@ void Grid::Announce(void* panel) {
     unsigned status = 0;
     const char* statusWord = ReadStatusWord(rows_[row_].flow, col_, &status);
 
-    char head[256];
-    std::snprintf(head, sizeof(head),
+    char cell[256];
+    std::snprintf(cell, sizeof(cell),
                   acc::strings::Get(acc::strings::Id::FmtChargenFeatChartCell), name, statusWord);
+    // A chain reads as one line of a list unless the cells to its right are named.
+    char head[320];
+    const int moreRight = skillflow_nav::FilledBeyond(rows_[row_].id, col_, +1);
+    if (moreRight > 0) {
+        std::snprintf(head, sizeof(head),
+                      acc::strings::Get(acc::strings::Id::FmtChargenFeatChartMoreRight),
+                      cell, moreRight);
+    } else {
+        strncpy_s(head, cell, _TRUNCATE);
+    }
     acc::speech::Speak(head, /*interrupt=*/false);
 
     char description[1024];

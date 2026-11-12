@@ -33,4 +33,12 @@ int StepCol(const unsigned short* cells, int from, int step) {
     return from;
 }
 
+int FilledBeyond(const unsigned short* cells, int from, int step) {
+    int count = 0;
+    for (int c = from + step; c >= 0 && c < kColumns; c += step) {
+        if (Filled(cells, c)) ++count;
+    }
+    return count;
+}
+
 }  // namespace acc::menus::skillflow_nav

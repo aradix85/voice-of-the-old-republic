@@ -236,6 +236,7 @@ const char* Get(Id id) {
         case Id::FmtChargenFeatGrantedRow:   return "%s, %d of %d";
 
         case Id::FmtChargenFeatChartCell:    return "%s, %s";
+        case Id::FmtChargenFeatChartMoreRight: return "%s. Right: %d more";
         case Id::ChargenFeatStatusAvailable: return "available";
         case Id::ChargenFeatStatusExisting:  return "already learned";
         case Id::ChargenFeatStatusGranted:   return "automatically granted";

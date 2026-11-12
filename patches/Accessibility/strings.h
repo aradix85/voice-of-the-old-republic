@@ -882,7 +882,10 @@ enum class Id : int {
     //          FmtChargenFeatChartCell — "%s, %s" (feat name, status word)
     //          ChargenFeatStatusAvailable / Existing / Granted / Locked /
     //              Chosen — five status words, no args.
+    //          FmtChargenFeatChartMoreRight — "%s. Right: %d more" (the
+    //              cell line, the cells of its chain further right)
     FmtChargenFeatChartCell,
+    FmtChargenFeatChartMoreRight,
     ChargenFeatStatusAvailable,
     ChargenFeatStatusExisting,
     ChargenFeatStatusGranted,
