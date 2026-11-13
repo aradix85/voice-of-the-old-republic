@@ -81,8 +81,10 @@ installer, as the pre-release `bridge-latest`.
 - Standing idle in combat with an enemy near is announced once.
 - Enter on a container that did nothing tries the game's own click the next
   time.
-- Enter or Ctrl+L on something behind closed doors opens every door on the
-  way, however far off.
+- Enter or Ctrl+L on anything behind closed doors opens every door on the
+  way, however far off: a crate, a person, a door, a map note, a way out.
+- A walk the game refuses is taken over by the mod, region by region, for
+  Enter, Ctrl+L and Shift+- alike; "way blocked" comes only after that.
 - A desk or crate that stands off the walkable floor gets a route like
   anything else.
 - Enter on an enemy round a corner walks there first and then attacks.
@@ -321,6 +323,19 @@ installer, as the pre-release `bridge-latest`.
   moved, four times over, three metres from the junction it led to (Vulkar
   garage). A door into another area has no region beyond it: there the walk
   still goes to the door.
+- The check for a closed door on the way now runs for every Enter target,
+  not only for containers, items and people. A door counts by the side you
+  walk up to, so the walk stops in front of it and Enter then opens it.
+- Under every walk the mod watches there is now one net. When the game does
+  not walk it (never started, or stalled out of reach after the retry and
+  the sidesteps) and the target lies in another region with an open way to
+  it, the mod walks there region by region, opening doors, and on arrival
+  repeats what was asked: Enter acts on the target, Shift+- walks up to it.
+  Only then does it say "way blocked". Until now each case the game refused
+  needed its own repair (the door at your feet, the door further on, the
+  desk off the floor); this one place catches the ones not yet met. Once per
+  target per minute, never in a fight, and not for a step of that walk
+  itself.
 - Enter on a way into another area (a transition, a map note at one, an open
   door) stops eight metres before it while a companion is more than seven
   metres behind, says "Waiting for Mission, Zaalbar" and walks on when they

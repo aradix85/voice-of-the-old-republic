@@ -1,4 +1,4 @@
-# guidance_approach_internal.h (100 lines)
+# guidance_approach_internal.h (106 lines)
 
 Source: `patches/Accessibility/guidance_approach_internal.h`
 
@@ -17,6 +17,7 @@ Internal to the guidance_approach module (guidance_approach*.cpp); no other file
 - L94 `bool TrySidestep(const Vector& tgt)`
 - L95 `void ResumeAfterSidestep()`
 - L96 `bool TryReissueUse(float gap)`
-- L97 `void OnBlocked(DWORD stalledMs)`
+- L102 `bool TryRegionWalk()`: The last rung before "way blocked": the engine does not walk it, but the region graph may know a way.
+- L103 `void OnBlocked(DWORD stalledMs)`
 
 Also 2 constants or variables at namespace scope.
