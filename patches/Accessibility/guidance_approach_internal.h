@@ -61,6 +61,11 @@ struct ApproachState {
     // half-metre shuffle on a re-walk must not count as a walk that ran.
     Vector        walkStartPos  = {0.0f, 0.0f, 0.0f};
     bool          haveWalkStart = false;
+
+    // The party hold of a walk that leaves the area: still owed, and since
+    // when the leader is standing (0: not holding).
+    bool          leavesArea    = false;
+    DWORD         holdSince     = 0;
 };
 
 extern ApproachState g_st;
@@ -80,6 +85,9 @@ void RestartStallWindow();
 // Ends the engine side of an approach: cancels the walk, hands input back
 // when the arm took it, and clears the dialog-pending state of a talk.
 void ReleaseApproach();
+
+// guidance_approach_gather.cpp. True while it handled the tick.
+bool TickPartyHold(const Vector& pos, DWORD now);
 
 // guidance_approach_rescue.cpp
 bool TryCoordinateWalkRetry(const Vector& tgt);

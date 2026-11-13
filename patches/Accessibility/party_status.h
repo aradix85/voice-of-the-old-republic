@@ -33,6 +33,10 @@ void PollHotkey();
 // when asked for. Empty when no party member can be read.
 std::string HealthLine(bool withLevelUp);
 
+// The companions farther than `beyondM` from the controlled character, by
+// name ("Mission, Zaalbar"). Empty when everyone is that near.
+std::string MembersBehind(float beyondM);
+
 // Once per frame (core_tick): the level-up notice.
 void Tick();
 

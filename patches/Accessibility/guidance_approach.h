@@ -76,6 +76,10 @@ struct ApproachArm {
     // second press. Leave 0 for arms with nothing to re-fire (talk, coord walk
     // to a transition, engine-picker verbs).
     uint32_t      useHandle     = 0;
+    // The walk ends in an area transition. The engine refuses one while a
+    // companion is behind ("You must gather your party"), so the tracker
+    // stops short and waits for them (guidance_approach_gather.cpp).
+    bool          leavesArea    = false;
 };
 
 // Arm / replace the single in-flight approach observation. A fresh arm

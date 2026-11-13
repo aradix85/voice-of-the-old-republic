@@ -43,8 +43,11 @@ const char* KeyName(bool forceRadial) {
 // announces "way blocked" when the walk-to-act stalls out of range and gives
 // input back on a blocked use. `useHandle` lets its coordinate-walk retry
 // re-fire a use on arrival; verbs with nothing to re-fire leave it 0.
+// `leavesArea`: the walk ends in an area transition (the tracker then waits
+// for the party before it).
 void ArmInteractApproach(const char* name, void* target, bool inputDisabled,
-                         bool isDialog, uint32_t useHandle = 0) {
+                         bool isDialog, uint32_t useHandle = 0,
+                         bool leavesArea = false) {
     acc::guidance::ApproachArm arm;
     arm.owner        = acc::guidance::ApproachOwner::Interact;
     std::snprintf(arm.name, sizeof(arm.name), "%s", (name && name[0]) ? name : "?");
@@ -55,6 +58,7 @@ void ArmInteractApproach(const char* name, void* target, bool inputDisabled,
     arm.isDialog      = isDialog;
     arm.speakBlocked  = true;
     arm.useHandle     = useHandle;
+    arm.leavesArea    = leavesArea;
     acc::guidance::ArmApproach(arm);
 }
 
@@ -135,6 +139,24 @@ bool RedirectLandmarkToDoor(void* target, const char* name, bool forceRadial) {
     return true;
 }
 
+// True when a transition trigger lies within 10 m of `p`: a map note such as
+// "To Sewers" sits at the trigger it names, and a walk to it leaves the area.
+bool TransitionTriggerNear(const Vector& p) {
+    void* area = acc::engine::GetCurrentArea();
+    if (!area) return false;
+    acc::engine::AreaObjectIterator it(area);
+    while (void* obj = it.Next()) {
+        Vector pos;
+        if (acc::engine::GetObjectKind(obj) ==
+                static_cast<int>(acc::engine::GameObjectKind::Trigger) &&
+            acc::engine::IsTransitionTrigger(obj) &&
+            acc::engine::GetObjectPosition(obj, pos) && DistXY(pos, p) <= 10.0f) {
+            return true;
+        }
+    }
+    return false;
+}
+
 // Transitions are trigger regions that fire on walk-in and landmarks are
 // waypoints: neither has a use node, so a use would never move the PC (and
 // report a false "way blocked"). Walk to the coordinate instead, input left
@@ -150,7 +172,9 @@ bool WalkToTrigger(void* target, uint32_t handle, const char* name,
     }
     char msg[192];
     SpeakWithName(PreRollFor(cat), name, msg, sizeof(msg));
-    ArmInteractApproach(name, target, /*inputDisabled=*/false, /*isDialog=*/false);
+    ArmInteractApproach(name, target, /*inputDisabled=*/false, /*isDialog=*/false,
+                        /*useHandle=*/0,
+                        /*leavesArea=*/!landmark || TransitionTriggerNear(tpos));
     acclog::Write("Interact", "%s -> [%s] %s via WalkTo(coord) "
         "target=0x%08x pos=(%.2f,%.2f,%.2f)",
         KeyName(forceRadial), msg, landmark ? "landmark waypoint" : "transition trigger",
@@ -166,7 +190,9 @@ bool WalkThroughOpenDoor(void* target, uint32_t handle, const char* name) {
     }
     char msg[192];
     SpeakWithName(acc::strings::Id::FmtWalkingTo, name, msg, sizeof(msg));
-    ArmInteractApproach(name, target, /*inputDisabled=*/false, /*isDialog=*/false);
+    ArmInteractApproach(name, target, /*inputDisabled=*/false, /*isDialog=*/false,
+                        /*useHandle=*/0,
+                        /*leavesArea=*/acc::engine::DoorHasTransitionDest(target));
     acclog::Write("Interact", "Enter -> [%s] open door via WalkTo(coord) "
         "target=0x%08x pos=(%.2f,%.2f,%.2f)", msg, handle, dpos.x, dpos.y, dpos.z);
     return true;

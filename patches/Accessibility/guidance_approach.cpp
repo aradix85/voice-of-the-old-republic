@@ -97,6 +97,7 @@ void ArmApproach(const ApproachArm& arm) {
     g_st.isDialog      = arm.isDialog;
     g_st.speakBlocked  = arm.speakBlocked;
     g_st.useHandle     = arm.useHandle;
+    g_st.leavesArea    = arm.leavesArea;
     // Snapshot any bark already showing so a lingering ambient bubble can't
     // instantly disarm a fresh walk; only a bark that *surfaces* after arm
     // counts as this interaction's output.
@@ -190,6 +191,8 @@ void TickApproach() {
         }
         return;
     }
+
+    if (TickPartyHold(pos, now)) return;
 
     // A sidestep that reached its point hands straight back to the target walk.
     if (g_st.stepping && DistXY(g_st.stepPos, pos) <= kStepArrivedM) {
