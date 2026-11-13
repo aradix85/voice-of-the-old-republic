@@ -73,6 +73,8 @@ installer, as the pre-release `bridge-latest`.
 - Enter on an open door walks into the region beyond it.
 - Enter again on a door you just walked through goes on to the next door
   instead of back.
+- Waiting for the party before leaving an area stops when nobody is coming,
+  and says so.
 - Enter and the walk keys work while you stand at an area transition.
 - The overview and the walk to unexplored places work from a small entrance
   hall.
@@ -350,6 +352,11 @@ installer, as the pre-release `bridge-latest`.
   metres behind, says "Waiting for Mission, Zaalbar" and walks on when they
   are there, or after twenty seconds. A long walk outran the companions and
   the game answered "You must gather your party before venturing forth".
+- That wait ends after three seconds in which no companion behind came
+  closer, and says "Walking on without Zaalbar". A companion that stood
+  fixed on one spot in the Lower City, and one left behind in solo mode,
+  cost the full twenty seconds on every Enter, with no word that the walk
+  would go on.
 
 <h3>Cycles:</h3>
 

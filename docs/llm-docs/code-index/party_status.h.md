@@ -1,4 +1,4 @@
-# party_status.h (53 lines)
+# party_status.h (54 lines)
 
 Source: `patches/Accessibility/party_status.h`
 
@@ -20,7 +20,7 @@ BestSecurity feeds the lock detail ("Security 15, best in your party: Trask with
 
 - L30 `void PollHotkey()`: Ctrl+H (Action::PartyStatusAnnounce).
 - L34 `std::string HealthLine(bool withLevelUp)`: "Korasha 10 of 13; Trask 27 of 36", with ", can level up" after a member when asked for.
-- L38 `std::string MembersBehind(float beyondM)`: The companions farther than `beyondM` from the controlled character, by name ("Mission, Zaalbar").
-- L41 `void Tick()`: Once per frame (core_tick): the level-up notice.
-- L46 `bool BestSecurity(std::string& outName, int& outScore)`: The party member (player included) with the highest Security, name in the game codepage.
-- L50 `bool SecurityOf(void* serverCreature, int& outScore)`: One creature's Security as BestSecurity counts it (KOTOR 1).
+- L39 `std::string MembersBehind(float beyondM, float* outLeftM = nullptr)`: The companions farther than `beyondM` from the controlled character, by name ("Mission, Zaalbar").
+- L42 `void Tick()`: Once per frame (core_tick): the level-up notice.
+- L47 `bool BestSecurity(std::string& outName, int& outScore)`: The party member (player included) with the highest Security, name in the game codepage.
+- L51 `bool SecurityOf(void* serverCreature, int& outScore)`: One creature's Security as BestSecurity counts it (KOTOR 1).
