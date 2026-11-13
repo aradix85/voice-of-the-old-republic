@@ -228,6 +228,7 @@ void TickApproach() {
         g_st.stepping = false;
         Vector t2;
         if (ResolveTargetPos(t2) && TrySidestep(t2)) return;
+        if (TryRegionWalk()) return;
         OnBlocked(now - g_st.progressAt);
         return;
     }
@@ -267,6 +268,7 @@ void TickApproach() {
     // retry and then sidesteps before anything calls it blocked.
     if (TryCoordinateWalkRetry(tgt)) return;
     if (TrySidestep(tgt)) return;
+    if (TryRegionWalk()) return;
 
     OnBlocked(now - g_st.progressAt);
 }

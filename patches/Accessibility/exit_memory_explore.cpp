@@ -110,6 +110,7 @@ bool ChainStep() {
 void ActOnArrival() {
     void* obj = g_chain.thenObj;
     const uint32_t handle = g_chain.thenHandle;
+    const bool walkOnly = g_chain.thenWalkOnly;
     StopChain("arrived");
     const uint32_t now = obj ? acc::engine::GetObjectHandle(obj) : 0;
     if (now == 0 || ((now ^ handle) & 0x7FFFFFFFu) != 0) {
@@ -117,7 +118,11 @@ void ActOnArrival() {
         return;
     }
     acc::narrated_target::Stamp(obj, handle);
-    acc::interact::DispatchInteract(obj, handle, /*forceRadial=*/false);
+    if (walkOnly) {
+        acc::cycle_input::WalkToNarratedTarget();
+    } else {
+        acc::interact::DispatchInteract(obj, handle, /*forceRadial=*/false);
+    }
 }
 
 void WalkTowardUnexplored() {
@@ -217,10 +222,16 @@ void WalkToNearestLoot() {
     acclog::Write("ExitMemory", "walk loot: %s", s.name.c_str());
 }
 
-}  // namespace
-
-bool WalkThenInteract(void* target, uint32_t handle, const char* name) {
+// The region walk to a target in another region, and on arrival the request
+// again: act on it, or with `walkOnly` walk up to it. `refused`: the engine
+// already declined the walk, so no reason is asked for; otherwise the walk
+// starts only where the engine is known to fail (a closed door on the way,
+// an enemy round a corner).
+bool WalkThenAct(void* target, uint32_t handle, const char* name, bool refused,
+                 bool walkOnly) {
     if (!target || handle == 0) return false;
+    // A hop of the region walk itself was refused: that is its end.
+    if (refused && g_chain.active) return false;
     // The walk stops when a fight starts, so it is no way to act in one.
     if (acc::engine::IsAnyPartyMemberInCombat()) return false;
     Vector pos;
@@ -241,17 +252,22 @@ bool WalkThenInteract(void* target, uint32_t handle, const char* name) {
     const bool  corner   = route.kind == Route::Open &&
                            static_cast<float>(route.walkM) >= straight + kCornerExtraM &&
                            static_cast<float>(route.walkM) >= straight * kCornerFactor;
-    const bool door  = ClosedDoorOnWay(g, area, t);
-    const bool enemy = corner && acc::examine_view::IsHostileCreature(
-                                     acc::engine::ResolveServerObjectHandle(handle));
-    if (!door && !enemy) return false;
+    const char* why = "the engine refused the walk";
+    if (!refused) {
+        const bool door  = ClosedDoorOnWay(g, area, t);
+        const bool enemy = corner && acc::examine_view::IsHostileCreature(
+                                         acc::engine::ResolveServerObjectHandle(handle));
+        if (!door && !enemy) return false;
+        why = door ? "closed door on the way" : "enemy round a corner";
+    }
 
-    g_chain            = ExploreChain{};
-    g_chain.active     = true;
-    g_chain.goal       = g.nodes[t].id;
-    g_chain.name       = (name && name[0]) ? name : "?";
-    g_chain.thenObj    = target;
-    g_chain.thenHandle = handle;
+    g_chain              = ExploreChain{};
+    g_chain.active       = true;
+    g_chain.goal         = g.nodes[t].id;
+    g_chain.name         = (name && name[0]) ? name : "?";
+    g_chain.thenObj      = target;
+    g_chain.thenHandle   = handle;
+    g_chain.thenWalkOnly = walkOnly;
     if (!ChainStep()) {
         g_chain.active = false;
         return false;
@@ -263,10 +279,20 @@ bool WalkThenInteract(void* target, uint32_t handle, const char* name) {
     std::snprintf(buf, sizeof(buf),
                   acc::strings::Get(acc::strings::Id::FmtWalkingTo), subject.c_str());
     acc::speech::Speak(buf, /*interrupt=*/true);
-    acclog::Write("ExitMemory", "walk then act: %s (goal region %d, %s) target 0x%08x",
-                  buf, g_chain.goal, door ? "closed door on the way" : "enemy round a corner",
-                  handle);
+    acclog::Write("ExitMemory", "walk then %s: %s (goal region %d, %s) target 0x%08x",
+                  walkOnly ? "walk up" : "act", buf, g_chain.goal, why, handle);
     return true;
+}
+
+}  // namespace
+
+bool WalkThenInteract(void* target, uint32_t handle, const char* name) {
+    return WalkThenAct(target, handle, name, /*refused=*/false, /*walkOnly=*/false);
+}
+
+bool RescueWalk(void* target, const char* name, bool act) {
+    const uint32_t handle = target ? acc::engine::GetObjectHandle(target) : 0;
+    return WalkThenAct(target, handle, name, /*refused=*/true, /*walkOnly=*/!act);
 }
 
 void TickExploreChain() {

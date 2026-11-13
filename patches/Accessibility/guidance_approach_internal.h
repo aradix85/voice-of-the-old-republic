@@ -94,6 +94,12 @@ bool TryCoordinateWalkRetry(const Vector& tgt);
 bool TrySidestep(const Vector& tgt);
 void ResumeAfterSidestep();
 bool TryReissueUse(float gap);
+// The last rung before "way blocked": the engine does not walk it, but the
+// region graph may know a way. exit_memory then walks region by region,
+// opening the doors, and repeats the request on arrival. Every watched walk
+// with a target object passes here, whatever its key or kind of target.
+// True when that walk started (the tracker is then armed for its first step).
+bool TryRegionWalk();
 void OnBlocked(DWORD stalledMs);
 
 }  // namespace acc::guidance

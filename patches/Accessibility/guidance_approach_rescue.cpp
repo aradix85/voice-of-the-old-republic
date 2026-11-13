@@ -8,6 +8,7 @@
 #include "engine_panels.h"
 #include "engine_player.h"
 #include "examine_view.h"
+#include "exit_memory.h"       // RescueWalk: the region walk under a refused walk
 #include "guidance_autowalk.h"
 #include "interact_dispatch.h"
 #include "log.h"
@@ -41,6 +42,13 @@ constexpr DWORD kRefireGuardMs  = 20000; // one talk re-fire per target per 20 s
 // be reached does not loop dialog -> retry -> re-fire.
 uint32_t g_refireHandle = 0;
 DWORD    g_refireAt     = 0;
+
+// The last target handed to the region walk: one such walk per target per
+// minute, so a target that walk cannot bring within reach either is not
+// walked to in rounds.
+constexpr DWORD kRegionWalkGuardMs = 60000;
+void* g_regionWalkFor = nullptr;
+DWORD g_regionWalkAt  = 0;
 
 // Clears the failed plan and hands input back: WalkTo manages its own AI
 // level and needs manual input left enabled. The flag drops so a later
@@ -349,6 +357,27 @@ bool TryReissueUse(float gap) {
 // Breaks a blocked approach and announces "way blocked" when the arm asked
 // for it, naming a companion at the target or a creature beside the PC when
 // one is the reason. Disarms.
+bool TryRegionWalk() {
+    void* target = g_st.targetObj;
+    const DWORD now = GetTickCount();
+    if (!target) return false;
+    if (target == g_regionWalkFor && now - g_regionWalkAt < kRegionWalkGuardMs) return false;
+    char name[sizeof(g_st.name)];
+    std::snprintf(name, sizeof(name), "%s", g_st.name);
+    const bool act = g_st.owner == ApproachOwner::Interact;
+    // The region walk arms its own steps, so this approach lets go first; the
+    // flags drop so that a later OnBlocked does not restore twice.
+    ReleaseApproach();
+    g_st.inputDisabled = false;
+    g_st.isDialog      = false;
+    if (!acc::exit_memory::RescueWalk(target, name, act)) return false;
+    g_regionWalkFor = target;
+    g_regionWalkAt  = now;
+    acclog::Write("Approach", "refused walk handed to the region walk name=[%s] "
+        "then=%s", name, act ? "act" : "walk up");
+    return true;
+}
+
 void OnBlocked(DWORD stalledMs) {
     ReleaseApproach();
 

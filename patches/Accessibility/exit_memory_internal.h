@@ -87,6 +87,7 @@ struct ExploreChain {
     int         doorTries = 0;      // hops in a row at that same door
     void*       thenObj    = nullptr;  // WalkThenInteract: acted on at arrival
     uint32_t    thenHandle = 0;        // 0 for the explore walk
+    bool        thenWalkOnly = false;  // at arrival walk up to it, as Shift+- does
     std::string name;             // "to a corridor": for way-blocked lines
 };
 extern ExploreChain g_chain;

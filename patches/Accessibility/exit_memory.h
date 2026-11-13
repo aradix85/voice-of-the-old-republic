@@ -192,7 +192,7 @@ void WarnIfBehindLock(void* target);
 // the door, as with a door into another area.
 bool BeyondDoor(const Vector& doorPos, Vector& out);
 
-// Enter or Ctrl+L on something in another region with a closed door on the
+// Enter or Ctrl+L on anything in another region with a closed door on the
 // way, or on an enemy round a corner: walk there region by region, opening
 // the doors, and act on the target on arrival, as Enter on it does. The
 // engine's own walk to a use or an attack opens no door and gives up in a
@@ -200,6 +200,13 @@ bool BeyondDoor(const Vector& doorPos, Vector& out);
 // dispatches nothing. False when the target is in the player's region, has
 // no open way to it, or needs neither.
 bool WalkThenInteract(void* target, uint32_t handle, const char* name);
+
+// The same walk as a net under every walk the approach tracker watches: the
+// engine did not walk to `target`, whatever the reason. On arrival `act`
+// repeats Enter on it, otherwise the walk up to it (Shift+-). False when the
+// target is in the player's region, no open way leads to it, a fight is on,
+// or the walk refused was a step of this walk itself.
+bool RescueWalk(void* target, const char* name, bool act);
 
 // Ctrl+Shift+N (ExploreWalkUnexplored): walk the whole way to the nearest
 // unexplored region, region by region, opening closed doors on the way. One
