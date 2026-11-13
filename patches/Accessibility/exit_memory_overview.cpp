@@ -400,7 +400,7 @@ void WarnIfBehindLock(void* target) {
         int farId  = kClusterIdNone;
         if (DoorSides(g, pos, nearId, farId)) t = g.IndexOf(nearId);
     }
-    if (t < 0) t = g.IndexOf(RegionAt(g.area, pos));
+    if (t < 0) t = IndexAt(g, pos);
     if (t < 0 || g.distAll[t] >= kFar) return;
     g_noWayPending = true;
     g_noWayAtMs    = GetTickCount() + kNoWayDelayMs;

@@ -161,6 +161,8 @@ void* TransitionDoorNear(void* area, const Vector& p, float maxM, const std::str
 // exit_memory_graph.cpp
 bool BuildGraph(void* area, const Vector& player, Graph& g);
 std::string ExitToward(const Graph& g, int hop, Vector* outPos);
+// The graph index of the region `pos` lies in, -1 when it lies in none.
+int IndexAt(const Graph& g, const Vector& pos);
 Route RouteToIndex(const Graph& g, int t, const Vector& targetPos);
 Route RouteTo(const Graph& g, const Vector& targetPos);
 std::string RouteText(const Route& r);

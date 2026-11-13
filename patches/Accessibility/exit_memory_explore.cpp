@@ -40,12 +40,11 @@ void StopChain(const char* why) {
                   g_chain.hops, g_chain.goal, why);
 }
 
-// The closed door on the link from the player's region to the region `hopId`
-// next to it, or null.
-void* ClosedDoorOnHop(const Graph& g, void* area, int hopId) {
+// The closed door on the link between the neighbouring regions `a` and `b`,
+// or null.
+void* ClosedDoorBetween(const Graph& g, void* area, int a, int b) {
     for (const ClusterLink& l : g.links) {
-        const bool thisLink = (l.a == g.start && l.b == hopId) ||
-                              (l.b == g.start && l.a == hopId);
+        const bool thisLink = (l.a == a && l.b == b) || (l.b == a && l.a == b);
         if (thisLink && l.viaDoor) return ClosedDoorNear(area, l.doorPos);
     }
     return nullptr;
@@ -66,7 +65,7 @@ bool ChainStep() {
     if (g.distOpen[t] >= kFar || g.hopOpen[t] < 0) return false;
     const int hop   = g.hopOpen[t];
     const int hopId = g.nodes[hop].id;
-    void* door = ClosedDoorOnHop(g, area, hopId);
+    void* door = ClosedDoorBetween(g, area, g.start, hopId);
     uint32_t before = 0;
     acc::guidance::LastApproachOutcome(&before);
     if (door) {
@@ -222,7 +221,7 @@ bool WalkThenInteract(void* target, uint32_t handle, const char* name) {
     void* area = acc::engine::GetCurrentArea();
     Graph g;
     if (!BuildGraph(area, player, g)) return false;
-    const int t = g.IndexOf(RegionAt(g.area, pos));
+    const int t = IndexAt(g, pos);
     if (t < 0 || g.si < 0 || t == g.si) return false;
     if (g.distOpen[t] >= kFar || g.hopOpen[t] < 0) return false;
 
@@ -231,7 +230,8 @@ bool WalkThenInteract(void* target, uint32_t handle, const char* name) {
     const bool  corner   = route.kind == Route::Open &&
                            static_cast<float>(route.walkM) >= straight + kCornerExtraM &&
                            static_cast<float>(route.walkM) >= straight * kCornerFactor;
-    const bool door  = ClosedDoorOnHop(g, area, g.nodes[g.hopOpen[t]].id) != nullptr;
+    const bool door  =
+        ClosedDoorBetween(g, area, g.start, g.nodes[g.hopOpen[t]].id) != nullptr;
     const bool enemy = corner && acc::examine_view::IsHostileCreature(
                                      acc::engine::ResolveServerObjectHandle(handle));
     if (!door && !enemy) return false;

@@ -146,8 +146,12 @@ Route RouteToIndex(const Graph& g, int t, const Vector& targetPos) {
     return r;
 }
 
+int IndexAt(const Graph& g, const Vector& pos) {
+    return g.IndexOf(RegionAt(g.area, pos));
+}
+
 Route RouteTo(const Graph& g, const Vector& targetPos) {
-    return RouteToIndex(g, g.IndexOf(RegionAt(g.area, targetPos)), targetPos);
+    return RouteToIndex(g, IndexAt(g, targetPos), targetPos);
 }
 
 std::string RouteText(const Route& r) {
@@ -355,7 +359,7 @@ bool UnreachableFlags(void* const* objs, const Vector* positions, int count,
             int farId  = kClusterIdNone;
             if (DoorSides(g, positions[i], nearId, farId)) t = g.IndexOf(nearId);
         }
-        if (t < 0) t = g.IndexOf(RegionAt(g.area, positions[i]));
+        if (t < 0) t = IndexAt(g, positions[i]);
         if (t < 0 || t == g.si) continue;
         out[i] = g.distOpen[t] >= kFar;
     }
