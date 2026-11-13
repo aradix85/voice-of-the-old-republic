@@ -1,4 +1,4 @@
-# exit_memory.h (211 lines)
+# exit_memory.h (216 lines)
 
 Source: `patches/Accessibility/exit_memory.h`
 
@@ -36,5 +36,6 @@ The overview (Ctrl+N, and the bridge's /overview): how many regions of the area 
 - L171 `struct RegionSummary`: The area's regions as the overview sees them, for the bridge's /rooms.
 - L182 `bool ListRegions(std::vector<RegionSummary>& out, std::vector<std::pair<int, int>>& links)`: False without a graph.
 - L188 `void WarnIfBehindLock(void* target)`: Enter on something that lies only behind a locked door: a beat after the walk line, "No way there now: it is behind a locked door." The dispatch itself is never held back.
-- L197 `bool WalkThenInteract(void* target, uint32_t handle, const char* name)`: Enter or Ctrl+L on something in another region with a closed door on the way, or on an enemy round a corner: walk there region by region, opening the doors, and act on the target on arrival, as Enter on it does.
-- L208 `void PollWalkHotkeys()`: Ctrl+Shift+N (ExploreWalkUnexplored): walk the whole way to the nearest unexplored region, region by region, opening closed doors on the way.
+- L193 `bool BeyondDoor(const Vector& doorPos, Vector& out)`: Where a walk through a door ends: the centre of the region beyond it, seen from the player.
+- L202 `bool WalkThenInteract(void* target, uint32_t handle, const char* name)`: Enter or Ctrl+L on something in another region with a closed door on the way, or on an enemy round a corner: walk there region by region, opening the doors, and act on the target on arrival, as Enter on it does.
+- L213 `void PollWalkHotkeys()`: Ctrl+Shift+N (ExploreWalkUnexplored): walk the whole way to the nearest unexplored region, region by region, opening closed doors on the way.

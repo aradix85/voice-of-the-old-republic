@@ -70,6 +70,7 @@ installer, as the pre-release `bridge-latest`.
   and the conversation starts.
 - Enter on a map note at a door uses the door.
 - Enter on a closed door into another area opens it and takes you through.
+- Enter on an open door walks into the region beyond it.
 - Enter and the walk keys work while you stand at an area transition.
 - The overview and the walk to unexplored places work from a small entrance
   hall.
@@ -314,6 +315,12 @@ installer, as the pre-release `bridge-latest`.
   lies behind an edge of the floor, so the desk had no region: no "about 100
   metres to walk" in the cycle, and Enter from afar said "way blocked" where
   the crate next to it got a walk.
+- Enter on an open door walks to the centre of the region on the other side
+  of it, seen from where you stand. It walked to the door's own spot, so
+  standing in the doorway it said "Walking: Standard Door, open" and nothing
+  moved, four times over, three metres from the junction it led to (Vulkar
+  garage). A door into another area has no region beyond it: there the walk
+  still goes to the door.
 - Enter on a way into another area (a transition, a map note at one, an open
   door) stops eight metres before it while a companion is more than seven
   metres behind, says "Waiting for Mission, Zaalbar" and walks on when they
