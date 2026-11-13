@@ -44,16 +44,21 @@ const char* KeyName(bool forceRadial) {
 // input back on a blocked use. `useHandle` lets its coordinate-walk retry
 // re-fire a use on arrival; verbs with nothing to re-fire leave it 0.
 // `leavesArea`: the walk ends in an area transition (the tracker then waits
-// for the party before it).
+// for the party before it). `walkEnd`: the walk ends at this point rather
+// than at the target, so that is what the tracker measures against.
 void ArmInteractApproach(const char* name, void* target, bool inputDisabled,
                          bool isDialog, uint32_t useHandle = 0,
-                         bool leavesArea = false) {
+                         bool leavesArea = false, const Vector* walkEnd = nullptr) {
     acc::guidance::ApproachArm arm;
     arm.owner        = acc::guidance::ApproachOwner::Interact;
     std::snprintf(arm.name, sizeof(arm.name), "%s", (name && name[0]) ? name : "?");
-    arm.targetObj    = target;
     Vector p{};
-    if (target && acc::engine::GetObjectPosition(target, p)) arm.targetPos = p;
+    if (walkEnd) {
+        arm.targetPos = *walkEnd;
+    } else {
+        arm.targetObj = target;
+        if (target && acc::engine::GetObjectPosition(target, p)) arm.targetPos = p;
+    }
     arm.inputDisabled = inputDisabled;
     arm.isDialog      = isDialog;
     arm.speakBlocked  = true;
@@ -182,19 +187,25 @@ bool WalkToTrigger(void* target, uint32_t handle, const char* name,
     return true;
 }
 
-// An open door has no verb, but Enter on it means going through: walk to it.
+// An open door has no verb, but Enter on it means going through: walk into
+// the region beyond it. The door's own spot is where a player in the doorway
+// already stands. A door into another area has no region beyond: there the
+// door itself is the way out.
 bool WalkThroughOpenDoor(void* target, uint32_t handle, const char* name) {
     Vector dpos{};
-    if (!acc::engine::GetObjectPosition(target, dpos) || !acc::guidance::WalkTo(dpos)) {
-        return false;
-    }
+    if (!acc::engine::GetObjectPosition(target, dpos)) return false;
+    Vector end = dpos;
+    const bool beyond = acc::exit_memory::BeyondDoor(dpos, end);
+    if (!acc::guidance::WalkTo(end)) return false;
     char msg[192];
     SpeakWithName(acc::strings::Id::FmtWalkingTo, name, msg, sizeof(msg));
     ArmInteractApproach(name, target, /*inputDisabled=*/false, /*isDialog=*/false,
                         /*useHandle=*/0,
-                        /*leavesArea=*/acc::engine::DoorHasTransitionDest(target));
+                        /*leavesArea=*/acc::engine::DoorHasTransitionDest(target),
+                        /*walkEnd=*/beyond ? &end : nullptr);
     acclog::Write("Interact", "Enter -> [%s] open door via WalkTo(coord) "
-        "target=0x%08x pos=(%.2f,%.2f,%.2f)", msg, handle, dpos.x, dpos.y, dpos.z);
+        "target=0x%08x door=(%.2f,%.2f) %s=(%.2f,%.2f)", msg, handle, dpos.x, dpos.y,
+        beyond ? "beyond" : "to the door", end.x, end.y);
     return true;
 }
 

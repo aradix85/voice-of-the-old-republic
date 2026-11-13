@@ -369,6 +369,22 @@ bool UnreachableFlags(void* const* objs, const Vector* positions, int count,
     return true;
 }
 
+bool BeyondDoor(const Vector& doorPos, Vector& out) {
+    Vector player;
+    if (!acc::engine::GetPlayerPosition(player)) return false;
+    Graph g;
+    if (!BuildGraph(acc::engine::GetCurrentArea(), player, g)) return false;
+    int nearId = kClusterIdNone;
+    int farId  = kClusterIdNone;
+    ClusterInfo beyond;
+    if (!DoorSides(g, doorPos, nearId, farId) ||
+        !acc::room_topology::GetClusterInfo(g.area, farId, beyond)) {
+        return false;
+    }
+    out = beyond.centre;
+    return true;
+}
+
 bool ListRegions(std::vector<RegionSummary>& out,
                  std::vector<std::pair<int, int>>& links) {
     out.clear();

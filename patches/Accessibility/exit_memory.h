@@ -187,6 +187,11 @@ bool ListRegions(std::vector<RegionSummary>& out,
 // itself is never held back.
 void WarnIfBehindLock(void* target);
 
+// Where a walk through a door ends: the centre of the region beyond it, seen
+// from the player. False (out untouched) when the graph joins nothing through
+// the door, as with a door into another area.
+bool BeyondDoor(const Vector& doorPos, Vector& out);
+
 // Enter or Ctrl+L on something in another region with a closed door on the
 // way, or on an enemy round a corner: walk there region by region, opening
 // the doors, and act on the target on arrival, as Enter on it does. The
