@@ -372,7 +372,7 @@ bool UnreachableFlags(void* const* objs, const Vector* positions, int count,
     return true;
 }
 
-bool BeyondDoor(const Vector& doorPos, Vector& out) {
+bool BeyondDoor(const Vector& doorPos, Vector& out, int* outRegion) {
     Vector player;
     if (!acc::engine::GetPlayerPosition(player)) return false;
     Graph g;
@@ -385,7 +385,25 @@ bool BeyondDoor(const Vector& doorPos, Vector& out) {
         return false;
     }
     out = beyond.centre;
+    if (outRegion) *outRegion = farId;
     return true;
+}
+
+void* OnwardDoor(int region, const Vector& passedDoorPos) {
+    Vector player;
+    if (region < 0 || !acc::engine::GetPlayerPosition(player)) return nullptr;
+    Graph g;
+    if (!BuildGraph(acc::engine::GetCurrentArea(), player, g) || g.start != region) {
+        return nullptr;
+    }
+    void* onward = nullptr;
+    for (const ExitMark& e : g.exits) {
+        if (DistXY(e.pos, passedDoorPos) <= kDoorMatchM) continue;
+        void* door = DoorNear(g.area, e.pos);
+        if (!door || onward) return nullptr;  // an open way, or two ways on
+        onward = door;
+    }
+    return onward;
 }
 
 bool ListRegions(std::vector<RegionSummary>& out,

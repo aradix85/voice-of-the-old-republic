@@ -189,8 +189,15 @@ void WarnIfBehindLock(void* target);
 
 // Where a walk through a door ends: the centre of the region beyond it, seen
 // from the player. False (out untouched) when the graph joins nothing through
-// the door, as with a door into another area.
-bool BeyondDoor(const Vector& doorPos, Vector& out);
+// the door, as with a door into another area. `outRegion` gets the id of the
+// region beyond.
+bool BeyondDoor(const Vector& doorPos, Vector& out, int* outRegion = nullptr);
+
+// The way on after a walk through the door at `passedDoorPos` into `region`:
+// the one other exit of that region when it is a door, so that Enter pressed
+// again goes on instead of back. Null while the player is not in `region`,
+// and when the region has no other exit, several, or one that is no door.
+void* OnwardDoor(int region, const Vector& passedDoorPos);
 
 // Enter or Ctrl+L on anything in another region with a closed door on the
 // way, or on an enemy round a corner: walk there region by region, opening

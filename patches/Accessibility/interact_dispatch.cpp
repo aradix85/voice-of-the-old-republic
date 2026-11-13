@@ -187,16 +187,48 @@ bool WalkToTrigger(void* target, uint32_t handle, const char* name,
     return true;
 }
 
+// The open door the last Enter walked through: the region that walk led into
+// and the narrated target's stamp at that press.
+struct PassedDoor {
+    uint32_t     handle    = 0;
+    int          region    = -1;
+    unsigned int tickStamp = 0;
+};
+PassedDoor g_passed;
+
 // An open door has no verb, but Enter on it means going through: walk into
 // the region beyond it. The door's own spot is where a player in the doorway
 // already stands. A door into another area has no region beyond: there the
 // door itself is the way out.
+// Enter again on the door just walked through, the target untouched in
+// between, means on and not back: where the region has one other door, that
+// door takes the press. Without it the same key walked there and back.
 bool WalkThroughOpenDoor(void* target, uint32_t handle, const char* name) {
     Vector dpos{};
     if (!acc::engine::GetObjectPosition(target, dpos)) return false;
+
+    acc::narrated_target::Slot slot;
+    const unsigned int stamp =
+        acc::narrated_target::TryGet(slot) ? slot.tickStamp : 0;
+    const PassedDoor passed = g_passed;
+    g_passed = {};
+    if (handle == passed.handle && stamp == passed.tickStamp) {
+        if (void* onward = acc::exit_memory::OnwardDoor(passed.region, dpos)) {
+            const uint32_t onwardHandle = acc::engine::GetObjectHandle(onward);
+            acclog::Write("Interact", "Enter again on the door just walked "
+                "through (0x%08x): on to the one other door, 0x%08x",
+                handle, onwardHandle);
+            acc::narrated_target::Stamp(onward, onwardHandle);
+            DispatchInteract(onward, onwardHandle, /*forceRadial=*/false);
+            return true;
+        }
+    }
+
     Vector end = dpos;
-    const bool beyond = acc::exit_memory::BeyondDoor(dpos, end);
+    int region = -1;
+    const bool beyond = acc::exit_memory::BeyondDoor(dpos, end, &region);
     if (!acc::guidance::WalkTo(end)) return false;
+    if (beyond) g_passed = PassedDoor{handle, region, stamp};
     char msg[192];
     SpeakWithName(acc::strings::Id::FmtWalkingTo, name, msg, sizeof(msg));
     ArmInteractApproach(name, target, /*inputDisabled=*/false, /*isDialog=*/false,
