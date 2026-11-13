@@ -147,7 +147,10 @@ Route RouteToIndex(const Graph& g, int t, const Vector& targetPos) {
 }
 
 int IndexAt(const Graph& g, const Vector& pos) {
-    return g.IndexOf(RegionAt(g.area, pos));
+    const int t = g.IndexOf(RegionAt(g.area, pos));
+    // A desk or a crate can stand off the walkable floor with an edge of it
+    // on every side, so that no region is in plain sight of its own spot.
+    return t >= 0 ? t : g.IndexOf(RegionAt(g.area, pos, /*throughWalls=*/true));
 }
 
 Route RouteTo(const Graph& g, const Vector& targetPos) {

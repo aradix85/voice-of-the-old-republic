@@ -143,7 +143,8 @@ struct Route {
 // Helpers shared across the modules, by the file that defines them.
 
 // exit_memory_regions.cpp
-int RegionAt(void* area, const Vector& p);
+// throughWalls: the nearest region, also when a wall stands in between.
+int RegionAt(void* area, const Vector& p, bool throughWalls = false);
 std::set<int> LinkedRegions(void* area, int self);
 int RegionBehind(void* area, int self, const std::set<int>& linked, const Vector& from, const Vector& exitPos);
 std::vector<std::pair<int, std::string>> LandmarkRegions(void* area);
@@ -162,7 +163,8 @@ void* TransitionDoorNear(void* area, const Vector& p, float maxM, const std::str
 // exit_memory_graph.cpp
 bool BuildGraph(void* area, const Vector& player, Graph& g);
 std::string ExitToward(const Graph& g, int hop, Vector* outPos);
-// The graph index of the region `pos` lies in, -1 when it lies in none.
+// The graph index of the region `pos` lies in; for a spot off the walkable
+// floor, of the region nearest to it. -1 when no region is in range.
 int IndexAt(const Graph& g, const Vector& pos);
 Route RouteToIndex(const Graph& g, int t, const Vector& targetPos);
 Route RouteTo(const Graph& g, const Vector& targetPos);

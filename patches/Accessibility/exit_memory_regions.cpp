@@ -23,13 +23,13 @@ constexpr float kProbeSteps[] = {0.0f, 1.5f, 3.0f, 5.0f, 8.0f};
 
 }  // namespace
 
-int RegionAt(void* area, const Vector& p) {
+int RegionAt(void* area, const Vector& p, bool throughWalls) {
     std::string label;
     int sig = 0;
     int cid = kClusterIdNone;
     if (!acc::room_topology::LookupAt(area, p, label, sig, cid,
                                       /*allowDiagLog=*/false,
-                                      /*requireWallReachable=*/true,
+                                      /*requireWallReachable=*/!throughWalls,
                                       /*zTrusted=*/false)) {
         return kClusterIdNone;
     }
