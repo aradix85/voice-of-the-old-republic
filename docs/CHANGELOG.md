@@ -139,6 +139,8 @@ installer, as the pre-release `bridge-latest`.
 - New setting "Swoop race: automatic pilot": the bike steers to the
   accelerator pads, around the obstacles, and shifts by itself (KOTOR 1).
 - KOTOR 1 swoop race: the obstacle warning sounds where the buoy stands.
+- KOTOR 1 swoop race: the automatic pilot launches and shifts, and a late
+  launch keeps the race cues.
 - A quick Ctrl+L no longer opens the game's Quests screen as well.
 - With a companion in control, your own character counts as a party member:
   Ctrl+H names everyone.
@@ -494,7 +496,15 @@ installer, as the pre-release `bridge-latest`.
   it, otherwise on the bike's own side, and the pad is let go when it cannot
   be had without a hit. On the three tracks as the game files have them the
   line touches no buoy at any speed, where the pads alone lead into 7 to 9 of
-  the 22 (unit test). It has not been raced yet.
+  the 22 (unit test).
+- The first real race showed the pilot never switched on: its launch waited
+  for the race timer, which only starts once the bike moves, and its shifts
+  stopped the moment the timer ran. It now launches as soon as the track
+  says "Go!" and shifts until the finish. Steering has still not been raced.
+- KOTOR 1 swoop race: a launch more than five seconds after "Go!" no longer
+  leaves the whole race silent. The start time counted as stale then, so the
+  obstacle and pad cues, the steering help and the finish time all stayed
+  off. The track's own gear value turning valid marks the "Go!" now.
 - KOTOR 1 swoop race: the obstacle warning is placed by the buoy's collision
   box, as on KOTOR 2, and no longer by the object's origin. The buoy often
   stands elsewhere: on Taris 8 of the 22 buoys, on Tatooine 21 and on Manaan
