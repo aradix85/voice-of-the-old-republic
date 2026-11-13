@@ -80,7 +80,10 @@ installer, as the pre-release `bridge-latest`.
 - Standing idle in combat with an enemy near is announced once.
 - Enter on a container that did nothing tries the game's own click the next
   time.
-- Enter or Ctrl+L on something behind a closed door opens the door on the way.
+- Enter or Ctrl+L on something behind closed doors opens every door on the
+  way, however far off.
+- A desk or crate that stands off the walkable floor gets a route like
+  anything else.
 - Enter on an enemy round a corner walks there first and then attacks.
 - Standing at a closed door, you are in the region on your side of it.
 - A walk into another area waits for your companions before it leaves.
@@ -286,7 +289,7 @@ installer, as the pre-release `bridge-latest`.
   walked into the door: the engine's own walk to a use opens no door, the
   party stood in the way, and all that followed was "way blocked". Enter on a
   container, item or person, and Ctrl+L, now check the way first. With a
-  closed door on the first stretch the mod walks itself, region by region as
+  closed door anywhere on it the mod walks itself, region by region as
   Ctrl+Shift+N does, opening the doors, says "Walking to Corpse - Sith
   soldier, via Sewer Door 7 Southeast, about 25 metres to walk", and acts on
   the target once it stands in the target's region.
@@ -301,6 +304,16 @@ installer, as the pre-release `bridge-latest`.
   read "leads South, back" while it stood in front of you, and Enter on a
   footlocker 19 metres on said "way blocked" four times, because the route
   saw no door to open (Black Vulkar Base).
+- That check looks at the whole way, not only at the first region next to
+  yours. With the first stretch open and closed doors further on, the walk
+  was left to the engine, which refuses a walk with a closed door on it:
+  Enter on Supplies, 115 metres off behind two doors, said "way blocked"
+  (Vulkar garage).
+- A target that stands off the walkable floor belongs to the region nearest
+  to it. From the spot of Garage Head's Desk every point of its own office
+  lies behind an edge of the floor, so the desk had no region: no "about 100
+  metres to walk" in the cycle, and Enter from afar said "way blocked" where
+  the crate next to it got a walk.
 - Enter on a way into another area (a transition, a map note at one, an open
   door) stops eight metres before it while a companion is more than seven
   metres behind, says "Waiting for Mission, Zaalbar" and walks on when they

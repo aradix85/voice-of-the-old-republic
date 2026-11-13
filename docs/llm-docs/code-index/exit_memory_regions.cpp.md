@@ -6,7 +6,7 @@ Regions for the exit-memory modules: the region at a point, the region behind an
 
 ## Declarations (in source order)
 
-- L26 `int RegionAt(void* area, const Vector& p)`
+- L26 `int RegionAt(void* area, const Vector& p, bool throughWalls)`
 - L40 `std::set<int> LinkedRegions(void* area, int self)`: Regions sharing a nav edge with `self` (room_topology's region links).
 - L51 `int RegionBehind(void* area, int self, const std::set<int>& linked, const Vector& from, const Vector& exitPos)`
 - L73 `std::vector<std::pair<int, std::string>> LandmarkRegions(void* area)`: Discovered landmarks (map notes the player has met) with the region each one sits in.

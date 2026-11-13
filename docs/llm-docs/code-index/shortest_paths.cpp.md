@@ -1,4 +1,4 @@
-# shortest_paths.cpp (41 lines)
+# shortest_paths.cpp (43 lines)
 
 Source: `patches/Accessibility/shortest_paths.cpp`
 
@@ -6,5 +6,5 @@ Source: `patches/Accessibility/shortest_paths.cpp`
 
 ## Declarations (in source order)
 
-- L5 `void ShortestPaths(const Adjacency& adj, int start, std::vector<float>& dist, std::vector<int>& firstHop)`
-- L35 `int RoundWalk(float metres, int step)`
+- L5 `void ShortestPaths(const Adjacency& adj, int start, std::vector<float>& dist, std::vector<int>& firstHop, std::vector<int>* prev)`
+- L37 `int RoundWalk(float metres, int step)`
