@@ -71,6 +71,8 @@ installer, as the pre-release `bridge-latest`.
 - Enter on a map note at a door uses the door.
 - Enter on a closed door into another area opens it and takes you through.
 - Enter on an open door walks into the region beyond it.
+- Enter again on a door you just walked through goes on to the next door
+  instead of back.
 - Enter and the walk keys work while you stand at an area transition.
 - The overview and the walk to unexplored places work from a small entrance
   hall.
@@ -323,6 +325,13 @@ installer, as the pre-release `bridge-latest`.
   moved, four times over, three metres from the junction it led to (Vulkar
   garage). A door into another area has no region beyond it: there the walk
   still goes to the door.
+- Enter again on the open door you just walked through, without choosing
+  another target in between, goes on: where the region you arrived in has one
+  other door, that door takes the press. The same key used to walk back, so
+  in the hall between Standard Door 16 and the door to the Lower City (Black
+  Vulkar Base) every Enter crossed door 16 the other way and the way out
+  was never reached. With several ways on, or none, Enter still walks back;
+  choose the door again (Q/E, comma, period) to go back through it on purpose.
 - The check for a closed door on the way now runs for every Enter target,
   not only for containers, items and people. A door counts by the side you
   walk up to, so the walk stops in front of it and Enter then opens it.

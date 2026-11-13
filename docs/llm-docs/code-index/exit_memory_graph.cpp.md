@@ -1,4 +1,4 @@
-# exit_memory_graph.cpp (423 lines)
+# exit_memory_graph.cpp (441 lines)
 
 Source: `patches/Accessibility/exit_memory_graph.cpp`
 
@@ -17,5 +17,6 @@ The region graph and walking routes: shortest walks with and without locked door
 - L263 `std::string DoorBeyond(const Graph& g, const Vector& doorPos, int* outNear)`
 - L310 `int TransitionSliverOwner(void* area, int region, Vector* outCentre)`
 - L357 `bool UnreachableFlags(void* const* objs, const Vector* positions, int count, bool* out)`
-- L375 `bool BeyondDoor(const Vector& doorPos, Vector& out)`
-- L391 `bool ListRegions(std::vector<RegionSummary>& out, std::vector<std::pair<int, int>>& links)`
+- L375 `bool BeyondDoor(const Vector& doorPos, Vector& out, int* outRegion)`
+- L392 `void* OnwardDoor(int region, const Vector& passedDoorPos)`
+- L409 `bool ListRegions(std::vector<RegionSummary>& out, std::vector<std::pair<int, int>>& links)`
