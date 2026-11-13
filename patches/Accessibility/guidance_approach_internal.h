@@ -63,9 +63,13 @@ struct ApproachState {
     bool          haveWalkStart = false;
 
     // The party hold of a walk that leaves the area: still owed, and since
-    // when the leader is standing (0: not holding).
+    // when the leader is standing (0: not holding). holdLeftM is the least
+    // the companions behind had left to walk, holdCloserAt when they last
+    // came closer than that.
     bool          leavesArea    = false;
     DWORD         holdSince     = 0;
+    float         holdLeftM     = 0.0f;
+    DWORD         holdCloserAt  = 0;
 };
 
 extern ApproachState g_st;

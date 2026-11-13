@@ -34,8 +34,9 @@ void PollHotkey();
 std::string HealthLine(bool withLevelUp);
 
 // The companions farther than `beyondM` from the controlled character, by
-// name ("Mission, Zaalbar"). Empty when everyone is that near.
-std::string MembersBehind(float beyondM);
+// name ("Mission, Zaalbar"). Empty when everyone is that near. `outLeftM`
+// gets their distances added up: it shrinks while any of them is coming.
+std::string MembersBehind(float beyondM, float* outLeftM = nullptr);
 
 // Once per frame (core_tick): the level-up notice.
 void Tick();

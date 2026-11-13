@@ -93,20 +93,22 @@ bool InWorldAndFree() {
 
 }  // namespace
 
-std::string MembersBehind(float beyondM) {
+std::string MembersBehind(float beyondM, float* outLeftM) {
     std::string names;
+    float left = 0.0f;
     void* lead = acc::engine::GetPlayerServerCreature();
     Vector leadPos;
     if (!lead || !acc::engine::GetObjectPosition(lead, leadPos)) return names;
     for (const Member& m : PartyMembers()) {
         Vector pos;
-        if (m.obj == lead || !acc::engine::GetObjectPosition(m.obj, pos) ||
-            DistXY(pos, leadPos) <= beyondM) {
-            continue;
-        }
+        if (m.obj == lead || !acc::engine::GetObjectPosition(m.obj, pos)) continue;
+        const float d = DistXY(pos, leadPos);
+        if (d <= beyondM) continue;
+        left += d;
         if (!names.empty()) names += ", ";
         names += NameOf(m.obj);
     }
+    if (outLeftM) *outLeftM = left;
     return names;
 }
 
