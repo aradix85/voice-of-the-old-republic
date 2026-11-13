@@ -3,10 +3,11 @@
 namespace acc::paths {
 
 void ShortestPaths(const Adjacency& adj, int start, std::vector<float>& dist,
-                   std::vector<int>& firstHop) {
+                   std::vector<int>& firstHop, std::vector<int>* prev) {
     const int n = static_cast<int>(adj.size());
     dist.assign(n, kUnreachable);
     firstHop.assign(n, -1);
+    if (prev) prev->assign(n, -1);
     if (start < 0 || start >= n) return;
     std::vector<bool> done(n, false);
     dist[start] = 0.0f;
@@ -27,6 +28,7 @@ void ShortestPaths(const Adjacency& adj, int start, std::vector<float>& dist,
             if (nd < dist[v]) {
                 dist[v]     = nd;
                 firstHop[v] = (u == start) ? v : firstHop[u];
+                if (prev) (*prev)[v] = u;
             }
         }
     }

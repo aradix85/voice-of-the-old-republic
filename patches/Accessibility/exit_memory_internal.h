@@ -123,6 +123,7 @@ struct Graph {
     bool                        startUnlisted = false;
     std::vector<float>          distOpen, distAll;
     std::vector<int>            hopOpen, hopAll;
+    std::vector<int>            prevOpen;  // the region before each on the open walk
 
     int IndexOf(int id) const {
         for (size_t i = 0; i < nodes.size(); ++i) {

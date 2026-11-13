@@ -50,6 +50,17 @@ void* ClosedDoorBetween(const Graph& g, void* area, int a, int b) {
     return nullptr;
 }
 
+// Whether a closed door stands anywhere on the open walk to region index `t`.
+// The engine refuses a walk with a closed door on it, however far off.
+bool ClosedDoorOnWay(const Graph& g, void* area, int t) {
+    for (int v = t; g.prevOpen[v] >= 0; v = g.prevOpen[v]) {
+        if (ClosedDoorBetween(g, area, g.nodes[g.prevOpen[v]].id, g.nodes[v].id)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 // One hop of the explore walk: from the player's region to the next region on
 // the open way to the goal — through the closed door on that link (walked to
 // and opened like Shift+- on it) or to the next region's centre. False when
@@ -230,8 +241,7 @@ bool WalkThenInteract(void* target, uint32_t handle, const char* name) {
     const bool  corner   = route.kind == Route::Open &&
                            static_cast<float>(route.walkM) >= straight + kCornerExtraM &&
                            static_cast<float>(route.walkM) >= straight * kCornerFactor;
-    const bool door  =
-        ClosedDoorBetween(g, area, g.start, g.nodes[g.hopOpen[t]].id) != nullptr;
+    const bool door  = ClosedDoorOnWay(g, area, t);
     const bool enemy = corner && acc::examine_view::IsHostileCreature(
                                      acc::engine::ResolveServerObjectHandle(handle));
     if (!door && !enemy) return false;

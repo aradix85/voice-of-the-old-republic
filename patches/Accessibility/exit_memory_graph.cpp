@@ -90,7 +90,7 @@ bool BuildGraph(void* area, const Vector& player, Graph& g) {
         open[b].emplace_back(a, w);
     }
     g.si = g.IndexOf(g.start);
-    ShortestPaths(open, g.si, g.distOpen, g.hopOpen);
+    ShortestPaths(open, g.si, g.distOpen, g.hopOpen, &g.prevOpen);
     ShortestPaths(all, g.si, g.distAll, g.hopAll);
     return true;
 }

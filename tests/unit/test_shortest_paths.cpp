@@ -37,6 +37,17 @@ TEST_CASE("ShortestPaths takes the shorter way round") {
     CHECK(hop[2] == 1);  // via node 1, not the direct 5 m edge
 }
 
+TEST_CASE("ShortestPaths gives the node before each on its walk") {
+    std::vector<float> dist;
+    std::vector<int>   hop;
+    std::vector<int>   prev;
+    acc::paths::ShortestPaths(SmallGraph(), 0, dist, hop, &prev);
+    CHECK(prev[0] == -1);
+    CHECK(prev[1] == 0);
+    CHECK(prev[2] == 1);  // via node 1, not straight from the start
+    CHECK(prev[3] == -1);
+}
+
 TEST_CASE("ShortestPaths marks nodes no walk reaches") {
     std::vector<float> dist;
     std::vector<int>   hop;
