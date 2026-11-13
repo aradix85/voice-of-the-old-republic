@@ -70,7 +70,8 @@ typedef void  (__thiscall* PFN_GetWorldTime)(void* timer, uint32_t* outDay,
 // is not the finish: a slow run that peaked early would report a better
 // time.)
 constexpr float kRaceTimeMaxSeconds = 600.0f;   // implausible-read ceiling
-constexpr long  kRaceStartFreshMaxMs = 5000;    // start-stamp freshness window
+// Start-stamp freshness window, for a track that keeps no gear global.
+constexpr long  kRaceStartFreshMaxMs = 5000;
 // Race-end announce: fire once the finish is crossed (envelope zeroed) on a bike
 // that actually raced (running envelope cleared kRaceMinTopSpeed). kTerminalStop
 // is a fallback trigger for an abnormal end where the envelope never zeroes and
@@ -217,7 +218,13 @@ void TickRaceTimer(void* miniGame) {
             (((sH * static_cast<int>(mph) + sM) * 60 + sS) * 1000) + sC * 10);
         const long initialElapsed =
             static_cast<long>(nowMs) - static_cast<long>(startMs);
-        if (initialElapsed < 0 || initialElapsed > kRaceStartFreshMaxMs) return;
+        // The gear global turning valid is the "Go!" itself (the heartbeat
+        // writes the stamp and gear 0 together), so with it the stamp is this
+        // race's however late the bike launches. A launch 19 s after "Go!"
+        // fell outside the window and left the whole race without its cues.
+        const bool fresh =
+            g_state.gear_from_global || initialElapsed <= kRaceStartFreshMaxMs;
+        if (initialElapsed < 0 || !fresh) return;
         g_state.race_start_ms = startMs;
         g_state.race_mph      = mph;
         g_state.have_start_ms = true;

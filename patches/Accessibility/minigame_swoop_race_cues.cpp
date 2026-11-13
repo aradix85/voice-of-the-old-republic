@@ -285,9 +285,11 @@ void TickShiftReady(void* miniGame) {
 
 // The automatic pilot's shifts: the launch out of gear 0, and each gear as
 // soon as TickShiftReady has seen its gate. A press can be lost, so it is
-// repeated every kAutoShiftRetryMs until the gear has changed.
+// repeated every kAutoShiftRetryMs until the gear has changed. The launch
+// waits for nothing but the gear global reading 0, which is the "Go!": the
+// race timer only starts once the bike moves.
 void TickAutoShift() {
-    if (!AutopilotOn() || !g_state.have_start_ms || g_state.have_race_time) return;
+    if (!AutopilotOn() || g_state.race_time_announced) return;
     const bool launch = g_state.gear_from_global && g_state.gear == 0;
     if (!launch && !g_state.shift_ready_announced) return;
     const ULONGLONG now = GetTickCount64();
