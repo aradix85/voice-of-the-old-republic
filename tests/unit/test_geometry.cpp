@@ -21,6 +21,23 @@ TEST_CASE("Distances on the floor plan ignore height") {
     CHECK(DistXY(b, a) == DistXY(a, b));
 }
 
+TEST_CASE("A door stands in the way only between the two ends and near the line") {
+    const Vector player{102.4f, 118.3f, 2.25f};
+    const Vector door{102.6f, 119.1f, 2.25f};
+    const Vector north{102.4f, 120.7f, 0.0f};   // the region behind the door
+    const Vector south{102.3f, 113.6f, 0.0f};   // the region the player stands in
+    CHECK(StandsBetweenXY(door, player, north, 1.0f));
+    CHECK_FALSE(StandsBetweenXY(door, player, south, 1.0f));     // behind the player
+
+    const Vector a{0.0f, 0.0f, 0.0f};
+    const Vector b{10.0f, 0.0f, 0.0f};
+    CHECK(StandsBetweenXY(Vector{5.0f, 0.9f, 0.0f}, a, b, 1.0f));
+    CHECK_FALSE(StandsBetweenXY(Vector{5.0f, 1.6f, 0.0f}, a, b, 1.0f));   // a door in the side wall
+    CHECK_FALSE(StandsBetweenXY(Vector{12.0f, 0.0f, 0.0f}, a, b, 1.0f));  // past the far end
+    CHECK_FALSE(StandsBetweenXY(a, a, b, 1.0f));                          // at the near end
+    CHECK_FALSE(StandsBetweenXY(Vector{1.0f, 0.0f, 0.0f}, a, a, 1.0f));   // no segment
+}
+
 TEST_CASE("A spoken distance is the nearest whole metre") {
     CHECK(WholeMetres(0.0f) == 0);
     CHECK(WholeMetres(0.49f) == 0);

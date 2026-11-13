@@ -70,6 +70,20 @@ inline float DistXYToSegmentSq(const Vector& p, const Vector& a, const Vector& b
     return DistXYSq(p, Vector{a.x + t * dx, a.y + t * dy, 0.0f});
 }
 
+// True when p stands in the way from a to b on the floor plan: beside the
+// segment by at most maxSideM, and between its ends (not at or behind a, not
+// at or past b).
+inline bool StandsBetweenXY(const Vector& p, const Vector& a, const Vector& b,
+                            float maxSideM) {
+    const float dx = b.x - a.x;
+    const float dy = b.y - a.y;
+    const float len2 = dx * dx + dy * dy;
+    if (len2 <= 1e-6f) return false;
+    const float t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / len2;
+    if (t <= 0.0f || t >= 1.0f) return false;
+    return DistXYSq(p, Vector{a.x + t * dx, a.y + t * dy, 0.0f}) <= maxSideM * maxSideM;
+}
+
 inline float DistXYZSq(const Vector& a, const Vector& b) {
     const float dz = a.z - b.z;
     return DistXYSq(a, b) + dz * dz;

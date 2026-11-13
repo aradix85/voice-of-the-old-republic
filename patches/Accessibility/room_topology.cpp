@@ -28,6 +28,16 @@ namespace {
 // case where the nav graph is sparse. Tune from log evidence.
 constexpr float kMaxSnapM = 15.0f;
 
+// A closed door within kClosedDoorNearM of the position keeps the nodes
+// behind it out of the primary pick: the walkmesh of the next room often
+// starts a metre before its door, so a player standing at the closed door
+// was placed in the region behind it (Black Vulkar Base, 0.8 m south of a
+// door: "way blocked" to a footlocker 19 m on, with the door read as the
+// way back). kDoorSideM: how far beside the line to a node the door's centre
+// may lie and still stand in the way; half a door panel.
+constexpr float kClosedDoorNearM = 4.0f;
+constexpr float kDoorSideM       = 1.0f;
+
 // Nav-graph build retry cap.
 //
 // transitions.cpp deliberately re-calls BuildForArea every tick until the
@@ -370,6 +380,8 @@ namespace {
 struct NodeScan {
     int   best = -1;          // reachable, not filtered: the primary pick
     float bestSq = 1e30f;
+    int   pastDoor = -1;      // the same, but past the closed door the caller
+    float pastDoorSq = 1e30f; //   stands at: taken only without a primary pick
     int   filtered = -1;      // reachable, dropped by the walkmesh-shape
     float filteredSq = 1e30f; //   gate: the rescue pick
     int   blocked = -1;       // nearest unreachable one, for the log
@@ -384,8 +396,10 @@ struct NodeScan {
 // (requireWallReachable: against the seam-filtered wall cache, so a room
 // does not speak the label of the corridor next door). With a trusted z
 // the ray runs floor to floor and other-storey walls drop out; without it
-// the test is plain 2D, for cursor callers.
-NodeScan ScanNodes(const Vector& worldPos, bool requireWallReachable, bool zTrusted) {
+// the test is plain 2D, for cursor callers. closedDoor: the closed door near
+// the caller, or null.
+NodeScan ScanNodes(const Vector& worldPos, bool requireWallReachable, bool zTrusted,
+                   const Vector* closedDoor) {
     const acc::engine::WallEdge* walls = nullptr;
     int wallCount = 0;
     const bool testWalls =
@@ -415,7 +429,13 @@ NodeScan ScanNodes(const Vector& worldPos, bool requireWallReachable, bool zTrus
                 s.filtered = i;
             }
         } else if (reachable) {
-            if (d2 < s.bestSq) {
+            if (closedDoor &&
+                StandsBetweenXY(*closedDoor, worldPos, g_graph.node_pos[i], kDoorSideM)) {
+                if (d2 < s.pastDoorSq) {
+                    s.pastDoorSq = d2;
+                    s.pastDoor = i;
+                }
+            } else if (d2 < s.bestSq) {
                 s.bestSq = d2;
                 s.best = i;
             }
@@ -435,6 +455,18 @@ NodeScan ScanNodes(const Vector& worldPos, bool requireWallReachable, bool zTrus
 // rejected every one (a sign the wall cache or the position is wrong).
 // Callers ask for it on room changes, not per tick.
 void LogScan(const NodeScan& s, const Vector& worldPos) {
+    if (s.pastDoor >= 0 && s.best >= 0 && s.pastDoorSq < s.bestSq) {
+        acclog::Write(
+            "WallTopo",
+            "LookupAt DOOR-FILTERED at (%.1f,%.1f,%.1f): nearest candidate node[%d] "
+            "(%.1f,%.1f) \"%s\" at %.1fm is past a closed door; picked node[%d] "
+            "(%.1f,%.1f) \"%s\" at %.1fm instead",
+            worldPos.x, worldPos.y, worldPos.z, s.pastDoor,
+            g_graph.node_pos[s.pastDoor].x, g_graph.node_pos[s.pastDoor].y,
+            g_graph.node_label[s.pastDoor].c_str(), std::sqrt(s.pastDoorSq), s.best,
+            g_graph.node_pos[s.best].x, g_graph.node_pos[s.best].y,
+            g_graph.node_label[s.best].c_str(), std::sqrt(s.bestSq));
+    }
     if (s.blocked >= 0 && (s.best < 0 || s.blockedSq < s.bestSq)) {
         acclog::Write(
             "WallTopo",
@@ -464,6 +496,20 @@ bool InSnapRange(int node, float distSq) {
     return node >= 0 && distSq <= kMaxSnapM * kMaxSnapM;
 }
 
+// The closed door within kClosedDoorNearM of `p`, if any. The snapshot's
+// positions answer "is there a door here at all" without touching the
+// engine; only then is the live door asked whether it is closed.
+bool ClosedDoorNear(void* area, const Vector& p, Vector& outDoor) {
+    bool any = false;
+    for (int i = 0; i < g_graph.door_count && !any; ++i) {
+        any = DistXYSq(g_graph.doors[i].pos, p) <= kClosedDoorNearM * kClosedDoorNearM;
+    }
+    if (!any) return false;
+    return acc::engine::NearestDoor(area, p, kClosedDoorNearM, [](void* door) {
+        return !acc::engine::IsDoorOpen(door) && !acc::engine::IsDoorCosmetic(door);
+    }, &outDoor) != nullptr;
+}
+
 }  // namespace
 
 bool LookupAt(void* area, const Vector& worldPos,
@@ -480,16 +526,25 @@ bool LookupAt(void* area, const Vector& worldPos,
     if (!HasGraphForArea(area)) return false;
     if (g_graph.node_count <= 0) return false;
 
-    const NodeScan s = ScanNodes(worldPos, requireWallReachable, zTrusted);
+    // Walking callers only: the map cursor is not stopped by a door.
+    Vector doorPos{};
+    const bool atClosedDoor =
+        requireWallReachable && ClosedDoorNear(area, worldPos, doorPos);
+
+    const NodeScan s = ScanNodes(worldPos, requireWallReachable, zTrusted,
+                                 atClosedDoor ? &doorPos : nullptr);
     if (allowDiagLog) LogScan(s, worldPos);
 
-    // The primary pick wins when in range. Otherwise the rescue pick: an
-    // alcove the shape gate misjudged, with no labelled cluster in range.
-    // The merge passes upstream absorb wall-curve artefacts inside inhabited
-    // regions, so a surviving filtered node is almost always a real alcove.
+    // The primary pick wins when in range, then the one past the closed
+    // door. Otherwise the rescue pick: an alcove the shape gate misjudged,
+    // with no labelled cluster in range. The merge passes upstream absorb
+    // wall-curve artefacts inside inhabited regions, so a surviving filtered
+    // node is almost always a real alcove.
     int pick = -1;
     if (InSnapRange(s.best, s.bestSq)) {
         pick = s.best;
+    } else if (InSnapRange(s.pastDoor, s.pastDoorSq)) {
+        pick = s.pastDoor;
     } else if (InSnapRange(s.filtered, s.filteredSq)) {
         pick = s.filtered;
         if (allowDiagLog) {
@@ -514,7 +569,7 @@ bool LookupAt(void* area, const Vector& worldPos,
 
     // Candidates, but none in range: the neutral "Area", so the player gets
     // one stable cue. False only when the graph had no candidate at all.
-    if (s.best < 0 && s.filtered < 0 && s.blockedSeen == 0) return false;
+    if (s.best < 0 && s.pastDoor < 0 && s.filtered < 0 && s.blockedSeen == 0) return false;
     outLabel = acc::strings::Get(acc::strings::Id::AreaNoun);
     outSig = kKindOpenArea & 0xff;
     outClusterId = kClusterIdOpenArea;
