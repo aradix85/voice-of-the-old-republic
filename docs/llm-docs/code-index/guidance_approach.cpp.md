@@ -1,4 +1,4 @@
-# guidance_approach.cpp (308 lines)
+# guidance_approach.cpp (311 lines)
 
 Source: `patches/Accessibility/guidance_approach.cpp`
 
@@ -12,10 +12,10 @@ The unified walk-to-act approach tracker: arming it, the per-tick verdict (a con
 - L68 `void RestartStallWindow()`
 - L73 `void ReleaseApproach()`
 - L83 `void ArmApproach(const ApproachArm& arm)`
-- L127 `void TickApproach()`
-- L271 `bool IsApproachInFlight()`
-- L275 `void CancelApproach()`
-- L279 `ApproachOutcome LastApproachOutcome(uint32_t* serial)`
-- L284 `void* ApproachTarget()`
-- L288 `bool IsAnyModApproachInFlight()`
-- L292 `bool CancelByMovement()`
+- L128 `void TickApproach()`
+- L274 `bool IsApproachInFlight()`
+- L278 `void CancelApproach()`
+- L282 `ApproachOutcome LastApproachOutcome(uint32_t* serial)`
+- L287 `void* ApproachTarget()`
+- L291 `bool IsAnyModApproachInFlight()`
+- L295 `bool CancelByMovement()`

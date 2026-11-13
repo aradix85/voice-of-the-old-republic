@@ -188,6 +188,7 @@ patches/Accessibility/focus_guard_movie.cpp
 patches/Accessibility/gui_forward_guard_k2.cpp
 patches/Accessibility/guidance_approach.cpp
 patches/Accessibility/guidance_approach.h
+patches/Accessibility/guidance_approach_gather.cpp
 patches/Accessibility/guidance_approach_internal.h
 patches/Accessibility/guidance_approach_rescue.cpp
 patches/Accessibility/guidance_autowalk.cpp

@@ -82,6 +82,8 @@ installer, as the pre-release `bridge-latest`.
   time.
 - Enter or Ctrl+L on something behind a closed door opens the door on the way.
 - Enter on an enemy round a corner walks there first and then attacks.
+- Standing at a closed door, you are in the region on your side of it.
+- A walk into another area waits for your companions before it leaves.
 - Door numbers stay the same after saving and loading.
 - Objects with the same name set in a row are numbered west to east.
 - The wall panels of the Sith base puzzle on Taris say their real on or off
@@ -293,6 +295,17 @@ installer, as the pre-release `bridge-latest`.
   attack walk ran on the spot for eight seconds between a wall and a party
   member and then dropped the attack; the only thing said was "Combat ends".
   Not during a fight: the walk stops when one starts.
+- A closed door within four metres keeps the region behind it from being
+  yours. The walkable floor of the next room often starts a metre before its
+  door, so close to a closed door the mod placed you beyond it: the door
+  read "leads South, back" while it stood in front of you, and Enter on a
+  footlocker 19 metres on said "way blocked" four times, because the route
+  saw no door to open (Black Vulkar Base).
+- Enter on a way into another area (a transition, a map note at one, an open
+  door) stops eight metres before it while a companion is more than seven
+  metres behind, says "Waiting for Mission, Zaalbar" and walks on when they
+  are there, or after twenty seconds. A long walk outran the companions and
+  the game answered "You must gather your party before venturing forth".
 
 <h3>Cycles:</h3>
 
