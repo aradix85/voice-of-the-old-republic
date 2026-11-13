@@ -232,7 +232,7 @@ bool WalkThenInteract(void* target, uint32_t handle, const char* name) {
     void* area = acc::engine::GetCurrentArea();
     Graph g;
     if (!BuildGraph(area, player, g)) return false;
-    const int t = IndexAt(g, pos);
+    const int t = TargetIndex(g, target, pos);
     if (t < 0 || g.si < 0 || t == g.si) return false;
     if (g.distOpen[t] >= kFar || g.hopOpen[t] < 0) return false;
 

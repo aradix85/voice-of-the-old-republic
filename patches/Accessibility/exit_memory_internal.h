@@ -166,6 +166,10 @@ std::string ExitToward(const Graph& g, int hop, Vector* outPos);
 // The graph index of the region `pos` lies in; for a spot off the walkable
 // floor, of the region nearest to it. -1 when no region is in range.
 int IndexAt(const Graph& g, const Vector& pos);
+// The graph index of the region to stand in to act on `obj` at `pos`: for a
+// door the side the player walks up to, for anything else the region it is
+// in. `obj` may be null. -1 when there is none.
+int TargetIndex(const Graph& g, void* obj, const Vector& pos);
 Route RouteToIndex(const Graph& g, int t, const Vector& targetPos);
 Route RouteTo(const Graph& g, const Vector& targetPos);
 std::string RouteText(const Route& r);

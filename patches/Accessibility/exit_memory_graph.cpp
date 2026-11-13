@@ -153,6 +153,17 @@ int IndexAt(const Graph& g, const Vector& pos) {
     return t >= 0 ? t : g.IndexOf(RegionAt(g.area, pos, /*throughWalls=*/true));
 }
 
+int TargetIndex(const Graph& g, void* obj, const Vector& pos) {
+    if (obj && acc::filter::ObjectMatches(obj, CycleCategory::Door)) {
+        int nearId = kClusterIdNone;
+        int farId  = kClusterIdNone;
+        if (DoorSides(g, pos, nearId, farId) && g.IndexOf(nearId) >= 0) {
+            return g.IndexOf(nearId);
+        }
+    }
+    return IndexAt(g, pos);
+}
+
 Route RouteTo(const Graph& g, const Vector& targetPos) {
     return RouteToIndex(g, IndexAt(g, targetPos), targetPos);
 }
@@ -354,15 +365,7 @@ bool UnreachableFlags(void* const* objs, const Vector* positions, int count,
     }
     for (int i = 0; i < count; ++i) {
         out[i] = false;
-        int t = -1;
-        void* obj = objs ? objs[i] : nullptr;
-        if (obj && acc::filter::ObjectMatches(obj, CycleCategory::Door)) {
-            // A door counts by the side the player would walk up to.
-            int nearId = kClusterIdNone;
-            int farId  = kClusterIdNone;
-            if (DoorSides(g, positions[i], nearId, farId)) t = g.IndexOf(nearId);
-        }
-        if (t < 0) t = IndexAt(g, positions[i]);
+        const int t = TargetIndex(g, objs ? objs[i] : nullptr, positions[i]);
         if (t < 0 || t == g.si) continue;
         out[i] = g.distOpen[t] >= kFar;
     }

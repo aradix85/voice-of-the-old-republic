@@ -394,13 +394,7 @@ void WarnIfBehindLock(void* target) {
     if (!acc::engine::GetPlayerPosition(player)) return;
     Graph g;
     if (!BuildGraph(acc::engine::GetCurrentArea(), player, g)) return;
-    int t = -1;
-    if (acc::filter::ObjectMatches(target, CycleCategory::Door)) {
-        int nearId = kClusterIdNone;
-        int farId  = kClusterIdNone;
-        if (DoorSides(g, pos, nearId, farId)) t = g.IndexOf(nearId);
-    }
-    if (t < 0) t = IndexAt(g, pos);
+    const int t = TargetIndex(g, target, pos);
     if (t < 0 || g.distAll[t] >= kFar) return;
     g_noWayPending = true;
     g_noWayAtMs    = GetTickCount() + kNoWayDelayMs;
