@@ -280,18 +280,18 @@ bool GetObjectBaseName(void* gameObject, char* outBuf, size_t bufSize) {
                                    outBuf, bufSize);
             break;
         case K::Trigger:
-            got = TryReadLocString(gameObject, kTriggerLocNameOffset,
+            // An area transition is named by where it leads: the
+            // transition_destination LocString (CSWSTrigger +0x30c), exactly
+            // like doors (BuildDoorSuffix reads the door equivalent). It goes
+            // before the trigger's LocName, which stock K1 leaves empty or
+            // fills with the builder's tag: the way into Dantooine's Matale
+            // Grounds has the LocName "to14bw". Non-transition triggers (trap
+            // / encounter) have an empty transition_destination and take
+            // their LocName, or the tag below.
+            got = TryReadLocString(gameObject, kTriggerTransitionDestOffset,
                                    outBuf, bufSize);
-            // Area-transition triggers carry their human-readable "to X"
-            // label in the transition_destination LocString (CSWSTrigger
-            // +0x30c), exactly like doors (BuildDoorSuffix reads the door
-            // equivalent). The trigger LocName above is near-always empty
-            // in stock K1, so without this the Transition cycle category
-            // falls through to the raw tag. Non-transition triggers (trap
-            // / encounter) have an empty transition_destination and still
-            // fall to the tag below.
             if (!got || outBuf[0] == '\0') {
-                got = TryReadLocString(gameObject, kTriggerTransitionDestOffset,
+                got = TryReadLocString(gameObject, kTriggerLocNameOffset,
                                        outBuf, bufSize);
             }
             break;
