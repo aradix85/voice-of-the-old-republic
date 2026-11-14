@@ -1,4 +1,4 @@
-# room_topology.h (192 lines)
+# room_topology.h (197 lines)
 
 Source: `patches/Accessibility/room_topology.h`
 
@@ -21,10 +21,11 @@ Replaced an earlier per-.lyt-room walkmesh-probe classifier — .lyt- rooms over
 - L137 `bool LookupAt(void* area, const Vector& worldPos, std::string& outLabel, int& outSig, int& outClusterId, bool allowDiagLog = true, bool requireWallReachable = true, bool zTrusted = false, std::vector<ExitMark>* outExits = nullptr)`: outSig packs kind in low byte + kind-specific bits above.
 - L147 `struct ClusterInfo`: What transitions.cpp needs to time a cluster's announce without a second label resolution.
 - L165 `bool GetClusterInfo(void* area, int clusterId, ClusterInfo& out)`: False (out left at its defaults) on sentinel ids, unknown ids, or no graph.
-- L170 `struct ClusterSummary`: One region of the area's graph, for the exploration overview (exit_memory).
-- L175 `bool ListClusters(void* area, std::vector<ClusterSummary>& out)`
-- L181 `struct ClusterLink`: Two regions joined by at least one nav-graph edge that does not cross a wall.
-- L187 `bool GetClusterLinks(void* area, std::vector<ClusterLink>& out)`
-- L189 `void DumpGraphToLog()`
+- L170 `bool NearestClusterNode(void* area, int clusterId, const Vector& p, Vector& out)`: The nav node of the region nearest to `p`: a spot of the engine's own path graph, so one a creature can stand on and walk to.
+- L175 `struct ClusterSummary`: One region of the area's graph, for the exploration overview (exit_memory).
+- L180 `bool ListClusters(void* area, std::vector<ClusterSummary>& out)`
+- L186 `struct ClusterLink`: Two regions joined by at least one nav-graph edge that does not cross a wall.
+- L192 `bool GetClusterLinks(void* area, std::vector<ClusterLink>& out)`
+- L194 `void DumpGraphToLog()`
 
 Also 2 constants or variables at namespace scope.

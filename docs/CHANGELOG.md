@@ -79,6 +79,10 @@ installer, as the pre-release `bridge-latest`.
   walks round to that side and uses it.
 - Enter on an open lift door takes the lift from the hall in front of it
   too, instead of walking back into that hall.
+- A walk through several rooms opens the doors on the way the way Enter
+  does; some doors stayed shut and the walk gave up.
+- A walk into a room whose middle is no place to stand goes to a spot in it
+  where you can, instead of "way blocked".
 - Enter and the walk keys work while you stand at an area transition.
 - The overview and the walk to unexplored places work from a small entrance
   hall.
@@ -382,6 +386,20 @@ installer, as the pre-release `bridge-latest`.
   A guess that points back to your own side is now dropped, so the walk goes
   to the lift door itself and the lift takes you down, and the door no
   longer says it leads to the hall.
+- The walk region by region (Ctrl+L, Ctrl+Shift+N, Enter on something far
+  off) opens a closed door on its way by pressing Enter on it, so the game's
+  own Open walks up to the door and opens it. It used the use that Shift+-
+  sends, which ends about two metres short of some doors and leaves them
+  shut: in Davik's estate the walk said "Use Standard Door" three times at
+  door 7 and again at door 8 and then stopped, while Enter on the same door
+  opened it at once.
+- A step of that walk into a region, and Enter on an open door, go to the
+  region's centre only when a creature can stand there. Where the centre
+  lies off the walkable floor or within 60 centimetres of an edge of it, the
+  walk goes to the region's nearest point of the game's own path graph. The
+  centre of Davik's throne room lies on the narrow steps of the throne; the
+  game never started a walk to it, so every walk through that room ended in
+  "way blocked", from 20 metres away with the door open.
 
 <h3>Cycles:</h3>
 

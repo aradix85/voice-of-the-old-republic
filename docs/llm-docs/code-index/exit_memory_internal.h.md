@@ -1,4 +1,4 @@
-# exit_memory_internal.h (194 lines)
+# exit_memory_internal.h (199 lines)
 
 Source: `patches/Accessibility/exit_memory_internal.h`
 
@@ -32,11 +32,12 @@ Internal to the exit-memory modules (exit_memory_*.cpp); no other file includes 
 - L175 `Route RouteTo(const Graph& g, const Vector& targetPos)`
 - L176 `std::string RouteText(const Route& r)`
 - L177 `bool DoorSides(const Graph& g, const Vector& doorPos, int& nearId, int& farId)`
-- L178 `std::string DoorBeyond(const Graph& g, const Vector& doorPos, int* outNear)`
-- L181 `std::string BehindDoorText(void* area, int farId)`: exit_memory_annotate.cpp
-- L184 `std::string TransitionDoorMemory(const Vector& doorPos)`: exit_memory_area_doors.cpp
-- L185 `void TickAreaMemory()`
-- L188 `void FlushReminder()`: exit_memory_overview.cpp
-- L191 `void TickExploreChain()`: exit_memory_explore.cpp
+- L182 `Vector RegionWalkPoint(void* area, int id, const Vector& centre)`: Where a walk into region `id` ends: its centre, or, where no creature can stand there (off the walkable floor or hard against an edge of it), the region's nav node nearest to the centre.
+- L183 `std::string DoorBeyond(const Graph& g, const Vector& doorPos, int* outNear)`
+- L186 `std::string BehindDoorText(void* area, int farId)`: exit_memory_annotate.cpp
+- L189 `std::string TransitionDoorMemory(const Vector& doorPos)`: exit_memory_area_doors.cpp
+- L190 `void TickAreaMemory()`
+- L193 `void FlushReminder()`: exit_memory_overview.cpp
+- L196 `void TickExploreChain()`: exit_memory_explore.cpp
 
 Also 22 constants or variables at namespace scope.
