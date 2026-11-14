@@ -256,6 +256,17 @@ bool DoorSides(const Graph& g, const Vector& doorPos, int& nearId, int& farId) {
         }
         farId = RegionBehind(g.area, nearId, nearLinked, g.player, doorPos);
         if (farId < 0 || !nearLinked.count(farId)) return false;
+        // A guess from geometry has to hold up in geometry: what lies beyond
+        // is past the door, never back on the player's side of it. In the
+        // hall between an inner door and a lift the player's own spot is no
+        // region of the list; the probe then took the junction behind the
+        // player for the near side and the hall itself for what lay beyond
+        // the lift door (Taris Sith base, upper floor).
+        ClusterInfo beyond;
+        if (!acc::room_topology::GetClusterInfo(g.area, farId, beyond) ||
+            (beyond.centre.x - doorPos.x) * ux + (beyond.centre.y - doorPos.y) * uy <= 0.0f) {
+            return false;
+        }
     }
     return nearId >= 0 && farId >= 0;
 }
