@@ -85,6 +85,10 @@ installer, as the pre-release `bridge-latest`.
   where you can, instead of "way blocked".
 - Where the game starts no long walk at all, the mod walks the way itself
   in short steps, instead of "way blocked".
+- A way into another area is named by where it leads, not by a builder's
+  tag such as "to14bw".
+- Enter on a map note that stands for a way out of the area goes on to that
+  way out, also when the note lies a few metres short of it.
 - Enter and the walk keys work while you stand at an area transition.
 - The overview and the walk to unexplored places work from a small entrance
   hall.
@@ -413,6 +417,18 @@ installer, as the pre-release `bridge-latest`.
   sidesteps and before the walk region by region. A hop that stalls is
   started again twice; then the route is given up and you hear "way
   blocked" as before.
+- A transition is named by its destination. The mod took a transition's own
+  name first, and the game's builders sometimes left their working tag
+  there: the way from Dantooine's Courtyard into the Matale Grounds was
+  "Transition. to14bw". It is now "Transition. Dantooine - Matale Grounds".
+- Enter on a map note that stands for a transition goes to the transition.
+  The note "Matale Grounds" lies seven metres short of the way into that
+  area; Enter walked to the note and every further press did nothing. The
+  press now goes on to the transition within ten metres when the note names
+  where it leads (the note's words occur in the destination, a leading "To"
+  aside), and otherwise when you already stand at the note, so that a note
+  for something else near an exit never takes you out of the area at the
+  first press.
 
 <h3>Cycles:</h3>
 
