@@ -8,7 +8,7 @@
 #include <cstdint>
 #include <cstring>
 
-#include "engine_player.h"   // GetPlayerServerCreature
+#include "engine_player.h"   // GetPlayerCharacterServerCreature
 #include "engine_reads.h"    // ReadCExoString
 #include "log.h"
 #include "engine_addr.h"
@@ -73,12 +73,17 @@ void ExoFree(ExoStr* s) {
 // player could do anything that reads it.
 constexpr int kSettleTicks = 60;
 
-// creature+0x100, or nullptr when no server-side player creature is loaded.
+// The player character's creature+0x100, or nullptr when it is not loaded.
+// Always the player character's table, never the controlled companion's:
+// each creature has a table of its own and each is saved, so reading the
+// controlled one's split the mod's state over the party (visited regions
+// written with Bastila in control were gone on a load with the player
+// character in control, and the other way round).
 void* PlayerVarTable() {
     // acc::off::Ptr, not raw addition: kScriptVarTableOffset is still Todo on
     // KOTOR 2, and a poisoned offset must yield nullptr rather than a non-null
     // wild pointer (see acc::off::Ptr's note).
-    return acc::off::Ptr(GetPlayerServerCreature(), kScriptVarTableOffset);
+    return acc::off::Ptr(GetPlayerCharacterServerCreature(), kScriptVarTableOffset);
 }
 
 // Reads into outBuf, always NUL-terminated; true for a non-empty value.
@@ -136,7 +141,7 @@ void PlayerVarsSettle::Reset() {
 }
 
 bool PlayerVarsSettle::Tick() {
-    void* creature = GetPlayerServerCreature();
+    void* creature = GetPlayerCharacterServerCreature();
     if (creature != creature_) {
         creature_ = creature;
         ticks_    = 0;

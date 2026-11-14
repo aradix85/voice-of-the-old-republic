@@ -213,11 +213,16 @@ bool GetPlayerCharacterName(char* outBuf, size_t bufSize) {
 }
 
 
-// The object id of the player character's creature, 0 when it is not in the
-// area. Player objects have the ids above kInvalidObjectId, handed out from
+// Player objects have the ids above kInvalidObjectId, handed out from
 // 0x7fffffff down, a new one with every load (0x7fffffff at the start of a
-// session, 0x7ffffff3 a few loads later), so the id is found by looking and
-// kept while it still resolves.
+// session, 0x7ffffff3 a few loads later).
+static bool IsPlayerCharacterId(uint32_t id) {
+    return id > kInvalidObjectId && id != 0xFFFFFFFFu;
+}
+
+// The object id of the player character's creature, 0 when it is not in the
+// area. The id is not fixed, so it is found by looking and kept while it
+// still resolves.
 static uint32_t PlayerCharacterObjectId() {
     static uint32_t s_id = 0;
     if (s_id != 0 && ResolveServerObjectHandle(s_id)) return s_id;
@@ -228,12 +233,21 @@ static uint32_t PlayerCharacterObjectId() {
     while (void* obj = it.Next()) {
         if (GetObjectKind(obj) != static_cast<int>(GameObjectKind::Creature)) continue;
         const uint32_t id = GetObjectHandle(obj);
-        if (id > kInvalidObjectId && id != 0xFFFFFFFFu) {
+        if (IsPlayerCharacterId(id)) {
             s_id = id;
             break;
         }
     }
     return s_id;
+}
+
+void* GetPlayerCharacterServerCreature() {
+    void* controlled = GetPlayerServerCreature();
+    if (!controlled || IsPlayerCharacterId(GetObjectHandle(controlled))) {
+        return controlled;
+    }
+    const uint32_t pc = PlayerCharacterObjectId();
+    return pc != 0 ? ResolveServerObjectHandle(pc) : nullptr;
 }
 
 int GetPartyMembers(uint32_t* outHandles, int maxCount) {
@@ -271,10 +285,9 @@ int GetPartyMembers(uint32_t* outHandles, int maxCount) {
     }
     // With a companion in control (Tab) the player character follows like any
     // member, and the member table never lists it.
-    void* controlled = GetPlayerServerCreature();
-    if (written < maxCount && controlled && GetObjectHandle(controlled) < kInvalidObjectId) {
-        const uint32_t pc = PlayerCharacterObjectId();
-        if (pc != 0) outHandles[written++] = pc;
+    void* pc = GetPlayerCharacterServerCreature();
+    if (written < maxCount && pc && pc != GetPlayerServerCreature()) {
+        outHandles[written++] = GetObjectHandle(pc);
     }
     return written;
 }

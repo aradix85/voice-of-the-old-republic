@@ -64,6 +64,13 @@ bool GetCameraYawRadians(float& outRad);
 // creature (e.g. AddMoveToPointAction) without redoing the chain walk.
 void* GetPlayerServerCreature();
 
+// The player character's own CSWSCreature*, whoever is in control: the
+// controlled creature while the player character leads, the player
+// character's creature in the area while a companion does (Tab). nullptr
+// when there is no controlled creature or the player character is not in
+// the area.
+void* GetPlayerCharacterServerCreature();
+
 // Reads CClientExoAppInternal::player_character_name (+0x294) via
 // CClientExoApp::GetPlayerCharacterName @0x5edab0. Engine owns the
 // CExoString lifetime; we copy bytes into outBuf.

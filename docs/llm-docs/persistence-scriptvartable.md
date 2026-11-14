@@ -246,9 +246,13 @@ Concrete recipe that works (copy for the real feature):
 - `__thiscall` typedefs called by `reinterpret_cast`ing the raw address; `GetString`
   declared `void* (__thiscall*)(table, out, name)` — the by-value-return hidden
   out-pointer is the first stack arg, returned in EAX.
-- Anchor: the **player creature** (server-side, from `GetPlayerServerCreature()`).
-  Confirmed it persists. Module/area tables also persist but player is cleanest for
-  per-playthrough data.
+- Anchor: the **player character's creature** (server-side, from
+  `GetPlayerCharacterServerCreature()`). Confirmed it persists. Module/area tables
+  also persist but player is cleanest for per-playthrough data. Not
+  `GetPlayerServerCreature()`: that is the CONTROLLED creature, a companion after
+  Tab, and every creature has a table of its own that is saved with it (a
+  companion's ends up in its `AVAILNPCn.utc`). Until 2026-11-14 the mod used the
+  controlled one and its state was split over the party.
 
 ## Still open (feature design, not primitive)
 
