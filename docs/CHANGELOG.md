@@ -40,6 +40,7 @@ installer, as the pre-release `bridge-latest`.
 - After the exits, "Here:" names everything in the region: people outside
   the party, containers that are not empty, items on the ground.
 - Visited regions are kept in the save.
+- What the mod keeps in the save no longer depends on who you control.
 - Ctrl+N gives an exploration overview: the current region, how much is
   explored, the nearest unexplored place and what is left to search, each with
   its route.
@@ -200,6 +201,13 @@ installer, as the pre-release `bridge-latest`.
   does not count as a walk through a door.
 - Visited regions are stored in a save variable per area (`ACC_VISIT_<area>`)
   by region centre, so they survive saving, loading and game updates.
+- What the mod keeps in the save (visited regions, where doors lead, the map
+  notes of an area, discovered objects) no longer depends on who is in
+  control. It was read from and written to the controlled creature, and each
+  party member has a table of its own in the save: regions visited with
+  Bastila in control read as new after a load with the player character in
+  control, and the other way round. It is now always the player character's
+  table. What an earlier build wrote to a companion is not carried over.
 - Ctrl+N (exploration overview) starts with the current region, then the
   explored count, the nearest unexplored region and the exit toward it, how
   many regions lie behind locked doors, and up to five places left to search
