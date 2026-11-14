@@ -83,6 +83,8 @@ installer, as the pre-release `bridge-latest`.
   does; some doors stayed shut and the walk gave up.
 - A walk into a room whose middle is no place to stand goes to a spot in it
   where you can, instead of "way blocked".
+- Where the game starts no long walk at all, the mod walks the way itself
+  in short steps, instead of "way blocked".
 - Enter and the walk keys work while you stand at an area transition.
 - The overview and the walk to unexplored places work from a small entrance
   hall.
@@ -400,6 +402,17 @@ installer, as the pre-release `bridge-latest`.
   centre of Davik's throne room lies on the narrow steps of the throne; the
   game never started a walk to it, so every walk through that room ended in
   "way blocked", from 20 metres away with the door open.
+- When the game starts no walk to a target at all, the mod now walks its
+  own path there: the route over the game's path graph that Ctrl+- speaks,
+  cut into hops of at most five metres, one after the other, and on arrival
+  it acts as asked. In some places the game plots no path of its own for a
+  walk of ten or twenty metres while it does walk a few metres at a time:
+  aboard the Ebon Hawk Enter on the Exit Ramp, 19 metres away, said "way
+  blocked", and in Davik's hangar after the fight neither the remains nor
+  the ship could be reached. This comes after the coordinate retry and the
+  sidesteps and before the walk region by region. A hop that stalls is
+  started again twice; then the route is given up and you hear "way
+  blocked" as before.
 
 <h3>Cycles:</h3>
 
