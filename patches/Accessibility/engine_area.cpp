@@ -129,7 +129,18 @@ void* ResolveClientObjectHandle(uint32_t handle) {
 }
 
 bool GetObjectPosition(void* gameObject, Vector& out) {
-    return TryReadVector(gameObject, kServerObjectPositionOffset, &out);
+    if (!TryReadVector(gameObject, kServerObjectPositionOffset, &out)) return false;
+    // A transition is where it is crossed. The stored position is only the
+    // origin its polygon is authored against, often a corner of it: a walk
+    // to the origin of Dantooine's way into the Ebon Hawk ended on the
+    // polygon's edge and the transition never fired. Of the game's 36
+    // transition polygons the origin lies 3.7 m from the centroid at the
+    // median and 11.7 m at most.
+    if (GetObjectKind(gameObject) == static_cast<int>(GameObjectKind::Trigger) &&
+        IsTransitionTrigger(gameObject)) {
+        GetTriggerCentroid(gameObject, out);
+    }
+    return true;
 }
 
 void* GetRoomAtIndexed(void* area, const Vector& pos, int& outIndex) {

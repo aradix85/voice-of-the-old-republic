@@ -88,7 +88,9 @@ void* ResolveClientObjectHandle(uint32_t handle);
 // via CSWCCreature::ActionInitiateDialog). nullptr on sentinel / miss / fault.
 void* ResolveClientObject(uint32_t handle);
 
-// CSWSObject +0x90. False on null / fault.
+// Where the object is: CSWSObject +0x90, and for a transition trigger the
+// centroid of its polygon, where it is crossed (its stored position is the
+// polygon's origin). False on null / fault.
 bool GetObjectPosition(void* gameObject, Vector& out);
 
 // CSWSArea::GetRoom @0x4bb600. Captures the room index the engine

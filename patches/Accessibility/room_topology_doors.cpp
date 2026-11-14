@@ -131,18 +131,12 @@ void SnapshotTransitionTriggers(void* area) {
             continue;
         }
         if (!acc::engine::IsTransitionTrigger(obj)) continue;
-        Vector origin;
-        if (!acc::engine::GetObjectPosition(obj, origin)) continue;
-
-        // Where a transition is crossed: the centroid of the trigger polygon.
-        // The object position is only the polygon's origin (the GIT position
-        // its Geometry list is authored against), and a transition polygon
-        // is a long strip across a corridor mouth, so the origin can sit
-        // metres from the crossing (Citadel Station module 082 East: 8 m
-        // east of it, voiced as "transition East" for a south-west exit).
-        // The origin without a polygon.
-        Vector pos = origin;
-        const int nVerts = acc::engine::GetTriggerCentroid(obj, pos);
+        // Where the transition is crossed: GetObjectPosition gives the
+        // centroid of its polygon, not the origin, which can sit metres from
+        // the crossing (Citadel Station module 082 East: 8 m east of it,
+        // voiced as "transition East" for a south-west exit).
+        Vector pos;
+        if (!acc::engine::GetObjectPosition(obj, pos)) continue;
 
         TransitionRecord& rec = g_graph.transitions[g_graph.transition_count];
         rec.pos         = pos;
@@ -158,10 +152,8 @@ void SnapshotTransitionTriggers(void* area) {
 
         acclog::Write("WallTopo",
                       "SnapshotTransitions: transition[%d] pos=(%.1f,%.1f) "
-                      "(polygon centroid of %d verts; origin=(%.1f,%.1f)) "
                       "dest=\"%s\" nearestNode=%d (dist=%.1fm)",
-                      g_graph.transition_count, pos.x, pos.y, nVerts,
-                      origin.x, origin.y, rec.destName,
+                      g_graph.transition_count, pos.x, pos.y, rec.destName,
                       rec.nearestNode,
                       rec.nearestNode >= 0 ? std::sqrt(bestSq) : -1.0f);
         if (rec.nearestNode < 0) {
