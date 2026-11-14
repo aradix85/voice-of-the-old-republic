@@ -175,6 +175,11 @@ Route RouteToIndex(const Graph& g, int t, const Vector& targetPos);
 Route RouteTo(const Graph& g, const Vector& targetPos);
 std::string RouteText(const Route& r);
 bool DoorSides(const Graph& g, const Vector& doorPos, int& nearId, int& farId);
+// Where a walk into region `id` ends: its centre, or, where no creature can
+// stand there (off the walkable floor or hard against an edge of it), the
+// region's nav node nearest to the centre. The engine does not start a walk
+// to a spot it cannot stand on. Every walk to a region passes here.
+Vector RegionWalkPoint(void* area, int id, const Vector& centre);
 std::string DoorBeyond(const Graph& g, const Vector& doorPos, int* outNear);
 
 // exit_memory_annotate.cpp

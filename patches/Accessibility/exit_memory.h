@@ -187,8 +187,9 @@ bool ListRegions(std::vector<RegionSummary>& out,
 // itself is never held back.
 void WarnIfBehindLock(void* target);
 
-// Where a walk through a door ends: the centre of the region beyond it, seen
-// from the player. False (out untouched) when the graph joins nothing through
+// Where a walk through a door ends: the region beyond it, seen from the
+// player, at its centre or the spot nearest to that where one can stand.
+// False (out untouched) when the graph joins nothing through
 // the door, as with a door into another area. `outRegion` gets the id of the
 // region beyond.
 bool BeyondDoor(const Vector& doorPos, Vector& out, int* outRegion = nullptr);

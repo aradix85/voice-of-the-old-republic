@@ -9,6 +9,7 @@
 #include "engine_player.h"     // position, yaw, party, player creature
 #include "log.h"
 #include "shortest_paths.h"
+#include "spatial_wall_surfaces.h"  // RegionWalkPoint: the floor and its edges
 #include "strings.h"
 
 namespace acc::exit_memory {
@@ -383,6 +384,36 @@ bool UnreachableFlags(void* const* objs, const Vector* positions, int count,
     return true;
 }
 
+Vector RegionWalkPoint(void* area, int id, const Vector& centre) {
+    // A creature needs about this much floor round it; nearer to an edge
+    // than this the engine finds no place to put it.
+    constexpr float kStandClearM = 0.6f;
+    Vector floor;
+    bool standable =
+        acc::spatial::wall_surfaces::NearestWalkableFloor(centre, 0.05f, floor);
+    const acc::engine::WallEdge* walls = nullptr;
+    int wallCount = 0;
+    if (standable && acc::spatial::wall_surfaces::GetCachedWalls(walls, wallCount)) {
+        for (int i = 0; i < wallCount && standable; ++i) {
+            const float dz = walls[i].a.z - floor.z;
+            if (dz > acc::engine::kWallCrossZToleranceM ||
+                dz < -acc::engine::kWallCrossZToleranceM) {
+                continue;  // another storey's wall
+            }
+            standable = DistXYToSegmentSq(floor, walls[i].a, walls[i].b) >=
+                        kStandClearM * kStandClearM;
+        }
+    }
+    Vector node;
+    if (standable || !acc::room_topology::NearestClusterNode(area, id, centre, node)) {
+        return centre;
+    }
+    acclog::Write("ExitMemory", "region %d: nobody can stand at its centre "
+                  "(%.2f,%.2f); the walk goes to its nav node (%.2f,%.2f)",
+                  id, centre.x, centre.y, node.x, node.y);
+    return node;
+}
+
 bool BeyondDoor(const Vector& doorPos, Vector& out, int* outRegion) {
     Vector player;
     if (!acc::engine::GetPlayerPosition(player)) return false;
@@ -395,7 +426,7 @@ bool BeyondDoor(const Vector& doorPos, Vector& out, int* outRegion) {
         !acc::room_topology::GetClusterInfo(g.area, farId, beyond)) {
         return false;
     }
-    out = beyond.centre;
+    out = RegionWalkPoint(g.area, farId, beyond.centre);
     if (outRegion) *outRegion = farId;
     return true;
 }

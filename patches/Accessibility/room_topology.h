@@ -164,6 +164,11 @@ struct ClusterInfo {
 // graph.
 bool GetClusterInfo(void* area, int clusterId, ClusterInfo& out);
 
+// The nav node of the region nearest to `p`: a spot of the engine's own path
+// graph, so one a creature can stand on and walk to. False for sentinel
+// ids, unknown ids, or no graph.
+bool NearestClusterNode(void* area, int clusterId, const Vector& p, Vector& out);
+
 // One region of the area's graph, for the exploration overview
 // (exit_memory). Regions made only of filtered nodes — never announced —
 // are left out.

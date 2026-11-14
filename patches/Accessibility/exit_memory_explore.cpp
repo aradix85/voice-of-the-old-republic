@@ -93,7 +93,7 @@ bool ChainStep() {
         acc::interact::DispatchInteract(door, doorHandle, /*forceRadial=*/false);
         g_dispatchingHop = false;
     } else {
-        const Vector dest = g.nodes[hop].centre;
+        const Vector dest = RegionWalkPoint(area, hopId, g.nodes[hop].centre);
         if (!acc::guidance::WalkTo(dest)) return false;
         acc::guidance::ApproachArm arm;
         arm.owner = acc::guidance::ApproachOwner::Cycle;

@@ -345,6 +345,20 @@ bool GetClusterInfo(void* area, int clusterId, ClusterInfo& out) {
     return false;
 }
 
+bool NearestClusterNode(void* area, int clusterId, const Vector& p, Vector& out) {
+    if (clusterId < 0 || !HasGraphForArea(area)) return false;
+    int best = -1;
+    for (int i = 0; i < g_graph.node_count; ++i) {
+        if (g_graph.node_cluster_id[i] != clusterId) continue;
+        if (best < 0 || DistXYSq(g_graph.node_pos[i], p) < DistXYSq(g_graph.node_pos[best], p)) {
+            best = i;
+        }
+    }
+    if (best < 0) return false;
+    out = g_graph.node_pos[best];
+    return true;
+}
+
 bool ListClusters(void* area, std::vector<ClusterSummary>& out) {
     out.clear();
     if (!HasGraphForArea(area)) return false;
