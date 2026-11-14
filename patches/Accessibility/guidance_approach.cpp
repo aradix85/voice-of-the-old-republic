@@ -257,6 +257,14 @@ void TickApproach() {
         // Arrived after a coordinate-walk retry — the use it displaced still
         // owes the player its result. Fire it before calling this settled.
         if (TryReissueUse(gap)) return;
+        // Settled, yet the use is still queued: the use point is out of
+        // reach from this side. Go to where the floor comes nearest to the
+        // target, and say so when even that leaves the use undone.
+        if (TryFloorNearestTarget(tgt)) return;
+        if (UseNeverLanded()) {
+            OnBlocked(now - g_st.progressAt);
+            return;
+        }
         acclog::Write("Approach", "settled within reach (stalled %lums, gap %.2fm, "
             "moved=%d) — disarm, no nag",
             static_cast<unsigned long>(now - g_st.progressAt), gap,

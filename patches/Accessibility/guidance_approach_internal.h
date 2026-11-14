@@ -43,6 +43,9 @@ struct ApproachState {
     // note on ApproachArm::useHandle), and its one-shot latch.
     uint32_t      useHandle     = 0;
     bool          useReissued   = false;
+    // The walk to the floor nearest the target (TryFloorNearestTarget) is
+    // one-shot per arm.
+    bool          floorTried    = false;
 
     // World paused (Space, or the engine's auto-pause when an enemy comes
     // into view) while armed: since when, and whether the hint was spoken.
@@ -98,6 +101,15 @@ bool TryCoordinateWalkRetry(const Vector& tgt);
 bool TrySidestep(const Vector& tgt);
 void ResumeAfterSidestep();
 bool TryReissueUse(float gap);
+// The PC has settled and the use it was sent to do is still queued: the
+// engine cannot get to the use point from this side (a terminal on a desk
+// that only the far side comes close to). Walks to the walkable floor nearest
+// the target, wherever around it that is; the use is re-fired on arrival.
+// True when that walk is in flight.
+bool TryFloorNearestTarget(const Vector& tgt);
+// True when that walk and its re-fired use still left the use queued: the
+// use point cannot be reached, and saying so beats a silent disarm.
+bool UseNeverLanded();
 // The last rung before "way blocked": the engine does not walk it, but the
 // region graph may know a way. exit_memory then walks region by region,
 // opening the doors, and repeats the request on arrival. Every watched walk

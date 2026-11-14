@@ -25,7 +25,20 @@ struct FloorTri {
     Vector a;
     Vector b;
     Vector c;
+    int    material_id;   // surfacemat.2da row, -1 when the mesh has none
 };
+
+// True for a surfacemat.2da row a creature can stand on (its "walk" column;
+// the same rows in both games, bar KOTOR 2's walkable BottomlessPit, which
+// nothing here should send anyone onto).
+bool IsWalkableMaterial(int materialId);
+
+// The point of the walkable floor nearest to p on the floor plan, within maxM
+// and within kWallCrossZToleranceM of p's height: p itself when it stands on
+// that floor, else a point on the floor's edge. outPoint.z is the floor's.
+// False when no walkable floor is that near.
+bool NearestWalkableFloor(const FloorTri* tris, int triCount, const Vector& p,
+                          float maxM, Vector& outPoint);
 
 // Any triangle side of a room, for the portal filter.
 struct TriEdge {

@@ -30,7 +30,7 @@ void RebuildForArea(void* area);
 void Clear();
 
 // About 5500 faces for KOTOR 1's densest observed area, with 3x headroom
-// over the Peragus builds; 8192 x 36 B is about 290 KB static. Overflow is
+// over the Peragus builds; 8192 x 40 B is about 320 KB static. Overflow is
 // logged per area change.
 constexpr int kMaxFloorTris = 8192;
 
@@ -40,5 +40,9 @@ constexpr int kMaxFloorTris = 8192;
 // is off-mesh or before the first RebuildForArea). Primary source for
 // wall_probe::ResolveProbeZ; the walls-only height vote is its fallback.
 int FloorZCandidatesAt(float x, float y, float* outZ, int maxOut);
+
+// acc::engine::NearestWalkableFloor over the cached floor: where the floor
+// a creature can stand on comes nearest to p. False before the first rebuild.
+bool NearestWalkableFloor(const Vector& p, float maxM, Vector& outPoint);
 
 }  // namespace acc::spatial::wall_surfaces

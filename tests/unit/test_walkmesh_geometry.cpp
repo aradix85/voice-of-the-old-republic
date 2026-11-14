@@ -1,10 +1,14 @@
-// walkmesh_geometry: the wall filters and the segment-vs-wall test.
+// walkmesh_geometry: the wall filters, the segment-vs-wall test and the
+// nearest walkable floor.
 
 #include "doctest.h"
 #include "walkmesh_geometry.h"
 
 using acc::engine::DropPortalEdges;
 using acc::engine::DropSameRoomDuplicates;
+using acc::engine::FloorTri;
+using acc::engine::IsWalkableMaterial;
+using acc::engine::NearestWalkableFloor;
 using acc::engine::SegmentCrossesWalkmesh;
 using acc::engine::TriEdge;
 using acc::engine::WallEdge;
@@ -14,6 +18,14 @@ namespace {
 
 WallEdge Wall(float ax, float ay, float az, float bx, float by, float bz, int room) {
     return WallEdge{Vector{ax, ay, az}, Vector{bx, by, bz}, room, 0};
+}
+
+constexpr int kNonWalk = 7;   // surfacemat.2da rows
+constexpr int kMetal   = 10;
+
+// A level floor triangle at height z.
+FloorTri Tri(float ax, float ay, float bx, float by, float cx, float cy, float z, int material) {
+    return FloorTri{Vector{ax, ay, z}, Vector{bx, by, z}, Vector{cx, cy, z}, material};
 }
 
 }  // namespace
@@ -78,4 +90,50 @@ TEST_CASE("Same-room duplicates go, walls of two floors stay") {
 
     WallEdge rooms[] = {Wall(0, 0, 0, 4, 0, 0, 0), Wall(0, 0, 0, 4, 0, 0, 1)};
     CHECK(DropSameRoomDuplicates(rooms, 2) == 2);
+}
+
+TEST_CASE("Only the surfacemat rows with walk set are walkable") {
+    CHECK(IsWalkableMaterial(kMetal));
+    CHECK(IsWalkableMaterial(30));  // Trigger
+    CHECK_FALSE(IsWalkableMaterial(kNonWalk));
+    CHECK_FALSE(IsWalkableMaterial(0));
+    CHECK_FALSE(IsWalkableMaterial(-1));
+    CHECK_FALSE(IsWalkableMaterial(31));
+    CHECK_FALSE(IsWalkableMaterial(64));
+}
+
+TEST_CASE("A point on the walkable floor is its own nearest floor") {
+    const FloorTri floor[] = {Tri(0, 0, 4, 0, 0, 4, 1.0f, kMetal)};
+    Vector out{};
+    REQUIRE(NearestWalkableFloor(floor, 1, Vector{1, 1, 1.5f}, 3.0f, out));
+    CHECK(out.x == Approx(1.0f));
+    CHECK(out.y == Approx(1.0f));
+    CHECK(out.z == Approx(1.0f));
+}
+
+TEST_CASE("Off the floor, the nearest floor is on the nearest edge") {
+    // The reception desk of the Taris Sith base: the terminal lies on the
+    // desk, the floor behind it comes within 0.18 m, the floor in front of it
+    // stays 1.43 m away, and the desk top itself is non-walkable floor.
+    const FloorTri floor[] = {
+        Tri(-0.33f, -11.36f, 1.67f, -11.36f, 1.67f, -9.94f, 0, kMetal),   // behind
+        Tri(0.04f, -12.97f, 1.27f, -12.97f, 0.5f, -14.0f, 0, kMetal),     // in front
+        Tri(-0.33f, -11.36f, 1.67f, -11.36f, 0.5f, -12.97f, 0, kNonWalk), // the desk
+    };
+    const Vector terminal{0.24f, -11.54f, 0.88f};
+    Vector out{};
+    REQUIRE(NearestWalkableFloor(floor, 3, terminal, 3.0f, out));
+    CHECK(out.x == Approx(0.24f));
+    CHECK(out.y == Approx(-11.36f));
+    CHECK(out.z == Approx(0.0f));
+}
+
+TEST_CASE("Floor out of range or on another storey is no floor") {
+    const FloorTri floor[] = {Tri(0, 0, 4, 0, 0, 4, 0, kMetal)};
+    Vector out{};
+    CHECK_FALSE(NearestWalkableFloor(floor, 1, Vector{-5, 0, 0}, 3.0f, out));
+    CHECK(NearestWalkableFloor(floor, 1, Vector{-2, 0, 0}, 3.0f, out));
+    CHECK(out.x == Approx(0.0f));
+    CHECK_FALSE(NearestWalkableFloor(floor, 1, Vector{1, 1, 4}, 3.0f, out));
+    CHECK_FALSE(NearestWalkableFloor(nullptr, 0, Vector{1, 1, 0}, 3.0f, out));
 }

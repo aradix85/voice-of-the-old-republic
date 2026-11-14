@@ -782,7 +782,8 @@ int BuildAreaWallCache(void* area, WallEdge* outBuf, int maxEdges);
 // Walks every room's surface mesh and emits every face as a FloorTri.
 // No material or adjacency filtering — non-walkable faces (grates,
 // hazard strips) still sit at floor height and are valid height
-// witnesses. Returns the discovered count; writes up to maxTris.
+// witnesses; each carries its material for the callers that want only
+// walkable floor. Returns the discovered count; writes up to maxTris.
 // SEH-guarded per room, same contract as BuildAreaWallCache.
 int BuildAreaFloorCache(void* area, FloorTri* outBuf, int maxTris);
 

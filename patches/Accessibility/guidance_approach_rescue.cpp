@@ -12,6 +12,7 @@
 #include "guidance_autowalk.h"
 #include "interact_dispatch.h"
 #include "log.h"
+#include "spatial_wall_surfaces.h"  // NearestWalkableFloor
 #include "speech.h"
 #include "spectator_scene.h"
 #include "strings.h"
@@ -38,6 +39,13 @@ constexpr float kFrontOfTargetM = 1.8f;  // rescue walks stop this far in front
                                          // of a creature or placeable
 constexpr DWORD kRefireGuardMs  = 20000; // one talk re-fire per target per 20 s
 
+// The walk to the floor nearest a target whose use stays queued.
+constexpr float kFloorSearchM   = 3.0f;  // floor further from the target than
+                                         // this brings no use point in reach
+constexpr float kOffFloorM      = 0.05f; // nearer than this is "on the floor"
+constexpr float kStepOntoFloorM = 0.6f;  // stand this far in from the edge
+constexpr float kAlreadyThereM  = 1.0f;  // the PC stands at that spot already
+
 // The last talk re-fired after a rescue walk, so a target that still cannot
 // be reached does not loop dialog -> retry -> re-fire.
 uint32_t g_refireHandle = 0;
@@ -59,6 +67,13 @@ void StopForRescueWalk() {
         acc::engine::SetPlayerInputEnabled(true);
         g_st.inputDisabled = false;
     }
+}
+
+// A use still in the queue once the PC has stood still for the stall window.
+// Done, it would have left the queue, or opened the panel or conversation
+// that ends the approach before any rescue runs.
+bool UseStillQueued() {
+    return g_st.useHandle != 0 && acc::engine::GetPlayerActionQueueDepth() > 0;
 }
 
 // Where a rescue walk should go. A creature or placeable often stands where
@@ -352,6 +367,52 @@ bool TryReissueUse(float gap) {
     acclog::Write("Approach", "arrived after coordinate-walk retry (gap %.2fm) — "
         "re-firing use handle=0x%08x name=[%s]", gap, g_st.useHandle, g_st.name);
     return true;
+}
+
+bool TryFloorNearestTarget(const Vector& tgt) {
+    if (g_st.floorTried || !UseStillQueued()) return false;
+    Vector pc, edge;
+    if (!acc::engine::GetPlayerPosition(pc)) return false;
+    if (!acc::spatial::wall_surfaces::NearestWalkableFloor(tgt, kFloorSearchM, edge)) {
+        return false;
+    }
+    // A target standing on the floor has its use point on the floor too;
+    // whatever keeps the use queued, the side is not it.
+    const float off = DistXY(edge, tgt);
+    if (off < kOffFloorM) return false;
+
+    // A step onto the floor, straight out from the target; the edge itself
+    // where the floor is too narrow for that.
+    Vector spot{edge.x + (edge.x - tgt.x) / off * kStepOntoFloorM,
+                edge.y + (edge.y - tgt.y) / off * kStepOntoFloorM, edge.z};
+    Vector onFloor;
+    if (!acc::spatial::wall_surfaces::NearestWalkableFloor(spot, kOffFloorM, onFloor)) {
+        spot = edge;
+    }
+    if (DistXY(spot, pc) < kAlreadyThereM) return false;
+
+    StopForRescueWalk();
+    MarkWalkStart();
+    if (!acc::guidance::WalkTo(spot)) {
+        acclog::Write("Approach", "use still queued; walk to the floor nearest the "
+            "target failed to queue name=[%s]", g_st.name);
+        return false;
+    }
+    // The arrival re-fires the use through TryReissueUse, as after the
+    // coordinate retry.
+    g_st.floorTried    = true;
+    g_st.coordRetried  = true;
+    g_st.useReissued   = false;
+    g_st.movedSinceArm = false;
+    RestartStallWindow();
+    acclog::Write("Approach", "use still queued (the use point is out of reach from "
+        "here) — walking to the floor nearest the target (%.2f,%.2f), %.2fm from "
+        "it name=[%s]", spot.x, spot.y, DistXY(spot, tgt), g_st.name);
+    return true;
+}
+
+bool UseNeverLanded() {
+    return g_st.floorTried && UseStillQueued();
 }
 
 // Breaks a blocked approach and announces "way blocked" when the arm asked

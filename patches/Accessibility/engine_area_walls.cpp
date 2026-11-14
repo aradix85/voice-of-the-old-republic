@@ -176,7 +176,8 @@ int BuildAreaFloorCache(void* area, FloorTri* outBuf, int maxTris) {
         for (uint32_t f = 0; f < m.faceCount; ++f) {
             if (!ReadFace(m, f, &face)) continue;
             if (outBuf && total < maxTris) {
-                outBuf[total] = FloorTri{face.corner[0], face.corner[1], face.corner[2]};
+                outBuf[total] =
+                    FloorTri{face.corner[0], face.corner[1], face.corner[2], face.material};
             }
             ++total;
         }
