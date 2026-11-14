@@ -33,6 +33,10 @@ constexpr float kChainMinMoveM = 1.0f;  // a hop that moved less made no progres
 constexpr float kCornerExtraM = 8.0f;
 constexpr float kCornerFactor = 1.5f;
 
+// True while a hop presses Enter on its door (ChainStep): WalkThenAct then
+// starts no walk of its own for that door.
+bool g_dispatchingHop = false;
+
 void StopChain(const char* why) {
     if (!g_chain.active) return;
     g_chain.active = false;
@@ -63,7 +67,7 @@ bool ClosedDoorOnWay(const Graph& g, void* area, int t) {
 
 // One hop of the explore walk: from the player's region to the next region on
 // the open way to the goal — through the closed door on that link (walked to
-// and opened like Shift+- on it) or to the next region's centre. False when
+// and opened like Enter on it) or to the next region's walk point. False when
 // there is no open way or no walk started.
 bool ChainStep() {
     Vector player;
@@ -80,14 +84,21 @@ bool ChainStep() {
     uint32_t before = 0;
     acc::guidance::LastApproachOutcome(&before);
     if (door) {
-        acc::narrated_target::Stamp(door, acc::engine::GetObjectHandle(door));
-        acc::cycle_input::WalkToNarratedTarget();
+        // Enter on the door: the engine's own Open walks up to it and opens
+        // it. A use (Shift+-) ends a couple of metres short of some doors
+        // and leaves them shut.
+        const uint32_t doorHandle = acc::engine::GetObjectHandle(door);
+        acc::narrated_target::Stamp(door, doorHandle);
+        g_dispatchingHop = true;
+        acc::interact::DispatchInteract(door, doorHandle, /*forceRadial=*/false);
+        g_dispatchingHop = false;
     } else {
-        if (!acc::guidance::WalkTo(g.nodes[hop].centre)) return false;
+        const Vector dest = g.nodes[hop].centre;
+        if (!acc::guidance::WalkTo(dest)) return false;
         acc::guidance::ApproachArm arm;
         arm.owner = acc::guidance::ApproachOwner::Cycle;
         std::snprintf(arm.name, sizeof(arm.name), "%s", g_chain.name.c_str());
-        arm.targetPos    = g.nodes[hop].centre;
+        arm.targetPos    = dest;
         arm.speakBlocked = true;
         acc::guidance::ArmApproach(arm);
     }
@@ -230,8 +241,9 @@ void WalkToNearestLoot() {
 bool WalkThenAct(void* target, uint32_t handle, const char* name, bool refused,
                  bool walkOnly) {
     if (!target || handle == 0) return false;
-    // A hop of the region walk itself was refused: that is its end.
-    if (refused && g_chain.active) return false;
+    // A hop of the region walk itself was refused: that is its end. And the
+    // Enter a hop presses on its door is that hop, not a walk of its own.
+    if ((refused && g_chain.active) || g_dispatchingHop) return false;
     // The walk stops when a fight starts, so it is no way to act in one.
     if (acc::engine::IsAnyPartyMemberInCombat()) return false;
     Vector pos;
