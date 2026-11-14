@@ -50,23 +50,6 @@ int NearestDoor(const Vector& p, float& outSq) {
     return best;
 }
 
-// Where a transition is crossed: the centroid of the trigger polygon. The
-// object position is only the polygon's origin (the GIT position its
-// Geometry list is authored against), and a transition polygon is a long
-// strip across a corridor mouth, so the origin can sit metres from the
-// crossing (Citadel Station module 082 East: 8 m east of it, voiced as
-// "transition East" for a south-west exit). The origin without a polygon.
-Vector TriggerCrossing(void* trigger, const Vector& origin, int& outVerts) {
-    Vector poly[32];
-    outVerts = acc::engine::GetTriggerGeometry(trigger, poly, 32);
-    if (outVerts < 3) return origin;
-    Vector sum = {0, 0, 0};
-    for (int v = 0; v < outVerts; ++v) {
-        sum.x += poly[v].x; sum.y += poly[v].y; sum.z += poly[v].z;
-    }
-    return {sum.x / outVerts, sum.y / outVerts, sum.z / outVerts};
-}
-
 }  // namespace
 
 // Fills g_graph.doors with the area's real doors. A door that cannot be read
@@ -151,8 +134,15 @@ void SnapshotTransitionTriggers(void* area) {
         Vector origin;
         if (!acc::engine::GetObjectPosition(obj, origin)) continue;
 
-        int nVerts = 0;
-        const Vector pos = TriggerCrossing(obj, origin, nVerts);
+        // Where a transition is crossed: the centroid of the trigger polygon.
+        // The object position is only the polygon's origin (the GIT position
+        // its Geometry list is authored against), and a transition polygon
+        // is a long strip across a corridor mouth, so the origin can sit
+        // metres from the crossing (Citadel Station module 082 East: 8 m
+        // east of it, voiced as "transition East" for a south-west exit).
+        // The origin without a polygon.
+        Vector pos = origin;
+        const int nVerts = acc::engine::GetTriggerCentroid(obj, pos);
 
         TransitionRecord& rec = g_graph.transitions[g_graph.transition_count];
         rec.pos         = pos;

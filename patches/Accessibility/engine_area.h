@@ -237,6 +237,10 @@ bool IsTransitionTrigger(void* trigger);
 // run point-in-polygon against player world coordinates directly.
 int GetTriggerGeometry(void* trigger, Vector* out, int maxVerts);
 
+// The centroid of that polygon into `out`. Returns the number of vertices;
+// 0, and `out` untouched, without a polygon.
+int GetTriggerCentroid(void* trigger, Vector& out);
+
 // Reads one bit of the object's fixed NWScript local-boolean table
 // (CSWVarTable @ CSWSObject+0x110, `ulong local_booleans[3]` — the table
 // GetLocalBoolean/SetLocalBoolean script commands hit; bit layout

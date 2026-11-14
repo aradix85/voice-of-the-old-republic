@@ -108,6 +108,18 @@ int GetTriggerGeometry(void* trigger, Vector* out, int maxVerts) {
     }
 }
 
+int GetTriggerCentroid(void* trigger, Vector& out) {
+    Vector poly[32];
+    const int n = GetTriggerGeometry(trigger, poly, 32);
+    if (n < 3) return 0;
+    Vector sum = {0, 0, 0};
+    for (int v = 0; v < n; ++v) {
+        sum.x += poly[v].x; sum.y += poly[v].y; sum.z += poly[v].z;
+    }
+    out = {sum.x / n, sum.y / n, sum.z / n};
+    return n;
+}
+
 bool GetObjectLocalBoolean(void* gameObject, int index) {
     if (!gameObject || index < 0 || index >= 96) return false;
     __try {
