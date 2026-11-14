@@ -77,6 +77,8 @@ installer, as the pre-release `bridge-latest`.
   and says so.
 - Enter on a terminal or other object that can only be used from one side
   walks round to that side and uses it.
+- Enter on an open lift door takes the lift from the hall in front of it
+  too, instead of walking back into that hall.
 - Enter and the walk keys work while you stand at an area transition.
 - The overview and the walk to unexplored places work from a small entrance
   hall.
@@ -371,6 +373,15 @@ installer, as the pre-release `bridge-latest`.
   you stand still, and goes round. If the use is still waiting after that, you
   hear "way blocked" instead of silence. An object that stands on the floor
   itself is left alone, as is a use that simply finished without a screen.
+- What lies beyond a door is now always past the door, seen from where you
+  stand. For a door with no link through it the mod guesses the two sides
+  from the layout, and in the hall between an inner door and the lift on the
+  upper floor of the Taris Sith base that guess came out backwards: the hall
+  you stood in was taken for what lay beyond the open lift door. Enter said
+  "Walking: Elevator, open" six times and walked to the middle of the hall.
+  A guess that points back to your own side is now dropped, so the walk goes
+  to the lift door itself and the lift takes you down, and the door no
+  longer says it leads to the hall.
 
 <h3>Cycles:</h3>
 
