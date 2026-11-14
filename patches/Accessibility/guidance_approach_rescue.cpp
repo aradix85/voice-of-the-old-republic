@@ -10,6 +10,7 @@
 #include "examine_view.h"
 #include "exit_memory.h"       // RescueWalk: the region walk under a refused walk
 #include "guidance_autowalk.h"
+#include "guidance_pathfind.h"  // ComputePath: the route walk
 #include "interact_dispatch.h"
 #include "log.h"
 #include "spatial_wall_surfaces.h"  // NearestWalkableFloor
@@ -38,6 +39,11 @@ constexpr float kRootedMaxM     = 1.5f;  // moved less than this = still rooted
 constexpr float kFrontOfTargetM = 1.8f;  // rescue walks stop this far in front
                                          // of a creature or placeable
 constexpr DWORD kRefireGuardMs  = 20000; // one talk re-fire per target per 20 s
+
+// Route walk: a hop this long the engine starts where it refuses the whole
+// walk, and a hop that stalls is started again this often.
+constexpr float kRouteHopM       = 5.0f;
+constexpr int   kRouteHopRetries = 2;
 
 // The walk to the floor nearest a target whose use stays queued.
 constexpr float kFloorSearchM   = 3.0f;  // floor further from the target than
@@ -367,6 +373,93 @@ bool TryReissueUse(float gap) {
     acclog::Write("Approach", "arrived after coordinate-walk retry (gap %.2fm) — "
         "re-firing use handle=0x%08x name=[%s]", gap, g_st.useHandle, g_st.name);
     return true;
+}
+
+namespace {
+
+// Walks to the current hop of the route. The hop counts as a fresh start, so
+// one that never moves is caught again.
+bool StartRouteHop() {
+    MarkWalkStart();
+    if (!acc::guidance::WalkTo(g_st.route[g_st.routeAt])) return false;
+    g_st.movedSinceArm = false;
+    RestartStallWindow();
+    return true;
+}
+
+void EndRoute(const char* why) {
+    g_st.routing = false;
+    acclog::Write("Approach", "route walk: over at hop %d/%d (%s) name=[%s]",
+                  g_st.routeAt + 1, g_st.routeCount, why, g_st.name);
+}
+
+}  // namespace
+
+bool TryRouteWalk(const Vector& tgt) {
+    if (g_st.routeTried || g_st.movedSinceArm) return false;
+    g_st.routeTried = true;
+    Vector pc;
+    void* area = acc::engine::GetCurrentArea();
+    if (!area || !acc::engine::GetPlayerPosition(pc)) return false;
+    std::vector<Vector> path;
+    if (!acc::guidance::ComputePath(area, pc, RescueDestination(tgt), path)) {
+        return false;
+    }
+    // Each leg is clear of walls in a straight line; cut it into hops the
+    // engine will start.
+    int n = 0;
+    Vector from = pc;
+    for (const Vector& to : path) {
+        const int parts =
+            (std::max)(1, static_cast<int>(std::ceil(DistXY(from, to) / kRouteHopM)));
+        for (int k = 1; k <= parts; ++k) {
+            if (n == kRouteMax) return false;  // too long a way for one rescue
+            const float t = static_cast<float>(k) / static_cast<float>(parts);
+            g_st.route[n++] = Vector{from.x + (to.x - from.x) * t,
+                                     from.y + (to.y - from.y) * t,
+                                     from.z + (to.z - from.z) * t};
+        }
+        from = to;
+    }
+    if (n == 0) return false;
+
+    StopForRescueWalk();
+    g_st.routeCount   = n;
+    g_st.routeAt      = 0;
+    g_st.routeRetries = 0;
+    g_st.routing      = true;
+    g_st.coordRetried = true;   // the arrival re-fires a use, as after that retry
+    if (!StartRouteHop()) {
+        EndRoute("the first hop would not queue");
+        return false;
+    }
+    acclog::Write("Approach", "route walk: the engine starts no walk; walking the "
+        "mod's own path in %d hop(s) of up to %.0fm to (%.2f,%.2f) name=[%s]",
+        n, kRouteHopM, g_st.route[n - 1].x, g_st.route[n - 1].y, g_st.name);
+    return true;
+}
+
+bool NextRouteHop() {
+    if (g_st.routeAt + 1 >= g_st.routeCount) {
+        EndRoute("arrived");
+        return false;
+    }
+    ++g_st.routeAt;
+    g_st.routeRetries = 0;
+    if (StartRouteHop()) return true;
+    EndRoute("the next hop would not queue");
+    return false;
+}
+
+bool RetryRouteHop() {
+    if (g_st.routeRetries >= kRouteHopRetries) {
+        EndRoute("the hop keeps stalling");
+        return false;
+    }
+    ++g_st.routeRetries;
+    if (StartRouteHop()) return true;
+    EndRoute("the hop would not queue again");
+    return false;
 }
 
 bool TryFloorNearestTarget(const Vector& tgt) {

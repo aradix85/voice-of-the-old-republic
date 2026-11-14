@@ -6,6 +6,7 @@
 #include "guidance_approach.h"
 
 #include <windows.h>
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <cstring>
@@ -13,6 +14,7 @@
 namespace acc::guidance {
 
 constexpr int kSidestepMax = 3;  // sidesteps per arm before giving up
+constexpr int kRouteMax    = 48; // hops of one route walk
 
 struct ApproachState {
     bool          active        = false;
@@ -58,6 +60,16 @@ struct ApproachState {
     bool          stepping      = false;
     Vector        stepPos       = {0.0f, 0.0f, 0.0f};
     float         triedYaw[kSidestepMax] = {};
+
+    // Route walk (TryRouteWalk): the mod's own path to the target, cut into
+    // short hops; the hop being walked, how often it was started again, and
+    // the one-shot latch.
+    Vector        route[kRouteMax] = {};
+    int           routeCount    = 0;
+    int           routeAt       = 0;
+    int           routeRetries  = 0;
+    bool          routing       = false;
+    bool          routeTried    = false;
 
     // Where the current walk (the first, the coordinate retry or a re-walk)
     // started. "Rooted" means the PC is still within kRootedMaxM of it: a
@@ -110,6 +122,18 @@ bool TryFloorNearestTarget(const Vector& tgt);
 // True when that walk and its re-fired use still left the use queued: the
 // use point cannot be reached, and saying so beats a silent disarm.
 bool UseNeverLanded();
+// The engine starts no walk to the target, though short walks go: it plots
+// no path of its own there (the Ebon Hawk's corridors, Davik's hangar after
+// the fight). The mod then walks its own path over the nav graph, hop by
+// hop of a few metres; the arrival acts as after the coordinate retry.
+// True when the first hop is in flight.
+bool TryRouteWalk(const Vector& tgt);
+// The hop was reached: starts the next one. False after the last hop (the
+// tracker's own verdicts take the arrival) or when the next will not start.
+bool NextRouteHop();
+// A hop stalled short of its point: starts it again, twice at most. False
+// when the route is given up.
+bool RetryRouteHop();
 // The last rung before "way blocked": the engine does not walk it, but the
 // region graph may know a way. exit_memory then walks region by region,
 // opening the doors, and repeats the request on arrival. Every watched walk

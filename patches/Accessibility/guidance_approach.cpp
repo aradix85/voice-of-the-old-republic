@@ -32,6 +32,8 @@ constexpr DWORD kPauseHintMs    = 1000;    // paused this long after a walk
 // still held from before the walk, and the engine's enqueue ramp-up.
 constexpr DWORD kCancelGraceMs  = 300;
 constexpr float kStepArrivedM   = 0.6f;    // close enough to a sidestep point
+constexpr float kHopNearM       = 1.5f;    // a stalled route hop this near its
+                                           // point is there
 
 // Outcome of the last approach that ended, and the serial of the latest arm
 // (see LastApproachOutcome).
@@ -199,6 +201,12 @@ void TickApproach() {
         ResumeAfterSidestep();
         return;
     }
+    // A hop of the route walk that reached its point goes on to the next;
+    // after the last one the verdicts below take the arrival.
+    if (g_st.routing && DistXY(g_st.route[g_st.routeAt], pos) <= kStepArrivedM &&
+        NextRouteHop()) {
+        return;
+    }
 
     // Movement liveness. lastPos updates only when the PC has moved ≥0.5 m, so a
     // normal sub-threshold stride still registers progress every few ticks and
@@ -217,6 +225,14 @@ void TickApproach() {
         return;
     }
     if (now - g_st.progressAt < kStallMs) return;
+
+    // A hop of the route walk stalled: close by its point counts as there,
+    // further off it is started again. With the route over or given up the
+    // verdicts below speak.
+    if (g_st.routing) {
+        const bool there = DistXY(g_st.route[g_st.routeAt], pos) <= kHopNearM;
+        if (there ? NextRouteHop() : RetryRouteHop()) return;
+    }
 
     // A sidestep stalled short of its point: if it moved at all, try the
     // target again from here; if it never moved, try another direction.
@@ -276,6 +292,7 @@ void TickApproach() {
     // retry and then sidesteps before anything calls it blocked.
     if (TryCoordinateWalkRetry(tgt)) return;
     if (TrySidestep(tgt)) return;
+    if (TryRouteWalk(tgt)) return;
     if (TryRegionWalk()) return;
 
     OnBlocked(now - g_st.progressAt);
