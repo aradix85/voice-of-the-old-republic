@@ -90,6 +90,7 @@ installer, as the pre-release `bridge-latest`.
   tag such as "to14bw".
 - Enter on a map note that stands for a way out of the area goes on to that
   way out, also when the note lies a few metres short of it.
+- Enter on a way into another area walks into it, not to its edge.
 - Enter and the walk keys work while you stand at an area transition.
 - The overview and the walk to unexplored places work from a small entrance
   hall.
@@ -437,6 +438,17 @@ installer, as the pre-release `bridge-latest`.
   aside), and otherwise when you already stand at the note, so that a note
   for something else near an exit never takes you out of the area at the
   first press.
+- Enter on a transition walks into it. The mod took the transition's stored
+  position, which is only the point its outline is drawn from and often a
+  corner of it: on Dantooine the walk to "Ebon Hawk" ended on the edge, the
+  area never changed, and you heard "Waiting for Bastila" and "Walking on
+  without Bastila" at every press. A transition's place is now the middle of
+  its outline everywhere in the mod: for the walk, the party hold, distances
+  and directions, and the match with a map note. Over the game's 36
+  transitions the two points lie 3.7 metres apart at the median and 11.7 at
+  most, and four map notes ("Path North" and "Path South" in the Matale
+  Grounds, "To Ebon Hawk", "To Anchorhead") are matched to their transition
+  for the first time.
 
 <h3>Cycles:</h3>
 

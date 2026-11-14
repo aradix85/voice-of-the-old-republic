@@ -1,4 +1,4 @@
-# engine_area.cpp (234 lines)
+# engine_area.cpp (245 lines)
 
 Source: `patches/Accessibility/engine_area.cpp`
 
@@ -16,10 +16,10 @@ Game objects and areas: the server object array, handle resolution (server and c
 - L107 `void* ResolveClientObject(uint32_t handle)`
 - L122 `void* ResolveClientObjectHandle(uint32_t handle)`
 - L131 `bool GetObjectPosition(void* gameObject, Vector& out)`
-- L135 `void* GetRoomAtIndexed(void* area, const Vector& pos, int& outIndex)`
-- L156 `bool GetAreaDisplayName(void* area, char* outBuf, size_t bufSize)`
-- L170 `bool GetObjectTag(void* gameObject, char* outBuf, size_t bufSize)`
-- L176 `bool GetAreaTag(void* area, char* outBuf, size_t bufSize)`
-- L182 `bool GetRoomDisplayName(void* area, int roomIndex, char* outBuf, size_t bufSize)`
-- L202 `AreaObjectIterator::AreaObjectIterator(void* area) : handles_(nullptr), size_(0), index_(0), objectArray_(nullptr)`
-- L217 `void* AreaObjectIterator::Next()`
+- L146 `void* GetRoomAtIndexed(void* area, const Vector& pos, int& outIndex)`
+- L167 `bool GetAreaDisplayName(void* area, char* outBuf, size_t bufSize)`
+- L181 `bool GetObjectTag(void* gameObject, char* outBuf, size_t bufSize)`
+- L187 `bool GetAreaTag(void* area, char* outBuf, size_t bufSize)`
+- L193 `bool GetRoomDisplayName(void* area, int roomIndex, char* outBuf, size_t bufSize)`
+- L213 `AreaObjectIterator::AreaObjectIterator(void* area) : handles_(nullptr), size_(0), index_(0), objectArray_(nullptr)`
+- L228 `void* AreaObjectIterator::Next()`
