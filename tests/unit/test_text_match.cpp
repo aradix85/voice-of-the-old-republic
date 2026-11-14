@@ -3,8 +3,20 @@
 #include "doctest.h"
 #include "text_match.h"
 
+using acc::text::ContainsIgnoreCase;
 using acc::text::EqualsTrimmed;
 using acc::text::MatchesWithTokens;
+
+TEST_CASE("ContainsIgnoreCase finds a name inside a longer one") {
+    CHECK(ContainsIgnoreCase("Dantooine - Matale Grounds", "Matale Grounds"));
+    CHECK(ContainsIgnoreCase("Taris - Upper City South", "upper city"));
+    CHECK(ContainsIgnoreCase("Ebon Hawk", "Ebon Hawk"));
+    CHECK_FALSE(ContainsIgnoreCase("Dantooine - Jedi Enclave", "Exit Ramp"));
+    CHECK_FALSE(ContainsIgnoreCase("Grove", "Dantooine - Grove"));  // needle longer
+    CHECK_FALSE(ContainsIgnoreCase("Dantooine - Grove", ""));
+    CHECK_FALSE(ContainsIgnoreCase(nullptr, "Grove"));
+    CHECK_FALSE(ContainsIgnoreCase("Dantooine - Grove", nullptr));
+}
 
 TEST_CASE("EqualsTrimmed ignores padding at both ends only") {
     CHECK(EqualsTrimmed(" Close", "Close"));       // KOTOR 2 pads its captions

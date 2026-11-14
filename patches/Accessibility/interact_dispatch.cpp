@@ -20,6 +20,7 @@
 #include "narrated_target.h"
 #include "speech.h"
 #include "strings.h"
+#include "text_match.h"      // a map note that names a transition's destination
 #include "unified_action_menu.h"
 
 #include <cmath>
@@ -164,6 +165,39 @@ void* TransitionTriggerNear(const Vector& p) {
         }
     }
     return nearest;
+}
+
+// A map note that stands for a way out of the area means that way out. The
+// note need not lie in the trigger: "Matale Grounds" in Dantooine's Courtyard
+// sits 7 m short of it, and a walk to the note ends there. Enter goes on to
+// the trigger when the note names where it leads ("To Sewers" for a trigger
+// into the Lower Sewers), or when the player already stands at the note, so
+// that a note which names something else never takes anyone out of the area
+// at the first press.
+bool RedirectLandmarkToTransition(void* target, const char* name, bool forceRadial) {
+    Vector lpos{};
+    if (!acc::engine::GetObjectPosition(target, lpos)) return false;
+    void* trigger = TransitionTriggerNear(lpos);
+    const uint32_t th = trigger ? acc::engine::GetObjectHandle(trigger) : 0;
+    if (!th) return false;
+
+    char dest[128] = "";
+    acc::engine::GetObjectName(trigger, dest, sizeof(dest));
+    const char* place = name;
+    if ((place[0] == 'T' || place[0] == 't') && (place[1] == 'o' || place[1] == 'O') &&
+        place[2] == ' ') {
+        place += 3;
+    }
+    const bool named = acc::text::ContainsIgnoreCase(dest, place);
+    Vector pc{};
+    const bool atNote = acc::engine::GetPlayerPosition(pc) && DistXY(pc, lpos) <= 1.5f;
+    if (!named && !atNote) return false;
+
+    acclog::Write("Interact", "landmark [%s] stands for the transition 0x%08x [%s] "
+        "(%s) — Enter goes to the transition", name, th, dest,
+        named ? "names it" : "player at the note");
+    DispatchInteract(trigger, th, forceRadial);
+    return true;
 }
 
 // Transitions are trigger regions that fire on walk-in and landmarks are
@@ -429,7 +463,10 @@ void DispatchInteract(void* target, uint32_t handle, bool forceRadial) {
     // there first and comes back here on arrival.
     if (!forceRadial && acc::exit_memory::WalkThenInteract(target, handle, name)) return;
 
-    if (cat == C::Landmark && RedirectLandmarkToDoor(target, name, forceRadial)) return;
+    if (cat == C::Landmark && (RedirectLandmarkToDoor(target, name, forceRadial) ||
+                               RedirectLandmarkToTransition(target, name, forceRadial))) {
+        return;
+    }
     if ((cat == C::Transition || cat == C::Landmark) &&
         WalkToTrigger(target, handle, name, cat, forceRadial)) {
         return;

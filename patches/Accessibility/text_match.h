@@ -23,4 +23,8 @@ bool EqualsTrimmed(const char* a, const char* b);
 // EqualsTrimmed.
 bool MatchesWithTokens(const char* rendered, const char* stored);
 
+// True when `needle` occurs in `haystack`, ASCII letter case ignored. An
+// empty or null needle matches nothing.
+bool ContainsIgnoreCase(const char* haystack, const char* needle);
+
 }  // namespace acc::text

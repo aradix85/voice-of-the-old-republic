@@ -72,4 +72,17 @@ bool MatchesWithTokens(const char* rendered, const char* stored) {
     return *r == '\0';
 }
 
+bool ContainsIgnoreCase(const char* haystack, const char* needle) {
+    if (!haystack || !needle || !needle[0]) return false;
+    auto lower = [](char c) {
+        return (c >= 'A' && c <= 'Z') ? static_cast<char>(c - 'A' + 'a') : c;
+    };
+    for (const char* h = haystack; *h; ++h) {
+        size_t i = 0;
+        while (needle[i] && h[i] && lower(h[i]) == lower(needle[i])) ++i;
+        if (!needle[i]) return true;
+    }
+    return false;
+}
+
 }  // namespace acc::text
