@@ -144,22 +144,26 @@ bool RedirectLandmarkToDoor(void* target, const char* name, bool forceRadial) {
     return true;
 }
 
-// True when a transition trigger lies within 10 m of `p`: a map note such as
-// "To Sewers" sits at the trigger it names, and a walk to it leaves the area.
-bool TransitionTriggerNear(const Vector& p) {
+// The transition trigger nearest to `p` within 10 m, or null: a map note such
+// as "To Sewers" sits at the trigger it names, and a walk to it leaves the
+// area.
+void* TransitionTriggerNear(const Vector& p) {
     void* area = acc::engine::GetCurrentArea();
-    if (!area) return false;
+    if (!area) return nullptr;
+    void* nearest = nullptr;
+    float nearestM = 10.0f;
     acc::engine::AreaObjectIterator it(area);
     while (void* obj = it.Next()) {
         Vector pos;
         if (acc::engine::GetObjectKind(obj) ==
                 static_cast<int>(acc::engine::GameObjectKind::Trigger) &&
             acc::engine::IsTransitionTrigger(obj) &&
-            acc::engine::GetObjectPosition(obj, pos) && DistXY(pos, p) <= 10.0f) {
-            return true;
+            acc::engine::GetObjectPosition(obj, pos) && DistXY(pos, p) <= nearestM) {
+            nearest  = obj;
+            nearestM = DistXY(pos, p);
         }
     }
-    return false;
+    return nearest;
 }
 
 // Transitions are trigger regions that fire on walk-in and landmarks are
@@ -179,7 +183,7 @@ bool WalkToTrigger(void* target, uint32_t handle, const char* name,
     SpeakWithName(PreRollFor(cat), name, msg, sizeof(msg));
     ArmInteractApproach(name, target, /*inputDisabled=*/false, /*isDialog=*/false,
                         /*useHandle=*/0,
-                        /*leavesArea=*/!landmark || TransitionTriggerNear(tpos));
+                        /*leavesArea=*/!landmark || TransitionTriggerNear(tpos) != nullptr);
     acclog::Write("Interact", "%s -> [%s] %s via WalkTo(coord) "
         "target=0x%08x pos=(%.2f,%.2f,%.2f)",
         KeyName(forceRadial), msg, landmark ? "landmark waypoint" : "transition trigger",
