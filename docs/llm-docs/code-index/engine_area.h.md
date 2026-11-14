@@ -1,4 +1,4 @@
-# engine_area.h (790 lines)
+# engine_area.h (791 lines)
 
 Source: `patches/Accessibility/engine_area.h`
 
@@ -73,6 +73,6 @@ game_objects[] is an array of handles, not pointers. Initial code treated entrie
 - L448 `void* NearestDoor(void* area, const Vector& p, float maxM, Accept accept, Vector* outPos = nullptr)`: The door of `area` nearest to `p` in the plane, within `maxM`, for which accept(door) holds; null if none.
 - L765 `bool TrapDetectedByAnyOf(void* gameObject, const uint32_t* ids, int idCount)`: True when `gameObject`'s trap has been detected by any of the given SERVER object ids (pass the current party's ids).
 - L780 `int BuildAreaWallCache(void* area, WallEdge* outBuf, int maxEdges)`: Walks every room in `area` and every face of its CSWRoomSurfaceMesh and collects each side with adjacency -1, in world space, then drops the portals and same-room duplicates (DropPortalEdges, DropSameRoomDuplicates in...
-- L787 `int BuildAreaFloorCache(void* area, FloorTri* outBuf, int maxTris)`: Walks every room's surface mesh and emits every face as a FloorTri.
+- L788 `int BuildAreaFloorCache(void* area, FloorTri* outBuf, int maxTris)`: Walks every room's surface mesh and emits every face as a FloorTri.
 
 Also 84 constants or variables at namespace scope.

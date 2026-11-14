@@ -75,6 +75,8 @@ installer, as the pre-release `bridge-latest`.
   instead of back.
 - Waiting for the party before leaving an area stops when nobody is coming,
   and says so.
+- Enter on a terminal or other object that can only be used from one side
+  walks round to that side and uses it.
 - Enter and the walk keys work while you stand at an area transition.
 - The overview and the walk to unexplored places work from a small entrance
   hall.
@@ -359,6 +361,16 @@ installer, as the pre-release `bridge-latest`.
   fixed on one spot in the Lower City, and one left behind in solo mode,
   cost the full twenty seconds on every Enter, with no word that the walk
   would go on.
+- Enter on an object that can only be used from one side walks to the floor
+  that comes nearest to it, wherever around it that is, and uses it from
+  there. The Reception Terminal of the Taris Sith base lies on the desk: the
+  floor behind the desk comes within 20 centimetres of it, the floor in front
+  stays a metre and a half away. From the front the game kept the use in its
+  queue without ever doing it, and the mod, standing within reach, said
+  nothing, press after press. It now sees that the use is still waiting once
+  you stand still, and goes round. If the use is still waiting after that, you
+  hear "way blocked" instead of silence. An object that stands on the floor
+  itself is left alone, as is a use that simply finished without a screen.
 
 <h3>Cycles:</h3>
 

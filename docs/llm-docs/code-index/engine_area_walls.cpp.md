@@ -1,4 +1,4 @@
-# engine_area_walls.cpp (188 lines)
+# engine_area_walls.cpp (189 lines)
 
 Source: `patches/Accessibility/engine_area_walls.cpp`
 
