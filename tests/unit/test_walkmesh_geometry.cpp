@@ -1,11 +1,12 @@
-// walkmesh_geometry: the wall filters, the segment-vs-wall test and the
-// nearest walkable floor.
+// walkmesh_geometry: the wall filters, the segment-vs-wall test, the
+// nearest walkable floor and the spot to stand on it.
 
 #include "doctest.h"
 #include "walkmesh_geometry.h"
 
 using acc::engine::DropPortalEdges;
 using acc::engine::DropSameRoomDuplicates;
+using acc::engine::FloorSpotNear;
 using acc::engine::FloorTri;
 using acc::engine::IsWalkableMaterial;
 using acc::engine::NearestWalkableFloor;
@@ -136,4 +137,37 @@ TEST_CASE("Floor out of range or on another storey is no floor") {
     CHECK(out.x == Approx(0.0f));
     CHECK_FALSE(NearestWalkableFloor(floor, 1, Vector{1, 1, 4}, 3.0f, out));
     CHECK_FALSE(NearestWalkableFloor(nullptr, 0, Vector{1, 1, 0}, 3.0f, out));
+}
+
+TEST_CASE("The spot to stand lies a step onto the floor, straight out from the point") {
+    // The same desk: the spot is 0.6 m behind the edge the terminal is nearest to.
+    const FloorTri floor[] = {
+        Tri(-0.33f, -11.36f, 1.67f, -11.36f, 1.67f, -9.94f, 0, kMetal),
+        Tri(-0.33f, -11.36f, 1.67f, -11.36f, 0.5f, -12.97f, 0, kNonWalk),
+    };
+    Vector out{};
+    REQUIRE(FloorSpotNear(floor, 2, Vector{1.2f, -11.54f, 0.88f}, 3.0f, out));
+    CHECK(out.x == Approx(1.2f));
+    CHECK(out.y == Approx(-10.76f));
+    CHECK(out.z == Approx(0.0f));
+}
+
+TEST_CASE("Where the floor is narrower than the step, the spot is its edge") {
+    // A strip 0.4 m deep: a step of 0.6 m would leave it on the far side.
+    const FloorTri floor[] = {
+        Tri(0, 0, 4, 0, 4, 0.4f, 0, kMetal),
+        Tri(0, 0, 4, 0.4f, 0, 0.4f, 0, kMetal),
+    };
+    Vector out{};
+    REQUIRE(FloorSpotNear(floor, 2, Vector{2, -1, 0}, 3.0f, out));
+    CHECK(out.x == Approx(2.0f));
+    CHECK(out.y == Approx(0.0f));
+}
+
+TEST_CASE("A point on the floor, or with no floor near, has no spot to stand") {
+    const FloorTri floor[] = {Tri(0, 0, 4, 0, 0, 4, 0, kMetal)};
+    Vector out{};
+    CHECK_FALSE(FloorSpotNear(floor, 1, Vector{1, 1, 0.5f}, 3.0f, out));
+    CHECK_FALSE(FloorSpotNear(floor, 1, Vector{-5, 0, 0}, 3.0f, out));
+    CHECK_FALSE(FloorSpotNear(nullptr, 0, Vector{-1, 0, 0}, 3.0f, out));
 }

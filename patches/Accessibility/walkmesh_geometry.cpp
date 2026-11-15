@@ -10,6 +10,11 @@ namespace {
 // of two rooms slightly apart.
 constexpr float kSeamEpsSq = 1e-4f;
 
+// FloorSpotNear: nearer to the floor than this is on it, and the spot lies
+// this far in from the floor's edge.
+constexpr float kOnFloorM       = 0.05f;
+constexpr float kStepOntoFloorM = 0.6f;
+
 bool Same3D(const Vector& p, const Vector& q) { return DistXYZSq(p, q) < kSeamEpsSq; }
 bool SameXY(const Vector& p, const Vector& q) { return DistXYSq(p, q) < kSeamEpsSq; }
 
@@ -90,6 +95,20 @@ bool NearestWalkableFloor(const FloorTri* tris, int triCount, const Vector& p,
         found    = true;
     }
     return found;
+}
+
+bool FloorSpotNear(const FloorTri* tris, int triCount, const Vector& p, float maxM,
+                   Vector& outSpot) {
+    Vector edge;
+    if (!NearestWalkableFloor(tris, triCount, p, maxM, edge)) return false;
+    const float off = DistXY(edge, p);
+    if (off < kOnFloorM) return false;
+
+    outSpot = Vector{edge.x + (edge.x - p.x) / off * kStepOntoFloorM,
+                     edge.y + (edge.y - p.y) / off * kStepOntoFloorM, edge.z};
+    Vector onFloor;
+    if (!NearestWalkableFloor(tris, triCount, outSpot, kOnFloorM, onFloor)) outSpot = edge;
+    return true;
 }
 
 int DropPortalEdges(WallEdge* walls, int count, const TriEdge* sides, int sideCount) {

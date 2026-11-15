@@ -45,4 +45,8 @@ int FloorZCandidatesAt(float x, float y, float* outZ, int maxOut);
 // a creature can stand on comes nearest to p. False before the first rebuild.
 bool NearestWalkableFloor(const Vector& p, float maxM, Vector& outPoint);
 
+// acc::engine::FloorSpotNear over the cached floor: where to stand to be as
+// near to p as the floor allows. False before the first rebuild.
+bool FloorSpotNear(const Vector& p, float maxM, Vector& outSpot);
+
 }  // namespace acc::spatial::wall_surfaces

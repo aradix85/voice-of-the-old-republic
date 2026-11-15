@@ -13,7 +13,7 @@
 #include "guidance_pathfind.h"  // ComputePath: the route walk
 #include "interact_dispatch.h"
 #include "log.h"
-#include "spatial_wall_surfaces.h"  // NearestWalkableFloor
+#include "spatial_wall_surfaces.h"  // FloorSpotNear
 #include "speech.h"
 #include "spectator_scene.h"
 #include "strings.h"
@@ -48,8 +48,6 @@ constexpr int   kRouteHopRetries = 2;
 // The walk to the floor nearest a target whose use stays queued.
 constexpr float kFloorSearchM   = 3.0f;  // floor further from the target than
                                          // this brings no use point in reach
-constexpr float kOffFloorM      = 0.05f; // nearer than this is "on the floor"
-constexpr float kStepOntoFloorM = 0.6f;  // stand this far in from the edge
 constexpr float kAlreadyThereM  = 1.0f;  // the PC stands at that spot already
 
 // The last talk re-fired after a rescue walk, so a target that still cannot
@@ -464,24 +462,11 @@ bool RetryRouteHop() {
 
 bool TryFloorNearestTarget(const Vector& tgt) {
     if (g_st.floorTried || !UseStillQueued()) return false;
-    Vector pc, edge;
+    Vector pc, spot;
     if (!acc::engine::GetPlayerPosition(pc)) return false;
-    if (!acc::spatial::wall_surfaces::NearestWalkableFloor(tgt, kFloorSearchM, edge)) {
-        return false;
-    }
     // A target standing on the floor has its use point on the floor too;
     // whatever keeps the use queued, the side is not it.
-    const float off = DistXY(edge, tgt);
-    if (off < kOffFloorM) return false;
-
-    // A step onto the floor, straight out from the target; the edge itself
-    // where the floor is too narrow for that.
-    Vector spot{edge.x + (edge.x - tgt.x) / off * kStepOntoFloorM,
-                edge.y + (edge.y - tgt.y) / off * kStepOntoFloorM, edge.z};
-    Vector onFloor;
-    if (!acc::spatial::wall_surfaces::NearestWalkableFloor(spot, kOffFloorM, onFloor)) {
-        spot = edge;
-    }
+    if (!acc::spatial::wall_surfaces::FloorSpotNear(tgt, kFloorSearchM, spot)) return false;
     if (DistXY(spot, pc) < kAlreadyThereM) return false;
 
     StopForRescueWalk();

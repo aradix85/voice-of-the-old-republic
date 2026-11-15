@@ -80,6 +80,10 @@ bool NearestWalkableFloor(const Vector& p, float maxM, Vector& outPoint) {
                                              outPoint);
 }
 
+bool FloorSpotNear(const Vector& p, float maxM, Vector& outSpot) {
+    return acc::engine::FloorSpotNear(g_floor_tris, g_floor_tri_count, p, maxM, outSpot);
+}
+
 int FloorZCandidatesAt(float x, float y, float* outZ, int maxOut) {
     if (!outZ || maxOut <= 0 || g_floor_tri_count <= 0) return 0;
 

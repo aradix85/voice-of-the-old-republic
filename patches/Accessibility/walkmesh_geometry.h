@@ -40,6 +40,14 @@ bool IsWalkableMaterial(int materialId);
 bool NearestWalkableFloor(const FloorTri* tris, int triCount, const Vector& p,
                           float maxM, Vector& outPoint);
 
+// Where to stand to be as near to p as the walkable floor lets anyone come:
+// a step onto the floor from its edge nearest p, straight away from p, or
+// that edge itself where the floor is narrower than the step. False when p
+// stands on the floor, or no walkable floor lies within maxM of it (both as
+// NearestWalkableFloor sees them).
+bool FloorSpotNear(const FloorTri* tris, int triCount, const Vector& p, float maxM,
+                   Vector& outSpot);
+
 // Any triangle side of a room, for the portal filter.
 struct TriEdge {
     Vector a;
