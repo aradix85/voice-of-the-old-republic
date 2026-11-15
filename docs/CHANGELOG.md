@@ -118,6 +118,8 @@ installer, as the pre-release `bridge-latest`.
   state.
 - Decorative doors are left out of the , / . cycle.
 - , / . lists only what you can still reach, and no empty containers.
+- An item lying in the world says that it cannot be picked up and no longer
+  counts as something left to search.
 - Script triggers are no longer announced as exits.
 - Locked doors and containers say whether they open only through the story,
   need a key, or need Security N, with the best Security in the party.
@@ -501,6 +503,14 @@ installer, as the pre-release `bridge-latest`.
   a second after it started.
 - Script triggers (for example "nulltrigger") are no longer treated as area
   transitions.
+- An item lying in the world, such as the loose "Crystal, Bondar" in the
+  Crystal Cave on Dantooine, says "Crystal, Bondar cannot be picked up" on
+  Enter and Shift+-. Neither game lets the player pick such an item up: it is
+  scenery, and the game's own answer for it is "No Action". The mod said "Pick
+  up Crystal, Bondar", counted it under "To search", and Ctrl+L walked to it
+  again and again. It still shows in the , / . and Q/E cycles and in "Here:",
+  as something that stands in the room; what is left to search is containers
+  that hold something.
 
 <h3>Locks and party:</h3>
 

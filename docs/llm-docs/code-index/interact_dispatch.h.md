@@ -1,4 +1,4 @@
-# interact_dispatch.h (32 lines)
+# interact_dispatch.h (33 lines)
 
 Source: `patches/Accessibility/interact_dispatch.h`
 
@@ -10,5 +10,5 @@ Self-gates on player loaded so menus + chargen pass Enter through.
 
 ## Declarations (in source order)
 
-- L23 `acc::strings::Id PreRollFor(acc::filter::CycleCategory c)`: The verb before a target's name for its kind ("Open X", "Talk to X", "Pick up X"); Enter and the Shift+- walk speak the same verbs.
-- L29 `void DispatchInteract(void* target, uint32_t handle, bool forceRadial)`: The one interact pipeline.
+- L24 `acc::strings::Id PreRollFor(acc::filter::CycleCategory c)`: The line for a target of this kind, with its name: the verb ("Open X", "Talk to X"), or for an item in the world that it cannot be picked up.
+- L30 `void DispatchInteract(void* target, uint32_t handle, bool forceRadial)`: The one interact pipeline.
