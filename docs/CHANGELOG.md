@@ -91,6 +91,8 @@ installer, as the pre-release `bridge-latest`.
 - Enter on a map note that stands for a way out of the area goes on to that
   way out, also when the note lies a few metres short of it.
 - Enter on a way into another area walks into it, not to its edge.
+- Leaving the Ebon Hawk with Enter works again, without "way blocked" at the
+  ramp.
 - Enter and the walk keys work while you stand at an area transition.
 - The overview and the walk to unexplored places work from a small entrance
   hall.
@@ -449,6 +451,15 @@ installer, as the pre-release `bridge-latest`.
   most, and four map notes ("Path North" and "Path South" in the Matale
   Grounds, "To Ebon Hawk", "To Anchorhead") are matched to their transition
   for the first time.
+- Leaving the Ebon Hawk with Enter works again. "Exit Ebon Hawk" and the map
+  note "Exit Ramp" both lie on the ramp, which is not walkable floor; what
+  lets you out is the floor in front of it. The game takes a walk to a point
+  off the floor and drops it at once, so every press ended in "way blocked"
+  a step short of that floor, and plotting such a walk crashed the game
+  once. A walk to a point off the walkable floor now goes to the floor
+  nearest it, a step in from the edge, whichever key asked for the walk.
+  Three of the game's transitions have their middle off the floor: this one,
+  one on Korriban and the Star Forge's way back to the ship.
 
 <h3>Cycles:</h3>
 

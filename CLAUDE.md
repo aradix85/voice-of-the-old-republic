@@ -86,7 +86,7 @@ Always read these before diving into work — they capture decisions and current
 - **`docs/controls-and-input.md`** — canonical KOTOR 1 keyboard/mouse control survey + accessibility-gap backlog.
 - **`docs/installer.md`** — what the installer does: where the mod comes from, the flows, what lands in the game folder, the pins. The original design notes and research are in `archiev/installer-design-original.md`.
 - **`docs/upstream-prs.md`** — Kotor-Patch-Manager (and K1CP) defects with our workarounds and the local fixes in the vendored copy; code comments cite its entries as PR-1 … PR-12.
-- **`docs/known-issues.md`** — five-bucket status tracker (Bugs / Planned / Monitor / Polish / Beta Preparations).
+- **`docs/known-issues.md`** — five-bucket status tracker (Bugs / Unreproduced / Planned / Monitor / Polish).
 - **`docs/CHANGELOG.md`** — release notes. The top section (`v0.9.1+bridge`) is this fork's; add every change there, in its overview and its topic subsection.
 - **`docs/llm-docs/`** — LLM-targeted reference material. See `docs/llm-docs/CLAUDE.md` for the index. `docs/llm-docs/code-index/` is generated from the source comments: `python tools/analysis/code_index.py`. Start with `game-flow.md` for lifecycle context, `accessibility-map.md` for pillar-by-pillar hook candidates, and `sarif-cookbook.md` for querying Lane's RE database.
 - **`archiev/`** — historical investigation, design, and progress docs (session-by-session retrospectives). Search here if a code comment references a `docs/*-investigation.md` or `docs/navsystem-*.md` that no longer exists in `docs/`.

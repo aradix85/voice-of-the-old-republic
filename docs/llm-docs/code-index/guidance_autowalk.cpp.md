@@ -1,4 +1,4 @@
-# guidance_autowalk.cpp (357 lines)
+# guidance_autowalk.cpp (383 lines)
 
 Source: `patches/Accessibility/guidance_autowalk.cpp`
 
@@ -6,10 +6,11 @@ movement-key cancel.
 
 ## Declarations (in source order)
 
-- L101 `void PrimeActionManager(void* creature, int mode)`
-- L112 `int ReadServerObjInt(void* obj, size_t off, int dflt)`: Read an int field off a server object with SEH protection.
-- L120 `bool WalkTo(const Vector& destination)`
-- L210 `bool ForceWalkTo(const Vector& destination)`
-- L256 `bool UseObject(unsigned long targetHandle)`
-- L287 `bool CancelMovement()`
-- L312 `void PollMovementKeysCancel()`
+- L102 `void PrimeActionManager(void* creature, int mode)`
+- L113 `int ReadServerObjInt(void* obj, size_t off, int dflt)`: Read an int field off a server object with SEH protection.
+- L132 `Vector WalkEnd(const Vector& destination)`: Where a walk to `destination` ends.
+- L146 `bool WalkTo(const Vector& destination)`
+- L236 `bool ForceWalkTo(const Vector& destination)`
+- L282 `bool UseObject(unsigned long targetHandle)`
+- L313 `bool CancelMovement()`
+- L338 `void PollMovementKeysCancel()`
