@@ -454,8 +454,9 @@ void DispatchInteract(void* target, uint32_t handle, bool forceRadial) {
     // An item lying in the world is scenery in both games. GetDefaultActions
     // sorts its target with GetInterfaceTargetType, which knows creatures,
     // doors, placeables and triggers and leaves everything else at "No
-    // Action"; a use queues nothing either. So say that it cannot be picked
-    // up and stop: a walk up to it would only promise what never comes.
+    // Action"; AIActionUseObject walks into use range of any object and then
+    // acts on a placeable only. So say that it cannot be picked up and stop:
+    // a walk up to it would only promise what never comes.
     if (cat == C::Item) {
         char line[192];
         SpeakWithName(PreRollFor(cat), name, line, sizeof(line));
