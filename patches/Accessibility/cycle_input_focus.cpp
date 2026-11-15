@@ -193,7 +193,7 @@ void OnAnnounceFocus() {
 // dispatch:
 //   - A real interactable object → `acc::guidance::UseObject`. The engine
 //     walks to use-range and triggers the kind-appropriate callback (door
-//     open, container loot, item pickup, NPC dialog, transition cross-load),
+//     open, container loot, NPC dialog, transition cross-load),
 //     stopping at a sensible distance and facing the object.
 //   - A map pin / waypoint, or any focused target without a usable object
 //     handle (a non-interactable target), or an object whose USE the engine
@@ -244,6 +244,15 @@ void OnPathfindFocus() {
     std::snprintf(msg, sizeof(msg),
                   acc::strings::Get(acc::interact::PreRollFor(a.category)),
                   a.name);
+
+    // An item in the world cannot be picked up (see DispatchInteract): the
+    // line says so, and there is nothing to walk up to and use.
+    if (a.category == acc::filter::CycleCategory::Item) {
+        acc::speech::Speak(msg, /*interrupt=*/true);
+        acclog::Write("Cycle", "Shift+- -> [%s] obj=%p handle=0x%08x (item, no walk)",
+                      msg, a.obj, a.handle);
+        return;
+    }
 
     // Dispatch. Map pins and handle-less targets have no object to "use" —
     // walk straight to the coordinate. Real objects go through UseObject

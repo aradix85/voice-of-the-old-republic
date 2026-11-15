@@ -380,7 +380,7 @@ acc::strings::Id PreRollFor(acc::filter::CycleCategory c) {
         case C::Door:       return S::FmtInteractOpen;
         case C::Npc:        return S::FmtInteractTalk;
         case C::Container:  return S::FmtInteractOpen;
-        case C::Item:       return S::FmtInteractTake;
+        case C::Item:       return S::FmtInteractNoTake;
         case C::Landmark:   return S::FmtInteractOpen;  // landmark = waypoint
         case C::Transition: return S::FmtInteractOpen;  // transition = doorway
         case C::Count_:     break;
@@ -450,6 +450,19 @@ void DispatchInteract(void* target, uint32_t handle, bool forceRadial) {
 
     // The one creature-keyed refusal: Trask as leader trying his own door.
     if (acc::endar::BlockCompanionAttempt(target)) return;
+
+    // An item lying in the world is scenery in both games. GetDefaultActions
+    // sorts its target with GetInterfaceTargetType, which knows creatures,
+    // doors, placeables and triggers and leaves everything else at "No
+    // Action"; a use queues nothing either. So say that it cannot be picked
+    // up and stop: a walk up to it would only promise what never comes.
+    if (cat == C::Item) {
+        char line[192];
+        SpeakWithName(PreRollFor(cat), name, line, sizeof(line));
+        acclog::Write("Interact", "%s -> [%s] target=%p handle=0x%08x (item: the "
+            "engine has no action for it)", KeyName(forceRadial), line, target, handle);
+        return;
+    }
 
     // Short reminders a beat after the walk line, never instead of it: what is
     // left to search in the region being left, and a target behind a locked

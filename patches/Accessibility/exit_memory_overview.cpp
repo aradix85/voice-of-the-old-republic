@@ -44,12 +44,13 @@ DWORD       g_reminderDoorMs  = 0;
 // close in a straight line.
 constexpr float kExitDoorNearM = 40.0f;
 
-// Loot left: containers holding items, and items on the ground, nearest
-// first (straight line). Every such object in the area, whether or not the
-// player has heard it yet: the , / . cycles' discovery tier is the wrong
-// filter here (a footlocker not yet walked past is exactly what "left to
-// search" is for, and ground items are never in that tier at all). Callers
-// decide what of it to speak; `known` says whether the cycles would list it.
+// Loot left: containers holding items, nearest first (straight line). Every
+// such container in the area, whether or not the player has heard it yet:
+// the , / . cycles' discovery tier is the wrong filter here (a footlocker not
+// yet walked past is exactly what "left to search" is for). An item lying in
+// the world is no loot: neither game lets the player pick one up (see
+// DispatchInteract). Callers decide what of it to speak; `known` says whether
+// the cycles would list it.
 void CollectLoot(std::vector<LootSpot>& out) {
     out.clear();
     Vector player;
@@ -60,19 +61,13 @@ void CollectLoot(std::vector<LootSpot>& out) {
         acc::menus::modsettings::Option::ExtendedCycling);
     acc::engine::AreaObjectIterator it(area);
     while (void* obj = it.Next()) {
-        CycleCategory cat;
-        if (acc::filter::ObjectMatches(obj, CycleCategory::Container)) {
-            cat = CycleCategory::Container;
-            if (acc::engine::GetContainerItemCount(obj) <= 0) continue;
-        } else if (acc::filter::ObjectMatches(obj, CycleCategory::Item)) {
-            cat = CycleCategory::Item;
-        } else {
-            continue;
-        }
+        if (!acc::filter::ObjectMatches(obj, CycleCategory::Container)) continue;
+        if (acc::engine::GetContainerItemCount(obj) <= 0) continue;
         Vector pos;
         if (!acc::engine::GetObjectPosition(obj, pos)) continue;
         char name[160] = {0};
-        if (!acc::narration::GetSpokenName(obj, cat, name, sizeof(name)) ||
+        if (!acc::narration::GetSpokenName(obj, CycleCategory::Container, name,
+                                           sizeof(name)) ||
             !name[0]) {
             continue;
         }

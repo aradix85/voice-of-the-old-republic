@@ -190,12 +190,14 @@ enum class Id : int {
     //      object, before the engine click pipeline runs.
     //      `FmtInteractTalk`  — NPCs (talk to / start dialog).
     //      `FmtInteractOpen`  — doors, containers, placeables (use).
-    //      `FmtInteractTake`  — items (pick up).
+    //      `FmtInteractNoTake` — an item lying in the world: neither game
+    //                            lets the player pick one up, so this says so
+    //                            and nothing is dispatched.
     //      `FmtInteractFailed` — generic failure pre-roll if the engine
     //                            entry point faults under SEH.
     FmtInteractTalk,
     FmtInteractOpen,
-    FmtInteractTake,
+    FmtInteractNoTake,
     FmtInteractFailed,
 
     // ---- Engine-picked action pre-roll. Used when the engine action

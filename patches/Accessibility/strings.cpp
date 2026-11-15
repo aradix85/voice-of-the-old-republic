@@ -71,7 +71,7 @@ const char* Get(Id id) {
 
         case Id::FmtInteractTalk:      return "Talk to %s";
         case Id::FmtInteractOpen:      return "Use %s";
-        case Id::FmtInteractTake:      return "Pick up %s";
+        case Id::FmtInteractNoTake:    return "%s cannot be picked up";
         case Id::FmtInteractFailed:    return "Interact with %s failed";
         case Id::FmtInteractEngine:    return "%s %s";
         case Id::FmtInteractRadial:    return "Action menu, %s";

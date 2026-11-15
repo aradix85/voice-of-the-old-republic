@@ -18,8 +18,9 @@
 
 namespace acc::interact {
 
-// The verb before a target's name for its kind ("Open X", "Talk to X",
-// "Pick up X"); Enter and the Shift+- walk speak the same verbs.
+// The line for a target of this kind, with its name: the verb ("Open X",
+// "Talk to X"), or for an item in the world that it cannot be picked up.
+// Enter and the Shift+- walk speak the same lines.
 acc::strings::Id PreRollFor(acc::filter::CycleCategory c);
 
 // The one interact pipeline. target must be the server-side CSWSObject*,
