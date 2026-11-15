@@ -140,6 +140,7 @@ installer, as the pre-release `bridge-latest`.
 - The game's map notes, such as "Duel Organizer", are always in the , / .
   landmark list, also before you have been there.
 - A bystander's remark is no longer cut off by the automatic target line.
+- A conversation is no longer announced as a game of Pazaak.
 - Speech and braille go through NVDA only; there is no other screen reader
   support, no SAPI or compass voice and no 3D speech.
 - The exploration sounds are gone: what they told you is said in words.
@@ -564,6 +565,12 @@ installer, as the pre-release `bridge-latest`.
   alone.
 - The kill line ("X killed Y: 100 XP") is spoken in its turn. It used to
   interrupt, and so cut off the blows that led to the kill.
+- "Pazaak. Press C to read your hand, T for the table." is said for the
+  Pazaak board only. The mod also took any screen it did not know for the
+  board when the game's memory behind it looked like a card table, and
+  cleared memory does: a passer-by's conversation in Anchorhead was announced
+  as Pazaak, with a board of nine plus-ones. The board is now known by what
+  the game itself calls it.
 
 <h3>Language:</h3>
 
