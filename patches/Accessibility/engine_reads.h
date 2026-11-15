@@ -240,6 +240,12 @@ void* ResolveItemFromClientHandle(uint32_t clientHandle);
 // an unresolved handle. It does not check that the control is a row.
 void* ResolveItemFromRow(void* rowControl);
 
+// The name of the creature that wears the item of a workbench item-list row
+// (CSWUpgradeItemEntry), as the row itself records it. False, with an empty
+// buffer, for a row whose item nobody wears and when the name does not
+// resolve. Only for rows of that list: it does not check the row's class.
+bool ReadUpgradeItemRowWearer(void* rowControl, char* outBuf, size_t bufSize);
+
 // Multi-line property description (damage / range / on-hit / defence /
 // base description). Engine allocates a heap c_string per call which
 // we deliberately leak (CRT-mismatch — same pattern as LookupTlk).

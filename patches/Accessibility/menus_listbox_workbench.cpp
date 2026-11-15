@@ -59,10 +59,26 @@ void* WorkbenchItemsFindLb(void* p) {
 }
 
 // Speak the focused weapon row + position. No per-tick monitor watches
-// this listbox so we speak on every step (including clamp).
+// this listbox so we speak on every step (including clamp). The game marks a
+// worn item "(Equipped)" and no more, so the wearer's name follows it: three
+// Lightsabers worn by two companions read alike otherwise.
 void WorkbenchItemsAnnounce(void* /*lb*/, const ListBoxNavResult& r) {
-    if (r.rowCount <= 0) return;
-    SpeakRowAndPosition(r);
+    if (!r.row || r.rowCount <= 0) return;
+    char wearer[128];
+    if (!acc::engine::ReadUpgradeItemRowWearer(r.row, wearer, sizeof(wearer))) {
+        SpeakRowAndPosition(r);
+        return;
+    }
+    char rowText[256];
+    if (!acc::menus::extract::FromControl(r.row, rowText, sizeof(rowText))) return;
+    char named[400];
+    snprintf(named, sizeof(named), "%s, %s", rowText, wearer);
+    char msg[480];
+    snprintf(msg, sizeof(msg),
+             acc::strings::Get(acc::strings::Id::FmtContainerItemAt),
+             named, r.newSel + 1, r.rowCount);
+    acc::speech::Speak(msg, /*interrupt=*/false);
+    acclog::Write("WorkbenchItems", "row=%p worn by [%s]", r.row, wearer);
 }
 
 bool WorkbenchItemsOnEnter(void* panel) {

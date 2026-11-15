@@ -59,6 +59,32 @@ void* ResolveItemFromRow(void* rowControl) {
     return ResolveItemFromClientHandle(handle);
 }
 
+bool ReadUpgradeItemRowWearer(void* rowControl, char* outBuf, size_t bufSize) {
+    if (!outBuf || bufSize < 2) return false;
+    outBuf[0] = '\0';
+    uint32_t flags = 0, wearer = 0;
+    if (!TryReadU32(rowControl, kUpgradeItemEntryFlagsOffset, &flags) ||
+        !(flags & kUpgradeItemEntryEquippedBit) ||
+        !TryReadU32(rowControl, kUpgradeItemEntryWearerIdOffset, &wearer) ||
+        wearer == 0 || wearer == 0xffffffff || wearer == kInvalidObjectId) {
+        return false;
+    }
+    if (GetObjectDisplayNameByHandle(wearer, outBuf, bufSize) && outBuf[0] != '\0') {
+        return true;
+    }
+    // A companion who is not in the party is loaded on the server for this
+    // list alone and has no client object to ask; its own name field answers.
+    outBuf[0] = '\0';
+    if (GetObjectName(ResolveServerObjectHandle(wearer), outBuf, bufSize) &&
+        outBuf[0] != '\0') {
+        return true;
+    }
+    acclog::Write("Menus.ItemRow", "row=%p wearer=0x%08x name-resolve missed",
+                  rowControl, wearer);
+    outBuf[0] = '\0';
+    return false;
+}
+
 uint32_t ClientToServerObjectId(uint32_t clientHandle) {
     if (clientHandle == 0 || clientHandle == 0xffffffff) return 0;
     void* serverApp = GetServerApp();

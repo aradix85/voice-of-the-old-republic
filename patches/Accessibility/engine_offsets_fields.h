@@ -1986,6 +1986,18 @@ const uint32_t  kControlVisibleBit                     = acc::off::Same(0x2);
 // the id at [row+0x1d0].
 const size_t    kStoreItemEntryObjIdOffset             = acc::off::Pick(0x1c4, 0x1d0);
 
+// CSWUpgradeItemEntry — a row of the workbench's item list (upgradeitems.gui).
+// CSWUpgradeItemEntry::SetItem (K1 0x006c3ea0, K2 0x008D0780) stores its four
+// arguments behind the embedded button: the item's id at the obj_id offset
+// above, then the id of the creature that wears it, the slot bit, and bit 0
+// of a flag word for "equipped" (the bit that makes it append the "(Equipped)"
+// string, strref 0x7e5a). The list builder passes `[creature+4]` as the
+// wearer for every item it finds in an inventory slot (K1 0x006c4960), so the
+// id names the creature whatever party or area it is in.
+const size_t    kUpgradeItemEntryWearerIdOffset        = acc::off::Pick(0x1c8, 0x1d4);
+const size_t    kUpgradeItemEntryFlagsOffset           = acc::off::Pick(0x1d0, 0x1dc);
+const uint32_t  kUpgradeItemEntryEquippedBit           = acc::off::Same(0x1);
+
 // CSWSItem.bit_flags @ +0x288 (ulong), CSWSItem.stack_size @ +0x28c (ushort).
 // Verified two ways: (1) Ghidra struct DB names them at these offsets;
 // (2) raw disassembly of CSWGuiStore::OnControlEntered @ 0x006c0aa0:
