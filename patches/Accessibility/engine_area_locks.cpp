@@ -5,6 +5,7 @@
 
 #include "engine_game.h"    // IsKotor1: the lock fields are KOTOR 1 offsets
 #include "engine_offsets_select.h"
+#include "engine_player.h"  // GetPlayerServerCreature: who would open the lock
 #include "engine_reads.h"   // ReadCExoString
 #include "log.h"
 #include "party_status.h"   // best Security in the party
@@ -36,17 +37,44 @@ bool ReadLockFieldsRaw(void* obj, size_t lockedOff, size_t keyReqOff,
     }
 }
 
-// One log line per object (recent handles remembered), so the raw values
-// can be checked against the object's UTD / UTP template.
+typedef void*    (__thiscall* PFN_GetItemRepository)(void* creature, int partyItems);
+typedef uint32_t (__thiscall* PFN_FindItemWithTag)(void* repository, void* tag);
+
+// Whether the creature under control has the key this lock names, asked the
+// way the game asks when that creature tries the lock (see the addresses in
+// engine_area.h). `keyName` is the lock's own CExoString, not a copy.
+bool OpenerHoldsKey(void* keyName) {
+    void* opener = GetPlayerServerCreature();
+    if (!opener || !acc::addr::Ok(kAddrCSWSCreatureGetItemRepository) ||
+        !acc::addr::Ok(kAddrCItemRepositoryFindItemWithTag)) {
+        return false;
+    }
+    __try {
+        void* items = reinterpret_cast<PFN_GetItemRepository>(
+            kAddrCSWSCreatureGetItemRepository)(opener, 1);
+        if (!items) return false;
+        return reinterpret_cast<PFN_FindItemWithTag>(
+                   kAddrCItemRepositoryFindItemWithTag)(items, keyName) !=
+               kInvalidObjectId;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+}
+
+// One log line per object and answer (recent ones remembered), so the raw
+// values can be checked against the object's UTD / UTP template, and a lock
+// whose answer changes (the key was found) is logged again.
 void LogLockOnce(void* obj, int kind, const LockFields& f, const char* key,
                  LockNeed need, const char* failScript = "") {
     static uint32_t s_logged[64] = {0};
+    static LockNeed s_need[64]   = {};
     static int      s_next = 0;
     const uint32_t handle = GetObjectHandle(obj);
-    for (uint32_t h : s_logged) {
-        if (h == handle) return;
+    for (int i = 0; i < 64; ++i) {
+        if (s_logged[i] == handle && s_need[i] == need) return;
     }
     s_logged[s_next] = handle;
+    s_need[s_next]   = need;
     s_next = (s_next + 1) % 64;
     char tag[64] = {0};
     GetObjectTag(obj, tag, sizeof(tag));
@@ -59,9 +87,9 @@ void LogLockOnce(void* obj, int kind, const LockFields& f, const char* key,
 
 }  // namespace
 
-// ", opens only through the story" / ", needs a key" / ", Security 15"
-// after the "locked" word, so the player knows whether to bring a key, a
-// slicer, or nothing at all (KOTOR 1; see ReadLockNeed).
+// ", opens only through the story" / ", needs a key" / ", you have the key" /
+// ", Security 15" after the "locked" word, so the player knows whether to
+// bring a key, a slicer, or nothing at all (KOTOR 1; see ReadLockNeed).
 void AppendLockNeed(void* obj, char* outBuf, size_t bufSize) {
     int dc = 0;
     switch (ReadLockNeed(obj, dc)) {
@@ -76,6 +104,10 @@ void AppendLockNeed(void* obj, char* outBuf, size_t bufSize) {
         case LockNeed::Key:
             AppendCommaSeparated(outBuf, bufSize,
                 acc::strings::Get(acc::strings::Id::LockNeedKey));
+            break;
+        case LockNeed::KeyHeld:
+            AppendCommaSeparated(outBuf, bufSize,
+                acc::strings::Get(acc::strings::Id::LockNeedKeyHeld));
             break;
         case LockNeed::Security: {
             char buf[64];
@@ -143,7 +175,12 @@ LockNeed ReadLockNeed(void* gameObject, int& outDc, bool* outLocked) {
     const bool haveKey =
         ReadCExoString(gameObject, keyNameOff, key, sizeof(key)) && key[0];
     LockNeed need = LockNeed::Unknown;
-    if (f.keyRequired != 0) {
+    if (haveKey &&
+        OpenerHoldsKey(reinterpret_cast<unsigned char*>(gameObject) + keyNameOff)) {
+        // The game unlocks it for whoever holds the named key, whether or
+        // not the lock could be picked as well.
+        need = LockNeed::KeyHeld;
+    } else if (f.keyRequired != 0) {
         need = haveKey ? LockNeed::Key : LockNeed::StoryOnly;
     } else if (f.dc > 0 && f.dc < 100) {
         need  = LockNeed::Security;

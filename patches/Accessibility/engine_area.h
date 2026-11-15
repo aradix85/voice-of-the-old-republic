@@ -285,6 +285,7 @@ enum class LockNeed {
     Security,   // can be picked; outDc holds the Security difficulty
     TryIt,      // door with an OnFailToOpen script and no other way in:
                 // the attempt itself is what the story reacts to
+    KeyHeld,    // a key is named and the party has it: opening it works
 };
 // outLocked (optional) receives the live locked flag, so a caller can say
 // "locked" even when the need is Unknown. Doors and placeables only.
@@ -631,6 +632,13 @@ const size_t kPlaceableLockedOffset        = acc::off::Kotor1Only(0x260);  // in
 const size_t kPlaceableKeyNameOffset       = acc::off::Kotor1Only(0x264);  // CExoString
 const size_t kPlaceableKeyRequiredOffset   = acc::off::Kotor1Only(0x26c);  // int (bool)
 const size_t kPlaceableOpenLockDcOffset    = acc::off::Kotor1Only(0x274);  // short
+// How the game itself looks for a key. CSWSCreature::EvaluateLock (0x004f0b20)
+// takes the opener's item repository, GetItemRepository(1) (the party's shared
+// inventory for a party member), and asks it for an item whose tag equals the
+// lock's key name: it passes the lock's own CExoString and gets the item's id
+// back, 0x7F000000 for none. KOTOR 1 only, like the lock fields.
+const uintptr_t kAddrCSWSCreatureGetItemRepository  = acc::addr::Kotor1Only(0x004ef770);
+const uintptr_t kAddrCItemRepositoryFindItemWithTag = acc::addr::Kotor1Only(0x00555ed0);
 // DUPLICATE of kCreatureStatsPointerOffset in engine_offsets_fields.h — same
 // CSWSCreature.creature_stats field under a second name. Kept in sync by hand;
 // worth collapsing to one declaration. KOTOR 2 value from the seeded

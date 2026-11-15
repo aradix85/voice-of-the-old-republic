@@ -944,6 +944,7 @@ const char* Get(Id id) {
         case Id::LockNeedStoryOnly:       return "opens only through the story";
         case Id::LockNeedTryIt:           return "may open when you try";
         case Id::LockNeedKey:             return "needs a key";
+        case Id::LockNeedKeyHeld:         return "you have the key";
         case Id::FmtLockNeedSecurity:     return "Security %d";
         case Id::FmtRegionHere:           return "Here: %s";
         case Id::FmtRegionHereMore:       return "%d more";

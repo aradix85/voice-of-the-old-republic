@@ -2154,6 +2154,7 @@ enum class Id : int {
     LockNeedStoryOnly,        // "opens only through the story" — key required, none named
     LockNeedTryIt,            // "may open when you try" — locked door with an OnFailToOpen script
     LockNeedKey,              // "needs a key"
+    LockNeedKeyHeld,          // "you have the key" — the party holds the named key
     FmtLockNeedSecurity,      // "Security %d" — the Security difficulty
 
     // ---- What is in the player's new region, after its exits
