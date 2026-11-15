@@ -4,6 +4,7 @@
 #include "doctest.h"
 #include "walkmesh_geometry.h"
 
+using acc::engine::DistToPolygonXY;
 using acc::engine::DropPortalEdges;
 using acc::engine::DropSameRoomDuplicates;
 using acc::engine::FloorSpotNear;
@@ -11,6 +12,7 @@ using acc::engine::FloorTri;
 using acc::engine::IsWalkableMaterial;
 using acc::engine::NearestWalkableFloor;
 using acc::engine::OverWalkableFloor;
+using acc::engine::PointInPolygonXY;
 using acc::engine::SegmentCrossesWalkmesh;
 using acc::engine::TriEdge;
 using acc::engine::WallEdge;
@@ -183,6 +185,20 @@ TEST_CASE("A point is over the walkable floor at whatever height") {
     CHECK_FALSE(OverWalkableFloor(floor, 2, Vector{3, -1, 10}));   // the non-walkable face
     CHECK_FALSE(OverWalkableFloor(floor, 2, Vector{-1, 1, 10}));
     CHECK_FALSE(OverWalkableFloor(nullptr, 0, Vector{1, 1, 0}));
+}
+
+TEST_CASE("A point is inside a polygon or a distance from its outline") {
+    // An L: the notch at the top right is outside.
+    const Vector poly[] = {Vector{0, 0, 0}, Vector{4, 0, 0}, Vector{4, 2, 0},
+                           Vector{2, 2, 0}, Vector{2, 4, 0}, Vector{0, 4, 0}};
+    CHECK(PointInPolygonXY(poly, 6, 1, 1));
+    CHECK(PointInPolygonXY(poly, 6, 1, 3));
+    CHECK_FALSE(PointInPolygonXY(poly, 6, 3, 3));
+    CHECK_FALSE(PointInPolygonXY(poly, 2, 1, 1));
+    CHECK(DistToPolygonXY(poly, 6, 1, 1) == Approx(0.0f));
+    CHECK(DistToPolygonXY(poly, 6, 3, 3) == Approx(1.0f));
+    CHECK(DistToPolygonXY(poly, 6, 6, 1) == Approx(2.0f));
+    CHECK(DistToPolygonXY(poly, 2, 1, 1) > 1e8f);
 }
 
 TEST_CASE("The middle of the Ebon Hawk's exit lies off the floor, 0.6 m in from the ramp's foot") {

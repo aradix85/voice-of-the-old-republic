@@ -75,6 +75,14 @@ int DropPortalEdges(WallEdge* walls, int count, const TriEdge* sides, int sideCo
 // stay. Swap-removes, so the order changes; returns the kept count.
 int DropSameRoomDuplicates(WallEdge* walls, int count);
 
+// True when (x, y) lies inside the polygon on the floor plan (even-odd rule).
+// False for fewer than three corners.
+bool PointInPolygonXY(const Vector* poly, int count, float x, float y);
+
+// 0 inside the polygon, else the floor-plan distance to its outline; 1e9 for
+// fewer than three corners.
+float DistToPolygonXY(const Vector* poly, int count, float x, float y);
+
 // How far (metres) a wall's z at the crossing may sit from the ray's z and
 // still block. 2 m clears step and slope authoring and excludes real
 // stacked decks: every over-block a nav-graph crosscheck found was an

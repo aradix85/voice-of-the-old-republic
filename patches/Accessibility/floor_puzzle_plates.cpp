@@ -3,9 +3,10 @@
 #include "floor_puzzle_plates.h"
 
 #include <algorithm>
-#include <cmath>
 #include <cstdlib>
 #include <cstring>
+
+#include "walkmesh_geometry.h"  // PointInPolygonXY, DistToPolygonXY
 
 namespace acc::floor_puzzle {
 
@@ -41,28 +42,11 @@ void ComputeCenterAndSpan(Plate& p) {
 }
 
 bool PointInPoly(const Plate& p, float x, float y) {
-    if (p.vertCount < 3) return false;
-    bool in = false;
-    for (int i = 0, j = p.vertCount - 1; i < p.vertCount; j = i++) {
-        const Vector& a = p.poly[i];
-        const Vector& b = p.poly[j];
-        if ((a.y > y) != (b.y > y) &&
-            x < (b.x - a.x) * (y - a.y) / (b.y - a.y) + a.x) {
-            in = !in;
-        }
-    }
-    return in;
+    return acc::engine::PointInPolygonXY(p.poly, p.vertCount, x, y);
 }
 
 float DistToPlate(const Plate& p, float x, float y) {
-    if (p.vertCount < 3) return 1e9f;
-    if (PointInPoly(p, x, y)) return 0.0f;
-    const Vector pt{x, y, 0.0f};
-    float bestSq = DistXYToSegmentSq(pt, p.poly[p.vertCount - 1], p.poly[0]);
-    for (int i = 1; i < p.vertCount; ++i) {
-        bestSq = std::min(bestSq, DistXYToSegmentSq(pt, p.poly[i - 1], p.poly[i]));
-    }
-    return std::sqrt(bestSq);
+    return acc::engine::DistToPolygonXY(p.poly, p.vertCount, x, y);
 }
 
 SpanOffset OffsetToSpan(const Plate& p, const Vector& pos) {

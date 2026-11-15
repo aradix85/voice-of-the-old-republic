@@ -2,6 +2,8 @@
 
 #include "walkmesh_geometry.h"
 
+#include <cmath>
+
 namespace acc::engine {
 
 namespace {
@@ -152,6 +154,32 @@ int DropSameRoomDuplicates(WallEdge* walls, int count) {
         }
     }
     return count;
+}
+
+bool PointInPolygonXY(const Vector* poly, int count, float x, float y) {
+    if (!poly || count < 3) return false;
+    bool in = false;
+    for (int i = 0, j = count - 1; i < count; j = i++) {
+        const Vector& a = poly[i];
+        const Vector& b = poly[j];
+        if ((a.y > y) != (b.y > y) &&
+            x < (b.x - a.x) * (y - a.y) / (b.y - a.y) + a.x) {
+            in = !in;
+        }
+    }
+    return in;
+}
+
+float DistToPolygonXY(const Vector* poly, int count, float x, float y) {
+    if (!poly || count < 3) return 1e9f;
+    if (PointInPolygonXY(poly, count, x, y)) return 0.0f;
+    const Vector pt{x, y, 0.0f};
+    float bestSq = DistXYToSegmentSq(pt, poly[count - 1], poly[0]);
+    for (int i = 1; i < count; ++i) {
+        const float dSq = DistXYToSegmentSq(pt, poly[i - 1], poly[i]);
+        if (dSq < bestSq) bestSq = dSq;
+    }
+    return std::sqrt(bestSq);
 }
 
 bool SegmentCrossesWalkmesh(const WallEdge* walls,
