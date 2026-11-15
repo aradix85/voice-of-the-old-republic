@@ -1,4 +1,4 @@
-# engine_reads_items.cpp (236 lines)
+# engine_reads_items.cpp (262 lines)
 
 Source: `patches/Accessibility/engine_reads_items.cpp`
 
@@ -10,15 +10,16 @@ Item and creature reads on top of the generic readers of engine_reads.cpp: clien
 - L32 `uint32_t ReadItemRowHandle(void* rowControl)`: The obj_id the row was built for (same offset on both row classes); 0 when the control is no row or the read faults.
 - L41 `bool ReadItemChargesRaw(void* item, int* outCharges)`: Charged items (max_charges > 0) cannot stack; false for any other item.
 - L54 `void* ResolveItemFromRow(void* rowControl)`
-- L62 `uint32_t ClientToServerObjectId(uint32_t clientHandle)`
-- L79 `void* ResolveItemFromServerHandle(uint32_t serverHandle)`
-- L92 `void* ResolveItemFromClientHandle(uint32_t clientHandle)`
-- L98 `int ReadItemStack(void* item)`: CSWSItem.stack_size; 0 on a fault and for infinite-stock items (the store reads that flag itself).
-- L108 `int ReadItemRowStackCount(void* rowControl)`
-- L112 `int ReadItemCharges(void* item)`
-- L117 `int ReadItemRowCharges(void* rowControl)`
-- L122 `bool ReadLocStringOtherLanguage(void* base, size_t locStringOffset, char* outBuf, size_t bufSize)`
-- L168 `bool ReadItemRowName(void* rowControl, char* outBuf, size_t bufSize)`
-- L193 `bool IsInventoryItemRow(void* control)`
-- L198 `void* GetWorkbenchSlotInstalledItem(void* upgradePanel, void* slotControl)`
-- L209 `WorkbenchPickerInfo GetWorkbenchPickerInfo(void* upgradePanel)`
+- L62 `bool ReadUpgradeItemRowWearer(void* rowControl, char* outBuf, size_t bufSize)`
+- L88 `uint32_t ClientToServerObjectId(uint32_t clientHandle)`
+- L105 `void* ResolveItemFromServerHandle(uint32_t serverHandle)`
+- L118 `void* ResolveItemFromClientHandle(uint32_t clientHandle)`
+- L124 `int ReadItemStack(void* item)`: CSWSItem.stack_size; 0 on a fault and for infinite-stock items (the store reads that flag itself).
+- L134 `int ReadItemRowStackCount(void* rowControl)`
+- L138 `int ReadItemCharges(void* item)`
+- L143 `int ReadItemRowCharges(void* rowControl)`
+- L148 `bool ReadLocStringOtherLanguage(void* base, size_t locStringOffset, char* outBuf, size_t bufSize)`
+- L194 `bool ReadItemRowName(void* rowControl, char* outBuf, size_t bufSize)`
+- L219 `bool IsInventoryItemRow(void* control)`
+- L224 `void* GetWorkbenchSlotInstalledItem(void* upgradePanel, void* slotControl)`
+- L235 `WorkbenchPickerInfo GetWorkbenchPickerInfo(void* upgradePanel)`

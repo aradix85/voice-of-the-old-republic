@@ -133,6 +133,7 @@ installer, as the pre-release `bridge-latest`.
   such as Security next to Bash.
 - The feat and Force power charts say how many feats of a chain stand to the
   right.
+- The workbench names who wears an item: "Lightsaber (Equipped), Bastila".
 - Q/E say the clock direction and distance of each object.
 - New setting: Q and E step through everything within 30 metres instead of
   only what the camera sees.
@@ -544,6 +545,12 @@ installer, as the pre-release `bridge-latest`.
   to the right ends with their number: "Flurry, already learned. Right: 2
   more". Up and Down step through the first feat of each chain, so the chart
   sounded like one list and the improved and master feats went unnoticed.
+- In the workbench's item list, an item someone wears is followed by the
+  wearer's name: "Lightsaber (Equipped), Bastila, 2 of 5". The game marks
+  such an item "(Equipped)" and nothing else, so three Lightsabers worn by
+  two companions could not be told apart. The name is the one the game keeps
+  with the row, so it also names a companion who is not in the party. An item
+  from the inventory is read as before.
 
 <h3>Endar Spire:</h3>
 
