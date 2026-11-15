@@ -3,10 +3,13 @@
 
 #include "guidance_approach_internal.h"
 
+#include "dialog_speech.h"      // ConversationHasSpeaker
 #include "engine_area.h"
 #include "engine_compass.h"
 #include "engine_panels.h"
 #include "engine_player.h"
+#include "engine_reads.h"
+#include "engine_subscreen.h"   // WorldIsPaused
 #include "examine_view.h"
 #include "exit_memory.h"       // RescueWalk: the region walk under a refused walk
 #include "guidance_autowalk.h"
@@ -17,6 +20,7 @@
 #include "speech.h"
 #include "spectator_scene.h"
 #include "strings.h"
+#include "turnback_zones.h"
 
 namespace acc::guidance {
 
@@ -44,6 +48,19 @@ constexpr DWORD kRefireGuardMs  = 20000; // one talk re-fire per target per 20 s
 // walk, and a hop that stalls is started again this often.
 constexpr float kRouteHopM       = 5.0f;
 constexpr int   kRouteHopRetries = 2;
+
+// Turn-back zones (turnback_zones.h). A walk still this far from its target
+// has not reached it, and a trigger area this near the PC is the one that
+// spoke. The Enter that was turned back is repeated once the message has
+// been closed for a moment (the script puts the party back first) and is
+// dropped when that takes too long.
+constexpr float kTurnbackFarM   = 10.0f;
+constexpr float kTurnbackNearM  = 3.0f;
+constexpr DWORD kResumeSettleMs = 600;
+constexpr DWORD kResumeGiveUpMs = 60000;
+uint32_t g_resumeHandle  = 0;
+DWORD    g_resumeSince   = 0;
+DWORD    g_resumeClearAt = 0;
 
 // The walk to the floor nearest a target whose use stays queued.
 constexpr float kFloorSearchM   = 3.0f;  // floor further from the target than
@@ -393,7 +410,7 @@ void EndRoute(const char* why) {
 
 }  // namespace
 
-bool TryRouteWalk(const Vector& tgt) {
+bool TryRouteWalk(const Vector& tgt, const char* why) {
     if (g_st.routeTried || g_st.movedSinceArm) return false;
     g_st.routeTried = true;
     Vector pc;
@@ -431,10 +448,97 @@ bool TryRouteWalk(const Vector& tgt) {
         EndRoute("the first hop would not queue");
         return false;
     }
-    acclog::Write("Approach", "route walk: the engine starts no walk; walking the "
-        "mod's own path in %d hop(s) of up to %.0fm to (%.2f,%.2f) name=[%s]",
-        n, kRouteHopM, g_st.route[n - 1].x, g_st.route[n - 1].y, g_st.name);
+    acclog::Write("Approach", "route walk: %s; walking the mod's own path in %d "
+        "hop(s) of up to %.0fm to (%.2f,%.2f) name=[%s]",
+        why, n, kRouteHopM, g_st.route[n - 1].x, g_st.route[n - 1].y, g_st.name);
     return true;
+}
+
+void LearnTurnback() {
+    if (acc::dialog_speech::ConversationHasSpeaker()) return;
+    Vector pc, tgt;
+    void* area = acc::engine::GetCurrentArea();
+    if (!area || !acc::engine::GetPlayerPosition(pc) || !ResolveTargetPos(tgt)) return;
+    if (DistXY(pc, tgt) <= kTurnbackFarM) return;
+
+    turnback::ForArea(area);
+    int learned = 0;
+    acc::engine::AreaObjectIterator it(area);
+    while (void* obj = it.Next()) {
+        if (acc::engine::GetObjectKind(obj) !=
+            static_cast<int>(acc::engine::GameObjectKind::Trigger)) {
+            continue;
+        }
+        // A way out of the area or a mine is no script's notice.
+        if (acc::engine::IsTransitionTrigger(obj) ||
+            acc::engine::ReadI32Or0(obj, kTriggerIsTrapOffset) != 0) {
+            continue;
+        }
+        Vector poly[turnback::kMaxVerts];
+        const int n = acc::engine::GetTriggerGeometry(obj, poly, turnback::kMaxVerts);
+        if (acc::engine::DistToPolygonXY(poly, n, pc.x, pc.y) > kTurnbackNearM) continue;
+        if (turnback::Add(poly, n)) ++learned;
+    }
+    if (learned == 0) return;
+
+    const bool again = g_st.owner == ApproachOwner::Interact && g_st.targetObj;
+    if (again) {
+        g_resumeHandle  = acc::engine::GetObjectHandle(g_st.targetObj);
+        g_resumeSince   = GetTickCount();
+        g_resumeClearAt = 0;
+    }
+    acclog::Write("Approach", "turned back at (%.2f,%.2f), %.0fm from the target, by "
+        "a message nobody speaks: %d trigger area(s) there are turn-back zones now; "
+        "%s name=[%s]", pc.x, pc.y, DistXY(pc, tgt), learned,
+        again ? "walking to the target again when the message has closed"
+              : "the next walk goes round",
+        g_st.name);
+}
+
+void RouteRoundTurnbacks() {
+    Vector pc, tgt;
+    void* area = acc::engine::GetCurrentArea();
+    if (!area || !acc::engine::GetPlayerPosition(pc) || !ResolveTargetPos(tgt)) return;
+    turnback::ForArea(area);
+    if (!turnback::Crosses(pc, tgt)) return;
+    if (!TryRouteWalk(tgt, "a turn-back zone lies on the straight way")) {
+        acclog::Write("Approach", "a turn-back zone lies on the straight way to "
+            "(%.2f,%.2f) and the mod has no way round it name=[%s]",
+            tgt.x, tgt.y, g_st.name);
+    }
+}
+
+void ForgetTurnbackResume() {
+    g_resumeHandle = 0;
+}
+
+void TickTurnbackResume() {
+    if (g_resumeHandle == 0) return;
+    const DWORD now = GetTickCount();
+    if (now - g_resumeSince > kResumeGiveUpMs) {
+        g_resumeHandle = 0;
+        return;
+    }
+    if (acc::engine::HasActiveDialogPanel() || acc::engine::IsForegroundUiBlocking() ||
+        acc::engine::WorldIsPaused()) {
+        g_resumeClearAt = 0;
+        return;
+    }
+    if (g_resumeClearAt == 0) {
+        g_resumeClearAt = now;
+        return;
+    }
+    if (now - g_resumeClearAt < kResumeSettleMs) return;
+
+    const uint32_t handle = g_resumeHandle;
+    g_resumeHandle = 0;
+    void* obj = acc::engine::ResolveServerObjectHandle(handle);
+    if (!obj) return;
+    acc::speech::Speak(acc::strings::Get(acc::strings::Id::GuidanceGoingRound),
+                       /*interrupt=*/false);
+    acclog::Write("Approach", "turned back: walking to handle=0x%08x again, round "
+        "the zone", handle);
+    acc::interact::DispatchInteract(obj, handle, /*forceRadial=*/false);
 }
 
 bool NextRouteHop() {

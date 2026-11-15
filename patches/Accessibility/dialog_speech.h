@@ -11,4 +11,9 @@ namespace acc::dialog_speech {
 // Idle when no dialog panel is mounted.
 void Tick();
 
+// True when a creature speaks the open conversation's line. False for a
+// message nobody speaks: a script's notice, such as the one at the rim of a
+// desert.
+bool ConversationHasSpeaker();
+
 }  // namespace acc::dialog_speech

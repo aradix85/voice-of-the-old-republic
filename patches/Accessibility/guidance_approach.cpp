@@ -125,15 +125,25 @@ void ArmApproach(const ApproachArm& arm) {
         static_cast<int>(arm.owner), arm.isDialog ? 1 : 0,
         arm.inputDisabled ? 1 : 0, arm.speakBlocked ? 1 : 0,
         arm.targetObj, arm.useHandle, g_st.name);
+
+    // A new walk replaces the one that was turned back, and goes round the
+    // zones known by now.
+    ForgetTurnbackResume();
+    RouteRoundTurnbacks();
 }
 
 void TickApproach() {
-    if (!g_st.active) return;
+    if (!g_st.active) {
+        TickTurnbackResume();
+        return;
+    }
     DWORD now = GetTickCount();
 
     // Success 1 — a conversation opened (talk verbs). PC reached range and the
-    // dialog started; nothing to cancel.
+    // dialog started; nothing to cancel. Unless it is a script's notice that
+    // turned the walk back on the way.
     if (acc::engine::HasActiveDialogPanel()) {
+        LearnTurnback();
         acclog::Write("Approach", "conversation open — disarm (walk-to-talk OK)");
         EndApproach(ApproachOutcome::Other);
         return;
@@ -292,7 +302,7 @@ void TickApproach() {
     // retry and then sidesteps before anything calls it blocked.
     if (TryCoordinateWalkRetry(tgt)) return;
     if (TrySidestep(tgt)) return;
-    if (TryRouteWalk(tgt)) return;
+    if (TryRouteWalk(tgt, "the engine starts no walk")) return;
     if (TryRegionWalk()) return;
 
     OnBlocked(now - g_st.progressAt);

@@ -14,7 +14,8 @@
 namespace acc::guidance {
 
 constexpr int kSidestepMax = 3;  // sidesteps per arm before giving up
-constexpr int kRouteMax    = 48; // hops of one route walk
+constexpr int kRouteMax    = 128; // hops of one route walk: 640 m, the way
+                                  // round the rim of a desert
 
 struct ApproachState {
     bool          active        = false;
@@ -122,12 +123,27 @@ bool TryFloorNearestTarget(const Vector& tgt);
 // True when that walk and its re-fired use still left the use queued: the
 // use point cannot be reached, and saying so beats a silent disarm.
 bool UseNeverLanded();
-// The engine starts no walk to the target, though short walks go: it plots
-// no path of its own there (the Ebon Hawk's corridors, Davik's hangar after
-// the fight). The mod then walks its own path over the nav graph, hop by
-// hop of a few metres; the arrival acts as after the coordinate retry.
-// True when the first hop is in flight.
-bool TryRouteWalk(const Vector& tgt);
+// The mod walks its own path over the nav graph, hop by hop of a few metres;
+// the arrival acts as after the coordinate retry. For a target the engine
+// starts no walk to, though short walks go (it plots no path of its own
+// there: the Ebon Hawk's corridors, Davik's hangar after the fight), and for
+// one behind a turn-back zone. `why` goes to the log. True when the first hop
+// is in flight.
+bool TryRouteWalk(const Vector& tgt, const char* why);
+// Turn-back zones (turnback_zones.h).
+// A conversation ended the approach: when nobody speaks it, the target is
+// still far and the PC stands on or beside a script trigger, that trigger
+// turned the walk back. Its area becomes a zone, and an Enter's target is
+// kept to walk to again.
+void LearnTurnback();
+// The fresh approach would walk straight into a known zone: walks the mod's
+// own path round it instead.
+void RouteRoundTurnbacks();
+// Drops the target kept by LearnTurnback.
+void ForgetTurnbackResume();
+// With no approach in flight: once the message has closed and the party has
+// been put back, repeats the Enter that was turned back.
+void TickTurnbackResume();
 // The hop was reached: starts the next one. False after the last hop (the
 // tracker's own verdicts take the arrival) or when the next will not start.
 bool NextRouteHop();

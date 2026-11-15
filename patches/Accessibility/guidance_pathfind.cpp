@@ -8,6 +8,7 @@
 #include "engine_navgraph.h"            // shared snapshot helpers
 #include "log.h"
 #include "spatial_wall_surfaces.h"    // GetCachedWalls
+#include "turnback_zones.h"
 
 namespace acc::guidance {
 
@@ -35,9 +36,12 @@ constexpr int kMaxNodes = acc::engine::navgraph::kMaxNodes;
 // This only chooses among existing nodes — it never adds links, so areas
 // the author left unconnected stay unreachable. 2D wall test for the same
 // reason as the smoother: nodes carry no z; it can only over-block.
+//
+// `allowed`, when given, limits the choice to the nodes it marks.
 int FindAnchorNode(const acc::engine::navgraph::NavGraphSnapshot& graph,
                    const acc::engine::WallEdge* walls, int wallCount,
-                   const Vector& target, const char* role) {
+                   const Vector& target, const char* role,
+                   const bool* allowed = nullptr) {
     const int n = static_cast<int>(graph.nodes.size());
     if (n <= 0) return -1;
     const float kInf = std::numeric_limits<float>::infinity();
@@ -45,6 +49,7 @@ int FindAnchorNode(const acc::engine::navgraph::NavGraphSnapshot& graph,
     float anySq      = kInf,  linkedSq      = kInf, clearSq      = kInf;
     int   rejectedByWall = 0;
     for (int i = 0; i < n; ++i) {
+        if (allowed && !allowed[i]) continue;
         const Vector& p = graph.nodes[i].pos;
         float d = DistXYSq(p, target);
         if (d < anySq) { anySq = d; nearestAny = i; }
@@ -126,6 +131,41 @@ int FindBlockingEdge(const acc::engine::WallEdge* walls, int wallCount,
     return bestIdx;
 }
 
+// True when a→b crosses no outline of a turn-back zone (turnback_zones.h).
+bool ClearOfZones(const std::vector<acc::engine::WallEdge>& zoneWalls,
+                  const Vector& a, const Vector& b) {
+    Vector hit{};
+    return !acc::engine::SegmentCrossesWalkmesh(
+        zoneWalls.data(), static_cast<int>(zoneWalls.size()), a, b, hit,
+        /*ignoreZ=*/true);
+}
+
+// Marks the nodes that links clear of the zones reach from `from`.
+void MarkReachable(const acc::engine::navgraph::NavGraphSnapshot& graph,
+                   const std::vector<acc::engine::WallEdge>& zoneWalls,
+                   int from, bool* reached) {
+    const int n = static_cast<int>(graph.nodes.size());
+    for (int i = 0; i < n; ++i) reached[i] = false;
+    static int s_todo[kMaxNodes];
+    int todo = 0;
+    reached[from] = true;
+    s_todo[todo++] = from;
+    while (todo > 0) {
+        const int cur = s_todo[--todo];
+        int lo = 0, hi = 0;
+        acc::engine::navgraph::NeighbourRange(graph, cur, lo, hi);
+        for (int e = lo; e < hi; ++e) {
+            const int nb = static_cast<int>(graph.conns[e]);
+            if (nb < 0 || nb >= n || reached[nb]) continue;
+            if (!ClearOfZones(zoneWalls, graph.nodes[cur].pos, graph.nodes[nb].pos)) {
+                continue;
+            }
+            reached[nb] = true;
+            s_todo[todo++] = nb;
+        }
+    }
+}
+
 }  // namespace
 
 bool ComputePath(void* area,
@@ -182,8 +222,29 @@ bool ComputePath(void* area,
                      && walls != nullptr && wallCount > 0;
     if (!haveWalls) { walls = nullptr; wallCount = 0; }
 
+    // Turn-back zones (turnback_zones.h): their outlines stand as walls for
+    // the anchors and the smoothing, a link across one is closed, and the
+    // goal's anchor is a node the start still reaches. With no zone known
+    // nothing below differs.
+    acc::guidance::turnback::ForArea(area);
+    std::vector<acc::engine::WallEdge> zoneWalls;
+    acc::guidance::turnback::AppendWalls(start, goal, zoneWalls);
+    const bool haveZones = !zoneWalls.empty();
+    std::vector<acc::engine::WallEdge> wallsAndZones;
+    if (haveZones) {
+        if (haveWalls) wallsAndZones.assign(walls, walls + wallCount);
+        wallsAndZones.insert(wallsAndZones.end(), zoneWalls.begin(), zoneWalls.end());
+        walls     = wallsAndZones.data();
+        wallCount = static_cast<int>(wallsAndZones.size());
+    }
+
     int startNode = FindAnchorNode(graph, walls, wallCount, start, "start");
-    int goalNode  = FindAnchorNode(graph, walls, wallCount, goal,  "goal");
+    static bool s_reached[kMaxNodes];
+    if (haveZones && startNode >= 0) {
+        MarkReachable(graph, zoneWalls, startNode, s_reached);
+    }
+    int goalNode  = FindAnchorNode(graph, walls, wallCount, goal,  "goal",
+                                   haveZones ? s_reached : nullptr);
     if (startNode < 0 || goalNode < 0) {
         acclog::Write("Pathfind", "ComputePath: nearest-node resolution failed");
         return false;
@@ -192,6 +253,12 @@ bool ComputePath(void* area,
     // Degenerate: start and goal map to same nav-graph node. Path is just
     // the goal anchor.
     if (startNode == goalNode) {
+        if (haveZones && !ClearOfZones(zoneWalls, start, goal)) {
+            acclog::Write("Pathfind", "ComputePath: start/goal share node %d "
+                          "across a turn-back zone; no path", startNode);
+            if (failure) *failure = PathFailure::Unreachable;
+            return false;
+        }
         outWaypoints.push_back(goal);
         acclog::Write("Pathfind", "ComputePath: start/goal share node %d "
                       "(single-point path)", startNode);
@@ -248,6 +315,10 @@ bool ComputePath(void* area,
             int nb = static_cast<int>(graph.conns[e]);
             if (nb < 0 || nb >= nodeCount) continue;
             if (s_state[nb].closed) continue;
+            if (haveZones && !ClearOfZones(zoneWalls, graph.nodes[best].pos,
+                                           graph.nodes[nb].pos)) {
+                continue;
+            }
 
             float tentativeG = s_state[best].g +
                                DistXY(graph.nodes[best].pos,
@@ -411,6 +482,23 @@ bool ComputePath(void* area,
         acclog::Write("Pathfind", "ComputePath: wall cache unavailable "
                       "(walls=%p count=%d) — skipping smoothing",
                       walls, wallCount);
+    }
+
+    // A way round a zone that still crosses one (an anchor with no clear
+    // node, no walls to smooth against) is no way round.
+    if (haveZones) {
+        Vector from = start;
+        for (const Vector& to : outWaypoints) {
+            if (!ClearOfZones(zoneWalls, from, to)) {
+                acclog::Write("Pathfind", "ComputePath: the leg (%.2f,%.2f) -> "
+                              "(%.2f,%.2f) crosses a turn-back zone; no path",
+                              from.x, from.y, to.x, to.y);
+                outWaypoints.clear();
+                if (failure) *failure = PathFailure::Unreachable;
+                return false;
+            }
+            from = to;
+        }
     }
 
     if (failure) *failure = PathFailure::None;

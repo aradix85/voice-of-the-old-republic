@@ -37,6 +37,7 @@ $underTest = @(
     'shortest_paths.cpp',
     'stuck_detect.cpp',
     'text_match.cpp',
+'turnback_zones.cpp',
     'walkmesh_geometry.cpp'
 )
 

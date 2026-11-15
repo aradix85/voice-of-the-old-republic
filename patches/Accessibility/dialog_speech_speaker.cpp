@@ -3,6 +3,7 @@
 
 #include "dialog_speech_internal.h"
 
+#include "dialog_speech.h"
 #include "engine_area.h"
 #include "engine_game.h"
 #include "engine_offsets.h"
@@ -222,6 +223,11 @@ bool ResolveDialogSpeaker(SpeakerInfo& out) {
 
     void* partner = acc::engine::ResolveServerObjectHandle(partnerHandle);
     return FillSpeakerFromServerObject(partner, out);
+}
+
+bool ConversationHasSpeaker() {
+    SpeakerInfo info;
+    return ResolveDialogSpeaker(info);
 }
 
 // A bark names its owner itself (CSWGuiBarkBubble.object_id, a CLIENT id,
