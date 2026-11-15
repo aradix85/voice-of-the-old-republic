@@ -10,6 +10,7 @@ using acc::engine::FloorSpotNear;
 using acc::engine::FloorTri;
 using acc::engine::IsWalkableMaterial;
 using acc::engine::NearestWalkableFloor;
+using acc::engine::OverWalkableFloor;
 using acc::engine::SegmentCrossesWalkmesh;
 using acc::engine::TriEdge;
 using acc::engine::WallEdge;
@@ -170,4 +171,34 @@ TEST_CASE("A point on the floor, or with no floor near, has no spot to stand") {
     CHECK_FALSE(FloorSpotNear(floor, 1, Vector{1, 1, 0.5f}, 3.0f, out));
     CHECK_FALSE(FloorSpotNear(floor, 1, Vector{-5, 0, 0}, 3.0f, out));
     CHECK_FALSE(FloorSpotNear(nullptr, 0, Vector{-1, 0, 0}, 3.0f, out));
+}
+
+TEST_CASE("A point is over the walkable floor at whatever height") {
+    const FloorTri floor[] = {
+        Tri(0, 0, 4, 0, 0, 4, 10.0f, kMetal),
+        Tri(0, 0, 4, 0, 4, -4, 10.0f, kNonWalk),
+    };
+    CHECK(OverWalkableFloor(floor, 2, Vector{1, 1, 0}));
+    CHECK(OverWalkableFloor(floor, 2, Vector{1, 1, 10}));
+    CHECK_FALSE(OverWalkableFloor(floor, 2, Vector{3, -1, 10}));   // the non-walkable face
+    CHECK_FALSE(OverWalkableFloor(floor, 2, Vector{-1, 1, 10}));
+    CHECK_FALSE(OverWalkableFloor(nullptr, 0, Vector{1, 1, 0}));
+}
+
+TEST_CASE("The middle of the Ebon Hawk's exit lies off the floor, 0.6 m in from the ramp's foot") {
+    // The hold floor up to the foot of the ramp at y 49.04 and the ramp
+    // itself, which is not walkable; the transition's centroid lies on it.
+    const FloorTri floor[] = {
+        Tri(64.28f, 43.0f, 68.73f, 43.0f, 68.73f, 49.04f, 1.94f, kMetal),
+        Tri(64.28f, 43.0f, 68.73f, 49.04f, 64.28f, 49.04f, 1.94f, kMetal),
+        FloorTri{Vector{63.71f, 54.54f, 4.5f}, Vector{64.28f, 49.04f, 1.94f},
+                 Vector{68.73f, 49.04f, 1.94f}, kNonWalk},
+    };
+    const Vector centroid{66.26f, 51.42f, 3.07f};
+    CHECK_FALSE(OverWalkableFloor(floor, 3, centroid));
+    Vector out{};
+    REQUIRE(FloorSpotNear(floor, 3, centroid, 5.0f, out));
+    CHECK(out.x == Approx(66.26f));
+    CHECK(out.y == Approx(48.44f));
+    CHECK(out.z == Approx(1.94f));
 }

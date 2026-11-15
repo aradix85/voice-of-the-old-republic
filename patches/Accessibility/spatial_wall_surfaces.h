@@ -49,4 +49,8 @@ bool NearestWalkableFloor(const Vector& p, float maxM, Vector& outPoint);
 // near to p as the floor allows. False before the first rebuild.
 bool FloorSpotNear(const Vector& p, float maxM, Vector& outSpot);
 
+// acc::engine::OverWalkableFloor over the cached floor. False before the
+// first rebuild.
+bool OverWalkableFloor(const Vector& p);
+
 }  // namespace acc::spatial::wall_surfaces

@@ -17,6 +17,7 @@
                       // so keys pressed in another app while Alt+Tabbed out
                       // don't kill an in-flight autowalk silently.
 #include "log.h"
+#include "spatial_wall_surfaces.h"  // WalkEnd: the floor nearest a point off it
 #include "engine_addr.h"
 #include "engine_offsets_select.h"
 
@@ -115,6 +116,31 @@ int ReadServerObjInt(void* obj, size_t off, int dflt) {
     return value;
 }
 
+// Walkable floor further from the destination than this is somewhere else.
+// Of the game's transitions the Star Forge's way back to the ship has its
+// middle furthest off the floor, 3.1 m.
+constexpr float kWalkEndReachM = 5.0f;
+
+// Where a walk to `destination` ends. The engine takes a walk to a point off
+// the walkable floor and drops it at once, and plotting it can crash: an
+// access violation in CSWRoomSurfaceMesh::GetTriangleAdjacency under
+// AIActionMoveToPoint, for a walk to the Ebon Hawk's "Exit Ramp" map note
+// (2026-11-15). Such a walk goes to the floor nearest the point instead.
+// That note and the "Exit Ebon Hawk" transition both lie on the ramp, which
+// is not walkable; the floor before it is the trigger that lets the player
+// out. A point over the floor plan stays as it is, whatever its height says.
+Vector WalkEnd(const Vector& destination) {
+    Vector spot;
+    if (acc::spatial::wall_surfaces::OverWalkableFloor(destination) ||
+        !acc::spatial::wall_surfaces::FloorSpotNear(destination, kWalkEndReachM, spot)) {
+        return destination;
+    }
+    acclog::Write("Autowalk", "WalkTo: (%.2f,%.2f,%.2f) is off the walkable floor; "
+                  "walking to the floor nearest it, %.2fm away",
+                  destination.x, destination.y, destination.z, DistXY(spot, destination));
+    return spot;
+}
+
 }  // namespace
 
 bool WalkTo(const Vector& destination) {
@@ -128,9 +154,9 @@ bool WalkTo(const Vector& destination) {
     // results back.
     static unsigned short s_actionId = 0;
 
-    // Defensive copy out of the SEH frame's reach (matches audio_bus
-    // PlayCue3D's pattern).
-    Vector dest = destination;
+    // A copy out of the SEH frame's reach (matches audio_bus PlayCue3D's
+    // pattern), on the floor.
+    Vector dest = WalkEnd(destination);
 
     // Secondary point = zero, exactly as the native click-to-move handler
     // (HandlePlayerToServerInputWalkToWaypoint) passes it. With the action

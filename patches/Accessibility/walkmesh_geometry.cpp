@@ -111,6 +111,17 @@ bool FloorSpotNear(const FloorTri* tris, int triCount, const Vector& p, float ma
     return true;
 }
 
+bool OverWalkableFloor(const FloorTri* tris, int triCount, const Vector& p) {
+    if (!tris) return false;
+    for (int i = 0; i < triCount; ++i) {
+        if (IsWalkableMaterial(tris[i].material_id) &&
+            DistXYSq(p, NearestOnTriangleXY(p, tris[i])) < kOnFloorM * kOnFloorM) {
+            return true;
+        }
+    }
+    return false;
+}
+
 int DropPortalEdges(WallEdge* walls, int count, const TriEdge* sides, int sideCount) {
     int kept = 0;
     for (int i = 0; i < count; ++i) {

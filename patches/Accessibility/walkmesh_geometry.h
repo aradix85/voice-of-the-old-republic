@@ -48,6 +48,11 @@ bool NearestWalkableFloor(const FloorTri* tris, int triCount, const Vector& p,
 bool FloorSpotNear(const FloorTri* tris, int triCount, const Vector& p, float maxM,
                    Vector& outSpot);
 
+// True when a walkable face lies under p on the floor plan, at whatever
+// height: for a point whose own height is a guess (the hops of a route walk
+// carry none).
+bool OverWalkableFloor(const FloorTri* tris, int triCount, const Vector& p);
+
 // Any triangle side of a room, for the portal filter.
 struct TriEdge {
     Vector a;
