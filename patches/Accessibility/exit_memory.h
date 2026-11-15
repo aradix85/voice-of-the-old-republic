@@ -189,9 +189,10 @@ void WarnIfBehindLock(void* target);
 
 // Where a walk through a door ends: the region beyond it, seen from the
 // player, at its centre or the spot nearest to that where one can stand.
-// False (out untouched) when the graph joins nothing through
-// the door, as with a door into another area. `outRegion` gets the id of the
-// region beyond.
+// False (out untouched) when the graph joins nothing through the door.
+// Not for a door into another area: with no link through it the two sides
+// are guessed from the walkmesh round it, and the guess lands on this
+// area's side of the wall. `outRegion` gets the id of the region beyond.
 bool BeyondDoor(const Vector& doorPos, Vector& out, int* outRegion = nullptr);
 
 // The way on after a walk through the door at `passedDoorPos` into `region`:

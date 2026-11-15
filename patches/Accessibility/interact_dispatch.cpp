@@ -236,8 +236,11 @@ PassedDoor g_passed;
 
 // An open door has no verb, but Enter on it means going through: walk into
 // the region beyond it. The door's own spot is where a player in the doorway
-// already stands. A door into another area has no region beyond: there the
-// door itself is the way out.
+// already stands. A door into another area has nothing of this area beyond
+// it: there the door itself is the way out, and the regions are not asked.
+// Asked, they answer with whatever lies past the building the door is set in:
+// Enter on the open door of the Czerka Office in Anchorhead walked 45 m off
+// to the square behind it, and from there back to the street in front.
 // Enter again on the door just walked through, the target untouched in
 // between, means on and not back: where the region has one other door, that
 // door takes the press. Without it the same key walked there and back.
@@ -262,16 +265,16 @@ bool WalkThroughOpenDoor(void* target, uint32_t handle, const char* name) {
         }
     }
 
+    const bool leavesArea = acc::engine::DoorHasTransitionDest(target);
     Vector end = dpos;
     int region = -1;
-    const bool beyond = acc::exit_memory::BeyondDoor(dpos, end, &region);
+    const bool beyond = !leavesArea && acc::exit_memory::BeyondDoor(dpos, end, &region);
     if (!acc::guidance::WalkTo(end)) return false;
     if (beyond) g_passed = PassedDoor{handle, region, stamp};
     char msg[192];
     SpeakWithName(acc::strings::Id::FmtWalkingTo, name, msg, sizeof(msg));
     ArmInteractApproach(name, target, /*inputDisabled=*/false, /*isDialog=*/false,
-                        /*useHandle=*/0,
-                        /*leavesArea=*/acc::engine::DoorHasTransitionDest(target),
+                        /*useHandle=*/0, leavesArea,
                         /*walkEnd=*/beyond ? &end : nullptr);
     acclog::Write("Interact", "Enter -> [%s] open door via WalkTo(coord) "
         "target=0x%08x door=(%.2f,%.2f) %s=(%.2f,%.2f)", msg, handle, dpos.x, dpos.y,
