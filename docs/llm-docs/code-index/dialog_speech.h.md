@@ -1,4 +1,4 @@
-# dialog_speech.h (15 lines)
+# dialog_speech.h (20 lines)
 
 Source: `patches/Accessibility/dialog_speech.h`
 
@@ -7,3 +7,4 @@ Dialog narration, polled each tick: the NPC line (silenced where the speaker's v
 ## Declarations (in source order)
 
 - L12 `void Tick()`: Idle when no dialog panel is mounted.
+- L17 `bool ConversationHasSpeaker()`: True when a creature speaks the open conversation's line.

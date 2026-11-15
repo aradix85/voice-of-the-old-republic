@@ -459,6 +459,8 @@ patches/Accessibility/transitions_room_speech.cpp
 patches/Accessibility/transitions_state.cpp
 patches/Accessibility/trap_watch.cpp
 patches/Accessibility/trap_watch.h
+patches/Accessibility/turnback_zones.cpp
+patches/Accessibility/turnback_zones.h
 patches/Accessibility/tutorial_hints.cpp
 patches/Accessibility/tutorial_hints.h
 patches/Accessibility/tutorial_hints_dialog.cpp

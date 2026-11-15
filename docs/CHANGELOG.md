@@ -95,6 +95,8 @@ installer, as the pre-release `bridge-latest`.
   ramp.
 - Enter on an open door into another area walks through that door, not off
   to another part of the area.
+- A walk the game turns back at the rim of a desert is repeated round the
+  rim, and later walks there go round it from the start.
 - Enter and the walk keys work while you stand at an area transition.
 - The overview and the walk to unexplored places work from a small entrance
   hall.
@@ -476,6 +478,22 @@ installer, as the pre-release `bridge-latest`.
   office, and pressed there, back to the street in front, four times over.
   Such a door is now always its own destination, as it already was whenever
   the guess found nothing.
+- A walk the game turns back is repeated by another way: "Going round." The
+  rims of Tatooine's deserts are strips of trigger area that answer a step
+  into them with "[A vast expanse of desert stretches before you ...]" and
+  put the party back at the nearest marker. The engine walks to a far target
+  in a straight line where the floor allows it, straight through such a
+  strip; in the Eastern Dune Sea one lies between the hunter and the bantha
+  herd, and every Enter on a bantha ended in that message. A conversation
+  nobody speaks, opening under a walk that is still far from its target
+  while you stand on a trigger area, now marks that area as a zone to keep
+  out of. When the message has closed, an Enter that was turned back is
+  pressed again for you, and that walk and every later one that would cross
+  the zone follows the game's own waypoints round it in short hops (up to
+  640 metres) and does at the end what the key asked. The route of Ctrl+-
+  keeps out of the zone as well. Zones are forgotten when you leave the
+  area, so each strip gives its message once a visit. A target inside a
+  zone, or behind one with no way round, is walked to as before.
 
 <h3>Cycles:</h3>
 
