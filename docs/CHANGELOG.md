@@ -93,6 +93,8 @@ installer, as the pre-release `bridge-latest`.
 - Enter on a way into another area walks into it, not to its edge.
 - Leaving the Ebon Hawk with Enter works again, without "way blocked" at the
   ramp.
+- Enter on an open door into another area walks through that door, not off
+  to another part of the area.
 - Enter and the walk keys work while you stand at an area transition.
 - The overview and the walk to unexplored places work from a small entrance
   hall.
@@ -465,6 +467,15 @@ installer, as the pre-release `bridge-latest`.
   nearest it, a step in from the edge, whichever key asked for the walk.
   Three of the game's transitions have their middle off the floor: this one,
   one on Korriban and the Star Forge's way back to the ship.
+- Enter on an open door into another area walks through that door. For an
+  open door the walk goes into the region beyond it, and where nothing is
+  recorded through a door the two sides are guessed from the walkmesh round
+  it. A door into another area has nothing of this area behind it, so the
+  guess landed past the building: with the door of the Czerka Office in
+  Anchorhead open, Enter walked 45 metres off to the square behind the
+  office, and pressed there, back to the street in front, four times over.
+  Such a door is now always its own destination, as it already was whenever
+  the guess found nothing.
 
 <h3>Cycles:</h3>
 
