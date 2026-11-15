@@ -123,6 +123,7 @@ installer, as the pre-release `bridge-latest`.
 - Script triggers are no longer announced as exits.
 - Locked doors and containers say whether they open only through the story,
   need a key, or need Security N, with the best Security in the party.
+- A lock whose key you carry says "you have the key".
 - The best Security in the party is counted the way the game counts it.
 - A locked door that the story opens when you try it says "may open when you
   try".
@@ -527,6 +528,13 @@ installer, as the pre-release `bridge-latest`.
   Spire bridge doors and the Taris Upper City Cantina entrance open on it, and
   the old wording talked the player out of trying. The script is
   CSWSDoor.scripts[14] (+0x298), slot order read from CSWSDoor::LoadDoor.
+- A locked door or container whose key is in the party's inventory says
+  "locked, you have the key" instead of "needs a key" or "Security N" (KOTOR
+  1). The back door of the Sandral Estate went on saying "needs a key" with
+  Rahasia's Key in the inventory, and the prison door inside said "Security
+  30" with the Prison Key in hand; both open on Enter. The mod asks the game
+  the way the game asks itself when you try the lock: is there an item in the
+  inventory whose tag is the key the lock names.
 - An open door says "open" even while its lock flag is still set. A script can
   open a door without unlocking it; the Upper City Cantina entrance was read
   "locked" as you walked through it.
