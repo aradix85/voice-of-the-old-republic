@@ -53,7 +53,6 @@ const size_t kPanelStateOffset = acc::off::Pick(0x86d4, 0x9650); // game_state
 //     HandleStand; score +0xa0 follows it, which the 0xa4 player size closes.
 const size_t kModelPlayerOffset = acc::off::Same(0x08);        // CSWPazaak.player (CPazaakPlayer)
 const size_t kModelEnemyOffset  = acc::off::Pick(0x78, 0xAC);  // CSWPazaak.enemy
-const size_t kModelRemainOffset = acc::off::Pick(0x228, 0x330); // remaining_card_count
 
 const size_t kPlayerHandOffset  = acc::off::Same(0x00);        // CPazaakCard hand_cards[4]
 const size_t kPlayerBoardOffset = acc::off::Pick(0x20, 0x30);  // CPazaakCard board_cards[9]

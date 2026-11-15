@@ -3,9 +3,8 @@
 // snapshot and its spoken deltas, and Tick.
 //
 // Design (no engine detour hook):
-//   * Identify the live board panel by its vtable, or structurally — the
-//     foreground modal whose deep fields match the CSWPazaak model layout —
-//     then track it by pointer until it leaves the manager.
+//   * Identify the live board panel by its vtable, then track it by pointer
+//     until it leaves the manager.
 //   * Read the model each tick and announce deltas. Pure state observation,
 //     so we poll rather than hook (hook-vs-poll principle).
 //   * Drive play through the engine's own CSWGuiPazaakGame handlers
@@ -22,10 +21,8 @@
 
 #include "minigame_pazaak_internal.h"
 
-#include "engine_game.h"
 #include "engine_manager.h"
 #include "engine_reads.h"
-#include "engine_panels.h"
 #include "engine_addr.h"
 #include "log.h"
 #include "strings.h"
@@ -58,43 +55,11 @@ const size_t kTutorialActiveOffset = acc::off::Pick(0x7d20 + 0x994, 0x9630);
 // KOTOR 2's out of its RTTI class map. The board is a heap-allocated modal with
 // no CGuiInGame slot, so vtable equality is the cleanest identifier there is —
 // this is the same shape as every other single-instance panel in engine_panels.
-// The structural probe below stays as the fallback: it is what found the board
-// before the vtable was known, it costs nothing while untracked, and it keeps
-// working if a build relocates the table.
+// It is also the only one: a probe of the model's fields used to stand in as a
+// fallback, but every range it tested holds for a block of zeroes, so any
+// unidentified foreground panel with a pointer to cleared memory at the model
+// offset passed for a board (a passer-by's dialog in Anchorhead did).
 const uintptr_t kVtableCSWGuiPazaakGame = acc::addr::Pick(0x00753358, 0x009A6404);
-
-// Highest card index the engine can put in a hand slot. KOTOR 1 tops out at 27
-// (main deck 18..27); KOTOR 2 inserts five special cards at 18..22 and pushes
-// its main deck to 23..32 — see FormatCardLabel.
-constexpr int kMaxCardIndexK1 = 27;
-constexpr int kMaxCardIndexK2 = 32;
-
-// Structural identity probe — true iff `panel` looks like a CSWGuiPazaakGame.
-// All reads SEH-guarded: a smaller panel faults on the deep field reads and
-// returns false. The nested model-field range checks make a false positive
-// from adjacent heap effectively impossible.
-bool LooksLikePazaak(void* panel) {
-    const int maxCard =
-        acc::game::IsKotor2() ? kMaxCardIndexK2 : kMaxCardIndexK1;
-    __try {
-        if (acc::engine::HasVtable(panel, kVtableCSWGuiPazaakGame)) return true;
-        auto* p = reinterpret_cast<unsigned char*>(panel);
-        void* model = *reinterpret_cast<void**>(p + kPanelModelOffset);
-        if (!model) return false;
-        int state = *reinterpret_cast<int*>(p + kPanelStateOffset);
-        if (state < 0 || state > 0xc) return false;
-        auto* m = reinterpret_cast<unsigned char*>(model);
-        int pScore = *reinterpret_cast<int*>(m + kModelPlayerOffset + kPlayerScoreOffset);
-        int eScore = *reinterpret_cast<int*>(m + kModelEnemyOffset  + kPlayerScoreOffset);
-        int remain = *reinterpret_cast<int*>(m + kModelRemainOffset);
-        int hand0  = *reinterpret_cast<int*>(m + kModelPlayerOffset + kPlayerHandOffset);
-        if (pScore < 0 || pScore > 3) return false;
-        if (eScore < 0 || eScore > 3) return false;
-        if (remain < -1 || remain > 40) return false;
-        if (hand0 < -2 || hand0 > maxCard) return false;
-        return true;
-    } __except (EXCEPTION_EXECUTE_HANDLER) { return false; }
-}
 
 Snap ReadSnap(void* panel) {
     Snap s;
@@ -229,12 +194,10 @@ void Tick() {
         ResetState();
     }
 
-    // Acquire the board panel: an unknown-kind foreground modal whose deep
-    // fields match the model layout. Only probed while untracked, so the
-    // structural read isn't paid during normal play.
+    // Acquire the board panel: the foreground panel that carries the board's
+    // vtable.
     if (!g_panel && fg &&
-        acc::engine::IdentifyPanel(fg) == acc::engine::PanelKind::Unknown &&
-        LooksLikePazaak(fg)) {
+        acc::engine::HasVtable(fg, kVtableCSWGuiPazaakGame)) {
         ResetState();
         g_panel = fg;
         // Disable the visual tutorial so its help popups can't stack on top of
