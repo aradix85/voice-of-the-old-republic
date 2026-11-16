@@ -22,7 +22,7 @@ constexpr int kWalkRoundM = 5;
 using acc::paths::Adjacency;
 using acc::paths::ShortestPaths;
 
-// TransitionSliverOwner state: the last answer, reused for a short while
+// DoorwaySliverOwner state: the last answer, reused for a short while
 // (the cluster tick asks every frame).
 struct SliverCache {
     void*  area   = nullptr;
@@ -56,7 +56,7 @@ bool BuildGraph(void* area, const Vector& player, Graph& g) {
     g.start = (area == g_area && g_current >= 0) ? g_current : g.underPlayer;
     // In the doorway sliver of an area door the region in front of it is
     // where the player is (and ExitToward then names no exit of the sliver).
-    g.start = TransitionSliverOwner(area, g.start, nullptr);
+    g.start = DoorwaySliverOwner(area, g.start, nullptr);
     // The list leaves out a region too small to be a place of its own, but
     // the player can stand in one: the hall between an entrance and the
     // first inner door. Walks are measured from where the player is, so
@@ -319,7 +319,7 @@ std::string DoorBeyond(const Graph& g, const Vector& doorPos, int* outNear) {
     return out;
 }
 
-int TransitionSliverOwner(void* area, int region, Vector* outCentre) {
+int DoorwaySliverOwner(void* area, int region, Vector* outCentre) {
     if (!area || region < 0) return region;
     const DWORD now = GetTickCount();
     if (g_sliver.area == area && g_sliver.region == region &&

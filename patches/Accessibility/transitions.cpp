@@ -329,12 +329,12 @@ void Tick() {
     // The doorway sliver of an area door (the lift just arrived by) is a
     // region of its own, joined to the rest only through that door. Track
     // and announce the region in front of the door instead, with its label
-    // resolved at that region's centre (exit_memory::TransitionSliverOwner).
+    // resolved at that region's centre (exit_memory::DoorwaySliverOwner).
     Vector labelPos       = pos;
     bool   sliverRedirect = false;
     {
         Vector ownerCentre{};
-        const int owner = acc::exit_memory::TransitionSliverOwner(
+        const int owner = acc::exit_memory::DoorwaySliverOwner(
             area, clusterId, &ownerCentre);
         if (owner != clusterId) {
             clusterId      = owner;

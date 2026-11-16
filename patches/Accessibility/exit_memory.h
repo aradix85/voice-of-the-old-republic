@@ -70,7 +70,7 @@ void OnClusterSeen(int id);
 // outCentre, may be null) for such a sliver, else `region` unchanged, so a
 // route from the Lower City lift does not start "via Elevator 2 North, To
 // Upper City". Cached briefly; cheap per frame.
-int TransitionSliverOwner(void* area, int region, Vector* outCentre);
+int DoorwaySliverOwner(void* area, int region, Vector* outCentre);
 
 // Once per frame: loads this area's visited regions from the save once the
 // player creature has settled and the region graph exists.

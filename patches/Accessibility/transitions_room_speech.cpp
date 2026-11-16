@@ -349,7 +349,7 @@ void TickPendingPlaza(void* area, const Vector& playerPos) {
                                          /*allowDiagLog=*/false,
                                          /*requireWallReachable=*/true,
                                          /*zTrusted=*/true) &&
-            acc::exit_memory::TransitionSliverOwner(area, sliverCid,
+            acc::exit_memory::DoorwaySliverOwner(area, sliverCid,
                                                     nullptr) != sliverCid) {
             resolvePos = g_pending_plaza_pos;
         }

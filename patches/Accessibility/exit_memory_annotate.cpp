@@ -156,7 +156,7 @@ std::string RegionLabelAt(void* area, const Vector& player) {
     }
     // In the doorway sliver of an area door: read the region in front of it.
     Vector ownerCentre{};
-    if (TransitionSliverOwner(area, cid, &ownerCentre) != cid) {
+    if (DoorwaySliverOwner(area, cid, &ownerCentre) != cid) {
         std::string ownerLabel;
         std::vector<ExitMark> ownerExits;
         int ownerCid = kClusterIdNone;
