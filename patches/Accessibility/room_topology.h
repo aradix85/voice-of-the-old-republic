@@ -187,6 +187,12 @@ struct ClusterLink {
     int    a       = kClusterIdNone;
     int    b       = kClusterIdNone;
     bool   viaDoor = false;
+    // No free way and not through a door either: every edge ends in front of
+    // a door (doorPos) that stands past one of the two regions, not between
+    // them. The bit of floor at a door that leads out of the area, or
+    // nowhere, is joined to the room it belongs to like this. Whether that
+    // door is locked says nothing about the link.
+    bool   besideDoor = false;
     Vector doorPos = {0.0f, 0.0f, 0.0f};
 };
 bool GetClusterLinks(void* area, std::vector<ClusterLink>& out);

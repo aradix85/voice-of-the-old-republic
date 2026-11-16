@@ -54,8 +54,8 @@ bool BuildGraph(void* area, const Vector& player, Graph& g) {
                                  /*requireWallReachable=*/true,
                                  /*zTrusted=*/true, &g.exits);
     g.start = (area == g_area && g_current >= 0) ? g_current : g.underPlayer;
-    // In the doorway sliver of an area door the region in front of it is
-    // where the player is (and ExitToward then names no exit of the sliver).
+    // In the doorway sliver of a door the region in front of it is where the
+    // player is (and ExitToward then names no exit of the sliver).
     g.start = DoorwaySliverOwner(area, g.start, nullptr);
     // The list leaves out a region too small to be a place of its own, but
     // the player can stand in one: the hall between an entrance and the
@@ -344,9 +344,12 @@ int DoorwaySliverOwner(void* area, int region, Vector* outCentre) {
     for (const ClusterLink& l : links) {
         if (l.a != region && l.b != region) continue;
         const int other = (l.a == region) ? l.b : l.a;
-        if (!l.viaDoor) return region;  // an open way: a place of its own
+        // An open way: a place of its own.
+        if (!l.viaDoor && !l.besideDoor) return region;
         void* door = DoorNear(area, l.doorPos);
-        if (!door || !acc::engine::DoorHasTransitionDest(door)) return region;
+        if (!door) return region;
+        // Through a door inside the area: the far side of a real door.
+        if (l.viaDoor && !acc::engine::DoorHasTransitionDest(door)) return region;
         if (owner != kClusterIdNone && owner != other) return region;
         owner   = other;
         viaDoor = door;
@@ -360,7 +363,7 @@ int DoorwaySliverOwner(void* area, int region, Vector* outCentre) {
     if (g_sliverLogged != region) {
         g_sliverLogged = region;
         acclog::Write("ExitMemory", "region %d (extent %.1fm) is the doorway "
-                      "sliver of area door %p; standing in it counts as "
+                      "sliver of door %p; standing in it counts as "
                       "region %d", region, info.extentM, viaDoor, owner);
     }
     return owner;

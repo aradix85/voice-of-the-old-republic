@@ -180,9 +180,17 @@ void SnapshotTransitionTriggers(void* area) {
 //     metre past the nav point that flanks it.
 //
 // An edge crosses one door at most in practice, so the first hit is taken.
-int FindDoorOnEdge(const Vector& a, const Vector& b) {
+//
+// outBeside (may be null): the door was found in the endpoint slack, at
+// least kBesideMinM past an end of the segment. Such a segment stops in
+// front of the door; what joins its two ends is not that door. Nearer than
+// that, the end is a nav point standing in the doorway itself, which is on
+// neither side: that segment counts as going through. Of the 168 doors in a
+// week of logs, 157 had only segments through them.
+int FindDoorOnEdge(const Vector& a, const Vector& b, bool* outBeside) {
     constexpr float kMaxPerpM       = 1.5f;
     constexpr float kEndpointSlackM = 1.0f;
+    constexpr float kBesideMinM     = 0.3f;
 
     const float abx = b.x - a.x;
     const float aby = b.y - a.y;
@@ -197,7 +205,12 @@ int FindDoorOnEdge(const Vector& a, const Vector& b) {
         if (t < -slackT || t > 1.0f + slackT) continue;
         const float dxC = d.x - (a.x + t * abx);
         const float dyC = d.y - (a.y + t * aby);
-        if (dxC * dxC + dyC * dyC <= maxPerpSq) return i;
+        if (dxC * dxC + dyC * dyC > maxPerpSq) continue;
+        if (outBeside) {
+            const float pastEnd = (t < 0.0f ? -t : t - 1.0f) * std::sqrt(abLenSq);
+            *outBeside = pastEnd >= kBesideMinM;
+        }
+        return i;
     }
     return -1;
 }
@@ -210,7 +223,7 @@ int FindDoorOnEdge(const Vector& a, const Vector& b) {
 EdgeResult ClassifyEdge(void* areaForDiag,
                         const Vector& a, const Vector& b,
                         const char* callerCtx) {
-    EdgeResult r{kEdgeClear, -1};
+    EdgeResult r{kEdgeClear, -1, false};
 
     const acc::engine::WallEdge* walls = nullptr;
     int wallCount = 0;
@@ -243,7 +256,7 @@ EdgeResult ClassifyEdge(void* areaForDiag,
         return r;
     }
 
-    const int doorIdx = FindDoorOnEdge(a, b);
+    const int doorIdx = FindDoorOnEdge(a, b, &r.doorBeside);
     if (doorIdx >= 0) {
         r.kind    = kEdgeDoor;
         r.doorIdx = doorIdx;

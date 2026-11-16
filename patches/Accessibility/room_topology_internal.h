@@ -249,6 +249,10 @@ enum EdgeClass {
 struct EdgeResult {
     EdgeClass kind;
     int       doorIdx;  // valid only when kind == kEdgeDoor
+    // kEdgeDoor only: the door lies past an end of the segment (see
+    // FindDoorOnEdge), so the segment ends in front of it and does not go
+    // through it.
+    bool      doorBeside;
 };
 
 // Tallies for the end-of-build summary. Counts are multi-fire across
@@ -320,7 +324,7 @@ struct BuildPasses {
 // room_topology_doors.cpp
 void SnapshotDoors(void* area);
 void SnapshotTransitionTriggers(void* area);
-int FindDoorOnEdge(const Vector& a, const Vector& b);
+int FindDoorOnEdge(const Vector& a, const Vector& b, bool* outBeside = nullptr);
 EdgeResult ClassifyEdge(void* areaForDiag, const Vector& a, const Vector& b, const char* callerCtx);
 
 // room_topology_merge.cpp

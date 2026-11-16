@@ -103,7 +103,8 @@ namespace {
 
 // Region adjacency for the exploration overview: which regions share a
 // nav edge that does not cross a wall, and whether every such edge runs
-// through a door. Labels never read this.
+// through a door. An edge that only ends in front of a door is a way that
+// does not pass it. Labels never read this.
 void BuildClusterLinks(const acc::engine::navgraph::NavGraphSnapshot& g, int n) {
     g_graph.cluster_links.clear();
     for (int i = 0; i < n; ++i) {
@@ -120,20 +121,28 @@ void BuildClusterLinks(const acc::engine::navgraph::NavGraphSnapshot& g, int n) 
                                                g_graph.node_pos[j],
                                                "ClusterLinks");
             if (er.kind == kEdgeBlocked) continue;
-            const bool viaDoor = er.kind == kEdgeDoor && er.doorIdx >= 0;
+            const bool atDoor  = er.kind == kEdgeDoor && er.doorIdx >= 0;
+            const bool viaDoor = atDoor && !er.doorBeside;
             ClusterLink* found = nullptr;
             for (ClusterLink& l : g_graph.cluster_links) {
                 if (l.a == ca && l.b == cb) { found = &l; break; }
             }
             if (!found) {
                 ClusterLink l;
-                l.a       = ca;
-                l.b       = cb;
-                l.viaDoor = viaDoor;
-                if (viaDoor) l.doorPos = g_graph.doors[er.doorIdx].pos;
+                l.a          = ca;
+                l.b          = cb;
+                l.viaDoor    = viaDoor;
+                l.besideDoor = atDoor && !viaDoor;
+                if (atDoor) l.doorPos = g_graph.doors[er.doorIdx].pos;
                 g_graph.cluster_links.push_back(l);
-            } else if (found->viaDoor && !viaDoor) {
-                found->viaDoor = false;  // a free way round the door
+            } else if (!atDoor) {
+                found->viaDoor    = false;  // a free way round the door
+                found->besideDoor = false;
+            } else if (!viaDoor && found->viaDoor) {
+                // A way that stops in front of a door, next to one through it.
+                found->viaDoor    = false;
+                found->besideDoor = true;
+                found->doorPos    = g_graph.doors[er.doorIdx].pos;
             }
         }
     }

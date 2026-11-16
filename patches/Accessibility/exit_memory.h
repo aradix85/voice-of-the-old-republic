@@ -63,9 +63,10 @@ void OnClusterCommitted(int from, int to);
 // Marks it visited only.
 void OnClusterSeen(int id);
 
-// The bit of walkmesh at a door into another area (the lift you arrive by,
-// the doorway of an area door) can be a region of its own, joined to the
-// rest of the area only through that door. Standing in it is standing in
+// The bit of walkmesh at a door that leads out of the area or nowhere (the
+// lift you arrive by, the doorway of an area door, the step in front of a
+// hall that only a scene lets you into) can be a region of its own, joined
+// to the rest of the area only at that door. Standing in it is standing in
 // the region in front of the door: returns that region (and its centre in
 // outCentre, may be null) for such a sliver, else `region` unchanged, so a
 // route from the Lower City lift does not start "via Elevator 2 North, To
