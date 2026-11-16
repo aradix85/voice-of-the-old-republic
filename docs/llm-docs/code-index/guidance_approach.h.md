@@ -1,4 +1,4 @@
-# guidance_approach.h (138 lines)
+# guidance_approach.h (142 lines)
 
 Source: `patches/Accessibility/guidance_approach.h`
 
@@ -6,7 +6,7 @@ Unified approach tracker — the single "I dispatched a walk-to-act, watch wheth
 
 Replaces three previously-independent observers that all keyed on the same signal (player movement after a dispatch): - guidance_autowalk's in-flight tracker + walk-blocked one-shot (Shift+-), - the interact dispatch's dialog/use watchdog (Enter), - cycle_input's autowalk block-watch (Shift+- announce wrapper).
 
-One arm, one tick, one set of thresholds. Whoever dispatches a walk (Shift+- autowalk, Enter loot/talk/door/...) arms it with the target identity + the lifecycle flags; TickApproach() drives it: - SUCCESS  → a conversation opens (talk), an interaction panel opens (loot), or the PC settles within reach of the target. Disarm quietly. - BLOCKED  → the PC stalls (no movement for the stall window) while still far from the target (wedged against geometry / no walkable point in range). Cancel the bouncing walk, restore input if the caller disabled it, clear dialog-pending state (talk only), and — if the arm asked for it — announce "way blocked" with the target's live distance + direction.
+One arm, one tick, one set of thresholds. Whoever dispatches a walk (Shift+- autowalk, Enter loot/talk/door/...) arms it with the target identity + the lifecycle flags; TickApproach() drives it: - SUCCESS  → a conversation opens (talk), an interaction panel opens (loot), or the PC settles within reach of the target. Disarm quietly. - BLOCKED  → the PC stalls (no movement for the stall window) while still far from the target (wedged against geometry / no walkable point in range). Cancel the bouncing walk, restore input if the caller disabled it, clear dialog-pending state (talk only), and — if the arm asked for it — announce "way blocked" with the target's live distance + direction. - COMBAT   → the party is fighting and the target is someone to talk to or something to use. Released as for BLOCKED and said as "Movement cancelled, combat": a talk or use left pending in a fight zeroes every hit of the party.
 
 Liveness is MOVEMENT, never the action-queue depth: the engine drains its queue to 0 transiently between walkmesh waypoints and UseObject's composite queue never drains, so a depth read mistakes live walks for finished ones.
 
@@ -18,15 +18,15 @@ Input restore on SUCCESS stays with engine_player's queue-watched session (TickP
 
 ## Declarations (in source order)
 
-- L61 `enum class ApproachOwner`: Who armed the approach.
-- L63 `struct ApproachArm`
-- L87 `void ArmApproach(const ApproachArm& arm)`: Arm / replace the single in-flight approach observation.
-- L90 `void TickApproach()`: Per-tick driver.
-- L95 `bool IsApproachInFlight()`: True while a Cycle-owned approach is in flight — the Shift+- second-press toggle-cancel queries this.
-- L101 `bool IsAnyModApproachInFlight()`: True while ANY mod-armed approach is in flight, regardless of owner.
-- L109 `bool CancelByMovement()`: Movement-key cancel: reclaim manual control from an in-flight mod-armed walk.
-- L113 `void CancelApproach()`: Clear tracker state without announcing — for the explicit Shift+- / panic cancel paths, where the caller already runs CancelMovement + input restore.
-- L120 `void* ApproachTarget()`: The object an in-flight approach is walking to, or nullptr when nothing is armed.
-- L128 `enum class ApproachOutcome`: How the most recent approach ended.
-- L129 `ApproachOutcome LastApproachOutcome(uint32_t* serial)`
-- L135 `void SpeakWayBlocked(const char* name, const Vector& targetPos)`: Announce "way blocked" for a target with the given name + LIVE distance and compass direction (player→target), falling back to the plain phrase when the player position is unreadable.
+- L65 `enum class ApproachOwner`: Who armed the approach.
+- L67 `struct ApproachArm`
+- L91 `void ArmApproach(const ApproachArm& arm)`: Arm / replace the single in-flight approach observation.
+- L94 `void TickApproach()`: Per-tick driver.
+- L99 `bool IsApproachInFlight()`: True while a Cycle-owned approach is in flight — the Shift+- second-press toggle-cancel queries this.
+- L105 `bool IsAnyModApproachInFlight()`: True while ANY mod-armed approach is in flight, regardless of owner.
+- L113 `bool CancelByMovement()`: Movement-key cancel: reclaim manual control from an in-flight mod-armed walk.
+- L117 `void CancelApproach()`: Clear tracker state without announcing — for the explicit Shift+- / panic cancel paths, where the caller already runs CancelMovement + input restore.
+- L124 `void* ApproachTarget()`: The object an in-flight approach is walking to, or nullptr when nothing is armed.
+- L132 `enum class ApproachOutcome`: How the most recent approach ended.
+- L133 `ApproachOutcome LastApproachOutcome(uint32_t* serial)`
+- L139 `void SpeakWayBlocked(const char* name, const Vector& targetPos)`: Announce "way blocked" for a target with the given name + LIVE distance and compass direction (player→target), falling back to the plain phrase when the player position is unreadable.

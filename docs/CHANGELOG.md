@@ -99,6 +99,8 @@ installer, as the pre-release `bridge-latest`.
   rim, and later walks there go round it from the start.
 - Enter on a far-off door or person walks there and acts on it, not on the
   thing you used last.
+- A fight ends a walk to someone to talk to or something to use, so the
+  party's hits no longer do 0 damage: "Movement cancelled, combat."
 - Enter and the walk keys work while you stand at an area transition.
 - The overview and the walk to unexplored places work from a small entrance
   hall.
@@ -504,6 +506,17 @@ installer, as the pre-release `bridge-latest`.
   Kashyyyk, Enter on the Force Field from 120 to 280 metres said "Dialog
   Force Field" or "Open Force Field" and walked back to Gorwooken at the
   basket, or to the remains opened last.
+- With the party fighting, a walk to someone to talk to or something to use
+  is given up: "Movement cancelled, combat." and the name. That holds when
+  the fight begins on the way and when the key is pressed in it. While the
+  player character has a conversation or a use ahead of it, the game counts
+  every hit of the party as 0 damage and every hit of the enemy in full,
+  and goes on doing so until that conversation has opened and closed. Seven
+  fights between 13 and 16 November went that way, the longest for 117
+  hits: Enter on the Dangling vine in the Lower Shadowlands with a viper
+  kinrath closing in, Enter on remains or a footlocker in a fight, a talk
+  to Canderous in one. Doors, ways out and plain walks are not ended, since
+  a party may have to leave through enemies that keep coming.
 
 <h3>Cycles:</h3>
 
