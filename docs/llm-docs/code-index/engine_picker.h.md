@@ -1,4 +1,4 @@
-# engine_picker.h (150 lines)
+# engine_picker.h (153 lines)
 
 Source: `patches/Accessibility/engine_picker.h`
 
@@ -16,9 +16,9 @@ Engine surfaces: HandleMouseClickInWorld @0x00620350 GetDefaultActions       @0x
 
 - L58 `inline bool IsWalkToActVerb(uint32_t action_id)`: Walk-to-act world verbs that GetDefaultActions emits for targets the PC must approach before acting: 0x3ea talk, 0x3f7 use/open, 0x3f5 bash, 0x3f2 door toggle, 0x3f4 disable mine.
 - L72 `struct ActionSnapshot`: Snapshot of the first descriptor at +0x4c8 after GetDefaultActions.
-- L110 `bool Drive(uint32_t targetServerHandle, ActionSnapshot* outSnapshot, bool forceRadial = false, bool populateOnly = false)`: targetServerHandle = server-side id (engine::GetObjectHandle).
-- L124 `bool ReanchorRadial(uint32_t targetServerHandle)`: Re-assert the radial's target and rebuild the engine target-action menu for it, WITHOUT dispatching.
-- L129 `bool ReadCurrent(ActionSnapshot* outSnapshot)`: Read +0x4c8 without driving anything — observe the engine's own picker (cursor-hover or passive-selection-driven) for diagnostics or refined narration of what Enter would pick now.
-- L147 `bool InitiateDialog(uint32_t targetServerHandle)`: Start a conversation with the target DIRECTLY via CSWCCreature::Action- InitiateDialog @0x0060f620 — the function HandleMouseClickInWorld's confirm branch calls.
+- L113 `bool Drive(uint32_t targetServerHandle, ActionSnapshot* outSnapshot, bool forceRadial = false, bool populateOnly = false)`: targetServerHandle = server-side id (engine::GetObjectHandle).
+- L127 `bool ReanchorRadial(uint32_t targetServerHandle)`: Re-assert the radial's target and rebuild the engine target-action menu for it, WITHOUT dispatching.
+- L132 `bool ReadCurrent(ActionSnapshot* outSnapshot)`: Read +0x4c8 without driving anything — observe the engine's own picker (cursor-hover or passive-selection-driven) for diagnostics or refined narration of what Enter would pick now.
+- L150 `bool InitiateDialog(uint32_t targetServerHandle)`: Start a conversation with the target DIRECTLY via CSWCCreature::Action- InitiateDialog @0x0060f620 — the function HandleMouseClickInWorld's confirm branch calls.
 
 Also 1 constants or variables at namespace scope.

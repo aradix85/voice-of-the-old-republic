@@ -1,4 +1,4 @@
-# interact_dispatch.cpp (560 lines)
+# interact_dispatch.cpp (569 lines)
 
 Source: `patches/Accessibility/interact_dispatch.cpp`
 

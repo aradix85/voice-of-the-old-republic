@@ -97,6 +97,8 @@ installer, as the pre-release `bridge-latest`.
   to another part of the area.
 - A walk the game turns back at the rim of a desert is repeated round the
   rim, and later walks there go round it from the start.
+- Enter on a far-off door or person walks there and acts on it, not on the
+  thing you used last.
 - Enter and the walk keys work while you stand at an area transition.
 - The overview and the walk to unexplored places work from a small entrance
   hall.
@@ -494,6 +496,14 @@ installer, as the pre-release `bridge-latest`.
   keeps out of the zone as well. Zones are forgotten when you leave the
   area, so each strip gives its message once a visit. A target inside a
   zone, or behind one with no way round, is walked to as before.
+- Enter on a target the game has no action for from where you stand walks
+  to its region and presses Enter there. The engine builds the action for a
+  target from its own copy of it and builds nothing for one far enough off,
+  leaving the previous target's action in place. The check for that asked
+  for the same copy and so let it pass: in the Upper Shadowlands of
+  Kashyyyk, Enter on the Force Field from 120 to 280 metres said "Dialog
+  Force Field" or "Open Force Field" and walked back to Gorwooken at the
+  basket, or to the remains opened last.
 
 <h3>Cycles:</h3>
 

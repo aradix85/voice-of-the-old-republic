@@ -1,4 +1,4 @@
-# engine_picker.cpp (333 lines)
+# engine_picker.cpp (347 lines)
 
 Source: `patches/Accessibility/engine_picker.cpp`
 
@@ -13,9 +13,9 @@ The engine's own default action for a target: build its action descriptor the wa
 - L119 `uint32_t ToClientHandle(uint32_t handle)`: The engine's id for a handle from either namespace: server ids have the high bit clear, the cursor system uses the OR'd client form.
 - L125 `void SnapshotDescriptor(void* internal, ActionSnapshot* snap)`: The descriptor the engine last built.
 - L148 `void RejectUnusable(ActionSnapshot& snap, uint32_t targetClient)`: Drops a descriptor that is not a usable action on this target.
-- L183 `bool OpenRadial(void* mainIf, uint32_t targetClient, int descriptorCount, bool forceRadial)`: No default action, or the radial was asked for: open the radial menu the way the first mouse click on a target does, through the PopulateMenus wrapper.
-- L207 `bool DispatchClick(void* internal, uint32_t targetClient, const ActionSnapshot& snap)`: Dispatches the descriptor the way a mouse click does.
-- L238 `bool Drive(uint32_t targetServerHandle, ActionSnapshot* outSnapshot, bool forceRadial, bool populateOnly)`
-- L280 `bool ReanchorRadial(uint32_t targetServerHandle)`: Drive's radial branch without the diagnostics: it runs on every radial keypress.
-- L294 `bool ReadCurrent(ActionSnapshot* outSnapshot)`
-- L310 `bool InitiateDialog(uint32_t targetServerHandle)`
+- L191 `bool OpenRadial(void* mainIf, uint32_t targetClient, int descriptorCount, bool forceRadial)`: No default action, or the radial was asked for: open the radial menu the way the first mouse click on a target does, through the PopulateMenus wrapper.
+- L215 `bool DispatchClick(void* internal, uint32_t targetClient, const ActionSnapshot& snap)`: Dispatches the descriptor the way a mouse click does.
+- L246 `bool Drive(uint32_t targetServerHandle, ActionSnapshot* outSnapshot, bool forceRadial, bool populateOnly)`
+- L294 `bool ReanchorRadial(uint32_t targetServerHandle)`: Drive's radial branch without the diagnostics: it runs on every radial keypress.
+- L308 `bool ReadCurrent(ActionSnapshot* outSnapshot)`
+- L324 `bool InitiateDialog(uint32_t targetServerHandle)`
