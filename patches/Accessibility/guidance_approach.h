@@ -17,6 +17,10 @@
 //     range). Cancel the bouncing walk, restore input if the caller disabled
 //     it, clear dialog-pending state (talk only), and — if the arm asked for
 //     it — announce "way blocked" with the target's live distance + direction.
+//   - COMBAT   → the party is fighting and the target is someone to talk to or
+//     something to use. Released as for BLOCKED and said as "Movement
+//     cancelled, combat": a talk or use left pending in a fight zeroes every
+//     hit of the party.
 //
 // Liveness is MOVEMENT, never the action-queue depth: the engine drains its
 // queue to 0 transiently between walkmesh waypoints and UseObject's composite

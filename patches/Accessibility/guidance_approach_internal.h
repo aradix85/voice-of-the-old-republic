@@ -28,6 +28,9 @@ struct ApproachState {
     bool          isDialog      = false;
     bool          speakBlocked  = true;
     bool          barkAtArm     = false;
+    // The target is someone to talk to or something to use, not a door, a way
+    // out, a spot or an enemy: an approach a fight ends (see TickApproach).
+    bool          talkOrUse     = false;
 
     DWORD         armedAt       = 0;
     bool          haveProgress  = false;

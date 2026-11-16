@@ -2202,6 +2202,7 @@ enum class Id : int {
     RouteNoWayLocked,         // "No way there now: it is behind a locked door."
     GuidancePausedHint,       // "The game is paused. Press Space to walk."
     GuidanceGoingRound,       // "Going round."
+    FmtApproachEndedByCombat, // "Movement cancelled, combat. %s"
     FmtCompanionInTheWay,     // "%s is standing in the way. Switch to them with Tab and step aside."
     FmtCreatureInTheWay,      // "%s is in the way." (after "way blocked", someone beside the PC)
     FmtWaitingForParty,       // "Waiting for %s" (a walk out of the area holds for the companions)

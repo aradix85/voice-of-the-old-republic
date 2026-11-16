@@ -9,6 +9,8 @@
 #include "engine_panels.h"
 #include "engine_player.h"
 #include "engine_subscreen.h"
+#include "examine_view.h"     // IsHostileCreature
+#include "filter_objects.h"   // ClassifyObject
 #include "guidance_autowalk.h"
 #include "log.h"
 #include "speech.h"
@@ -39,6 +41,16 @@ constexpr float kHopNearM       = 1.5f;    // a stalled route hop this near its
 // (see LastApproachOutcome).
 uint32_t        g_armSerial = 0;
 ApproachOutcome g_outcome   = ApproachOutcome::None;
+
+// Someone to talk to or something to use. Read at the arm, while the object
+// is known to be there.
+bool IsTalkOrUseTarget(void* obj) {
+    if (!obj) return false;
+    using C = acc::filter::CycleCategory;
+    const C cat = acc::filter::ClassifyObject(obj);
+    if (cat == C::Container) return true;
+    return cat == C::Npc && !acc::examine_view::IsHostileCreature(obj);
+}
 
 }  // namespace
 
@@ -97,6 +109,7 @@ void ArmApproach(const ApproachArm& arm) {
                           arm.targetPos.z != 0.0f);
     g_st.inputDisabled = arm.inputDisabled;
     g_st.isDialog      = arm.isDialog;
+    g_st.talkOrUse     = arm.isDialog || IsTalkOrUseTarget(arm.targetObj);
     g_st.speakBlocked  = arm.speakBlocked;
     g_st.useHandle     = arm.useHandle;
     g_st.leavesArea    = arm.leavesArea;
@@ -170,6 +183,29 @@ void TickApproach() {
     if (!g_st.barkAtArm && acc::engine::HasActiveBarkBubble()) {
         acclog::Write("Approach", "bark surfaced — disarm (interaction fired)");
         EndApproach(ApproachOutcome::Other);
+        return;
+    }
+
+    // A fight ends a walk to someone to talk to or something to use, whether
+    // it began on the way or the key was pressed in it. While the player
+    // character has a conversation or a use ahead of it, every hit of the
+    // party does 0 damage ("Hit ... for damage 0", no breakdown) and the
+    // enemy's hits count: a vine used with a kinrath closing in cost 38
+    // seconds of that, until its conversation had opened and closed. Doors,
+    // ways out and plain walks go on: a party may have to leave through
+    // enemies that keep coming.
+    if (g_st.talkOrUse && acc::engine::IsAnyPartyMemberInCombat()) {
+        ReleaseApproach();
+        char msg[192];
+        std::snprintf(msg, sizeof(msg),
+                      acc::strings::Get(acc::strings::Id::FmtApproachEndedByCombat),
+                      g_st.name);
+        acc::speech::Speak(msg, /*interrupt=*/false);
+        acclog::Write("Approach", "the party is fighting — released -> [%s] "
+            "(owner=%d isDialog=%d inputDisabled=%d)", msg,
+            static_cast<int>(g_st.owner), g_st.isDialog ? 1 : 0,
+            g_st.inputDisabled ? 1 : 0);
+        EndApproach(ApproachOutcome::Cancelled);
         return;
     }
 
