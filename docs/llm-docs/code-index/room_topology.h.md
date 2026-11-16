@@ -1,4 +1,4 @@
-# room_topology.h (197 lines)
+# room_topology.h (203 lines)
 
 Source: `patches/Accessibility/room_topology.h`
 
@@ -25,7 +25,7 @@ Replaced an earlier per-.lyt-room walkmesh-probe classifier — .lyt- rooms over
 - L175 `struct ClusterSummary`: One region of the area's graph, for the exploration overview (exit_memory).
 - L180 `bool ListClusters(void* area, std::vector<ClusterSummary>& out)`
 - L186 `struct ClusterLink`: Two regions joined by at least one nav-graph edge that does not cross a wall.
-- L192 `bool GetClusterLinks(void* area, std::vector<ClusterLink>& out)`
-- L194 `void DumpGraphToLog()`
+- L198 `bool GetClusterLinks(void* area, std::vector<ClusterLink>& out)`
+- L200 `void DumpGraphToLog()`
 
 Also 2 constants or variables at namespace scope.

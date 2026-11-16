@@ -101,6 +101,8 @@ installer, as the pre-release `bridge-latest`.
   thing you used last.
 - A fight ends a walk to someone to talk to or something to use, so the
   party's hits no longer do 0 damage: "Movement cancelled, combat."
+- Standing in front of a locked door that leads nowhere no longer counts
+  as being locked in behind it.
 - Enter and the walk keys work while you stand at an area transition.
 - The overview and the walk to unexplored places work from a small entrance
   hall.
@@ -517,6 +519,21 @@ installer, as the pre-release `bridge-latest`.
   kinrath closing in, Enter on remains or a footlocker in a fight, a talk
   to Canderous in one. Doors, ways out and plain walks are not ended, since
   a party may have to leave through enemies that keep coming.
+- The spot in front of a door is on your side of that door. The game's
+  walk points often stop a step short of a door, and the mod took the last
+  point before a door for a place behind it. Where a room lies beyond the
+  door that did no harm, but in front of a locked door with nothing behind
+  it the spot became a dead end cut off from everything: after the audience
+  in the Chieftain's Hall on Kashyyyk the game puts you on that step in the
+  village, and the overview said "7 more behind locked doors", every way
+  out counted as unreachable and Ctrl+Shift+N had nowhere to go, with the
+  whole village open around you. A link between two regions now counts as
+  going through a door only when the door stands between its two ends, and
+  such a step belongs to the room in front of the door, as the doorway of
+  a door into another area already did. Of the 168 doors in a week of logs
+  this changes ten: this one, a sewer door on Taris, a door into another
+  area in Anchorhead, and the steps in front of seven ordinary doors, which
+  no longer count as behind their own lock.
 
 <h3>Cycles:</h3>
 

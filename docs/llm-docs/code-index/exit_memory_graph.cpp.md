@@ -1,4 +1,4 @@
-# exit_memory_graph.cpp (483 lines)
+# exit_memory_graph.cpp (486 lines)
 
 Source: `patches/Accessibility/exit_memory_graph.cpp`
 
@@ -15,9 +15,9 @@ The region graph and walking routes: shortest walks with and without locked door
 - L172 `std::string RouteText(const Route& r)`
 - L202 `bool DoorSides(const Graph& g, const Vector& doorPos, int& nearId, int& farId)`: Where a door leads, from the player's side: the compass direction through it and the region beyond ("leads West, to a corridor, visited"; "leads South, back").
 - L275 `std::string DoorBeyond(const Graph& g, const Vector& doorPos, int* outNear)`
-- L322 `int TransitionSliverOwner(void* area, int region, Vector* outCentre)`
-- L369 `bool UnreachableFlags(void* const* objs, const Vector* positions, int count, bool* out)`
-- L387 `Vector RegionWalkPoint(void* area, int id, const Vector& centre)`
-- L417 `bool BeyondDoor(const Vector& doorPos, Vector& out, int* outRegion)`
-- L434 `void* OnwardDoor(int region, const Vector& passedDoorPos)`
-- L451 `bool ListRegions(std::vector<RegionSummary>& out, std::vector<std::pair<int, int>>& links)`
+- L322 `int DoorwaySliverOwner(void* area, int region, Vector* outCentre)`
+- L372 `bool UnreachableFlags(void* const* objs, const Vector* positions, int count, bool* out)`
+- L390 `Vector RegionWalkPoint(void* area, int id, const Vector& centre)`
+- L420 `bool BeyondDoor(const Vector& doorPos, Vector& out, int* outRegion)`
+- L437 `void* OnwardDoor(int region, const Vector& passedDoorPos)`
+- L454 `bool ListRegions(std::vector<RegionSummary>& out, std::vector<std::pair<int, int>>& links)`
