@@ -503,6 +503,15 @@ void DispatchInteract(void* target, uint32_t handle, bool forceRadial) {
     // no default action, and the verb is dispatched below.
     acc::picker::ActionSnapshot snap = {};
     acc::picker::Drive(handle, &snap, forceRadial, /*populateOnly=*/true);
+    // The engine has no action for a target it holds no copy of, one far off:
+    // walk to where it is and press again there, where it has one.
+    if (snap.stale && !forceRadial &&
+        acc::exit_memory::RescueWalk(target, name, /*act=*/true)) {
+        acclog::Write("Interact", "%s: the engine has no action for 0x%08x from "
+            "here; the region walk goes there and acts on arrival",
+            KeyName(forceRadial), handle);
+        return;
+    }
     char msg[192];
     AnnouncePick(snap, handle, name, cat, forceRadial, msg, sizeof(msg));
     acclog::Write("Interact", "%s -> [%s] target=%p handle=0x%08x cat=%s "

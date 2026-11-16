@@ -76,6 +76,9 @@ struct ActionSnapshot {
     char     label[64];
     char     icon[16];
     bool     valid;            // descriptor non-null AND count > 0
+    bool     stale;            // the engine built nothing for this target and
+                               // left an earlier target's descriptor in the
+                               // slot: it has no action for it from here
     bool     radial_opened;    // Drive opened the radial via
                                // PopulateMenus (count==0 or forceRadial)
                                // instead of dispatching. Caller should

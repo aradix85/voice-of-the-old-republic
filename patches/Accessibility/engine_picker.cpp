@@ -164,13 +164,21 @@ void RejectUnusable(ActionSnapshot& snap, uint32_t targetClient) {
     // conversation with a party member. Conclusive only when our handle
     // names a real object: some callers arrive with a value from the wrong
     // namespace, and there the descriptor's own target is the better answer.
+    // Real on the server: the engine builds from the client's copy of the
+    // object and says nothing just as well when that copy is missing, as for
+    // a door 120 m off. Asked of the client, the test passed the previous
+    // target's "Dialog" for that door, and Enter on it walked 280 m back to
+    // the person spoken to last.
     if (snap.target_id && snap.target_id != targetClient &&
-        acc::engine::ResolveClientObjectHandle(targetClient)) {
+        acc::engine::ResolveServerObjectHandle(targetClient & ~0x80000000u)) {
         acclog::Write("Picker", "descriptor belongs to 0x%08x, not 0x%08x (label=[%s] "
-                      "action_id=0x%x): engine did not rebuild for this target; "
-                      "treating as no default action",
-                      snap.target_id, targetClient, snap.label, snap.action_id);
+                      "action_id=0x%x): engine did not rebuild for this target, of "
+                      "which the client %s; treating as no default action",
+                      snap.target_id, targetClient, snap.label, snap.action_id,
+                      acc::engine::ResolveClientObject(targetClient) ? "has a copy"
+                                                                     : "has no copy");
         snap.valid = false;
+        snap.stale = true;
     }
 }
 
@@ -259,6 +267,12 @@ bool Drive(uint32_t targetServerHandle, ActionSnapshot* outSnapshot,
     SnapshotDescriptor(internal, &snap);
     RejectUnusable(snap, targetClient);
 
+    // Nothing built for this target: its radial has no rows either. The caller
+    // goes to the target and asks again there.
+    if (snap.stale && !forceRadial) {
+        if (outSnapshot) *outSnapshot = snap;
+        return false;
+    }
     if (!snap.valid || forceRadial) {
         snap.radial_opened = OpenRadial(mainIf, targetClient, snap.count, forceRadial);
         if (outSnapshot) *outSnapshot = snap;
