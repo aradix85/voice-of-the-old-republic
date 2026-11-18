@@ -63,6 +63,7 @@
 // through the hover pipeline and must stay off the input-dispatch stack.
 
 #include <cstdio>
+#include <cstring>
 
 #include "menus_listbox.h"
 
@@ -71,6 +72,7 @@
 #include "engine_panels.h"
 #include "engine_reads.h"
 #include "log.h"
+#include "menus_equipstats.h"
 #include "menus_extract.h"
 #include "menus_internal.h"
 #include "menus_pending.h"   // IsPending — bounds the arm latch to the queued open
@@ -378,6 +380,53 @@ void MonitorEquipPickerSelection() {
                   lb, selIdx, prev, rowText);
 }
 
+// The equip panel's stat rows (vitality, defense, attack, damage) as last read.
+// Browsing the picker equips as it goes (see RuleSuppressEquipPreviewFeedback),
+// so the engine rewrites these rows for every item the user lands on. Speaking
+// the rows that changed is how two items are compared, and silence says the
+// two are equal: nothing else told two same-named weapons apart.
+constexpr int kEquipStatRows = 4;
+constexpr size_t kEquipStatTextMax = 96;
+char  s_equipStatText[kEquipStatRows][kEquipStatTextMax];
+void* s_equipStatPanel = nullptr;
+
+struct EquipStatWalk {
+    void* panel;
+    bool  speak;
+    int   index;
+};
+
+bool RecordEquipStatRow(void* label, int /*sortCy*/, void* userData) {
+    auto* walk = static_cast<EquipStatWalk*>(userData);
+    if (walk->index >= kEquipStatRows) return false;
+    char* last = s_equipStatText[walk->index++];
+    char now[kEquipStatTextMax];
+    if (!acc::menus::equipstats::ExtractEquipStatRow(walk->panel, label, now, sizeof(now)) ||
+        strcmp(now, last) == 0) {
+        return true;
+    }
+    strncpy_s(last, kEquipStatTextMax, now, _TRUNCATE);
+    if (walk->speak) {
+        acc::speech::Speak(now, /*interrupt=*/false);
+        acclog::Write("Menus.EquipPicker", "stat row changed under the picker: \"%s\"", now);
+    }
+    return true;
+}
+
+// Runs after MonitorEquipPickerSelection, so a row is named before its stats.
+// Only while the picker is up: the engine also rewrites the rows when a cancel
+// puts the old item back, and on a fresh panel the first values are no change.
+void MonitorEquipPickerStats() {
+    void* panel = FindPanelByKind(PanelKind::InGameEquip);
+    if (!panel) {
+        s_equipStatPanel = nullptr;
+        return;
+    }
+    EquipStatWalk walk = { panel, s_equipStatPanel == panel && IsEquipPickerArmed(), 0 };
+    s_equipStatPanel = panel;
+    acc::menus::equipstats::ForEachEquipStatRowAnchor(panel, RecordEquipStatRow, &walk);
+}
+
 // Workbench upgrade picker: retire the arm latch and run the one-shot cursor
 // park. Mirror of the equip monitor above. The panel-gone branch matters
 // because the spec's callbacks only run while the panel is foreground, so a
@@ -460,6 +509,7 @@ void RegisterPickerMsgRules() {
 
 void TickPickerMonitors() {
     MonitorEquipPickerSelection();
+    MonitorEquipPickerStats();
     MonitorWorkbenchUpgradePicker();
 }
 
