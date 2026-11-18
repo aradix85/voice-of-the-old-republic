@@ -69,18 +69,23 @@ void ApplyCycleCategoryPrefix(void* control, char* outBuf, size_t bufSize) {
     }
 }
 
+// Appends the suffix text whole, or not at all when it does not fit.
+void AppendSuffix(acc::strings::Id id, char* outBuf, size_t bufSize) {
+    const char* suffix = acc::strings::Get(id);
+    const size_t len = strnlen(outBuf, bufSize);
+    const size_t suffixLen = strlen(suffix);
+    if (suffixLen > 0 && len + suffixLen + 1 <= bufSize) {
+        memcpy(outBuf + len, suffix, suffixLen + 1);
+    }
+}
+
 // Append element-state suffix for toggles. Detected via the same downcast
 // we'd use for text extraction, so works regardless of which path
 // returned the label (most toggles are caught by AsButton at step 2).
 void AppendToggleSuffix(void* control, char* outBuf, size_t bufSize) {
-    bool on = ReadToggleState(control);
-    size_t len = strnlen(outBuf, bufSize);
-    const char* suffix = acc::strings::Get(
-        on ? acc::strings::Id::ToggleOn : acc::strings::Id::ToggleOff);
-    size_t suffixLen = strlen(suffix);
-    if (len + suffixLen + 1 <= bufSize) {
-        memcpy(outBuf + len, suffix, suffixLen + 1);
-    }
+    AppendSuffix(ReadToggleState(control) ? acc::strings::Id::ToggleOn
+                                          : acc::strings::Id::ToggleOff,
+                 outBuf, bufSize);
 }
 
 // Append "unavailable" / "unavailable" suffix when the focused
@@ -149,13 +154,7 @@ void AppendDisabledSuffix(void* control, void* ownerPanel,
         }
     }
     if ((bitFlags & disabledMask) == 0) {
-        const char* suffix = acc::strings::Get(
-            acc::strings::Id::DisabledSuffix);
-        size_t len = strnlen(outBuf, bufSize);
-        size_t suffixLen = strlen(suffix);
-        if (suffixLen > 0 && len + suffixLen + 1 <= bufSize) {
-            memcpy(outBuf + len, suffix, suffixLen + 1);
-        }
+        AppendSuffix(acc::strings::Id::DisabledSuffix, outBuf, bufSize);
     }
 }
 
