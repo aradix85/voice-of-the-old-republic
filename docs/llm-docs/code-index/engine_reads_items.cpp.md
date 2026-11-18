@@ -1,4 +1,4 @@
-# engine_reads_items.cpp (262 lines)
+# engine_reads_items.cpp (269 lines)
 
 Source: `patches/Accessibility/engine_reads_items.cpp`
 
@@ -18,8 +18,9 @@ Item and creature reads on top of the generic readers of engine_reads.cpp: clien
 - L134 `int ReadItemRowStackCount(void* rowControl)`
 - L138 `int ReadItemCharges(void* item)`
 - L143 `int ReadItemRowCharges(void* rowControl)`
-- L148 `bool ReadLocStringOtherLanguage(void* base, size_t locStringOffset, char* outBuf, size_t bufSize)`
-- L194 `bool ReadItemRowName(void* rowControl, char* outBuf, size_t bufSize)`
-- L219 `bool IsInventoryItemRow(void* control)`
-- L224 `void* GetWorkbenchSlotInstalledItem(void* upgradePanel, void* slotControl)`
-- L235 `WorkbenchPickerInfo GetWorkbenchPickerInfo(void* upgradePanel)`
+- L148 `bool ItemRowHasUpgrades(void* rowControl)`
+- L155 `bool ReadLocStringOtherLanguage(void* base, size_t locStringOffset, char* outBuf, size_t bufSize)`
+- L201 `bool ReadItemRowName(void* rowControl, char* outBuf, size_t bufSize)`
+- L226 `bool IsInventoryItemRow(void* control)`
+- L231 `void* GetWorkbenchSlotInstalledItem(void* upgradePanel, void* slotControl)`
+- L242 `WorkbenchPickerInfo GetWorkbenchPickerInfo(void* upgradePanel)`

@@ -145,6 +145,8 @@ installer, as the pre-release `bridge-latest`.
 - The feat and Force power charts say how many feats of a chain stand to the
   right.
 - The workbench names who wears an item: "Lightsaber (Equipped), Bastila".
+- An item with upgrades says "upgraded" after its name in every item list.
+- The equipment list says the attack, damage or defense an item changes.
 - Q/E say the clock direction and distance of each object.
 - New setting: Q and E step through everything within 30 metres instead of
   only what the camera sees.
@@ -628,6 +630,16 @@ installer, as the pre-release `bridge-latest`.
   two companions could not be told apart. The name is the one the game keeps
   with the row, so it also names a companion who is not in the party. An item
   from the inventory is read as before.
+- An item with workbench upgrades ends its name with "upgraded" in the
+  inventory, a container, a store and the equipment list: "Double-Bladed
+  Lightsaber, upgraded, 9 of 11". Two Double-Bladed Lightsabers, one with
+  crystals and one without, read exactly alike, and the empty one was worn
+  for days. KOTOR 1 only.
+- In the equipment list, moving to an item says the stats it changes:
+  "Attack left +23, right +25", "Damage left 9-32, right 9-32", or Defense
+  for armour. The game already wears the item you stand on, so the numbers
+  are the real ones; an item that changes nothing adds nothing, which tells
+  you two items are equal.
 
 <h3>Endar Spire:</h3>
 
