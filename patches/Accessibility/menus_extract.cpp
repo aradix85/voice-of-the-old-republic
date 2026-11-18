@@ -2,7 +2,7 @@
 //
 // FromControl is the ladder: it does no extraction of its own, it runs the
 // Try* steps in order (one file per kind of control, menus_extract_*.cpp)
-// and applies the three announce suffixes. Each step's rationale lives at
+// and applies the four announce suffixes. Each step's rationale lives at
 // its definition, under its step number. Helpers shared with chain
 // navigation (IsChainNavigable, IsClassSelectionIcon, ClassLabelCache*,
 // GetControlCenter) and the focused-panel pointer (g_currentPanel) come
@@ -320,6 +320,12 @@ const char* FromControl(void* control,
     }
     if (source && !IsToggle(control) && IsChainNavigable(control)) {
         AppendDisabledSuffix(control, ownerPanel, outBuf, bufSize);
+    }
+    // Two items of one name read alike in every list (two Double-Bladed
+    // Lightsabers, one with crystals and one without); the upgrades are the
+    // one difference a row can name.
+    if (source && acc::engine::ItemRowHasUpgrades(control)) {
+        AppendSuffix(acc::strings::Id::ItemUpgradedSuffix, outBuf, bufSize);
     }
 
     return source;

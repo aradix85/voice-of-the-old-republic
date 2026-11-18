@@ -728,6 +728,11 @@ enum class Id : int {
     //      does nothing.
     DisabledSuffix,
 
+    // ---- Appended to the name of an item row whose item carries workbench
+    //      upgrades: two items of one name differ in nothing else a list
+    //      shows ("Double-Bladed Lightsaber, upgraded").
+    ItemUpgradedSuffix,
+
     // ---- Toggle (checkbox) element-state suffix. Appended (with leading
     //      ", ") to an options-screen toggle's announced label to voice its
     //      on/off state — e.g. "Subtitles, on". Read

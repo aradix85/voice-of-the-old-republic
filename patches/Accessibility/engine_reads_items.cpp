@@ -145,6 +145,13 @@ int ReadItemRowCharges(void* rowControl) {
     return item ? ReadItemCharges(item) : -1;
 }
 
+bool ItemRowHasUpgrades(void* rowControl) {
+    if (!acc::off::Ok(kSwsItemUpgradesOffset)) return false;
+    void* item = ResolveItemFromClientHandle(ReadItemRowHandle(rowControl));
+    uint32_t upgrades = 0;
+    return item && TryReadU32(item, kSwsItemUpgradesOffset, &upgrades) && upgrades != 0;
+}
+
 bool ReadLocStringOtherLanguage(void* base, size_t locStringOffset,
                                 char* outBuf, size_t bufSize) {
     if (!base || !outBuf || bufSize < 2) return false;

@@ -2041,6 +2041,11 @@ const uint32_t  kSwsItemInfiniteStockBit               = acc::off::Same(0x4);
 const size_t    kSwsItemChargesOffset                  = acc::off::Pick(0x258, 0x298);
 const size_t    kSwsItemMaxChargesOffset               = acc::off::Pick(0x25c, 0x29c);
 
+// CSWSItem upgrade bits (ulong), one per upgrade.2da row: CSWSItem::HasUpgrade
+// 0x004EADA0 is `test [item+0x294], 1 << row`. The colour crystal of a
+// lightsaber is not among them. KOTOR 2: not witnessed.
+const size_t    kSwsItemUpgradesOffset                 = acc::off::Kotor1Only(0x294);
+
 // CSWSItem.description_indentified is a CExoLocString. GetPropertyDescription
 // appends its text via CExoLocString::GetString, which returns the INLINE
 // substring first (the per-item embedded copy) and only falls back to the TLK

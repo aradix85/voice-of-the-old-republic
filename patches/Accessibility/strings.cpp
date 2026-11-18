@@ -202,6 +202,7 @@ const char* Get(Id id) {
         case Id::PartySelectionFull:        return "Party full";
 
         case Id::DisabledSuffix:       return ", unavailable";
+        case Id::ItemUpgradedSuffix:   return ", upgraded";
         case Id::ToggleOn:             return ", on";
         case Id::ToggleOff:            return ", off";
         case Id::FmtSliderValueLabeled: return "%s %u of %u";

@@ -332,6 +332,11 @@ int ReadItemRowStackCount(void* rowControl);
 int ReadItemCharges(void* item);
 int ReadItemRowCharges(void* rowControl);
 
+// True when the item of an inventory, container, equip-picker or store row
+// carries at least one workbench upgrade (CSWSItem upgrade bits). False for
+// any other control, an unresolved item and on KOTOR 2.
+bool ItemRowHasUpgrades(void* rowControl);
+
 // Name an item row from the ITEM it points at, not from its own caption.
 // The engine normally writes the localised name into the row control and
 // every extractor reads it there; a row whose caption comes up empty used
