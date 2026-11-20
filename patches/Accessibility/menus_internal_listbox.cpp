@@ -1,17 +1,48 @@
 // Driving a listbox's selection from the keyboard, by our own selection
-// write or by the engine's SetSelectedControl.
+// write or by the engine's SetSelectedControl, and the row the keyboard
+// holds in an engine-driven list.
 
 #include <windows.h>
 
 #include "menus_internal.h"
 #include "engine_offsets.h"
 #include "engine_panels.h"
+#include "engine_reads.h"
+#include "log.h"
 
 using namespace acc::engine;
 
 namespace acc::menus::detail {
 
 namespace {
+
+// The row the keyboard last selected in an engine-driven list.
+//
+// The engine re-selects the row under the mouse cursor every frame
+// (CSWGuiListBox::HandleMouseMove), and its hit-test clamps to the nearest
+// rendered row rather than missing the list, so no parking spot keeps
+// selection_index the keyboard's. Stepping from selection_index then reaches
+// only the two rows next to the hovered one and never the hovered row itself:
+// the key bindings list (patch-20260725-150854) and the workbench crystal
+// picker (patch-20261120-115903, "sel=3->4" on every Down, the crystals below
+// the fold out of reach).
+//
+// One list is driven at a time, so one record. It holds while the list has the
+// same number of rows and the same row at that index. A list that is filled
+// anew can keep both, so whoever opens or refills one calls
+// ForgetDrivenListBoxSelection.
+struct DrivenRow {
+    void* listbox;
+    void* row;
+    int   rowCount;
+    short sel;
+};
+DrivenRow s_driven = {};
+
+bool DrivenRowIsOf(void* listbox, int rowCount) {
+    return s_driven.listbox == listbox && s_driven.rowCount == rowCount &&
+           s_driven.sel >= 0 && s_driven.sel < rowCount;
+}
 
 // The row a step lands on, clamped without wrapping. A selection below
 // minSel (typically the engine's initial -1) lands on minSel whatever the
@@ -38,17 +69,27 @@ bool DriveBody(void* listbox, ListBoxNavOp op, short minSel, bool viaEngine,
 
     auto* sel = reinterpret_cast<short*>(base + kListBoxSelectionIndexOffset);
     short oldSel = *sel;
+    if (viaEngine && DrivenRowIsOf(listbox, rowCount) &&
+        rows->data[s_driven.sel] == s_driven.row && oldSel != s_driven.sel) {
+        acclog::Write("Menus.ListBox", "lb=%p steps from the keyboard's row %d, "
+                      "not the engine's %d (hover-select)",
+                      listbox, s_driven.sel, oldSel);
+        oldSel = s_driven.sel;
+    }
     short newSel = TargetRow(op, oldSel, minSel, rowCount);
 
     if (viaEngine) {
-        // Re-assert even on a boundary clamp so a frame of hover drift is
-        // corrected on the next keypress; the select sound plays only when
-        // the selection moves. SetSelectedControl may clamp on its own, so
-        // its result is read back.
+        // Re-assert even on a boundary clamp, so the row the list shows is
+        // the keyboard's again; the select sound plays only when the
+        // selection moves. SetSelectedControl may clamp on its own, so its
+        // result is read back.
         auto setSel = reinterpret_cast<PFN_CSWGuiListBoxSetSelectedControl>(
             kAddrCSWGuiListBoxSetSelectedControl);
         setSel(listbox, newSel, newSel != oldSel ? 1 : 0);
         newSel = *sel;
+        s_driven = { listbox,
+                     (newSel >= 0 && newSel < rowCount) ? rows->data[newSel] : nullptr,
+                     rowCount, newSel };
     } else if (newSel != oldSel) {
         *sel = newSel;
         auto* top = reinterpret_cast<short*>(base + kListBoxTopVisibleIndexOffset);
@@ -94,6 +135,18 @@ bool DriveListBoxSelection(void* listbox, ListBoxNavOp op, short minSel,
 bool DriveListBoxSelectionEngine(void* listbox, ListBoxNavOp op, short minSel,
                                  ListBoxNavResult& out) {
     return DriveGuarded(listbox, op, minSel, /*viaEngine=*/true, out);
+}
+
+int DrivenListBoxSelection(void* listbox) {
+    if (DrivenRowIsOf(listbox, ReadListBoxRowCount(listbox)) &&
+        ReadListBoxRow(listbox, s_driven.sel) == s_driven.row) {
+        return s_driven.sel;
+    }
+    return ReadListBoxSelection(listbox);
+}
+
+void ForgetDrivenListBoxSelection() {
+    s_driven = {};
 }
 
 }  // namespace acc::menus::detail

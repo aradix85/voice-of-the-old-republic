@@ -98,12 +98,23 @@ bool DriveListBoxSelection(void* listbox, ListBoxNavOp op, short minSel,
 // CSWGuiListBox::SetSelectedControl instead of writing selection_index raw.
 // SetSelectedControl sets the row's real highlight state, plays the GUI select
 // sound, and scrolls the page natively (OrganizeControls) — so multipage lists
-// work the engine's way and the selection survives the per-frame hover-select
-// that overwrites a raw index write. Callers that use this MUST also keep the
-// mouse cursor off the list while armed (see the picker arm path), otherwise
-// the engine's hover handler re-selects the row under the cursor every frame.
+// work the engine's way. The engine's hover handler still re-selects the row
+// under the mouse cursor every frame, so a step starts from the row the last
+// step selected here, not from selection_index; `oldSel` reports that row.
+// Parking the cursor (ParkCursorToCorner) keeps the highlight the keyboard's
+// where the park holds, and is no longer what the stepping depends on.
 bool DriveListBoxSelectionEngine(void* listbox, ListBoxNavOp op, short minSel,
                                  ListBoxNavResult& out);
+
+// The row the keyboard holds in `listbox`: the one DriveListBoxSelectionEngine
+// last selected there, or the engine's selection_index when the keyboard has
+// not driven this list since it was filled. What Enter acts on.
+int DrivenListBoxSelection(void* listbox);
+
+// Drop the row DriveListBoxSelectionEngine remembers. Call when a list it
+// drives is opened or filled anew: the engine's own selection is the starting
+// point again.
+void ForgetDrivenListBoxSelection();
 
 // Warp the OS cursor to the empty top-left corner of the screen so the engine's
 // per-frame hover-select (CSWGuiListBox::HandleMouseMove -> HitCheckMouseLocal
