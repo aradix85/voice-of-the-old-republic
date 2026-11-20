@@ -1,4 +1,4 @@
-# peek_description_item.cpp (384 lines)
+# peek_description_item.cpp (385 lines)
 
 Source: `patches/Accessibility/peek_description_item.cpp`
 
@@ -19,4 +19,4 @@ Reading an item's description block by block: the equipment and workbench slot t
 - L222 `bool HandleWorkbenchSlotTooltip(void* panel, void* control, bool down)`: Shift+arrow on a workbench upgrade slot button (upgrade.gui IDs 12..18): speak the installed mod's full property description ("what the slot does for your item"), or announce the slot is empty.
 - L274 `const ItemTooltipPanelInfo* LookupItemTooltipPanel(acc::engine::PanelKind k)`
 - L282 `bool HandleItemTooltip(acc::engine::PanelKind kind, const ItemTooltipPanelInfo& info, void* activePanel, bool down)`: Caller consumes the key regardless of return (predictable behaviour).
-- L358 `bool SpeakItemRowDescription(void* row)`
+- L359 `bool SpeakItemRowDescription(void* row)`

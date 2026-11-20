@@ -147,6 +147,8 @@ installer, as the pre-release `bridge-latest`.
 - The workbench names who wears an item: "Lightsaber (Equipped), Bastila".
 - An item with upgrades says "upgraded" after its name in every item list.
 - The equipment list says the attack, damage or defense an item changes.
+- Every row of the workbench's crystal list and of the equipment list can be
+  reached with the arrow keys, and Enter takes the row you heard.
 - Q/E say the clock direction and distance of each object.
 - New setting: Q and E step through everything within 30 metres instead of
   only what the camera sees.
@@ -640,6 +642,13 @@ installer, as the pre-release `bridge-latest`.
   for armour. The game already wears the item you stand on, so the numbers
   are the real ones; an item that changes nothing adds nothing, which tells
   you two items are equal.
+- In the workbench's crystal list and the equipment list, Up and Down step
+  from the row the keyboard was on, and Enter and Shift+Up/Down act on that
+  row. The game re-selects the row under the mouse pointer every frame, and
+  moving the pointer away does not always stop it: with eight crystals, Down
+  kept saying "Crystal, Firkrann, 4 of 7" and the crystals below it could not
+  be chosen. The key bindings list already kept its own row; the three lists
+  now share one.
 
 <h3>Endar Spire:</h3>
 

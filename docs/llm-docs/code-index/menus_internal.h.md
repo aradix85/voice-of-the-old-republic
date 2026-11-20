@@ -1,4 +1,4 @@
-# menus_internal.h (309 lines)
+# menus_internal.h (320 lines)
 
 Source: `patches/Accessibility/menus_internal.h`
 
@@ -22,64 +22,66 @@ The menus feature's private seam: helpers and state the menus*.cpp files share, 
 - L74 `struct ListBoxNavResult`: Result of a single arrow-key step on a listbox cursor.
 - L85 `enum class ListBoxNavOp`: Direction of cursor motion driven by DriveListBoxSelection.
 - L94 `bool DriveListBoxSelection(void* listbox, ListBoxNavOp op, short minSel, ListBoxNavResult& out)`: Drive a CSWGuiListBox cursor in response to Nav-Up / Nav-Down / Home / End.
-- L105 `bool DriveListBoxSelectionEngine(void* listbox, ListBoxNavOp op, short minSel, ListBoxNavResult& out)`: Same contract as DriveListBoxSelection, but drives the engine's own CSWGuiListBox::SetSelectedControl instead of writing selection_index raw.
-- L118 `bool ParkCursorToCorner(const char* tag)`: Warp the OS cursor to the empty top-left corner of the screen so the engine's per-frame hover-select (CSWGuiListBox::HandleMouseMove -> HitCheckMouseLocal -> SetSelectedControl) finds no row under it and stops overwri...
-- L124 `bool QueueControlActivate(void* target, const char* logPrefix)`: Queue activation of a control resolved through a panel-member resolver.
-- L145 `void* CurrentPanelIfLive()`: Liveness-filtered view of g_currentPanel — returns it only while it is still in the manager's panels[], nullptr once the engine has freed it.
-- L178 `int EquipSlotIndexFromButton(void* panel, void* control)`: Equip-panel slot identity from the engine's embedded control arrays (kEquipPanelSlotButtons/LabelsOffset).
-- L179 `int EquipSlotIndexFromControl(void* panel, void* control)`
-- L182 `inline int EquipSlotCount()`: Slots in the engine's arrays for the running game (9 on K1, 11 on K2).
-- L189 `int UpgradeSlotIndexFromButton(void* panel, void* control)`: Slot-button membership on the workbench upgrade panel via its embedded button run (K1: 7 from +0x64, K2: 9 from +0x7a8).
-- L200 `void* EquipPanelItemsListBox(void* panel)`: The equipment screen (equip / equip_p).
-- L201 `void* EquipPanelEquipButton(void* panel)`
-- L202 `void* EquipPanelBackButton(void* panel)`
-- L205 `void* UpgradePanelItemsListBox(void* panel)`: CSWGuiUpgrade, the workbench upgrade screen (upgrade / upgrade_p).
-- L206 `void* UpgradePanelAssembleButton(void* panel)`
-- L207 `void* UpgradePanelBackButton(void* panel)`
-- L210 `void* SaveLoadPanelGamesListBox(void* panel)`: CSWGuiSaveLoad (saveload / saveload_p).
-- L211 `void* SaveLoadPanelActionButton(void* panel)`
-- L212 `void* SaveLoadPanelBackButton(void* panel)`
-- L219 `void* UpgradeSelPanelListBox(void* panel)`: KOTOR 2 workbench and crafting; nullptr on KOTOR 1.
-- L224 `bool IsUpgradePickerNoneRow(void* row)`: KOTOR 2: `row` is the upgrade picker's "-" entry (none / remove).
-- L225 `void* UpgradeSelPanelUpgradeButton(void* panel)`
-- L226 `void* UpgradeSelPanelTitleLabel(void* panel)`
-- L227 `void* CraftPanelShopListBox(void* panel)`
-- L228 `void* CraftPanelInvListBox(void* panel)`
-- L229 `void* CraftPanelAcceptButton(void* panel)`
-- L230 `void* CraftPanelExamineButton(void* panel)`
-- L231 `void* CraftPanelTitleLabel(void* panel)`
-- L234 `void* PowersPanelPowersListBox(void* panel)`: CSWGuiPowersLevelUp (pwrlvlup / pwrlvlup_p).
-- L235 `void* PowersPanelDescListBox(void* panel)`
-- L236 `void* PowersPanelPowerLabel(void* panel)`
-- L237 `void* PowersPanelSubTitleLabel(void* panel)`
-- L238 `void* PowersPanelRecommendedButton(void* panel)`
-- L239 `void* PowersPanelAcceptButton(void* panel)`
-- L240 `void* PowersPanelBackButton(void* panel)`
-- L243 `void* ContainerPanelItemsListBox(void* panel)`: CSWGuiContainer (container / container_p).
-- L244 `void* ContainerPanelOkButton(void* panel)`
-- L245 `void* ContainerPanelCancelButton(void* panel)`
-- L246 `void* ContainerPanelGiveItemsButton(void* panel)`
-- L249 `void* FeatsPanelAcceptButton(void* panel)`: CSWGuiFeatsCharGen (ftchrgen / ftchrgen_p).
-- L250 `void* FeatsPanelBackButton(void* panel)`
-- L251 `void* FeatsPanelRecommendedButton(void* panel)`
-- L255 `void* SkillInfoBoxPanelSkillsListBox(void* panel)`: CSWGuiSkillInfoBox (skillinfo / skillinfo_p), the granted-feats / level-up info popup.
-- L256 `void* SkillInfoBoxPanelMessageLabel(void* panel)`
-- L257 `void* SkillInfoBoxPanelOkButton(void* panel)`
-- L261 `void* ScriptSelectPanelAiStateListBox(void* panel)`: CSWGuiScriptSelect (ScriptSelect.gui), the character sheet's combat-behaviour picker; KOTOR 1 only.
-- L262 `void* ScriptSelectPanelAcceptButton(void* panel)`
-- L263 `void* ScriptSelectPanelBackButton(void* panel)`
-- L266 `void* WagerPopupPanelLessButton(void* panel)`: CSWGuiWagerPopup (pazaakwager / pazaakwager_p), the pazaak bet popup.
-- L267 `void* WagerPopupPanelMoreButton(void* panel)`
-- L268 `void* WagerPopupPanelMaximumLabel(void* panel)`
-- L271 `void* PazaakStartPanelPlayButton(void* panel)`: CSWGuiPazaakStart (pazaaksetup / pazaaksetup_p), the side-deck builder.
-- L272 `void* PazaakStartPanelClearButton(void* panel)`
-- L277 `void* KeyMapPanelEventListBox(void* panel)`: CSWGuiInGameOptKeyMappings (OPTKeyMapping / OPTKeyMapping_p), the Keymapping screen.
-- L278 `void* KeyMapPanelDefaultButton(void* panel)`
-- L279 `void* KeyMapPanelAcceptButton(void* panel)`
-- L280 `void* KeyMapPanelCancelButton(void* panel)`
-- L281 `void* KeyMapPanelFilterButton(void* panel, int filterIndex)`
-- L285 `void* WorkbenchItemsPanelItemsListBox(void* panel)`: CSWGuiUpgradeItemSelect (upgradeitems / upgradeitems_p), the workbench per-category item picker.
-- L286 `void* WorkbenchItemsPanelUpgradeButton(void* panel)`
-- L287 `void* WorkbenchItemsPanelBackButton(void* panel)`
+- L106 `bool DriveListBoxSelectionEngine(void* listbox, ListBoxNavOp op, short minSel, ListBoxNavResult& out)`: Same contract as DriveListBoxSelection, but drives the engine's own CSWGuiListBox::SetSelectedControl instead of writing selection_index raw.
+- L112 `int DrivenListBoxSelection(void* listbox)`: The row the keyboard holds in `listbox`: the one DriveListBoxSelectionEngine last selected there, or the engine's selection_index when the keyboard has not driven this list since it was filled.
+- L117 `void ForgetDrivenListBoxSelection()`: Drop the row DriveListBoxSelectionEngine remembers.
+- L129 `bool ParkCursorToCorner(const char* tag)`: Warp the OS cursor to the empty top-left corner of the screen so the engine's per-frame hover-select (CSWGuiListBox::HandleMouseMove -> HitCheckMouseLocal -> SetSelectedControl) finds no row under it and stops overwri...
+- L135 `bool QueueControlActivate(void* target, const char* logPrefix)`: Queue activation of a control resolved through a panel-member resolver.
+- L156 `void* CurrentPanelIfLive()`: Liveness-filtered view of g_currentPanel — returns it only while it is still in the manager's panels[], nullptr once the engine has freed it.
+- L189 `int EquipSlotIndexFromButton(void* panel, void* control)`: Equip-panel slot identity from the engine's embedded control arrays (kEquipPanelSlotButtons/LabelsOffset).
+- L190 `int EquipSlotIndexFromControl(void* panel, void* control)`
+- L193 `inline int EquipSlotCount()`: Slots in the engine's arrays for the running game (9 on K1, 11 on K2).
+- L200 `int UpgradeSlotIndexFromButton(void* panel, void* control)`: Slot-button membership on the workbench upgrade panel via its embedded button run (K1: 7 from +0x64, K2: 9 from +0x7a8).
+- L211 `void* EquipPanelItemsListBox(void* panel)`: The equipment screen (equip / equip_p).
+- L212 `void* EquipPanelEquipButton(void* panel)`
+- L213 `void* EquipPanelBackButton(void* panel)`
+- L216 `void* UpgradePanelItemsListBox(void* panel)`: CSWGuiUpgrade, the workbench upgrade screen (upgrade / upgrade_p).
+- L217 `void* UpgradePanelAssembleButton(void* panel)`
+- L218 `void* UpgradePanelBackButton(void* panel)`
+- L221 `void* SaveLoadPanelGamesListBox(void* panel)`: CSWGuiSaveLoad (saveload / saveload_p).
+- L222 `void* SaveLoadPanelActionButton(void* panel)`
+- L223 `void* SaveLoadPanelBackButton(void* panel)`
+- L230 `void* UpgradeSelPanelListBox(void* panel)`: KOTOR 2 workbench and crafting; nullptr on KOTOR 1.
+- L235 `bool IsUpgradePickerNoneRow(void* row)`: KOTOR 2: `row` is the upgrade picker's "-" entry (none / remove).
+- L236 `void* UpgradeSelPanelUpgradeButton(void* panel)`
+- L237 `void* UpgradeSelPanelTitleLabel(void* panel)`
+- L238 `void* CraftPanelShopListBox(void* panel)`
+- L239 `void* CraftPanelInvListBox(void* panel)`
+- L240 `void* CraftPanelAcceptButton(void* panel)`
+- L241 `void* CraftPanelExamineButton(void* panel)`
+- L242 `void* CraftPanelTitleLabel(void* panel)`
+- L245 `void* PowersPanelPowersListBox(void* panel)`: CSWGuiPowersLevelUp (pwrlvlup / pwrlvlup_p).
+- L246 `void* PowersPanelDescListBox(void* panel)`
+- L247 `void* PowersPanelPowerLabel(void* panel)`
+- L248 `void* PowersPanelSubTitleLabel(void* panel)`
+- L249 `void* PowersPanelRecommendedButton(void* panel)`
+- L250 `void* PowersPanelAcceptButton(void* panel)`
+- L251 `void* PowersPanelBackButton(void* panel)`
+- L254 `void* ContainerPanelItemsListBox(void* panel)`: CSWGuiContainer (container / container_p).
+- L255 `void* ContainerPanelOkButton(void* panel)`
+- L256 `void* ContainerPanelCancelButton(void* panel)`
+- L257 `void* ContainerPanelGiveItemsButton(void* panel)`
+- L260 `void* FeatsPanelAcceptButton(void* panel)`: CSWGuiFeatsCharGen (ftchrgen / ftchrgen_p).
+- L261 `void* FeatsPanelBackButton(void* panel)`
+- L262 `void* FeatsPanelRecommendedButton(void* panel)`
+- L266 `void* SkillInfoBoxPanelSkillsListBox(void* panel)`: CSWGuiSkillInfoBox (skillinfo / skillinfo_p), the granted-feats / level-up info popup.
+- L267 `void* SkillInfoBoxPanelMessageLabel(void* panel)`
+- L268 `void* SkillInfoBoxPanelOkButton(void* panel)`
+- L272 `void* ScriptSelectPanelAiStateListBox(void* panel)`: CSWGuiScriptSelect (ScriptSelect.gui), the character sheet's combat-behaviour picker; KOTOR 1 only.
+- L273 `void* ScriptSelectPanelAcceptButton(void* panel)`
+- L274 `void* ScriptSelectPanelBackButton(void* panel)`
+- L277 `void* WagerPopupPanelLessButton(void* panel)`: CSWGuiWagerPopup (pazaakwager / pazaakwager_p), the pazaak bet popup.
+- L278 `void* WagerPopupPanelMoreButton(void* panel)`
+- L279 `void* WagerPopupPanelMaximumLabel(void* panel)`
+- L282 `void* PazaakStartPanelPlayButton(void* panel)`: CSWGuiPazaakStart (pazaaksetup / pazaaksetup_p), the side-deck builder.
+- L283 `void* PazaakStartPanelClearButton(void* panel)`
+- L288 `void* KeyMapPanelEventListBox(void* panel)`: CSWGuiInGameOptKeyMappings (OPTKeyMapping / OPTKeyMapping_p), the Keymapping screen.
+- L289 `void* KeyMapPanelDefaultButton(void* panel)`
+- L290 `void* KeyMapPanelAcceptButton(void* panel)`
+- L291 `void* KeyMapPanelCancelButton(void* panel)`
+- L292 `void* KeyMapPanelFilterButton(void* panel, int filterIndex)`
+- L296 `void* WorkbenchItemsPanelItemsListBox(void* panel)`: CSWGuiUpgradeItemSelect (upgradeitems / upgradeitems_p), the workbench per-category item picker.
+- L297 `void* WorkbenchItemsPanelUpgradeButton(void* panel)`
+- L298 `void* WorkbenchItemsPanelBackButton(void* panel)`
 
 Also 8 constants or variables at namespace scope.
