@@ -145,11 +145,29 @@ int ReadItemRowCharges(void* rowControl) {
     return item ? ReadItemCharges(item) : -1;
 }
 
-bool ItemRowHasUpgrades(void* rowControl) {
-    if (!acc::off::Ok(kSwsItemUpgradesOffset)) return false;
-    void* item = ResolveItemFromClientHandle(ReadItemRowHandle(rowControl));
+namespace {
+
+bool ItemHasUpgrades(void* item) {
     uint32_t upgrades = 0;
-    return item && TryReadU32(item, kSwsItemUpgradesOffset, &upgrades) && upgrades != 0;
+    return item && acc::off::Ok(kSwsItemUpgradesOffset) &&
+           TryReadU32(item, kSwsItemUpgradesOffset, &upgrades) && upgrades != 0;
+}
+
+}  // namespace
+
+bool ItemRowHasUpgrades(void* rowControl) {
+    return ItemHasUpgrades(ResolveItemFromClientHandle(ReadItemRowHandle(rowControl)));
+}
+
+bool UpgradeItemRowHasUpgrades(void* rowControl) {
+    // CSWUpgradeItemEntry::SetItem keeps the item's id where the other item
+    // rows do, but the workbench fills its list on the server side: the id
+    // resolves as a server id, and as a client id only by luck.
+    uint32_t id = 0;
+    if (!TryReadU32(rowControl, kStoreItemEntryObjIdOffset, &id)) return false;
+    void* item = ResolveItemFromServerHandle(id);
+    if (!item) item = ResolveItemFromClientHandle(id);
+    return ItemHasUpgrades(item);
 }
 
 bool ReadLocStringOtherLanguage(void* base, size_t locStringOffset,

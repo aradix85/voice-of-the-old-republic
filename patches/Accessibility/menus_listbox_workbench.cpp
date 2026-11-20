@@ -62,23 +62,26 @@ void* WorkbenchItemsFindLb(void* p) {
 // this listbox so we speak on every step (including clamp). The game marks a
 // worn item "(Equipped)" and no more, so the wearer's name follows it: three
 // Lightsabers worn by two companions read alike otherwise.
+// An item with upgrades says so, as in every other item list: the row is a
+// class of its own, which the shared suffix in menus_extract does not reach.
 void WorkbenchItemsAnnounce(void* /*lb*/, const ListBoxNavResult& r) {
     if (!r.row || r.rowCount <= 0) return;
-    char wearer[128];
-    if (!acc::engine::ReadUpgradeItemRowWearer(r.row, wearer, sizeof(wearer))) {
-        SpeakRowAndPosition(r);
-        return;
-    }
     char rowText[256];
     if (!acc::menus::extract::FromControl(r.row, rowText, sizeof(rowText))) return;
+    char wearer[128];
+    const bool worn = acc::engine::ReadUpgradeItemRowWearer(r.row, wearer, sizeof(wearer));
+    const bool upgraded = acc::engine::UpgradeItemRowHasUpgrades(r.row);
     char named[400];
-    snprintf(named, sizeof(named), "%s, %s", rowText, wearer);
+    snprintf(named, sizeof(named), "%s%s%s%s", rowText, worn ? ", " : "",
+             worn ? wearer : "",
+             upgraded ? acc::strings::Get(acc::strings::Id::ItemUpgradedSuffix) : "");
     char msg[480];
     snprintf(msg, sizeof(msg),
              acc::strings::Get(acc::strings::Id::FmtContainerItemAt),
              named, r.newSel + 1, r.rowCount);
     acc::speech::Speak(msg, /*interrupt=*/false);
-    acclog::Write("WorkbenchItems", "row=%p worn by [%s]", r.row, wearer);
+    acclog::Write("WorkbenchItems", "row=%p worn by [%s] upgraded=%d", r.row,
+                  worn ? wearer : "", upgraded ? 1 : 0);
 }
 
 bool WorkbenchItemsOnEnter(void* panel) {

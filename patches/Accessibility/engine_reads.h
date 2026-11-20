@@ -337,6 +337,11 @@ int ReadItemRowCharges(void* rowControl);
 // any other control, an unresolved item and on KOTOR 2.
 bool ItemRowHasUpgrades(void* rowControl);
 
+// The same for a row of the workbench's item list (CSWUpgradeItemEntry), a
+// class of its own that ItemRowHasUpgrades does not know. Only for rows of
+// that list: it does not check the row's class.
+bool UpgradeItemRowHasUpgrades(void* rowControl);
+
 // Name an item row from the ITEM it points at, not from its own caption.
 // The engine normally writes the localised name into the row control and
 // every extractor reads it there; a row whose caption comes up empty used
