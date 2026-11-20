@@ -1,4 +1,4 @@
-# guidance_approach.cpp (384 lines)
+# guidance_approach.cpp (390 lines)
 
 Source: `patches/Accessibility/guidance_approach.cpp`
 
@@ -8,15 +8,15 @@ The unified walk-to-act approach tracker: arming it, the per-tick verdict (a con
 
 - L47 `bool IsTalkOrUseTarget(void* obj)`: Someone to talk to or something to use.
 - L59 `void EndApproach(ApproachOutcome outcome)`
-- L64 `bool ResolveTargetPos(Vector& out)`
-- L76 `void MarkWalkStart()`
-- L82 `void RestartStallWindow()`
-- L87 `void ReleaseApproach()`
-- L97 `void ArmApproach(const ApproachArm& arm)`
-- L148 `void TickApproach()`
-- L347 `bool IsApproachInFlight()`
-- L351 `void CancelApproach()`
-- L355 `ApproachOutcome LastApproachOutcome(uint32_t* serial)`
-- L360 `void* ApproachTarget()`
-- L364 `bool IsAnyModApproachInFlight()`
-- L368 `bool CancelByMovement()`
+- L67 `bool ResolveTargetPos(Vector& out)`
+- L79 `void MarkWalkStart()`
+- L85 `void RestartStallWindow()`
+- L90 `void ReleaseApproach()`
+- L100 `void ArmApproach(const ApproachArm& arm)`
+- L151 `void TickApproach()`
+- L353 `bool IsApproachInFlight()`
+- L357 `void CancelApproach()`
+- L361 `ApproachOutcome LastApproachOutcome(uint32_t* serial)`
+- L366 `void* ApproachTarget()`
+- L370 `bool IsAnyModApproachInFlight()`
+- L374 `bool CancelByMovement()`

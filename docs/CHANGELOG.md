@@ -69,6 +69,12 @@ installer, as the pre-release `bridge-latest`.
   still cannot start, you hear who is in the way.
 - "Way blocked" and the game's "Unable to reach target!" name a closed door
   that stands by the target.
+- A use that stops at a closed door names the door.
+- A walk that does not start says "Trying another way" while the mod works
+  on it.
+- Enter on a map note that names the person or thing beside it goes to that
+  person or thing.
+- A walk that arrives with a companion far behind says who stayed behind.
 - Talking to someone behind a counter works: the walk stops in front of them
   and the conversation starts.
 - Enter on a map note at a door uses the door.
@@ -152,6 +158,8 @@ installer, as the pre-release `bridge-latest`.
 - The equipment list says the attack, damage or defense an item changes.
 - Every row of the workbench's crystal list and of the equipment list can be
   reached with the arrow keys, and Enter takes the row you heard.
+- The workbench's item list says "upgraded" too.
+- The load screen says which save is the newest.
 - Q/E say the clock direction and distance of each object.
 - New setting: Q and E step through everything within 30 metres instead of
   only what the camera sees.
@@ -172,8 +180,10 @@ installer, as the pre-release `bridge-latest`.
 - In a fight, a party member whose health sinks to half and to a quarter is
   named with the numbers.
 - A party member who is down reads as "down", not as a negative number.
+- "Combat ends" names a member who is down, also after a fight without kills.
 - A scene with no line and no reply says "Scene without words", and "Scene
   over" when it ends.
+- A movie in the game says "Movie."
 - A kill no longer cuts off the combat lines before it.
 - The mod and the installer are English only and assume the English game.
 - Supported games: KOTOR 1 version 1.0.3 (Steam or GOG) and KOTOR 2 from
@@ -302,6 +312,21 @@ installer, as the pre-release `bridge-latest`.
   the mod says "A closed Tomb Door stands by it." when a closed door is within
   4 metres of the target. In the Korriban tombs a sarcophagus stands behind
   its own Tomb Door: Bash on it was refused without a word about the door.
+- Enter on something that stands just behind a closed door says "A closed
+  Door stands by it." when the use ends there without having happened. An urn
+  1.8 metres off behind a locked door said "Open Clay Urn" and then nothing.
+- A walk the game does not start says "Trying another way." after two
+  seconds, when the mod begins its own attempts: a plain walk, steps aside,
+  its own route. Those can take ten seconds more, in which nothing was said
+  and the door or chest was taken for stuck.
+- Enter on a map note that carries the name of the person or thing within 3
+  metres of it goes to that person or thing: "Freyyr" beside Freyyr,
+  "Computer" at the computer, "Basket Up" over the Basket. The note only
+  walked to its own spot and said "Use Freyyr".
+- A walk by Enter that arrives while a companion is more than 40 metres away
+  says "HK-47 stayed behind." Companions do not follow round a turn-back
+  zone, and a stuck one stays put; the walk went on without a word. Said
+  again only for other names or after a minute.
 - The rescue walk to a creature or placeable stops 1.8 metres in front of it
   on your side, not on its exact spot, and a conversation that needed it is
   asked for again on arrival (once per 20 seconds per person). Janice Nall in
@@ -665,6 +690,12 @@ installer, as the pre-release `bridge-latest`.
   kept saying "Crystal, Firkrann, 4 of 7" and the crystals below it could not
   be chosen. The key bindings list already kept its own row; the three lists
   now share one.
+- The workbench's list of items says "upgraded" after an item that carries
+  upgrades, as the inventory does. Its rows are a class of their own, whose
+  item is looked up on the game's server side.
+- In the load screen the save with the longest play time ends with
+  "newest". The game lists the quicksave first whether or not the autosave
+  is later, and shows nothing else that orders the saves in time.
 
 <h3>Endar Spire:</h3>
 
@@ -703,10 +734,16 @@ installer, as the pre-release `bridge-latest`.
 - Ctrl+H and the "Combat ends" summary say "Canderous down" for a member at
   zero hit points. The game keeps counting below zero, which read as "-11 of
   42".
+- "Combat ends" is followed by the party line whenever someone is down, also
+  after a fight without kills, which used to end with the two words alone.
 - A cutscene that shows no line and offers no reply says "Scene without
   words" after two and a half seconds, and "Scene over" when it closes. Such a
   scene plays in silence — the Star Map opening, a door blown up, a dream —
   and was taken for a frozen game.
+- A movie that starts in the game says "Movie.": a flight, a ship breaking
+  up. The game takes no key while it plays and most have no words. Not said
+  for the intro movies at start-up, nor for the next part of a cutscene that
+  plays as several movies in a row.
 - The kill line ("X killed Y: 100 XP") is spoken in its turn. It used to
   interrupt, and so cut off the blows that led to the kill.
 - "Pazaak. Press C to read your hand, T for the table." is said for the

@@ -407,6 +407,7 @@ patches/Accessibility/peek_description.cpp
 patches/Accessibility/peek_description.h
 patches/Accessibility/peek_description_internal.h
 patches/Accessibility/peek_description_item.cpp
+patches/Accessibility/play_time.h
 patches/Accessibility/qe_ring.cpp
 patches/Accessibility/qe_ring.h
 patches/Accessibility/room_topology.cpp

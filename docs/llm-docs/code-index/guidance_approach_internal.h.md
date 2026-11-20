@@ -1,4 +1,4 @@
-# guidance_approach_internal.h (165 lines)
+# guidance_approach_internal.h (171 lines)
 
 Source: `patches/Accessibility/guidance_approach_internal.h`
 
@@ -28,5 +28,7 @@ Internal to the guidance_approach module (guidance_approach*.cpp); no other file
 - L155 `bool RetryRouteHop()`: A hop stalled short of its point: starts it again, twice at most.
 - L161 `bool TryRegionWalk()`: The last rung before "way blocked": the engine does not walk it, but the region graph may know a way.
 - L162 `void OnBlocked(DWORD stalledMs)`
+- L165 `void TellWhoStayedBehind()`: A walk arrived: names the companions that are far behind (guidance_approach_gather.cpp).
+- L168 `bool SpeakClosedDoorBetween(const Vector& from, const Vector& tgt)`: The approach ended at the target without its act: says "A closed Door stands by it." when a closed door is on the line from `from` to the target.
 
 Also 3 constants or variables at namespace scope.

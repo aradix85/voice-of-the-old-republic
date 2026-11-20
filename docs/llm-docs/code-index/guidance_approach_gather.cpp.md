@@ -1,4 +1,4 @@
-# guidance_approach_gather.cpp (85 lines)
+# guidance_approach_gather.cpp (109 lines)
 
 Source: `patches/Accessibility/guidance_approach_gather.cpp`
 
@@ -8,3 +8,4 @@ A walk that leaves the area waits for the party. The engine refuses an area tran
 
 - L30 `void SayAboutParty(acc::strings::Id fmt, const std::string& names, char* line, size_t cap)`
 - L38 `bool TickPartyHold(const Vector& pos, DWORD now)`
+- L91 `void TellWhoStayedBehind()`

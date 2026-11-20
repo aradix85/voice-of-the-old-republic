@@ -1,4 +1,4 @@
-# bringup_announce.cpp (303 lines)
+# bringup_announce.cpp (324 lines)
 
 Source: `patches/Accessibility/bringup_announce.cpp`
 
@@ -14,13 +14,14 @@ Detection is fully derived from the game's window state + the input-pump-live si
 - L69 `bool IsOurWindowOfClass(HWND hwnd, const char* targetClass)`: True iff `hwnd` belongs to the current process AND its class is the given target.
 - L92 `bool IsLiveMovieWindow(HWND hwnd)`: A live, on-screen movie window of ours.
 - L98 `BOOL CALLBACK FindMovieWindowProc(HWND hwnd, LPARAM lp)`
-- L121 `bool MoviePlaying()`: True while an engine movie is on screen.
-- L149 `void TransitionTo(Phase next, const char* reason)`
-- L166 `Phase ClassifyForeground()`: Map current foreground-window class to a phase.
-- L191 `bool UserNavKeyHeld()`
-- L205 `DWORD WINAPI PollProc(LPVOID)`
-- L264 `void Start()`
-- L282 `void NotifyInputPumpLive()`
-- L286 `bool IsInputPumpLive()`
-- L290 `bool IsMoviePlaying()`
-- L294 `bool MovieRecentlyPlaying(unsigned int windowMs)`
+- L114 `void AnnounceMovie(HWND movie, DWORD now)`
+- L141 `bool MoviePlaying()`: True while an engine movie is on screen.
+- L170 `void TransitionTo(Phase next, const char* reason)`
+- L187 `Phase ClassifyForeground()`: Map current foreground-window class to a phase.
+- L212 `bool UserNavKeyHeld()`
+- L226 `DWORD WINAPI PollProc(LPVOID)`
+- L285 `void Start()`
+- L303 `void NotifyInputPumpLive()`
+- L307 `bool IsInputPumpLive()`
+- L311 `bool IsMoviePlaying()`
+- L315 `bool MovieRecentlyPlaying(unsigned int windowMs)`
