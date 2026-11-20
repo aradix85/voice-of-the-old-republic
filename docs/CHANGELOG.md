@@ -72,6 +72,8 @@ installer, as the pre-release `bridge-latest`.
 - A use that stops at a closed door names the door.
 - A walk that does not start says "Trying another way" while the mod works
   on it.
+- Where no walk starts at all, among containers or between people, the mod
+  steps out with your own movement key and walks from there.
 - Enter on a map note that names the person or thing beside it goes to that
   person or thing.
 - A walk that arrives with a companion far behind says who stayed behind.
@@ -323,6 +325,21 @@ installer, as the pre-release `bridge-latest`.
   seconds, when the mod begins its own attempts: a plain walk, steps aside,
   its own route. Those can take ten seconds more, in which nothing was said
   and the door or chest was taken for stuck.
+- A character rooted where the game starts no walk at all is stepped out by
+  hand. Standing in the footprint of a bashed container (the cargo hold of
+  the crashed Ebon Hawk) or between crew who stand on the spot a save loads
+  into (the same ship, twice on 20 November), every walk was refused, the
+  steps aside too, and it ended in "Movement cancelled, way blocked"; walking
+  out with W always worked. After the steps aside the mod now holds your own
+  movement key for half a second, toward the freest of forward, back, left
+  and right of the camera (over floor, no wall, furthest from people and
+  placeables), and then walks to the target again. Once per walk; the key is
+  let go when the walk ends or the game loses the focus.
+- A step aside is only taken to a point over walkable floor with no wall on
+  the way. A point off the floor was moved to the nearest floor, 3 metres off
+  in a direction nobody chose, and that step never started.
+- When the steps aside fail without the character moving, the mod's own
+  route is tried before the walk region by region.
 - Enter on a map note that carries the name of the person or thing within 3
   metres of it goes to that person or thing: "Freyyr" beside Freyyr,
   "Computer" at the computer, "Basket Up" over the Basket. The note only

@@ -1,4 +1,4 @@
-# guidance_approach.h (147 lines)
+# guidance_approach.h (151 lines)
 
 Source: `patches/Accessibility/guidance_approach.h`
 
@@ -24,10 +24,11 @@ Input restore on SUCCESS stays with engine_player's queue-watched session (TickP
 - L94 `void TickApproach()`: Per-tick driver.
 - L99 `bool IsApproachInFlight()`: True while a Cycle-owned approach is in flight — the Shift+- second-press toggle-cancel queries this.
 - L105 `bool IsAnyModApproachInFlight()`: True while ANY mod-armed approach is in flight, regardless of owner.
-- L113 `bool CancelByMovement()`: Movement-key cancel: reclaim manual control from an in-flight mod-armed walk.
-- L117 `void CancelApproach()`: Clear tracker state without announcing — for the explicit Shift+- / panic cancel paths, where the caller already runs CancelMovement + input restore.
-- L124 `void* ApproachTarget()`: The object an in-flight approach is walking to, or nullptr when nothing is armed.
-- L132 `enum class ApproachOutcome`: How the most recent approach ended.
-- L133 `ApproachOutcome LastApproachOutcome(uint32_t* serial)`
-- L139 `void SpeakWayBlocked(const char* name, const Vector& targetPos)`: Announce "way blocked" for a target with the given name + LIVE distance and compass direction (player→target), falling back to the plain phrase when the player position is unreadable.
-- L144 `void RegisterMsgRule()`: Registers the feedback-router rule that follows the engine's "Unable to reach target!" with the closed door that stands by the target, when one does.
+- L109 `bool HandStepActive()`: True while the approach itself holds a movement key down (its step by hand out of a spot no walk starts from): that key is not the player's.
+- L117 `bool CancelByMovement()`: Movement-key cancel: reclaim manual control from an in-flight mod-armed walk.
+- L121 `void CancelApproach()`: Clear tracker state without announcing — for the explicit Shift+- / panic cancel paths, where the caller already runs CancelMovement + input restore.
+- L128 `void* ApproachTarget()`: The object an in-flight approach is walking to, or nullptr when nothing is armed.
+- L136 `enum class ApproachOutcome`: How the most recent approach ended.
+- L137 `ApproachOutcome LastApproachOutcome(uint32_t* serial)`
+- L143 `void SpeakWayBlocked(const char* name, const Vector& targetPos)`: Announce "way blocked" for a target with the given name + LIVE distance and compass direction (player→target), falling back to the plain phrase when the player position is unreadable.
+- L148 `void RegisterMsgRule()`: Registers the feedback-router rule that follows the engine's "Unable to reach target!" with the closed door that stands by the target, when one does.

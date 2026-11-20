@@ -1,4 +1,4 @@
-# guidance_autowalk.cpp (383 lines)
+# guidance_autowalk.cpp (384 lines)
 
 Source: `patches/Accessibility/guidance_autowalk.cpp`
 
