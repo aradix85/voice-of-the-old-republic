@@ -65,6 +65,17 @@ bool IsPanelInManager(void* panel);
 // (last-pushed draws on top), else nullptr.
 void* GetForegroundPanel(void* mgr);
 
+// A panel in panels[] of a kind the engine only ever shows as a modal, that
+// is no longer on the modal stack; nullptr when there is none. The engine's
+// PopModalPanel pops whatever is on top, so a movie or a load that ends while
+// such a panel is up takes it off the stack and leaves it on screen: the mouse
+// still works there, and no key arrives.
+void* FindOrphanedModalPanel(void* mgr);
+
+// The engine's own CSWGuiManager::PushModalPanel. True when the panel went on
+// the modal stack; false when it was on it already, or on a fault.
+bool PushModalPanel(void* mgr, void* panel);
+
 // Dumps panels + modal_stack + GetForegroundPanel. Doubles as live
 // verification of the SARIF-derived modal_stack offset.
 void LogManagerStack(void* mgr, const char* tag);

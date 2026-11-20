@@ -156,6 +156,49 @@ void* GetForegroundPanel(void* mgr) {
     return nullptr;
 }
 
+// The kinds the engine only ever shows on the modal stack.
+static bool OpensOnlyAsModal(PanelKind k) {
+    return k == PanelKind::PartySelection;
+}
+
+void* FindOrphanedModalPanel(void* mgr) {
+    constexpr int kCap = 32;
+    void* panels[kCap];
+    void* modal[kCap];
+    const int pn = ReadPanelArray(mgr, panels, kCap);
+    const int mn = ReadModalStack(mgr, modal, kCap);
+    // SEH-guarded like GetForegroundPanel: a panel pointer can be stale.
+    __try {
+        for (int i = pn - 1; i >= 0; --i) {
+            void* p = panels[i];
+            if (!p || !OpensOnlyAsModal(IdentifyPanel(p))) continue;
+            bool onStack = false;
+            for (int j = 0; j < mn && !onStack; ++j) onStack = modal[j] == p;
+            if (!onStack) return p;
+        }
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return nullptr;
+    }
+    return nullptr;
+}
+
+// CSWGuiManager::PushModalPanel(panel) @0x0040bd90, __thiscall, ret 4. Drops
+// the manager's hover and focus, adds the panel to panels[] when it is not
+// there, and appends it to the modal stack unless it is on it already (then
+// it returns 0). RemovePanel takes a panel off the modal stack wherever it
+// sits, so a panel pushed here closes the engine's own way.
+static const uintptr_t kAddrPushModalPanel = acc::addr::R(0x0040bd90);
+typedef int (__thiscall* PFN_PushModalPanel)(void* mgr, void* panel);
+
+bool PushModalPanel(void* mgr, void* panel) {
+    if (!mgr || !panel || !acc::addr::Ok(kAddrPushModalPanel)) return false;
+    __try {
+        return reinterpret_cast<PFN_PushModalPanel>(kAddrPushModalPanel)(mgr, panel) != 0;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+}
+
 void LogManagerStack(void* mgr, const char* tag) {
     const char* ctx = tag ? tag : "?";
     if (!mgr) {

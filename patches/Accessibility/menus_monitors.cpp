@@ -12,6 +12,7 @@
 #include "menus_chargen_skills.h"
 #include "menus_chain.h"
 #include "menus_extract.h"
+#include "menus_focus.h"     // RestoreOrphanedModal
 #include "menus_listbox.h"
 #include "speech.h"
 #include "tutorial_hints.h"
@@ -318,7 +319,8 @@ void AnnounceControl(void* control) {
 }
 
 void TickGeneralMonitors() {
-    // First: drain the pending-announce slot. Multiple SetActive events
+    acc::menus::focus::RestoreOrphanedModal();
+    // Then: drain the pending-announce slot. Multiple SetActive events
     // fired within this tick collapsed to the last write — speak it now
     // (or stay silent if the voluntary AnnounceControl path already spoke
     // matching text and primed the channel-0 dedup).

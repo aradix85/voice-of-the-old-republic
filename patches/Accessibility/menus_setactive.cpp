@@ -9,9 +9,11 @@
 
 #include "bringup_announce.h"
 #include "engine_area.h"
+#include "engine_manager.h"    // FindOrphanedModalPanel, PushModalPanel
 #include "engine_offsets.h"
 #include "engine_panels.h"
 #include "engine_reads.h"
+#include "engine_subscreen.h"  // SetMenuPauseBit
 #include "log.h"
 #include "menus.h"
 #include "menus_chain.h"
@@ -160,6 +162,22 @@ extern "C" void __cdecl OnSetActiveControl(void* panel, void* newControl) {
         return;
     }
     acc::menus::focus::AnnounceNewFocusedControl(n, panel, newControl);
+}
+
+// Puts a panel that lost its place on the modal stack back there with the
+// engine's own push, pauses the world again as the engine did when it opened
+// the panel, and replays the focus event the burst may have swallowed, so
+// that the panel is spoken and takes the keys. Waits for the burst to end:
+// what ends it pops the stack once more.
+void acc::menus::focus::RestoreOrphanedModal() {
+    if (BurstSuppression()) return;
+    void* mgr = GetGuiManager();
+    void* panel = FindOrphanedModalPanel(mgr);
+    if (!panel || !PushModalPanel(mgr, panel)) return;
+    acclog::Trace("Menus.Modal", "panel=%p kind=%s was off the modal stack — pushed back",
+                  panel, PanelKindName(IdentifyPanel(panel)));
+    SetMenuPauseBit(true);
+    OnSetActiveControl(panel, ReadPtrOrNull(panel, kPanelActiveControlOffset));
 }
 
 // CSWGuiListBox::SetActiveControl(CSWGuiControl* row, int param_2), hooked

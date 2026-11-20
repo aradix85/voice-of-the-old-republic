@@ -30,4 +30,8 @@ void WalkAndCaptureOnFirstSight(void* panel);
 void SpeakPanelTitleOnFirstSight(void* panel);
 void AnnounceNewFocusedControl(int n, void* panel, void* newControl);
 
+// Per tick: a modal panel the engine took off its modal stack while it stays
+// on screen goes back on it and is announced (menus_setactive.cpp).
+void RestoreOrphanedModal();
+
 }  // namespace acc::menus::focus
