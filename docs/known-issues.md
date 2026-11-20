@@ -263,15 +263,6 @@ Offer the community resolution / widescreen + HR-menus patches as an installer o
 
 ## Monitor
 
-### To check in play after the 2026-11 restructuring
-
-- Tab: the leader's name had two announcers and was heard twice, or as the old name and then the new one (confirmed by Anouk, 2026-11-11). party_leader_announce has one `Tick` now; confirm in play that the name comes once, and that Tab alone in the party still answers.
-- Max HP of companions: party_status and bridge_state read it with `ReadCreatureMaxHitPoints` (GetMaxHitPoints(1)), which the original notes say returns garbage for anyone but the player character. `ReadClientCreatureHitPoints` is what the character sheet uses. Compare Ctrl+H with the character sheet.
-- Enter on something out of reach: the use call left KOTOR 1's caller with garbage registers until 4c91ad0d, so the stalled approach could not read its target and gave up without a word. It should now say that the way is blocked. In Anouk's logs of 2026-11-10 and 11 on the old build, 212 of 610 armed approaches carried the handle where the object pointer belongs, and 63 ended in "target position unresolvable - disarm quietly". She reports (2026-11-11) that after "way blocked" she often cannot walk on until she reloads, and that turning the character does not always free it. Whether that is gone with the fix is open: when it happens again, look at the live state (action queue depth, `Approach:` and `Autowalk:` lines) before she reloads.
-- KOTOR 2 tutorial popups: the popup called the wrong engine function for its text until 9b6fcb1b (a vtable slot off by one). Its text should show and be spoken now; no KOTOR 2 session has confirmed it.
-- combat_queue counts a round without an action list as 0 where it was -1 and silent; if the engine can add an action on such a round, the announce now says "position 1" there.
-- NVDA's "speech interrupt for typed characters" (Keyboard settings) cuts a line while a key is held (map cursor, turret fire key). The Windows voices used to dodge that; they are gone.
-
 ### KOTOR 2 party selection read "control 13..24" — v0.8.3 fix FAILED in the field, re-fixed 2026-10-24, awaiting test (GitHub issues 6, 7 and 9)
 
 **v0.9.0 field log (2026-10-29, `k2-patch-20261029-192616.log`, Telos Czerka
@@ -482,61 +473,10 @@ KOTOR 2 mostly cannot: the answer to this entry's original open question (decomp
 
 Code: `engine_actionbar.cpp` (`VariantRefusal`, `SendUseItemRequestK2`, the always-on flags log), `combat_queue.cpp` (`ArmUserQueueAdd` / `TickNoOpWatch`), `combat_diag.cpp` (`OnUseItemRequestK2`), `unified_action_menu.cpp` (`SpeakRefusal`, the medical party picker).
 
-### To confirm in play: fixes of 15 and 16 Nov 2026
-
-- The place right in front of a door belongs to the side you stand on (1b43996f, 16 Nov 2026). To test in the village on Kashyyyk in front of the door "Chieftain's Hall" at (94,67): Ctrl+N should name the exits of the village there and not "behind locked doors". Log: "ExitMemory: region ... is the doorway sliver of door". Watch for the reverse too: if the mod says somewhere that something can be reached while a locked door stands in between, the margin of 0.3 metres in `FindDoorOnEdge` (room_topology_doors.cpp) is too wide. The check script laid the rule next to all doors from a week of logs: 158 of the 168 do not change.
-- "Movement cancelled, combat." with the name, as soon as there is fighting while the player is on the way to someone or something (fc306ce4, 16 Nov 2026). Log: "Approach: the party is fighting — released". Watch whether it breaks off too often (a Tach in the distance) and whether the player can then still walk and attack normally.
-- Enter on a far target the game makes no action for (the Force Field in kas_m24aa from 120 metres and further) should now say "Walking to ...", walk there and give Enter there by itself (bcbb3d69, 16 Nov 2026). Log: "Picker: descriptor belongs to ... has no copy" (or "has a copy": then the suspicion that the client does not know the object at that distance is wrong) and "Interact: ... the region walk goes there and acts on arrival". If it says "Dialog" or "Open" with the name of the far target again and the character walks the wrong way, it is not solved; the workaround is Shift+- on the target and Enter once there.
-- False Pazaak (fix of 15 Nov 2026): no "Pazaak. Press C..." any more in a dialog, and at a real game still "Pazaak: acquired board panel=".
-- A loose item in the world (fix of 15 Nov 2026): Enter says "... cannot be picked up", and Ctrl+L and "To search" no longer name it.
-- A key in the inventory (fix of 15 Nov 2026): "locked, you have the key". Log: "LockNeed: ... -> 5". The two engine calls behind it (GetItemRepository, FindItemWithTag) have never yet run in the game.
-
-### To confirm in play: first round of 20 Nov 2026
-
-- Health (9589e49d): in a fight "korasha sinks to 150 of 323" at half and at a quarter, and the quarter interrupts; Ctrl+H and the summary say "Canderous down". Watch whether it talks too often and whether the maximum of companions is right. Log: "PartyStatus: health warning, band N".
-- Wordless scene (7eab047f): "Scene without words." after 2.5 seconds without a line and without replies, "Scene over." when the panel closes. Watch whether it fires in the middle of an ordinary dialog. Log: "Dialog.Speech: wordless scene named".
-- Closed door by the target (d11f1d4c): "A closed Tomb Door stands by it." after "way blocked" and after "Unable to reach target!".
-- Equipment list (ca9ea23a): the lines with "--" are no longer said, and only what changes is said.
-- Bridge (577e4a12): /state gives dialog_replies as long as a dialog is open, at a computer too.
-
-### To confirm in play: second round of 20 Nov 2026
-
-- "Combat ends" with the party line when someone is down, also without kills (bf4ebc75).
-- The load menu says ", newest" after the save with the longest play time (9cd5db6b). It works only if the row shows a play time such as "80h 24m", otherwise it says nothing: to check.
-- The workbench's list of items says ", upgraded" (36cf27b3). Log: "WorkbenchItems: ... upgraded=1".
-- A use that ends at a closed door between the player and the target says "A closed Door stands by it." (537e9838, the urn of Tulak Hord).
-- A walk that does not start says "Trying another way." after two seconds (fb555577).
-- Enter on a map note that carries the name of the person or thing within 3 metres goes to that target (dea8bfae). Log: "landmark [...] stands ... from its namesake". To test at Freyyr, the Computer and the basket "Basket Up" on Kashyyyk.
-- A walk that arrives while a companion is more than 40 metres away says "HK-47 stayed behind." (eeddeb13). Watch whether it talks too often in solo mode.
-- A movie in the game says "Movie." (409fce92); not at the movies of the start-up.
-
-### To confirm in play: the step by movement key out of a spot no walk starts from (20 Nov 2026)
-
-- Built for three cases of 20 Nov 2026 and not yet run in the game: after the steps aside the approach holds the player's own movement key for 450 ms toward the freest of forward, back, left and right of the camera, then walks to the target again. Log: "Approach: hand step: rooted and no walk starts; holding the forward key (scancode 0x11) for 450ms toward ...", then "sidestep done — walking to target again". To watch: that the character really moves (the key goes through SendInput and needs the game in the foreground), that "Movement cancelled" is not said for the mod's own key, and that no key stays down (the release is in TickHandStep). A save that loads into the wedge: the quicksave of 20 Nov 22:43 on the crashed Ebon Hawk, korasha at (53.3,45.2) with Juhani and Jolee within a metre; Enter on the exit should now get out.
-- The three cases, kept for the log lines:
-  - Standing among a cluster of containers, no walk starts at all (20 Nov 2026, the crashed Ebon Hawk ebo_m41aa, cargo hold, the player at (31.68,36.27) on the spot of "Plasteel cylinder 3" after bashing a container there, with two more cylinders, two Metal Boxes and the Compartment within 3 metres). Enter on the exit "Unknown World - Central Beach" said "Use Unknown World - Central Beach", "Trying another way." and "Movement cancelled, way blocked."; log "walk never started", "sidestep skipped: nobody within 2.5m", "route walk: over at hop 1/13 (the hop keeps stalling)", "explore walk: stop after 0 hop(s), goal 39 (blocked)". A 4 metre hop did not start either, and loading a save made on that spot changed nothing. Walking by hand works: holding W for 1.5 seconds moved the character 8 metres out, and from there the walk to the exit ran normally. Workaround: walk a few steps with W, then Enter again. Proposed fix: when no walk starts and nobody stands near, the sidestep should still be tried, as it frees the character from containers as well as from party members.
-  - After a scripted scene that places the party, the player character can stand wedged behind its companions and no walk starts (20 Nov 2026, South Beach unk_m41ab, after the hologram of the Elders: korasha at (47.4,111.9) inside the ring of pylons, Canderous right behind her and HK-47 two metres north in the 5 metre opening). Every walk to the north moved her one metre and stopped; the bridge's walk command reported success each time. Way out: Tab to the companion nearest the open side (HK-47), walk away with him, the others follow. Proposed fix: let the sidestep rescue also try the companion that stands between the player and the target, or say "HK-47 is standing in the way" as the blocked line already can.
-  - Between crew on the crashed Ebon Hawk (ebo_m41aa, 20 Nov 2026, twice from the same quicksave): korasha at (53.3,45.2), Juhani and Jolee within a metre. Log: "walk never started", "sidestep 1/3 ... stepping 2.0m to (55.18,44.47)" with "WalkTo: (55.18,44.47,1.83) is off the walkable floor; walking to the floor nearest it, 1.45m away" (that step never ran), a second step that ran one time and not the other, a third of 0.46 m, then "refused walk handed to the region walk" and "Movement cancelled, way blocked". By hand: walks to (54.77,46.65), (52.4,48.0), (57.4,46.6) and (64.5,45.6) in that order got out; a walk straight to the exit and W along the camera both came back to the same spot.
-
-### To confirm in play: the deadly arcs before the Elder compound (20 Nov 2026)
-
-- Built after the whole party died there (South Beach unk_m41ab, log "blowtrig3 damages korasha for 998 damage (universal 998)"): Enter on "Settlement Entrance" from the north-east walked through the arc beside the opening. Not yet run in the game. To test from a save before the hologram (the autosave on arriving at South Beach): Enter on "Settlement Entrance" from 40 metres or more should say "A deadly barrier guards Settlement Entrance. Walking to its gate; choose the target again after that.", walk to about (46.6,114.7) and open the hologram; after the conversation a second Enter should walk through the opening to the door. Log: "Approach: deadly zone on the way to ... walking to its gate" and "route walk: a deadly zone bars the target".
-- What it does not cover: a walk whose straight line misses every arc while the game's own path does not (the mod only judges the straight line); companions, who walk beside the leader and can still touch an arc; walking by hand with W, which gets no warning; the bridge's walk command, which arms no approach; and the region walk of Ctrl+Shift+N, whose steps are judged one by one and that may say the line at each of them.
-- The outer arcs (blowtrigd1 to 6) stay after the hologram. The opening between them is 5 metres wide; the zones leave about 3 metres of it.
-
-### To confirm in play: list stepping at the workbench and in the equipment list (a8faa3a1 and 69c32401, 20 Nov 2026)
-
-- In the workbench's crystal list and in the equipment list, Up and Down should step from the row the keyboard was on, and Enter and Shift+arrow should take that row. The game puts the selection back every frame on the row under the mouse cursor, and moving the cursor away does not always hold; because of that the list stuck on "Crystal, Firkrann, 4 of 7" on 20 Nov 2026 and the Solari crystal could not be chosen. Log on a deviation: "steps from the keyboard's row N, not the engine's M (hover-select)". If it still fails: scroll the list and click the row with the mouse (radix_input, with the coordinates from the screenshot times 1.5), then Down to Assemble and Enter. Mouse clicks do work in the game's menu screens (workbench, Select Party Members), not in the world.
-
 ### Swoop race automatic pilot (KOTOR 1 only)
 
 - The setting "Swoop race: automatic pilot" steers to the line, shifts by itself and avoids buoys; the player presses nothing. KOTOR 1 only. It has been run on the Taris, Tatooine and Manaan (18 Nov 2026) tracks. A race without the line "race timer start" in the log had no signals and no pilot.
 - After a race on a new track, look in the log at "SwoopRace" and "SwoopAssist": "pilot: shift", "CROSS ... hit=", "pilot: buoy slot=", and "box=FAILED" (then the pilot works with the origin of the buoy instead of its collision box). A collision shows as a drop in "snapshot speed".
-
-### Still watching from play, 11 to 20 Nov 2026
-
-- The kill announcement no longer interrupts speech. If the player finds that speech lags behind in a long fight, let the kill interrupt again and keep only the summary.
-- Check the container fields: LockNeed lines with kind=9 in the log against `python kotor-tools\check_locks.py MODULE`.
 
 ## Polish
 
