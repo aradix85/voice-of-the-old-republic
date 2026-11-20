@@ -44,6 +44,28 @@ TEST_CASE("A walk into a zone crosses it; one out of it or to a target inside do
     CHECK_FALSE(tb::Crosses(Vector{5, 25, 0}, Vector{20, 25, 0}));
 }
 
+TEST_CASE("Standing zones are walked round like learned ones and go as a set") {
+    // A second strip further east, from x 30 to 32.
+    const Vector kFar[] = {Vector{30, 0, 0}, Vector{32, 0, 0}, Vector{32, 20, 0},
+                           Vector{30, 20, 0}};
+    tb::ForArea(&g_areaB);
+    tb::ForArea(&g_areaA);
+    REQUIRE(tb::Add(kStrip, 4));
+    REQUIRE(tb::AddStanding(kFar, 4));
+    CHECK_FALSE(tb::AddStanding(kFar, 4));                           // known already
+    CHECK(tb::Crosses(Vector{25, 5, 0}, Vector{40, 5, 0}));          // the standing one
+    CHECK(tb::CrossesStanding(Vector{25, 5, 0}, Vector{40, 5, 0}));
+    CHECK(tb::Crosses(Vector{5, 5, 0}, Vector{20, 5, 0}));           // the learned one
+    CHECK_FALSE(tb::CrossesStanding(Vector{5, 5, 0}, Vector{20, 5, 0}));
+    CHECK_FALSE(tb::CrossesStanding(Vector{25, 5, 0}, Vector{31, 5, 0}));  // target inside
+
+    tb::ClearStanding();
+    CHECK_FALSE(tb::Crosses(Vector{25, 5, 0}, Vector{40, 5, 0}));
+    CHECK(tb::Crosses(Vector{5, 5, 0}, Vector{20, 5, 0}));           // the learned one stays
+    CHECK(tb::AddStanding(kFar, 4));                                 // and it can come back
+    CHECK(tb::CrossesStanding(Vector{25, 5, 0}, Vector{40, 5, 0}));
+}
+
 TEST_CASE("The outlines come as walls, without the zone an end stands in") {
     tb::ForArea(&g_areaB);
     tb::ForArea(&g_areaA);
