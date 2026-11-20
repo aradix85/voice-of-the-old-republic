@@ -1,4 +1,4 @@
-# guidance_approach.h (142 lines)
+# guidance_approach.h (147 lines)
 
 Source: `patches/Accessibility/guidance_approach.h`
 
@@ -30,3 +30,4 @@ Input restore on SUCCESS stays with engine_player's queue-watched session (TickP
 - L132 `enum class ApproachOutcome`: How the most recent approach ended.
 - L133 `ApproachOutcome LastApproachOutcome(uint32_t* serial)`
 - L139 `void SpeakWayBlocked(const char* name, const Vector& targetPos)`: Announce "way blocked" for a target with the given name + LIVE distance and compass direction (player→target), falling back to the plain phrase when the player position is unreadable.
+- L144 `void RegisterMsgRule()`: Registers the feedback-router rule that follows the engine's "Unable to reach target!" with the closed door that stands by the target, when one does.

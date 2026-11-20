@@ -1,4 +1,4 @@
-# msg_router.cpp (221 lines)
+# msg_router.cpp (225 lines)
 
 Source: `patches/Accessibility/msg_router.cpp`
 
@@ -21,5 +21,5 @@ AppendToMsgBuffer is main-thread-only. No locking.
 - L63 `void Router::LogRaw(const char* text)`
 - L67 `void Router::LogEmit(const char* subTag, const char* text)`
 - L92 `extern "C" void __cdecl OnAppendToMsgBuffer(void* /*guiInGame*/, void* esp_param1_addr)`
-- L187 `void EnsureRulesRegistered()`
-- L216 `extern "C" void __cdecl OnAppendToMsgBufferK2(void* thisGui, void* ebp)`: KOTOR 2 frame-unpacking wrapper (Batch 2).
+- L188 `void EnsureRulesRegistered()`
+- L220 `extern "C" void __cdecl OnAppendToMsgBufferK2(void* thisGui, void* ebp)`: KOTOR 2 frame-unpacking wrapper (Batch 2).

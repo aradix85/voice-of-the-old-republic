@@ -67,6 +67,8 @@ installer, as the pre-release `bridge-latest`.
 - A party member standing on the target is named: "X is standing in the way".
 - A walk boxed in by people steps aside by itself and tries again; if it
   still cannot start, you hear who is in the way.
+- "Way blocked" and the game's "Unable to reach target!" name a closed door
+  that stands by the target.
 - Talking to someone behind a counter works: the walk stops in front of them
   and the conversation starts.
 - Enter on a map note at a door uses the door.
@@ -295,6 +297,10 @@ installer, as the pre-release `bridge-latest`.
   while one manual step aside always freed the walk. Sidesteps only happen
   with someone within 2.5 metres; a half-metre shuffle no longer counts as a
   walk that ran.
+- After "way blocked", and after the game's own "Unable to reach target!",
+  the mod says "A closed Tomb Door stands by it." when a closed door is within
+  4 metres of the target. In the Korriban tombs a sarcophagus stands behind
+  its own Tomb Door: Bash on it was refused without a word about the door.
 - The rescue walk to a creature or placeable stops 1.8 metres in front of it
   on your side, not on its exact spot, and a conversation that needed it is
   asked for again on arrival (once per 20 seconds per person). Janice Nall in
@@ -647,7 +653,8 @@ installer, as the pre-release `bridge-latest`.
   "Attack left +23, right +25", "Damage left 9-32, right 9-32", or Defense
   for armour. The game already wears the item you stand on, so the numbers
   are the real ones; an item that changes nothing adds nothing, which tells
-  you two items are equal.
+  you two items are equal. The "--" the game shows in every row between two
+  items is not spoken, and no longer makes an unchanged number read as changed.
 - In the workbench's crystal list and the equipment list, Up and Down step
   from the row the keyboard was on, and Enter and Shift+Up/Down act on that
   row. The game re-selects the row under the mouse pointer every frame, and

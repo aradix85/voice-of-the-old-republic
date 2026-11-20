@@ -1,4 +1,4 @@
-# menus_listbox_picker.cpp (521 lines)
+# menus_listbox_picker.cpp (524 lines)
 
 Source: `patches/Accessibility/menus_listbox_picker.cpp`
 
@@ -31,8 +31,8 @@ The cursor-park mechanism ------------------------- Both pickers set useEngineSe
 - L226 `void SpeakStillEquippedAfterRefusal(void* panel, void* slotBtn)`: The engine refused to open the picker — its "no items for this slot" modal is what the user just heard (the ContentChange monitor speaks it).
 - L250 `void MonitorEquipPickerSelection()`: Equip picker: retire the arm latch, run the one-shot cursor park, and speak row changes.
 - L403 `bool RecordEquipStatRow(void* label, int /*sortCy*/, void* userData)`
-- L423 `void MonitorEquipPickerStats()`: Runs after MonitorEquipPickerSelection, so a row is named before its stats.
-- L438 `void MonitorWorkbenchUpgradePicker()`: Workbench upgrade picker: retire the arm latch and run the one-shot cursor park.
-- L500 `bool RuleSuppressEquipPreviewFeedback(const char* text)`: Message-buffer rule: mute the engine's feedback while the equip picker is up.
-- L509 `void RegisterPickerMsgRules()`
-- L514 `void TickPickerMonitors()`
+- L426 `void MonitorEquipPickerStats()`: Runs after MonitorEquipPickerSelection, so a row is named before its stats.
+- L441 `void MonitorWorkbenchUpgradePicker()`: Workbench upgrade picker: retire the arm latch and run the one-shot cursor park.
+- L503 `bool RuleSuppressEquipPreviewFeedback(const char* text)`: Message-buffer rule: mute the engine's feedback while the equip picker is up.
+- L512 `void RegisterPickerMsgRules()`
+- L517 `void TickPickerMonitors()`
