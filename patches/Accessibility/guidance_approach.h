@@ -104,6 +104,10 @@ bool IsApproachInFlight();
 // arms the tracker, so it is structurally out of this function's reach.
 bool IsAnyModApproachInFlight();
 
+// True while the approach itself holds a movement key down (its step by hand
+// out of a spot no walk starts from): that key is not the player's.
+bool HandStepActive();
+
 // Movement-key cancel: reclaim manual control from an in-flight mod-armed walk.
 // Owner-agnostic teardown — cancels the bouncing walk, restores input if the
 // arming caller disabled it, clears dialog-pending state (Enter walk-to-talk),

@@ -7,6 +7,7 @@
 #include "dialog_speech.h"      // ConversationHasSpeaker
 #include "engine_area.h"
 #include "engine_compass.h"
+#include "engine_keymap.h"      // the movement keys of the hand step
 #include "engine_panels.h"
 #include "engine_player.h"
 #include "engine_reads.h"
@@ -15,7 +16,9 @@
 #include "exit_memory.h"       // RescueWalk: the region walk under a refused walk
 #include "guidance_autowalk.h"
 #include "guidance_pathfind.h"  // ComputePath: the route walk
+#include "hotkeys.h"            // IsForegroundGame
 #include "interact_dispatch.h"
+#include "key_inject.h"
 #include "log.h"
 #include "msg_router.h"         // the "Unable to reach target!" rule
 #include "narrated_target.h"
@@ -121,10 +124,12 @@ Vector RescueDestination(const Vector& tgt) {
                   tgt.y + dy / d * kFrontOfTargetM, tgt.z};
 }
 
-// Living creatures (party included, the leader not) within `radius` of `pc`.
-// Fills positions and, when `outObj` is given, the objects. Returns the count.
+// Living creatures (party included, the leader not) within `radius` of `pc`,
+// and with `placeablesToo` the placeables as well: what a step should keep
+// clear of. Fills positions and, when `outObj` is given, the objects. Returns
+// the count.
 int NearbyCreatures(const Vector& pc, float radius, Vector* outPos,
-                    void** outObj, int maxCount) {
+                    void** outObj, int maxCount, bool placeablesToo = false) {
     void* area = acc::engine::GetCurrentArea();
     if (!area) return 0;
     void* leader = acc::engine::GetPlayerServerCreature();
@@ -133,11 +138,13 @@ int NearbyCreatures(const Vector& pc, float radius, Vector* outPos,
     while (void* obj = it.Next()) {
         if (n >= maxCount) break;
         if (obj == leader) continue;
-        if (acc::engine::GetObjectKind(obj) !=
-            static_cast<int>(acc::engine::GameObjectKind::Creature)) {
+        const int kind = acc::engine::GetObjectKind(obj);
+        if (kind == static_cast<int>(acc::engine::GameObjectKind::Creature)) {
+            if (acc::examine_view::IsCreatureDead(obj)) continue;
+        } else if (!placeablesToo ||
+                   kind != static_cast<int>(acc::engine::GameObjectKind::Placeable)) {
             continue;
         }
-        if (acc::examine_view::IsCreatureDead(obj)) continue;
         Vector p;
         if (!acc::engine::GetObjectPosition(obj, p)) continue;
         if (DistXY(p, pc) > radius) continue;
@@ -148,10 +155,27 @@ int NearbyCreatures(const Vector& pc, float radius, Vector* outPos,
     return n;
 }
 
+// True when the PC can step from `pc` to `c` in a straight line: `c` lies over
+// walkable floor and no wall stands between. Also true when the floor cache
+// cannot judge (not built, or the PC itself reads as off the floor).
+bool StraightStepFree(const Vector& pc, const Vector& c) {
+    namespace ws = acc::spatial::wall_surfaces;
+    if (!ws::OverWalkableFloor(pc)) return true;
+    if (!ws::OverWalkableFloor(c)) return false;
+    const acc::engine::WallEdge* walls = nullptr;
+    int wallCount = 0;
+    if (!ws::GetCachedWalls(walls, wallCount)) return true;
+    Vector hit{};
+    return !acc::engine::SegmentCrossesWalkmesh(walls, wallCount, pc, c, hit,
+                                                /*ignoreZ=*/true);
+}
+
 // Pick a sidestep point kSidestepDist from `pc`: as far from nearby creatures
 // as possible, leaning toward the target, but never straight at it (that line
-// is the one that just failed) and never back along an already-tried
-// direction. Returns false when every direction is hemmed in.
+// is the one that just failed), never back along an already-tried direction
+// and never off the floor or through a wall (WalkTo would move such a point
+// to the floor nearest it, metres off in a direction nobody chose). Returns
+// false when every direction is hemmed in.
 bool ChooseSidestep(const Vector& pc, const Vector& tgt, Vector& out,
                     float& outYaw, float& outNearest) {
     Vector obs[kMaxObstacles];
@@ -171,6 +195,7 @@ bool ChooseSidestep(const Vector& pc, const Vector& tgt, Vector& out,
         if (tried) continue;
         Vector c{pc.x + std::cos(a) * kSidestepDist,
                  pc.y + std::sin(a) * kSidestepDist, pc.z};
+        if (!StraightStepFree(pc, c)) continue;
         float nearest = 99.0f;
         for (int i = 0; i < n; ++i) {
             const float d = DistXY(obs[i], c);
@@ -396,6 +421,114 @@ bool TrySidestep(const Vector& tgt) {
         "(%.2f,%.2f) (nearest creature there %.1fm) name=[%s]",
         g_st.sidestepTries, kSidestepMax, kSidestepDist, step.x, step.y,
         nearest, g_st.name);
+    return true;
+}
+
+namespace {
+
+// The step by hand (TryHandStep): the scancode held down and when to let go.
+// Kept outside g_st, which a new arm wipes while the key may still be down.
+constexpr DWORD kHandStepMs     = 450;   // about 2.4 m at a run
+constexpr float kHandStepNearM  = 1.2f;  // must be free
+constexpr float kHandStepFarM   = 2.4f;  // better when free as well
+int   g_handKey   = 0;
+DWORD g_handUntil = 0;
+
+void ReleaseHandStep() {
+    if (g_handKey == 0) return;
+    acc::key_inject::Send(g_handKey, /*down=*/false);
+    g_handKey = 0;
+}
+
+}  // namespace
+
+bool HandStepActive() {
+    return g_handKey != 0;
+}
+
+void TickHandStep() {
+    if (g_handKey == 0) return;
+    // Until the time is up, and no longer than the approach or the focus last.
+    if (g_st.active && acc::hotkeys::IsForegroundGame() &&
+        static_cast<LONG>(GetTickCount() - g_handUntil) < 0) {
+        return;
+    }
+    ReleaseHandStep();
+}
+
+bool TryHandStep(const Vector& tgt) {
+    if (g_st.handStepped || g_handKey != 0) return false;
+    if (!acc::hotkeys::IsForegroundGame()) return false;
+    Vector pc;
+    float  camYaw = 0.0f;
+    if (!acc::engine::GetPlayerPosition(pc) ||
+        !acc::engine::GetCameraYawRadians(camYaw)) {
+        return false;
+    }
+    if (g_st.haveWalkStart && DistXY(pc, g_st.walkStartPos) > kRootedMaxM) {
+        return false;                   // the walk ran; the PC is not rooted
+    }
+    Vector obs[kMaxObstacles];
+    const int n = NearbyCreatures(pc, kObstacleRadius + kHandStepFarM, obs, nullptr,
+                                  kMaxObstacles, /*placeablesToo=*/true);
+    // The walk keys move along the camera: forward, back, and the strafe
+    // pair to its left and right.
+    using Axis = acc::engine_keymap::MoveAxis;
+    static const struct { Axis axis; float turn; const char* word; } kDirs[] = {
+        {Axis::Forward,   0.0f,        "forward"},
+        {Axis::Backward,  kPi,         "back"},
+        {Axis::TurnLeft,  kPi * 0.5f,  "left"},
+        {Axis::TurnRight, -kPi * 0.5f, "right"},
+    };
+    const float toTgt = std::atan2(tgt.y - pc.y, tgt.x - pc.x);
+    float       best     = -1.0e9f;
+    int         bestKey  = 0;
+    const char* bestWord = "";
+    Vector      bestSpot = pc;
+    for (const auto& d : kDirs) {
+        const int vk  = acc::engine_keymap::MoveAxisPrimaryVk(d.axis);
+        const int key = vk ? static_cast<int>(MapVirtualKeyA(static_cast<UINT>(vk),
+                                                             MAPVK_VK_TO_VSC)) : 0;
+        if (key == 0) continue;
+        const float a = camYaw + d.turn;
+        const Vector nearSpot{pc.x + std::cos(a) * kHandStepNearM,
+                              pc.y + std::sin(a) * kHandStepNearM, pc.z};
+        const Vector farSpot{pc.x + std::cos(a) * kHandStepFarM,
+                             pc.y + std::sin(a) * kHandStepFarM, pc.z};
+        if (!StraightStepFree(pc, nearSpot)) continue;
+        const bool farFree = StraightStepFree(pc, farSpot);
+        float clear = 3.0f;
+        for (int i = 0; i < n; ++i) {
+            clear = (std::min)(clear, (std::min)(DistXY(obs[i], nearSpot),
+                                                 DistXY(obs[i], farSpot)));
+        }
+        const float score = clear + (farFree ? 1.0f : 0.0f) + 0.5f * std::cos(a - toTgt);
+        if (score > best) {
+            best     = score;
+            bestKey  = key;
+            bestWord = d.word;
+            bestSpot = farFree ? farSpot : nearSpot;
+        }
+    }
+    if (bestKey == 0) {
+        acclog::Write("Approach", "hand step: no free floor forward, back, left "
+            "or right of the camera name=[%s]", g_st.name);
+        return false;
+    }
+    StopForRescueWalk();
+    acc::key_inject::Send(bestKey, /*down=*/true);
+    g_handKey   = bestKey;
+    g_handUntil = GetTickCount() + kHandStepMs;
+    g_st.handStepped = true;
+    g_st.stepping    = true;
+    g_st.stepPos     = bestSpot;
+    MarkWalkStart();
+    g_st.movedSinceArm = false;
+    RestartStallWindow();
+    acclog::Write("Approach", "hand step: rooted and no walk starts; holding the "
+        "%s key (scancode 0x%02x) for %lums toward (%.2f,%.2f), %d obstacle(s) "
+        "near name=[%s]", bestWord, bestKey, static_cast<unsigned long>(kHandStepMs),
+        bestSpot.x, bestSpot.y, n, g_st.name);
     return true;
 }
 

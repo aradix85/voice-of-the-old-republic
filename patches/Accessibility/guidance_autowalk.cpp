@@ -350,8 +350,9 @@ void PollMovementKeysCancel() {
 
     // camera_orient's snap-turn drives the camera by SendInput'ing A/D scancodes,
     // which GetAsyncKeyState reports as real presses. Don't let that self-cancel
-    // an in-flight walk while the auto-rotation is running.
-    if (acc::camera_orient::IsActive()) return;
+    // an in-flight walk while the auto-rotation is running. The approach's own
+    // step by movement key (TryHandStep) is such a press as well.
+    if (acc::camera_orient::IsActive() || acc::guidance::HandStepActive()) return;
 
     // Any of the player's bound movement / turn keys held cancels the walk —
     // read from swkotor.ini [Keymapping] (engine_keymap) so this follows a

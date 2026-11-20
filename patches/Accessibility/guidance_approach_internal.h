@@ -64,6 +64,8 @@ struct ApproachState {
     bool          stepping      = false;
     Vector        stepPos       = {0.0f, 0.0f, 0.0f};
     float         triedYaw[kSidestepMax] = {};
+    // The step by movement key (TryHandStep) is one-shot per arm.
+    bool          handStepped   = false;
 
     // Route walk (TryRouteWalk): the mod's own path to the target, cut into
     // short hops; the hop being walked, how often it was started again, and
@@ -116,6 +118,14 @@ bool TickPartyHold(const Vector& pos, DWORD now);
 bool TryCoordinateWalkRetry(const Vector& tgt);
 bool TrySidestep(const Vector& tgt);
 void ResumeAfterSidestep();
+// Rooted where the engine starts no walk at all (inside the footprint of a
+// container, between people): holds the player's own movement key for a
+// moment, toward the freest of forward, back, left and right, as a player
+// would step out by hand; the arrival goes on as after a sidestep. True when
+// the key is down.
+bool TryHandStep(const Vector& tgt);
+// Every tick, armed or not: lets that key go when its time is up.
+void TickHandStep();
 bool TryReissueUse(float gap);
 // The PC has settled and the use it was sent to do is still queued: the
 // engine cannot get to the use point from this side (a terminal on a desk

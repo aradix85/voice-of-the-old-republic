@@ -149,6 +149,7 @@ void ArmApproach(const ApproachArm& arm) {
 }
 
 void TickApproach() {
+    TickHandStep();
     if (!g_st.active) {
         TickTurnbackResume();
         return;
@@ -284,7 +285,8 @@ void TickApproach() {
     }
 
     // A sidestep stalled short of its point: if it moved at all, try the
-    // target again from here; if it never moved, try another direction.
+    // target again from here; if it never moved, try another direction, then
+    // a step by movement key, then the mod's own path.
     if (g_st.stepping) {
         if (g_st.movedSinceArm) {
             ResumeAfterSidestep();
@@ -292,7 +294,11 @@ void TickApproach() {
         }
         g_st.stepping = false;
         Vector t2;
-        if (ResolveTargetPos(t2) && TrySidestep(t2)) return;
+        if (ResolveTargetPos(t2) &&
+            (TrySidestep(t2) || TryHandStep(t2) ||
+             TryRouteWalk(t2, "the steps aside did not free the walk"))) {
+            return;
+        }
         if (TryRegionWalk()) return;
         OnBlocked(now - g_st.progressAt);
         return;
@@ -344,6 +350,7 @@ void TickApproach() {
     // retry and then sidesteps before anything calls it blocked.
     if (TryCoordinateWalkRetry(tgt)) return;
     if (TrySidestep(tgt)) return;
+    if (TryHandStep(tgt)) return;
     if (TryRouteWalk(tgt, "the engine starts no walk")) return;
     if (TryRegionWalk()) return;
 
