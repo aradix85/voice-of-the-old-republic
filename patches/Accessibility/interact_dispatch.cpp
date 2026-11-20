@@ -12,6 +12,7 @@
 #include "engine_panels.h"
 #include "engine_picker.h"
 #include "engine_player.h"
+#include "examine_view.h"    // IsCreatureDead: a map note's namesake
 #include "exit_memory.h"     // loot reminder when leaving a region
 #include "filter_objects.h"
 #include "guidance_approach.h"
@@ -26,6 +27,7 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
+#include <cstring>
 
 namespace acc::interact {
 
@@ -197,6 +199,55 @@ bool RedirectLandmarkToTransition(void* target, const char* name, bool forceRadi
         "(%s) — Enter goes to the transition", name, th, dest,
         named ? "names it" : "player at the note");
     DispatchInteract(trigger, th, forceRadial);
+    return true;
+}
+
+// A map note that carries the name of the person or thing it stands beside
+// means that person or thing: "Freyyr" a metre and a half from Freyyr,
+// "Computer" at the computer, "Basket Up" over the Basket that takes you up.
+// Enter on the note said "Use Freyyr" and only walked to the note, twice
+// taken for a target that was not a person. The names must overlap, and the
+// object stand within kNamesakeM of the note.
+constexpr float kNamesakeM = 3.0f;
+
+bool RedirectLandmarkToNamesake(void* target, const char* name, bool forceRadial) {
+    Vector lpos{};
+    void* area = acc::engine::GetCurrentArea();
+    if (!area || !name || std::strlen(name) < 4 ||
+        !acc::engine::GetObjectPosition(target, lpos)) {
+        return false;
+    }
+    void* nearest  = nullptr;
+    float nearestM = kNamesakeM;
+    void* leader   = acc::engine::GetPlayerServerCreature();
+    acc::engine::AreaObjectIterator it(area);
+    while (void* obj = it.Next()) {
+        const int kind = acc::engine::GetObjectKind(obj);
+        const bool creature = kind == static_cast<int>(acc::engine::GameObjectKind::Creature);
+        const bool thing = kind == static_cast<int>(acc::engine::GameObjectKind::Placeable);
+        if (obj == leader || (!creature && !thing)) continue;
+        if (creature ? acc::examine_view::IsCreatureDead(obj)
+                     : !acc::engine::IsUsablePlaceable(obj)) {
+            continue;
+        }
+        Vector pos;
+        char other[128] = "";
+        if (!acc::engine::GetObjectPosition(obj, pos) || DistXY(pos, lpos) > nearestM ||
+            !acc::engine::GetObjectName(obj, other, sizeof(other)) || std::strlen(other) < 4) {
+            continue;
+        }
+        if (!acc::text::ContainsIgnoreCase(name, other) &&
+            !acc::text::ContainsIgnoreCase(other, name)) {
+            continue;
+        }
+        nearest  = obj;
+        nearestM = DistXY(pos, lpos);
+    }
+    const uint32_t h = nearest ? acc::engine::GetObjectHandle(nearest) : 0;
+    if (!h) return false;
+    acclog::Write("Interact", "landmark [%s] stands %.1fm from its namesake 0x%08x — "
+        "Enter goes to it", name, nearestM, h);
+    DispatchInteract(nearest, h, forceRadial);
     return true;
 }
 
@@ -480,7 +531,8 @@ void DispatchInteract(void* target, uint32_t handle, bool forceRadial) {
     // there first and comes back here on arrival.
     if (!forceRadial && acc::exit_memory::WalkThenInteract(target, handle, name)) return;
 
-    if (cat == C::Landmark && (RedirectLandmarkToDoor(target, name, forceRadial) ||
+    if (cat == C::Landmark && (RedirectLandmarkToNamesake(target, name, forceRadial) ||
+                               RedirectLandmarkToDoor(target, name, forceRadial) ||
                                RedirectLandmarkToTransition(target, name, forceRadial))) {
         return;
     }
