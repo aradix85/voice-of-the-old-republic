@@ -101,6 +101,26 @@ BOOL CALLBACK FindMovieWindowProc(HWND hwnd, LPARAM lp) {
     return FALSE;                                  // found it — stop
 }
 
+// A movie in the game has pictures and music and, as a rule, no words: a
+// flight, a ship breaking up. The game takes no key while it plays, so to a
+// blind player it is silence of unknown length. "Movie." says what the silence
+// is. Once per movie window, in the game only (the intro movies at start-up
+// come before anything can be done anyway), and not for the next segment of a
+// cutscene that plays as several movies in a row.
+constexpr DWORD kMovieSegmentGapMs = 2000;
+
+std::atomic<HWND> g_movieSpokenFor{nullptr};
+
+void AnnounceMovie(HWND movie, DWORD now) {
+    if (g_movieSpokenFor.exchange(movie, std::memory_order_acq_rel) == movie) return;
+    if (g_phase.load(std::memory_order_acquire) != Phase::Responsive) return;
+    const DWORD endedAt = g_movieEndedAt.load(std::memory_order_acquire);
+    if (endedAt != 0 && now - endedAt < kMovieSegmentGapMs) return;
+    acc::speech::Speak(acc::strings::Get(acc::strings::Id::MoviePlaying),
+                       /*interrupt=*/false);
+    acclog::Write("BringupAnnounce", "movie named (window %p)", movie);
+}
+
 // True while an engine movie is on screen.
 //
 // The obvious test — "is our SWMovieWindow the foreground window?" — has a
@@ -140,6 +160,7 @@ bool MoviePlaying() {
     if (!found && cached) {
         g_movieEndedAt.store(now, std::memory_order_release);
     }
+    if (found) AnnounceMovie(found, now);
     g_movieHwnd.store(found, std::memory_order_release);
     acclog::Edge("BringupAnnounce", found ? 1 : 0,
                  "movie window %s", found ? "on screen" : "gone");
