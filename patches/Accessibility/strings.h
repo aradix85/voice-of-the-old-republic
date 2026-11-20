@@ -2214,6 +2214,8 @@ enum class Id : int {
     GuidancePausedHint,       // "The game is paused. Press Space to walk."
     GuidanceGoingRound,       // "Going round."
     GuidanceTryingAnotherWay, // "Trying another way." — a walk that did not start is being rescued
+    FmtDeadlyZoneGate,        // "A deadly barrier guards %s. Walking to its gate; choose the target again after that."
+    FmtDeadlyZoneNoWay,       // "Movement cancelled: a deadly barrier bars the way to %s."
     FmtApproachEndedByCombat, // "Movement cancelled, combat. %s"
     FmtCompanionInTheWay,     // "%s is standing in the way. Switch to them with Tab and step aside."
     FmtCreatureInTheWay,      // "%s is in the way." (after "way blocked", someone beside the PC)

@@ -985,6 +985,8 @@ const char* Get(Id id) {
         case Id::GuidancePausedHint:          return "The game is paused. Press Space to walk.";
         case Id::GuidanceGoingRound:          return "Going round.";
         case Id::GuidanceTryingAnotherWay:    return "Trying another way.";
+        case Id::FmtDeadlyZoneGate:           return "A deadly barrier guards %s. Walking to its gate; choose the target again after that.";
+        case Id::FmtDeadlyZoneNoWay:          return "Movement cancelled: a deadly barrier bars the way to %s.";
         case Id::FmtApproachEndedByCombat:    return "Movement cancelled, combat. %s";
         case Id::FmtCompanionInTheWay:        return "%s is standing in the way. Switch to them with Tab and step aside.";
         case Id::FmtCreatureInTheWay:         return "%s is in the way.";

@@ -4,6 +4,7 @@
 #include <cmath>
 #include <limits>
 
+#include "deadly_triggers.h"
 #include "engine_area.h"                // WallEdge, SegmentCrossesWalkmesh
 #include "engine_navgraph.h"            // shared snapshot helpers
 #include "log.h"
@@ -222,11 +223,12 @@ bool ComputePath(void* area,
                      && walls != nullptr && wallCount > 0;
     if (!haveWalls) { walls = nullptr; wallCount = 0; }
 
-    // Turn-back zones (turnback_zones.h): their outlines stand as walls for
-    // the anchors and the smoothing, a link across one is closed, and the
-    // goal's anchor is a node the start still reaches. With no zone known
-    // nothing below differs.
-    acc::guidance::turnback::ForArea(area);
+    // Zones the path stays out of (turnback_zones.h; the deadly triggers that
+    // stand now are among them): their outlines stand as walls for the
+    // anchors and the smoothing, a link across one is closed, and the goal's
+    // anchor is a node the start still reaches. With no zone known nothing
+    // below differs.
+    acc::guidance::deadly::Refresh(area);
     std::vector<acc::engine::WallEdge> zoneWalls;
     acc::guidance::turnback::AppendWalls(start, goal, zoneWalls);
     const bool haveZones = !zoneWalls.empty();

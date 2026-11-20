@@ -3,6 +3,7 @@
 
 #include "guidance_approach_internal.h"
 
+#include "deadly_triggers.h"
 #include "dialog_speech.h"      // ConversationHasSpeaker
 #include "engine_area.h"
 #include "engine_compass.h"
@@ -579,17 +580,61 @@ void LearnTurnback() {
         g_st.name);
 }
 
+namespace {
+
+// A deadly zone lies on the straight way and the mod knows no way round it,
+// so this walk must not run. With a gate known the approach becomes a plain
+// walk to the gate, whose script opens the way; the player picks the target
+// again after that. Without one the approach ends here.
+void HoldBeforeDeadlyZone(const Vector& tgt) {
+    char msg[224];
+    ReleaseApproach();
+    g_st.inputDisabled = false;
+    g_st.isDialog      = false;
+
+    Vector gate;
+    if (deadly::Gate(gate)) {
+        g_st.targetObj     = nullptr;
+        g_st.targetPos     = gate;
+        g_st.haveTargetPos = true;
+        g_st.useHandle     = 0;
+        g_st.talkOrUse     = false;
+        g_st.leavesArea    = false;
+        g_st.routeTried    = false;
+        if (TryRouteWalk(gate, "a deadly zone bars the target; walking to its gate")) {
+            std::snprintf(msg, sizeof(msg),
+                          acc::strings::Get(acc::strings::Id::FmtDeadlyZoneGate),
+                          g_st.name);
+            acc::speech::Speak(msg, /*interrupt=*/true);
+            acclog::Write("Approach", "deadly zone on the way to (%.2f,%.2f): walking "
+                "to its gate at (%.2f,%.2f) -> [%s]", tgt.x, tgt.y, gate.x, gate.y, msg);
+            return;
+        }
+    }
+    std::snprintf(msg, sizeof(msg),
+                  acc::strings::Get(acc::strings::Id::FmtDeadlyZoneNoWay), g_st.name);
+    acc::speech::Speak(msg, /*interrupt=*/true);
+    acclog::Write("Approach", "deadly zone on the way to (%.2f,%.2f) and no way "
+        "round it: the walk is cancelled -> [%s]", tgt.x, tgt.y, msg);
+    EndApproach(ApproachOutcome::Blocked);
+}
+
+}  // namespace
+
 void RouteRoundTurnbacks() {
     Vector pc, tgt;
     void* area = acc::engine::GetCurrentArea();
     if (!area || !acc::engine::GetPlayerPosition(pc) || !ResolveTargetPos(tgt)) return;
-    turnback::ForArea(area);
+    deadly::Refresh(area);
     if (!turnback::Crosses(pc, tgt)) return;
-    if (!TryRouteWalk(tgt, "a turn-back zone lies on the straight way")) {
-        acclog::Write("Approach", "a turn-back zone lies on the straight way to "
-            "(%.2f,%.2f) and the mod has no way round it name=[%s]",
-            tgt.x, tgt.y, g_st.name);
+    if (TryRouteWalk(tgt, "a zone lies on the straight way")) return;
+    if (turnback::CrossesStanding(pc, tgt)) {
+        HoldBeforeDeadlyZone(tgt);
+        return;
     }
+    acclog::Write("Approach", "a turn-back zone lies on the straight way to "
+        "(%.2f,%.2f) and the mod has no way round it name=[%s]",
+        tgt.x, tgt.y, g_st.name);
 }
 
 void ForgetTurnbackResume() {
