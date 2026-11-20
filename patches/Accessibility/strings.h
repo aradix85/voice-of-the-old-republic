@@ -2214,6 +2214,7 @@ enum class Id : int {
     FmtApproachEndedByCombat, // "Movement cancelled, combat. %s"
     FmtCompanionInTheWay,     // "%s is standing in the way. Switch to them with Tab and step aside."
     FmtCreatureInTheWay,      // "%s is in the way." (after "way blocked", someone beside the PC)
+    FmtClosedDoorByTarget,    // "A closed %s stands by it." (after a refusal, a door by the target)
     FmtWaitingForParty,       // "Waiting for %s" (a walk out of the area holds for the companions)
     FmtWalkingOnWithout,      // "Walking on without %s" (the hold ends, they are not coming)
     FmtOverviewTryDoor,       // "Door to try: %s" (overview, nothing else reachable)

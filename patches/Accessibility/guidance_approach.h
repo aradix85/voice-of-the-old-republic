@@ -138,4 +138,9 @@ ApproachOutcome LastApproachOutcome(uint32_t* serial);
 // announce without arming the tracker can reuse the exact phrasing.
 void SpeakWayBlocked(const char* name, const Vector& targetPos);
 
+// Registers the feedback-router rule that follows the engine's "Unable to
+// reach target!" with the closed door that stands by the target, when one
+// does. A blocked approach names that door the same way.
+void RegisterMsgRule();
+
 }  // namespace acc::guidance

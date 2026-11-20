@@ -16,6 +16,8 @@
 #include "guidance_pathfind.h"  // ComputePath: the route walk
 #include "interact_dispatch.h"
 #include "log.h"
+#include "msg_router.h"         // the "Unable to reach target!" rule
+#include "narrated_target.h"
 #include "spatial_wall_surfaces.h"  // FloorSpotNear
 #include "speech.h"
 #include "spectator_scene.h"
@@ -235,7 +237,54 @@ bool CompanionInTheWay(const Vector& tgt, char* name, size_t nameSize) {
     return false;
 }
 
+// A closed door within kDoorByTargetM of the target, other than the target
+// itself: the usual reason a target that reads as right there cannot be
+// reached. A sarcophagus in the Korriban tombs stands behind its own Tomb
+// Door, an urn in an alcove behind a locked one, and neither refusal named the
+// door. Fills `name`.
+constexpr float kDoorByTargetM = 4.0f;
+
+bool ClosedDoorBy(const Vector& tgt, void* target, char* name, size_t nameSize) {
+    void* door = acc::engine::NearestDoor(
+        acc::engine::GetCurrentArea(), tgt, kDoorByTargetM, [target](void* d) {
+            return d != target && !acc::engine::IsDoorOpen(d) &&
+                   !acc::engine::IsDoorCosmetic(d);
+        });
+    name[0] = '\0';
+    return door && acc::engine::GetObjectName(door, name, nameSize) && name[0];
+}
+
+// Says "A closed Tomb Door stands by it." after `lead` (the refusal the door
+// explains, or null when that has been spoken) when ClosedDoorBy finds one.
+bool SpeakClosedDoorBy(const Vector& tgt, void* target, const char* lead) {
+    char door[64];
+    if (!ClosedDoorBy(tgt, target, door, sizeof(door))) return false;
+    char msg[128];
+    std::snprintf(msg, sizeof(msg),
+                  acc::strings::Get(acc::strings::Id::FmtClosedDoorByTarget), door);
+    if (lead) acc::speech::Speak(lead, /*interrupt=*/false);
+    acc::speech::Speak(msg, /*interrupt=*/false);
+    acclog::Write("Approach", "closed door by the target -> [%s]", msg);
+    return true;
+}
+
+// Feedback-router rule: the engine's own refusal of an attack or a use it
+// cannot path to ("Unable to reach target!", Bash on a sarcophagus behind its
+// door). Claims the line only when there is a door to name after it.
+bool RuleUnreachableTarget(const char* text) {
+    if (!text || !std::strstr(text, "Unable to reach target")) return false;
+    acc::narrated_target::Slot slot;
+    if (!acc::narrated_target::TryGet(slot) || slot.isMapPin || !slot.obj) return false;
+    Vector tgt = slot.pos;
+    acc::engine::GetObjectPosition(slot.obj, tgt);
+    return SpeakClosedDoorBy(tgt, slot.obj, text);
+}
+
 }  // namespace
+
+void RegisterMsgRule() {
+    acc::msg::Router::Instance().AddRule("UnreachableTarget", RuleUnreachableTarget);
+}
 
 // The walk never physically started (see the header note): re-issue it as a
 // plain coordinate walk to the target position rather than hand the player a
@@ -664,6 +713,7 @@ void OnBlocked(DWORD stalledMs) {
                               acc::strings::Get(acc::strings::Id::InteractWayBlocked));
                 acc::speech::Speak(msg, /*interrupt=*/true);
             }
+            if (ResolveTargetPos(tgt)) SpeakClosedDoorBy(tgt, g_st.targetObj, nullptr);
         }
     }
 

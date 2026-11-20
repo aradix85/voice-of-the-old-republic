@@ -181,6 +181,7 @@ extern "C" void __cdecl OnAppendToMsgBuffer(void* /*guiInGame*/,
 namespace acc::combat { void RegisterCombatMsgRules(); }
 namespace acc::locked_recall { void RegisterMsgRule(); }
 namespace acc::endar { void RegisterMsgRule(); }
+namespace acc::guidance { void RegisterMsgRule(); }
 
 namespace {
 
@@ -202,6 +203,9 @@ void EnsureRulesRegistered() {
     // opening off the engine's own locked report, never consumes it. See
     // endar_softlock.h for why this hangs here and not on the interact path.
     acc::endar::RegisterMsgRule();
+    // The engine's "Unable to reach target!" names the closed door by the
+    // target, when there is one. See guidance_approach.h.
+    acc::guidance::RegisterMsgRule();
 }
 
 }  // namespace

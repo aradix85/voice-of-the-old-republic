@@ -985,6 +985,7 @@ const char* Get(Id id) {
         case Id::FmtApproachEndedByCombat:    return "Movement cancelled, combat. %s";
         case Id::FmtCompanionInTheWay:        return "%s is standing in the way. Switch to them with Tab and step aside.";
         case Id::FmtCreatureInTheWay:         return "%s is in the way.";
+        case Id::FmtClosedDoorByTarget:       return "A closed %s stands by it.";
         case Id::FmtWaitingForParty:          return "Waiting for %s";
         case Id::FmtWalkingOnWithout:         return "Walking on without %s";
         case Id::FmtOverviewTryDoor:          return "Door to try: %s";
