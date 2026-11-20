@@ -1,4 +1,4 @@
-# menus_focus.h (34 lines)
+# menus_focus.h (38 lines)
 
 Source: `patches/Accessibility/menus_focus.h`
 
@@ -19,3 +19,4 @@ AnnouncePanelTitle stays file-static in menus_focus.cpp: its only caller is Spea
 - L29 `void WalkAndCaptureOnFirstSight(void* panel)`
 - L30 `void SpeakPanelTitleOnFirstSight(void* panel)`
 - L31 `void AnnounceNewFocusedControl(int n, void* panel, void* newControl)`
+- L35 `void RestoreOrphanedModal()`: Per tick: a modal panel the engine took off its modal stack while it stays on screen goes back on it and is announced (menus_setactive.cpp).

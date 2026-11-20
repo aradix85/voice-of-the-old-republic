@@ -1,4 +1,4 @@
-# engine_manager.cpp (188 lines)
+# engine_manager.cpp (231 lines)
 
 Source: `patches/Accessibility/engine_manager.cpp`
 
@@ -18,4 +18,7 @@ GoG bytes match Steam — addresses lift directly from Lane's DB.
 - L73 `bool IsPanelInManager(void* panel)`
 - L91 `void* FindOwningPanel(void* control)`
 - L124 `void* GetForegroundPanel(void* mgr)`: NOT migrated to ReadPanelArray, deliberately.
-- L159 `void LogManagerStack(void* mgr, const char* tag)`
+- L160 `static bool OpensOnlyAsModal(PanelKind k)`: The kinds the engine only ever shows on the modal stack.
+- L164 `void* FindOrphanedModalPanel(void* mgr)`
+- L193 `bool PushModalPanel(void* mgr, void* panel)`
+- L202 `void LogManagerStack(void* mgr, const char* tag)`

@@ -160,6 +160,8 @@ installer, as the pre-release `bridge-latest`.
   reached with the arrow keys, and Enter takes the row you heard.
 - The workbench's item list says "upgraded" too.
 - The load screen says which save is the newest.
+- The party selection screen keeps the keyboard after a movie, and after
+  loading a save made while it was open.
 - Q/E say the clock direction and distance of each object.
 - New setting: Q and E step through everything within 30 metres instead of
   only what the camera sees.
@@ -696,6 +698,13 @@ installer, as the pre-release `bridge-latest`.
 - In the load screen the save with the longest play time ends with
   "newest". The game lists the quicksave first whether or not the autosave
   is later, and shows nothing else that orders the saves in time.
+- The party selection screen takes the arrow keys and Enter again when a
+  movie played while it was open, or when a save made with it open is loaded;
+  after a load it is also read out. The game takes the top screen off its
+  list of screens that own the keyboard when a movie or a loading screen
+  ends, whichever screen that is, and left this one on screen without it:
+  silent, every key going to the world behind it, Cancel refused, only the
+  mouse working. The mod puts it back with the game's own call. KOTOR 1 only.
 
 <h3>Endar Spire:</h3>
 
