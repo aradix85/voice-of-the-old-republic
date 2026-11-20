@@ -67,6 +67,8 @@ patches/Accessibility/cycle_input_focus.cpp
 patches/Accessibility/cycle_input_internal.h
 patches/Accessibility/cycle_state.cpp
 patches/Accessibility/cycle_state.h
+patches/Accessibility/deadly_triggers.cpp
+patches/Accessibility/deadly_triggers.h
 patches/Accessibility/diag_chargen_feats.cpp
 patches/Accessibility/diag_chargen_feats.h
 patches/Accessibility/diag_settings.cpp

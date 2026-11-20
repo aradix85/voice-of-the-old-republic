@@ -105,6 +105,8 @@ installer, as the pre-release `bridge-latest`.
   to another part of the area.
 - A walk the game turns back at the rim of a desert is repeated round the
   rim, and later walks there go round it from the start.
+- A walk no longer runs through the deadly arcs between the pylons before
+  the Elder compound; it goes round them, or to the opening in them.
 - Enter on a far-off door or person walks there and acts on it, not on the
   thing you used last.
 - A fight ends a walk to someone to talk to or something to use, so the
@@ -544,6 +546,21 @@ installer, as the pre-release `bridge-latest`.
   keeps out of the zone as well. Zones are forgotten when you leave the
   area, so each strip gives its message once a visit. A target inside a
   zone, or behind one with no way round, is walked to as before.
+- A walk keeps out of trigger areas that kill. Before the Elder compound on
+  the Unknown World (South Beach) lightning arcs between pylons: eleven
+  trigger areas that answer a step with 998 damage, in a ring with one
+  opening, where the hologram of the Elders appears and takes the inner arcs
+  away. Nothing says so in text, and Enter on "Settlement Entrance" walked
+  the whole party straight through an arc. Those areas are now zones the
+  mod's path stays out of, a metre wider than the arcs, for as long as each
+  arc stands. A walk whose straight line crosses one follows the game's
+  waypoints round it. When there is no way round, the walk does not start:
+  the mod says "A deadly barrier guards Settlement Entrance. Walking to its
+  gate; choose the target again after that." and walks to the opening, or
+  says "Movement cancelled: a deadly barrier bars the way to ..." when it
+  knows no opening. The route of Ctrl+- keeps out of the arcs as well. The
+  triggers are known by their tag (`deadly_triggers.cpp`); another such
+  place needs a line there.
 - Enter on a target the game has no action for from where you stand walks
   to its region and presses Enter there. The engine builds the action for a
   target from its own copy of it and builds nothing for one far enough off,
