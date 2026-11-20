@@ -290,7 +290,8 @@ bool HandleItemTooltip(acc::engine::PanelKind kind,
         return false;
     }
     const int rowCount = acc::engine::ReadListBoxRowCount(lb);
-    const int selIdx = acc::engine::ReadListBoxSelection(lb);
+    // In a picker the engine's selection_index is the hovered row's.
+    const int selIdx = acc::menus::detail::DrivenListBoxSelection(lb);
 
     if (rowCount <= 0 || selIdx < info.minSel || selIdx >= rowCount) {
         acclog::Write("Peek.Item",

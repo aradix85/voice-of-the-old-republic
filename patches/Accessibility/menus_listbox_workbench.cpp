@@ -200,7 +200,8 @@ bool WorkbenchUpgradeOnEnter(void* panel) {
     void* lb  = acc::menus::detail::UpgradePanelItemsListBox(panel);
     void* btn = acc::menus::detail::UpgradePanelAssembleButton(panel);
     const int rowCount = acc::engine::ReadListBoxRowCount(lb);
-    const int selIdx = acc::engine::ReadListBoxSelection(lb);
+    // The keyboard's row: the engine's selection_index is the hovered row's.
+    const int selIdx = acc::menus::detail::DrivenListBoxSelection(lb);
     void* const row = acc::engine::ReadListBoxRow(lb, selIdx);
     // Row 0: the 0x7f000000 remove entry (power slots).
     void* const removeRow = acc::engine::ReadListBoxRow(lb, 0);

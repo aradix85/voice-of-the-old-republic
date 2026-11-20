@@ -72,7 +72,8 @@ bool EquipPickerOnEnter(void* panel) {
     void* lb  = acc::menus::detail::EquipPanelItemsListBox(panel);
     void* btn = acc::menus::detail::EquipPanelEquipButton(panel);
     const int rowCount = acc::engine::ReadListBoxRowCount(lb);
-    const int selIdx = acc::engine::ReadListBoxSelection(lb);
+    // The keyboard's row: the engine's selection_index is the hovered row's.
+    const int selIdx = acc::menus::detail::DrivenListBoxSelection(lb);
     // The selected row, an equippable item. Row 0 is not one: it is the
     // "empty" entry (item id 0x7f000000) that OnEnterSlot always inserts,
     // hidden from our navigation (minSel=1); committing it drives the

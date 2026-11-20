@@ -119,10 +119,13 @@ bool IsEquipPickerArmed() {
     return s_equipArmPending == panel;
 }
 
+// A picker's list is filled anew when it opens, so the row the keyboard held
+// in the last one is forgotten (ForgetDrivenListBoxSelection).
 void ArmEquipPicker(void* panel, void* slotBtn) {
     s_equipArmPending  = panel;
     s_equipArmSlotBtn  = slotBtn;
     s_equipParkPending = true;
+    acc::menus::detail::ForgetDrivenListBoxSelection();
 }
 
 // "We are done driving this picker." Deliberately does NOT clear the engine's
@@ -151,6 +154,7 @@ void* WorkbenchUpgradePickerPanel() {
 void ArmWorkbenchUpgradePicker(void* panel) {
     s_workbenchUpgradeArmPending  = panel;
     s_workbenchUpgradeParkPending = true;
+    acc::menus::detail::ForgetDrivenListBoxSelection();
 }
 
 void ClearWorkbenchUpgradeArmLatch() {
