@@ -160,6 +160,9 @@ bool RetryRouteHop();
 // True when that walk started (the tracker is then armed for its first step).
 bool TryRegionWalk();
 void OnBlocked(DWORD stalledMs);
+// A walk arrived: names the companions that are far behind
+// (guidance_approach_gather.cpp).
+void TellWhoStayedBehind();
 // The approach ended at the target without its act: says "A closed Door
 // stands by it." when a closed door is on the line from `from` to the target.
 bool SpeakClosedDoorBetween(const Vector& from, const Vector& tgt);

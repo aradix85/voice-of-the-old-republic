@@ -81,4 +81,28 @@ bool TickPartyHold(const Vector& pos, DWORD now) {
     return true;
 }
 
+// A walk by Enter that arrives with a companion far behind says so: they do
+// not come round a turn-back zone, and one that is stuck stays where it is.
+// Nothing else tells the player, who walks on alone into the next fight. Said
+// again only for other names, or after kBehindAgainMs.
+constexpr float kLeftBehindM   = 40.0f;
+constexpr DWORD kBehindAgainMs = 60000;
+
+void TellWhoStayedBehind() {
+    static std::string s_told;
+    static DWORD       s_toldAt = 0;
+    const std::string behind = acc::party_status::MembersBehind(kLeftBehindM);
+    const DWORD now = GetTickCount();
+    if (behind.empty()) {
+        s_told.clear();
+        return;
+    }
+    if (behind == s_told && now - s_toldAt < kBehindAgainMs) return;
+    s_told   = behind;
+    s_toldAt = now;
+    char line[192];
+    SayAboutParty(acc::strings::Id::FmtStayedBehind, behind, line, sizeof(line));
+    acclog::Write("Approach", "arrived without the party -> [%s]", line);
+}
+
 }  // namespace acc::guidance

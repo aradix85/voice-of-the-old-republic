@@ -57,8 +57,11 @@ bool IsTalkOrUseTarget(void* obj) {
 ApproachState g_st;
 
 void EndApproach(ApproachOutcome outcome) {
+    const bool walkedThere = g_st.active && g_st.movedSinceArm &&
+                             outcome == ApproachOutcome::Arrived;
     g_st.active = false;
     g_outcome   = outcome;
+    if (walkedThere) TellWhoStayedBehind();
 }
 
 bool ResolveTargetPos(Vector& out) {
