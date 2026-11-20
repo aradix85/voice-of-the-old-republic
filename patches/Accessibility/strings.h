@@ -2051,6 +2051,8 @@ enum class Id : int {
     //      where the label reads empty, so a screen full of camera picture is
     //      never announced as nothing at all.
     CameraFeed,
+    SceneWithoutWords,       // "Scene without words." — a cutscene with no line and no reply
+    SceneOver,               // "Scene over." — that cutscene's panel closed
 
     // ---- KOTOR 2 tutorial hints. Same two surfaces, retargeted at KOTOR 2's
     //      content: its tutorial.2da rows 0-42 mirror KOTOR 1's and reuse the

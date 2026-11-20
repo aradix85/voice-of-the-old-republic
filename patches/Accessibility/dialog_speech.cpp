@@ -146,6 +146,47 @@ void TickComputerRows(void* panel) {
     s_lastComputerRows = rows;
 }
 
+// A scene that shows no line and offers no reply plays in silence: the Star
+// Map opening, a door blown up, a dream. A blind player then hears nothing for
+// as long as it lasts and takes the game for frozen (the Star Map on Korriban,
+// patch-20261120-115903). After kWordlessSceneMs of that the scene is named
+// once, and its end is named when the panel closes.
+constexpr DWORD kWordlessSceneMs = 2500;
+
+struct WordlessScene {
+    DWORD since;  // tick the wordless stretch began at, 0 when words are up
+    bool  told;   // the scene has been named, so its end is owed
+};
+WordlessScene s_wordless = { 0, false };
+
+void TickWordlessScene(const DialogPanelMatch& m, bool hasLine) {
+    const bool cinematic = m.kind == acc::engine::PanelKind::DialogCinematic ||
+                           m.kind == acc::engine::PanelKind::DialogCinematicCopy;
+    if (!cinematic || hasLine || acc::engine::ReadDialogReplyCount() > 0) {
+        s_wordless.since = 0;
+        return;
+    }
+    const DWORD now = GetTickCount();
+    if (s_wordless.since == 0) {
+        s_wordless.since = now;
+    } else if (!s_wordless.told && now - s_wordless.since >= kWordlessSceneMs) {
+        s_wordless.told = true;
+        acc::speech::Speak(acc::strings::Get(acc::strings::Id::SceneWithoutWords),
+                           /*interrupt=*/false);
+        acclog::Write("Dialog.Speech", "wordless scene named (panel=%p kind=%s)",
+                      m.panel, acc::engine::PanelKindName(m.kind));
+    }
+}
+
+void EndWordlessScene() {
+    if (s_wordless.told) {
+        acc::speech::Speak(acc::strings::Get(acc::strings::Id::SceneOver),
+                           /*interrupt=*/false);
+        acclog::Write("Dialog.Speech", "wordless scene over");
+    }
+    s_wordless = { 0, false };
+}
+
 // The main dialog panel: the NPC line, a terminal's output, and R to repeat
 // the line.
 void TickDialogPanel() {
@@ -158,6 +199,7 @@ void TickDialogPanel() {
             acclog::Write("Dialog.Speech", "panel closed");
             s_lastPanel = nullptr;
             s_lastNpcLine[0] = '\0';
+            EndWordlessScene();
             // A tutorial Q&A branch can record its hint and return straight
             // to the world with no further reply break, so the close fires
             // the pending popup. No-op when nothing is pending.
@@ -176,6 +218,7 @@ void TickDialogPanel() {
     char npc[512] = "";
     bool gotNpc = acc::engine::ReadLabelTextAt(m.panel, kDialogMessageLabelOffset,
                                 npc, sizeof(npc));
+    TickWordlessScene(m, gotNpc && npc[0] != '\0');
     if (gotNpc && std::strcmp(npc, s_lastNpcLine) != 0) {
         bool tutorialManaged = RecordTutorialLine(npc);
         SpeakerInfo info;
