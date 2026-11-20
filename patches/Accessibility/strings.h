@@ -601,6 +601,7 @@ enum class Id : int {
     //                              so PL/RU need no plural forms.
     FmtSaveLoadRow,
     FmtSaveLoadRowNoLoc,
+    SaveLoadNewestSuffix,     // ", newest" — after the save row with the longest play time
     FmtSaveLoadCharacter,
 
     // ---- Level-up hotkey (Shift+L). Speaks an opener cue when the user

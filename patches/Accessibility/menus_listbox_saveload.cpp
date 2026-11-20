@@ -4,12 +4,15 @@
 
 #include "menus_listbox_internal.h"
 
+#include <algorithm>
+
 #include "engine_game.h"     // IsKotor2 — K2 one-step upgrade install
 #include "engine_offsets.h"
 #include "engine_reads.h"
 #include "log.h"
 #include "menus.h"           // SpeakIfChanged (empty-state dedup)
 #include "menus_extract.h"
+#include "play_time.h"
 #include "menus_chain.h"      // chain focus: the K2 save/load selection sync
 #include "speech.h"
 #include "engine_player.h"   // GetPlayerPosition — world-live check
@@ -55,12 +58,33 @@ void* SaveLoadFindLb(void* p) {
 // Pull planet/area from the row entry's CExoString fields directly — the
 // preview labels at id=4/id=6 only refresh through the engine's
 // onSelectionChanged callback that DriveListBoxSelection bypasses.
-void SaveLoadAnnounce(void* /*lb*/, const ListBoxNavResult& r) {
+// The longest play time among the rows of the save list, -1 when no row
+// shows one.
+int NewestPlayMinutes(void* lb, int rowCount) {
+    int newest = -1;
+    for (int i = 0; i < rowCount; ++i) {
+        char text[256];
+        void* row = acc::engine::ReadListBoxRow(lb, i);
+        if (!row || !acc::menus::extract::FromControl(row, text, sizeof(text))) continue;
+        newest = (std::max)(newest, acc::menus::PlayMinutes(text));
+    }
+    return newest;
+}
+
+// The list puts the quicksave on top whether or not it is the latest, so the
+// row with the longest play time says "newest": the save to load after a
+// death is not always the first one.
+void SaveLoadAnnounce(void* lb, const ListBoxNavResult& r) {
     if (!r.row) return;
-    char rowText[256];
+    char rowText[288];
     const char* rowSrc = acc::menus::extract::FromControl(
-        r.row, rowText, sizeof(rowText));
+        r.row, rowText, sizeof(rowText) - 32);
     if (!rowSrc) return;
+    const int minutes = acc::menus::PlayMinutes(rowText);
+    if (minutes >= 0 && minutes == NewestPlayMinutes(lb, r.rowCount)) {
+        strncat_s(rowText, acc::strings::Get(acc::strings::Id::SaveLoadNewestSuffix),
+                  _TRUNCATE);
+    }
     const char* planet = ReadSaveLoadEntryString(
         r.row, kSaveLoadEntryLastModuleOffset);
     const char* area   = ReadSaveLoadEntryString(
