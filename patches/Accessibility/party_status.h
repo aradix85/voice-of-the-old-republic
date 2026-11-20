@@ -41,6 +41,13 @@ std::string MembersBehind(float beyondM, float* outLeftM = nullptr);
 // Once per frame (core_tick): the level-up notice.
 void Tick();
 
+// Once per frame while the combat mode is watched (combat.cpp). In a fight,
+// says "Korasha sinks to 150 of 323" when a party member's health sinks to
+// half and again at a quarter; a member who enters the fight that low is told
+// at its start. A sighted player sees the portrait bars drain; nothing spoke
+// it, and a character fought on at 6 of 323 unnoticed.
+void TickHealthWarnings(bool inCombat);
+
 // The party member (player included) with the highest Security, name in
 // the game codepage. False when nobody could be read (KOTOR 2, not in the
 // world).

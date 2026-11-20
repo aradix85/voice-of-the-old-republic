@@ -134,6 +134,8 @@ void TickCombatMode() {
         }
     }
 
+    acc::party_status::TickHealthWarnings(s_party.Settled());
+
     // The leader at peace while the encounter goes on: a Tab to a member who
     // is not engaged, or the leader breaking off. On a real end both signals
     // fall together and "Combat ends" speaks. The other direction, a Tab onto

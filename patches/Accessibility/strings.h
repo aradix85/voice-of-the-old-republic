@@ -2183,6 +2183,8 @@ enum class Id : int {
 
     // ---- Party status (party_status, Ctrl+H) and the level-up notice.
     FmtPartyMemberHp,         // "%s %d of %d" — name, current, max hit points
+    FmtPartyMemberDown,       // "%s down" — a member at zero hit points or below
+    FmtHealthSank,            // "%s sinks to %d of %d" — a member at half or a quarter in a fight
     PartyCanLevelUp,          // "can level up" — suffix on a member entry
     FmtCanLevelUpNotice,      // "%s can level up" — spoken once when it becomes true
     KbNamePartyStatus,        // keybind menu row

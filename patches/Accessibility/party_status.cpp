@@ -16,6 +16,7 @@
 #include "engine_panels.h"
 #include "engine_player.h"
 #include "engine_reads.h"
+#include "health_bands.h"
 #include "hotkeys.h"
 #include "log.h"
 #include "speech.h"
@@ -41,6 +42,11 @@ constexpr DWORD kLevelCheckPeriodMs = 1000;
 
 std::set<uint32_t> g_toldCanLevel;  // members already told, until it clears
 DWORD              g_lastLevelCheck = 0;
+
+constexpr DWORD kHealthCheckPeriodMs = 250;
+
+acc::combat::HealthWarnings g_healthWarnings;
+DWORD                       g_lastHealthCheck = 0;
 
 std::vector<Member> PartyMembers() {
     std::vector<Member> out;
@@ -118,9 +124,17 @@ std::string HealthLine(bool withLevelUp) {
         const int hp    = acc::engine::ReadCreatureCurrentHitPoints(m.obj);
         const int maxHp = acc::engine::ReadCreatureMaxHitPoints(m.obj);
         char buf[192];
-        std::snprintf(buf, sizeof(buf),
-                      acc::strings::Get(acc::strings::Id::FmtPartyMemberHp),
-                      NameOf(m.obj).c_str(), hp, maxHp);
+        if (hp <= 0) {
+            // The engine keeps counting below zero: "-11 of 42" is a member
+            // who lies down until the fight is over.
+            std::snprintf(buf, sizeof(buf),
+                          acc::strings::Get(acc::strings::Id::FmtPartyMemberDown),
+                          NameOf(m.obj).c_str());
+        } else {
+            std::snprintf(buf, sizeof(buf),
+                          acc::strings::Get(acc::strings::Id::FmtPartyMemberHp),
+                          NameOf(m.obj).c_str(), hp, maxHp);
+        }
         std::string entry = buf;
         if (withLevelUp && acc::engine_levelup::CreatureCanLevelUp(m.obj)) {
             entry += ", ";
@@ -139,6 +153,29 @@ void PollHotkey() {
     if (text.empty()) return;
     acc::speech::Speak(text.c_str(), /*interrupt=*/true);
     acclog::Write("PartyStatus", "Ctrl+H: %s", text.c_str());
+}
+
+void TickHealthWarnings(bool inCombat) {
+    if (!inCombat) {
+        g_healthWarnings.Clear();
+        return;
+    }
+    const DWORD now = GetTickCount();
+    if (now - g_lastHealthCheck < kHealthCheckPeriodMs) return;
+    g_lastHealthCheck = now;
+    for (const Member& m : PartyMembers()) {
+        const int hp    = acc::engine::ReadCreatureCurrentHitPoints(m.obj);
+        const int maxHp = acc::engine::ReadCreatureMaxHitPoints(m.obj);
+        const int band  = g_healthWarnings.Sank(m.handle, hp, maxHp);
+        if (band == 0) continue;
+        char buf[192];
+        std::snprintf(buf, sizeof(buf),
+                      acc::strings::Get(acc::strings::Id::FmtHealthSank),
+                      NameOf(m.obj).c_str(), hp, maxHp);
+        // A quarter is urgent enough to cut the blow-by-blow lines off.
+        acc::speech::Speak(buf, /*interrupt=*/band == 2);
+        acclog::Write("PartyStatus", "health warning, band %d: %s", band, buf);
+    }
 }
 
 void Tick() {

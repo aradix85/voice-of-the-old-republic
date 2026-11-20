@@ -960,6 +960,8 @@ const char* Get(Id id) {
         case Id::HelpKeyExploreOverview:  return "Ctrl plus N: the room you are in, how much of this area you have explored, the nearest unexplored place and the way there, and what is left to search";
         case Id::ModSettingQEAllAround:       return "Q and E: everything around you, not just what the camera sees";
         case Id::FmtPartyMemberHp:            return "%s %d of %d";
+        case Id::FmtPartyMemberDown:          return "%s down";
+        case Id::FmtHealthSank:               return "%s sinks to %d of %d";
         case Id::PartyCanLevelUp:             return "can level up";
         case Id::FmtCanLevelUpNotice:         return "%s can level up";
         case Id::KbNamePartyStatus:           return "Party health";
