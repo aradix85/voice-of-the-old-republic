@@ -338,6 +338,12 @@ bool TryCoordinateWalkRetry(const Vector& tgt) {
     }
 
     RestartStallWindow();
+    // The first rung of the rescue, and two seconds of silence are behind it
+    // already: say that the walk is still being worked on. The rungs that
+    // follow (sidesteps, the route walk) can take ten more, in which the
+    // player took the door for stuck and pressed other keys.
+    acc::speech::Speak(acc::strings::Get(acc::strings::Id::GuidanceTryingAnotherWay),
+                       /*interrupt=*/false);
     acclog::Write("Approach", "walk never started (PC has not moved since arm) "
         "— retrying as coordinate walk to (%.2f,%.2f,%.2f)%s name=[%s]",
         dest.x, dest.y, dest.z,

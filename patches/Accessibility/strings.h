@@ -2054,6 +2054,7 @@ enum class Id : int {
     CameraFeed,
     SceneWithoutWords,       // "Scene without words." — a cutscene with no line and no reply
     SceneOver,               // "Scene over." — that cutscene's panel closed
+    MoviePlaying,            // "Movie." — a movie started in the game
 
     // ---- KOTOR 2 tutorial hints. Same two surfaces, retargeted at KOTOR 2's
     //      content: its tutorial.2da rows 0-42 mirror KOTOR 1's and reuse the
@@ -2212,12 +2213,14 @@ enum class Id : int {
     RouteNoWayLocked,         // "No way there now: it is behind a locked door."
     GuidancePausedHint,       // "The game is paused. Press Space to walk."
     GuidanceGoingRound,       // "Going round."
+    GuidanceTryingAnotherWay, // "Trying another way." — a walk that did not start is being rescued
     FmtApproachEndedByCombat, // "Movement cancelled, combat. %s"
     FmtCompanionInTheWay,     // "%s is standing in the way. Switch to them with Tab and step aside."
     FmtCreatureInTheWay,      // "%s is in the way." (after "way blocked", someone beside the PC)
     FmtClosedDoorByTarget,    // "A closed %s stands by it." (after a refusal, a door by the target)
     FmtWaitingForParty,       // "Waiting for %s" (a walk out of the area holds for the companions)
     FmtWalkingOnWithout,      // "Walking on without %s" (the hold ends, they are not coming)
+    FmtStayedBehind,          // "%s stayed behind." — a walk arrived with companions far off
     FmtOverviewTryDoor,       // "Door to try: %s" (overview, nothing else reachable)
     ExploreTryingDoor,        // Ctrl+Shift+N tries the locked door that leads on
     FmtDoorOpensNearby,       // "%s opens" (a door someone else opened, nearby)

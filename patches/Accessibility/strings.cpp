@@ -857,6 +857,7 @@ const char* Get(Id id) {
         case Id::CameraFeed:            return "Camera view.";
         case Id::SceneWithoutWords:     return "Scene without words.";
         case Id::SceneOver:             return "Scene over.";
+        case Id::MoviePlaying:          return "Movie.";
 
         // ---- KOTOR 2 tutorial hints (tutorial_hints.cpp K2 tables). The
         //      shared rows 0-42 reuse the TutHint* wordings above; these
@@ -983,12 +984,14 @@ const char* Get(Id id) {
         case Id::RouteNoWayLocked:            return "No way there now: it is behind a locked door.";
         case Id::GuidancePausedHint:          return "The game is paused. Press Space to walk.";
         case Id::GuidanceGoingRound:          return "Going round.";
+        case Id::GuidanceTryingAnotherWay:    return "Trying another way.";
         case Id::FmtApproachEndedByCombat:    return "Movement cancelled, combat. %s";
         case Id::FmtCompanionInTheWay:        return "%s is standing in the way. Switch to them with Tab and step aside.";
         case Id::FmtCreatureInTheWay:         return "%s is in the way.";
         case Id::FmtClosedDoorByTarget:       return "A closed %s stands by it.";
         case Id::FmtWaitingForParty:          return "Waiting for %s";
         case Id::FmtWalkingOnWithout:         return "Walking on without %s";
+        case Id::FmtStayedBehind:             return "%s stayed behind.";
         case Id::FmtOverviewTryDoor:          return "Door to try: %s";
         case Id::ExploreTryingDoor:           return "Everything you can reach is explored, so trying this door.";
         case Id::FmtDoorOpensNearby:          return "%s opens";
