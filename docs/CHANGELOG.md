@@ -169,6 +169,8 @@ installer, as the pre-release `bridge-latest`.
 - In a fight, a party member whose health sinks to half and to a quarter is
   named with the numbers.
 - A party member who is down reads as "down", not as a negative number.
+- A scene with no line and no reply says "Scene without words", and "Scene
+  over" when it ends.
 - A kill no longer cuts off the combat lines before it.
 - The mod and the installer are English only and assume the English game.
 - Supported games: KOTOR 1 version 1.0.3 (Steam or GOG) and KOTOR 2 from
@@ -200,6 +202,7 @@ installer, as the pre-release `bridge-latest`.
 - Every build publishes the installer next to the mod.
 - Using an object through the bridge no longer crashes the game.
 - A key sent through the bridge also works in the game's screens.
+- The bridge lists the replies of a conversation at a computer or panel too.
 - The code is reorganised into small files with one job each, with less
   duplication and with unit tests; play is meant to stay the same.
 - Log only: the patch log can be read while the game runs; lock lines name a
@@ -690,6 +693,10 @@ installer, as the pre-release `bridge-latest`.
 - Ctrl+H and the "Combat ends" summary say "Canderous down" for a member at
   zero hit points. The game keeps counting below zero, which read as "-11 of
   42".
+- A cutscene that shows no line and offers no reply says "Scene without
+  words" after two and a half seconds, and "Scene over" when it closes. Such a
+  scene plays in silence — the Star Map opening, a door blown up, a dream —
+  and was taken for a frozen game.
 - The kill line ("X killed Y: 100 XP") is spoken in its turn. It used to
   interrupt, and so cut off the blows that led to the kill.
 - "Pazaak. Press C to read your hand, T for the table." is said for the
@@ -796,6 +803,9 @@ installer, as the pre-release `bridge-latest`.
   a conversation but not in a screen such as a container's contents, which
   polls the keyboard once a frame. A DirectInput code with the high bit (0xD0,
   Down) is sent as the extended key it stands for.
+- `/state` carries `dialog_replies` whenever a conversation is open. It
+  looked at the foreground screen only, and while the replies of a computer
+  or panel are up that is a screen the mod has no name for.
 
 <h3>Installer:</h3>
 
