@@ -180,7 +180,7 @@ void ApplyPostFireClosePolicy() {
 bool HandleEnter(void* tam, void* mi, const Cat& cur, int sel,
                  bool targetChanged, bool selectionCarried) {
     if (targetChanged && !selectionCarried) {
-        char prefix[160] = "";
+        char prefix[192] = "";
         std::snprintf(prefix, sizeof(prefix),
                       acc::strings::Get(
                           acc::strings::Id::FmtInteractRadial),

@@ -76,7 +76,9 @@ struct State {
                                     // back corrupted (a stack imbalance in
                                     // the engine calls) while globals stayed
                                     // intact.
-    char     targetName[64] = "";
+    // Room for a lock detail: "Sith Sarcophagus, locked, Security 28, best in
+    // your party: HK-47 with 4" was cut off at 63 characters.
+    char     targetName[160] = "";
     uint32_t unfoldDeclined = 0;    // last narrated handle whose mid-menu
                                     // target-block unfold found no populated
                                     // rows. Suppresses re-running the populate

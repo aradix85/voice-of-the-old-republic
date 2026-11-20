@@ -40,7 +40,7 @@ bool ArmFromRadial(const char* name, uint32_t targetHandle) {
     int loc = LocateCat(CatKind::Target, firstRow);
     g.curCat = (loc >= 0) ? loc : 0;
 
-    char prefix[160] = "";
+    char prefix[192] = "";
     std::snprintf(prefix, sizeof(prefix),
                   acc::strings::Get(acc::strings::Id::FmtInteractRadial),
                   g.targetName);
