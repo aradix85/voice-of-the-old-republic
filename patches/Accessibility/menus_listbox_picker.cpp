@@ -405,8 +405,11 @@ bool RecordEquipStatRow(void* label, int /*sortCy*/, void* userData) {
     if (walk->index >= kEquipStatRows) return false;
     char* last = s_equipStatText[walk->index++];
     char now[kEquipStatTextMax];
+    // "--" is what the engine writes into every row between two items, not a
+    // value: spoken, it gave four "--" lines per step, and recorded, it made
+    // each row read as changed when the same number came back.
     if (!acc::menus::equipstats::ExtractEquipStatRow(walk->panel, label, now, sizeof(now)) ||
-        strcmp(now, last) == 0) {
+        strstr(now, "--") != nullptr || strcmp(now, last) == 0) {
         return true;
     }
     strncpy_s(last, kEquipStatTextMax, now, _TRUNCATE);
