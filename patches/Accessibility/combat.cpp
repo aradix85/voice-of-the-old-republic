@@ -60,17 +60,24 @@ void Announce(acc::strings::Id id) {
 // "Combat ends", after a fight with kills followed by who died and how the
 // party stands. In a fast fight every interrupting announcement cuts the
 // lines of the single blows off; this line comes after them.
+// A fight without kills still gets the party line when someone is down: a
+// member who lies there stays silent otherwise.
 void AnnounceEnd() {
+    std::string line;
     if (g_kills.Empty()) {
-        Announce(acc::strings::Id::CombatEnds);
-        return;
+        if (!acc::party_status::AnyoneDown()) {
+            Announce(acc::strings::Id::CombatEnds);
+            return;
+        }
+        line = acc::strings::Get(acc::strings::Id::CombatEnds);
+    } else {
+        char buf[512];
+        std::snprintf(buf, sizeof(buf),
+                      acc::strings::Get(acc::strings::Id::FmtCombatEndsKilled),
+                      g_kills.List().c_str());
+        line = buf;
+        g_kills.Clear();
     }
-    char buf[512];
-    std::snprintf(buf, sizeof(buf),
-                  acc::strings::Get(acc::strings::Id::FmtCombatEndsKilled),
-                  g_kills.List().c_str());
-    std::string line = buf;
-    g_kills.Clear();
     const std::string health = acc::party_status::HealthLine(/*withLevelUp=*/false);
     if (!health.empty()) {
         line += ". ";

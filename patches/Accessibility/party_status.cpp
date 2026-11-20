@@ -146,6 +146,13 @@ std::string HealthLine(bool withLevelUp) {
     return text;
 }
 
+bool AnyoneDown() {
+    for (const Member& m : PartyMembers()) {
+        if (acc::engine::ReadCreatureCurrentHitPoints(m.obj) <= 0) return true;
+    }
+    return false;
+}
+
 void PollHotkey() {
     if (!acc::hotkeys::Pressed(acc::hotkeys::Action::PartyStatusAnnounce)) return;
     if (!InWorldAndFree()) return;

@@ -33,6 +33,9 @@ void PollHotkey();
 // when asked for. Empty when no party member can be read.
 std::string HealthLine(bool withLevelUp);
 
+// True when a party member is at zero hit points or below.
+bool AnyoneDown();
+
 // The companions farther than `beyondM` from the controlled character, by
 // name ("Mission, Zaalbar"). Empty when everyone is that near. `outLeftM`
 // gets their distances added up: it shrinks while any of them is coming.
