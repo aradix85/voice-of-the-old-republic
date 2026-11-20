@@ -160,5 +160,8 @@ bool RetryRouteHop();
 // True when that walk started (the tracker is then armed for its first step).
 bool TryRegionWalk();
 void OnBlocked(DWORD stalledMs);
+// The approach ended at the target without its act: says "A closed Door
+// stands by it." when a closed door is on the line from `from` to the target.
+bool SpeakClosedDoorBetween(const Vector& from, const Vector& tgt);
 
 }  // namespace acc::guidance

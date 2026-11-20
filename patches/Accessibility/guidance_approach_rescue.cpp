@@ -244,24 +244,49 @@ bool CompanionInTheWay(const Vector& tgt, char* name, size_t nameSize) {
 // door. Fills `name`.
 constexpr float kDoorByTargetM = 4.0f;
 
-bool ClosedDoorBy(const Vector& tgt, void* target, char* name, size_t nameSize) {
-    void* door = acc::engine::NearestDoor(
-        acc::engine::GetCurrentArea(), tgt, kDoorByTargetM, [target](void* d) {
-            return d != target && !acc::engine::IsDoorOpen(d) &&
-                   !acc::engine::IsDoorCosmetic(d);
-        });
-    name[0] = '\0';
-    return door && acc::engine::GetObjectName(door, name, nameSize) && name[0];
+bool IsClosedDoorOtherThan(void* door, void* target) {
+    return door != target && !acc::engine::IsDoorOpen(door) &&
+           !acc::engine::IsDoorCosmetic(door);
+}
+
+void* ClosedDoorBy(const Vector& tgt, void* target) {
+    return acc::engine::NearestDoor(
+        acc::engine::GetCurrentArea(), tgt, kDoorByTargetM,
+        [target](void* d) { return IsClosedDoorOtherThan(d, target); });
+}
+
+// A closed door on the straight line from `from` to the target, within
+// kDoorOffLineM of it: the player stands at the target and a door is in
+// between (an urn in an alcove, 1.8 metres off behind a locked door).
+constexpr float kDoorOffLineM = 1.5f;
+
+void* ClosedDoorBetween(const Vector& from, const Vector& tgt, void* target) {
+    const float dx = tgt.x - from.x;
+    const float dy = tgt.y - from.y;
+    const float lenSq = dx * dx + dy * dy;
+    if (lenSq < 0.01f) return nullptr;
+    void* found = nullptr;
+    acc::engine::ForEachDoor(acc::engine::GetCurrentArea(),
+                             [&](void* door, const Vector& q) {
+        if (found || !IsClosedDoorOtherThan(door, target)) return;
+        const float t = ((q.x - from.x) * dx + (q.y - from.y) * dy) / lenSq;
+        if (t <= 0.0f || t >= 1.0f) return;
+        const Vector onLine = {from.x + t * dx, from.y + t * dy, q.z};
+        if (DistXY(q, onLine) <= kDoorOffLineM) found = door;
+    });
+    return found;
 }
 
 // Says "A closed Tomb Door stands by it." after `lead` (the refusal the door
-// explains, or null when that has been spoken) when ClosedDoorBy finds one.
-bool SpeakClosedDoorBy(const Vector& tgt, void* target, const char* lead) {
-    char door[64];
-    if (!ClosedDoorBy(tgt, target, door, sizeof(door))) return false;
+// explains, or null when that has been spoken). False for no door or no name.
+bool SpeakClosedDoor(void* door, const char* lead) {
+    char name[64] = "";
+    if (!door || !acc::engine::GetObjectName(door, name, sizeof(name)) || !name[0]) {
+        return false;
+    }
     char msg[128];
     std::snprintf(msg, sizeof(msg),
-                  acc::strings::Get(acc::strings::Id::FmtClosedDoorByTarget), door);
+                  acc::strings::Get(acc::strings::Id::FmtClosedDoorByTarget), name);
     if (lead) acc::speech::Speak(lead, /*interrupt=*/false);
     acc::speech::Speak(msg, /*interrupt=*/false);
     acclog::Write("Approach", "closed door by the target -> [%s]", msg);
@@ -277,13 +302,17 @@ bool RuleUnreachableTarget(const char* text) {
     if (!acc::narrated_target::TryGet(slot) || slot.isMapPin || !slot.obj) return false;
     Vector tgt = slot.pos;
     acc::engine::GetObjectPosition(slot.obj, tgt);
-    return SpeakClosedDoorBy(tgt, slot.obj, text);
+    return SpeakClosedDoor(ClosedDoorBy(tgt, slot.obj), text);
 }
 
 }  // namespace
 
 void RegisterMsgRule() {
     acc::msg::Router::Instance().AddRule("UnreachableTarget", RuleUnreachableTarget);
+}
+
+bool SpeakClosedDoorBetween(const Vector& from, const Vector& tgt) {
+    return SpeakClosedDoor(ClosedDoorBetween(from, tgt, g_st.targetObj), nullptr);
 }
 
 // The walk never physically started (see the header note): re-issue it as a
@@ -713,7 +742,9 @@ void OnBlocked(DWORD stalledMs) {
                               acc::strings::Get(acc::strings::Id::InteractWayBlocked));
                 acc::speech::Speak(msg, /*interrupt=*/true);
             }
-            if (ResolveTargetPos(tgt)) SpeakClosedDoorBy(tgt, g_st.targetObj, nullptr);
+            if (ResolveTargetPos(tgt)) {
+                SpeakClosedDoor(ClosedDoorBy(tgt, g_st.targetObj), nullptr);
+            }
         }
     }
 

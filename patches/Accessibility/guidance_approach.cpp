@@ -331,6 +331,9 @@ void TickApproach() {
             "moved=%d) — disarm, no nag",
             static_cast<unsigned long>(now - g_st.progressAt), gap,
             g_st.movedSinceArm ? 1 : 0);
+        // Within reach as the crow flies, with a closed door in between: the
+        // act did not land and nothing else says why.
+        SpeakClosedDoorBetween(pos, tgt);
         EndApproach(ApproachOutcome::Arrived);
         return;
     }
