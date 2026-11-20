@@ -197,6 +197,7 @@ patches/Accessibility/guidance_description.cpp
 patches/Accessibility/guidance_description.h
 patches/Accessibility/guidance_pathfind.cpp
 patches/Accessibility/guidance_pathfind.h
+patches/Accessibility/health_bands.h
 patches/Accessibility/help.cpp
 patches/Accessibility/help.h
 patches/Accessibility/hotkeys.cpp

@@ -166,6 +166,9 @@ installer, as the pre-release `bridge-latest`.
 - The map cursor says "Edge of the map".
 - The combat heartbeat is gone.
 - "Combat ends" says who was killed and how the party stands.
+- In a fight, a party member whose health sinks to half and to a quarter is
+  named with the numbers.
+- A party member who is down reads as "down", not as a negative number.
 - A kill no longer cuts off the combat lines before it.
 - The mod and the installer are English only and assume the English game.
 - Supported games: KOTOR 1 version 1.0.3 (Steam or GOG) and KOTOR 2 from
@@ -678,6 +681,15 @@ installer, as the pre-release `bridge-latest`.
   announcement (a Tab, a new target, a direction) cuts the queued lines off;
   the summary comes after them. A fight without kills ends with "Combat ends"
   alone.
+- In a fight the mod says "korasha sinks to 150 of 323" when a party member
+  reaches half health, and again at a quarter; the quarter interrupts other
+  speech. A member who starts the fight that low is named as it begins, and
+  healing above a mark makes it speak again. Nothing told a blind player what
+  the portrait bars show: a character fought two Terentateks down to 6 of 323
+  without knowing.
+- Ctrl+H and the "Combat ends" summary say "Canderous down" for a member at
+  zero hit points. The game keeps counting below zero, which read as "-11 of
+  42".
 - The kill line ("X killed Y: 100 XP") is spoken in its turn. It used to
   interrupt, and so cut off the blows that led to the kill.
 - "Pazaak. Press C to read your hand, T for the table." is said for the

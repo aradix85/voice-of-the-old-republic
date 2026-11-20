@@ -1,4 +1,4 @@
-# combat.cpp (147 lines)
+# combat.cpp (149 lines)
 
 Source: `patches/Accessibility/combat.cpp`
 
