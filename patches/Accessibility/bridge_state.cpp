@@ -37,16 +37,6 @@ std::string ScreenField(void* panel) {
            Json(acc::engine::PanelKindName(acc::engine::IdentifyPanel(panel)));
 }
 
-bool IsDialogPanel(void* panel) {
-    if (!panel) return false;
-    using PK = acc::engine::PanelKind;
-    const PK kind = acc::engine::IdentifyPanel(panel);
-    return kind == PK::DialogCinematic || kind == PK::DialogCinematicCopy ||
-           kind == PK::DialogComputer || kind == PK::DialogComputerCamera ||
-           kind == PK::DialogLetterbox1 || kind == PK::DialogLetterbox2 ||
-           kind == PK::DialogLetterbox3;
-}
-
 std::string CreatureJson(void* serverCreature) {
     std::string name = "?";
     char buf[128] = {0};
@@ -151,7 +141,9 @@ std::string BuildSnapshot() {
     s += ",\"in_combat\":";
     s += acc::engine::IsAnyPartyMemberInCombat() ? "true" : "false";
     s += ScreenField(panel);
-    if (IsDialogPanel(panel)) s += DialogRepliesField();
+    // Any dialog panel in the stack, not the foreground one: while the replies
+    // are up the foreground panel is one this patch does not name ("Unknown").
+    if (acc::engine::HasActiveDialogPanel()) s += DialogRepliesField();
     s += TargetField(f);
     return s + "}";
 }
