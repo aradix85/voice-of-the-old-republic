@@ -12,6 +12,13 @@ public static class StatusCommand
         return cmd;
     }
 
+    // A game that is not installed is a fact, not a problem: only the game a
+    // command acts on has to exist (KdevConfig.ResolveTarget).
+    private static string Installed(string? install, string? exe) =>
+        install is null ? "(not configured)"
+        : File.Exists(exe) ? install
+        : $"{install} (not installed)";
+
     internal static int Run()
     {
         KdevConfig config;
@@ -29,8 +36,8 @@ public static class StatusCommand
         Console.WriteLine("===========");
         Console.WriteLine();
         Console.WriteLine("Resolved configuration:");
-        Console.WriteLine($"  game.install         = {config.GameInstall}");
-        Console.WriteLine($"  game.exe             = {config.GameExe}");
+        Console.WriteLine($"  game.install         = {Installed(config.GameInstall, config.GameExe)}");
+        Console.WriteLine($"  game.install_k2      = {Installed(config.GameInstallK2, config.GameExeK2)}");
         Console.WriteLine($"  patch_manager.release= {config.PatchManagerRelease}");
         Console.WriteLine($"  upstream.clone       = {config.UpstreamClone}");
         Console.WriteLine($"  accessibility.source = {config.AccessibilitySource}");

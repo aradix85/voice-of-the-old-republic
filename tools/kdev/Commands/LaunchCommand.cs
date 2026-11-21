@@ -12,27 +12,32 @@ public static class LaunchCommand
             name: "--monitor",
             description: "Block until the game exits and report its exit code.");
 
-        var cmd = new Command("launch", "Launch swkotor.exe directly — the dinput8.dll proxy auto-loads the patcher.");
+        var gameOption = KdevConfig.GameOption();
+        var cmd = new Command("launch", "Launch the game directly — the dinput8.dll proxy auto-loads the patcher.");
         cmd.AddOption(monitor);
+        cmd.AddOption(gameOption);
         cmd.SetHandler((InvocationContext context) =>
         {
             var monitorValue = context.ParseResult.GetValueForOption(monitor);
-            context.ExitCode = Run(monitorValue);
+            context.ExitCode = Run(monitorValue, context.ParseResult.GetValueForOption(gameOption)!);
         });
         return cmd;
     }
 
-    internal static int Run(bool monitor)
+    internal static int Run(bool monitor, string game = "k1")
     {
         var config = KdevConfig.LoadOrPrintErrors(out var exitCode);
         if (config is null) return exitCode;
+
+        var target = config.ResolveTarget(game);
+        if (target is null) return 2;
 
         // The proxy loader is what brings KotorPatcher into the process on
         // launch. Without it the game runs unmodded and the dev cycle
         // silently produces a vanilla session — the same death path that
         // KPatchLauncher used to mask by injecting at runtime. Surface it
         // explicitly so 'kdev launch' fails loudly instead of misleading.
-        var proxyDll = Path.Combine(config.GameInstall, "dinput8.dll");
+        var proxyDll = Path.Combine(target.Install, "dinput8.dll");
         if (!File.Exists(proxyDll))
         {
             Console.Error.WriteLine($"ERROR: dinput8.dll proxy not installed at {proxyDll}");
@@ -40,12 +45,12 @@ public static class LaunchCommand
             return 6;
         }
 
-        Console.WriteLine($"Launching {config.GameExe}...");
+        Console.WriteLine($"Launching {target.Exe}...");
 
         var psi = new ProcessStartInfo
         {
-            FileName = config.GameExe,
-            WorkingDirectory = Path.GetDirectoryName(config.GameExe) ?? string.Empty,
+            FileName = target.Exe,
+            WorkingDirectory = target.Install,
             UseShellExecute = true,
         };
 
@@ -57,7 +62,7 @@ public static class LaunchCommand
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"ERROR: failed to launch swkotor.exe: {ex.Message}");
+            Console.Error.WriteLine($"ERROR: failed to launch {target.Exe}: {ex.Message}");
             return 6;
         }
 

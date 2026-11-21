@@ -20,7 +20,7 @@ public static class DevCommand
     {
         var steps = new (string Name, Func<int> Run)[]
         {
-            ("clean", CleanCommand.Run),
+            ("clean", () => CleanCommand.Run()),
             ("build", BuildCommand.Run),
             // `kdev dev` is the KOTOR 1 inner loop; the K2 target is reached
             // with an explicit `kdev apply --game k2`.

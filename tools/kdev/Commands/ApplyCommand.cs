@@ -10,11 +10,7 @@ public static class ApplyCommand
     public static Command Build()
     {
         var cmd = new Command("apply", "Install the built .kpatch into the game via KPatchCore.");
-        var gameOption = new Option<string>(
-            name: "--game",
-            description: "Which game to install into: 'k1' (default) or 'k2'. " +
-                         "'k2' requires game.install_k2 in kdev.toml.",
-            getDefaultValue: () => "k1");
+        var gameOption = KdevConfig.GameOption();
         cmd.AddOption(gameOption);
         cmd.SetHandler((InvocationContext context) =>
             context.ExitCode = Run(context.ParseResult.GetValueForOption(gameOption)!));

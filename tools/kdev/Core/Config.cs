@@ -48,17 +48,22 @@ public sealed record KdevConfig(
     /// <summary>
     /// Resolve a `--game` selection ("k1" / "k2") to its paths.
     /// Returns null and prints the reason when the selection is unusable —
-    /// either an unknown name, or "k2" with no game.install_k2 configured.
+    /// an unknown name, "k2" with no game.install_k2 configured, or a game
+    /// that is not installed at the configured path. Only the selected game
+    /// has to exist: a machine with one of the two games installed can still
+    /// build, and can apply and launch the game it has.
     /// Callers should exit non-zero on null rather than falling back to k1:
     /// silently applying a KOTOR 2 build into the KOTOR 1 install would be
     /// both wrong and hard to notice.
     /// </summary>
     public GameTarget? ResolveTarget(string which)
     {
+        GameTarget target;
         switch (which.ToLowerInvariant())
         {
             case "k1":
-                return new GameTarget(GameInstall, GameExe, "swkotor", "KOTOR 1");
+                target = new GameTarget(GameInstall, GameExe, "swkotor", "KOTOR 1");
+                break;
 
             case "k2":
                 if (GameInstallK2 is null || GameExeK2 is null)
@@ -69,13 +74,39 @@ public sealed record KdevConfig(
                         "  Example: install_k2 = 'C:\\Program Files (x86)\\Steam\\steamapps\\common\\Knights of the Old Republic II'");
                     return null;
                 }
-                return new GameTarget(GameInstallK2, GameExeK2, "swkotor2", "KOTOR 2");
+                target = new GameTarget(GameInstallK2, GameExeK2, "swkotor2", "KOTOR 2");
+                break;
 
             default:
                 Console.Error.WriteLine($"ERROR: unknown --game value '{which}'. Expected 'k1' or 'k2'.");
                 return null;
         }
+
+        var problem = InstallProblem(target);
+        if (problem is not null)
+        {
+            Console.Error.WriteLine($"ERROR: {problem}");
+            return null;
+        }
+        return target;
     }
+
+    /// <summary>Why this game cannot be used on this machine, or null when it is installed.</summary>
+    private static string? InstallProblem(GameTarget target)
+    {
+        if (!Directory.Exists(target.Install))
+            return $"{target.Label} install directory does not exist: {target.Install}";
+        if (!File.Exists(target.Exe))
+            return $"{target.Label} executable not found at: {target.Exe}";
+        return null;
+    }
+
+    /// <summary>The value of the `--game` option every game-facing command takes.</summary>
+    public static System.CommandLine.Option<string> GameOption() => new(
+        name: "--game",
+        description: "Which game to act on: 'k1' (default) or 'k2'. " +
+                     "'k2' requires game.install_k2 in kdev.toml.",
+        getDefaultValue: () => "k1");
 
     /// <summary>
     /// Walks upward from the current directory looking for kdev.toml.
@@ -203,15 +234,12 @@ public sealed record KdevConfig(
     /// <summary>
     /// Returns a list of validation problems (empty if config is fully usable on this machine).
     /// Distinct from Load() — Load enforces shape, Validate checks the contents resolve to real things.
+    /// The game installs are not checked here: a command that acts on a game
+    /// resolves it with <see cref="ResolveTarget"/>, which checks that one game.
     /// </summary>
     public IReadOnlyList<string> Validate()
     {
         var problems = new List<string>();
-
-        if (!Directory.Exists(GameInstall))
-            problems.Add($"Game install directory does not exist: {GameInstall}");
-        else if (!File.Exists(GameExe))
-            problems.Add($"swkotor.exe not found at: {GameExe}");
 
         if (!Directory.Exists(PatchManagerRelease))
             problems.Add($"Patch manager release directory does not exist: {PatchManagerRelease}");

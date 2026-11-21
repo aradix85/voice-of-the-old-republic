@@ -8,18 +8,24 @@ public static class CleanCommand
 {
     public static Command Build()
     {
+        var gameOption = KdevConfig.GameOption();
         var cmd = new Command("clean", "Kill running game and uninstall all patches from the game install.");
-        cmd.SetHandler((InvocationContext context) => context.ExitCode = Run());
+        cmd.AddOption(gameOption);
+        cmd.SetHandler((InvocationContext context) =>
+            context.ExitCode = Run(context.ParseResult.GetValueForOption(gameOption)!));
         return cmd;
     }
 
-    internal static int Run()
+    internal static int Run(string game = "k1")
     {
         var config = KdevConfig.LoadOrPrintErrors(out var exitCode);
         if (config is null) return exitCode;
 
+        var target = config.ResolveTarget(game);
+        if (target is null) return 2;
+
         Console.WriteLine("Stopping any running game...");
-        var killSummary = GameProcess.KillAll();
+        var killSummary = GameProcess.KillAll(target.ProcessName);
         if (killSummary.NothingToKill)
         {
             Console.WriteLine("  No running game.");
@@ -32,7 +38,7 @@ public static class CleanCommand
 
         Console.WriteLine();
         Console.WriteLine("Uninstalling patches...");
-        var result = PatchRemover.RemoveAllPatches(config.GameExe);
+        var result = PatchRemover.RemoveAllPatches(target.Exe);
 
         foreach (var msg in result.Messages)
         {
