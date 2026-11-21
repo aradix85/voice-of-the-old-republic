@@ -1,4 +1,4 @@
-# interact_dispatch.cpp (621 lines)
+# interact_dispatch.cpp (624 lines)
 
 Source: `patches/Accessibility/interact_dispatch.cpp`
 
@@ -16,14 +16,14 @@ Enter / Shift+Enter on the narrated target. DispatchInteract is the one pipeline
 - L134 `bool RedirectLandmarkToDoor(void* target, const char* name, bool forceRadial)`: A map note placed at a door ("Largo's Apartment" on his door) means the door: a coordinate walk stops against it closed.
 - L153 `void* TransitionTriggerNear(const Vector& p)`: The transition trigger nearest to `p` within 10 m, or null: a map note such as "To Sewers" sits at the trigger it names, and a walk to it leaves the area.
 - L179 `bool RedirectLandmarkToTransition(void* target, const char* name, bool forceRadial)`: A map note that stands for a way out of the area means that way out.
-- L213 `bool RedirectLandmarkToNamesake(void* target, const char* name, bool forceRadial)`
-- L258 `bool WalkToTrigger(void* target, uint32_t handle, const char* name, acc::filter::CycleCategory cat, bool forceRadial)`: Transitions are trigger regions that fire on walk-in and landmarks are waypoints: neither has a use node, so a use would never move the PC (and report a false "way blocked").
-- L298 `bool WalkThroughOpenDoor(void* target, uint32_t handle, const char* name)`: An open door has no verb, but Enter on it means going through: walk into the region beyond it.
-- L340 `void AnnouncePick(const acc::picker::ActionSnapshot& snap, uint32_t handle, const char* name, acc::filter::CycleCategory cat, bool forceRadial, char* msg, size_t cap)`: The pre-roll for a picked action.
-- L368 `bool UseWithInputDisabled(uint32_t handle, bool* inputDisabled)`: AddUseObjectAction with input disabled, its proven contract: on success engine_player's queue-watched session gives control back, on a stall the approach tracker does.
-- L378 `bool LastUseDidNothing(uint32_t handle)`: A use the engine accepted and never acted on, on this target, the press before: a container that was bashed open takes AddUseObjectAction and does nothing with it.
-- L387 `bool DispatchVerb(acc::picker::ActionSnapshot& snap, uint32_t dispatchHandle, const char* name, void* target, bool forceRadial)`: Dispatch the picked verb.
-- L430 `acc::strings::Id PreRollFor(acc::filter::CycleCategory c)`
-- L449 `bool ShouldSwitchFromInGameMenu()`: The in-game menu (Escape menu and its tabs, which keep the InGameMenu strip in the foreground) is the only blocker the action-menu openers switch out of, as the game's own menu hotkeys do; message boxes, dialogs and s...
-- L455 `void OnInteract(bool forceRadial)`
-- L477 `void DispatchInteract(void* target, uint32_t handle, bool forceRadial)`
+- L215 `bool RedirectLandmarkToNamesake(void* target, const char* name, bool forceRadial)`
+- L261 `bool WalkToTrigger(void* target, uint32_t handle, const char* name, acc::filter::CycleCategory cat, bool forceRadial)`: Transitions are trigger regions that fire on walk-in and landmarks are waypoints: neither has a use node, so a use would never move the PC (and report a false "way blocked").
+- L301 `bool WalkThroughOpenDoor(void* target, uint32_t handle, const char* name)`: An open door has no verb, but Enter on it means going through: walk into the region beyond it.
+- L343 `void AnnouncePick(const acc::picker::ActionSnapshot& snap, uint32_t handle, const char* name, acc::filter::CycleCategory cat, bool forceRadial, char* msg, size_t cap)`: The pre-roll for a picked action.
+- L371 `bool UseWithInputDisabled(uint32_t handle, bool* inputDisabled)`: AddUseObjectAction with input disabled, its proven contract: on success engine_player's queue-watched session gives control back, on a stall the approach tracker does.
+- L381 `bool LastUseDidNothing(uint32_t handle)`: A use the engine accepted and never acted on, on this target, the press before: a container that was bashed open takes AddUseObjectAction and does nothing with it.
+- L390 `bool DispatchVerb(acc::picker::ActionSnapshot& snap, uint32_t dispatchHandle, const char* name, void* target, bool forceRadial)`: Dispatch the picked verb.
+- L433 `acc::strings::Id PreRollFor(acc::filter::CycleCategory c)`
+- L452 `bool ShouldSwitchFromInGameMenu()`: The in-game menu (Escape menu and its tabs, which keep the InGameMenu strip in the foreground) is the only blocker the action-menu openers switch out of, as the game's own menu hotkeys do; message boxes, dialogs and s...
+- L458 `void OnInteract(bool forceRadial)`
+- L480 `void DispatchInteract(void* target, uint32_t handle, bool forceRadial)`

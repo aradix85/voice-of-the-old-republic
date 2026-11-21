@@ -76,6 +76,8 @@ installer, as the pre-release `bridge-latest`.
   steps out with your own movement key and walks from there.
 - Enter on a map note that names the person or thing beside it goes to that
   person or thing.
+- Enter on a map note goes to the thing beside it too when the two names only
+  end in the same word.
 - A walk that arrives with a companion far behind says who stayed behind.
 - Talking to someone behind a counter works: the walk stops in front of them
   and the conversation starts.
@@ -344,6 +346,10 @@ installer, as the pre-release `bridge-latest`.
   metres of it goes to that person or thing: "Freyyr" beside Freyyr,
   "Computer" at the computer, "Basket Up" over the Basket. The note only
   walked to its own spot and said "Use Freyyr".
+- Enter on a map note goes to the person or thing within 3 metres of it too
+  when the two names only end in the same word of four letters or more:
+  "Ancient Computer" on the Rakata Computer in the Temple Catacombs. Enter
+  there said "Use Ancient Computer" and did nothing.
 - A walk by Enter that arrives while a companion is more than 40 metres away
   says "HK-47 stayed behind." Companions do not follow round a turn-back
   zone, and a stuck one stays put; the walk went on without a word. Said
