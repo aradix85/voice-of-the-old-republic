@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include <cstddef>
+
 namespace acc::text {
 
 // Case-sensitive compare that ignores leading/trailing whitespace on both
@@ -26,5 +28,9 @@ bool MatchesWithTokens(const char* rendered, const char* stored);
 // True when `needle` occurs in `haystack`, ASCII letter case ignored. An
 // empty or null needle matches nothing.
 bool ContainsIgnoreCase(const char* haystack, const char* needle);
+
+// True when both names end in the same word of at least `minLen` characters,
+// ASCII letter case ignored: "Ancient Computer" and "Rakata Computer".
+bool SameLastWord(const char* a, const char* b, size_t minLen);
 
 }  // namespace acc::text

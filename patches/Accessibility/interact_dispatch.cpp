@@ -206,9 +206,11 @@ bool RedirectLandmarkToTransition(void* target, const char* name, bool forceRadi
 // means that person or thing: "Freyyr" a metre and a half from Freyyr,
 // "Computer" at the computer, "Basket Up" over the Basket that takes you up.
 // Enter on the note said "Use Freyyr" and only walked to the note, twice
-// taken for a target that was not a person. The names must overlap, and the
-// object stand within kNamesakeM of the note.
-constexpr float kNamesakeM = 3.0f;
+// taken for a target that was not a person. The names must overlap: one holds
+// the other, or both end in the same word ("Ancient Computer" at the Rakata
+// Computer). And the object must stand within kNamesakeM of the note.
+constexpr float  kNamesakeM       = 3.0f;
+constexpr size_t kNamesakeWordLen = 4;
 
 bool RedirectLandmarkToNamesake(void* target, const char* name, bool forceRadial) {
     Vector lpos{};
@@ -237,7 +239,8 @@ bool RedirectLandmarkToNamesake(void* target, const char* name, bool forceRadial
             continue;
         }
         if (!acc::text::ContainsIgnoreCase(name, other) &&
-            !acc::text::ContainsIgnoreCase(other, name)) {
+            !acc::text::ContainsIgnoreCase(other, name) &&
+            !acc::text::SameLastWord(name, other, kNamesakeWordLen)) {
             continue;
         }
         nearest  = obj;

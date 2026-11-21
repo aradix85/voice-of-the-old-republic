@@ -6,6 +6,7 @@
 using acc::text::ContainsIgnoreCase;
 using acc::text::EqualsTrimmed;
 using acc::text::MatchesWithTokens;
+using acc::text::SameLastWord;
 
 TEST_CASE("ContainsIgnoreCase finds a name inside a longer one") {
     CHECK(ContainsIgnoreCase("Dantooine - Matale Grounds", "Matale Grounds"));
@@ -16,6 +17,18 @@ TEST_CASE("ContainsIgnoreCase finds a name inside a longer one") {
     CHECK_FALSE(ContainsIgnoreCase("Dantooine - Grove", ""));
     CHECK_FALSE(ContainsIgnoreCase(nullptr, "Grove"));
     CHECK_FALSE(ContainsIgnoreCase("Dantooine - Grove", nullptr));
+}
+
+TEST_CASE("SameLastWord matches two names for the same kind of thing") {
+    CHECK(SameLastWord("Ancient Computer", "Rakata Computer", 4));
+    CHECK(SameLastWord("Security terminal ", "Computer Terminal", 4));
+    CHECK(SameLastWord("Computer", "Computer", 4));
+    CHECK_FALSE(SameLastWord("Sith Base", "Sith Guard", 4));       // the first word shared
+    CHECK_FALSE(SameLastWord("Computer Room", "Rakata Computer", 4));
+    CHECK_FALSE(SameLastWord("North Bay", "Docking Bay", 4));      // the shared word too short
+    CHECK_FALSE(SameLastWord("Computers", "Computer", 4));
+    CHECK_FALSE(SameLastWord("", "", 4));
+    CHECK_FALSE(SameLastWord(nullptr, "Computer", 4));
 }
 
 TEST_CASE("EqualsTrimmed ignores padding at both ends only") {

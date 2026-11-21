@@ -19,6 +19,20 @@ const char* FindSegment(const char* hay, const char* needle, size_t n) {
     return nullptr;
 }
 
+char Lower(char c) {
+    return (c >= 'A' && c <= 'Z') ? static_cast<char>(c - 'A' + 'a') : c;
+}
+
+// The last space-separated word of `s`, trailing spaces left out.
+const char* LastWord(const char* s, size_t& len) {
+    size_t end = std::strlen(s);
+    while (end > 0 && s[end - 1] == ' ') --end;
+    size_t begin = end;
+    while (begin > 0 && s[begin - 1] != ' ') --begin;
+    len = end - begin;
+    return s + begin;
+}
+
 }  // namespace
 
 bool EqualsTrimmed(const char* a, const char* b) {
@@ -74,15 +88,24 @@ bool MatchesWithTokens(const char* rendered, const char* stored) {
 
 bool ContainsIgnoreCase(const char* haystack, const char* needle) {
     if (!haystack || !needle || !needle[0]) return false;
-    auto lower = [](char c) {
-        return (c >= 'A' && c <= 'Z') ? static_cast<char>(c - 'A' + 'a') : c;
-    };
     for (const char* h = haystack; *h; ++h) {
         size_t i = 0;
-        while (needle[i] && h[i] && lower(h[i]) == lower(needle[i])) ++i;
+        while (needle[i] && h[i] && Lower(h[i]) == Lower(needle[i])) ++i;
         if (!needle[i]) return true;
     }
     return false;
+}
+
+bool SameLastWord(const char* a, const char* b, size_t minLen) {
+    if (!a || !b) return false;
+    size_t lenA = 0, lenB = 0;
+    const char* wordA = LastWord(a, lenA);
+    const char* wordB = LastWord(b, lenB);
+    if (lenA != lenB || lenA < minLen) return false;
+    for (size_t i = 0; i < lenA; ++i) {
+        if (Lower(wordA[i]) != Lower(wordB[i])) return false;
+    }
+    return true;
 }
 
 }  // namespace acc::text
