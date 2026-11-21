@@ -226,6 +226,8 @@ installer, as the pre-release `bridge-latest`.
 - The bridge lists the replies of a conversation at a computer or panel too.
 - The code is reorganised into small files with one job each, with less
   duplication and with unit tests; play is meant to stay the same.
+- `kdev` works with only one of the two games installed, and `kdev launch`
+  and `kdev clean` take `--game k2`.
 - Log only: the patch log can be read while the game runs; lock lines name a
   door's OnFailToOpen script.
 
@@ -936,6 +938,12 @@ installer, as the pre-release `bridge-latest`.
   `tools/analysis/` checks every call into the engine against the
   engine's own code in both games. `kdev combat-strings-extract` is gone
   with the other languages.
+- `kdev` works with only one of the two games installed. Every command
+  refused to run while the KOTOR 1 install was missing, `kdev build` and
+  `kdev apply --game k2` included. Now only the game a command acts on has
+  to exist (`KdevConfig.ResolveTarget`), `kdev status` says which games are
+  installed, and `kdev launch` and `kdev clean` take `--game k2` like
+  `kdev apply`.
 - Log only: the patch log is opened shared for reading, so it can be followed
   while the game runs.
 
