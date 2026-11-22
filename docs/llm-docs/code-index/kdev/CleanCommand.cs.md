@@ -1,4 +1,4 @@
-# CleanCommand.cs (63 lines)
+# CleanCommand.cs (69 lines)
 
 Source: `tools/kdev/Commands/CleanCommand.cs`
 
@@ -6,4 +6,4 @@ Source: `tools/kdev/Commands/CleanCommand.cs`
 
 - L7 `public static class CleanCommand`
 - L9 `public static Command Build()`
-- L16 `internal static int Run()`
+- L19 `internal static int Run(string game = "")`

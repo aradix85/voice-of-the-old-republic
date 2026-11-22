@@ -224,6 +224,7 @@ installer, as the pre-release `bridge-latest`.
 - Using an object through the bridge no longer crashes the game.
 - A key sent through the bridge also works in the game's screens.
 - The bridge lists the replies of a conversation at a computer or panel too.
+- The bridge reads the world and acts in it in KOTOR 2 as well.
 - The code is reorganised into small files with one job each, with less
   duplication and with unit tests; play is meant to stay the same.
 - `kdev` works with only one of the two games installed, and `kdev launch`
@@ -904,6 +905,14 @@ installer, as the pre-release `bridge-latest`.
 - `/state` carries `dialog_replies` whenever a conversation is open. It
   looked at the foreground screen only, and while the replies of a computer
   or panel are up that is a screen the mod has no name for.
+- `/state` in full, `/nearby`, `/overview`, `/objects`, `/rooms` and the
+  select, interact, use and walk actions answer in KOTOR 2 too. They were shut
+  there as a precaution; every engine read behind them is one the mod's own
+  keys already make in KOTOR 2. A party member's `security` stays KOTOR 1
+  only. Not yet run in a KOTOR 2 area.
+- `in_combat` in `/state` is the verdict the mod's own combat cue uses (any
+  party member, or the controlled one), not the party scan alone, which
+  answers nothing in KOTOR 2.
 
 <h3>Installer:</h3>
 

@@ -1,4 +1,4 @@
-# LaunchCommand.cs (120 lines)
+# LaunchCommand.cs (125 lines)
 
 Source: `tools/kdev/Commands/LaunchCommand.cs`
 
@@ -6,5 +6,5 @@ Source: `tools/kdev/Commands/LaunchCommand.cs`
 
 - L7 `public static class LaunchCommand`
 - L9 `public static Command Build()`
-- L25 `internal static int Run(bool monitor)`
-- L101 `private static void TryPin(int pid, IntPtr mask, string label)`: The IsWindows() guard below looks redundant — both call sites are already inside Run's if (OperatingSystem.IsWindows()) block, and kdev.csproj pins RuntimeIdentifier=win-x64.
+- L27 `internal static int Run(bool monitor, string game = "")`
+- L106 `private static void TryPin(int pid, IntPtr mask, string label)`: The IsWindows() guard below looks redundant — both call sites are already inside Run's if (OperatingSystem.IsWindows()) block, and kdev.csproj pins RuntimeIdentifier=win-x64.
