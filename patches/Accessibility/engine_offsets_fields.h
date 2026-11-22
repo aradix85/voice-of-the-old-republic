@@ -909,10 +909,16 @@ const size_t kControlIdOffset = acc::off::Pick(0x50, 0x54);  // int id
 //   +0x1e0  CExoString  save_file_name
 //   +0x1e8  CExoString  areaname         (e.g. "Kommandomodul")
 //   +0x1f0  CExoString  lastmodule       (e.g. "Endar Spire")
-const size_t kSaveLoadEntrySaveNumberOffset    = acc::off::Todo(0x1c8);
-const size_t kSaveLoadEntrySaveGameNameOffset  = acc::off::Todo(0x1d8);
-const size_t kSaveLoadEntryAreaNameOffset      = acc::off::Todo(0x1e8);
-const size_t kSaveLoadEntryLastModuleOffset    = acc::off::Todo(0x1f0);
+//
+// KOTOR 2: read off CSWGuiSaveLoadEntry::LoadData (0x00855F30), which fills
+// the entry from savenfo.res field by field: SAVEGAMENAME is assigned to
+// this+0x1ec, AREANAME to +0x1fc, LASTMODULE to +0x204, and SAVENUMBER is
+// stored at +0x26c. The entry grew (TIMEPLAYED, PCNAME, ten story hints), so
+// these are not KOTOR 1's values plus the wider button.
+const size_t kSaveLoadEntrySaveNumberOffset    = acc::off::Pick(0x1c8, 0x26c);
+const size_t kSaveLoadEntrySaveGameNameOffset  = acc::off::Pick(0x1d8, 0x1ec);
+const size_t kSaveLoadEntryAreaNameOffset      = acc::off::Pick(0x1e8, 0x1fc);
+const size_t kSaveLoadEntryLastModuleOffset    = acc::off::Pick(0x1f0, 0x204);
 
 // CSWGuiSaveLoad ctor-bound EMBEDDED members (gui-id audit, 2026-08-18 —
 // docs/gui-id-audit.md). Every offset below has a DIRECT witness: the
@@ -1711,7 +1717,10 @@ const size_t    kStatsFeatsListOffset             = acc::off::Same(0x0);
 // confirmation popups), the spec handles row navigation. We just don't
 // open it ourselves for creature examine — that would land on an empty
 // TLK-lookup result.
-const size_t    kExaminePanelListBoxOffset        = acc::off::Todo(0x67c);
+// KOTOR 2 +0x6a8: CSWGuiExamine's constructor (0x008BECF0) runs
+// CSWGuiMessageBox's (0x0075AE40) on the same `this`, and that one binds
+// "LB_MESSAGE" to this+0x6a8, after BTN_OK at +0x308 and BTN_CANCEL at +0x4d8.
+const size_t    kExaminePanelListBoxOffset        = acc::off::Pick(0x67c, 0x6a8);
 const size_t    kExaminePanelHandleOffset         = acc::off::Todo(0x984);
 
 // CSWGuiInGameMessages — combat log + dialog history panel.
