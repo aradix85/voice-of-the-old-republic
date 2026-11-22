@@ -166,7 +166,7 @@ Options (O), then Mod settings at the bottom of the list. Up / Down move, Enter 
 
 ## The bridge
 
-While the game runs, the mod listens on 127.0.0.1 — this PC only — for tools that want to read the game state or act in the game. At every start it writes the port and a fresh token to `bridge.json` next to `swkotor.exe`; a request without that token is refused. It can report what is on screen, the party, what is nearby, the explored map and what NVDA said, and it can focus, use and walk to objects. Most of it works in KOTOR 1 only. The endpoints are listed in [patches/Accessibility/bridge.h](patches/Accessibility/bridge.h).
+While the game runs, the mod listens on 127.0.0.1 — this PC only — for tools that want to read the game state or act in the game. At every start it writes the port and a fresh token to `bridge.json` next to the game's executable; a request without that token is refused. It can report what is on screen, the party, what is nearby, the explored map and what NVDA said, and it can focus, use and walk to objects, in both games. The endpoints are listed in [patches/Accessibility/bridge.h](patches/Accessibility/bridge.h).
 
 ## Troubleshooting
 

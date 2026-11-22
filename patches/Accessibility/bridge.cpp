@@ -21,7 +21,6 @@
 
 #include "bridge.h"
 #include "bridge_internal.h"
-#include "engine_game.h"
 #include "log.h"
 
 #pragma comment(lib, "ws2_32.lib")
@@ -36,22 +35,20 @@ constexpr int    kPortAttempts   = 10;
 constexpr DWORD  kJobTimeoutMs   = 2000;
 constexpr size_t kSpokenCapacity = 300;
 
-// The requests Tick answers on the main thread. k1Only: the engine reads
-// behind them are mapped for KOTOR 1 only.
+// The requests Tick answers on the main thread.
 struct Route {
     const char* path;
-    bool        k1Only;
     std::string (*run)(const Params&);
 };
 
 const Route kRoutes[] = {
-    {"/state",    false, [](const Params&) { return BuildSnapshot(); }},
-    {"/menu",     false, [](const Params&) { return BuildMenu(); }},
-    {"/do",       false, RunAction},
-    {"/nearby",   true,  BuildNearby},
-    {"/overview", true,  [](const Params&) { return BuildOverview(); }},
-    {"/objects",  true,  [](const Params&) { return BuildObjects(); }},
-    {"/rooms",    true,  [](const Params&) { return BuildRooms(); }},
+    {"/state",    [](const Params&) { return BuildSnapshot(); }},
+    {"/menu",     [](const Params&) { return BuildMenu(); }},
+    {"/do",       RunAction},
+    {"/nearby",   BuildNearby},
+    {"/overview", [](const Params&) { return BuildOverview(); }},
+    {"/objects",  [](const Params&) { return BuildObjects(); }},
+    {"/rooms",    [](const Params&) { return BuildRooms(); }},
 };
 
 const Route* FindRoute(const std::string& path) {
@@ -86,14 +83,6 @@ std::deque<std::shared_ptr<Job>> g_jobs;
 bool        g_started = false;
 int         g_port = 0;
 std::string g_token;
-
-std::string Run(const Job& job) {
-    if (job.route->k1Only && !acc::game::IsKotor1()) {
-        return "{\"error\":" +
-               Json(std::string(job.route->path + 1) + " is KOTOR 1 only for now") + "}";
-    }
-    return job.route->run(job.params);
-}
 
 void Send(SOCKET c, int status, const std::string& body) {
     const std::string all = Response(status, body);
@@ -299,7 +288,7 @@ void Tick() {
     if (jobs.empty()) return;
 
     for (auto& job : jobs) {
-        std::string result = Run(*job);
+        std::string result = job->route->run(job->params);
         if (std::strcmp(job->route->path, "/do") == 0) {
             acclog::Write("Bridge", "/do action=%s -> %.120s",
                           Param(job->params, "action").c_str(), result.c_str());

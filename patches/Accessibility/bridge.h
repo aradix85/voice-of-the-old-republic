@@ -4,7 +4,7 @@
 //
 // Every request must carry the header "X-Kotor-Bridge: <token>". The token
 // is random per session and written, with the port, to bridge.json next to
-// swkotor.exe. A browser page cannot set that header on a cross-origin
+// the game's executable. A browser page cannot set that header on a cross-origin
 // request without a CORS preflight this server never answers, so web pages
 // cannot drive the game through it.
 //
@@ -31,8 +31,6 @@
 //   GET /do?action=key&scancode=<dec or 0x..>[&extended=1]
 //       held for a moment, so that game screens see it; a DirectInput code
 //       with the high bit (0xD0 = Down) is sent as its extended key
-// All but /health, /spoken, /state, /menu and the say and key actions are
-// KOTOR 1 only for now.
 
 #pragma once
 

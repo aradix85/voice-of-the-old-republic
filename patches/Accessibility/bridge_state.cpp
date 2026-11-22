@@ -7,9 +7,9 @@
 #include <vector>
 
 #include "bridge_internal.h"
+#include "combat.h"
 #include "engine_area.h"
 #include "engine_compass.h"
-#include "engine_game.h"
 #include "engine_manager.h"
 #include "engine_panels.h"
 #include "engine_player.h"
@@ -104,9 +104,6 @@ std::string TargetField(const PlayerFrame& f) {
 
 std::string BuildSnapshot() {
     std::string s = "{\"ready\":true," + GameFields();
-    if (!acc::game::IsKotor1())
-        return s + ",\"note\":\"state reads are KOTOR 1 only for now\"}";
-
     void* panel = ForegroundPanel();
     // World reads only once the player creature exists. Between character
     // creation's Play and the first area the server already has the area but
@@ -139,7 +136,7 @@ std::string BuildSnapshot() {
 
     s += ",\"party\":" + PartyJson();
     s += ",\"in_combat\":";
-    s += acc::engine::IsAnyPartyMemberInCombat() ? "true" : "false";
+    s += acc::combat::IsPartyInCombat() ? "true" : "false";
     s += ScreenField(panel);
     // Any dialog panel in the stack, not the foreground one: while the replies
     // are up the foreground panel is one this patch does not name ("Unknown").

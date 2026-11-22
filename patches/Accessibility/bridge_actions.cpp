@@ -5,7 +5,6 @@
 
 #include "bridge_internal.h"
 #include "engine_area.h"
-#include "engine_game.h"
 #include "guidance_autowalk.h"
 #include "interact_dispatch.h"
 #include "key_inject.h"
@@ -67,8 +66,6 @@ std::string RunAction(const Params& params) {
                              Param(params, "extended") == "1");
         return kOk;
     }
-
-    if (!acc::game::IsKotor1()) return Error("this action is KOTOR 1 only for now");
 
     if (action == "walk") {
         PlayerFrame f = ReadPlayerFrame();
