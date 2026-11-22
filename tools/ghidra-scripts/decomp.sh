@@ -53,6 +53,7 @@ OUT="$(mktemp -t decomp.XXXXXX.txt)"
 "$GHIDRA" "$PROJ_DIR" "$PROJ_NAME" \
   -process "$PROGRAM" \
   -readOnly \
+  -noanalysis \
   -scriptPath "$SCRIPTS" \
   -postScript Decompile.java "$OUT" "$@" >/dev/null 2>&1 || true
 
