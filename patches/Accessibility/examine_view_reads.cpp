@@ -23,7 +23,8 @@ typedef int (__thiscall* PFN_GetIntThisInt)(void* this_, int arg);
 
 // CClientExoApp::GetLastTarget, the read combat_query uses too.
 typedef uint32_t (__thiscall* PFN_GetLastTarget)(void* this_);
-const uintptr_t kAddrCClientExoAppGetLastTargetLocal = acc::addr::R(0x005EDD80);
+// K2 twin 0x00740660: returns [internal+0x2b4], the field KOTOR 1 reads.
+const uintptr_t kAddrCClientExoAppGetLastTargetLocal = acc::addr::Pick(0x005EDD80, 0x00740660);
 
 // The engine's side-effect-free int accessors; -1 when the call faults.
 int CallIntThis(void* this_, uintptr_t addr) {

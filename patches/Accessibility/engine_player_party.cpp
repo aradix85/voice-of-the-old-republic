@@ -195,6 +195,13 @@ bool GetActiveLeaderName(char* outBuf, size_t bufSize) {
 bool GetPlayerCharacterName(char* outBuf, size_t bufSize) {
     if (!outBuf || bufSize < 2) return false;
     outBuf[0] = '\0';
+    // KOTOR 2 reads the field, not the accessor: see
+    // kClientInternalPlayerCharacterNameOffset.
+    if (acc::game::IsKotor2()) {
+        void* internal = GetClientAppInternal();
+        return internal && ReadCExoString(internal, kClientInternalPlayerCharacterNameOffset,
+                                          outBuf, bufSize);
+    }
     void* exoApp = GetClientApp();
     if (!exoApp) return false;
     __try {

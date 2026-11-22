@@ -105,7 +105,10 @@ typedef int (__thiscall* PFN_HideSWInGameGui)(void* gui, int param_1);
 // (engine never runs AIActionDialogObject's bail that would clear it), which
 // then gates further click/interact processing. The dialog-approach watchdog
 // calls this with 0 after cancelling a blocked approach to avoid that limbo.
-static const uintptr_t kAddrSetGlobalDialogState = acc::addr::R(0x0062ec60);
+// K2 twin 0x007CEB80 (named by the Patch Manager's KOTOR 2 database,
+// decompiled 2026-11-22): stores the state at gui+0xcc and, for 0, runs the
+// engine's own end-of-conversation cleanup.
+static const uintptr_t kAddrSetGlobalDialogState = acc::addr::Pick(0x0062ec60, 0x007CEB80);
 typedef void (__thiscall* PFN_SetGlobalDialogState)(void* gui, int state);
 
 bool SetGlobalDialogState(int state) {

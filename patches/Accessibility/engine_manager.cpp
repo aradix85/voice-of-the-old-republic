@@ -187,7 +187,10 @@ void* FindOrphanedModalPanel(void* mgr) {
 // there, and appends it to the modal stack unless it is on it already (then
 // it returns 0). RemovePanel takes a panel off the modal stack wherever it
 // sits, so a panel pushed here closes the engine's own way.
-static const uintptr_t kAddrPushModalPanel = acc::addr::R(0x0040bd90);
+// K2 twin 0x00410900 (named by the Patch Manager's KOTOR 2 database,
+// decompiled 2026-11-22): the same steps in the same order, the hover at
+// mgr+8, the focus at mgr+0x18, and 0 for a panel already on the stack.
+static const uintptr_t kAddrPushModalPanel = acc::addr::Pick(0x0040bd90, 0x00410900);
 typedef int (__thiscall* PFN_PushModalPanel)(void* mgr, void* panel);
 
 bool PushModalPanel(void* mgr, void* panel) {

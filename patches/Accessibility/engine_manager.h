@@ -163,7 +163,11 @@ typedef void (__thiscall* PFN_MoveMouseToPosition)(void* gm, int x, int y);
 // SetActiveControl path that crashed at mgr+5: we no longer skip the
 // HandleLMouseDown prelude writes, so the engine's press+release
 // invariant stays intact.
-const uintptr_t kAddrManagerLMouseDown = acc::addr::R(0x0040c570);
-const uintptr_t kAddrManagerLMouseUp = acc::addr::R(0x0040a170);
+// K2 twins 0x004131E0 / 0x004132E0 (the Patch Manager's KOTOR 2 database
+// names them; decompiled 2026-11-22): Down stores `press & 1` in the held bit
+// at mgr+0x1c and calls the hovered control's ([mgr+8]) vtable+0x18; Up calls
+// the pressed control's ([mgr+0x10]) vtable+0x1c and clears the held bit.
+const uintptr_t kAddrManagerLMouseDown = acc::addr::Pick(0x0040c570, 0x004131E0);
+const uintptr_t kAddrManagerLMouseUp = acc::addr::Pick(0x0040a170, 0x004132E0);
 typedef int (__thiscall* PFN_ManagerLMouseDown)(void* gm, int press);
 typedef int (__thiscall* PFN_ManagerLMouseUp)(void* gm);
