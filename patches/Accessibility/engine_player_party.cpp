@@ -34,26 +34,40 @@ void* GetClientLeader() {
     }
 }
 
-void* GetPartyCreatureBySlotK2(int slot) {
-    if (!acc::game::IsKotor2()) return nullptr;
-    if (slot < 0 || slot > 2) return nullptr;
-    // GetPartyCreature @ K2 0x007E5DA0 — the resolver the K2 medical-use
-    // handler feeds its picked party slot into (and whose slot-0 wrapper
-    // PopulateMenus/DoPersonalAction use as "the player"). Its `this` is the
-    // PARTY object at CClientExoAppInternal+0x270 — witnessed in the getter
-    // 0x0073FB90 ([app+4]+0x270) that every engine caller runs first.
-    typedef void* (__thiscall* PFN_K2GetPartyCreature)(void* this_, int slot);
+namespace {
+
+// CClientExoAppInternal.party (CSWParty*) and CSWParty::GetCharacter(index)
+// -> CSWCCreature*, null for an index outside the party.
+// KOTOR 2: the party hangs at the same +0x270 (the getter 0x0073FB90 returns
+// [app+4]+0x270), and GetCharacter is 0x007E5DA0: bounds check against the
+// member count at [party], then the member's object id through the client
+// creature lookup. It is the resolver the K2 medical-use handler feeds its
+// party slot into, and the one K2's UpdateCombatMode (0x0079D840) loops over
+// every tick to keep each member's combat bit: the loop IsAnyPartyMemberInCombat
+// reads the result of.
+const size_t    kInternalPartyOffset      = acc::off::Same(0x270);
+const uintptr_t kAddrCSWPartyGetCharacter = acc::addr::Pick(0x006346C0, 0x007E5DA0);
+
+void* PartyCharacter(int index) {
+    typedef void* (__thiscall* PFN_GetCharacter)(void* this_, int index);
     void* internal = GetClientAppInternal();
     if (!internal) return nullptr;
     __try {
         void* party = *reinterpret_cast<void**>(
-            reinterpret_cast<unsigned char*>(internal) + 0x270);
+            reinterpret_cast<unsigned char*>(internal) + kInternalPartyOffset);
         if (!party) return nullptr;
-        auto fn = reinterpret_cast<PFN_K2GetPartyCreature>(0x007E5DA0);
-        return fn(party, slot);
+        return reinterpret_cast<PFN_GetCharacter>(kAddrCSWPartyGetCharacter)(party, index);
     } __except (EXCEPTION_EXECUTE_HANDLER) {
         return nullptr;
     }
+}
+
+}  // namespace
+
+void* GetPartyCreatureBySlotK2(int slot) {
+    if (!acc::game::IsKotor2()) return nullptr;
+    if (slot < 0 || slot > 2) return nullptr;
+    return PartyCharacter(slot);
 }
 
 int SetLeaderQueueModeBit(int on) {
@@ -82,34 +96,18 @@ bool IsAnyPartyMemberInCombat() {
     // OR that bit across the whole party for the true encounter state. Stays
     // client-side on the same field/namespace as the global we already poll,
     // so there is no client/server timing skew between the two.
-    // CClientExoAppInternal.party
-    const size_t kInternalPartyOffset = acc::off::Todo(0x270);
-    // __thiscall(int) -> CSWCCreature*
-    const uintptr_t kAddrCSWPartyGetCharacter = acc::addr::R(0x006346C0);
+    //
+    // GetCharacter is bounds-checked (null for any index >= party_count), so
+    // a fixed cap with a null-skip is safe.
     constexpr int kPartyScanCap = 8;  // a KOTOR party is at most 3
-    typedef void* (__thiscall* PFN_GetCharacter)(void* this_, int index);
-    void* internal = GetClientAppInternal();
-    if (!internal) return false;
-    __try {
-        void* party = *reinterpret_cast<void**>(
-            reinterpret_cast<unsigned char*>(internal) + kInternalPartyOffset);
-        if (!party) return false;
-        auto getChar = reinterpret_cast<PFN_GetCharacter>(
-            kAddrCSWPartyGetCharacter);
-        // GetCharacter is internally bounds-checked (returns null for any
-        // index >= party_count), so a fixed cap with a null-skip is safe even
-        // though party_member_datas is contiguous.
-        for (int i = 0; i < kPartyScanCap; ++i) {
-            void* c = getChar(party, i);
-            if (!c) continue;
-            uint8_t bits = *(reinterpret_cast<uint8_t*>(c) +
-                             kCSWCCreatureCombatModeOffset);
-            if (bits & 0x01u) return true;
+    for (int i = 0; i < kPartyScanCap; ++i) {
+        uint8_t bits = 0;
+        if (TryReadU8(PartyCharacter(i), kCSWCCreatureCombatModeOffset, &bits) &&
+            (bits & 0x01u)) {
+            return true;
         }
-        return false;
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        return false;
     }
+    return false;
 }
 
 namespace {
