@@ -214,6 +214,18 @@ installer, as the pre-release `bridge-latest`.
   opened by your own character.
 - F1 help lists the new keys.
 - The README is rewritten for this fork.
+- KOTOR 2: a fight counts as one while any party member is in it, not only
+  the one you control.
+- KOTOR 2: the examine view opens on the current target.
+- KOTOR 2: the save and load lists say each save's planet and area.
+- KOTOR 2: Enter on a tab of a tabbed screen switches to it.
+- KOTOR 2: a screen that lost its place takes the keys again.
+- KOTOR 2: a cancelled walk to a conversation no longer leaves the game
+  refusing interactions.
+- KOTOR 2: "<FullName>" is your own character's name, also with a companion
+  in control.
+- KOTOR 2: the rows of the game's own examine box can be read with the arrow
+  keys.
 - A local bridge lets an external helper read the game state and act in the
   game.
 - The in-game updater is gone: F5 on the main menu no longer checks for or
@@ -229,6 +241,8 @@ installer, as the pre-release `bridge-latest`.
   duplication and with unit tests; play is meant to stay the same.
 - `kdev` works with only one of the two games installed, and `kdev launch`
   and `kdev clean` take `--game k2`.
+- `decomp.sh` answers in seconds, and `k2_gog_names.py` finds a KOTOR 2
+  function by name.
 - Log only: the patch log can be read while the game runs; lock lines name a
   door's OnFailToOpen script.
 
@@ -879,6 +893,36 @@ installer, as the pre-release `bridge-latest`.
 - The mod's "Open the guide" and "Latest changes" links open this fork's
   README and changelog.
 
+<h3>KOTOR 2:</h3>
+
+Engine addresses and fields that had a KOTOR 1 value only, so that the
+feature behind each did nothing in KOTOR 2. Every value was read from the
+KOTOR 2 executable (22 Nov 2026) and none has run in a KOTOR 2 game yet; the
+witnesses are at the declarations.
+
+- A fight counts as one while any party member is in it. The scan over the
+  party's own combat bits had no KOTOR 2 address, so only the controlled
+  character counted: "Movement cancelled, combat", the walk to an unexplored
+  place and the Q/E order did not see a fight a companion was in, and a
+  switch to a member who was not engaged yet read as the end of the fight.
+- The examine view opens on the current target. It asked the engine for the
+  last target through an address KOTOR 2 did not have, and said "no target".
+- The save and load lists say each save's planet and area after its name.
+- Enter on a tab of a tabbed screen (Options) switches to it, through the
+  engine's own mouse-down and mouse-up as in KOTOR 1. The click was declined
+  for want of the two addresses.
+- A screen that fell off the engine's modal stack is pushed back and takes
+  the keys again.
+- Cancelling a blocked walk to a conversation resets the engine's
+  conversation state, which otherwise stays set and gates further
+  interactions.
+- "<FullName>" in a name is the player character's own name. KOTOR 2's
+  accessor for it also clears the engine's "name set" flag, so the mod reads
+  the field and leaves the flag alone; until now it fell back to whoever was
+  in control.
+- The rows of the game's own examine box (a message box with a list) are read
+  with the arrow keys.
+
 <h3>Bridge:</h3>
 
 - A loopback HTTP server (`bridge.json` next to `swkotor.exe` holds port and
@@ -953,6 +997,12 @@ installer, as the pre-release `bridge-latest`.
   to exist (`KdevConfig.ResolveTarget`), `kdev status` says which games are
   installed, and `kdev launch` and `kdev clean` take `--game k2` like
   `kdev apply`.
+- `tools/ghidra-scripts/decomp.sh` passes `-noanalysis`. Without it every
+  call analysed the whole program again: eight minutes for two functions of
+  KOTOR 2, seven seconds now.
+- `tools/re-scripts/k2_gog_names.py` looks a KOTOR 2 function up by name in
+  Kotor Patch Manager's database of the GOG build (some ten thousand names)
+  and translates the address to the Steam build, for a decompile to confirm.
 - Log only: the patch log is opened shared for reading, so it can be followed
   while the game runs.
 

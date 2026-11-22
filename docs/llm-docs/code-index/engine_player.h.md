@@ -1,4 +1,4 @@
-# engine_player.h (376 lines)
+# engine_player.h (382 lines)
 
 Source: `patches/Accessibility/engine_player.h`
 
@@ -46,4 +46,4 @@ All functions return false/nullptr cleanly on null at any chain link or SEH faul
 - L231 `int PartySelectionChosenCount(void* panel)`: The panel's count of companions currently chosen (the engine refuses an add once it reaches 2).
 - L244 `bool GetPartyNpcNameForSlot(int npcSlot, char* outBuf, size_t bufSize)`: Resolves a PartySelection roster slot to a display name.
 
-Also 22 constants or variables at namespace scope.
+Also 23 constants or variables at namespace scope.

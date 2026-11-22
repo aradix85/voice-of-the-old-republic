@@ -1,4 +1,4 @@
-# engine_manager.h (170 lines)
+# engine_manager.h (174 lines)
 
 Source: `patches/Accessibility/engine_manager.h`
 
@@ -20,7 +20,7 @@ GoG bytes match Steam — addresses lift directly from Lane's DB.
 - L77 `bool PushModalPanel(void* mgr, void* panel)`: The engine's own CSWGuiManager::PushModalPanel.
 - L81 `void LogManagerStack(void* mgr, const char* tag)`: Dumps panels + modal_stack + GetForegroundPanel.
 - L145 `typedef void (__thiscall* PFN_MoveMouseToPosition)(void* gm, int x, int y)`
-- L168 `typedef int (__thiscall* PFN_ManagerLMouseDown)(void* gm, int press)`
-- L169 `typedef int (__thiscall* PFN_ManagerLMouseUp)(void* gm)`
+- L172 `typedef int (__thiscall* PFN_ManagerLMouseDown)(void* gm, int press)`
+- L173 `typedef int (__thiscall* PFN_ManagerLMouseUp)(void* gm)`
 
 Also 9 constants or variables at namespace scope.

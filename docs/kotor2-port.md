@@ -16,6 +16,39 @@ result especially — but whose cost estimate predates the RTTI finding below.
 
 ## WHERE TO RESUME (read this first)
 
+**Eight gaps closed offline on 2026-11-22 (fork), NOT run in a KOTOR 2 game
+yet.** They were the `R()` addresses and `Todo()` offsets that still had a
+live caller; each did nothing in KOTOR 2. KOTOR 1's executable was no longer
+on disk, so the twins were found from the KOTOR 2 side alone: by name in Kotor
+Patch Manager's `kotor2_gog_aspyr.db` (ten thousand named functions of the
+GOG build, which is the Steam compile re-linked), translated to Steam with
+`tools/re-scripts/k2_gog_names.py`, then confirmed by decompile.
+`engine_twins.py` still had its KOTOR 1 image and agrees with three of the
+pairs; the other three are accessors too small for it to compare.
+
+- **Party combat scan**: `CSWParty::GetCharacter` 0x007E5DA0, party at
+  `CClientExoAppInternal+0x270` as in KOTOR 1. K2's UpdateCombatMode
+  (0x0079D840) walks exactly this every tick and keeps `[creature+0x458] & 1`
+  per member. `GetPartyCreatureBySlotK2` used the same address under another
+  name; both now go through one read.
+- **PushModalPanel** 0x00410900, **manager HandleLMouseDown / Up** 0x004131E0 /
+  0x004132E0, **SetGlobalDialogState** 0x007CEB80, **GetLastTarget**
+  0x00740660 (`[internal+0x2b4]`, unmoved).
+- **Player character name**: not the accessor. K2's GetPlayerCharacterName
+  (0x0073FFE0 into 0x007985B0) clears the "name set" flag at internal+0x290
+  as it returns internal+0x294, so the mod reads the CExoString at +0x294.
+- **Save list rows**: from `CSWGuiSaveLoadEntry::LoadData` 0x00855F30 —
+  SAVEGAMENAME +0x1ec, AREANAME +0x1fc, LASTMODULE +0x204, SAVENUMBER +0x26c.
+- **Examine box list**: +0x6a8; K2's CSWGuiExamine is a CSWGuiMessageBox
+  (ctor 0x008BECF0 runs 0x0075AE40, which binds LB_MESSAGE there).
+
+Left as they are, on purpose: `kUpgradeActiveSlotOff` (K2's workbench has its
+own path, which shows the remove row that KOTOR 1's picker info would hide),
+the journal's entry-count diagnostic (its offsets inside the journal and the
+GUI are KOTOR 1's), `kAreaClientAreaBackOffset` (see its declaration), and the
+constants no code reads (stat getters, store value labels, the four extra
+equipment handles, the upgrade base item, the portrait resref).
+
 **Tutorial hints + custom tutorial popups — PORTED 2026-08-25, first K2 test
 round PASSED 2026-08-25 (patch-20260825-231201.log; Surface 1 popups
 confirmed), round-2 fixes + all-language translations built 2026-08-26 —

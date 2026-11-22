@@ -82,7 +82,8 @@ Lane's RE work also lives in a Ghidra `.gzf` archive on Google Drive (linked fro
 - **Our scripts:** `tools/ghidra-scripts/` (in repo, shareable). Currently:
   - `DumpBytes.java` — print N bytes at given addresses; used to discover detour `original_bytes` for new hooks.
   - `Decompile.java` — print decompiled C for one or more functions by entry-point address. If the FIRST arg is a path it writes **clean** C to that file (no Ghidra log prefixes / doubled lines / banner); otherwise it `println`s (noisy — the headless logger mirrors+prefixes each line, so output comes out doubled). Prefer the wrapper below.
-- **Decompile a function — clean one-liner:** `bash tools/ghidra-scripts/decomp.sh 0x<addr> [0x<addr> ...]`. Picks a temp out-file, runs headless, prints pure C. ~30-60s (JVM + 28 MB project load — inherent to Ghidra headless, not a hang; the run auto-backgrounds via the Bash tool, so read the task output on completion). Only one headless run at a time against the `kotor1` project (it takes a lock).
+- **Decompile a function — clean one-liner:** `bash tools/ghidra-scripts/decomp.sh 0x<addr> [0x<addr> ...]`. Picks a temp out-file, runs headless, prints pure C in a few seconds (it passes `-noanalysis`; without that flag every call analyses the whole program again, minutes for KOTOR 2). Only one headless run at a time against one project (it takes a lock). KOTOR 2: `KDEV_GHIDRA_PROJ=kotor2 KDEV_GHIDRA_PROGRAM=swkotor2.exe` in front, against the project made from the Steam `swkotor2.exe` (not encrypted on disk).
+- **A KOTOR 2 function by name:** `python tools/re-scripts/k2_gog_names.py <db> Class::Function` (also `--class Class` and `--offsets Class`). `<db>` is `AddressDatabases/kotor2_gog_aspyr.db` from the current Kotor-Patch-Manager repository (2 MB, some ten thousand named functions of the GOG build; the vendored copy is an older, nearly empty one), kept outside the repo, here at `C:\Tools\k2re\`. The script translates the GOG address to the Steam build; the result is a candidate that the decompile has to confirm, as its header explains.
 - **Standard headless invocation pattern** (read-only against the imported project):
   ```
   "C:/Tools/ghidra_12.0.4_PUBLIC/support/analyzeHeadless.bat" \
@@ -253,8 +254,8 @@ Reports land in `build/analysis/`. Where the checks stood on 2026-11-11; anythin
 - `clang_tidy.py`: 8 findings, all reviewed false positives (audio_loop, combat_log_parse, cycle_state, engine_area_names, guidance_autowalk, mod_settings_store, party_status, room_topology_absorb). Run it on every file a rewrite touches.
 - `msvc_check.ps1 -Mode analyze`: 121. 105 are C28159 (GetTickCount is the live clock on purpose; `acc::tick::NowMs` is the time of the tick being dispatched), 7 C6385 and 3 C6054 are false positives, 4 C6262 are stack frames over 16 KB (engine_manager, map_ui_cursor, menus_chain_input, peek_description_item), 2 are in the Windows SDK.
 - Unit tests: 89 cases, 712 assertions; 91% line coverage of the files under test.
-- `call_convention.py`: 186 calls fit in KOTOR 1 and 184 in KOTOR 2 (two are KOTOR 1 only), 11 not checked.
-- `engine_twins.py`: 159 pairs, 110 agree, 0 disagree, 3 mixed (read by hand, see `engine_twins_reviewed.txt`), 46 unproven (small accessors with nothing to compare).
+- `call_convention.py` (22 Nov): 187 calls fit in KOTOR 1 and 189 in KOTOR 2, 11 not checked.
+- `engine_twins.py` (22 Nov): 165 pairs, 113 agree, 0 disagree, 3 mixed (read by hand, see `engine_twins_reviewed.txt`), 49 unproven (small accessors with nothing to compare).
 - `engine_constants.py`: no constant defined twice.
 - `raw_try.py`: 230 `__try` blocks outside `engine_reads`; 33 of them have no call inside and stay (several fields of one object under one guard, array walks, reads off a hook's stack frame).
 - `analyse.py`: 479 files, 50,725 code lines, 2,444 functions, 135 above complexity 15, 3 cloned blocks of ten lines or more and none across files.
