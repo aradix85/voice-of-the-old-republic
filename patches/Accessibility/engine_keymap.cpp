@@ -134,9 +134,9 @@ void AddAxisVk(int axis, int vk) {
 // DIK scancodes (DIK == PS/2 set-1):
 //   main-row 1..7 = 0x02..0x08; E=0x12 Q=0x10 J=0x24 U=0x16 L=0x26.
 struct CodeScan { int code; int scancode; };
-constexpr CodeScan kEngineCommands[] = {
-    // Action-menu hotkeys — main-row digits. The 6/7 logical codes are swapped
-    // (key 6 -> 0xee, key 7 -> 0xec); see input_pipeline.cpp's bare-key notes.
+// Action-menu hotkeys — main-row digits. The 6/7 logical codes are swapped
+// (key 6 -> 0xee, key 7 -> 0xec); see input_pipeline.cpp's bare-key notes.
+constexpr CodeScan kDigitCommands[] = {
     {0xe2, 0x02},  // 1 -> DoTargetAction row 0
     {0xe4, 0x03},  // 2 -> row 1
     {0xe6, 0x04},  // 3 -> row 2
@@ -144,6 +144,8 @@ constexpr CodeScan kEngineCommands[] = {
     {0xea, 0x06},  // 5 -> col 1
     {0xee, 0x07},  // 6 -> col 2   (logical 6/7 swap)
     {0xec, 0x08},  // 7 -> col 3
+};
+constexpr CodeScan kQuickScreenCommands[] = {
     // Quick-menu screen hotkeys (confirmed command codes). Only L is shadowed by
     // a default mod hotkey (Shift+L = LevelUpOpen); J/U are included for the
     // upcoming free-config conflict checker and are inert for consume until a
@@ -328,7 +330,10 @@ int GameActionScancode(int actionId) {
 
 void Rebuild() {
     s_count = 0;
-    for (const CodeScan& cs : kEngineCommands) {
+    for (const CodeScan& cs : kDigitCommands) {
+        AddPair(cs.code, ScancodeToVk(cs.scancode));
+    }
+    for (const CodeScan& cs : kQuickScreenCommands) {
         AddPair(cs.code, ScancodeToVk(cs.scancode));
     }
     s_built = true;
