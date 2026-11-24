@@ -145,6 +145,13 @@ constexpr CodeScan kDigitCommands[] = {
     {0xee, 0x07},  // 6 -> col 2   (logical 6/7 swap)
     {0xec, 0x08},  // 7 -> col 3
 };
+// KOTOR 1 only. On KOTOR 2 the command codes ARE the [Keymapping] action ids
+// (keymap.2da row + 200), so its pairs come from the ini (Rebuild): Ctrl+L
+// there leaked command 213, which is Action213 = L (Messages; the engine opens
+// its strip slot 4, the party screen), and Ctrl itself came as 219 = Action219
+// = LeftCtrl (patch-20261124-194254.log). The digit codes above equal K2's
+// Action226..238 as well, 6/7 swap included. This table read 213 as J there,
+// so the chord latch never took the leaked L.
 constexpr CodeScan kQuickScreenCommands[] = {
     // Quick-menu screen hotkeys (confirmed command codes). Only L is shadowed by
     // a default mod hotkey (Shift+L = LevelUpOpen); J/U are included for the
@@ -333,11 +340,17 @@ void Rebuild() {
     for (const CodeScan& cs : kDigitCommands) {
         AddPair(cs.code, ScancodeToVk(cs.scancode));
     }
-    for (const CodeScan& cs : kQuickScreenCommands) {
-        AddPair(cs.code, ScancodeToVk(cs.scancode));
-    }
     s_built = true;
     ReloadGameConfig();  // also (re)load the player's configurable game binds
+    if (acc::game::IsKotor2()) {
+        for (int i = 0; i < s_actionVkCount; ++i) {
+            AddPair(s_actionVks[i].actionId, s_actionVks[i].vk);
+        }
+    } else {
+        for (const CodeScan& cs : kQuickScreenCommands) {
+            AddPair(cs.code, ScancodeToVk(cs.scancode));
+        }
+    }
     acclog::Write("EngineKeymap",
                   "table built: %d (command -> vk) pairs (active layout)",
                   s_count);

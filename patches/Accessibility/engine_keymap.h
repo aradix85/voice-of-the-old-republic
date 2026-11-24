@@ -27,6 +27,10 @@
 // ACTIVE keyboard layout, so the result matches what the mod's
 // GetAsyncKeyState-based bindings see on the same physical key
 // (QWERTY/QWERTZ/AZERTY correctness).
+//
+// KOTOR 2 is the exception: there the command codes are the [Keymapping]
+// action ids, so its quick-screen pairs are read from swkotor2.ini (see
+// kQuickScreenCommands in engine_keymap.cpp for the measurement).
 
 #pragma once
 
