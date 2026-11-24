@@ -219,7 +219,9 @@ installer, as the pre-release `bridge-latest`.
 - KOTOR 2: the examine view opens on the current target.
 - KOTOR 2: the save and load lists say each save's planet and area.
 - KOTOR 2: Enter on a tab of a tabbed screen switches to it.
-- KOTOR 2: a screen that lost its place takes the keys again.
+- KOTOR 2: the party screen closes with OK, Cancel and Escape.
+- KOTOR 2: Ctrl+L, and any other modified hotkey on a game key, no longer
+  also fires the game's own key (L opened the party screen).
 - KOTOR 2: a cancelled walk to a conversation no longer leaves the game
   refusing interactions.
 - KOTOR 2: "<FullName>" is your own character's name, also with a companion
@@ -911,8 +913,16 @@ witnesses are at the declarations.
 - Enter on a tab of a tabbed screen (Options) switches to it, through the
   engine's own mouse-down and mouse-up as in KOTOR 1. The click was declined
   for want of the two addresses.
-- A screen that fell off the engine's modal stack is pushed back and takes
-  the keys again.
+- The party screen closes with OK, Cancel and Escape. KOTOR 2 opens it as a
+  sub-screen of the icon strip, off the modal stack; the mod took it for
+  KOTOR 1's modal panel and pushed it back every tick, undoing each close.
+  That push-back now applies to KOTOR 1 only.
+- A modified hotkey on a key the game also uses (Ctrl+L) no longer lets the
+  bare key through when its modifier is released first. KOTOR 2's command
+  codes are its [Keymapping] action ids, so the command-to-key pairs are read
+  from swkotor2.ini; KOTOR 1's table read L's command as J, so the late L
+  reached the game, and in KOTOR 2 L opens the party screen. Measured in the
+  first KOTOR 2 session (24 Nov 2026).
 - Cancelling a blocked walk to a conversation resets the engine's
   conversation state, which otherwise stays set and gates further
   interactions.

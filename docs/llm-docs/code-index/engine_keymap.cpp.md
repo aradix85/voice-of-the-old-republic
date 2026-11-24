@@ -1,4 +1,4 @@
-# engine_keymap.cpp (416 lines)
+# engine_keymap.cpp (434 lines)
 
 Source: `patches/Accessibility/engine_keymap.cpp`
 
@@ -8,24 +8,26 @@ Why this exists --------------- KOTOR reads DirectInput scancodes, which are mod
 
 Namespace note -------------- The codes here are the engine's internal "quick action" COMMAND codes (what CClientExoAppInternal::HandleInputEvent receives), NOT the swkotor.ini [Keymapping] ActionNNN ids — those are a separate namespace (confirmed: command 214 = Equip/U, but [Keymapping] Action214 = F4). The shadowed gameplay hotkeys (action-menu digits, quick-menu letters) are HARDCODED in the engine — they are not exposed in the in-game Key Mapping screen — so they are stable regardless of the user's game keybinds. We map command -> DIK scancode from the engine's hardcoded handler and resolve scancode -> VK via MapVirtualKeyEx against the ACTIVE keyboard layout, so the result matches what the mod's GetAsyncKeyState-based bindings see on the same physical key (QWERTY/QWERTZ/AZERTY correctness).
 
+KOTOR 2 is the exception: there the command codes are the [Keymapping] action ids, so its quick-screen pairs are read from swkotor2.ini (see kQuickScreenCommands in engine_keymap.cpp for the measurement).
+
 ## Declarations (in source order)
 
 - L112 `void AddAxisVk(int axis, int vk)`
-- L161 `void AddPair(int code, int vk)`
-- L171 `void AddGameVk(int vk)`
-- L184 `bool ResolveIniPath(char* out, size_t cap)`: Resolve the game's config ini from acclog::PatchDir() (= \patches) by stripping the last path component — the same derivation mod_settings_store uses.
-- L198 `int ScancodeToVk(int scancode)`
-- L213 `void SeedDefaults()`: WASD in every axis bucket and primary bind, so neither is ever empty, whatever happens to the ini.
-- L226 `void ApplyEntry(const KeymapEntry& e)`: Files one [Keymapping] entry into the tables.
-- L261 `void ReloadGameConfig()`
-- L303 `bool IsKeyUsedByGame(int vk)`
-- L313 `int GameActionVk(int actionId)`
-- L321 `int GameActionScancode(int actionId)`
-- L329 `void Rebuild()`
-- L345 `int VksForCode(int code, int* out, int cap)`
-- L359 `int CodeForVk(int vk)`
-- L367 `int MoveAxisPrimaryVk(MoveAxis axis)`
-- L374 `int TurnScancode(bool left)`
-- L381 `bool ForwardBackwardKeyHeld()`
-- L393 `int FirstMovementKeyHeld()`
-- L411 `bool AnyMovementKeyHeld()`
+- L170 `void AddPair(int code, int vk)`
+- L180 `void AddGameVk(int vk)`
+- L193 `bool ResolveIniPath(char* out, size_t cap)`: Resolve the game's config ini from acclog::PatchDir() (= \patches) by stripping the last path component — the same derivation mod_settings_store uses.
+- L207 `int ScancodeToVk(int scancode)`
+- L222 `void SeedDefaults()`: WASD in every axis bucket and primary bind, so neither is ever empty, whatever happens to the ini.
+- L235 `void ApplyEntry(const KeymapEntry& e)`: Files one [Keymapping] entry into the tables.
+- L270 `void ReloadGameConfig()`
+- L312 `bool IsKeyUsedByGame(int vk)`
+- L322 `int GameActionVk(int actionId)`
+- L330 `int GameActionScancode(int actionId)`
+- L338 `void Rebuild()`
+- L363 `int VksForCode(int code, int* out, int cap)`
+- L377 `int CodeForVk(int vk)`
+- L385 `int MoveAxisPrimaryVk(MoveAxis axis)`
+- L392 `int TurnScancode(bool left)`
+- L399 `bool ForwardBackwardKeyHeld()`
+- L411 `int FirstMovementKeyHeld()`
+- L429 `bool AnyMovementKeyHeld()`

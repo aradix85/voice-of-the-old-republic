@@ -1,4 +1,4 @@
-# engine_keymap.h (139 lines)
+# engine_keymap.h (143 lines)
 
 Source: `patches/Accessibility/engine_keymap.h`
 
@@ -8,20 +8,22 @@ Why this exists --------------- KOTOR reads DirectInput scancodes, which are mod
 
 Namespace note -------------- The codes here are the engine's internal "quick action" COMMAND codes (what CClientExoAppInternal::HandleInputEvent receives), NOT the swkotor.ini [Keymapping] ActionNNN ids — those are a separate namespace (confirmed: command 214 = Equip/U, but [Keymapping] Action214 = F4). The shadowed gameplay hotkeys (action-menu digits, quick-menu letters) are HARDCODED in the engine — they are not exposed in the in-game Key Mapping screen — so they are stable regardless of the user's game keybinds. We map command -> DIK scancode from the engine's hardcoded handler and resolve scancode -> VK via MapVirtualKeyEx against the ACTIVE keyboard layout, so the result matches what the mod's GetAsyncKeyState-based bindings see on the same physical key (QWERTY/QWERTZ/AZERTY correctness).
 
+KOTOR 2 is the exception: there the command codes are the [Keymapping] action ids, so its quick-screen pairs are read from swkotor2.ini (see kQuickScreenCommands in engine_keymap.cpp for the measurement).
+
 ## Declarations (in source order)
 
-- L37 `void Rebuild()`: (Re)build the table for the active keyboard layout.
-- L42 `int VksForCode(int code, int* out, int cap)`: Fill `out` with up to `cap` distinct VKs that, when pressed, make the engine emit the given command `code`.
-- L47 `int CodeForVk(int vk)`: Reverse lookup: the first engine command code a given VK fires, or 0 if the VK is not in the table.
-- L53 `bool IsKeyUsedByGame(int vk)`: True iff `vk` is bound to ANY game action — a hardcoded quick key (CodeForVk) OR a player-configurable bind read from swkotor.ini [Keymapping].
-- L58 `void ReloadGameConfig()`: (Re)read the configurable [Keymapping] binds from swkotor.ini.
-- L64 `int GameActionVk(int actionId)`: The VK currently bound to a slotless [Keymapping] game action ("Action =" lines, e.g.
-- L71 `int GameActionScancode(int actionId)`: The same bind as a DIK scancode, for a caller that has to SYNTHESISE the key rather than test it (the swoop race presses KOTOR 1's MGshoot bind this way; the engine reads DirectInput, which sees scancodes only).
-- L75 `int ScancodeToVk(int scancode)`: Resolve a DirectInput scancode to a Win32 VK against the active layout.
-- L81 `int InputIndexToVk(int inputIndex)`: Resolve an engine InputIndices value (KEYBOARD_MOUSE_* — what the keymap row's key_code and swkotor.ini [Keymapping] actually store) to a Win32 VK.
-- L89 `enum class MoveAxis`: ---- Movement / turn axis queries ------------------------------------------ The player's bound movement + turn keys, so the mod can react to "the player is moving / turning" and steer the map cursor by the same keys ...
-- L110 `int MoveAxisPrimaryVk(MoveAxis axis)`: The single VK a consumer should treat as "the" key for this direction, when reacting to every bound key would be wrong.
-- L118 `int TurnScancode(bool left)`: DIK scancode to synthesise (via SendInput KEYEVENTF_SCANCODE) to drive the engine's camera-turn axis in the given direction — resolved from the player's configured primary turn bind (Action283/284), so it follows a re...
-- L123 `bool AnyMovementKeyHeld()`: True iff any bound movement/turn key is currently held down.
-- L129 `int FirstMovementKeyHeld()`: Same scan, but returns the VK that answered (0 when none).
-- L136 `bool ForwardBackwardKeyHeld()`: True iff a bound forward/backward key is currently held (the walk axes, including the arrow alternates) — deliberately EXCLUDING the turn/strafe buckets.
+- L41 `void Rebuild()`: (Re)build the table for the active keyboard layout.
+- L46 `int VksForCode(int code, int* out, int cap)`: Fill `out` with up to `cap` distinct VKs that, when pressed, make the engine emit the given command `code`.
+- L51 `int CodeForVk(int vk)`: Reverse lookup: the first engine command code a given VK fires, or 0 if the VK is not in the table.
+- L57 `bool IsKeyUsedByGame(int vk)`: True iff `vk` is bound to ANY game action — a hardcoded quick key (CodeForVk) OR a player-configurable bind read from swkotor.ini [Keymapping].
+- L62 `void ReloadGameConfig()`: (Re)read the configurable [Keymapping] binds from swkotor.ini.
+- L68 `int GameActionVk(int actionId)`: The VK currently bound to a slotless [Keymapping] game action ("Action =" lines, e.g.
+- L75 `int GameActionScancode(int actionId)`: The same bind as a DIK scancode, for a caller that has to SYNTHESISE the key rather than test it (the swoop race presses KOTOR 1's MGshoot bind this way; the engine reads DirectInput, which sees scancodes only).
+- L79 `int ScancodeToVk(int scancode)`: Resolve a DirectInput scancode to a Win32 VK against the active layout.
+- L85 `int InputIndexToVk(int inputIndex)`: Resolve an engine InputIndices value (KEYBOARD_MOUSE_* — what the keymap row's key_code and swkotor.ini [Keymapping] actually store) to a Win32 VK.
+- L93 `enum class MoveAxis`: ---- Movement / turn axis queries ------------------------------------------ The player's bound movement + turn keys, so the mod can react to "the player is moving / turning" and steer the map cursor by the same keys ...
+- L114 `int MoveAxisPrimaryVk(MoveAxis axis)`: The single VK a consumer should treat as "the" key for this direction, when reacting to every bound key would be wrong.
+- L122 `int TurnScancode(bool left)`: DIK scancode to synthesise (via SendInput KEYEVENTF_SCANCODE) to drive the engine's camera-turn axis in the given direction — resolved from the player's configured primary turn bind (Action283/284), so it follows a re...
+- L127 `bool AnyMovementKeyHeld()`: True iff any bound movement/turn key is currently held down.
+- L133 `int FirstMovementKeyHeld()`: Same scan, but returns the VK that answered (0 when none).
+- L140 `bool ForwardBackwardKeyHeld()`: True iff a bound forward/backward key is currently held (the walk axes, including the arrow alternates) — deliberately EXCLUDING the turn/strafe buckets.
