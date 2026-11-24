@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <cstdint>
 
+#include "engine_game.h"     // IsKotor2
 #include "engine_offsets.h"  // CExoArrayList, kPanelControlsOffset
 #include "engine_panels.h"   // PanelKind, IdentifyPanel
 #include "engine_reads.h"
@@ -156,9 +157,12 @@ void* GetForegroundPanel(void* mgr) {
     return nullptr;
 }
 
-// The kinds the engine only ever shows on the modal stack.
+// The kinds the engine only ever shows on the modal stack. KOTOR 2 opens its
+// party screen as a strip sub-screen, off the modal stack (see the
+// PartySelection row in menus_monitors_subscreens.cpp); pushing it there
+// every tick undid each close, so OK, Cancel and Escape could not leave it.
 static bool OpensOnlyAsModal(PanelKind k) {
-    return k == PanelKind::PartySelection;
+    return k == PanelKind::PartySelection && !acc::game::IsKotor2();
 }
 
 void* FindOrphanedModalPanel(void* mgr) {
