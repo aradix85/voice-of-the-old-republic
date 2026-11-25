@@ -275,6 +275,13 @@ bool HasActiveSubScreen() {
             case PanelKind::InGameMap:
             case PanelKind::InGameOptions:
                 return true;
+            // KOTOR 2 opens the party screen from the strip's fifth slot (L)
+            // as a sub-screen, off the modal stack; without it here, closing
+            // a popup over it ran the unpause cleanup and the world resumed
+            // under the open menu.
+            case PanelKind::PartySelection:
+                if (acc::game::IsKotor2()) return true;
+                break;
             default:
                 break;
             }
