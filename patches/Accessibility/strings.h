@@ -1781,6 +1781,10 @@ enum class Id : int {
     HelpKeyScreenMap,
     HelpKeyScreenMessages,
     HelpKeyScreenQuests,
+    // KOTOR 2 puts the party screen on L (keymap.2da row 13, "Party Select
+    // Screen") and the journal on J; its message log opens from the journal.
+    HelpKeyScreenPartyK2,
+    HelpKeyScreenQuestsK2,
     HelpKeyScreenAbilities,
     HelpKeyScreenCharacter,
     HelpKeyScreenInventory,

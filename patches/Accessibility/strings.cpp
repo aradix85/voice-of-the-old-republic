@@ -627,6 +627,8 @@ const char* Get(Id id) {
         case Id::HelpKeyScreenMap:       return "M: open the map";
         case Id::HelpKeyScreenMessages:  return "J: messages and feedback";
         case Id::HelpKeyScreenQuests:    return "L: quests";
+        case Id::HelpKeyScreenPartyK2:   return "L: party selection";
+        case Id::HelpKeyScreenQuestsK2:  return "J: quests, with the message log behind its Messages Log button";
         case Id::HelpKeyScreenAbilities: return "K: skills, feats and force powers";
         case Id::HelpKeyScreenCharacter: return "P: character sheet";
         case Id::HelpKeyScreenInventory: return "I: party inventory";
@@ -904,9 +906,9 @@ const char* Get(Id id) {
         //      rows 13/14). Same texts as the TutHint* twins above with the two
         //      letters exchanged.
         case Id::TutK2OpenScreens:
-            return "Open game screens directly: M map, L messages, J quests, K abilities, P character, I inventory, U equip, O options. Escape returns.";
+            return "Open game screens directly: M map, L party selection, J quests, K abilities, P character, I inventory, U equip, O options. Escape returns.";
         case Id::TutK2Messages:
-            return "The messages screen shows values such as experience points, attack and damage rolls, and changes to your character. Open it with L.";
+            return "The messages screen shows values such as experience points, attack and damage rolls, and changes to your character. Open the quest screen with J and choose Messages Log.";
         case Id::TutK2Journal:
             return "The quest screen shows your progress and hints on what to do next. Open it with J. Choose an entry with the arrows and read its details with Shift and an arrow.";
 

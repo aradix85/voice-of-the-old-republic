@@ -162,8 +162,10 @@ constexpr Entry kEntries[] = {
     { S::HelpKeyCancelCombat,    Grp::Combat, 0 },
 
     { S::HelpKeyScreenMap,       Grp::Screens, 0 },
-    { S::HelpKeyScreenMessages,  Grp::Screens, 0 },
-    { S::HelpKeyScreenQuests,    Grp::Screens, 0 },
+    { S::HelpKeyScreenMessages,  Grp::Screens, 0, Only::Kotor1 },
+    { S::HelpKeyScreenQuests,    Grp::Screens, 0, Only::Kotor1 },
+    { S::HelpKeyScreenPartyK2,   Grp::Screens, 0, Only::Kotor2 },
+    { S::HelpKeyScreenQuestsK2,  Grp::Screens, 0, Only::Kotor2 },
     { S::HelpKeyScreenAbilities, Grp::Screens, 0 },
     { S::HelpKeyScreenCharacter, Grp::Screens, 0 },
     { S::HelpKeyScreenInventory, Grp::Screens, 0 },
