@@ -1,4 +1,4 @@
-# menus_keybinds.cpp (402 lines)
+# menus_keybinds.cpp (403 lines)
 
 Source: `patches/Accessibility/menus_keybinds.cpp`
 
@@ -18,6 +18,6 @@ Mod keybind configurator — see menus_keybinds.h for the design summary.
 - L277 `const char* DisplayName(A action)`: ----- Public API -----------------------------------------------------------
 - L282 `bool IsOpen()`
 - L284 `void Open()`
-- L299 `void Reset()`
-- L308 `bool HandleInput(int keyCode)`
-- L374 `void Tick()`
+- L300 `void Reset()`
+- L309 `bool HandleInput(int keyCode)`
+- L375 `void Tick()`

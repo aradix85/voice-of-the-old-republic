@@ -243,6 +243,12 @@ installer, as the pre-release `bridge-latest`.
 - KOTOR 2: the turret's range marker can be heard.
 - KOTOR 2: tutorial hints and voiced lines are recognised when the game's text
   carries an acting direction in braces.
+- KOTOR 2: the save list names a save's area instead of its module code.
+- KOTOR 2: the turret's "fire now" cue can be heard.
+- KOTOR 2: after a key is rebound in the game's Key Mapping screen, the mod's
+  modified hotkeys follow the new key.
+- KOTOR 2: the death screen and a second kind of message box are read out,
+  and their buttons can be walked with the arrows.
 - A local bridge lets an external helper read the game state and act in the
   game.
 - The in-game updater is gone: F5 on the main menu no longer checks for or
@@ -981,6 +987,21 @@ witnesses are at the declarations.
 - Tutorial hints and voiced lines match their dialogue text with or without
   the acting directions in braces ("{Equip weapon}") that open or split
   thousands of KOTOR 2 lines.
+- The save list names a save's area instead of its module code ("001ebo"),
+  which KOTOR 2's save entry copies into the field read as the planet. A row
+  with only one place no longer reads an empty part.
+- The turret's "fire now" cue plays the astromech hit c_drdastro_hit2 as the
+  installer now ships it (Override\acc_fire.wav); KOTOR 2 keeps the vanilla
+  one only in streamsounds.
+- After a rebind in the game's Key Mapping screen the quick-action key pairs
+  are read again: KOTOR 2 writes the new bind to swkotor2.ini at once, and
+  the pairs come from there. The mod's own key configurator reads them anew
+  as well.
+- The death screen ("Your entire party has been killed.", with Load Last
+  Saved Game, Go to Load Game List and Main Menu) is read when it appears and
+  its buttons are walked with the arrows; it takes no focus when it opens, so
+  as an unknown panel it stayed silent. KOTOR 2's second message box (the
+  GUI's slot 0xa4) is handled as a message box too.
 
 <h3>Bridge:</h3>
 
