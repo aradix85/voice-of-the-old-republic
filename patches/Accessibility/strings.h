@@ -593,6 +593,9 @@ enum class Id : int {
     //                              and lastmodule are both empty (e.g. an
     //                              unused slot). Args: row_text (`%s`),
     //                              index_one_based (`%d`), total (`%d`).
+    //      `FmtSaveLoadRowPlace` — one place only (the area, or the planet
+    //                              when the area is empty). Args: row_text,
+    //                              place (`%s`), index_one_based, total (`%d`).
     //      `FmtSaveLoadCharacter` — K2 only: spoken when the Switch
     //                              Characters button re-filters the list to
     //                              another character's saves. Args:
@@ -601,6 +604,7 @@ enum class Id : int {
     //                              so PL/RU need no plural forms.
     FmtSaveLoadRow,
     FmtSaveLoadRowNoLoc,
+    FmtSaveLoadRowPlace,
     SaveLoadNewestSuffix,     // ", newest" — after the save row with the longest play time
     FmtSaveLoadCharacter,
 

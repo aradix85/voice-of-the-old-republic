@@ -173,6 +173,7 @@ const char* Get(Id id) {
 
         case Id::FmtSaveLoadRow:       return "%s, %s, %s, %d of %d";
         case Id::FmtSaveLoadRowNoLoc:  return "%s, %d of %d";
+        case Id::FmtSaveLoadRowPlace:  return "%s, %s, %d of %d";
         case Id::SaveLoadNewestSuffix: return ", newest";
         case Id::FmtSaveLoadCharacter: return "%s, saves: %d";
 

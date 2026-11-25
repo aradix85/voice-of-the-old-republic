@@ -85,17 +85,22 @@ void SaveLoadAnnounce(void* lb, const ListBoxNavResult& r) {
         strncat_s(rowText, acc::strings::Get(acc::strings::Id::SaveLoadNewestSuffix),
                   _TRUNCATE);
     }
-    const char* planet = ReadSaveLoadEntryString(
+    // KOTOR 2's entry holds the module code in that field ("001ebo", copied
+    // from savenfo's LASTMODULE), which names no planet; its area name
+    // already says where the save was made.
+    const char* planet = acc::game::IsKotor2() ? nullptr : ReadSaveLoadEntryString(
         r.row, kSaveLoadEntryLastModuleOffset);
     const char* area   = ReadSaveLoadEntryString(
         r.row, kSaveLoadEntryAreaNameOffset);
     char msg[512];
-    if (planet || area) {
+    if (planet && area) {
         snprintf(msg, sizeof(msg),
                  acc::strings::Get(acc::strings::Id::FmtSaveLoadRow),
-                 rowText, planet ? planet : "",
-                 area ? area : "",
-                 r.newSel + 1, r.rowCount);
+                 rowText, planet, area, r.newSel + 1, r.rowCount);
+    } else if (planet || area) {
+        snprintf(msg, sizeof(msg),
+                 acc::strings::Get(acc::strings::Id::FmtSaveLoadRowPlace),
+                 rowText, area ? area : planet, r.newSel + 1, r.rowCount);
     } else {
         snprintf(msg, sizeof(msg),
                  acc::strings::Get(acc::strings::Id::FmtSaveLoadRowNoLoc),
