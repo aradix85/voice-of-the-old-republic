@@ -133,7 +133,6 @@ void OnEngineActionAdded(void* combatRound, void* action) {
 }
 
 void TickIdleNotice() {
-    if (acc::game::IsKotor2()) return;
     Vector unused;
     if (!acc::engine::GetPlayerPosition(unused)) return;
     void* server = acc::engine::GetPlayerServerCreature();
