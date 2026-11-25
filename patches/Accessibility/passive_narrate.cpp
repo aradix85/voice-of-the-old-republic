@@ -39,7 +39,7 @@ namespace {
 //                      synthetic retry). Cleared by OnEngineShowObject
 //                      on any resulting ShowObject call, or by Tick's
 //                      single-hostile reannounce path.
-//   direction_code   — 204 (E forward) / 205 (Q reverse). Saved on
+//   direction_code   — kInputSelectNext (E) / kInputSelectPrev (Q). Saved on
 //                      arming so the retry can synthesize the same key.
 //   retry_armed      — sentinel landed during press_active; arm Tick
 //                      to re-issue the same Q/E next frame.
@@ -389,7 +389,8 @@ void Tick() {
 
         // CClientExoAppInternal::HandleInputEvent @ 0x00621210.
         // __thiscall(int param_1, int param_2) — same signature the
-        // input-pipeline detour observes. dir 204=E / 205=Q. K2 twin is the
+        // input-pipeline detour observes; dir is the code the press came
+        // with (kInputSelectNext / kInputSelectPrev). K2 twin is the
         // Batch 2 dispatcher find (0x007B12C0, triple-witnessed: 5 callers,
         // the case-0xdf Esc path, the hotkey triple).
         using PFN_HIE = void(__thiscall*)(void*, int, int);

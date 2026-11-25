@@ -313,15 +313,17 @@ void PrepareBareActionKey(const InputEvent& ev) {
     if (row >= 0) RestampTargetRow(row);
 }
 
-// Q (205) / E (204). With "Q and E: everything around you" the mod cycles all
-// objects around and points the engine's target and lists at the landing.
-// Otherwise the re-announce for the single-enemy case (where the engine's
-// cycle changes nothing) waits a frame, so it never speaks the old target
-// before the engine's ShowObject speaks the new one.
+// Q / E (kInputSelectPrev / kInputSelectNext). With "Q and E: everything
+// around you" the mod cycles all objects around and points the engine's target
+// and lists at the landing. Otherwise the re-announce for the single-enemy case
+// (where the engine's cycle changes nothing) waits a frame, so it never speaks
+// the old target before the engine's ShowObject speaks the new one.
 bool TryQE(const InputEvent& ev) {
-    if (ev.value == 0 || (ev.code != 204 && ev.code != 205)) return false;
+    if (ev.value == 0 || (ev.code != kInputSelectNext && ev.code != kInputSelectPrev)) {
+        return false;
+    }
     if (acc::passive_narrate::IsInSynthesizedQE()) return false;  // our own re-issue
-    if (acc::qe_ring::HandlePress(ev.code == 204 ? +1 : -1)) {
+    if (acc::qe_ring::HandlePress(ev.code == kInputSelectNext ? +1 : -1)) {
         PrepareBareDispatchForNarratedTarget();
         acclog::Write("Diag.ClientHIE", "seq=%u Q/E CONSUMED — all-around cycle", ev.seq);
         return true;

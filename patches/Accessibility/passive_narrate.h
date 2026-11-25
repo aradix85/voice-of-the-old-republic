@@ -32,8 +32,8 @@ void OnEngineShowObject(uint32_t handle);
 // then fires ShowObject this tick, OnEngineShowObject cancels the
 // request; otherwise Tick drains it (single-hostile combat case).
 //
-// directionCode is the engine's Q/E logical code (204 = E forward,
-// 205 = Q reverse) — stored so the sentinel-skip retry path can
+// directionCode is the engine's Q/E command code (kInputSelectNext = E,
+// kInputSelectPrev = Q) — stored so the sentinel-skip retry path can
 // synthesize the same direction back through HandleInputEvent.
 void RequestQEReannounce(int directionCode);
 

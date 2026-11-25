@@ -59,7 +59,7 @@ bool TryHandleEvent(int param_1, int param_2) {
     // Shift state tracking — fires on both press and release, never consumed.
     // Notify peek_description on the release edge so its block cursor resets
     // (so the next Shift+arrow starts at block 0 again).
-    if (param_1 == kInputKbLeftShift || param_1 == kInputKbRightShift) {
+    if (param_1 == kInputLeftShift || param_1 == kInputRightShift) {
         bool wasHeld = g_engineShiftHeld;
         g_engineShiftHeld = (param_2 != 0);
         if (wasHeld && !g_engineShiftHeld) {

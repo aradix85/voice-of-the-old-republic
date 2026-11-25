@@ -4,6 +4,7 @@
 
 #include <cstddef>
 
+#include "engine_game.h"            // IsKotor2 — the per-game command codes below
 #include "engine_offsets_select.h"  // acc::off — the raw-input layout below
 
 namespace acc::engine {
@@ -193,6 +194,19 @@ constexpr int kInputActivate = 0x27;   // KEYBOARD_F1, engine's activate code
 // action function (talk/open/bash/use…). The keyboard twin of Mouse 1.
 constexpr int kInputDefaultAction = 0xef;
 
+// The keymap's SelectNext / SelectPrev commands (default E / Q). KOTOR 2's
+// in-world command codes are its [Keymapping] action ids, keymap.2da row + 200
+// (SelectPrev row 4, SelectNext row 5); KOTOR 1's are their own namespace,
+// with E = 204 (engine_keymap.cpp).
+inline const int kInputSelectNext = acc::game::IsKotor2() ? 205 : 204;
+inline const int kInputSelectPrev = acc::game::IsKotor2() ? 204 : 205;
+
+// Shift. KOTOR 1 passes the raw InputIndices; on KOTOR 2 the keymap's
+// AlternateActions rows 21/22 make them commands 221/222 (Shift arrived as
+// 221 in patch-20261124-194254.log, never as 24).
+inline const int kInputLeftShift  = acc::game::IsKotor2() ? 221 : 24;
+inline const int kInputRightShift = acc::game::IsKotor2() ? 222 : 25;
+
 // Raw InputIndices — engine has no logical-action translation for these.
 // Stock kotor.ini has no [Keymapping] for scancodes 32/33, so they arrive
 // bare at the manager hook.
@@ -210,8 +224,6 @@ constexpr int kInputCatLast  = 0x202;  // Ctrl+End  → last  category
 // kInputKbAnnounce = physical key right of `.` (KEYBOARD_SLASH = 105) —
 // labelled `-` on QWERTZ, `/` on QWERTY, same physical position. Keeps
 // `,` `.` `-` contiguous on QWERTZ (`,` `.` `/` on QWERTY).
-constexpr int kInputKbLeftShift  = 24;
-constexpr int kInputKbRightShift = 25;
 constexpr int kInputKbComma      = 103;
 constexpr int kInputKbPeriod     = 104;
 constexpr int kInputKbAnnounce   = 105;
