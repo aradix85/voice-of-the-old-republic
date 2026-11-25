@@ -5,6 +5,7 @@
 
 using acc::text::ContainsIgnoreCase;
 using acc::text::EqualsTrimmed;
+using acc::text::MatchesDialogLine;
 using acc::text::MatchesWithTokens;
 using acc::text::SameLastWord;
 
@@ -57,4 +58,14 @@ TEST_CASE("A trailing token swallows the rest, a final literal must end the line
 TEST_CASE("Without a token the token match is EqualsTrimmed") {
     CHECK(MatchesWithTokens("  Plain line ", "Plain line"));
     CHECK_FALSE(MatchesWithTokens("Plain line too", "Plain line"));
+}
+
+TEST_CASE("A dialogue line matches its TLK text with or without acting directions") {
+    const char* stored = "{Equip weapon}Select the weapon slot, <FullName>.";
+    CHECK(MatchesDialogLine("Select the weapon slot, Korasha.", stored));
+    CHECK(MatchesDialogLine("{Equip weapon}Select the weapon slot, Korasha.", stored));
+    CHECK(MatchesDialogLine("I see. Go on.", "I see. {Pause} Go on."));
+    CHECK(MatchesDialogLine("I see.  Go on.", "I see. {Pause} Go on."));
+    CHECK_FALSE(MatchesDialogLine("Select the armor slot, Korasha.", stored));
+    CHECK_FALSE(MatchesDialogLine(nullptr, stored));
 }

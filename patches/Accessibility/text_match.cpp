@@ -3,10 +3,28 @@
 #include "text_match.h"
 
 #include <cstring>
+#include <string>
 
 namespace acc::text {
 
 namespace {
+
+// A copy without acting directions in braces, each run of spaces left as one.
+std::string WithoutDirections(const char* s) {
+    std::string out;
+    for (; *s; ++s) {
+        if (*s == '{') {
+            const char* close = std::strchr(s, '}');
+            if (close) {
+                s = close;
+                continue;
+            }
+        }
+        if (*s == ' ' && !out.empty() && out.back() == ' ') continue;
+        out += *s;
+    }
+    return out;
+}
 
 // strstr for a length-bounded needle.
 const char* FindSegment(const char* hay, const char* needle, size_t n) {
@@ -84,6 +102,13 @@ bool MatchesWithTokens(const char* rendered, const char* stored) {
     if (endsWithToken) return true;  // a trailing token swallows the rest
     while (*r == ' ') ++r;
     return *r == '\0';
+}
+
+bool MatchesDialogLine(const char* rendered, const char* stored) {
+    if (!rendered || !stored) return false;
+    const std::string r = WithoutDirections(rendered);
+    const std::string s = WithoutDirections(stored);
+    return MatchesWithTokens(r.c_str(), s.c_str());
 }
 
 bool ContainsIgnoreCase(const char* haystack, const char* needle) {

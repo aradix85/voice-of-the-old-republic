@@ -19,7 +19,7 @@ namespace {
 
 using acc::strings::Id;
 using acc::text::EqualsTrimmed;
-using acc::text::MatchesWithTokens;
+using acc::text::MatchesDialogLine;
 
 struct DialogHint {
     uint32_t strref;
@@ -208,7 +208,7 @@ const char* HintForDialogLine(const char* renderedLine, uint32_t* outStrref) {
         return nullptr;
     }
     const int i = s_hintText.Find(
-        [&](const char* stored) { return EqualsTrimmed(renderedLine, stored); });
+        [&](const char* stored) { return MatchesDialogLine(renderedLine, stored); });
     if (i < 0) return nullptr;
     const char* s = acc::strings::Get(hints[i].id);
     if (!s[0]) return nullptr;
@@ -231,7 +231,7 @@ bool IsVoicedSuppressedLine(const char* renderedLine) {
     return s_voicedText.Ensure(kVoicedSuppressedCount,
                                [](int i) { return kVoicedSuppressedK2[i]; }, "voiced-suppress") &&
            s_voicedText.Find([&](const char* stored) {
-               return MatchesWithTokens(renderedLine, stored);
+               return MatchesDialogLine(renderedLine, stored);
            }) >= 0;
 }
 

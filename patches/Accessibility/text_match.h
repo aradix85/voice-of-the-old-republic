@@ -25,6 +25,13 @@ bool EqualsTrimmed(const char* a, const char* b);
 // EqualsTrimmed.
 bool MatchesWithTokens(const char* rendered, const char* stored);
 
+// MatchesWithTokens for a dialogue line against its TLK text. KOTOR 2's TLK
+// opens or splits thousands of lines with an acting direction in braces
+// ("{Equip weapon}") that the engine does not show; those are left out of
+// both sides, and runs of spaces count as one, so the match holds whether the
+// line arrives with or without them.
+bool MatchesDialogLine(const char* rendered, const char* stored);
+
 // True when `needle` occurs in `haystack`, ASCII letter case ignored. An
 // empty or null needle matches nothing.
 bool ContainsIgnoreCase(const char* haystack, const char* needle);
