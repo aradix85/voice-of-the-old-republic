@@ -52,8 +52,9 @@ bool ReadBaseItemFlags(void* item, uint8_t& itemType, uint8_t& weaponType) {
 //     AttackMod, Defence | Misc.
 //   K2 (0x00607790): NEW header, FeatReq | NEW x4 | (weapon || base 0x2d)?
 //     {Damage, Range, [Crit unless base 0x2d], OnHit, Size} | AttackMod,
-//     Defence | Misc. The lightsaber base id 0x2d forces the weapon block
-//     (minus the crit builder) even with weapon_type == 0.
+//     Defence | Misc. Base id 0x2d, Gauntlets in KOTOR 2's baseitems.2da
+//     (row 45; the lightsaber is row 8), forces the weapon block (minus the
+//     crit builder) even with weapon_type == 0.
 void ComputeSectionOffsets(void* item, uint8_t weaponType,
                            size_t& offTags, size_t& offValues,
                            size_t& offProps) {
@@ -80,11 +81,11 @@ void ComputeSectionOffsets(void* item, uint8_t weaponType,
             AddProps(kAddrItemAddK2Extra3, item, &acc);
             AddProps(kAddrItemAddK2Extra4, item, &acc);
         }
-        const bool saber = k2 && baseItemId == 0x2d;
-        if (weaponType != 0 || saber) {
+        const bool gauntlets = k2 && baseItemId == 0x2d;
+        if (weaponType != 0 || gauntlets) {
             AddProps(kAddrItemAddDamageProperties, item, &acc);
             AddProps(kAddrItemAddRangeProperties, item, &acc);
-            if (!saber) {
+            if (!gauntlets) {
                 AddProps(kAddrItemAddCriticalThreatProps, item, &acc);
             }
             AddProps(kAddrItemAddOnHitProperties, item, &acc);
