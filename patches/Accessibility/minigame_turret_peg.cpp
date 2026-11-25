@@ -46,7 +46,9 @@ constexpr float kElevMaxOctaves   = 1.0f;   // clamp the glide to +/- 1 octave
 // (3° cone), which correctly signals that far fighters aren't worth firing at.
 // One-shot, not continuous — the player is rarely on a fast target long enough
 // to ride a sustained tone. Played toward the fighter so it pans correctly.
-constexpr const char* kFireCueResref = "c_drdastro_hit2";
+// The sample is the astromech hit c_drdastro_hit2 as the mod ships it in
+// Override (acc_fire): KOTOR 2 keeps the vanilla one only in streamsounds\.
+constexpr const char* kFireCueResref = "acc_fire";
 
 float Clamp1(float v) { return v > 1.0f ? 1.0f : (v < -1.0f ? -1.0f : v); }
 

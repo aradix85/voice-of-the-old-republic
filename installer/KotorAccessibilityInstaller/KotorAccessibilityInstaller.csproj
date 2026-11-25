@@ -101,6 +101,11 @@
          played the 0.87 s assassin-droid sibling instead ("too long"). Shipping
          it under our own resref gives both games the same short beep. -->
     <EmbeddedResource Include="Resources\acc_shift.wav" />
+    <!-- Turret "fire now" cue (minigame_turret_peg.cpp, resref acc_fire): a
+         byte-identical copy of the astromech hit sound c_drdastro_hit2, which
+         KOTOR 2 keeps only in streamsounds, where a lookup by resref does not
+         find it. -->
+    <EmbeddedResource Include="Resources\acc_fire.wav" />
     <!-- Vanilla prioritygroups.2da. The installer appends the mod's
          dedicated full-volume audio priority group to whatever copy is in
          Override (or this bundled vanilla if absent) — see
