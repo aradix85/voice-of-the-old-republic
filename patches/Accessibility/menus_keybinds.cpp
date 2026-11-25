@@ -288,9 +288,10 @@ void Open() {
     g_catCursor = 0;
     g_curCat    = 0;
     g_actCursor = 0;
-    // Refresh the game's configurable keymap so conflict warnings reflect any
-    // changes the player made in the engine's Key Mapping screen this session.
-    acc::engine_keymap::ReloadGameConfig();
+    // Refresh the game's keymap so conflict warnings reflect any changes the
+    // player made in the engine's Key Mapping screen this session (on KOTOR 2
+    // that includes the command-to-key pairs, read from the ini).
+    acc::engine_keymap::Rebuild();
     acclog::Write("Keybinds", "configurator opened");
     acc::speech::Speak(T(S::KeybindsOpened), /*interrupt=*/true);
     SpeakCategory(/*interrupt=*/false);

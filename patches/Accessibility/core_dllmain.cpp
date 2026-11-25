@@ -94,11 +94,11 @@ void EnsureSessionBringup() {
     // Build the engine keybinding table (hardcoded command -> scancode -> VK,
     // resolved against the active keyboard layout) so the input hooks can
     // swallow the engine's bare-key action when a modifier-using mod hotkey
-    // shadows an engine-bound key. The shadowed gameplay hotkeys are hardcoded
-    // in the engine (not in the rebindable Key Mapping screen), so this is a
-    // one-time build per session. VksForCode self-heals via a lazy Rebuild if
-    // it is asked first, so this call is about doing it once, up front, with
-    // the table dumped to the log where support can read it.
+    // shadows an engine-bound key. On KOTOR 1 the shadowed gameplay hotkeys are
+    // hardcoded in the engine; on KOTOR 2 they come from swkotor2.ini and the
+    // table is rebuilt after a rebind (menus_keymap.cpp). VksForCode self-heals
+    // via a lazy Rebuild if it is asked first, so this call is about doing it
+    // once, up front, with the table dumped to the log where support can read it.
     acc::engine_keymap::Rebuild();
     // Spin up the focus-probe polling thread now (rather than at
     // MainMenu first-sight) so we catch focus events during intro-movie

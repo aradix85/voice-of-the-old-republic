@@ -297,6 +297,10 @@ void Tick() {
     s_armedPanel = nullptr;
     SpeakControl(panel, row);
     acclog::Write("Menus.KeyMap", "capture done; re-announced row=%p", row);
+    // KOTOR 2 writes the new bind to swkotor2.ini at once (the Keymapping
+    // write at 0x00902800), and pairs its quick-action keys from there: read
+    // them again so the hotkey shadowing follows the new key.
+    acc::engine_keymap::Rebuild();
     // If the player just bound a game action onto a key a mod hotkey already
     // uses, warn them — the game's own conflict check doesn't know about mod
     // binds, so the double-fire would otherwise be silent.
