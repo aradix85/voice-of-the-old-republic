@@ -167,6 +167,12 @@ constexpr CodeScan kQuickScreenCommands[] = {
     {205,  0x10},  // Q — cycle left
 };
 
+// KOTOR 2's counterpart: the [Keymapping] actions whose key gets the same
+// shadowing, the target cycle (204/205), solo mode (207), the screen keys
+// (209..216) and stealth (264). Not Tab, the modifiers, Escape or the
+// dialogue digits: pairing those swallowed plain menu keys such as Shift+Tab.
+constexpr int kQuickActionsK2[] = {204, 205, 207, 209, 210, 211, 212, 213, 214, 215, 216, 264};
+
 void AddPair(int code, int vk) {
     if (vk == 0 || s_count >= kMaxPairs) return;
     for (int i = 0; i < s_count; ++i) {
@@ -343,9 +349,7 @@ void Rebuild() {
     s_built = true;
     ReloadGameConfig();  // also (re)load the player's configurable game binds
     if (acc::game::IsKotor2()) {
-        for (int i = 0; i < s_actionVkCount; ++i) {
-            AddPair(s_actionVks[i].actionId, s_actionVks[i].vk);
-        }
+        for (int id : kQuickActionsK2) AddPair(id, GameActionVk(id));
     } else {
         for (const CodeScan& cs : kQuickScreenCommands) {
             AddPair(cs.code, ScancodeToVk(cs.scancode));
