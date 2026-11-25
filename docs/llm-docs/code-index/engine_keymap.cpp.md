@@ -1,4 +1,4 @@
-# engine_keymap.cpp (434 lines)
+# engine_keymap.cpp (438 lines)
 
 Source: `patches/Accessibility/engine_keymap.cpp`
 
@@ -13,21 +13,21 @@ KOTOR 2 is the exception: there the command codes are the [Keymapping] action id
 ## Declarations (in source order)
 
 - L112 `void AddAxisVk(int axis, int vk)`
-- L170 `void AddPair(int code, int vk)`
-- L180 `void AddGameVk(int vk)`
-- L193 `bool ResolveIniPath(char* out, size_t cap)`: Resolve the game's config ini from acclog::PatchDir() (= \patches) by stripping the last path component — the same derivation mod_settings_store uses.
-- L207 `int ScancodeToVk(int scancode)`
-- L222 `void SeedDefaults()`: WASD in every axis bucket and primary bind, so neither is ever empty, whatever happens to the ini.
-- L235 `void ApplyEntry(const KeymapEntry& e)`: Files one [Keymapping] entry into the tables.
-- L270 `void ReloadGameConfig()`
-- L312 `bool IsKeyUsedByGame(int vk)`
-- L322 `int GameActionVk(int actionId)`
-- L330 `int GameActionScancode(int actionId)`
-- L338 `void Rebuild()`
-- L363 `int VksForCode(int code, int* out, int cap)`
-- L377 `int CodeForVk(int vk)`
-- L385 `int MoveAxisPrimaryVk(MoveAxis axis)`
-- L392 `int TurnScancode(bool left)`
-- L399 `bool ForwardBackwardKeyHeld()`
-- L411 `int FirstMovementKeyHeld()`
-- L429 `bool AnyMovementKeyHeld()`
+- L176 `void AddPair(int code, int vk)`
+- L186 `void AddGameVk(int vk)`
+- L199 `bool ResolveIniPath(char* out, size_t cap)`: Resolve the game's config ini from acclog::PatchDir() (= \patches) by stripping the last path component — the same derivation mod_settings_store uses.
+- L213 `int ScancodeToVk(int scancode)`
+- L228 `void SeedDefaults()`: WASD in every axis bucket and primary bind, so neither is ever empty, whatever happens to the ini.
+- L241 `void ApplyEntry(const KeymapEntry& e)`: Files one [Keymapping] entry into the tables.
+- L276 `void ReloadGameConfig()`
+- L318 `bool IsKeyUsedByGame(int vk)`
+- L328 `int GameActionVk(int actionId)`
+- L336 `int GameActionScancode(int actionId)`
+- L344 `void Rebuild()`
+- L367 `int VksForCode(int code, int* out, int cap)`
+- L381 `int CodeForVk(int vk)`
+- L389 `int MoveAxisPrimaryVk(MoveAxis axis)`
+- L396 `int TurnScancode(bool left)`
+- L403 `bool ForwardBackwardKeyHeld()`
+- L415 `int FirstMovementKeyHeld()`
+- L433 `bool AnyMovementKeyHeld()`

@@ -1,4 +1,4 @@
-# engine_panels_state.cpp (382 lines)
+# engine_panels_state.cpp (389 lines)
 
 Source: `patches/Accessibility/engine_panels_state.cpp`
 
@@ -23,5 +23,5 @@ Declarations stay in engine_panels.h, so all 39 includers are unaffected.
 - L232 `bool HasActiveLevelUpPanel()`
 - L244 `bool IsInGameOptionsSubScreen(void* panel)`
 - L259 `bool HasActiveSubScreen()`
-- L288 `bool IsForegroundUiBlocking(UiBlockState* outState)`
-- L333 `WorldInput WorldInputOver(PanelKind k)`
+- L295 `bool IsForegroundUiBlocking(UiBlockState* outState)`
+- L340 `WorldInput WorldInputOver(PanelKind k)`

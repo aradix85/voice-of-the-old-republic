@@ -1,4 +1,4 @@
-# engine_subscreen.cpp (404 lines)
+# engine_subscreen.cpp (409 lines)
 
 Source: `patches/Accessibility/engine_subscreen.cpp`
 
@@ -22,10 +22,10 @@ The engine's sub-screen and pause machinery: the overlay pause for the mod's own
 - L235 `void TickInputClassReassert()`: The unpause safety net, on two edges (calling both on one frame is safe): 1.
 - L266 `bool ReadSlots(void* p1_addr, void* p2_addr, int* p1, int* p2, uint32_t* callerEip)`: The hooks' parameters are the addresses of the engine's stack slots (the "esp+X" LEA); the return address sits one slot below the first.
 - L284 `extern "C" void __cdecl OnSwitchToSWInGameGui(void* thisPtr, int guiId)`: CGuiInGame::SwitchToSWInGameGui, the warm path (a sub-screen is up and another opens; the cold path is ShowSWInGameGui, which the menus monitor covers by polling).
-- L299 `extern "C" void __cdecl OnSetSWGuiStatus(void* thisPtr, void* p1_addr, void* p2_addr)`: CGuiInGame::SetSWGuiStatus.
-- L319 `extern "C" void __cdecl OnHideSWInGameGui(void* thisPtr, void* p1_addr)`: CGuiInGame::HideSWInGameGui: which engine path closes a sub-screen.
-- L333 `extern "C" void __cdecl OnSetPauseState(void* thisPtr, void* p1_addr, void* p2_addr)`: CServerExoAppInternal::SetPauseState (K1 0x004b8110): every pause change.
-- L378 `extern "C" void __cdecl OnSwitchToSWInGameGuiK2(void* thisGui, void* ebp)`: CGuiInGame::SwitchToSWInGameGui @0x007CA550, hooked at 0x007CA575.
-- L386 `extern "C" void __cdecl OnHideSWInGameGuiK2(void* thisGui, void* ebp)`: CGuiInGame::HideSWInGameGui @0x007CA060, hooked at 0x007CA066.
-- L392 `extern "C" void __cdecl OnSetSWGuiStatusK2(void* thisGui, void* ebp)`: CGuiInGame::SetSWGuiStatus @0x007C9C40, hooked at 0x007C9C46.
-- L400 `void __cdecl OnSetPauseStateK2(void* thisPtr, void* ebp)`
+- L304 `extern "C" void __cdecl OnSetSWGuiStatus(void* thisPtr, void* p1_addr, void* p2_addr)`: CGuiInGame::SetSWGuiStatus.
+- L324 `extern "C" void __cdecl OnHideSWInGameGui(void* thisPtr, void* p1_addr)`: CGuiInGame::HideSWInGameGui: which engine path closes a sub-screen.
+- L338 `extern "C" void __cdecl OnSetPauseState(void* thisPtr, void* p1_addr, void* p2_addr)`: CServerExoAppInternal::SetPauseState (K1 0x004b8110): every pause change.
+- L383 `extern "C" void __cdecl OnSwitchToSWInGameGuiK2(void* thisGui, void* ebp)`: CGuiInGame::SwitchToSWInGameGui @0x007CA550, hooked at 0x007CA575.
+- L391 `extern "C" void __cdecl OnHideSWInGameGuiK2(void* thisGui, void* ebp)`: CGuiInGame::HideSWInGameGui @0x007CA060, hooked at 0x007CA066.
+- L397 `extern "C" void __cdecl OnSetSWGuiStatusK2(void* thisGui, void* ebp)`: CGuiInGame::SetSWGuiStatus @0x007C9C40, hooked at 0x007C9C46.
+- L405 `void __cdecl OnSetPauseStateK2(void* thisPtr, void* ebp)`

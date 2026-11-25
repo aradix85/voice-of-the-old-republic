@@ -8,7 +8,7 @@ F1 (HelpMenuOpen)   — opens a navigable, screen-reader-friendly list of every 
 
 Ctrl+F1 (HelpContext) — speaks the subset of the catalog tagged for the screen the user is currently on (in-world / menu / map / action menu / dialog / container / store). Generalises the per-screen "what's important here" announcement the Pazaak board already does on open.
 
-The catalog (kEntries in help.cpp) is the single source of truth. Each entry carries a `grp` (which F1 section it lives under), a curated `ctx` bitmask (which screens speak it on Ctrl+F1 — kept short so a context summary stays digestible), and a `k2Only` flag. F1 is exhaustive; Ctrl+F1 is the essentials, ending with a "press F1 for the full list" hint.
+The catalog (kEntries in help.cpp) is the single source of truth. Each entry carries a `grp` (which F1 section it lives under), a curated `ctx` bitmask (which screens speak it on Ctrl+F1 — kept short so a context summary stays digestible), and the game it belongs to (`only`). F1 is exhaustive; Ctrl+F1 is the essentials, ending with a "press F1 for the full list" hint.
 
 The strings live in strings.h (HelpGroup* / HelpKey* / HelpContext*).
 

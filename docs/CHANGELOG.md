@@ -228,6 +228,21 @@ installer, as the pre-release `bridge-latest`.
   in control.
 - KOTOR 2: the rows of the game's own examine box can be read with the arrow
   keys.
+- KOTOR 2: a locked door or container says whether it needs a key, opens only
+  through the story, or which Security it takes and who has the most.
+- KOTOR 2: "You are not attacking" is spoken.
+- KOTOR 2: with "Q and E: everything around you", E steps clockwise and Q
+  back, as in KOTOR 1.
+- KOTOR 2: Shift+arrow descriptions start at the top again after Shift is let
+  go.
+- KOTOR 2: F1 help and the tutorial hints name L as the party screen and J as
+  the quests, with the message log behind the journal's Messages Log button.
+- KOTOR 2: the world stays paused while the party screen is open.
+- KOTOR 2: switching between game screens no longer opens the neighbouring one
+  for a moment.
+- KOTOR 2: the turret's range marker can be heard.
+- KOTOR 2: tutorial hints and voiced lines are recognised when the game's text
+  carries an acting direction in braces.
 - A local bridge lets an external helper read the game state and act in the
   game.
 - The in-game updater is gone: F5 on the main menu no longer checks for or
@@ -919,9 +934,10 @@ witnesses are at the declarations.
   That push-back now applies to KOTOR 1 only.
 - A modified hotkey on a key the game also uses (Ctrl+L) no longer lets the
   bare key through when its modifier is released first. KOTOR 2's command
-  codes are its [Keymapping] action ids, so the command-to-key pairs are read
-  from swkotor2.ini; KOTOR 1's table read L's command as J, so the late L
-  reached the game, and in KOTOR 2 L opens the party screen. Measured in the
+  codes are its [Keymapping] action ids, so the command-to-key pairs of the
+  quick-action keys (target cycle, solo mode, the screen keys, stealth) are
+  read from swkotor2.ini; KOTOR 1's table read L's command as J, so the late
+  L reached the game, and in KOTOR 2 L opens the party screen. Measured in the
   first KOTOR 2 session (24 Nov 2026).
 - Cancelling a blocked walk to a conversation resets the engine's
   conversation state, which otherwise stays set and gates further
@@ -932,6 +948,39 @@ witnesses are at the declarations.
   in control.
 - The rows of the game's own examine box (a message box with a list) are read
   with the arrow keys.
+- A locked door or container says what it needs: a key (or that you hold
+  it), the story only, or the Security DC with the member who has the most
+  Security; a locked container is called locked at all. The lock fields and
+  the key lookup were KOTOR 1 only. KOTOR 2's come from its door and
+  container loads and from EvaluateLock, the DC from the engine's own
+  GetOpenLockDC (the difficulty term included, -5 on Easy, and a level-scaled
+  DC for locks without a fixed one), each member's Security from its
+  GetSkillRank. The bridge's per-member Security works there as well.
+- "You are not attacking. Choose an enemy with Q or E and press R." is spoken.
+  Its KOTOR 2 gate dates from before the party combat scan was ported.
+- E steps the all-around ring clockwise and Q back. KOTOR 2's SelectPrev (Q)
+  is command 204 and SelectNext (E) 205, the reverse of the codes the mod
+  read.
+- Shift+arrow descriptions start at the top again once Shift is released.
+  KOTOR 2 passes Shift as commands 221/222, never as the raw keys the mod
+  watched; Shift+comma and Shift+period on the map no longer act twice.
+- F1 help and the tutorial hints name L as the party screen and J as the
+  quests (keymap.2da rows 13 "Party Select Screen" and 14; the engine opens
+  strip slot 4, the party screen, for L), and say the message log opens from
+  the journal's Messages Log button.
+- The world stays paused while the party screen opened with L is up: it now
+  counts as a sub-screen, so closing a popup over it no longer resumes the
+  world under the menu.
+- Switching between game screens no longer opens the neighbouring one for a
+  moment. KOTOR 2's switch removes the current screen itself, so the mod's
+  own clean-up first only added the previous tab (from the journal: the party
+  screen) and spoke it.
+- The turret's range marker plays the astromech chirp the mod ships
+  (acc_shift); KOTOR 2 keeps the vanilla one only in streamsounds, where a
+  lookup by name does not find it.
+- Tutorial hints and voiced lines match their dialogue text with or without
+  the acting directions in braces ("{Equip weapon}") that open or split
+  thousands of KOTOR 2 lines.
 
 <h3>Bridge:</h3>
 

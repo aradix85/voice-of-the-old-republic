@@ -1,4 +1,4 @@
-# passive_narrate.cpp (485 lines)
+# passive_narrate.cpp (486 lines)
 
 Source: `patches/Accessibility/passive_narrate.cpp`
 
@@ -18,6 +18,6 @@ Does NOT handle focus-loss announce (silent on sentinel transitions), the Q/E cy
 - L347 `void RequestQEReannounce(int directionCode)`
 - L361 `bool IsInSynthesizedQE()`
 - L365 `void Tick()`
-- L442 `bool NarrateExplicit(uint32_t serverHandle)`
-- L452 `void __cdecl OnShowObject(void* /*clientObject*/, int handle)`
-- L468 `void __cdecl OnShowObjectK2(void* ebp)`
+- L443 `bool NarrateExplicit(uint32_t serverHandle)`
+- L453 `void __cdecl OnShowObject(void* /*clientObject*/, int handle)`
+- L469 `void __cdecl OnShowObjectK2(void* ebp)`
