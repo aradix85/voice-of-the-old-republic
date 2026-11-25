@@ -193,7 +193,10 @@ constexpr const char* kTickCueResref = "acc_turret_tick";
 // continuous crosshair tone. K1's 130 m was derived from the close-band
 // 25%-hit boundary, nudged out a little for reaction time; the distance now
 // comes from KillableRangeM (range model above), which reproduces it on K1.
-constexpr const char* kRangeCueResref = "c_drdastro_atk1";
+// The sample is the astromech chirp c_drdastro_atk1 as the mod ships it in
+// Override (acc_shift, audio_cues.h): KOTOR 2 keeps the vanilla one only in
+// streamsounds\, where a resref lookup does not find it.
+constexpr const char* kRangeCueResref = "acc_shift";
 // LEAVE fires the marker twice (a double-tap) so it's unambiguous against the
 // single-tap ENTER — leaving ("window closed, reacquire") is the event the
 // player most needs to read at a glance. This is the gap to the 2nd tap; long
