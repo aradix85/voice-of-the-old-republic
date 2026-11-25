@@ -38,6 +38,14 @@ struct Member {
 const size_t kStatsSkillRanksOffset = acc::off::Kotor1Only(0x168);  // byte*
 const size_t kStatsWisModOffset     = acc::off::Kotor1Only(0xf2);   // byte
 
+// KOTOR 2 asks the engine: CSWSCreatureStats::GetSkillRank(skill, versus,
+// baseOnly), __thiscall, a signed char back. With baseOnly 0 it adds the
+// skill's key ability modifier (Intelligence for Security in KOTOR 2), effects
+// and the skill feats to the rank, the number the game itself rolls with.
+const uintptr_t kAddrCSWSCreatureStatsGetSkillRank = acc::addr::Kotor2Only(0x006B7BB0);
+typedef char (__thiscall* PFN_GetSkillRank)(void* stats, unsigned char skill,
+                                            uint32_t versus, int baseOnly);
+
 constexpr DWORD kLevelCheckPeriodMs = 1000;
 
 std::set<uint32_t> g_toldCanLevel;  // members already told, until it clears
@@ -67,10 +75,24 @@ std::string NameOf(void* obj) {
     return "?";
 }
 
+bool ReadSecurityK2(void* creature, int& out) {
+    if (!acc::addr::Ok(kAddrCSWSCreatureStatsGetSkillRank)) return false;
+    __try {
+        auto* base = reinterpret_cast<unsigned char*>(creature);
+        void* stats = *reinterpret_cast<void**>(base + kCreatureStatsPointerOffset);
+        if (!stats) return false;
+        out = reinterpret_cast<PFN_GetSkillRank>(kAddrCSWSCreatureStatsGetSkillRank)(
+            stats, static_cast<unsigned char>(kSkillSecurity), kInvalidObjectId, 0);
+        return true;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+}
+
 bool ReadSecurity(void* creature, int& out) {
-    if (!creature || !acc::game::IsKotor1() ||
-        !acc::off::Ok(kStatsSkillRanksOffset) ||
-        !acc::off::Ok(kStatsWisModOffset)) {
+    if (!creature) return false;
+    if (acc::game::IsKotor2()) return ReadSecurityK2(creature, out);
+    if (!acc::off::Ok(kStatsSkillRanksOffset) || !acc::off::Ok(kStatsWisModOffset)) {
         return false;
     }
     __try {
