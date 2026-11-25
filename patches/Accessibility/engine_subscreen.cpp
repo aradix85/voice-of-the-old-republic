@@ -287,6 +287,11 @@ extern "C" void __cdecl OnSwitchToSWInGameGui(void* thisPtr, int guiId) {
         acclog::Write("SubScreen.Switch", "first fire: this=%p GUI_id=%d (hook is alive)",
                       thisPtr, guiId);
     }
+    // KOTOR 2's SwitchToSWInGameGui (0x007CA550) removes the current
+    // sub-screen itself: its remove gate at 0x00A10760 is 1 in .data and only
+    // ever compared. PrevSWInGameGui here would add the neighbouring tab for a
+    // moment (from the journal: the party screen) and speak its focus.
+    if (acc::game::IsKotor2()) return;
     if (!acc::engine::HasActiveSubScreen()) return;
     acclog::Write("SubScreen.Switch", "redrill cleanup: this=%p new GUI_id=%d (closing prior "
                   "sub-screen via PrevSWInGameGui)", thisPtr, guiId);
