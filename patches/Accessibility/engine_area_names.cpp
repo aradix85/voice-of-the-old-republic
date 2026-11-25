@@ -165,7 +165,7 @@ void AppendObjectStateSuffix(void* gameObject, char* outBuf, size_t bufSize) {
     size_t curLen = std::strlen(outBuf);
     if (curLen + 3 >= bufSize) return;
     if (kind == static_cast<int>(GameObjectKind::Placeable)) {
-        // Locked containers (KOTOR 1): "Footlocker 2, locked, Security 12".
+        // Locked containers: "Footlocker 2, locked, Security 12".
         bool locked = false;
         int dc = 0;
         ReadLockNeed(gameObject, dc, &locked);

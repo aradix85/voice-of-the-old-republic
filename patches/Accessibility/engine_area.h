@@ -617,28 +617,43 @@ const size_t kDoorStaticOffset             = acc::off::Pick(0x3c0, 0x410);  // u
 const size_t kDoorTransitionDestOffset     = acc::off::Pick(0x3c8, 0x418);
 // Lock fields (ReadLockNeed). KOTOR 1 values from the 1.03 address DB
 // (CSWSDoor open_lock_dc / key_name / key_required, CSWSPlaceable locked /
-// key_name / key_required / open_lock_dc); the KOTOR 2 layout is not mapped,
-// hence Kotor1Only. The flags are GFF BYTEs, read as their low byte.
-const size_t kDoorOpenLockDcOffset         = acc::off::Kotor1Only(0x2bf);  // byte
-const size_t kDoorKeyNameOffset            = acc::off::Kotor1Only(0x2d0);  // CExoString
-const size_t kDoorKeyRequiredOffset        = acc::off::Kotor1Only(0x2d8);  // int (bool)
+// key_name / key_required / open_lock_dc). KOTOR 2 values from CSWSDoor's
+// load (0x0061a210) and CSWSPlaceable's (0x005ef570), and the door key name
+// and the placeable locked / key name as CSWSCreature::EvaluateLock
+// (0x0056CEB0) reads them. The flags are GFF BYTEs, read as their low byte.
+const size_t kDoorOpenLockDcOffset         = acc::off::Pick(0x2bf, 0x2ff);  // byte
+const size_t kDoorKeyNameOffset            = acc::off::Pick(0x2d0, 0x320);  // CExoString
+const size_t kDoorKeyRequiredOffset        = acc::off::Pick(0x2d8, 0x328);  // int (bool)
 // CSWSDoor.scripts[14], the OnFailToOpen script (CExoString). The address DB
 // gives scripts as CExoString[15] at +0x228; the slot order is read from
 // CSWSDoor::LoadDoor (0x0058a1f0, unpacked Steam 1.03): "OnOpen" -> +0x228,
 // "OnClosed" -> +0x230, ..., "OnClick" -> +0x288, "OnDialog" -> +0x290,
-// "OnFailToOpen" -> +0x298.
-const size_t kDoorOnFailToOpenOffset       = acc::off::Kotor1Only(0x298);  // CExoString
-const size_t kPlaceableLockedOffset        = acc::off::Kotor1Only(0x260);  // int (bool)
-const size_t kPlaceableKeyNameOffset       = acc::off::Kotor1Only(0x264);  // CExoString
-const size_t kPlaceableKeyRequiredOffset   = acc::off::Kotor1Only(0x26c);  // int (bool)
-const size_t kPlaceableOpenLockDcOffset    = acc::off::Kotor1Only(0x274);  // short
-// How the game itself looks for a key. CSWSCreature::EvaluateLock (0x004f0b20)
-// takes the opener's item repository, GetItemRepository(1) (the party's shared
-// inventory for a party member), and asks it for an item whose tag equals the
-// lock's key name: it passes the lock's own CExoString and gets the item's id
-// back, 0x7F000000 for none. KOTOR 1 only, like the lock fields.
-const uintptr_t kAddrCSWSCreatureGetItemRepository  = acc::addr::Kotor1Only(0x004ef770);
-const uintptr_t kAddrCItemRepositoryFindItemWithTag = acc::addr::Kotor1Only(0x00555ed0);
+// "OnFailToOpen" -> +0x298. KOTOR 2's load keeps the order 0x40 higher:
+// OnClick +0x2c8, OnDialog +0x2d0, OnFailToOpen +0x2d8.
+const size_t kDoorOnFailToOpenOffset       = acc::off::Pick(0x298, 0x2d8);  // CExoString
+const size_t kPlaceableLockedOffset        = acc::off::Pick(0x260, 0x2a0);  // int (bool)
+const size_t kPlaceableKeyNameOffset       = acc::off::Pick(0x264, 0x2a4);  // CExoString
+const size_t kPlaceableKeyRequiredOffset   = acc::off::Pick(0x26c, 0x2ac);  // int (bool)
+const size_t kPlaceableOpenLockDcOffset    = acc::off::Pick(0x274, 0x2b4);  // K1 short, K2 byte
+// KOTOR 2's OpenLockDiff (byte): 4 means the DC is the template's OpenLockDC;
+// any other value has GetOpenLockDC scale it with the level instead.
+const size_t kDoorOpenLockDiffOffset       = acc::off::Kotor2Only(0x30c);
+const size_t kPlaceableOpenLockDiffOffset  = acc::off::Kotor2Only(0x2b6);
+// CSWSDoor / CSWSPlaceable::GetOpenLockDC, KOTOR 2: __thiscall, no arguments,
+// the DC in the low byte of EAX. It adds the difficulty term (-5 on Easy, 0 on
+// Normal, +5 on Difficult) to the OpenLockDC, or builds a level-scaled DC when
+// OpenLockDiff is not 4. KOTOR 1 reads the field itself.
+const uintptr_t kAddrCSWSDoorGetOpenLockDC      = acc::addr::Kotor2Only(0x0061CD50);
+const uintptr_t kAddrCSWSPlaceableGetOpenLockDC = acc::addr::Kotor2Only(0x005F5C40);
+// How the game itself looks for a key. CSWSCreature::EvaluateLock (K1
+// 0x004f0b20, K2 0x0056CEB0) takes the opener's item repository,
+// GetItemRepository(1) (the party's shared inventory for a party member), and
+// asks it for an item whose tag equals the lock's key name: it passes the
+// lock's own CExoString and gets the item's id back, 0x7F000000 for none.
+// KOTOR 2's EvaluateLock also accepts the key in one of the 20 equipment
+// slots; the mod asks the inventory only.
+const uintptr_t kAddrCSWSCreatureGetItemRepository  = acc::addr::Pick(0x004ef770, 0x0058A2C0);
+const uintptr_t kAddrCItemRepositoryFindItemWithTag = acc::addr::Pick(0x00555ed0, 0x00605CB0);
 // DUPLICATE of kCreatureStatsPointerOffset in engine_offsets_fields.h — same
 // CSWSCreature.creature_stats field under a second name. Kept in sync by hand;
 // worth collapsing to one declaration. KOTOR 2 value from the seeded

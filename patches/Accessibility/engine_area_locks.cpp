@@ -3,7 +3,7 @@
 
 #include "engine_area_internal.h"
 
-#include "engine_game.h"    // IsKotor1: the lock fields are KOTOR 1 offsets
+#include "engine_game.h"    // IsKotor2: the DC comes from the engine there
 #include "engine_offsets_select.h"
 #include "engine_player.h"  // GetPlayerServerCreature: who would open the lock
 #include "engine_reads.h"   // ReadCExoString
@@ -39,6 +39,25 @@ bool ReadLockFieldsRaw(void* obj, size_t lockedOff, size_t keyReqOff,
 
 typedef void*    (__thiscall* PFN_GetItemRepository)(void* creature, int partyItems);
 typedef uint32_t (__thiscall* PFN_FindItemWithTag)(void* repository, void* tag);
+typedef uint32_t (__thiscall* PFN_GetOpenLockDC)(void* lockObject);
+
+// KOTOR 2: the DC the game rolls against, from its own GetOpenLockDC (see
+// engine_area.h). A fixed OpenLockDC of 100 or more is no lock to pick,
+// whatever the difficulty takes off it, so it gives 0 as KOTOR 1's raw read
+// of such a lock is not spoken either.
+int EngineOpenLockDc(void* obj, int kind, int rawDc) {
+    const bool door = kind == static_cast<int>(GameObjectKind::Door);
+    const size_t diffOff = door ? kDoorOpenLockDiffOffset : kPlaceableOpenLockDiffOffset;
+    const uintptr_t fn = door ? kAddrCSWSDoorGetOpenLockDC : kAddrCSWSPlaceableGetOpenLockDC;
+    if (!acc::off::Ok(diffOff) || !acc::addr::Ok(fn)) return 0;
+    __try {
+        const int diff = *(reinterpret_cast<unsigned char*>(obj) + diffOff);
+        if (diff == 4 && rawDc >= 100) return 0;
+        return static_cast<int>(reinterpret_cast<PFN_GetOpenLockDC>(fn)(obj) & 0xff);
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return 0;
+    }
+}
 
 // Whether the creature under control has the key this lock names, asked the
 // way the game asks when that creature tries the lock (see the addresses in
@@ -89,7 +108,7 @@ void LogLockOnce(void* obj, int kind, const LockFields& f, const char* key,
 
 // ", opens only through the story" / ", needs a key" / ", you have the key" /
 // ", Security 15" after the "locked" word, so the player knows whether to
-// bring a key, a slicer, or nothing at all (KOTOR 1; see ReadLockNeed).
+// bring a key, a slicer, or nothing at all (see ReadLockNeed).
 void AppendLockNeed(void* obj, char* outBuf, size_t bufSize) {
     int dc = 0;
     switch (ReadLockNeed(obj, dc)) {
@@ -147,19 +166,21 @@ LockNeed ReadLockNeed(void* gameObject, int& outDc, bool* outLocked) {
         keyReqOff  = kPlaceableKeyRequiredOffset;
         keyNameOff = kPlaceableKeyNameOffset;
         dcOff      = kPlaceableOpenLockDcOffset;
-        dcIsShort  = true;
+        dcIsShort  = !acc::game::IsKotor2();
     } else {
         return LockNeed::Unknown;
     }
-    if (!acc::game::IsKotor1() || !acc::off::Ok(lockedOff) ||
-        !acc::off::Ok(keyReqOff) || !acc::off::Ok(keyNameOff) ||
-        !acc::off::Ok(dcOff)) {
+    if (!acc::off::Ok(lockedOff) || !acc::off::Ok(keyReqOff) ||
+        !acc::off::Ok(keyNameOff) || !acc::off::Ok(dcOff)) {
         return LockNeed::Unknown;
     }
     LockFields f;
     if (!ReadLockFieldsRaw(gameObject, lockedOff, keyReqOff, dcOff, dcIsShort,
                            f)) {
         return LockNeed::Unknown;
+    }
+    if (acc::game::IsKotor2() && f.locked != 0) {
+        f.dc = EngineOpenLockDc(gameObject, kind, f.dc);
     }
     if (f.locked == 0) {
         // Containers: log the raw fields once anyway, so the placeable
