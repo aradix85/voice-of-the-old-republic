@@ -4,7 +4,6 @@
 #include "combat_queue_internal.h"
 
 #include "engine_area.h"       // AreaObjectIterator, positions
-#include "engine_game.h"
 #include "engine_offsets.h"
 #include "engine_panels.h"     // HasActiveDialogPanel, IsForegroundUiBlocking
 #include "engine_player.h"
