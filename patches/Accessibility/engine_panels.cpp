@@ -79,8 +79,9 @@ const PanelKindOffset kPanelKindOffsets[] = {
     // status 1 and removes it otherwise, as KOTOR 1's does for +0x90.
     { acc::off::Pick(0x90, 0x98), PanelKind::MainInterface, "MainInterface" },
     { acc::off::Pick(0x94, 0x9c), PanelKind::AreaTransition, "AreaTransition" },
-    // KOTOR 2 files three CSWGuiMessageBox instances (0xa0, 0xa4 and one not
-    // yet followed); KOTOR 1 tracks only the modal one. 0xa0 is the first.
+    // KOTOR 2 files three CSWGuiMessageBox instances (0xa0, 0xa4 below, and
+    // the ControllerLossBox); KOTOR 1 tracks only the modal one. 0xa0 is the
+    // first.
     { acc::off::Pick(0x98, 0xa0), PanelKind::MessageBoxModal, "MessageBox" },
     { acc::off::Pick(0x9c, 0xac), PanelKind::SkillInfoBox,  "SkillInfoBox" },
     { acc::off::Pick(0xa0, 0xb0), PanelKind::TutorialBox,   "TutorialBox" },
@@ -88,6 +89,17 @@ const PanelKindOffset kPanelKindOffsets[] = {
     // [gui+0xb4]; its 0xa4 is the second MessageBox (ctor 0x0075B370, arg 1).
     { acc::off::Pick(0xa4, 0xb4), PanelKind::ControllerLossBox, "ControllerLossBox" },
     { acc::off::Pick(0xa8, 0xb8), PanelKind::StatusSummary, "StatusSummary" },
+    // KOTOR 2's second CSWGuiMessageBox, pushed modal by 0x005F5770 (the
+    // "lockertsfinv" path), the same class as the first.
+    { acc::off::Kotor2Only(0xa4), PanelKind::MessageBoxModal, "MessageBox2" },
+    // KOTOR 2's death screen, CSWGuiDeathDisplay (vtable 0x0099EAE4), built
+    // here on first use and added modal by DisplayDeathMessage 0x007D2030
+    // (AddPanel flags 1): "Your entire party has been
+    // killed." over Load Last Saved Game, Go to Load Game List and Main Menu.
+    // No control takes focus when it opens, so as an unknown panel it stayed
+    // silent; as a modal popup its text is read on sight and the arrows walk
+    // its buttons.
+    { acc::off::Kotor2Only(0xa8), PanelKind::MessageBoxModal, "DeathDisplay" },
     // Dialogue input-routing surfaces (CGuiInGame layout, swkotor.exe.h:10282):
     // during a cinematic conversation the arrow keys go to a foreground panel
     // other than the rendering one at +0x3c. KOTOR 1 only: KOTOR 2's creator
