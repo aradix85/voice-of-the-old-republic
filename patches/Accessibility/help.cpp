@@ -94,11 +94,15 @@ static_assert(sizeof(kGroupHeader) / sizeof(kGroupHeader[0]) ==
               static_cast<int>(Grp::COUNT),
               "kGroupHeader must cover every Grp");
 
+// The game a line belongs to: a binding the other game does not have, or a
+// key the two games put on different screens.
+enum class Only { Both, Kotor1, Kotor2 };
+
 struct Entry {
     S        label;   // the line, or its format (see EntryText)
     Grp      grp;
     uint32_t ctx;     // 0 = listed by F1 only, never spoken by Ctrl+F1
-    bool     k2Only;  // a binding for something KOTOR 1 does not have
+    Only     only = Only::Both;
 };
 
 // The screens with a list to walk.
@@ -151,8 +155,8 @@ constexpr Entry kEntries[] = {
     // behaviour, forms) exist on KOTOR 2 only.
     { S::FmtHelpNumberActions,   Grp::Combat, 0 },
     { S::HelpKeyOpenCategory,    Grp::Combat, 0 },
-    { S::FmtHelpNumberActions8,  Grp::Combat, 0, /*k2Only=*/true },
-    { S::FmtHelpNumberActions9,  Grp::Combat, 0, /*k2Only=*/true },
+    { S::FmtHelpNumberActions8,  Grp::Combat, 0, Only::Kotor2 },
+    { S::FmtHelpNumberActions9,  Grp::Combat, 0, Only::Kotor2 },
     { S::HelpKeyActionQueue,     Grp::Combat, 0 },
     { S::HelpKeyLevelUp,         Grp::Combat, 0 },
     { S::HelpKeyCancelCombat,    Grp::Combat, 0 },
@@ -185,9 +189,14 @@ constexpr Entry kEntries[] = {
 constexpr int kEntryCount =
     static_cast<int>(sizeof(kEntries) / sizeof(kEntries[0]));
 
-// A line that KOTOR 2 alone has is not listed on KOTOR 1.
+// A line of one game is not listed on the other.
 bool EntryListed(const Entry& e) {
-    return !e.k2Only || acc::game::IsKotor2();
+    switch (e.only) {
+        case Only::Kotor1: return acc::game::IsKotor1();
+        case Only::Kotor2: return acc::game::IsKotor2();
+        case Only::Both:   break;
+    }
+    return true;
 }
 
 // An entry's line. The number-key lines are formats over the MenuCat* names,

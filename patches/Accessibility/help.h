@@ -18,8 +18,8 @@
 // The catalog (kEntries in help.cpp) is the single source of truth. Each
 // entry carries a `grp` (which F1 section it lives under), a curated `ctx`
 // bitmask (which screens speak it on Ctrl+F1 — kept short so a context summary
-// stays digestible), and a `k2Only` flag. F1 is exhaustive; Ctrl+F1 is the
-// essentials, ending with a "press F1 for the full list" hint.
+// stays digestible), and the game it belongs to (`only`). F1 is exhaustive;
+// Ctrl+F1 is the essentials, ending with a "press F1 for the full list" hint.
 //
 // The strings live in strings.h (HelpGroup* / HelpKey* / HelpContext*).
 
