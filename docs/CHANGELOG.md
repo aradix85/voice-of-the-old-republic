@@ -260,6 +260,8 @@ installer, as the pre-release `bridge-latest`.
   network.
 - KOTOR 2: with a single save, Enter in the load screen loads it instead of
   switching Cloud Save on.
+- A list with a single item is a list on every screen, not only in the
+  journal and the inventory.
 - KOTOR 2: Escape in an options screen presses its Close button.
 - KOTOR 2: a slider changed with Left and Right keeps its new value.
 - The installer makes an energy shield that runs out or breaks audible, in
@@ -1051,6 +1053,12 @@ witnesses are at the declarations.
   screen, so the switch cannot be turned off again; the way back is `Use
   Steam Cloud=0` in swkotor2.ini. The switch now comes after the other
   buttons.
+- A list with a single item is walked like any other list, on every screen.
+  The rule was "one row is a description", with an exception for the
+  journal and one for the inventory; the load screen with one save was the
+  third screen to need one. What the row is now decides: a row that can be
+  chosen (a button, a toggle, a slider) makes it a list, a row of plain
+  text a description.
 - Escape in an options screen (Sound, Graphics, Gameplay, Feedback,
   Auto-Pause) presses its Close button, as in KOTOR 1. KOTOR 2 writes these
   captions with a space in front, so the button was never found and Escape
