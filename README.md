@@ -80,7 +80,9 @@ The mod keeps the game's key map, with one change the installer makes on a fresh
 - Esc — Game menu
 - F4 — Quick save, F5 — Quick load
 - I — Inventory, U — Equipment, P — Character record, K — Skills, feats and powers
-- M — Map, L — Quests, J — Messages, O — Options
+- M — Map, O — Options
+- KOTOR 1: L — Quests, J — Messages
+- KOTOR 2: J — Journal (quests; its Messages Log button opens the message log), L — Party screen
 
 ### Mod keys — the world
 

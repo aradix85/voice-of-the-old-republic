@@ -90,8 +90,9 @@ What the first round exposed and what changed for round 2:
   (FR/IT/ES/RU/PL generated via the escape-aware script in the session
   scratchpad `k2tut/gen_translations.py`; cp1251/cp1250 split rule applied).
 - **J/L key swap (user-reported after round 2's popups were confirmed):**
-  KOTOR 2's keymap.2da puts Quests on J and Messages on L — the mirror image
-  of KOTOR 1 — so the reused journal/messages/open-screens hints named the
+  KOTOR 2's keymap.2da puts the journal (Quests) on J and the party screen on
+  L; the message log is a button in the journal. KOTOR 1 has Quests on L and
+  Messages on J, so the reused journal/messages/open-screens hints named the
   wrong keys. Three keyboard-only ids (`TutK2OpenScreens` / `TutK2Messages` /
   `TutK2Journal`, all 7 languages, letters swapped mechanically with an
   apostrophe-safe replacer — French "L'écran" must not become "J'écran")
