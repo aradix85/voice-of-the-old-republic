@@ -35,4 +35,10 @@ bool GameOwnsForeground();
 // tick on the engine's main thread (speech path is COM-safe there).
 void DrainInputBlockedWarning();
 
+// Tells the engine its window is active again when it believes otherwise
+// while the game holds the foreground and no movie plays: the state that left
+// KOTOR 2's loading screen up for good after a movie in windowed play
+// (focus_guard_engine_active.cpp). Call once per tick on the main thread.
+void TickEngineActive();
+
 }  // namespace acc::focus_guard

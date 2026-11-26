@@ -207,6 +207,10 @@ void Dispatch() {
     // focus-probe thread queued.
     acc::focus_guard::DrainInputBlockedWarning();
 
+    // The engine's "window active" flag follows the foreground again when a
+    // movie's end left it cleared (the stuck loading screen in KOTOR 2).
+    acc::focus_guard::TickEngineActive();
+
     // Drop stale panel pointers before any handler touches them.
     PHASE("menus.ValidatePanels", acc::menus::ValidatePanels());
 
