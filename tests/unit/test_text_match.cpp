@@ -69,3 +69,17 @@ TEST_CASE("A dialogue line matches its TLK text with or without acting direction
     CHECK_FALSE(MatchesDialogLine("Select the armor slot, Korasha.", stored));
     CHECK_FALSE(MatchesDialogLine(nullptr, stored));
 }
+
+TEST_CASE("WithoutBraces drops a note in braces wherever it stands") {
+    using acc::text::WithoutBraces;
+    CHECK(WithoutBraces("Footlocker{Spikes}") == "Footlocker");
+    CHECK(WithoutBraces("Blast Door {HK-50}") == "Blast Door");
+    CHECK(WithoutBraces("Blast Door 1{HK-50} North") == "Blast Door 1 North");
+    CHECK(WithoutBraces("{Dummy Medbay PC}test") == "test");
+    CHECK(WithoutBraces("T3-M4 damages Footlocker{Spikes} for 3 damage") ==
+          "T3-M4 damages Footlocker for 3 damage");
+    CHECK(WithoutBraces("I see. {Pause} Go on.") == "I see. Go on.");
+    CHECK(WithoutBraces("Plain name") == "Plain name");
+    CHECK(WithoutBraces("Open { brace") == "Open { brace");
+    CHECK(WithoutBraces("{Only a note}").empty());
+}

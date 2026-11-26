@@ -9,23 +9,6 @@ namespace acc::text {
 
 namespace {
 
-// A copy without acting directions in braces, each run of spaces left as one.
-std::string WithoutDirections(const char* s) {
-    std::string out;
-    for (; *s; ++s) {
-        if (*s == '{') {
-            const char* close = std::strchr(s, '}');
-            if (close) {
-                s = close;
-                continue;
-            }
-        }
-        if (*s == ' ' && !out.empty() && out.back() == ' ') continue;
-        out += *s;
-    }
-    return out;
-}
-
 // strstr for a length-bounded needle.
 const char* FindSegment(const char* hay, const char* needle, size_t n) {
     if (n == 0) return hay;
@@ -104,10 +87,27 @@ bool MatchesWithTokens(const char* rendered, const char* stored) {
     return *r == '\0';
 }
 
+std::string WithoutBraces(const char* s) {
+    std::string out;
+    for (; *s; ++s) {
+        if (*s == '{') {
+            const char* close = std::strchr(s, '}');
+            if (close) {
+                s = close;
+                continue;
+            }
+        }
+        if (*s == ' ' && (out.empty() || out.back() == ' ')) continue;
+        out += *s;
+    }
+    if (!out.empty() && out.back() == ' ') out.pop_back();
+    return out;
+}
+
 bool MatchesDialogLine(const char* rendered, const char* stored) {
     if (!rendered || !stored) return false;
-    const std::string r = WithoutDirections(rendered);
-    const std::string s = WithoutDirections(stored);
+    const std::string r = WithoutBraces(rendered);
+    const std::string s = WithoutBraces(stored);
     return MatchesWithTokens(r.c_str(), s.c_str());
 }
 

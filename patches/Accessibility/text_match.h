@@ -4,6 +4,7 @@
 #pragma once
 
 #include <cstddef>
+#include <string>
 
 namespace acc::text {
 
@@ -24,6 +25,13 @@ bool EqualsTrimmed(const char* a, const char* b);
 // and padding spaces at either end do not count. Without a token it is
 // EqualsTrimmed.
 bool MatchesWithTokens(const char* rendered, const char* stored);
+
+// A copy without the notes in braces that KOTOR 2's writers and level
+// designers left in the text: an acting direction in a dialogue line
+// ("{Equip weapon}Select...") or a note in an object name
+// ("Footlocker{Spikes}"). Each run of spaces is left as one, none at either
+// end. A brace that is never closed stays.
+std::string WithoutBraces(const char* s);
 
 // MatchesWithTokens for a dialogue line against its TLK text. KOTOR 2's TLK
 // opens or splits thousands of lines with an acting direction in braces
