@@ -1,4 +1,4 @@
-# guidance_approach_rescue.cpp (1013 lines)
+# guidance_approach_rescue.cpp (1016 lines)
 
 Source: `patches/Accessibility/guidance_approach_rescue.cpp`
 
@@ -39,10 +39,10 @@ Rescuing a stalled approach: the coordinate retry, the sidestep round creatures 
 - L781 `void ForgetTurnbackResume()`
 - L785 `void TickTurnbackResume()`
 - L816 `bool ResumeAfterNoticeOnTheWay()`
-- L848 `bool NextRouteHop()`
-- L860 `bool RetryRouteHop()`
-- L871 `bool TryFloorNearestTarget(const Vector& tgt)`
-- L900 `bool UseNeverLanded()`
-- L907 `bool TryRegionWalk()`: Breaks a blocked approach and announces "way blocked" when the arm asked for it, naming a companion at the target or a creature beside the PC when one is the reason.
-- L928 `void OnBlocked(DWORD stalledMs)`
-- L985 `void SpeakWayBlocked(const char* name, const Vector& targetPos)`
+- L851 `bool NextRouteHop()`
+- L863 `bool RetryRouteHop()`
+- L874 `bool TryFloorNearestTarget(const Vector& tgt)`
+- L903 `bool UseNeverLanded()`
+- L910 `bool TryRegionWalk()`: Breaks a blocked approach and announces "way blocked" when the arm asked for it, naming a companion at the target or a creature beside the PC when one is the reason.
+- L931 `void OnBlocked(DWORD stalledMs)`
+- L988 `void SpeakWayBlocked(const char* name, const Vector& targetPos)`

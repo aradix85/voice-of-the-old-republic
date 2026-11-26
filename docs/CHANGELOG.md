@@ -1081,7 +1081,7 @@ witnesses are at the declarations.
   the way. On the Ebon Hawk every room says what it is each time you enter
   it ("This is the Garage.", eight times in one session), and the game ends
   the walk when it does: 26 walks in that session. The mod took such a
-  notice for the answer of the thing walked to and let go. More than ten
+  notice for the answer of the thing walked to and let go. More than four
   metres from the target it now starts the walk again, as it already did
   after a conversation nobody speaks; a spot that stops the same walk twice
   within ten seconds is left alone.

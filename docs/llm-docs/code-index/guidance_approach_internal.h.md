@@ -1,4 +1,4 @@
-# guidance_approach_internal.h (187 lines)
+# guidance_approach_internal.h (188 lines)
 
 Source: `patches/Accessibility/guidance_approach_internal.h`
 
@@ -26,12 +26,12 @@ Internal to the guidance_approach module (guidance_approach*.cpp); no other file
 - L154 `void RouteRoundTurnbacks()`: The fresh approach would walk straight into a known zone: walks the mod's own path round it instead.
 - L156 `void ForgetTurnbackResume()`: Drops the target kept by LearnTurnback.
 - L159 `void TickTurnbackResume()`: With no approach in flight: once the message has closed and the party has been put back, repeats the Enter that was turned back.
-- L165 `bool ResumeAfterNoticeOnTheWay()`: A bark surfaced while the walk was still far from its target: a notice on the way (KOTOR 2's "This is the Garage."), which ends the walk in the engine.
-- L168 `bool NextRouteHop()`: The hop was reached: starts the next one.
-- L171 `bool RetryRouteHop()`: A hop stalled short of its point: starts it again, twice at most.
-- L177 `bool TryRegionWalk()`: The last rung before "way blocked": the engine does not walk it, but the region graph may know a way.
-- L178 `void OnBlocked(DWORD stalledMs)`
-- L181 `void TellWhoStayedBehind()`: A walk arrived: names the companions that are far behind (guidance_approach_gather.cpp).
-- L184 `bool SpeakClosedDoorBetween(const Vector& from, const Vector& tgt)`: The approach ended at the target without its act: says "A closed Door stands by it." when a closed door is on the line from `from` to the target.
+- L166 `bool ResumeAfterNoticeOnTheWay()`: A bark surfaced while the walk was not yet at its target: a notice on the way (KOTOR 2's "This is the Garage."), which ends the walk in the engine.
+- L169 `bool NextRouteHop()`: The hop was reached: starts the next one.
+- L172 `bool RetryRouteHop()`: A hop stalled short of its point: starts it again, twice at most.
+- L178 `bool TryRegionWalk()`: The last rung before "way blocked": the engine does not walk it, but the region graph may know a way.
+- L179 `void OnBlocked(DWORD stalledMs)`
+- L182 `void TellWhoStayedBehind()`: A walk arrived: names the companions that are far behind (guidance_approach_gather.cpp).
+- L185 `bool SpeakClosedDoorBetween(const Vector& from, const Vector& tgt)`: The approach ended at the target without its act: says "A closed Door stands by it." when a closed door is on the line from `from` to the target.
 
 Also 3 constants or variables at namespace scope.
