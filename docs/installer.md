@@ -39,6 +39,7 @@ Command-line arguments: `/uninstall`, `/quiet`, `--game k1|k2`, a game path, and
 - `msvcp140.dll`, `vcruntime140.dll` (see below)
 - `patches/accessibility.dll` (from the `.kpatch`) and `patches/nvdaControllerClient32.dll` with its license; old `prism.dll` and `Tolk.dll` are removed
 - the minigame cue files and the extended `prioritygroups.2da` in `Override`
+- repaired sound tables in `Override` (`SoundTableFixes`): `visualeffects.2da` gets a correctly spelled `soundcessation` column next to the shipped `soundcessastion`, so an energy shield that runs out or breaks plays the game's own sound in both games; KOTOR 1 also gets two cells that named sound files that do not exist. An existing Override copy is patched, not replaced, and the files stay on uninstall. `kdev apply` does not do this
 - `KotorAccessibility_Uninstaller.exe`, a copy of the installer, so the uninstall entry keeps working after the download is deleted
 
 Optional, from the maintenance screens: dsoal and OpenAL Soft for spatial game audio (`SpatialAudioManager`).
