@@ -254,6 +254,12 @@ installer, as the pre-release `bridge-latest`.
 - KOTOR 2: Up and Down in an empty container say "Empty".
 - KOTOR 2: the designers' notes in braces are no longer spoken in room exits,
   in the feedback log or in front of a name.
+- KOTOR 2: the loading screen no longer stays up after a movie when the game
+  runs in a window.
+- KOTOR 2: walking, companions and routes cross the gaps in an area's path
+  network.
+- The installer makes an energy shield that runs out or breaks audible, in
+  both games.
 - A local bridge lets an external helper read the game state and act in the
   game.
 - The in-game updater is gone: F5 on the main menu no longer checks for or
@@ -1018,6 +1024,21 @@ witnesses are at the declarations.
   Door 1{HK-50} North" in a room's exits, "T3-M4 damages Footlocker{Spikes}"
   in the feedback log, "{Dummy Medbay PC}test" with the note in front. Only a
   note at the end of an object's name was removed before.
+- The loading screen no longer stays up after a movie in windowed play (from
+  the original mod's v0.9.3). KOTOR 2 hides it only while the engine believes
+  its window is active, and a movie's end can leave that flag cleared with
+  the game still in front; Alt+Tab away and back was the way out. The mod now
+  tells the engine itself, after a second and a half. Not yet seen in a game
+  with this fork.
+- Walking, companions that follow and the mod's routes cross the gaps in an
+  area's path network (from the original mod, after v0.9.2; its author had
+  not run it in a game either). Many KOTOR 2 areas ship their path points as
+  separate islands. On area load the islands are linked, shortest link first,
+  each link clear of walls with room for a body, and the links go into the
+  game's own network. Little changes on Peragus; the Harbinger's engine deck
+  and six Citadel Station areas become one network each. Left out of the
+  port: the original's longer wait before a long walk counts as not started
+  and its walks in stages, which the fork's own route walk covers.
 
 <h3>Bridge:</h3>
 
@@ -1064,6 +1085,11 @@ witnesses are at the declarations.
 - No self-update, no `--auto-update` mode for the removed in-game updater,
   no language choice. The Readme link and the uninstall entry's help link
   open this fork's README.
+- An energy shield that runs out or breaks plays the game's own sound, in
+  both games (from the original mod's v0.9.2): `visualeffects.2da` in
+  Override gets the column name the engine looks for next to the misspelled
+  one the game ships. KOTOR 1 also gets two cells that named sound files
+  that do not exist. `kdev apply` does not do this.
 
 <h3>Build:</h3>
 

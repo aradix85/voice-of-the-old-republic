@@ -1,4 +1,4 @@
-# guidance_pathfind.h (86 lines)
+# guidance_pathfind.h (90 lines)
 
 Source: `patches/Accessibility/guidance_pathfind.h`
 
@@ -17,4 +17,4 @@ First-cut scope: - Single area only — cross-area routing is deferred; the user
 - L54 `enum class PathFailure`: Computes shortest walkmesh-respecting path.
 - L64 `bool ComputePath(void* area, const Vector& start, const Vector& goal, std::vector<Vector>& outWaypoints, PathFailure* failure = nullptr)`: Returns: true — non-empty path.
 
-Also 7 constants or variables at namespace scope.
+Also 8 constants or variables at namespace scope.

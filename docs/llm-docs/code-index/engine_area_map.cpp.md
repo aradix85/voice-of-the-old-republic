@@ -1,4 +1,4 @@
-# engine_area_map.cpp (383 lines)
+# engine_area_map.cpp (382 lines)
 
 Source: `patches/Accessibility/engine_area_map.cpp`
 
@@ -26,4 +26,4 @@ Declarations stay in engine_area.h - splitting that header is a separate, deferr
 - L280 `bool GetMapPinPosition(void* mapPin, Vector& out)`
 - L285 `bool IsMapPinEnabled(void* mapPin)`
 - L289 `bool GetMapPinNoteText(void* mapPin, char* outBuf, size_t bufSize)`
-- L330 `bool CreateMapPin(void* clientArea, const Vector& pos, const char* name, uint32_t referenceNumber, void** outPin)`
+- L329 `bool CreateMapPin(void* clientArea, const Vector& pos, const char* name, uint32_t referenceNumber, void** outPin)`

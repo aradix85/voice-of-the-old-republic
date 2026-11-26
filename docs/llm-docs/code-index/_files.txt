@@ -185,6 +185,7 @@ patches/Accessibility/floor_puzzle_plates.h
 patches/Accessibility/focus_guard.cpp
 patches/Accessibility/focus_guard.h
 patches/Accessibility/focus_guard_bigpicture.cpp
+patches/Accessibility/focus_guard_engine_active.cpp
 patches/Accessibility/focus_guard_internal.h
 patches/Accessibility/focus_guard_movie.cpp
 patches/Accessibility/gui_forward_guard_k2.cpp
@@ -555,11 +556,13 @@ installer/KotorAccessibilityInstaller/PriorityGroup2da.cs
 installer/KotorAccessibilityInstaller/Program.cs
 installer/KotorAccessibilityInstaller/RegistryManager.cs
 installer/KotorAccessibilityInstaller/ScreenReaderAnnouncer.cs
+installer/KotorAccessibilityInstaller/SoundTableFixes.cs
 installer/KotorAccessibilityInstaller/SourcePins.cs
 installer/KotorAccessibilityInstaller/SpatialAudioManager.cs
 installer/KotorAccessibilityInstaller/SwkotorIniTweaker.cs
 installer/KotorAccessibilityInstaller/TslrcmDetector.cs
 installer/KotorAccessibilityInstaller/TslrcmInstallForm.cs
+installer/KotorAccessibilityInstaller/TwoDa.cs
 installer/KotorAccessibilityInstaller/UninstallFlow.cs
 installer/KotorAccessibilityInstaller/UninstallForm.cs
 installer/KotorAccessibilityInstaller/UpdateAvailableForm.cs

@@ -1,4 +1,4 @@
-# room_topology.cpp (603 lines)
+# room_topology.cpp (630 lines)
 
 Source: `patches/Accessibility/room_topology.cpp`
 
@@ -8,18 +8,18 @@ The nav graph is what BioWare ships and the engine trusts for path solving, the 
 
 ## Declarations (in source order)
 
-- L77 `void Reset()`
-- L92 `bool HasGraphForArea(void* area)`
-- L98 `void ResetNavGraphRetry()`
-- L108 `void BuildClusterLinks(const acc::engine::navgraph::NavGraphSnapshot& g, int n)`: Region adjacency for the exploration overview: which regions share a nav edge that does not cross a wall, and whether every such edge runs through a door.
-- L153 `void BuildForArea(void* area)`
-- L325 `void DumpGraphToLog()`
-- L341 `bool GetClusterInfo(void* area, int clusterId, ClusterInfo& out)`
-- L357 `bool NearestClusterNode(void* area, int clusterId, const Vector& p, Vector& out)`
-- L371 `bool ListClusters(void* area, std::vector<ClusterSummary>& out)`
-- L391 `bool GetClusterLinks(void* area, std::vector<ClusterLink>& out)`
-- L424 `NodeScan ScanNodes(const Vector& worldPos, bool requireWallReachable, bool zTrusted, const Vector* closedDoor)`: A node is reachable when it is on the caller's floor (zTrusted: its calibrated floor within the wall test's own z tolerance, so "same floor" means one thing in both filters) and no wall lies between (requireWallReacha...
-- L480 `void LogScan(const NodeScan& s, const Vector& worldPos)`: Logged only when the filter rejected a candidate nearer than the pick, or rejected every one (a sign the wall cache or the position is wrong).
-- L518 `bool InSnapRange(int node, float distSq)`
-- L525 `bool ClosedDoorNear(void* area, const Vector& p, Vector& outDoor)`: The closed door within kClosedDoorNearM of `p`, if any.
-- L538 `bool LookupAt(void* area, const Vector& worldPos, std::string& outLabel, int& outSig, int& outClusterId, bool allowDiagLog, bool requireWallReachable, bool zTrusted, std::vector<ExitMark>* outExits)`
+- L78 `void Reset()`
+- L93 `bool HasGraphForArea(void* area)`
+- L99 `void ResetNavGraphRetry()`
+- L109 `void BuildClusterLinks(const acc::engine::navgraph::NavGraphSnapshot& g, int n)`: Region adjacency for the exploration overview: which regions share a nav edge that does not cross a wall, and whether every such edge runs through a door.
+- L154 `void BuildForArea(void* area)`
+- L352 `void DumpGraphToLog()`
+- L368 `bool GetClusterInfo(void* area, int clusterId, ClusterInfo& out)`
+- L384 `bool NearestClusterNode(void* area, int clusterId, const Vector& p, Vector& out)`
+- L398 `bool ListClusters(void* area, std::vector<ClusterSummary>& out)`
+- L418 `bool GetClusterLinks(void* area, std::vector<ClusterLink>& out)`
+- L451 `NodeScan ScanNodes(const Vector& worldPos, bool requireWallReachable, bool zTrusted, const Vector* closedDoor)`: A node is reachable when it is on the caller's floor (zTrusted: its calibrated floor within the wall test's own z tolerance, so "same floor" means one thing in both filters) and no wall lies between (requireWallReacha...
+- L507 `void LogScan(const NodeScan& s, const Vector& worldPos)`: Logged only when the filter rejected a candidate nearer than the pick, or rejected every one (a sign the wall cache or the position is wrong).
+- L545 `bool InSnapRange(int node, float distSq)`
+- L552 `bool ClosedDoorNear(void* area, const Vector& p, Vector& outDoor)`: The closed door within kClosedDoorNearM of `p`, if any.
+- L565 `bool LookupAt(void* area, const Vector& worldPos, std::string& outLabel, int& outSig, int& outClusterId, bool allowDiagLog, bool requireWallReachable, bool zTrusted, std::vector<ExitMark>* outExits)`

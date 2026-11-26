@@ -70,11 +70,11 @@ Reports land in `build/analysis/`. Where the checks stood on 2026-11-11, unless 
 - `cppcheck.ps1`: exit 0. With `-Style`, 38 knownConditionTrueFalse findings remain, each a variable set inside a raw `__try`, which cppcheck does not follow. Left as they are: constVariablePointer and its relatives, useStlAlgorithm, uninitMemberVarNoCtor (structs the engine fills) and three false positives (bridge_describe containerOutOfBounds, cycle_state and skillinfo uninitvar).
 - `clang_tidy.py`: 8 findings, all reviewed false positives (audio_loop, combat_log_parse, cycle_state, engine_area_names, guidance_autowalk, mod_settings_store, party_status, room_topology_absorb). Run it on every file a rewrite touches.
 - `msvc_check.ps1 -Mode analyze`: 121. 105 are C28159 (GetTickCount is the live clock on purpose; `acc::tick::NowMs` is the time of the tick being dispatched), 7 C6385 and 3 C6054 are false positives, 4 C6262 are stack frames over 16 KB (engine_manager, map_ui_cursor, menus_chain_input, peek_description_item), 2 are in the Windows SDK.
-- Unit tests: 89 cases, 712 assertions; 91% line coverage of the files under test.
-- `call_convention.py` (2026-11-25, `--game k1` and `--game k2`): 187 calls fit in KOTOR 1 and 194 in KOTOR 2, 11 not checked.
-- `engine_twins.py` (2026-11-25): 167 pairs, 115 agree, 0 disagree, 3 mixed (the Abilities input handler, the inventory list filler and the client input handler; not in `engine_twins_reviewed.txt`), 49 unproven (small accessors with nothing to compare).
+- Unit tests (2026-11-26): 137 cases, 956 assertions. Line coverage of the files under test was 91% on 2026-11-11.
+- `call_convention.py` (2026-11-26, `--game k1` and `--game k2`): 189 calls fit in KOTOR 1 and 196 in KOTOR 2, 11 not checked.
+- `engine_twins.py` (2026-11-26): 168 pairs, 117 agree, 0 disagree, 3 mixed (the Abilities input handler, the inventory list filler and the client input handler; not in `engine_twins_reviewed.txt`), 48 unproven (small accessors with nothing to compare).
 - `engine_constants.py`: no constant defined twice.
-- `raw_try.py`: 230 `__try` blocks outside `engine_reads`; 33 of them have no call inside and stay (several fields of one object under one guard, array walks, reads off a hook's stack frame).
+- `raw_try.py` (2026-11-26): 236 `__try` blocks outside `engine_reads`; 33 of them have no call inside and stay (several fields of one object under one guard, array walks, reads off a hook's stack frame).
 - `analyse.py`: 479 files, 50,725 code lines, 2,444 functions, 135 above complexity 15, 3 cloned blocks of ten lines or more and none across files.
 
 Splitting a file: `python tools/analysis/split_file.py CONFIG.json` (format in its docstring). Afterwards move the project includes of the internal header to the files that use them; the compiler names a missing one. When the module's public header is not `<module>.h`, fix the include in the internal header by hand, and move a constant that a shared function's default argument uses to the internal header yourself.

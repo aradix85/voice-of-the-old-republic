@@ -1,4 +1,4 @@
-# InstallationManager.cs (863 lines)
+# InstallationManager.cs (908 lines)
 
 Source: `installer/KotorAccessibilityInstaller/InstallationManager.cs`
 
@@ -16,12 +16,13 @@ Source: `installer/KotorAccessibilityInstaller/InstallationManager.cs`
 - L528 `public void InstallSpeechRuntime()`: Copies the bundled NVDA controller client into &lt;game&gt;/patches/, where speech.cpp loads it, and removes the speech runtimes earlier versions shipped (prism.dll, Tolk.dll).
 - L566 `public void InstallOverrideAssets()`: Drops custom WAV samples (and any other Aurora-engine assets we ship) into &lt;game&gt;/Override/.
 - L607 `public void InstallPriorityGroup()`: Appends the mod's dedicated full-volume audio priority group to &lt;game&gt;/Override/prioritygroups.2da.
-- L636 `public string CopyUninstaller()`: Copies the running installer EXE into the game folder so Add/Remove Programs has a stable uninstaller path even if the user deletes the original download.
-- L681 `public static void SweepAbandonedStagingDirs()`: Delete any staging directories left behind, ours or an earlier run's.
-- L716 `public void CleanupStaging(string stagingRoot)`: Delete the staging directory, retrying briefly.
-- L742 `private static byte[] ReadEmbeddedResourceBytes(string shortName)`
-- L757 `private static void ExtractEmbeddedResource(string shortName, string targetPath)`
-- L781 `private static void WriteFileResilient(string targetPath, byte[] data, string shortName)`: Writes to , clearing any stale read-only attribute first and retrying on transient I/O / access errors with backoff.
-- L810 `private static void ClearReadOnly(string path)`: Best-effort clear of the read-only attribute on an existing target so FileMode.Create can overwrite it.
-- L828 `private static string FindResourceName(Assembly assembly, string shortName)`
-- L850 `public class LoaderBlockedException : Exception`: Raised when the dinput8.dll proxy loader cannot be written into the game folder even after the resilient writer's retries — almost always because antivirus / Windows Defender blocked the drop (the proxy-DLL name trips...
+- L642 `public void InstallSoundTableFixes()`: Repairs the vanilla table data that keeps shipped sounds silent (see ).
+- L681 `public string CopyUninstaller()`: Copies the running installer EXE into the game folder so Add/Remove Programs has a stable uninstaller path even if the user deletes the original download.
+- L726 `public static void SweepAbandonedStagingDirs()`: Delete any staging directories left behind, ours or an earlier run's.
+- L761 `public void CleanupStaging(string stagingRoot)`: Delete the staging directory, retrying briefly.
+- L787 `private static byte[] ReadEmbeddedResourceBytes(string shortName)`
+- L802 `private static void ExtractEmbeddedResource(string shortName, string targetPath)`
+- L826 `private static void WriteFileResilient(string targetPath, byte[] data, string shortName)`: Writes to , clearing any stale read-only attribute first and retrying on transient I/O / access errors with backoff.
+- L855 `private static void ClearReadOnly(string path)`: Best-effort clear of the read-only attribute on an existing target so FileMode.Create can overwrite it.
+- L873 `private static string FindResourceName(Assembly assembly, string shortName)`
+- L895 `public class LoaderBlockedException : Exception`: Raised when the dinput8.dll proxy loader cannot be written into the game folder even after the resilient writer's retries — almost always because antivirus / Windows Defender blocked the drop (the proxy-DLL name trips...

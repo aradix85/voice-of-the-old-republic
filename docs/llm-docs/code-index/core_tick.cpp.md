@@ -1,4 +1,4 @@
-# core_tick.cpp (372 lines)
+# core_tick.cpp (376 lines)
 
 Source: `patches/Accessibility/core_tick.cpp`
 
@@ -14,4 +14,4 @@ The per-tick dispatcher (see core_tick.h) and its watchdog.
 - L149 `void WatchdogEndTick(const LARGE_INTEGER& tickStart)`
 - L163 `DWORD NowMs()`
 - L170 `void Dispatch()`
-- L369 `extern "C" void __cdecl OnUpdate(void* /*unused*/)`: CSWGuiManager::Update detour: @0x40ce76 on KOTOR 1 (argument = the manager, from EBP), @0x4113a9 on KOTOR 2 (argument = the frame pointer).
+- L373 `extern "C" void __cdecl OnUpdate(void* /*unused*/)`: CSWGuiManager::Update detour: @0x40ce76 on KOTOR 1 (argument = the manager, from EBP), @0x4113a9 on KOTOR 2 (argument = the frame pointer).

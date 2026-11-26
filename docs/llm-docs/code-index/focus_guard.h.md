@@ -1,4 +1,4 @@
-# focus_guard.h (39 lines)
+# focus_guard.h (45 lines)
 
 Source: `patches/Accessibility/focus_guard.h`
 
@@ -13,3 +13,4 @@ Idempotent — repeat calls are no-ops. Safe to call from OnRulesInit (early, be
 - L21 `void StartFocusProbe()`: Start the focus-probe polling thread.
 - L28 `bool GameOwnsForeground()`: True when the foreground window belongs to our process — i.e.
 - L36 `void DrainInputBlockedWarning()`: Drain a pending "input blocked by Steam Big Picture" warning and speak it (no-op if none queued).
+- L42 `void TickEngineActive()`: Tells the engine its window is active again when it believes otherwise while the game holds the foreground and no movie plays: the state that left KOTOR 2's loading screen up for good after a movie in windowed play (f...
