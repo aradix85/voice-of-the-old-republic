@@ -1,154 +1,72 @@
-# Voice of the Old Republic — KOTOR 1 Accessibility Mod
+# Voice of the Old Republic — accessibility mod for KOTOR 1 and KOTOR 2
 
 ## Purpose
-Accessibility mod for **Star Wars: Knights of the Old Republic** (KOTOR 1, BioWare 2003) enabling blind players to play with NVDA (speech and braille, through the NVDA Controller Client). This is Anouk's fork (aradix85, branch `bridge`) of JeanStiletto's Voice of the Old Republic: NVDA only, English only, keyboard only, text instead of exploration sounds.
+Accessibility mod for **Star Wars: Knights of the Old Republic** (BioWare 2003) and **Knights of the Old Republic II: The Sith Lords** (Obsidian 2004, Aspyr's 2015 rebuild), so blind players can play with NVDA (speech and braille, through the NVDA Controller Client). One build serves both games; KOTOR 1's hooks are in `patches/Accessibility/hooks.toml`, KOTOR 2's in `kotor2.hooks.toml`. This is Anouk's fork (aradix85, branch `bridge`) of JeanStiletto's Voice of the Old Republic: NVDA only, English only, keyboard only, text instead of exploration sounds, plus a local bridge.
 
-## Developer accessibility
-The developer of this mod is blind. Any workflow you propose has to be doable with a screen reader and keyboard alone. Things to avoid unless there is no alternative:
-- Mouse-only steps ("click here", "drag this", "hover over X")
-- "Check the screen", "look at the colour", "see if the icon shows" — anything that needs visual confirmation
-- GUI tools that aren't screen-reader-friendly (most Ghidra panels, raw imhex hex dumps, image diff viewers, etc.)
-- Asking the user to read what's on a loading/black screen, or to time something visually
-- Sighted-only verification ("does the cutscene look right?", "is the character in the right spot?")
-
-Prefer instead: CLI commands the user can run, log lines we can grep, deterministic test states, screen-reader-announceable outputs, and "speak what you hear" as the user's verification channel. When a sighted check would normally be the fast path, treat it as a last resort and ask the user explicitly before proposing it.
-
-## Accessibility Goals
-- Well-structured text output (no tables, no graphics)
-- Linear, readable format for screen readers
-- Full keyboard navigation support
-- Announce context changes, focused elements, and game state
-
-## Claude Response Formatting
-- Never use markdown tables (| symbols are read aloud by screen readers)
-- Use headings and bullet lists for comparisons
-- Present information linearly, one item per line
-- Group related info under clear labels
-- Don't write raw memory addresses in chat answers. Use the function name, field name, or a short recognisable description instead ("PlayFootstep's field6_0x20 check", "the engine's natural early-out JZ", "the wrapper's TEST EAX,EAX"). Addresses bloat answers without informing the reader. Only include an address when it is itself the point — e.g. when distinguishing two adjacent hook candidates by their exact offset, or when reporting a finding that has to be re-typed into Ghidra/hooks.toml. In code, hooks.toml comments, memory entries, and docs, addresses are still encouraged.
-
-Example - instead of tables, format like this:
-**Item Name**
-- Property: Value
-- Property: Value
+## Chat answers
+- Don't write raw memory addresses in chat answers. Use the function name, field name, or a short recognisable description instead ("PlayFootstep's field6_0x20 check", "the engine's natural early-out JZ"). Only include an address when it is itself the point — when distinguishing two adjacent hook candidates, or when a finding has to be re-typed into Ghidra or a hooks file. In code, hooks.toml comments and docs, addresses are encouraged.
 
 ## Permissions
 - NEVER add broad PowerShell wildcard permissions like `Bash(powershell -Command:*)` or `Bash(powershell:*)` to settings.local.json - always use specific, scoped commands only
 
-## Code Standards
-- Modular, maintainable, efficient code
-- Avoid redundancy
-- Consistent naming
-- Verify changes fit existing codebase before implementing - read and understand surrounding code first
-- When contributing to an existing project, match the existing style, patterns, and conventions
-- When fixing UI interaction bugs (e.g., keyboard event handling, focus management), always test edge cases where the fix might interfere with normal component behavior
-- Prefer editing existing files over creating new ones
-- Only make changes that are directly requested or clearly necessary - no drive-by refactors
-- Before adding a helper, search for an existing one — duplicate utilities are a recurring failure mode across these accessibility projects
-- Name a helper for what it DOES, never for the screen it is used on. `ReadCharSheetLabel` / `ReadEquipLabel` hid three copies of `engine_reads`' `ReadLabelTextAt`, because no grep could find them from either direction
-- The same applies to infrastructure: check whether a mechanism exists before proposing to build one. `acclog` already has `Trace` (line dedup), `BlockLog` (block dedup), `Once` and `Edge`
+## Code standards
+The conventions are in `CONTRIBUTING.md`. What it does not say:
+- Before adding a helper, search for an existing one — duplicate utilities are a recurring failure mode here.
+- Name a helper for what it DOES, never for the screen it is used on. `ReadCharSheetLabel` / `ReadEquipLabel` hid three copies of `engine_reads`' `ReadLabelTextAt`, because no grep could find them from either direction.
+- The same applies to infrastructure: check whether a mechanism exists before proposing to build one. `acclog` already has `Trace` (line dedup), `BlockLog` (block dedup), `Once` and `Edge`.
+- When fixing keyboard or focus handling, test the edge cases where the fix might interfere with the screen's normal behaviour.
 
 ## Non-obvious constraints
 - **MSVC C2712: a function using `__try` cannot contain anything needing unwinding** — no objects with destructors, and no function-local `static` (its thread-safe init guard counts). Engine-reading code here is SEH-heavy by convention, so RAII and lazily-cached constants are unavailable across much of the patch. Workaround when you need an object anyway: declare it in an SEH-free CALLER and pass a pointer in — a pointer is trivially destructible, so the constraint never fires and the SEH code needs no restructuring (see `map_ui_cursor.cpp` passing `acclog::BlockLog*`)
+- **Clocks.** A tick is one rendered frame (`core_tick` fans out from a detour on `CSWGuiManager::Update`), so the interval between ticks is whatever the framerate is. `GetTickCount` is right for a deadline ("have N ms passed") and for integration that updates its last stamp unconditionally. A rate (`delta / dt`) uses `acc::tick::NowMs()`, the stamp of the tick being dispatched: a near-zero interval falsifies a rate. `NowMs()` is valid only inside the tick dispatch; code reached from an input hook, a menu callback or a hotkey runs outside it and would read a stale value.
 
-## Bash Tool on Windows
-- Bash tool runs through bash shell (Git Bash), NOT CMD or PowerShell
-- NEVER use `cd /d` — that's CMD syntax, invalid in bash
-- NEVER use `cd` — use absolute paths in tool calls
-- For git: use `git -C "<absolute project path>"` instead of cd'ing first
-- For other tools: pass full paths as arguments
-- Windows paths with backslashes work in Git Bash when quoted
-
-## Project Reference
+## Project reference
 
 ### Game install
-- **Steam path:** `C:\steam\steamapps\common\swkotor` (Anouk's machine; `kdev.toml` holds it)
-- **Executable:** `swkotor.exe`
-- **Config:** `swkotor.ini` (in install root; `[Alias]` section defines folder mapping)
-- **Engine:** BioWare Odyssey Engine (Aurora Engine derivative, also used in NWN)
+- **KOTOR 2**, Steam: `C:\steam\steamapps\common\Knights of the Old Republic II`, `swkotor2.exe`, Aspyr 1.0.2. `kdev.toml` holds it as `install_k2`.
+- **KOTOR 1** is no longer on this machine; `install` in `kdev.toml` still names its old path. Every `kdev` command that acts on a game therefore needs `--game k2`.
+- **Config:** `swkotor2.ini` in the install root.
+- **Engine:** BioWare Odyssey (an Aurora derivative).
 
 ### Project workspace
-- **Project root:** `C:\Users\radix\Documents\KOTOR-toegankelijkheid\voice-of-the-old-republic`
-- **`tools/kdev/`** — internal dev CLI (.NET 10), drives the full build → install → launch loop for our patch
-- **`patches/Accessibility/`** — our patch source (hooks, menus, narration, audio, guidance, and engine-interface modules)
-- **`installer/KotorAccessibilityInstaller/`** — end-user installer (.NET 8 WinForms, self-contained single-file EXE). References KPatchCore directly; modelled on the arena installer (`AccessibleArenaInstaller/IMPLEMENTATION.md` in the sibling arena project) — read that first if touching this code.
+- **`tools/kdev/`** — internal dev CLI (.NET 10), drives the build → install → launch loop for the patch
+- **`patches/Accessibility/`** — the patch source (hooks, menus, narration, audio, guidance, engine-interface modules), with `manifest.toml` and the two hooks files
+- **`installer/KotorAccessibilityInstaller/`** — end-user installer (.NET 8 WinForms, self-contained single-file EXE); references KPatchCore directly. See `docs/installer.md`.
 - **`.github/workflows/build.yml`** — on every push to `bridge`: builds the mod and the installer, runs the unit tests (plain and under AddressSanitizer), and publishes both as the pre-release `bridge-latest`, which the installer downloads the mod from
 - **`tests/unit/`** — doctest unit tests for the engine-free code; run with `pwsh -File tools/tests/run_unit_tests.ps1` (`-Mode asan`, `-Mode coverage`)
 - **`third_party/`** — vendored dependencies: `Kotor-Patch-Manager`, `nvda` (the controller client), `doctest`, `KeyMouseAccessibilityTest`.
-- **`docs/`** — see Documentation below
 - **`build/`, `logs/`** — generated; gitignored
 - **`kdev.toml`** — project-level config consumed by `kdev`
-- **`LICENSE`** — GNU GPL v3 (same as the sibling arena project). All contributions ship under this licence.
+- **`LICENSE`** — GNU GPL v3. All contributions ship under this licence.
 
 ### Documentation
-Always read these before diving into work — they capture decisions and current state:
-- **`docs/tools.md`** — installs and paths (game, JDK, Ghidra, VS Build Tools, patch manager, kdev). Update when new tools are installed.
-- **`docs/kdev-design.md`** — kdev's design decisions, project layout, subcommand contracts, exit codes, completion status.
-- **`docs/controls-and-input.md`** — canonical KOTOR 1 keyboard/mouse control survey + accessibility-gap backlog.
-- **`docs/installer.md`** — what the installer does: where the mod comes from, the flows, what lands in the game folder, the pins. The original design notes and research are in `archiev/installer-design-original.md`.
+Read the one that covers the work before diving in:
+- **`docs/tools.md`** — the tools on this machine and how to call them (compiler, JDK, Ghidra and the reverse-engineering scripts, the analysis and test tools with where each check stands).
+- **`docs/kotor2-port.md`** — the KOTOR 2 port: how far it is and what is still `Todo()` or `R()` at the top, then the findings per subject.
+- **`docs/kdev-design.md`** — kdev's design decisions, project layout, subcommand contracts, exit codes.
+- **`docs/controls-and-input.md`** — survey of KOTOR 1's keyboard and mouse controls.
+- **`docs/installer.md`** — what the installer does: where the mod comes from, the flows, what lands in the game folder, the pins.
 - **`docs/upstream-prs.md`** — Kotor-Patch-Manager (and K1CP) defects with our workarounds and the local fixes in the vendored copy; code comments cite its entries as PR-1 … PR-12.
-- **`docs/known-issues.md`** — five-bucket status tracker (Bugs / Unreproduced / Planned / Monitor / Polish).
+- **`docs/known-issues.md`** — known limitations: what does not work or works differently, and why. No test plans or to-do lists.
 - **`docs/CHANGELOG.md`** — release notes. The top section (`v0.9.1+bridge`) is this fork's; add every change there, in its overview and its topic subsection.
-- **`docs/llm-docs/`** — LLM-targeted reference material. See `docs/llm-docs/CLAUDE.md` for the index. `docs/llm-docs/code-index/` is generated from the source comments: `python tools/analysis/code_index.py`. Start with `game-flow.md` for lifecycle context, `accessibility-map.md` for pillar-by-pillar hook candidates, and `sarif-cookbook.md` for querying Lane's RE database.
-- **`archiev/`** — historical investigation, design, and progress docs (session-by-session retrospectives). Search here if a code comment references a `docs/*-investigation.md` or `docs/navsystem-*.md` that no longer exists in `docs/`.
-
-### Game folders that matter for modding
-- **`Override\`** — drop-in folder; any file here overrides the matching resource in the BIFs. Primary entry point for content mods.
-- **`modules\`** — per-area `.rim` / `_s.rim` (script) bundles, one pair per game module (e.g. `M12ab.rim`).
-- **`rims\`** — global rims (`global.rim`, `chargen.rim`, etc.).
-- **`data\`** — `chitin.key`-indexed `.bif` archives (`2da.bif`, `dialog.bif`, `scripts.bif`, `templates.bif`, ...). Read-only base assets.
-- **`lips\`** — lipsync data per VO line.
-- **`streamwaves\` / `streammusic\` / `streamsounds\`** — audio (potential source for VO subtitles / cues).
-- **`dialog.tlk`** — master string table, all in-game text keyed by StrRef.
-- **`patch.erf`** — Steam patch overlay.
-
-### Key file formats
-- **KEY/BIF** — chitin.key indexes BIF archives (base assets).
-- **ERF/RIM/MOD** — encapsulated resource files (modules, patches).
-- **2DA** — 2-dimensional array tables (game data, e.g. `feat.2da`, `spells.2da`).
-- **GFF** — Generic File Format, structured binary used by `.utc` (creatures), `.uti` (items), `.dlg` (dialogs), `.are` (areas), `.git`, `.ifo`, `.utm`, etc.
-- **NSS / NCS** — NWScript source / compiled bytecode; the engine's scripting language.
-- **TLK** — talk table; all UI/dialog strings.
-- **MDL/MDX, TPC, TGA** — models and textures.
-
-### Modding entry points (in priority order for accessibility work)
-1. **Override drop-ins** — replace 2DA / GFF / NCS without touching base archives.
-2. **NWScript hooks** — every dialog node, area transition, combat round, and trigger fires scripts; modded `.ncs` can emit state we read externally.
-3. **External companion process** — DLL injection or memory reader to surface focused UI element / tooltip text to a screen reader (the engine has no native a11y APIs).
-4. **TLK / dialog.tlk edits** — for changing or augmenting text content.
-
-### Established community tooling (to be installed locally as needed)
-- **KotOR Tool** (Fred Tetra) — GUI extractor/editor for BIF/ERF/2DA/GFF.
-- **TSLPatcher / HoloPatcher** — standard installer format for distributing mods that patch 2DAs without conflicts.
-- **xoreos / xoreos-tools** — open-source reimplementation; `xoreos-tools` CLI is excellent for headless extraction (`unkeybif`, `unerf`, `gff2xml`, `tlk2xml`, `ncsdis`).
-- **KOTORBlender** — Blender add-on for MDL.
-- **nwnnsscomp** — NWScript compiler/decompiler (KOTOR variant).
-- **DeadlyStream** — primary mod hosting site / community knowledge base.
+- **`docs/llm-docs/`** — reference material on the engine. See `docs/llm-docs/CLAUDE.md` for the index. `docs/llm-docs/code-index/` is generated from the source comments: `python tools/analysis/code_index.py`.
+- **`archiev/`** — the original mod's historical investigation, design and progress docs. Search here if a code comment references a `docs/*-investigation.md` or `docs/navsystem-*.md` that no longer exists in `docs/`.
 
 ### Build/run
-- **Inner dev loop:** use `kdev` from the project root. Common: `kdev status`, `kdev dev` (clean → build → apply → launch), `kdev kill`, `kdev logs --follow`.
-- **`kdev` build:** `dotnet build tools/kdev/kdev.csproj -c Release` from the project root (output at `tools/kdev/bin/Release/net10.0/win-x64/kdev.exe`).
-- **Mod build pipeline:** `kdev build` compiles `patches/Accessibility/` **incrementally** — per-TU object cache in `build/objcache/` with header dependencies tracked via `/showIncludes`, so only changed translation units (and TUs that include a changed header) recompile — then links and packages the `.kpatch` in `build/`. Compile/link flags mirror the upstream `create-patch.bat`, except that our own sources build at `/W4 /WX`. `kdev build --clean` wipes the cache and recompiles everything; `kdev build --bat` falls back to the legacy full `create-patch.bat` path. A cold build recompiles every TU; a single-file edit builds in seconds, a change to `strings.h` in about two minutes. A warning in our sources fails the build; kdev prints the warnings of every file it compiles.
-- **Long jobs in the background:** a cold `kdev build`, `kdev dev`, and `kdev launch --monitor` can run for minutes. Prefer launching them with `run_in_background` so they don't block the turn; read the task output file on completion.
-- **Mod install:** `kdev apply [--game k2]` calls `KPatchCore.PatchApplicator.InstallPatches` against the chosen game's install (`k1` by default). Only the game a command acts on has to be installed.
-- **Mod launch:** `kdev launch [--monitor] [--game k2]` calls `Process.Start` on the game's exe directly; the `dinput8.dll` proxy (`kdev apply` drops it into the install root) auto-loads KotorPatcher. `--monitor` blocks on the game process and reports its real exit code.
+- **`kdev` itself:** `dotnet build tools/kdev/kdev.csproj -c Release` from the project root (output at `tools/kdev/bin/Release/net10.0/win-x64/kdev.exe`).
+- **Mod build:** `kdev build` compiles `patches/Accessibility/` **incrementally** — per-TU object cache in `build/objcache/` with header dependencies tracked via `/showIncludes`, so only changed translation units (and TUs that include a changed header) recompile — then links and packages the `.kpatch` in `build/`. Our own sources build at `/W4 /WX`: a warning fails the build, and kdev prints the warnings of every file it compiles. `kdev build --clean` wipes the cache and recompiles everything. A single-file edit builds in seconds, a change to `strings.h` in about two minutes.
+- **An interrupted build** leaves empty `.obj` files in `build/objcache/patch` (link error LNK1136): delete them and build again.
+- **Long jobs in the background:** a cold `kdev build`, `kdev dev` and `kdev launch --monitor` can run for minutes; start them with `run_in_background`.
+- **Mod install:** `kdev apply --game k2` calls `KPatchCore.PatchApplicator.InstallPatches` against the game's install and drops the `dinput8.dll` loader into the install root. It closes a running game first.
+- **Mod launch:** `kdev launch [--monitor] --game k2` starts the game's exe directly; the loader auto-loads KotorPatcher. `--monitor` blocks on the game process and reports its real exit code.
+- **Other:** `kdev status`, `kdev kill`, `kdev clean`, `kdev logs [--follow]`.
 
 ### Logs
-- **Project logs:** `logs/` at project root (gitignored). `kdev` writes `kdev-<utc>.log`, `build-<utc>.log`, `dev-<utc>.log`. Tail with `kdev logs [--follow]`.
-- **Game logs:** `<install>/logs/` — written by the game itself (largely silent).
-- **Patch DLL logs:** `<install>/logs/patch-YYYYMMDD-HHMMSS.log` — one timestamped file per session, written by our injected DLL via `acclog::Write` (see `patches/Accessibility/log.cpp`). Tail with `kdev logs [--follow]` or grep `<install>/logs/patch-*.log` directly.
-
-### Key entry points
-- **`patches/Accessibility/`** — our patch source. Will contain `manifest.toml`, `hooks.toml`, `exports.def`, `*.cpp`.
-- **`tools/kdev/Program.cs`** — dev CLI entry; subcommands in `tools/kdev/Commands/`.
-- **`third_party/Kotor-Patch-Manager/Patches/`** — Lane's example patches; canonical reference for how a `.kpatch` is structured. `ScriptExtender/` is the closest analog to what we'll build.
-- **`third_party/Kotor-Patch-Manager/docs/`** — upstream's `MULTI_VERSION_ARCHITECTURE.md`, `AddressDatabaseSystem.md`, `Roadmap2026.md`. Read when designing hooks.
-- **Override\\, dialog.tlk, GUI .gui files** — game-side artifacts; relevant if/when we move beyond detour hooks into data-side mods.
+- **Project logs:** `logs/` at project root (gitignored). `kdev` writes `kdev-<utc>.log`, `build-<utc>.log`, `dev-<utc>.log`.
+- **Patch DLL logs:** `<install>/logs/patch-YYYYMMDD-HHMMSS.log` — one file per game session, written by the injected DLL via `acclog::Write` (`patches/Accessibility/log.cpp`). Name and line times are UTC. Tail with `kdev logs [--follow]` or grep the file directly.
 
 ### External references
-- **Lane Dibello's GitHub** (primary upstream — Patch Manager, MessageInjector, KotOR_IO, etc.): `https://github.com/LaneDibello`. Full repo inventory + URLs in `docs/tools.md` under "Upstream sources".
-- **OldRepublicDevs/PyKotor** (HoloPatcher, file-format Python lib; future distribution path): `https://github.com/OldRepublicDevs/PyKotor`
-- **DeadlyStream** thread for Lane's RE work: `https://deadlystream.com/topic/11948-kotor-1-gog-reverse-engineering/`
-- **xoreos** (open-source engine reimplementation, useful cross-reference): `https://github.com/xoreos/xoreos`
-- BioWare Aurora/Odyssey docs are out of print; community references and xoreos source are the practical reference.
-- NWScript reference: `nwscript.nss` (extract from `scripts.bif`).
-- Lane's KOTOR 1 Ghidra database (`k1_win_gog_swkotor.exe.gzf`) lives on Lane's Google Drive (linked from the DeadlyStream thread above) — not pulled locally yet; download into `docs/llm-docs/re/` when we need to read function semantics.
+- **Lane Dibello's GitHub** (Kotor-Patch-Manager, KotorMessageInjector, KotOR_IO): `https://github.com/LaneDibello`
+- **PyKotor** (file-format Python library, HoloPatcher): `https://github.com/OldRepublicDevs/PyKotor`
+- **xoreos** (open-source engine reimplementation, a cross-reference for engine internals and file formats): `https://github.com/xoreos/xoreos`
+- **DeadlyStream** thread for Lane's KOTOR 1 reverse engineering, which links his Ghidra database: `https://deadlystream.com/topic/11948-kotor-1-gog-reverse-engineering/`
