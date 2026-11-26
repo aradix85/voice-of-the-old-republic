@@ -260,6 +260,7 @@ installer, as the pre-release `bridge-latest`.
   network.
 - KOTOR 2: with a single save, Enter in the load screen loads it instead of
   switching Cloud Save on.
+- KOTOR 2: Escape in an options screen keeps the changes.
 - The installer makes an energy shield that runs out or breaks audible, in
   both games.
 - A local bridge lets an external helper read the game state and act in the
@@ -1049,6 +1050,11 @@ witnesses are at the declarations.
   screen, so the switch cannot be turned off again; the way back is `Use
   Steam Cloud=0` in swkotor2.ini. The switch now comes after the other
   buttons.
+- Escape in an options screen (Sound, Graphics, Gameplay, Feedback,
+  Auto-Pause) presses its Close button, which keeps the changes. KOTOR 2
+  writes these captions with a space in front, so the button was never
+  found, Escape went to the game, and the game left the screen without
+  keeping anything; Close itself is not in the list the arrows walk.
 
 <h3>Bridge:</h3>
 
