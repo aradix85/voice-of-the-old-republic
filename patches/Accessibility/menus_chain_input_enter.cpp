@@ -102,6 +102,19 @@ bool QuestItemRow(PanelKind kind, const ChainEntry& e) {
     return true;
 }
 
+// KOTOR 2's save list is walked through the chain; Enter on a save loads or
+// saves it, as in KOTOR 1. The selection monitor has told the engine which
+// row the chain is on.
+bool SaveRow(PanelKind kind, const ChainEntry& e) {
+    if (kind != PanelKind::SaveLoad ||
+        !acc::menus::listbox::ActivateSaveRow(g_chainPanel, e.control)) {
+        return false;
+    }
+    acclog::Write("Menus.Enter", "save-row panel=%p index=%d target=%p",
+                  g_chainPanel, g_chainIndex, e.control);
+    return true;
+}
+
 // Modal body text has nothing to activate: say it again.
 bool TextOnly(PanelKind, const ChainEntry& e) {
     if (!e.textOnly) return false;
@@ -197,7 +210,7 @@ bool PartyAddBlocked(PanelKind kind, const ChainEntry& e) {
 constexpr EnterRoute kEnterRoutes[] = {
     LevelUpStepDisabled, StoreItemRow, CraftRow,   JournalRow,
     QuestItemRow,        TextOnly,     TabButton,  EquipSlot,
-    WorkbenchUpgradeSlot, WagerStepButton, PartyAddBlocked,
+    WorkbenchUpgradeSlot, WagerStepButton, PartyAddBlocked, SaveRow,
 };
 
 }  // namespace

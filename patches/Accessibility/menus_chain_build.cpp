@@ -152,12 +152,19 @@ void AppendListBoxChildren(void* panel, void* c, void* equipPickerLb,
     // The description listbox (+0x1a4) is a different control and stays
     // skipped. The inventory's item list needs the same exemption: one item
     // carried is a real state (the opening hour of KOTOR 2), and the size==1
-    // rule was written for description blobs, not for a short list.
+    // rule was written for description blobs, not for a short list. And
+    // KOTOR 2's save list, which is walked through the chain: with one save
+    // the row was left out, the chain began at the Cloud Save switch while
+    // the game's own focus read the save out, and Enter flipped the switch.
+    // With cloud saves on and none there, the game then says "You have no
+    // Saved Games" and the load screen cannot be opened to switch back.
     const PanelKind pk = IdentifyPanel(panel);
     auto* pb = reinterpret_cast<unsigned char*>(panel);
     const bool shortListOk =
         (pk == PanelKind::InGameJournal && c == pb + kJournalItemsListBoxOffset) ||
-        (pk == PanelKind::InGameInventory && c == pb + kInventoryItemListBoxOffset);
+        (pk == PanelKind::InGameInventory && c == pb + kInventoryItemListBoxOffset) ||
+        (pk == PanelKind::SaveLoad && acc::game::IsKotor2() &&
+         c == pb + kSaveLoadPanelGamesListBoxOffset);
     // Sort anchor for every row this listbox contributes. Row extents are
     // listbox-local content coordinates that keep climbing one row-pitch at a
     // time whether or not the row is inside the viewport, so they are not

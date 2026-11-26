@@ -120,4 +120,10 @@ void TickPickerMonitors();
 // are first-match-wins, so it has to sit ahead of the combat rules.
 void RegisterPickerMsgRules();
 
+// Enter on a save: fires the save/load screen's own Load or Save button for
+// the selected row, and arms the load latch when a load starts from the main
+// menu. KOTOR 1 reaches it through the list spec; KOTOR 2 from the chain,
+// when `control` is a row of the save list. False when it is not.
+bool ActivateSaveRow(void* panel, void* control);
+
 }  // namespace acc::menus::listbox

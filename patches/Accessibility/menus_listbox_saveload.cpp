@@ -148,6 +148,13 @@ bool SaveLoadOnEsc(void* panel) {
 
 }  // namespace
 
+bool ActivateSaveRow(void* panel, void* control) {
+    if (!panel || !IsSaveLoadPanel(panel)) return false;
+    void* lb = SaveLoadFindLb(panel);
+    if (!lb || acc::engine::FindListBoxRow(lb, control) < 0) return false;
+    return SaveLoadOnEnter(panel);
+}
+
 constexpr ListBoxPanelSpec kSaveLoadSpec = {
     /*logTag*/                  "SaveLoad",
     /*matches*/                 SaveLoadMatches,
