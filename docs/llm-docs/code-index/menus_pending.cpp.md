@@ -14,7 +14,7 @@ The deferred menu-side operation queue (see menus_pending.h for why the ops are 
 - L61 `void* MouseOver(void* gm)`: CSWGuiManager mouseOverControl pointer at +0x8 (per the decompilation in docs/menu-nav-design.md).
 - L65 `void DrainMoveCursor(void* gm, const PendingOp& op)`
 - L87 `void DrainClickAt(void* gm, const PendingOp& op)`: Combined move + click.
-- L112 `void DrainSliderInput(const PendingOp& op)`: Slider value adjustment via HandleInputEvent(500/501, 1).
+- L112 `void DrainSliderInput(const PendingOp& op)`: Slider value adjustment via HandleInputEvent(kSliderStepUp / Down, 1): the slider's handler runs SetCurValue (clamped to [0, max_value]), the panel's handler takes the new value over (engine_input.h says which code re...
 - L126 `void DrainStoreItemActivate(const PendingOp& op)`: Store item Enter — dispatch the engine's per-mode click handler with the row as param_1.
 - L133 `void DrainCraftRowCommit(const PendingOp& op)`: K2 workbench / crafting list-row commit — select the row, then fire the panel's own commit button.
 - L141 `void DrainGalaxyInput(const PendingOp& op)`: Galaxy-map planet cycle / accept / cancel.

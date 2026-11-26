@@ -261,6 +261,7 @@ installer, as the pre-release `bridge-latest`.
 - KOTOR 2: with a single save, Enter in the load screen loads it instead of
   switching Cloud Save on.
 - KOTOR 2: Escape in an options screen presses its Close button.
+- KOTOR 2: a slider changed with Left and Right keeps its new value.
 - The installer makes an energy shield that runs out or breaks audible, in
   both games.
 - A local bridge lets an external helper read the game state and act in the
@@ -1053,10 +1054,15 @@ witnesses are at the declarations.
 - Escape in an options screen (Sound, Graphics, Gameplay, Feedback,
   Auto-Pause) presses its Close button, as in KOTOR 1. KOTOR 2 writes these
   captions with a space in front, so the button was never found and Escape
-  went to the game; Close itself is not in the list the arrows walk. This
-  does not yet make KOTOR 2 keep a slider that was changed with the arrow
-  keys: on 26 Nov 2026 the sound sliders came back at their old values
-  after Escape and after a click on Close alike.
+  went to the game; Close itself is not in the list the arrows walk.
+- A slider changed with Left and Right is taken over by the game. The mod
+  stepped a slider with the codes KOTOR 1's slider handles in full. KOTOR
+  2's slider moves on them too and the mod read out the new number, but the
+  screen's own handler, the one that sets the volume and stores the option,
+  listens only to the game's own left and right codes. The sound sliders
+  came back at their old values after Escape and after a click on Close
+  alike. Sound, Graphics, Advanced Graphics, Mouse, Gameplay and the music
+  player all register the same codes.
 
 <h3>Bridge:</h3>
 

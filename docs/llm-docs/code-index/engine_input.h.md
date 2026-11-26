@@ -1,4 +1,4 @@
-# engine_input.h (249 lines)
+# engine_input.h (262 lines)
 
 Source: `patches/Accessibility/engine_input.h`
 
@@ -21,4 +21,4 @@ Engine input-code translation. Pure read-side; no engine state access.
 - L168 `bool PollTurnAxis(float* out)`: The engine's own turn-axis value, exactly as UpdateCamera polls it every frame (CExoInput::PollInput(0x11c, class 0), clamped by the caller to [-1, 1] before it reaches AcclTurnCamera).
 - L175 `bool ReadNativeStickAxes(float* x, float* y)`: KOTOR 2 only: the native right-stick pair UpdateCamera reads ahead of the screen-edge test (DirectInput controllers enumerated at start, 20% dead zone, first-seen baseline latch — camera-and-swoop.md "KOTOR 2 twin").
 
-Also 26 constants or variables at namespace scope.
+Also 28 constants or variables at namespace scope.
