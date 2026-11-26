@@ -153,7 +153,6 @@ std::vector<DoorName> NumberedDoors();
 void NumberDoorExit(ExitMark& e, const std::vector<DoorName>& doors);
 std::string Destination(void* area, int target, const std::vector<std::pair<int, std::string>>& landmarks, const std::string& exitText);
 bool NearAny(const Vector& p, const std::vector<Vector>& points, float maxM);
-std::string Located(const std::string& subject, const Vector& pos);
 
 // exit_memory_doors.cpp
 std::vector<Vector> LockedDoorPositions(void* area);

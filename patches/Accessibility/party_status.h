@@ -29,9 +29,11 @@ namespace acc::party_status {
 // Ctrl+H (Action::PartyStatusAnnounce). Called from the input poll router.
 void PollHotkey();
 
-// "Korasha 10 of 13; Trask 27 of 36", with ", can level up" after a member
-// when asked for. Empty when no party member can be read.
-std::string HealthLine(bool withLevelUp);
+// "Korasha 10 of 13; Trask 27 of 36". Empty when no party member can be read.
+// `forKey` is the answer to Ctrl+H: it adds ", can level up" after a member,
+// and for a member who is not with the controlled one where that member is,
+// in the words of the cycles ("3 o'clock, 12 metres, behind a locked door").
+std::string HealthLine(bool forKey);
 
 // True when a party member is at zero hit points or below.
 bool AnyoneDown();

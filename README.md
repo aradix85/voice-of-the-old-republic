@@ -90,7 +90,7 @@ The mod keeps the game's key map, with one change the installer makes on a fresh
 - Shift+Enter — The action menu for the target: every action (attack, talk, Force powers, items, special abilities) in one menu
 - Shift+1 … Shift+7 — One action category (1–3 the target's actions, 4–7 your Force powers, items and mines)
 - H — Your health, active effects and weapon
-- Ctrl+H — Health of everyone in the party, and who can level up
+- Ctrl+H — Health of everyone in the party, who can level up, and where a member is who is not with you
 - Shift+H — The action queue (review or clear queued actions)
 - Shift+L — Level up
 - F1 — The full key list; Ctrl+F1 — the keys for the current screen

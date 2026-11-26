@@ -78,7 +78,7 @@ void AnnounceEnd() {
         line = buf;
         g_kills.Clear();
     }
-    const std::string health = acc::party_status::HealthLine(/*withLevelUp=*/false);
+    const std::string health = acc::party_status::HealthLine(/*forKey=*/false);
     if (!health.empty()) {
         line += ". ";
         line += health;

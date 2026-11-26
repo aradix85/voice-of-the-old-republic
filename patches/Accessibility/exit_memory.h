@@ -154,6 +154,10 @@ void PollOverviewHotkey();
 // Game codepage, localized.
 std::string TargetWayInfo(void* obj, const Vector& pos);
 
+// `subject` with where `pos` is from the player: "{subject}, 3 o'clock, 12
+// metres", the words of the , / . cycle.
+std::string Located(const std::string& subject, const Vector& pos);
+
 // Enter on a door or exit (interact dispatch): when the region being left
 // still holds loot, queue a short "Still here: Metal box" a beat after the
 // walk line. Never blocks or replaces the walk; not repeated for the same

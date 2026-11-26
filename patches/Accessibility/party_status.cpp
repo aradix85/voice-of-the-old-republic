@@ -16,6 +16,7 @@
 #include "engine_panels.h"
 #include "engine_player.h"
 #include "engine_reads.h"
+#include "exit_memory.h"    // Located, TargetWayInfo: where a member is
 #include "health_bands.h"
 #include "hotkeys.h"
 #include "log.h"
@@ -52,6 +53,10 @@ std::set<uint32_t> g_toldCanLevel;  // members already told, until it clears
 DWORD              g_lastLevelCheck = 0;
 
 constexpr DWORD kHealthCheckPeriodMs = 250;
+
+// A member this close follows the controlled one; further off Ctrl+H says
+// where.
+constexpr float kWithYouM = 5.0f;
 
 acc::combat::HealthWarnings g_healthWarnings;
 DWORD                       g_lastHealthCheck = 0;
@@ -140,8 +145,11 @@ std::string MembersBehind(float beyondM, float* outLeftM) {
     return names;
 }
 
-std::string HealthLine(bool withLevelUp) {
+std::string HealthLine(bool forKey) {
     std::string text;
+    void* lead = acc::engine::GetPlayerServerCreature();
+    Vector leadPos;
+    const bool haveLead = lead && acc::engine::GetObjectPosition(lead, leadPos);
     for (const Member& m : PartyMembers()) {
         const int hp    = acc::engine::ReadCreatureCurrentHitPoints(m.obj);
         const int maxHp = acc::engine::ReadCreatureMaxHitPoints(m.obj);
@@ -158,9 +166,20 @@ std::string HealthLine(bool withLevelUp) {
                           NameOf(m.obj).c_str(), hp, maxHp);
         }
         std::string entry = buf;
-        if (withLevelUp && acc::engine_levelup::CreatureCanLevelUp(m.obj)) {
+        if (forKey && acc::engine_levelup::CreatureCanLevelUp(m.obj)) {
             entry += ", ";
             entry += acc::strings::Get(acc::strings::Id::PartyCanLevelUp);
+        }
+        // A member who is elsewhere (solo mode, a closed door in between):
+        // where, and the way there. On the Ebon Hawk the droid at the console
+        // could not hear that the other one still stood in the garage.
+        Vector pos;
+        if (forKey && haveLead && m.obj != lead &&
+            acc::engine::GetObjectPosition(m.obj, pos) &&
+            DistXY(pos, leadPos) > kWithYouM) {
+            entry = acc::exit_memory::Located(entry, pos);
+            const std::string way = acc::exit_memory::TargetWayInfo(m.obj, pos);
+            if (!way.empty()) entry += ", " + way;
         }
         if (!text.empty()) text += "; ";
         text += entry;
@@ -178,7 +197,7 @@ bool AnyoneDown() {
 void PollHotkey() {
     if (!acc::hotkeys::Pressed(acc::hotkeys::Action::PartyStatusAnnounce)) return;
     if (!InWorldAndFree()) return;
-    const std::string text = HealthLine(/*withLevelUp=*/true);
+    const std::string text = HealthLine(/*forKey=*/true);
     if (text.empty()) return;
     acc::speech::Speak(text.c_str(), /*interrupt=*/true);
     acclog::Write("PartyStatus", "Ctrl+H: %s", text.c_str());

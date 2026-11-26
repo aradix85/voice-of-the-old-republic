@@ -972,7 +972,7 @@ const char* Get(Id id) {
         case Id::PartyCanLevelUp:             return "can level up";
         case Id::FmtCanLevelUpNotice:         return "%s can level up";
         case Id::KbNamePartyStatus:           return "Party health";
-        case Id::HelpKeyPartyStatus:          return "Ctrl plus H: health of everyone in your party, and who can level up";
+        case Id::HelpKeyPartyStatus:          return "Ctrl plus H: health of everyone in your party, who can level up, and where a member is who is not with you";
         case Id::FmtWalkingTo:                return "Walking: %s";
         case Id::KbNameExploreWalkUnexplored: return "Walk to the nearest unexplored place";
         case Id::KbNameExploreWalkLoot:       return "Walk to the nearest thing to search";
