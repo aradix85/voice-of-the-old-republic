@@ -218,6 +218,7 @@ See [docs/known-issues.md](docs/known-issues.md).
 - **The K1 Community Patch team** — the bundled bug-fix layer
 - **xoreos and xoreos-tools** — the open-source engine reimplementation, a reference for the file formats
 - **The DeadlyStream community** — the modding knowledge base
+- **ampage87** — code contributed to the original mod: the Sith-base wall panels and the west-to-east numbering of same-name objects
 - The testers of the original mod: Kenny, Berenion, unexplained entity, Grinvold, dansc93, Mojsior, stirlock, Druidah, SightlessKombat, Destranis, Ozuaw, mkdbzfan, Kamilana, ABlindFellow, zargontheevilgod, zersiax and Michael
 
 The changes in this fork are written by Claude (Anthropic) at Anouk's direction.
