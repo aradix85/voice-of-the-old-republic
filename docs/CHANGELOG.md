@@ -264,6 +264,8 @@ installer, as the pre-release `bridge-latest`.
   switching Cloud Save on.
 - A list with a single item is a list on every screen, not only in the
   journal and the inventory.
+- A button the game has put away behind another one is no longer read out;
+  KOTOR 2's workbench lists one row of filters instead of two.
 - KOTOR 2: Escape in an options screen presses its Close button.
 - KOTOR 2: a slider changed with Left and Right keeps its new value.
 - The installer makes an energy shield that runs out or breaks audible, in
@@ -1069,6 +1071,11 @@ witnesses are at the declarations.
   third screen to need one. What the row is now decides: a row that can be
   chosen (a button, a toggle, a slider) makes it a list, a row of plain
   text a description.
+- Of two buttons on the same spot, only the one that takes clicks is read
+  out. KOTOR 2's workbench keeps the filter row of its create view and that
+  of its breakdown view on top of each other, and the list read both:
+  "Armor", "All, unavailable", "Ranged", "Weapons, unavailable" and so on. A
+  greyed-out button that stands alone is still read, with "unavailable".
 - Escape in an options screen (Sound, Graphics, Gameplay, Feedback,
   Auto-Pause) presses its Close button, as in KOTOR 1. KOTOR 2 writes these
   captions with a space in front, so the button was never found and Escape

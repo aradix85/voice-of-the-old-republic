@@ -1,4 +1,4 @@
-# menus_chain_build.cpp (459 lines)
+# menus_chain_build.cpp (496 lines)
 
 Source: `patches/Accessibility/menus_chain_build.cpp`
 
@@ -21,8 +21,9 @@ Building the chain's entries: controls, list-box rows, the virtual rows for valu
 - L242 `bool OnEquipStatAnchor(void* labelControl, int sortCy, void* userData)`: Virtual stat rows for the Equip panel (Vitality, Defense, Attack, Damage).
 - L252 `bool OnModSettingsAnchor(void* sentinel, int sortCx, int sortCy, void* /*userData*/)`: Virtual "Mod settings" entry for InGameOptions + MainMenuOptions.
 - L275 `void AppendStatusSummaryRows(void* panel, CExoArrayList* list, int n)`: Per-kind virtual chain entries for StatusSummary — the engine's quest- progress / journal-entry info popup.
-- L312 `void DemoteFilterStripAboveList(void* panel, int listBlockTop)`: House rule: on a list-driven screen the list is read first and its filter / toggle strip after it.
-- L339 `void SortChainBySortCy()`: Insertion sort in reading order (ChainEntryPrecedes).
-- L354 `void SquashCycleFlankers(void* panel)`: Squash cycle-arrow flankers from the chain.
-- L412 `void ComputeEquipSlotClickOffset(void* panel)`: Row pitch between InGameEquip slot buttons, used to compensate the simulated click position.
-- L440 `void ComputeClassIconClickOffset(void* panel)`: Column pitch between chargen class-selection icons, same purpose as ComputeEquipSlotClickOffset above.
+- L295 `void DropCoveredButtons()`: Two buttons on the same spot: the game can show only one of them, and the one that takes no clicks is the one it has put away.
+- L349 `void DemoteFilterStripAboveList(void* panel, int listBlockTop)`: House rule: on a list-driven screen the list is read first and its filter / toggle strip after it.
+- L376 `void SortChainBySortCy()`: Insertion sort in reading order (ChainEntryPrecedes).
+- L391 `void SquashCycleFlankers(void* panel)`: Squash cycle-arrow flankers from the chain.
+- L449 `void ComputeEquipSlotClickOffset(void* panel)`: Row pitch between InGameEquip slot buttons, used to compensate the simulated click position.
+- L477 `void ComputeClassIconClickOffset(void* panel)`: Column pitch between chargen class-selection icons, same purpose as ComputeEquipSlotClickOffset above.

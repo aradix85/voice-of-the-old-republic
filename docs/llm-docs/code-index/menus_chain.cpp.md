@@ -1,4 +1,4 @@
-# menus_chain.cpp (356 lines)
+# menus_chain.cpp (357 lines)
 
 Source: `patches/Accessibility/menus_chain.cpp`
 
