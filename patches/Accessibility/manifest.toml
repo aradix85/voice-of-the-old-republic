@@ -17,9 +17,8 @@ kotor1_steam_103 = "34E6D971C034222A417995D8E1E8FDD9F8781795C9C289BD86C499A439F3
 kotor1_gog_103 = "9C10E0450A6EECA417E036E3CDE7474FED1F0A92AAB018446D156944DEA91435"
 kotor1_gog_103_cdrepack = "761F9466F456A83909036BAEBB5C43167D722387BE66E54617BA20A8C49E9886"
 
-# KOTOR 2, Aspyr's 2015 rebuild — a supported game since v0.7.0. The port is
-# not finished: the minigames and the tutorial messages are not covered, and
-# no playthrough has reached the end yet.
+# KOTOR 2, Aspyr's 2015 rebuild — a supported game since v0.7.0. What the
+# port still lacks is listed at the top of docs/kotor2-port.md.
 #
 # Declaring this hash makes the framework willing to install into KOTOR 2.
 # Its hooks live in kotor2.hooks.toml, whose target_versions cover exactly
