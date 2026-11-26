@@ -102,7 +102,7 @@ void HandleLeftRight(void* activePanel, int code, int val, bool& consumed) {
             acclog::Write("Menus.Slider", "%s: op already pending; ignoring", dir);
             return;
         }
-        const int sliderCode = toRight ? 500 : 501;
+        const int sliderCode = toRight ? kSliderStepUp : kSliderStepDown;
         acc::menus::pending::QueueSliderInput(focused, sliderCode);
         acclog::Write("Menus.Slider", "%s panel=%p focus=%p code=%d",
                       dir, activePanel, focused, sliderCode);

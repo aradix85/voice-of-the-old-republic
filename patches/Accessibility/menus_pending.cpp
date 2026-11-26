@@ -104,11 +104,11 @@ void DrainClickAt(void* gm, const PendingOp& op) {
                   moBefore, moAfterDown, moAfterUp);
 }
 
-// Slider value adjustment via HandleInputEvent(500/501, 1). The slider's
-// handler runs SetCurValue (clamped to [0, max_value]) and the gui_object
-// callback that propagates to the audio system, then plays the click
-// feedback sound. The focus monitor catches the cur_value change at +0x74
-// on the next tick.
+// Slider value adjustment via HandleInputEvent(kSliderStepUp / Down, 1): the
+// slider's handler runs SetCurValue (clamped to [0, max_value]), the panel's
+// handler takes the new value over (engine_input.h says which code reaches
+// it in which game), and the click sound plays. The focus monitor catches
+// the cur_value change at +0x74 on the next tick.
 void DrainSliderInput(const PendingOp& op) {
     auto fn = acc::engine::ReadHandleInputEvent(op.a);
     if (!fn) return;

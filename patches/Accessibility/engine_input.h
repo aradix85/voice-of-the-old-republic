@@ -176,6 +176,19 @@ bool ReadNativeStickAxes(float* x, float* y);
 
 }  // namespace acc::engine
 
+// The codes that step a slider one notch through its own HandleInputEvent.
+// Both games' sliders move on 500 (up) and 501 (down). KOTOR 1's slider then
+// runs its panel's handler itself. KOTOR 2's (0x0041B220) only moves the
+// thumb: the panel's handler (CSWGuiOptionsSound::OnMoveVolumeSlider
+// 0x007DA7B0, which sets the volume and writes the option) is registered on
+// the slider for 0x2f / 0x30 / 0x3f / 0x40, the game's own left and right,
+// and the control's event dispatch (0x00418C50) calls it only for those. On
+// 500 / 501 the thumb moved, the mod read out the new number, and the game
+// kept the old value. A horizontal slider takes 0x3f as one down and 0x40 as
+// one up.
+inline const int kSliderStepUp   = acc::game::IsKotor2() ? 0x40 : 500;
+inline const int kSliderStepDown = acc::game::IsKotor2() ? 0x3f : 501;
+
 // Pre-translation codes received by CSWGuiManager::HandleInputEvent.
 // File-scope for callsite brevity in the menu hooks.
 constexpr int kInputNavUp    = 0xb6;
