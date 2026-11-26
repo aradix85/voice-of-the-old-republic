@@ -19,7 +19,13 @@ namespace {
 // Requiring the next character to be a non-letter/non-digit keeps the
 // keyword list a word list rather than a prefix list; trailing punctuation
 // still matches.
+//
+// KOTOR 2 pads these captions with a space (" Close", " Cancel"). Without
+// skipping it no button was ever found there: Esc fell through to the engine,
+// which leaves an Options sub-screen without keeping the changes, while the
+// Close button that keeps them is filtered out of the chain.
 bool LabelOpensWithWord(const char* text, const char* word) {
+    while (*text == ' ') ++text;
     const size_t n = strlen(word);
     if (strncmp(text, word, n) != 0) return false;
     const unsigned char next = static_cast<unsigned char>(text[n]);
