@@ -266,6 +266,7 @@ installer, as the pre-release `bridge-latest`.
   journal and the inventory.
 - A button the game has put away behind another one is no longer read out;
   KOTOR 2's workbench lists one row of filters instead of two.
+- A walk that a notice on the way stops is started again by itself.
 - KOTOR 2: Escape in an options screen presses its Close button.
 - KOTOR 2: a slider changed with Left and Right keeps its new value.
 - The installer makes an energy shield that runs out or breaks audible, in
@@ -1076,6 +1077,14 @@ witnesses are at the declarations.
   of its breakdown view on top of each other, and the list read both:
   "Armor", "All, unavailable", "Ranged", "Weapons, unavailable" and so on. A
   greyed-out button that stands alone is still read, with "unavailable".
+- A walk to something to use or someone to talk to goes on after a notice on
+  the way. On the Ebon Hawk every room says what it is each time you enter
+  it ("This is the Garage.", eight times in one session), and the game ends
+  the walk when it does: 26 walks in that session. The mod took such a
+  notice for the answer of the thing walked to and let go. More than ten
+  metres from the target it now starts the walk again, as it already did
+  after a conversation nobody speaks; a spot that stops the same walk twice
+  within ten seconds is left alone.
 - Escape in an options screen (Sound, Graphics, Gameplay, Feedback,
   Auto-Pause) presses its Close button, as in KOTOR 1. KOTOR 2 writes these
   captions with a space in front, so the button was never found and Escape
