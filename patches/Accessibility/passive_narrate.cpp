@@ -145,6 +145,17 @@ bool NarrateHandle(uint32_t handle, const char* reason, bool explicitRequest) {
         return false;
     }
 
+    // An emptied container is nothing to volunteer: the , / . cycles and the
+    // room line leave it out too (cycle_state KeepWhatIsLeft). KOTOR 2 moves
+    // its focus far more often than KOTOR 1, so there it spoke over the line
+    // of a walk the player had just asked for. Q/E still names it.
+    if (!explicitRequest && acc::engine::IsEmptyContainer(obj)) {
+        acclog::Write("PassiveNarrate",
+            "%s: handle 0x%08x is an emptied container, auto-focus suppressed",
+            reason, handle);
+        return false;
+    }
+
     // Auto focus-follow re-narrate debounce (see s_last_auto_handle above).
     // Only the automatic path is throttled; explicit Q/E always speaks.
     if (!explicitRequest) {
