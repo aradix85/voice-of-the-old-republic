@@ -1,4 +1,4 @@
-# passive_narrate.cpp (486 lines)
+# passive_narrate.cpp (497 lines)
 
 Source: `patches/Accessibility/passive_narrate.cpp`
 
@@ -14,10 +14,10 @@ Does NOT handle focus-loss announce (silent on sentinel transitions), the Q/E cy
 
 - L92 `bool IsActivePartyMember(void* obj)`: True when obj is one of the active party followers.
 - L114 `bool NarrateHandle(uint32_t handle, const char* reason, bool explicitRequest)`: Resolve → classify → speak → stamp.
-- L246 `void OnEngineShowObject(uint32_t handle)`
-- L347 `void RequestQEReannounce(int directionCode)`
-- L361 `bool IsInSynthesizedQE()`
-- L365 `void Tick()`
-- L443 `bool NarrateExplicit(uint32_t serverHandle)`
-- L453 `void __cdecl OnShowObject(void* /*clientObject*/, int handle)`
-- L469 `void __cdecl OnShowObjectK2(void* ebp)`
+- L257 `void OnEngineShowObject(uint32_t handle)`
+- L358 `void RequestQEReannounce(int directionCode)`
+- L372 `bool IsInSynthesizedQE()`
+- L376 `void Tick()`
+- L454 `bool NarrateExplicit(uint32_t serverHandle)`
+- L464 `void __cdecl OnShowObject(void* /*clientObject*/, int handle)`
+- L480 `void __cdecl OnShowObjectK2(void* ebp)`

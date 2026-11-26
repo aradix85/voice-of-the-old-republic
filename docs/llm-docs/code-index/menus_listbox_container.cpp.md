@@ -1,4 +1,4 @@
-# menus_listbox_container.cpp (239 lines)
+# menus_listbox_container.cpp (241 lines)
 
 Source: `patches/Accessibility/menus_listbox_container.cpp`
 
@@ -11,5 +11,5 @@ The container screen (loot, give items): its list box, Enter and Escape, the sel
 - L47 `void ContainerAnnounce(void* /*lb*/, const ListBoxNavResult& r)`: Inline announce only on a no-op clamp (boundary).
 - L79 `bool ContainerOnEnter(void* panel)`
 - L100 `bool ContainerOnEsc(void* panel)`
-- L125 `void MonitorContainerSelection()`
-- L215 `void PollContainerGiveModeKey()`
+- L127 `void MonitorContainerSelection()`
+- L217 `void PollContainerGiveModeKey()`

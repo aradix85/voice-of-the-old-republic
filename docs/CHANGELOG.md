@@ -249,6 +249,11 @@ installer, as the pre-release `bridge-latest`.
   modified hotkeys follow the new key.
 - KOTOR 2: the death screen and a second kind of message box are read out,
   and their buttons can be walked with the arrows.
+- An emptied container is no longer announced by itself when the game's focus
+  lands on it.
+- KOTOR 2: Up and Down in an empty container say "Empty".
+- KOTOR 2: the designers' notes in braces are no longer spoken in room exits,
+  in the feedback log or in front of a name.
 - A local bridge lets an external helper read the game state and act in the
   game.
 - The in-game updater is gone: F5 on the main menu no longer checks for or
@@ -1002,6 +1007,17 @@ witnesses are at the declarations.
   its buttons are walked with the arrows; it takes no focus when it opens, so
   as an unknown panel it stayed silent. KOTOR 2's second message box (the
   GUI's slot 0xa4) is handled as a message box too.
+- An emptied container is no longer announced by itself when the game's own
+  focus lands on it; Q and E still name it. KOTOR 2 moves its focus far more
+  often than KOTOR 1, and "Body, empty" cut off the line of a Ctrl+L walk
+  that had just started.
+- Up and Down in an empty container say "Empty". KOTOR 1 opens no screen for
+  an empty container; KOTOR 2 does, because items can be given there, and the
+  arrows did nothing without a word. Enter or Escape closes it.
+- The designers' notes in braces are left out wherever they stand: "Blast
+  Door 1{HK-50} North" in a room's exits, "T3-M4 damages Footlocker{Spikes}"
+  in the feedback log, "{Dummy Medbay PC}test" with the note in front. Only a
+  note at the end of an object's name was removed before.
 
 <h3>Bridge:</h3>
 

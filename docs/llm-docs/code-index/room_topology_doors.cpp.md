@@ -1,4 +1,4 @@
-# room_topology_doors.cpp (405 lines)
+# room_topology_doors.cpp (406 lines)
 
 Source: `patches/Accessibility/room_topology_doors.cpp`
 
@@ -10,8 +10,8 @@ Doors and area transitions in the region graph: the door and transition snapshot
 - L36 `void ReadLocString(void* obj, size_t offset, char (&out)[N])`
 - L43 `int NearestDoor(const Vector& p, float& outSq)`: The door nearest to p in the horizontal plane, -1 without doors; outSq gets its squared distance.
 - L63 `void SnapshotDoors(void* area)`: Fills g_graph.doors with the area's real doors.
-- L116 `void SnapshotTransitionTriggers(void* area)`: Fills g_graph.transitions with the walk-through area transitions, each bound to its nearest nav node; BuildForArea has filled the nodes by now.
-- L190 `int FindDoorOnEdge(const Vector& a, const Vector& b, bool* outBeside)`: The first door on segment AB, or -1: its projection falls on the segment and it lies within kMaxPerpM of it.
-- L223 `EdgeResult ClassifyEdge(void* areaForDiag, const Vector& a, const Vector& b, const char* callerCtx)`: Classifies nav segment AB against the walls and the doors.
-- L302 `void AttachLandmarksToDoors(void* area)`: Gives each map note to the nearest door within kLandmarkDoorMatchMaxM: the door gets the note's name, and the note is marked claimed so the proximity announce does not say the same name a second later.
-- L371 `void MaybeRefreshDoors(void* area)`
+- L117 `void SnapshotTransitionTriggers(void* area)`: Fills g_graph.transitions with the walk-through area transitions, each bound to its nearest nav node; BuildForArea has filled the nodes by now.
+- L191 `int FindDoorOnEdge(const Vector& a, const Vector& b, bool* outBeside)`: The first door on segment AB, or -1: its projection falls on the segment and it lies within kMaxPerpM of it.
+- L224 `EdgeResult ClassifyEdge(void* areaForDiag, const Vector& a, const Vector& b, const char* callerCtx)`: Classifies nav segment AB against the walls and the doors.
+- L303 `void AttachLandmarksToDoors(void* area)`: Gives each map note to the nearest door within kLandmarkDoorMatchMaxM: the door gets the note's name, and the note is marked claimed so the proximity announce does not say the same name a second later.
+- L372 `void MaybeRefreshDoors(void* area)`
