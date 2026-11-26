@@ -4,7 +4,7 @@ This is Anouk's fork of Voice of the Old Republic (branch `bridge`). Its changes
 
 ## Before you start
 
-Read `ARCHITECTURE.md` first. Then skim `docs/known-issues.md` for what is already on the backlog.
+Read `ARCHITECTURE.md` first. Then skim `docs/known-issues.md` for the known limitations.
 
 The player and owner of this fork is blind. Every workflow has to work with a screen reader and a keyboard: no mouse-only steps, no GUI-only tools, no "look at this screenshot".
 

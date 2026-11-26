@@ -498,4 +498,4 @@ examples under `menus_*`):
 - [CONTRIBUTING.md](CONTRIBUTING.md) — dev setup, the inner loop, hook and
   speech conventions, the reverse-engineering workflow, and how to commit.
 - [ARCHITECTURE.md](ARCHITECTURE.md) — the code's high-level shape.
-- [docs/known-issues.md](docs/known-issues.md) — the current backlog.
+- [docs/known-issues.md](docs/known-issues.md) — the known limitations.
