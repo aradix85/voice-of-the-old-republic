@@ -305,10 +305,12 @@ const uintptr_t kAddrCSWPlayerControlSetEnabled = acc::addr::Pick(0x006792E0, 0x
 // Kotor1Only on purpose. KOTOR 2's accessor (0x0073FFE0, into 0x007985B0) is
 // no plain getter: it returns internal+0x294 and also clears the "name set"
 // flag at +0x290 that SetPlayerCharacterName (0x00798580) raises and
-// GetPlayerCharacterSet (0x00740000) reports. KOTOR 2 therefore reads the
-// CExoString itself.
+// GetPlayerCharacterSet (0x00740000) reports. And the string at +0x294 is
+// not the character's name while the game runs: in the prologue it read
+// "temp" on one day and "test" on another, with Korasha on the med bed. So
+// KOTOR 2 asks the game's text parser what <FullName> is (ExpandTextTokens),
+// the answer the game's own dialogue lines carry.
 const uintptr_t kAddrCClientExoAppGetPlayerCharacterName = acc::addr::Kotor1Only(0x005EDAB0);
-const size_t kClientInternalPlayerCharacterNameOffset = acc::off::Kotor2Only(0x294);
 
 // CServerExoApp mirrors the facade/internal split:
 //   public facade = 8 bytes (vtable@0, internal@4).

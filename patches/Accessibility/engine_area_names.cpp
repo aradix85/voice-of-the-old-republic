@@ -7,6 +7,7 @@
 #include "engine_app.h"     // GetClientApp
 #include "engine_player.h"  // player and leader names
 #include "engine_reads.h"   // ExtractTextOrStrRef, ReadLocStringOtherLanguage
+#include "log.h"
 #include "strings.h"        // DoorLocked, for a locked container
 #include "text_match.h"     // WithoutBraces
 
@@ -14,9 +15,25 @@ namespace acc::engine {
 
 namespace {
 
-// <FullName> → the PC's name, in place. Only this token is known to appear in
-// the strings we read raw; anything else in angle brackets is left alone
-// rather than guessed at. No-op when the name can't be resolved.
+// CTlkTable::ParseStr, KOTOR 2: __thiscall(CTlkTable*, CExoString*), RET 4,
+// the string rewritten in place. The game's own renderer of authored text:
+// it fills in every <Token> (the name tokens from the talk table's token
+// object, which is the player character whoever is being controlled, see
+// CSWTlkTable::GetTokenValue 0x007FEFB0) and leaves out the notes in braces.
+// Its callers test for '<' or '{' first (0x007358D0). Found through the
+// "CUSTOM" string it compares against; 51 call sites.
+const uintptr_t kAddrCTlkTableParseStr = acc::addr::Kotor2Only(0x0071EBD0);
+typedef void (__thiscall* PFN_CTlkTableParseStr)(void* /*this CTlkTable*/,
+                                                 void* /*CExoString*/);
+
+// CExoString as the engine lays it out: the text and its allocated size.
+struct ExoString {
+    char*    text;
+    uint32_t size;
+};
+
+// <FullName> → the PC's name, in place: KOTOR 1's one token, by hand. No-op
+// when the name can't be resolved.
 void SubstitutePlayerNameToken(char* buf, size_t bufSize) {
     if (!buf || bufSize < 2 || !buf[0]) return;
     const char* kToken = "<FullName>";
@@ -46,10 +63,36 @@ void SubstitutePlayerNameToken(char* buf, size_t bufSize) {
 
 }  // namespace
 
+bool ExpandTextTokens(char* buf, size_t bufSize) {
+    if (!buf || bufSize < 2 || !acc::addr::Ok(kAddrCTlkTableParseStr)) return false;
+    void* tlk = ReadPtrOrNull(reinterpret_cast<void*>(kAddrTlkTablePtr), 0);
+    if (!tlk) return false;
+    // The string is the engine's own, so that ParseStr can grow and free it.
+    ExoString s = {nullptr, 0};
+    __try {
+        auto assign = reinterpret_cast<PFN_CExoStringAssignFromCString>(
+            kAddrCExoStringAssignFromCString);
+        assign(&s, buf);
+        reinterpret_cast<PFN_CTlkTableParseStr>(kAddrCTlkTableParseStr)(tlk, &s);
+        strncpy_s(buf, bufSize, s.text ? s.text : "", _TRUNCATE);
+        assign(&s, nullptr);
+        return true;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        acclog::Trace("Names", "ParseStr faulted on [%.80s]", buf);
+        return false;
+    }
+}
+
 void CleanAuthoredText(char* buf, size_t bufSize) {
     if (!buf || bufSize < 2 || !buf[0]) return;
-    SubstitutePlayerNameToken(buf, bufSize);
-    if (!std::strchr(buf, '{')) return;
+    if (!std::strchr(buf, '<') && !std::strchr(buf, '{')) return;
+    if (acc::game::IsKotor2()) {
+        ExpandTextTokens(buf, bufSize);
+    } else {
+        SubstitutePlayerNameToken(buf, bufSize);
+    }
+    // The space a note leaves behind ("Blast Door {HK-50}"), and the note
+    // itself where the engine's parser was not there to drop it.
     strncpy_s(buf, bufSize, acc::text::WithoutBraces(buf).c_str(), _TRUNCATE);
 }
 

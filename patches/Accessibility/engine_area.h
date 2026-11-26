@@ -198,22 +198,29 @@ int ReadGlobalNumber(const char* name);
 // on no server app / fault.
 bool IsLoadingSaveGame();
 
-// Clean, in place, the two kinds of authoring residue a raw read of the
-// game's text carries into speech. Every raw read goes through here: object
-// names, the door names of the room graph, the lines of the feedback log.
+// Render, in place, a raw read of the game's authored text the way the game
+// shows it. Every raw read goes through here: object names, the door names of
+// the room graph, the lines of the feedback log.
 //
-//  * The "<FullName>" player-name token, which the engine fills in only when
-//    it RENDERS a string ("<FullName>'s Kolto Tank", "<FullName> Needs Medical
-//    Attention"). Left as it is when the name can't be resolved: an empty
-//    name leaves grammar that sounds finished, the token says one is missing.
+//  * Tokens in angle brackets, which the engine fills in only when it RENDERS
+//    a string ("<FullName>'s Kolto Tank", "<FullName> Needs Medical
+//    Attention", "[<CUSTOM30> Spikes]").
 //
 //  * KOTOR 2's designer notes in braces, wherever they stand: "Blast
-//    Door{HK-50}", "Medical Bay Container{Chems}", "{Dummy Medbay PC}test",
-//    and the same names inside a feedback line ("T3-M4 damages
-//    Footlocker{Spikes} for 3 damage"). The game never shows them.
+//    Door{HK-50}", "{Dummy Medbay PC}<FullName>", and the same names inside a
+//    feedback line ("T3-M4 damages Footlocker{Spikes} for 3 damage").
 //
+// KOTOR 2 hands the text to the game's own parser (ExpandTextTokens); KOTOR 1
+// has no notes in braces and fills in the one token it meets, <FullName>.
 // Safe on any NUL-terminated buffer; never grows past bufSize.
 void CleanAuthoredText(char* buf, size_t bufSize);
+
+// KOTOR 2: `buf` through the game's own CTlkTable::ParseStr, in place. Every
+// token becomes what the game would show (the player character's name comes
+// from the talk table's token object, so it is right while a companion or a
+// droid is controlled) and notes in braces are dropped. False without the
+// parser (KOTOR 1) or a talk table, and on a fault; `buf` is then unchanged.
+bool ExpandTextTokens(char* buf, size_t bufSize);
 
 // Wraps CClientExoApp::GetObjectName(ulong, CExoString*) — the engine's
 // universal accessor. Better than GetObjectName(obj,...) from a handle
