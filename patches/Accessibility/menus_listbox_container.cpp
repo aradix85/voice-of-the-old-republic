@@ -118,7 +118,9 @@ constexpr ListBoxPanelSpec kContainerSpec = {
     /*onEnter*/                 ContainerOnEnter,
     /*onEsc*/                   ContainerOnEsc,
     /*titleOverride*/           nullptr,
-    /*emptyStateId*/            acc::strings::Id::Count_,  // empty containers don't open at all
+    // KOTOR 1 opens no screen for an empty container; KOTOR 2 does, because
+    // items can be given there. Up and Down then say so instead of nothing.
+    /*emptyStateId*/            acc::strings::Id::ContainerEmpty,
     /*alwaysReturnFromHandler*/ true,
 };
 
