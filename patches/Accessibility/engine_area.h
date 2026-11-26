@@ -546,7 +546,12 @@ const size_t kAreaMapWorldOriginYOffset = acc::off::Same(0x24);
 const uintptr_t kAddrOperatorNew = acc::addr::Pick(0x0043E1B0, 0x00919723);  // __cdecl(ulong)
 typedef void* (__cdecl* PFN_OperatorNew)(size_t /*size*/);
 const uintptr_t kAddrCSWCMapPinCtor = acc::addr::Pick(0x00692540, 0x00893460);
-const uintptr_t kAddrCExoStringAssignFromCString = acc::addr::Pick(0x005E5140, 0x007338D0);  // __thiscall(CExoString*, char*)
+// CExoString::operator=(char*). A null or empty rhs frees the buffer and
+// zeroes the string (KOTOR 2 decompile of 0x007338D0), so it also serves as
+// the release of a string the mod built for an engine call.
+const uintptr_t kAddrCExoStringAssignFromCString = acc::addr::Pick(0x005E5140, 0x007338D0);
+typedef void* (__thiscall* PFN_CExoStringAssignFromCString)(
+    void* /*this CExoString*/, const char* /*rhs*/);
 const uintptr_t kAddrCSWCAreaAddMapPin = acc::addr::Pick(0x00606D90, 0x007A9640);  // __thiscall(CSWCArea*, pin)
 
 // Server→client back-pointer (CSWSArea ends at +0x2d0 preceded by
