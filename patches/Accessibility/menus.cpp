@@ -108,8 +108,11 @@ bool AlreadySpokenOnAnyChannel(const char* text) {
     return text && (SameAsLast(0, text) || SameAsLast(1, text));
 }
 
-bool detail::IsMultiRowListBox(void* control) {
-    return IsListBox(control) && ReadListBoxRowCount(control) > 1;
+bool detail::IsItemListBox(void* control) {
+    if (!IsListBox(control)) return false;
+    const int rows = ReadListBoxRowCount(control);
+    return rows > 1 ||
+           (rows == 1 && detail::IsChainNavigable(ReadListBoxRow(control, 0)));
 }
 
 void ValidatePanels() {
@@ -190,7 +193,7 @@ void DrainPendingAnnounce() {
 
     // A panel's auto-focus on a list container is not navigation.
     const bool isListBoxContainer = IsListBox(control);
-    if (detail::IsMultiRowListBox(control)) return;
+    if (detail::IsItemListBox(control)) return;
     if (IsChainSiblingEcho(panel, control)) return;
 
     char text[detail::kAnnounceTextMax];

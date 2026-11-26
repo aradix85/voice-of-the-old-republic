@@ -127,11 +127,10 @@ void AppendChainEntry(void* control, int sortCy) {
 }
 
 // A listbox among the panel's controls:
-//   * size > 1  — recurse one level into button children (sub-dialog
-//     settings list).
-//   * size == 1 in a modal popup — promote the listbox to a text-only
-//     chain entry so arrow keys can land for re-announce.
-//   * size == 1 elsewhere — descriptive label blob; skipped.
+//   * a list of things to choose (IsItemListBox) — its rows join the chain.
+//   * one row of plain text in a modal popup — the listbox becomes a
+//     text-only chain entry so arrow keys can land for re-announce.
+//   * one row of plain text elsewhere — a description; skipped.
 void AppendListBoxChildren(void* panel, void* c, void* equipPickerLb,
                            void* workbenchUpgradeLb, bool modalText,
                            int& listBlockTop) {
@@ -145,26 +144,17 @@ void AppendListBoxChildren(void* panel, void* c, void* equipPickerLb,
         c == equipPickerLb || c == workbenchUpgradeLb) {
         return;
     }
-    // The journal's quest list (items_listbox @ panel+0x5c4) must expose its
-    // rows even when only ONE quest is active — the norm in the Endar Spire
-    // tutorial — or the user hears no journal content. Its rows carry the
-    // journal-entry Enter handler, so descend exactly like the size>1 path.
-    // The description listbox (+0x1a4) is a different control and stays
-    // skipped. The inventory's item list needs the same exemption: one item
-    // carried is a real state (the opening hour of KOTOR 2), and the size==1
-    // rule was written for description blobs, not for a short list. And
-    // KOTOR 2's save list, which is walked through the chain: with one save
-    // the row was left out, the chain began at the Cloud Save switch while
-    // the game's own focus read the save out, and Enter flipped the switch.
-    // With cloud saves on and none there, the game then says "You have no
-    // Saved Games" and the load screen cannot be opened to switch back.
-    const PanelKind pk = IdentifyPanel(panel);
-    auto* pb = reinterpret_cast<unsigned char*>(panel);
-    const bool shortListOk =
-        (pk == PanelKind::InGameJournal && c == pb + kJournalItemsListBoxOffset) ||
-        (pk == PanelKind::InGameInventory && c == pb + kInventoryItemListBoxOffset) ||
-        (pk == PanelKind::SaveLoad && acc::game::IsKotor2() &&
-         c == pb + kSaveLoadPanelGamesListBoxOffset);
+    // A list with ONE row is still a list when that row can be chosen. The
+    // rule used to be "one row is a description" with an exception per
+    // screen: the journal with one quest (the Endar Spire tutorial), the
+    // inventory with one item (KOTOR 2's opening hour), then KOTOR 2's load
+    // screen with one save. There the row was left out, the chain began at
+    // the Cloud Save switch while the game's own focus read the save out,
+    // and Enter flipped the switch; with cloud saves on and none there the
+    // game says "You have no Saved Games" and the load screen cannot be
+    // opened to switch back. The journal's description listbox is one row of
+    // plain text and stays skipped.
+    const bool itemList = acc::menus::detail::IsItemListBox(c);
     // Sort anchor for every row this listbox contributes. Row extents are
     // listbox-local content coordinates that keep climbing one row-pitch at a
     // time whether or not the row is inside the viewport, so they are not
@@ -182,7 +172,7 @@ void AppendListBoxChildren(void* panel, void* c, void* equipPickerLb,
     auto* lbList = reinterpret_cast<CExoArrayList*>(
         reinterpret_cast<unsigned char*>(c) + kListBoxControlsOffset);
     if (!lbList || !lbList->data) return;
-    if (lbList->size > 1 || (shortListOk && lbList->size == 1)) {
+    if (itemList) {
         // AppendChainEntry stops at the chain bound anyway; the same bound
         // here keeps the two limits in lockstep.
         int lbN = lbList->size > kMaxChainEntries ? kMaxChainEntries

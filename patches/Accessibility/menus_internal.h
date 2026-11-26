@@ -19,10 +19,14 @@ constexpr size_t kAnnounceTextMax = 1024;
 bool IsChainNavigable(void* control);
 bool IsClassSelectionIcon(void* panel, void* control);
 
-// True for a listbox container with more than one row. SetActiveControl on
-// one is the engine's panel-open auto-focus, not the user navigating: rows
+// True for a list box that holds things to choose: more than one row, or a
+// single row that can itself be chosen (a button, a toggle, a slider). A
+// single row of plain text is a description, read as one piece. What the rows
+// are decides, not how many there are: one save, one quest, one item carried
+// and one shop item are lists like any other. SetActiveControl on such a list
+// is the engine's panel-open auto-focus, not the user navigating: its rows
 // are reached through the listbox specs and the chain.
-bool IsMultiRowListBox(void* control);
+bool IsItemListBox(void* control);
 
 // Chargen class selection: the (panel, icon) to spoken text cache.
 const char* ClassLabelCacheLookup(void* panel, void* icon);
