@@ -318,7 +318,6 @@ bool GetMapPinNoteText(void* mapPin, char* outBuf, size_t bufSize) {
 
 namespace {
 
-typedef void* (__cdecl*    PFN_OperatorNew)(size_t /*size*/);
 typedef void* (__thiscall* PFN_CSWCMapPinCtor)(void* /*this*/);
 typedef void* (__thiscall* PFN_CExoStringAssignFromCString)(
     void* /*this CExoString*/, const char* /*rhs*/);

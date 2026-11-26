@@ -40,6 +40,10 @@ bool GetCachedWalls(const acc::engine::WallEdge*& outBuf, int& outCount) {
     return true;
 }
 
+void* CachedArea() {
+    return g_cached_area;
+}
+
 void Clear() {
     g_wall_count      = 0;
     g_floor_tri_count = 0;

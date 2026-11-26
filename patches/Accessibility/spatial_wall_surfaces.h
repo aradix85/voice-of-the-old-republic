@@ -23,6 +23,10 @@ void Tick();
 // rebuild.
 bool GetCachedWalls(const acc::engine::WallEdge*& outBuf, int& outCount);
 
+// The area Tick last built the caches for; null without a player. A caller
+// that must not take the previous area's walls for the new one's checks this.
+void* CachedArea();
+
 // Rebuilds both caches for this area; a null area clears them.
 void RebuildForArea(void* area);
 
