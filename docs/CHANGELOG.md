@@ -254,6 +254,8 @@ installer, as the pre-release `bridge-latest`.
 - KOTOR 2: Up and Down in an empty container say "Empty".
 - KOTOR 2: the designers' notes in braces are no longer spoken in room exits,
   in the feedback log or in front of a name.
+- KOTOR 2: your character's name is right in names and journal lines while
+  a droid or companion is controlled.
 - KOTOR 2: the loading screen no longer stays up after a movie when the game
   runs in a window.
 - KOTOR 2: walking, companions and routes cross the gaps in an area's path
@@ -1030,6 +1032,14 @@ witnesses are at the declarations.
   Door 1{HK-50} North" in a room's exits, "T3-M4 damages Footlocker{Spikes}"
   in the feedback log, "{Dummy Medbay PC}test" with the note in front. Only a
   note at the end of an object's name was removed before.
+- Your character's name is right in what the mod reads itself, and every
+  other token is filled in as the game would. The mod filled in <FullName>
+  from a place that does not hold the name while the game runs: in the
+  prologue, with the droid in control, the body on the med bed was "test"
+  and the journal said "Heal test", while the game's own lines said the
+  real name. KOTOR 2 now hands such text to the game's own parser, which
+  also drops the notes in braces and fills in tokens the mod never knew,
+  such as the number in "[<CUSTOM30> Spikes]".
 - The loading screen no longer stays up after a movie in windowed play (from
   the original mod's v0.9.3). KOTOR 2 hides it only while the engine believes
   its window is active, and a movie's end can leave that flag cleared with

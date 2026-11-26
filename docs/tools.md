@@ -71,7 +71,7 @@ Reports land in `build/analysis/`. Where the checks stood on 2026-11-11, unless 
 - `clang_tidy.py`: 8 findings, all reviewed false positives (audio_loop, combat_log_parse, cycle_state, engine_area_names, guidance_autowalk, mod_settings_store, party_status, room_topology_absorb). Run it on every file a rewrite touches.
 - `msvc_check.ps1 -Mode analyze`: 121. 105 are C28159 (GetTickCount is the live clock on purpose; `acc::tick::NowMs` is the time of the tick being dispatched), 7 C6385 and 3 C6054 are false positives, 4 C6262 are stack frames over 16 KB (engine_manager, map_ui_cursor, menus_chain_input, peek_description_item), 2 are in the Windows SDK.
 - Unit tests (2026-11-26): 137 cases, 956 assertions. Line coverage of the files under test was 91% on 2026-11-11.
-- `call_convention.py` (2026-11-26, `--game k1` and `--game k2`): 189 calls fit in KOTOR 1 and 196 in KOTOR 2, 11 not checked.
+- `call_convention.py` (2026-11-26, `--game k1` and `--game k2`): 190 calls fit in KOTOR 1 and 198 in KOTOR 2, 11 not checked.
 - `engine_twins.py` (2026-11-26): 168 pairs, 117 agree, 0 disagree, 3 mixed (the Abilities input handler, the inventory list filler and the client input handler; not in `engine_twins_reviewed.txt`), 48 unproven (small accessors with nothing to compare).
 - `engine_constants.py`: no constant defined twice.
 - `raw_try.py` (2026-11-26): 236 `__try` blocks outside `engine_reads`; 33 of them have no call inside and stay (several fields of one object under one guard, array walks, reads off a hook's stack frame).
