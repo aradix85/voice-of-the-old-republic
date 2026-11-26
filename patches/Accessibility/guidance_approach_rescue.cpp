@@ -821,8 +821,11 @@ bool ResumeAfterNoticeOnTheWay() {
     }
     Vector pc, tgt;
     if (!acc::engine::GetPlayerPosition(pc) || !ResolveTargetPos(tgt)) return false;
+    // At the object (the measure of the re-issued use) the bark is the
+    // object's own answer. Ten metres, the measure of a turn-back, lost the
+    // walk to a console twelve metres off: the room spoke after four.
     const float left = DistXY(pc, tgt);
-    if (left <= kTurnbackFarM) return false;
+    if (left * left <= kReissueUseMSq) return false;
     // A notice at the same place moments after the walk was started again is
     // a script that stops every walk there: walking again would only meet it
     // again. One that speaks on every entry (KOTOR 2's "This is the Garage.",

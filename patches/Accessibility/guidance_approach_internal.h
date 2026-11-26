@@ -157,11 +157,12 @@ void ForgetTurnbackResume();
 // With no approach in flight: once the message has closed and the party has
 // been put back, repeats the Enter that was turned back.
 void TickTurnbackResume();
-// A bark surfaced while the walk was still far from its target: a notice on
-// the way (KOTOR 2's "This is the Garage."), which ends the walk in the
-// engine. Keeps the target to walk to again, as LearnTurnback does, without
-// a zone. False when the walk ends in no act, the target is near (the bark
-// is then the act's own answer), or this spot stopped the same walk before.
+// A bark surfaced while the walk was not yet at its target: a notice on the
+// way (KOTOR 2's "This is the Garage."), which ends the walk in the engine.
+// Keeps the target to walk to again, as LearnTurnback does, without a zone.
+// False when the walk ends in no act, the PC is at the object (the bark is
+// then the act's own answer), or this spot stopped the same walk a moment
+// ago.
 bool ResumeAfterNoticeOnTheWay();
 // The hop was reached: starts the next one. False after the last hop (the
 // tracker's own verdicts take the arrival) or when the next will not start.
