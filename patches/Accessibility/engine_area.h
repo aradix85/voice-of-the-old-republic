@@ -198,17 +198,22 @@ int ReadGlobalNumber(const char* name);
 // on no server app / fault.
 bool IsLoadingSaveGame();
 
-// Replace the engine's "<FullName>" player-name token in `buf` with the PC's
-// name, in place. The engine expands this token when it RENDERS a string; we
-// read strings before that happens, so any raw read can carry it — placed-
-// object names ("<FullName>'s Kolto Tank"), journal-update lines ("<FullName>
-// Needs Medical Attention"), and anything else authored with the token.
+// Clean, in place, the two kinds of authoring residue a raw read of the
+// game's text carries into speech. Every raw read goes through here: object
+// names, the door names of the room graph, the lines of the feedback log.
 //
-// No-op when the name can't be resolved: substituting an empty string leaves
-// dangling grammar that sounds like a finished sentence, whereas the raw token
-// at least tells the listener a name is missing. Safe on any NUL-terminated
-// buffer; never grows past bufSize.
-void SubstitutePlayerNameToken(char* buf, size_t bufSize);
+//  * The "<FullName>" player-name token, which the engine fills in only when
+//    it RENDERS a string ("<FullName>'s Kolto Tank", "<FullName> Needs Medical
+//    Attention"). Left as it is when the name can't be resolved: an empty
+//    name leaves grammar that sounds finished, the token says one is missing.
+//
+//  * KOTOR 2's designer notes in braces, wherever they stand: "Blast
+//    Door{HK-50}", "Medical Bay Container{Chems}", "{Dummy Medbay PC}test",
+//    and the same names inside a feedback line ("T3-M4 damages
+//    Footlocker{Spikes} for 3 damage"). The game never shows them.
+//
+// Safe on any NUL-terminated buffer; never grows past bufSize.
+void CleanAuthoredText(char* buf, size_t bufSize);
 
 // Wraps CClientExoApp::GetObjectName(ulong, CExoString*) — the engine's
 // universal accessor. Better than GetObjectName(obj,...) from a handle

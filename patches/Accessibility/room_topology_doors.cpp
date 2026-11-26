@@ -96,6 +96,7 @@ void SnapshotDoors(void* area) {
         rec.landmarkName[0] = '\0';
         ReadLocString(obj, kDoorTransitionDestOffset, rec.transitionDest);
         ReadLocString(obj, kDoorLocNameOffset, rec.locName);
+        acc::engine::CleanAuthoredText(rec.locName, sizeof(rec.locName));
     });
 
     for (int i = 0; i < g_graph.door_count; ++i) {

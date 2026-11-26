@@ -8,54 +8,15 @@
 #include "engine_player.h"  // player and leader names
 #include "engine_reads.h"   // ExtractTextOrStrRef, ReadLocStringOtherLanguage
 #include "strings.h"        // DoorLocked, for a locked container
+#include "text_match.h"     // WithoutBraces
 
 namespace acc::engine {
 
 namespace {
 
-// Strip the two kinds of authoring residue KOTOR 2's object names carry into
-// speech. Both are things the module designers left in the name string itself,
-// so they reach us through the ordinary LocName/tag read and there is nothing
-// upstream to fix.
-//
-//  * A trailing {...} note. K2's doors and containers are routinely named
-//    "Blast Door{HK-50}", "Emergency Blast Door{103PER}", "Medical Bay
-//    Container{Chems}", "Door{Kreia Prison Warning}" — module codes, script
-//    hints and disambiguators for the level designer. A few read as almost
-//    useful ("Blast Door{Starboard Dormitory}") but most are noise, and read
-//    aloud they are noise every single time the object is announced, including
-//    inside action prompts ("Open Medical Bay Container{Chems}").
-//
-//  * An unsubstituted <FullName> token — the Peragus medbay tank announced as
-//    "<FullName>'s Kolto Tank". Handled by SubstitutePlayerNameToken
-//    (below), which the message router also calls; the token is not
-//    specific to object names.
-void CleanAuthoredName(char* buf, size_t bufSize) {
-    if (!buf || bufSize < 2 || !buf[0]) return;
-
-    SubstitutePlayerNameToken(buf, bufSize);
-
-    // Trailing {...}, plus any whitespace it was separated by.
-    size_t len = strlen(buf);
-    if (len >= 2 && buf[len - 1] == '}') {
-        for (size_t i = len - 1; i-- > 0;) {
-            if (buf[i] == '{') {
-                while (i > 0 && (buf[i - 1] == ' ' || buf[i - 1] == '\t')) --i;
-                buf[i] = '\0';
-                break;
-            }
-        }
-    }
-}
-
-}  // namespace
-
-// <FullName> → the PC's name. Only this token is known to appear in the
-// strings we read raw; anything else in angle brackets is left alone rather
-// than guessed at. Shared because the token reaches us on more than one
-// path — placed-object names via CleanAuthoredName below, and engine feedback
-// lines via the message router (the Peragus bonus quest announces as
-// "<FullName> Needs Medical Attention" on every journal update).
+// <FullName> → the PC's name, in place. Only this token is known to appear in
+// the strings we read raw; anything else in angle brackets is left alone
+// rather than guessed at. No-op when the name can't be resolved.
 void SubstitutePlayerNameToken(char* buf, size_t bufSize) {
     if (!buf || bufSize < 2 || !buf[0]) return;
     const char* kToken = "<FullName>";
@@ -81,6 +42,15 @@ void SubstitutePlayerNameToken(char* buf, size_t bufSize) {
         memmove(hit + nameLen, hit + kTokenLen, tailLen + 1);
         memcpy(hit, pcName, nameLen);
     }
+}
+
+}  // namespace
+
+void CleanAuthoredText(char* buf, size_t bufSize) {
+    if (!buf || bufSize < 2 || !buf[0]) return;
+    SubstitutePlayerNameToken(buf, bufSize);
+    if (!std::strchr(buf, '{')) return;
+    strncpy_s(buf, bufSize, acc::text::WithoutBraces(buf).c_str(), _TRUNCATE);
 }
 
 // Resolve a CExoLocString by treating its 8 bytes as the same shape as
@@ -300,12 +270,12 @@ bool GetObjectBaseName(void* gameObject, char* outBuf, size_t bufSize) {
     }
 
     if (got && outBuf[0] != '\0') {
-        CleanAuthoredName(outBuf, bufSize);
+        CleanAuthoredText(outBuf, bufSize);
         return outBuf[0] != '\0';
     }
     // Last resort: the modder-assigned tag. "g_dnt_carth" beats nothing.
     if (!GetObjectTag(gameObject, outBuf, bufSize)) return false;
-    CleanAuthoredName(outBuf, bufSize);
+    CleanAuthoredText(outBuf, bufSize);
     return outBuf[0] != '\0';
 }
 
