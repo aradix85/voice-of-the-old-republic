@@ -64,9 +64,21 @@ constexpr float kTurnbackFarM   = 10.0f;
 constexpr float kTurnbackNearM  = 3.0f;
 constexpr DWORD kResumeSettleMs = 600;
 constexpr DWORD kResumeGiveUpMs = 60000;
+constexpr DWORD kNoticeLoopMs   = 10000;
 uint32_t g_resumeHandle  = 0;
 DWORD    g_resumeSince   = 0;
 DWORD    g_resumeClearAt = 0;
+// The repeated walk goes round a zone learned just now, and says so. False
+// for a walk that a notice merely stopped (ResumeAfterNoticeOnTheWay).
+bool     g_resumeRound   = false;
+
+// Keeps the target of the approach in flight to walk to again.
+void KeepForResume(bool round) {
+    g_resumeHandle  = acc::engine::GetObjectHandle(g_st.targetObj);
+    g_resumeSince   = GetTickCount();
+    g_resumeClearAt = 0;
+    g_resumeRound   = round;
+}
 
 // The walk to the floor nearest a target whose use stays queued.
 constexpr float kFloorSearchM   = 3.0f;  // floor further from the target than
@@ -700,11 +712,7 @@ void LearnTurnback() {
     if (learned == 0) return;
 
     const bool again = g_st.owner == ApproachOwner::Interact && g_st.targetObj;
-    if (again) {
-        g_resumeHandle  = acc::engine::GetObjectHandle(g_st.targetObj);
-        g_resumeSince   = GetTickCount();
-        g_resumeClearAt = 0;
-    }
+    if (again) KeepForResume(/*round=*/true);
     acclog::Write("Approach", "turned back at (%.2f,%.2f), %.0fm from the target, by "
         "a message nobody speaks: %d trigger area(s) there are turn-back zones now; "
         "%s name=[%s]", pc.x, pc.y, DistXY(pc, tgt), learned,
@@ -796,11 +804,45 @@ void TickTurnbackResume() {
     g_resumeHandle = 0;
     void* obj = acc::engine::ResolveServerObjectHandle(handle);
     if (!obj) return;
-    acc::speech::Speak(acc::strings::Get(acc::strings::Id::GuidanceGoingRound),
-                       /*interrupt=*/false);
-    acclog::Write("Approach", "turned back: walking to handle=0x%08x again, round "
-        "the zone", handle);
+    if (g_resumeRound) {
+        acc::speech::Speak(acc::strings::Get(acc::strings::Id::GuidanceGoingRound),
+                           /*interrupt=*/false);
+    }
+    acclog::Write("Approach", "walking to handle=0x%08x again%s", handle,
+                  g_resumeRound ? ", round the zone" : " after the notice on the way");
     acc::interact::DispatchInteract(obj, handle, /*forceRadial=*/false);
+}
+
+bool ResumeAfterNoticeOnTheWay() {
+    // A walk that ends in an act: Enter, or a walk that uses its target.
+    if (!g_st.targetObj ||
+        (g_st.owner != ApproachOwner::Interact && g_st.useHandle == 0)) {
+        return false;
+    }
+    Vector pc, tgt;
+    if (!acc::engine::GetPlayerPosition(pc) || !ResolveTargetPos(tgt)) return false;
+    const float left = DistXY(pc, tgt);
+    if (left <= kTurnbackFarM) return false;
+    // A notice at the same place moments after the walk was started again is
+    // a script that stops every walk there: walking again would only meet it
+    // again. One that speaks on every entry (KOTOR 2's "This is the Garage.",
+    // eight times in one session) is not: the repeated walk starts inside its
+    // area and leaves it.
+    static void*  s_lastTarget = nullptr;
+    static Vector s_lastAt     = {0.0f, 0.0f, 0.0f};
+    static DWORD  s_lastTick   = 0;
+    const DWORD now = GetTickCount();
+    const bool again = s_lastTarget == g_st.targetObj &&
+                       DistXY(pc, s_lastAt) <= kTurnbackNearM &&
+                       now - s_lastTick < kNoticeLoopMs;
+    s_lastTarget = g_st.targetObj;
+    s_lastAt     = pc;
+    s_lastTick   = now;
+    if (again) return false;
+    KeepForResume(/*round=*/false);
+    acclog::Write("Approach", "a notice surfaced %.0fm short of the target: walking "
+        "there again when it has had a moment name=[%s]", left, g_st.name);
+    return true;
 }
 
 bool NextRouteHop() {

@@ -184,8 +184,12 @@ void TickApproach() {
     // CancelMovement (it would ClearAllActions and kill any queued follow-up)
     // and never announce "way blocked". engine_player's queue-watched restore
     // re-enables input on its own when the queue drains/stalls.
+    // Far from the target the bark is no result but a notice on the way, and
+    // the walk it ended is started again.
     if (!g_st.barkAtArm && acc::engine::HasActiveBarkBubble()) {
-        acclog::Write("Approach", "bark surfaced — disarm (interaction fired)");
+        if (!ResumeAfterNoticeOnTheWay()) {
+            acclog::Write("Approach", "bark surfaced — disarm (interaction fired)");
+        }
         EndApproach(ApproachOutcome::Other);
         return;
     }
