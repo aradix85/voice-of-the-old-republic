@@ -1,4 +1,4 @@
-# menus_listbox.h (124 lines)
+# menus_listbox.h (130 lines)
 
 Source: `patches/Accessibility/menus_listbox.h`
 
@@ -26,3 +26,4 @@ EquipPicker state (armed flag + bound panel) lives in this TU because the picker
 - L110 `void TickListboxMonitors()`: Per-tick fan-out for the listbox-paired monitors that live in this TU: MonitorContainerSelection (per-row navigation announces) and PollContainerGiveModeKey (Win32 poll for the give-mode toggle key — the engine's play...
 - L115 `void TickPickerMonitors()`: The two armed-picker monitors (equip + workbench upgrade), in menus_listbox_picker.cpp.
 - L121 `void RegisterPickerMsgRules()`: Registers the picker-owned message-buffer rules.
+- L127 `bool ActivateSaveRow(void* panel, void* control)`: Enter on a save: fires the save/load screen's own Load or Save button for the selected row, and arms the load latch when a load starts from the main menu.

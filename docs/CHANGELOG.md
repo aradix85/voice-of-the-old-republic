@@ -258,6 +258,8 @@ installer, as the pre-release `bridge-latest`.
   runs in a window.
 - KOTOR 2: walking, companions and routes cross the gaps in an area's path
   network.
+- KOTOR 2: with a single save, Enter in the load screen loads it instead of
+  switching Cloud Save on.
 - The installer makes an energy shield that runs out or breaks audible, in
   both games.
 - A local bridge lets an external helper read the game state and act in the
@@ -1039,6 +1041,14 @@ witnesses are at the declarations.
   and six Citadel Station areas become one network each. Left out of the
   port: the original's longer wait before a long walk counts as not started
   and its walks in stages, which the fork's own route walk covers.
+- Enter on a save in the load or save screen loads or saves it, as in
+  KOTOR 1, and a single save is in the list. With one save its row was left
+  out, the list began at the Cloud Save switch while the save was read out,
+  and Enter turned Cloud Save on. The game then looks only at its cloud
+  folder, says "You have no Saved Games" and no longer opens the load
+  screen, so the switch cannot be turned off again; the way back is `Use
+  Steam Cloud=0` in swkotor2.ini. The switch now comes after the other
+  buttons.
 
 <h3>Bridge:</h3>
 

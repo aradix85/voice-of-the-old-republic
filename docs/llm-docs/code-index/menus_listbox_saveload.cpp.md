@@ -1,4 +1,4 @@
-# menus_listbox_saveload.cpp (371 lines)
+# menus_listbox_saveload.cpp (378 lines)
 
 Source: `patches/Accessibility/menus_listbox_saveload.cpp`
 
@@ -13,7 +13,8 @@ The save and load screens: the save list, Enter and Escape, and on KOTOR 2 the s
 - L112 `void SaveLoadLogExtra(char* out, size_t outN, const ListBoxNavResult& r)`
 - L121 `bool SaveLoadOnEnter(void* panel)`
 - L142 `bool SaveLoadOnEsc(void* panel)`
-- L184 `void MonitorK2SaveLoadSelection()`: KOTOR 2 save/load: tell the engine which row the keyboard is on.
-- L243 `void AnnounceK2SaveLoadInfo()`: KOTOR 2 save/load: the per-slot location, one tick after the sync.
-- L296 `bool ReadK2SaveLoadSwapState(void* panel, void* lb, int* outIdx, int* outRows)`: One SEH block for every raw engine read this monitor needs.
-- L318 `void MonitorK2SaveLoadCharacterSwap()`
+- L151 `bool ActivateSaveRow(void* panel, void* control)`
+- L191 `void MonitorK2SaveLoadSelection()`: KOTOR 2 save/load: tell the engine which row the keyboard is on.
+- L250 `void AnnounceK2SaveLoadInfo()`: KOTOR 2 save/load: the per-slot location, one tick after the sync.
+- L303 `bool ReadK2SaveLoadSwapState(void* panel, void* lb, int* outIdx, int* outRows)`: One SEH block for every raw engine read this monitor needs.
+- L325 `void MonitorK2SaveLoadCharacterSwap()`
