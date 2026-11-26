@@ -1,4 +1,4 @@
-# exit_memory.h (233 lines)
+# exit_memory.h (237 lines)
 
 Source: `patches/Accessibility/exit_memory.h`
 
@@ -31,13 +31,14 @@ The overview (Ctrl+N, and the bridge's /overview): how many regions of the area 
 - L141 `std::string CurrentRegionText()`: The player's region as the walk-in announce speaks it (with where each exit leads and "Here:" when known).
 - L145 `void PollOverviewHotkey()`: Ctrl+N (Action::ExploreOverview): the current region first, then the overview.
 - L155 `std::string TargetWayInfo(void* obj, const Vector& pos)`: Extra words for an explicitly requested target line (Q/E, , / ., `-`): * a door: which way it leads and what lies beyond, seen from the player's side ("leads West, to a corridor, visited" / "leads South, back"), plus ...
-- L161 `void RemindLootOnLeaving(void* target)`: Enter on a door or exit (interact dispatch): when the region being left still holds loot, queue a short "Still here: Metal box" a beat after the walk line.
-- L168 `bool UnreachableFlags(void* const* objs, const Vector* positions, int count, bool* out)`: For the , / .
-- L172 `struct RegionSummary`: The area's regions as the overview sees them, for the bridge's /rooms.
-- L183 `bool ListRegions(std::vector<RegionSummary>& out, std::vector<std::pair<int, int>>& links)`: False without a graph.
-- L189 `void WarnIfBehindLock(void* target)`: Enter on something that lies only behind a locked door: a beat after the walk line, "No way there now: it is behind a locked door." The dispatch itself is never held back.
-- L197 `bool BeyondDoor(const Vector& doorPos, Vector& out, int* outRegion = nullptr)`: Where a walk through a door ends: the region beyond it, seen from the player, at its centre or the spot nearest to that where one can stand.
-- L203 `void* OnwardDoor(int region, const Vector& passedDoorPos)`: The way on after a walk through the door at `passedDoorPos` into `region`: the one other exit of that region when it is a door, so that Enter pressed again goes on instead of back.
-- L212 `bool WalkThenInteract(void* target, uint32_t handle, const char* name)`: Enter or Ctrl+L on anything in another region with a closed door on the way, or on an enemy round a corner: walk there region by region, opening the doors, and act on the target on arrival, as Enter on it does.
-- L219 `bool RescueWalk(void* target, const char* name, bool act)`: The same walk as a net under every walk the approach tracker watches: the engine did not walk to `target`, whatever the reason.
-- L230 `void PollWalkHotkeys()`: Ctrl+Shift+N (ExploreWalkUnexplored): walk the whole way to the nearest unexplored region, region by region, opening closed doors on the way.
+- L159 `std::string Located(const std::string& subject, const Vector& pos)`: `subject` with where `pos` is from the player: "{subject}, 3 o'clock, 12 metres", the words of the , / .
+- L165 `void RemindLootOnLeaving(void* target)`: Enter on a door or exit (interact dispatch): when the region being left still holds loot, queue a short "Still here: Metal box" a beat after the walk line.
+- L172 `bool UnreachableFlags(void* const* objs, const Vector* positions, int count, bool* out)`: For the , / .
+- L176 `struct RegionSummary`: The area's regions as the overview sees them, for the bridge's /rooms.
+- L187 `bool ListRegions(std::vector<RegionSummary>& out, std::vector<std::pair<int, int>>& links)`: False without a graph.
+- L193 `void WarnIfBehindLock(void* target)`: Enter on something that lies only behind a locked door: a beat after the walk line, "No way there now: it is behind a locked door." The dispatch itself is never held back.
+- L201 `bool BeyondDoor(const Vector& doorPos, Vector& out, int* outRegion = nullptr)`: Where a walk through a door ends: the region beyond it, seen from the player, at its centre or the spot nearest to that where one can stand.
+- L207 `void* OnwardDoor(int region, const Vector& passedDoorPos)`: The way on after a walk through the door at `passedDoorPos` into `region`: the one other exit of that region when it is a door, so that Enter pressed again goes on instead of back.
+- L216 `bool WalkThenInteract(void* target, uint32_t handle, const char* name)`: Enter or Ctrl+L on anything in another region with a closed door on the way, or on an enemy round a corner: walk there region by region, opening the doors, and act on the target on arrival, as Enter on it does.
+- L223 `bool RescueWalk(void* target, const char* name, bool act)`: The same walk as a net under every walk the approach tracker watches: the engine did not walk to `target`, whatever the reason.
+- L234 `void PollWalkHotkeys()`: Ctrl+Shift+N (ExploreWalkUnexplored): walk the whole way to the nearest unexplored region, region by region, opening closed doors on the way.

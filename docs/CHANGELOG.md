@@ -154,6 +154,7 @@ installer, as the pre-release `bridge-latest`.
 - A door that a script opened says "open", not "locked".
 - Ctrl+H reads the health of the whole party and who can level up; "Name can
   level up" is announced on its own.
+- Ctrl+H also says where a party member is who is not with you.
 - Shift+Enter on a door or container names the other rows of its action menu,
   such as Security next to Bash.
 - The action menu no longer cuts a long target name short.
@@ -755,6 +756,11 @@ installer, as the pre-release `bridge-latest`.
   "locked" as you walked through it.
 - Ctrl+H reads every party member's health and who can level up; "Name can
   level up" is announced when it becomes true.
+- Ctrl+H says where a member is who is more than five metres from the one
+  you control, in the words of the cycles: "3C-FD, 30 of 30, 2 o'clock, 14
+  metres, behind a locked door". In solo mode two droids open the Ebon
+  Hawk's garage for each other, and the one at the console could not hear
+  that the other still stood on the wrong side of the door.
 - Tab says the name of the character you now control, once. Two parts of
   the mod announced the switch: one waited a few frames for it, gave up and
   said the old name, and the other then said the new one; when the switch
