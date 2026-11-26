@@ -285,6 +285,43 @@ void AppendStatusSummaryRows(void* panel, CExoArrayList* list, int n) {
     }
 }
 
+// Two buttons on the same spot: the game can show only one of them, and the
+// one that takes no clicks is the one it has put away. KOTOR 2's workbench
+// keeps the filter row of its create view and that of its breakdown view on
+// top of each other, so the list read "Armor", "All, unavailable", "Ranged",
+// "Weapons, unavailable" and so on down both rows. A button that takes no
+// clicks and stands alone is a greyed-out choice and stays, with its
+// "unavailable".
+void DropCoveredButtons() {
+    const int sameSpot = ScaleGuiThresholdPx(5);
+    auto real = [](const ChainEntry& e) {
+        return e.geometricOrder && !e.textOnly && e.virtualKind == 0;
+    };
+    auto takesClicks = [](const ChainEntry& e) {
+        return (acc::engine::ReadControlBitFlags(e.control) & kControlVisibleBit) != 0;
+    };
+    bool covered[kMaxChainEntries] = {};
+    for (int i = 0; i < g_chainCount; ++i) {
+        const ChainEntry& e = g_chain[i];
+        if (!real(e) || takesClicks(e)) continue;
+        for (int j = 0; j < g_chainCount && !covered[i]; ++j) {
+            const ChainEntry& o = g_chain[j];
+            covered[i] = j != i && real(o) && takesClicks(o) &&
+                         abs(o.cx - e.cx) <= sameSpot && abs(o.cy - e.cy) <= sameSpot;
+        }
+    }
+    int kept = 0;
+    for (int i = 0; i < g_chainCount; ++i) {
+        if (covered[i]) {
+            acclog::Write("Menus.Chain", "drop covered button ctrl=%p at (%d,%d)",
+                          g_chain[i].control, g_chain[i].cx, g_chain[i].cy);
+            continue;
+        }
+        g_chain[kept++] = g_chain[i];
+    }
+    g_chainCount = kept;
+}
+
 // House rule: on a list-driven screen the list is read first and its filter /
 // toggle strip after it. KOTOR 2 lays several of those strips out ABOVE the
 // list — the journal's three sort-mode buttons (Time / Name / Planet) sit over

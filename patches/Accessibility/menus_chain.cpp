@@ -321,9 +321,10 @@ void RebindChain(void* panel) {
     acc::menus::modsettings::ForEachRootAnchor(panel, OnModSettingsAnchor,
                                                panel);
 
-    // Runs on the finished entry set (the virtual-row anchors above pick their
-    // own synthetic sortCy and are non-geometric, so they are never demoted),
-    // and before the sort that consumes sortCy.
+    // Both run on the finished entry set (the virtual-row anchors above pick
+    // their own synthetic sortCy and are non-geometric, so they are never
+    // dropped or demoted), and before the sort that consumes sortCy.
+    DropCoveredButtons();
     DemoteFilterStripAboveList(panel, listBlockTop);
 
     SortChainBySortCy();

@@ -54,6 +54,7 @@ bool OnWagerAnchor(void* labelControl, int sortCy, void* userData);
 bool OnEquipStatAnchor(void* labelControl, int sortCy, void* userData);
 bool OnModSettingsAnchor(void* sentinel, int sortCx, int sortCy, void* );
 void AppendStatusSummaryRows(void* panel, CExoArrayList* list, int n);
+void DropCoveredButtons();
 void DemoteFilterStripAboveList(void* panel, int listBlockTop);
 void SortChainBySortCy();
 void SquashCycleFlankers(void* panel);
