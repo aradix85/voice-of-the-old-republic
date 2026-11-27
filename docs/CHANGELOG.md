@@ -276,6 +276,8 @@ installer, as the pre-release `bridge-latest`.
   you control someone else.
 - The mod no longer picks targets behind a black screen while the game is
   changing area, which crashed the lift to the Ebon Hawk's hull.
+- An empty container that starts a conversation stays in the , / . lists,
+  such as the Ebon Hawk's combat training box.
 - The installer makes an energy shield that runs out or breaks audible, in
   both games.
 - A local bridge lets an external helper read the game state and act in the
@@ -1127,6 +1129,12 @@ witnesses are at the declarations.
   asked for the room of a player who was in no room: an access violation in
   the game, read from the crash dump. Seen once; the second ride, from the
   autosave, went through.
+- An empty container that has a conversation of its own stays in the , / .
+  lists, read as "empty". The lists leave out emptied containers as nothing
+  to come back for. The combat training box on the Ebon Hawk is empty from
+  the second round on and starts the next round each time it closes, so it
+  could no longer be found. What is left to search (Ctrl+L, "Here:",
+  "nothing left") still counts only what holds items.
 
 <h3>Bridge:</h3>
 

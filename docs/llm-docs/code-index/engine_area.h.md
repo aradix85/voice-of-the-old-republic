@@ -1,4 +1,4 @@
-# engine_area.h (838 lines)
+# engine_area.h (849 lines)
 
 Source: `patches/Accessibility/engine_area.h`
 
@@ -47,36 +47,37 @@ game_objects[] is an array of handles, not pointers. Initial code treated entrie
 - L256 `int GetTriggerCentroid(void* trigger, Vector& out)`: The centroid of that polygon into `out`.
 - L265 `bool GetObjectLocalBoolean(void* gameObject, int index)`: Reads one bit of the object's fixed NWScript local-boolean table (CSWVarTable @ CSWSObject+0x110, `ulong local_booleans[3]` — the table GetLocalBoolean/SetLocalBoolean script commands hit; bit layout confirmed against...
 - L274 `bool IsEmptyContainer(void* gameObject)`: True only when `gameObject` is a loot container (kind == Placeable AND has_inventory != 0) whose CItemRepository currently holds zero items — i.e.
-- L278 `bool IsDoorOpen(void* serverDoor)`: CSWSDoor.open_state +0x2cc.
-- L282 `bool IsDoorLocked(void* serverDoor)`: CSWSDoor live locked flag (kDoorLockedOffset).
-- L287 `bool DoorHasTransitionDest(void* serverDoor)`: True when the door names another area as its destination (non-empty TransitionDestination, the "Taris - Upper City Cantina" in the door's label).
-- L293 `enum class LockNeed`: What it takes to open a locked door or container, read from the object's own lock fields (UTD / UTP KeyRequired, KeyName, OpenLockDC).
-- L304 `LockNeed ReadLockNeed(void* gameObject, int& outDc, bool* outLocked = nullptr)`: outLocked (optional) receives the live locked flag, so a caller can say "locked" even when the need is Unknown.
-- L309 `int GetContainerItemCount(void* gameObject)`: Items currently in a loot container (placeable with HasInventory), the same repository count IsEmptyContainer reads.
-- L317 `bool IsDoorStatic(void* serverDoor)`: CSWSDoor Static flag +0x3c0 (UTD Static).
-- L325 `bool IsDoorCosmetic(void* serverDoor)`: A door the player can NEVER use — Static, with (on KOTOR 2) no lock evidence to the contrary.
-- L335 `bool MaybeDrivePassiveSelection()`: Root-cause fix (2026-07-19, rev 2): the Endar Spire opening HOLDS the global fade at alpha=1.0 (engine re-asserts it every frame, so it can't be cleared) after the fade animation finishes, while the player keeps world...
-- L339 `bool IsMapNoteEnabled(void* waypoint)`: CSWSWaypoint.map_note_enabled +0x22c.
-- L348 `bool EnableMapNote(void* waypoint)`: Replica of the write path in ExecuteCommandSetMapPinEnabled(TRUE) @0x0054b460: guard on has_map_note (+0x228), then set the int at +0x22c on the SERVER waypoint.
-- L353 `void* GetAreaMap()`: AppManager → CServerExoApp → GetModule → CSWSModule.area_map @+0x218.
-- L357 `bool IsWorldPointExplored(void* areaMap, const Vector& pos)`: CSWSAreaMap::IsWorldPointExplored @0x00579210.
-- L366 `bool GetFogCellSizeM(void* areaMap, float& outCellXM, float& outCellYM)`: Fog-of-war grid cell size in world metres.
-- L374 `bool GetMapRotateCCWFromWorldOrientation(void* areaMap, const Vector& orientation, float& outDegCCW)`: CSWSAreaMap::GetMapRotateCCWFromWorldOrientation @0x00578ed0.
-- L381 `void* GetClientArea(void* serverArea)`: Back-pointer at CSWSArea +0x2d0.
-- L383 `int GetMapPinCount(void* clientArea)`
-- L388 `void* GetMapPinAt(void* clientArea, int i)`: Pointer-array semantics (CSWCMapPin**, 4-byte stride, each slot a heap-allocated 0x110-byte pin).
-- L392 `bool GetMapPinPosition(void* mapPin, Vector& out)`: CSWCMapPin embeds CSWCObject at +0; position at +0x24 (standard CGameObject offset).
-- L404 `bool IsMapPinEnabled(void* mapPin)`: CSWCMapPin.enabled +0xfc.
-- L408 `bool GetMapPinNoteText(void* mapPin, char* outBuf, size_t bufSize)`: CSWCMapPin.note_text CExoString @+0x100.
-- L425 `bool CreateMapPin(void* clientArea, const Vector& pos, const char* name, uint32_t referenceNumber, void** outPin = nullptr)`: Replicates the engine pattern from HandleServerToPlayerMapPinReferenceNumber @0x652d60: operator_new(0x110) → CSWCMapPin ctor → field writes (pos +0x24, enabled +0xfc, note_text via CExoString::operator= +0x100, flags...
-- L433 `bool GetWaypointMapNote(void* waypoint, char* outBuf, size_t bufSize)`: CSWSWaypoint.map_note CExoLocString @+0x230 (strref @+0x234).
-- L439 `class AreaObjectIterator`: Snapshots data pointer + size at construction.
-- L455 `void ForEachDoor(void* area, Fn fn)`: Calls fn(door, pos) for every door of `area` whose position reads.
-- L467 `void* NearestDoor(void* area, const Vector& p, float maxM, Accept accept, Vector* outPos = nullptr)`: The door of `area` nearest to `p` in the plane, within `maxM`, for which accept(door) holds; null if none.
-- L554 `typedef void* (__cdecl* PFN_OperatorNew)(size_t )`
-- L560 `typedef void* (__thiscall* PFN_CExoStringAssignFromCString)( void* , const char* )`
-- L812 `bool TrapDetectedByAnyOf(void* gameObject, const uint32_t* ids, int idCount)`: True when `gameObject`'s trap has been detected by any of the given SERVER object ids (pass the current party's ids).
-- L827 `int BuildAreaWallCache(void* area, WallEdge* outBuf, int maxEdges)`: Walks every room in `area` and every face of its CSWRoomSurfaceMesh and collects each side with adjacency -1, in world space, then drops the portals and same-room duplicates (DropPortalEdges, DropSameRoomDuplicates in...
-- L835 `int BuildAreaFloorCache(void* area, FloorTri* outBuf, int maxTris)`: Walks every room's surface mesh and emits every face as a FloorTri.
+- L281 `bool IsSpentContainer(void* gameObject)`: An empty container that has nothing more to do either: no conversation of its own.
+- L285 `bool IsDoorOpen(void* serverDoor)`: CSWSDoor.open_state +0x2cc.
+- L289 `bool IsDoorLocked(void* serverDoor)`: CSWSDoor live locked flag (kDoorLockedOffset).
+- L294 `bool DoorHasTransitionDest(void* serverDoor)`: True when the door names another area as its destination (non-empty TransitionDestination, the "Taris - Upper City Cantina" in the door's label).
+- L300 `enum class LockNeed`: What it takes to open a locked door or container, read from the object's own lock fields (UTD / UTP KeyRequired, KeyName, OpenLockDC).
+- L311 `LockNeed ReadLockNeed(void* gameObject, int& outDc, bool* outLocked = nullptr)`: outLocked (optional) receives the live locked flag, so a caller can say "locked" even when the need is Unknown.
+- L316 `int GetContainerItemCount(void* gameObject)`: Items currently in a loot container (placeable with HasInventory), the same repository count IsEmptyContainer reads.
+- L324 `bool IsDoorStatic(void* serverDoor)`: CSWSDoor Static flag +0x3c0 (UTD Static).
+- L332 `bool IsDoorCosmetic(void* serverDoor)`: A door the player can NEVER use — Static, with (on KOTOR 2) no lock evidence to the contrary.
+- L342 `bool MaybeDrivePassiveSelection()`: Root-cause fix (2026-07-19, rev 2): the Endar Spire opening HOLDS the global fade at alpha=1.0 (engine re-asserts it every frame, so it can't be cleared) after the fade animation finishes, while the player keeps world...
+- L346 `bool IsMapNoteEnabled(void* waypoint)`: CSWSWaypoint.map_note_enabled +0x22c.
+- L355 `bool EnableMapNote(void* waypoint)`: Replica of the write path in ExecuteCommandSetMapPinEnabled(TRUE) @0x0054b460: guard on has_map_note (+0x228), then set the int at +0x22c on the SERVER waypoint.
+- L360 `void* GetAreaMap()`: AppManager → CServerExoApp → GetModule → CSWSModule.area_map @+0x218.
+- L364 `bool IsWorldPointExplored(void* areaMap, const Vector& pos)`: CSWSAreaMap::IsWorldPointExplored @0x00579210.
+- L373 `bool GetFogCellSizeM(void* areaMap, float& outCellXM, float& outCellYM)`: Fog-of-war grid cell size in world metres.
+- L381 `bool GetMapRotateCCWFromWorldOrientation(void* areaMap, const Vector& orientation, float& outDegCCW)`: CSWSAreaMap::GetMapRotateCCWFromWorldOrientation @0x00578ed0.
+- L388 `void* GetClientArea(void* serverArea)`: Back-pointer at CSWSArea +0x2d0.
+- L390 `int GetMapPinCount(void* clientArea)`
+- L395 `void* GetMapPinAt(void* clientArea, int i)`: Pointer-array semantics (CSWCMapPin**, 4-byte stride, each slot a heap-allocated 0x110-byte pin).
+- L399 `bool GetMapPinPosition(void* mapPin, Vector& out)`: CSWCMapPin embeds CSWCObject at +0; position at +0x24 (standard CGameObject offset).
+- L411 `bool IsMapPinEnabled(void* mapPin)`: CSWCMapPin.enabled +0xfc.
+- L415 `bool GetMapPinNoteText(void* mapPin, char* outBuf, size_t bufSize)`: CSWCMapPin.note_text CExoString @+0x100.
+- L432 `bool CreateMapPin(void* clientArea, const Vector& pos, const char* name, uint32_t referenceNumber, void** outPin = nullptr)`: Replicates the engine pattern from HandleServerToPlayerMapPinReferenceNumber @0x652d60: operator_new(0x110) → CSWCMapPin ctor → field writes (pos +0x24, enabled +0xfc, note_text via CExoString::operator= +0x100, flags...
+- L440 `bool GetWaypointMapNote(void* waypoint, char* outBuf, size_t bufSize)`: CSWSWaypoint.map_note CExoLocString @+0x230 (strref @+0x234).
+- L446 `class AreaObjectIterator`: Snapshots data pointer + size at construction.
+- L462 `void ForEachDoor(void* area, Fn fn)`: Calls fn(door, pos) for every door of `area` whose position reads.
+- L474 `void* NearestDoor(void* area, const Vector& p, float maxM, Accept accept, Vector* outPos = nullptr)`: The door of `area` nearest to `p` in the plane, within `maxM`, for which accept(door) holds; null if none.
+- L561 `typedef void* (__cdecl* PFN_OperatorNew)(size_t )`
+- L567 `typedef void* (__thiscall* PFN_CExoStringAssignFromCString)( void* , const char* )`
+- L823 `bool TrapDetectedByAnyOf(void* gameObject, const uint32_t* ids, int idCount)`: True when `gameObject`'s trap has been detected by any of the given SERVER object ids (pass the current party's ids).
+- L838 `int BuildAreaWallCache(void* area, WallEdge* outBuf, int maxEdges)`: Walks every room in `area` and every face of its CSWRoomSurfaceMesh and collects each side with adjacency -1, in world space, then drops the portals and same-room duplicates (DropPortalEdges, DropSameRoomDuplicates in...
+- L846 `int BuildAreaFloorCache(void* area, FloorTri* outBuf, int maxTris)`: Walks every room's surface mesh and emits every face as a FloorTri.
 
-Also 90 constants or variables at namespace scope.
+Also 91 constants or variables at namespace scope.
