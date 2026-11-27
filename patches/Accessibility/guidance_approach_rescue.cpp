@@ -814,11 +814,10 @@ void TickTurnbackResume() {
 }
 
 bool ResumeAfterNoticeOnTheWay() {
-    // A walk that ends in an act: Enter, or a walk that uses its target.
-    if (!g_st.targetObj ||
-        (g_st.owner != ApproachOwner::Interact && g_st.useHandle == 0)) {
-        return false;
-    }
+    // A walk to an object ends in an act on it, whichever key started it:
+    // Enter, Shift+- and Ctrl+L alike. A walk to a bare spot has no object
+    // to go back to.
+    if (!g_st.targetObj) return false;
     Vector pc, tgt;
     if (!acc::engine::GetPlayerPosition(pc) || !ResolveTargetPos(tgt)) return false;
     // At the object (the measure of the re-issued use) the bark is the
