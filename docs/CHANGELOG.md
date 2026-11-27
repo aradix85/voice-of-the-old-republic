@@ -274,6 +274,8 @@ installer, as the pre-release `bridge-latest`.
   companion plays your part, as T3-M4 does in the prologue.
 - KOTOR 2: the companion who plays your part is listed with the party while
   you control someone else.
+- The mod no longer picks targets behind a black screen while the game is
+  changing area, which crashed the lift to the Ebon Hawk's hull.
 - The installer makes an energy shield that runs out or breaks audible, in
   both games.
 - A local bridge lets an external helper read the game state and act in the
@@ -1117,6 +1119,14 @@ witnesses are at the declarations.
 - The companion who plays your part is listed with the party while you
   control someone else: with 3C-FD in control, T3-M4 was missing from the
   party's health and position.
+- Targets are no longer picked behind a black screen while a module load is
+  on its way. Where the game holds the screen black but leaves you in
+  control, the mod runs the game's target selection itself. The lift to the
+  Ebon Hawk's hull fades to black and then swaps the area, the mod picked a
+  target in between, and two seconds later the game's own action-menu update
+  asked for the room of a player who was in no room: an access violation in
+  the game, read from the crash dump. Seen once; the second ride, from the
+  autosave, went through.
 
 <h3>Bridge:</h3>
 
