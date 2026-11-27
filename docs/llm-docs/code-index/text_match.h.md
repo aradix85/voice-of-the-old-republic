@@ -1,4 +1,4 @@
-# text_match.h (52 lines)
+# text_match.h (63 lines)
 
 Source: `patches/Accessibility/text_match.h`
 
@@ -12,3 +12,5 @@ Engine-free text comparisons, for matching engine-rendered text against our own 
 - L41 `bool MatchesDialogLine(const char* rendered, const char* stored)`: MatchesWithTokens for a dialogue line against its TLK text.
 - L45 `bool ContainsIgnoreCase(const char* haystack, const char* needle)`: True when `needle` occurs in `haystack`, ASCII letter case ignored.
 - L49 `bool SameLastWord(const char* a, const char* b, size_t minLen)`: True when both names end in the same word of at least `minLen` characters, ASCII letter case ignored: "Ancient Computer" and "Rakata Computer".
+- L52 `enum class NoteNames`: How a map note's name stands to the name of something near it.
+- L60 `NoteNames NoteNamesThing(const char* note, const char* thing, size_t minLen)`

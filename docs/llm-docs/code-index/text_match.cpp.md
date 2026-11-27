@@ -1,4 +1,4 @@
-# text_match.cpp (137 lines)
+# text_match.cpp (145 lines)
 
 Source: `patches/Accessibility/text_match.cpp`
 
@@ -15,3 +15,4 @@ Engine-free text comparisons (text_match.h).
 - L107 `bool MatchesDialogLine(const char* rendered, const char* stored)`
 - L114 `bool ContainsIgnoreCase(const char* haystack, const char* needle)`
 - L124 `bool SameLastWord(const char* a, const char* b, size_t minLen)`
+- L136 `NoteNames NoteNamesThing(const char* note, const char* thing, size_t minLen)`

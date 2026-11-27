@@ -281,6 +281,10 @@ installer, as the pre-release `bridge-latest`.
 - Mines the party has detected are a category of their own in the , / .
   lists and are found by Q and E.
 - Shift+- never walks to a mine.
+- A walk started with Shift+- or Ctrl+L is started again after a notice on
+  the way, as a walk started with Enter already was.
+- Enter on a map note that names a thing in its room goes to that thing up
+  to ten metres away: "Garage, Workbench" uses the Workbench.
 - The installer makes an energy shield that runs out or breaks audible, in
   both games.
 - A local bridge lets an external helper read the game state and act in the
@@ -1147,6 +1151,17 @@ witnesses are at the declarations.
   action on it.
 - Shift+- on a mine says "Shift and Enter to disable or recover it" and
   does not walk: a walk to a mine's own spot ends on it.
+- A walk to a container started with Shift+- or Ctrl+L goes on after a
+  notice on the way. The rule that starts such a walk again asked which key
+  had started it and knew only Enter; on the Ebon Hawk three walks to a
+  footlocker ended at "This is the Main Hold.", "This is the Garage." and
+  "This is the Starboard dormitory." Every walk to an object now counts.
+- Enter on a map note that holds a thing's whole name goes to that thing
+  when it stands within ten metres. KOTOR 2 names a room and the thing in it
+  in one note and sets it down anywhere in the room: "Garage, Workbench"
+  lies 7.2 metres from the Workbench, so Enter said "Use Garage, Workbench"
+  and walked to a spot on the floor. Names that are only alike keep the
+  three metres.
 
 <h3>Bridge:</h3>
 
