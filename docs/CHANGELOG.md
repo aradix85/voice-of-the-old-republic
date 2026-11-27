@@ -239,6 +239,8 @@ installer, as the pre-release `bridge-latest`.
 - KOTOR 2: F1 help and the tutorial hints name L as the party screen and J as
   the quests, with the message log behind the journal's Messages Log button.
 - KOTOR 2: the world stays paused while the party screen is open.
+- KOTOR 2: opening and closing the action menu no longer says "Paused." and
+  "Unpaused."; the pause it holds while you choose is the menu's own.
 - KOTOR 2: switching between game screens no longer opens the neighbouring one
   for a moment.
 - KOTOR 2: the turret's range marker can be heard.
@@ -1023,6 +1025,13 @@ witnesses are at the declarations.
 - The world stays paused while the party screen opened with L is up: it now
   counts as a sub-screen, so closing a popup over it no longer resumes the
   world under the menu.
+- The pause the mod's own menus hold (the action menu, Shift+Enter) is
+  silent in KOTOR 2 as well. The mod marked its pause call as its own only
+  while the call ran; KOTOR 2 reports the pause after the call has returned,
+  so "Paused." was spoken right after "Action menu ..." (six of seven
+  openings in the logs), and it read as the game pausing by itself: Space
+  then took the menu's pause away. The mod now leaves a note for the report
+  that answers its call, the same on or off within half a second.
 - Switching between game screens no longer opens the neighbouring one for a
   moment. KOTOR 2's switch removes the current screen itself, so the mod's
   own clean-up first only added the previous tab (from the journal: the party

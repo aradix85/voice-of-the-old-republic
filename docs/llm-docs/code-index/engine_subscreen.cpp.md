@@ -1,4 +1,4 @@
-# engine_subscreen.cpp (409 lines)
+# engine_subscreen.cpp (433 lines)
 
 Source: `patches/Accessibility/engine_subscreen.cpp`
 
@@ -6,26 +6,27 @@ The engine's sub-screen and pause machinery: the overlay pause for the mod's own
 
 ## Declarations (in source order)
 
-- L73 `void CallSetSoundMode(void* exoSound, int mode)`
-- L83 `bool CallSetPauseState(void* server, bool on, bool own)`: `own` marks the call as the mod's, so that OnSetPauseState, which fires inside it, stays silent.
-- L97 `bool ReadUiState(int* modalSize, bool* hasSubScreen)`: The modal-stack size and whether a sub-screen is up; false on a fault.
-- L115 `void DispatchUnpauseCleanup(const char* trigger)`: Unpause after a close: server bit 2 off, then the mixer back on (the server round trip does not touch the sound mode).
-- L131 `void* PauseClient(const char* what)`: The client app for SetPausedByCombat, or nullptr (logged with `what`).
-- L141 `bool CallSetPausedByCombat(void* client, int paused, bool own)`
-- L155 `void DispatchOverlayPause(const char* trigger, int paused)`: The overlay's own open and close speech is the cue, as native sub-screens suppress the engine's, so this call counts as our own.
-- L165 `bool SetMenuPauseBit(bool on)`
-- L170 `void ResumeSoundMixer()`
-- L187 `void BeginOverlayPause(OverlayPauseOwner owner)`: The mod's in-world menus have no engine panel, so the engine never pauses for them; these give them a native sub-screen's freeze through the pause key's own path.
-- L192 `void EndOverlayPause(OverlayPauseOwner owner)`
-- L203 `bool WorldIsPaused()`
-- L207 `bool ResumeWorldIfPaused(const char* reason)`
-- L235 `void TickInputClassReassert()`: The unpause safety net, on two edges (calling both on one frame is safe): 1.
-- L266 `bool ReadSlots(void* p1_addr, void* p2_addr, int* p1, int* p2, uint32_t* callerEip)`: The hooks' parameters are the addresses of the engine's stack slots (the "esp+X" LEA); the return address sits one slot below the first.
-- L284 `extern "C" void __cdecl OnSwitchToSWInGameGui(void* thisPtr, int guiId)`: CGuiInGame::SwitchToSWInGameGui, the warm path (a sub-screen is up and another opens; the cold path is ShowSWInGameGui, which the menus monitor covers by polling).
-- L304 `extern "C" void __cdecl OnSetSWGuiStatus(void* thisPtr, void* p1_addr, void* p2_addr)`: CGuiInGame::SetSWGuiStatus.
-- L324 `extern "C" void __cdecl OnHideSWInGameGui(void* thisPtr, void* p1_addr)`: CGuiInGame::HideSWInGameGui: which engine path closes a sub-screen.
-- L338 `extern "C" void __cdecl OnSetPauseState(void* thisPtr, void* p1_addr, void* p2_addr)`: CServerExoAppInternal::SetPauseState (K1 0x004b8110): every pause change.
-- L383 `extern "C" void __cdecl OnSwitchToSWInGameGuiK2(void* thisGui, void* ebp)`: CGuiInGame::SwitchToSWInGameGui @0x007CA550, hooked at 0x007CA575.
-- L391 `extern "C" void __cdecl OnHideSWInGameGuiK2(void* thisGui, void* ebp)`: CGuiInGame::HideSWInGameGui @0x007CA060, hooked at 0x007CA066.
-- L397 `extern "C" void __cdecl OnSetSWGuiStatusK2(void* thisGui, void* ebp)`: CGuiInGame::SetSWGuiStatus @0x007C9C40, hooked at 0x007C9C46.
-- L405 `void __cdecl OnSetPauseStateK2(void* thisPtr, void* ebp)`
+- L81 `bool TakeOwnPauseNote(int onOff)`
+- L92 `void CallSetSoundMode(void* exoSound, int mode)`
+- L102 `bool CallSetPauseState(void* server, bool on, bool own)`: `own` marks the call as the mod's, so that OnSetPauseState, which fires inside it, stays silent.
+- L116 `bool ReadUiState(int* modalSize, bool* hasSubScreen)`: The modal-stack size and whether a sub-screen is up; false on a fault.
+- L134 `void DispatchUnpauseCleanup(const char* trigger)`: Unpause after a close: server bit 2 off, then the mixer back on (the server round trip does not touch the sound mode).
+- L150 `void* PauseClient(const char* what)`: The client app for SetPausedByCombat, or nullptr (logged with `what`).
+- L160 `bool CallSetPausedByCombat(void* client, int paused, bool own)`
+- L177 `void DispatchOverlayPause(const char* trigger, int paused)`: The overlay's own open and close speech is the cue, as native sub-screens suppress the engine's, so this call counts as our own.
+- L187 `bool SetMenuPauseBit(bool on)`
+- L192 `void ResumeSoundMixer()`
+- L209 `void BeginOverlayPause(OverlayPauseOwner owner)`: The mod's in-world menus have no engine panel, so the engine never pauses for them; these give them a native sub-screen's freeze through the pause key's own path.
+- L214 `void EndOverlayPause(OverlayPauseOwner owner)`
+- L225 `bool WorldIsPaused()`
+- L229 `bool ResumeWorldIfPaused(const char* reason)`
+- L257 `void TickInputClassReassert()`: The unpause safety net, on two edges (calling both on one frame is safe): 1.
+- L288 `bool ReadSlots(void* p1_addr, void* p2_addr, int* p1, int* p2, uint32_t* callerEip)`: The hooks' parameters are the addresses of the engine's stack slots (the "esp+X" LEA); the return address sits one slot below the first.
+- L306 `extern "C" void __cdecl OnSwitchToSWInGameGui(void* thisPtr, int guiId)`: CGuiInGame::SwitchToSWInGameGui, the warm path (a sub-screen is up and another opens; the cold path is ShowSWInGameGui, which the menus monitor covers by polling).
+- L326 `extern "C" void __cdecl OnSetSWGuiStatus(void* thisPtr, void* p1_addr, void* p2_addr)`: CGuiInGame::SetSWGuiStatus.
+- L346 `extern "C" void __cdecl OnHideSWInGameGui(void* thisPtr, void* p1_addr)`: CGuiInGame::HideSWInGameGui: which engine path closes a sub-screen.
+- L360 `extern "C" void __cdecl OnSetPauseState(void* thisPtr, void* p1_addr, void* p2_addr)`: CServerExoAppInternal::SetPauseState (K1 0x004b8110): every pause change.
+- L407 `extern "C" void __cdecl OnSwitchToSWInGameGuiK2(void* thisGui, void* ebp)`: CGuiInGame::SwitchToSWInGameGui @0x007CA550, hooked at 0x007CA575.
+- L415 `extern "C" void __cdecl OnHideSWInGameGuiK2(void* thisGui, void* ebp)`: CGuiInGame::HideSWInGameGui @0x007CA060, hooked at 0x007CA066.
+- L421 `extern "C" void __cdecl OnSetSWGuiStatusK2(void* thisGui, void* ebp)`: CGuiInGame::SetSWGuiStatus @0x007C9C40, hooked at 0x007C9C46.
+- L429 `void __cdecl OnSetPauseStateK2(void* thisPtr, void* ebp)`
