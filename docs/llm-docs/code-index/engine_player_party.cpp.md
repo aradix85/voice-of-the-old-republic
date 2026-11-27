@@ -1,4 +1,4 @@
-# engine_player_party.cpp (438 lines)
+# engine_player_party.cpp (461 lines)
 
 Source: `patches/Accessibility/engine_player_party.cpp`
 
@@ -18,14 +18,15 @@ Who is in the party, who is leading, and what they are called: leader and creatu
 - L195 `bool GetPlayerCharacterName(char* outBuf, size_t bufSize)`
 - L225 `static bool IsPlayerCharacterId(uint32_t id)`: Player objects have the ids above kInvalidObjectId, handed out from 0x7fffffff down, a new one with every load (0x7fffffff at the start of a session, 0x7ffffff3 a few loads later).
 - L232 `static uint32_t PlayerCharacterObjectId()`: The object id of the player character's creature, 0 when it is not in the area.
-- L250 `void* GetPlayerCharacterServerCreature()`
-- L259 `int GetPartyMembers(uint32_t* outHandles, int maxCount)`
-- L301 `void* GetServerPartyTable()`
-- L309 `bool GetSoloMode()`
-- L322 `int PartyRosterSlotCount()`
-- L326 `bool IsPartyPortrait(void* control)`
-- L330 `bool ReadPartyPortrait(void* control, PartyPortrait* out)`
-- L352 `int PartySelectionChosenCount(void* panel)`
-- L358 `bool PartyTableIsNPCAvailable(int npcSlot)`
-- L371 `bool PartyTableIsNPCSelectable(int npcSlot)`
-- L398 `bool GetPartyNpcNameForSlot(int npcSlot, char* outBuf, size_t bufSize)`
+- L254 `static void* StandInServerCreature()`: The creature of the companion the game has put in the player character's place, nullptr when the player character is itself.
+- L272 `void* GetPlayerCharacterServerCreature()`
+- L282 `int GetPartyMembers(uint32_t* outHandles, int maxCount)`
+- L324 `void* GetServerPartyTable()`
+- L332 `bool GetSoloMode()`
+- L345 `int PartyRosterSlotCount()`
+- L349 `bool IsPartyPortrait(void* control)`
+- L353 `bool ReadPartyPortrait(void* control, PartyPortrait* out)`
+- L375 `int PartySelectionChosenCount(void* panel)`
+- L381 `bool PartyTableIsNPCAvailable(int npcSlot)`
+- L394 `bool PartyTableIsNPCSelectable(int npcSlot)`
+- L421 `bool GetPartyNpcNameForSlot(int npcSlot, char* outBuf, size_t bufSize)`

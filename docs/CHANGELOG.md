@@ -270,6 +270,10 @@ installer, as the pre-release `bridge-latest`.
 - A walk that a notice on the way stops is started again by itself.
 - KOTOR 2: Escape in an options screen presses its Close button.
 - KOTOR 2: a slider changed with Left and Right keeps its new value.
+- KOTOR 2: visited regions and what was found are kept in the save while a
+  companion plays your part, as T3-M4 does in the prologue.
+- KOTOR 2: the companion who plays your part is listed with the party while
+  you control someone else.
 - The installer makes an energy shield that runs out or breaks audible, in
   both games.
 - A local bridge lets an external helper read the game state and act in the
@@ -1103,6 +1107,16 @@ witnesses are at the declarations.
   came back at their old values after Escape and after a click on Close
   alike. Sound, Graphics, Advanced Graphics, Mouse, Gameplay and the music
   player all register the same codes.
+- Visited regions, discoveries and the notes on other areas are kept in the
+  save while a companion plays your part. The mod keeps them with the player
+  character, which it found by its object id. In the prologue the game puts
+  T3-M4 in the player character's place and the player character is not in
+  the area at all, so nothing was ever read or written: after a load every
+  region was "new" again. The party table names the companion who stands in
+  (the save's PT_CONTROLLED_NPC), and the mod now asks it first.
+- The companion who plays your part is listed with the party while you
+  control someone else: with 3C-FD in control, T3-M4 was missing from the
+  party's health and position.
 
 <h3>Bridge:</h3>
 
