@@ -66,9 +66,10 @@ void* GetPlayerServerCreature();
 
 // The player character's own CSWSCreature*, whoever is in control: the
 // controlled creature while the player character leads, the player
-// character's creature in the area while a companion does (Tab). nullptr
-// when there is no controlled creature or the player character is not in
-// the area.
+// character's creature in the area while a companion does (Tab). Where the
+// game has put a companion in the player character's place (T3-M4 in
+// KOTOR 2's prologue), that companion. nullptr when there is no controlled
+// creature or the player character is not in the area.
 void* GetPlayerCharacterServerCreature();
 
 // Reads CClientExoAppInternal::player_character_name (+0x294) via
@@ -330,6 +331,12 @@ const size_t    kServerInternalPartyTableOffset = acc::off::Pick(0x1b770, 0x1f0b
 const size_t    kPartyTableNumMembersOffset    = acc::off::Same(0x0);
 const size_t    kPartyTableMemberIdsOffset     = acc::off::Pick(0x4, 0x8);
 const size_t    kPartyTableSoloModeOffset      = acc::off::Pick(0x190, 0x238);  // pt_solomode ulong
+// PT_CONTROLLED_NPC, member[0x46] in the same SaveTableInfo: the roster slot
+// of the companion standing in for the player character, -1 for none. Only
+// KOTOR 2's SwitchPlayerCharacter (0x005FE4B0) writes it, besides the
+// constructor and the load; Tab does not (that is member[0x45], which
+// PT_IS_LEADER is compared against). KOTOR 1 has no such script call.
+const size_t    kPartyTableStandInSlotOffset   = acc::off::Kotor2Only(0x118);
 constexpr int       kPartyTableMaxMembers          = 11;
 
 // CSWPartyTable thiscalls used by the PartySelection extractor (same

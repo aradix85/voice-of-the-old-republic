@@ -247,7 +247,30 @@ static uint32_t PlayerCharacterObjectId() {
     return s_id;
 }
 
+// The creature of the companion the game has put in the player character's
+// place, nullptr when the player character is itself. The player character
+// is then not in the area at all, and the game finds the stand-in the same
+// way: SwitchPlayerCharacter resolves the roster slot's cached object id.
+static void* StandInServerCreature() {
+    if (!acc::game::IsKotor2()) return nullptr;
+    void* table = GetServerPartyTable();
+    uint32_t slot = 0xFFFFFFFFu;
+    if (!TryReadU32(table, kPartyTableStandInSlotOffset, &slot) ||
+        slot == 0xFFFFFFFFu) {
+        return nullptr;
+    }
+    const uint32_t id = NpcObjectId(table, static_cast<int>(slot));
+    void* creature = (id != 0 && id != kInvalidObjectId)
+                         ? ResolveServerObjectHandle(id) : nullptr;
+    acclog::Edge("PlayerCharacter.StandIn", static_cast<int>(id),
+                 "roster slot %u stands in for the player character "
+                 "(object id 0x%08x, %s)",
+                 slot, id, creature ? "live" : "no creature");
+    return creature;
+}
+
 void* GetPlayerCharacterServerCreature() {
+    if (void* standIn = StandInServerCreature()) return standIn;
     void* controlled = GetPlayerServerCreature();
     if (!controlled || IsPlayerCharacterId(GetObjectHandle(controlled))) {
         return controlled;
