@@ -48,4 +48,15 @@ bool ContainsIgnoreCase(const char* haystack, const char* needle);
 // ASCII letter case ignored: "Ancient Computer" and "Rakata Computer".
 bool SameLastWord(const char* a, const char* b, size_t minLen);
 
+// How a map note's name stands to the name of something near it.
+enum class NoteNames {
+    Nothing,  // the names have nothing to do with each other
+    Alike,    // the thing's name holds the note's, or both end in one word
+              // of at least `minLen` characters ("Computer" at the Rakata
+              // Computer)
+    Whole,    // the note holds the thing's whole name: "Garage, Workbench"
+              // names the Workbench, "Freyyr" names Freyyr
+};
+NoteNames NoteNamesThing(const char* note, const char* thing, size_t minLen);
+
 }  // namespace acc::text

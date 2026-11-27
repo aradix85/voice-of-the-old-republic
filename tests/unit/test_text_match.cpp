@@ -70,6 +70,19 @@ TEST_CASE("A dialogue line matches its TLK text with or without acting direction
     CHECK_FALSE(MatchesDialogLine(nullptr, stored));
 }
 
+TEST_CASE("NoteNamesThing tells a note that names a thing from one that is only alike") {
+    using acc::text::NoteNames;
+    using acc::text::NoteNamesThing;
+    CHECK(NoteNamesThing("Garage, Workbench", "Workbench", 4) == NoteNames::Whole);
+    CHECK(NoteNamesThing("Main Hold, Security Console", "security console", 4) == NoteNames::Whole);
+    CHECK(NoteNamesThing("Freyyr", "Freyyr", 4) == NoteNames::Whole);
+    CHECK(NoteNamesThing("Computer", "Ancient Computer", 4) == NoteNames::Alike);
+    CHECK(NoteNamesThing("Ancient Computer", "Rakata Computer", 4) == NoteNames::Alike);
+    CHECK(NoteNamesThing("Cargo Hold", "Workbench", 4) == NoteNames::Nothing);
+    CHECK(NoteNamesThing("Garage, Workbench", nullptr, 4) == NoteNames::Nothing);
+    CHECK(NoteNamesThing(nullptr, "Workbench", 4) == NoteNames::Nothing);
+}
+
 TEST_CASE("WithoutBraces drops a note in braces wherever it stands") {
     using acc::text::WithoutBraces;
     CHECK(WithoutBraces("Footlocker{Spikes}") == "Footlocker");

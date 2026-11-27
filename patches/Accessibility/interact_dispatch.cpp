@@ -208,8 +208,13 @@ bool RedirectLandmarkToTransition(void* target, const char* name, bool forceRadi
 // Enter on the note said "Use Freyyr" and only walked to the note, twice
 // taken for a target that was not a person. The names must overlap: one holds
 // the other, or both end in the same word ("Ancient Computer" at the Rakata
-// Computer). And the object must stand within kNamesakeM of the note.
+// Computer). And the object must stand within kNamesakeM of the note. A note
+// that holds the thing's whole name may stand further off: KOTOR 2 names a
+// room and the thing in it in one note, set down anywhere in the room
+// ("Garage, Workbench" 7.2 m from the Workbench, "Engine Room, Hyperdrive"
+// about 8 m from the Hyperdrive).
 constexpr float  kNamesakeM       = 3.0f;
+constexpr float  kNamedThingM     = 10.0f;
 constexpr size_t kNamesakeWordLen = 4;
 
 bool RedirectLandmarkToNamesake(void* target, const char* name, bool forceRadial) {
@@ -220,7 +225,7 @@ bool RedirectLandmarkToNamesake(void* target, const char* name, bool forceRadial
         return false;
     }
     void* nearest  = nullptr;
-    float nearestM = kNamesakeM;
+    float nearestM = kNamedThingM;
     void* leader   = acc::engine::GetPlayerServerCreature();
     acc::engine::AreaObjectIterator it(area);
     while (void* obj = it.Next()) {
@@ -238,9 +243,10 @@ bool RedirectLandmarkToNamesake(void* target, const char* name, bool forceRadial
             !acc::engine::GetObjectName(obj, other, sizeof(other)) || std::strlen(other) < 4) {
             continue;
         }
-        if (!acc::text::ContainsIgnoreCase(name, other) &&
-            !acc::text::ContainsIgnoreCase(other, name) &&
-            !acc::text::SameLastWord(name, other, kNamesakeWordLen)) {
+        const acc::text::NoteNames names =
+            acc::text::NoteNamesThing(name, other, kNamesakeWordLen);
+        if (names == acc::text::NoteNames::Nothing ||
+            (names == acc::text::NoteNames::Alike && DistXY(pos, lpos) > kNamesakeM)) {
             continue;
         }
         nearest  = obj;

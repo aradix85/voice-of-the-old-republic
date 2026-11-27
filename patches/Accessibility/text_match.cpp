@@ -133,4 +133,12 @@ bool SameLastWord(const char* a, const char* b, size_t minLen) {
     return true;
 }
 
+NoteNames NoteNamesThing(const char* note, const char* thing, size_t minLen) {
+    if (ContainsIgnoreCase(note, thing)) return NoteNames::Whole;
+    if (ContainsIgnoreCase(thing, note) || SameLastWord(note, thing, minLen)) {
+        return NoteNames::Alike;
+    }
+    return NoteNames::Nothing;
+}
+
 }  // namespace acc::text
