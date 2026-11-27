@@ -469,8 +469,12 @@ NodeScan ScanNodes(const Vector& worldPos, bool requireWallReachable, bool zTrus
             Vector hit{};
             Vector nodeEnd = g_graph.node_pos[i];
             if (zTrusted) nodeEnd.z = g_graph.node_floor_z[i];
+            // An untrusted z compares nothing: the node's stored z is 0, and
+            // a ray diving to it from a floor at z 9 passed under every wall
+            // further than a fifth of the way (Peragus: the lab read as
+            // reachable from inside the medical bay next door).
             reachable = !acc::engine::SegmentCrossesWalkmesh(
-                walls, wallCount, worldPos, nodeEnd, hit);
+                walls, wallCount, worldPos, nodeEnd, hit, /*ignoreZ=*/!zTrusted);
         }
 
         if (g_graph.node_filtered[i]) {
