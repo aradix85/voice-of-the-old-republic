@@ -55,6 +55,11 @@ bool IsEmptyContainer(void* gameObject) {
     return ReadContainerCount(gameObject, count) && count <= 0;
 }
 
+bool IsSpentContainer(void* gameObject) {
+    return IsEmptyContainer(gameObject) &&
+           ReadU8Or0(gameObject, kPlaceableConversationOffset) == 0;
+}
+
 bool IsLandmarkWaypoint(void* waypoint) {
     return ReadU8Or0(waypoint, kWaypointHasMapNoteOffset) != 0;
 }

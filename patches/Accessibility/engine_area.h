@@ -273,6 +273,13 @@ bool GetObjectLocalBoolean(void* gameObject, int index);
 // at narration time, not cached — looting changes the count.
 bool IsEmptyContainer(void* gameObject);
 
+// An empty container that has nothing more to do either: no conversation
+// of its own. KOTOR 2 hangs a conversation on containers whose opening or
+// closing is the point (the Ebon Hawk's combat training box is empty and
+// starts the next round each time it closes), so such a container stays a
+// place to go to.
+bool IsSpentContainer(void* gameObject);
+
 // CSWSDoor.open_state +0x2cc. state >= 1 covers both opening anim and
 // fully open. False on null/fault/state==0.
 bool IsDoorOpen(void* serverDoor);
@@ -703,6 +710,10 @@ const size_t kPlaceableUsableOffset        = acc::off::Pick(0x328, 0x380);  // "
 // item_repository, confirming it as the authoritative "is a lootable
 // container" flag.
 const size_t kPlaceableHasInventoryOffset  = acc::off::Pick(0x324, 0x37c);
+// "Conversation" CResRef, sixteen characters in place; a first byte of 0 is
+// no conversation. Both loads assign the field they read to it: KOTOR 1 at
+// 0x00585be8 (lea ecx, [esi+0x240]), KOTOR 2 at 0x005eff91 (add ecx, 0x280).
+const size_t kPlaceableConversationOffset  = acc::off::Pick(0x240, 0x280);
 // CSWSPlaceable.item_repository @+0x36c → CItemRepository. The repo's
 // live item count sits at +0x10 (items_list @+0xc). Confirmed by
 // decompiling CItemRepository::GetItemInRepository / ItemListGetItem /

@@ -47,7 +47,7 @@ void SortByDistanceAscending(CategoryListing& l) {
 // World cycles list what the player can still go to: nothing that lies only
 // behind locked doors (or where the region graph has no way to; a door
 // counts by the side the player walks up to), and no container already
-// emptied. Without this the lists read like a history of everything passed:
+// emptied, unless it still starts a conversation. Without this the lists read like a history of everything passed:
 // every looted footlocker and every door shut off behind the story, far
 // behind the player (2026-11-08). Q/E still finds anything in view.
 void KeepWhatIsLeft(CategoryListing& l, acc::filter::CycleContext ctx) {
@@ -59,7 +59,7 @@ void KeepWhatIsLeft(CategoryListing& l, acc::filter::CycleContext ctx) {
     for (int i = 0; i < l.count; ++i) {
         if (behind[i]) continue;
         if (!l.isPin[i] && !l.isStatic[i] && l.objs[i] &&
-            acc::engine::IsEmptyContainer(l.objs[i])) {
+            acc::engine::IsSpentContainer(l.objs[i])) {
             continue;
         }
         const int k = kept.count++;
