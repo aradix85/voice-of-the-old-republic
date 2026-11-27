@@ -201,7 +201,13 @@ void Dispatch() {
     // alpha 1.0 while the player has control, which gates MainLoop's
     // DoPassiveSelection off and freezes Q/E targeting and passive narration.
     // This drives it while the fade is the only blocker; see engine_area.cpp.
-    acc::engine::MaybeDrivePassiveSelection();
+    // A module load that is on its way is another blocker: the lift to the
+    // Ebon Hawk's hull fades out and then swaps the module, and a target
+    // chosen in that window crashed the game's own action-menu update, whose
+    // room lookup has no answer for a player who is in no room.
+    if (!acc::transitions::IsModuleLoadPending()) {
+        acc::engine::MaybeDrivePassiveSelection();
+    }
 
     // The "Steam Big Picture is eating your keypresses" warning the
     // focus-probe thread queued.
