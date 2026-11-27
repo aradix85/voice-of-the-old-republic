@@ -1,4 +1,4 @@
-# room_topology.cpp (630 lines)
+# room_topology.cpp (634 lines)
 
 Source: `patches/Accessibility/room_topology.cpp`
 
@@ -19,7 +19,7 @@ The nav graph is what BioWare ships and the engine trusts for path solving, the 
 - L398 `bool ListClusters(void* area, std::vector<ClusterSummary>& out)`
 - L418 `bool GetClusterLinks(void* area, std::vector<ClusterLink>& out)`
 - L451 `NodeScan ScanNodes(const Vector& worldPos, bool requireWallReachable, bool zTrusted, const Vector* closedDoor)`: A node is reachable when it is on the caller's floor (zTrusted: its calibrated floor within the wall test's own z tolerance, so "same floor" means one thing in both filters) and no wall lies between (requireWallReacha...
-- L507 `void LogScan(const NodeScan& s, const Vector& worldPos)`: Logged only when the filter rejected a candidate nearer than the pick, or rejected every one (a sign the wall cache or the position is wrong).
-- L545 `bool InSnapRange(int node, float distSq)`
-- L552 `bool ClosedDoorNear(void* area, const Vector& p, Vector& outDoor)`: The closed door within kClosedDoorNearM of `p`, if any.
-- L565 `bool LookupAt(void* area, const Vector& worldPos, std::string& outLabel, int& outSig, int& outClusterId, bool allowDiagLog, bool requireWallReachable, bool zTrusted, std::vector<ExitMark>* outExits)`
+- L511 `void LogScan(const NodeScan& s, const Vector& worldPos)`: Logged only when the filter rejected a candidate nearer than the pick, or rejected every one (a sign the wall cache or the position is wrong).
+- L549 `bool InSnapRange(int node, float distSq)`
+- L556 `bool ClosedDoorNear(void* area, const Vector& p, Vector& outDoor)`: The closed door within kClosedDoorNearM of `p`, if any.
+- L569 `bool LookupAt(void* area, const Vector& worldPos, std::string& outLabel, int& outSig, int& outClusterId, bool allowDiagLog, bool requireWallReachable, bool zTrusted, std::vector<ExitMark>* outExits)`

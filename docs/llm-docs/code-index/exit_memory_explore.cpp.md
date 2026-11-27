@@ -1,4 +1,4 @@
-# exit_memory_explore.cpp (377 lines)
+# exit_memory_explore.cpp (381 lines)
 
 Source: `patches/Accessibility/exit_memory_explore.cpp`
 
@@ -17,4 +17,4 @@ Walking for the player: Ctrl+Shift+N, region by region to the nearest unexplored
 - L301 `bool WalkThenInteract(void* target, uint32_t handle, const char* name)`
 - L305 `bool RescueWalk(void* target, const char* name, bool act)`
 - L310 `void TickExploreChain()`
-- L361 `void PollWalkHotkeys()`
+- L365 `void PollWalkHotkeys()`

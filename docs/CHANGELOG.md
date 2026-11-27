@@ -268,6 +268,9 @@ installer, as the pre-release `bridge-latest`.
 - A button the game has put away behind another one is no longer read out;
   KOTOR 2's workbench lists one row of filters instead of two.
 - A walk that a notice on the way stops is started again by itself.
+- KOTOR 2: a hint box that opens during a walk through a door no longer
+  makes the mod say "Walking" and "Open Door" over and over; the walk goes
+  on when the box is closed.
 - KOTOR 2: Escape in an options screen presses its Close button.
 - KOTOR 2: a slider changed with Left and Right keeps its new value.
 - KOTOR 2: visited regions and what was found are kept in the save while a
@@ -1162,6 +1165,22 @@ witnesses are at the declarations.
   lies 7.2 metres from the Workbench, so Enter said "Use Garage, Workbench"
   and walked to a spot on the floor. Names that are only alike keep the
   three metres.
+- The region at a spot is no longer read through walls where the floor lies
+  far from height 0. The check that asks which region a spot is in (for
+  arriving, for what lies in a region, for a target's region) sent its ray
+  from the spot's own height down to the path nodes' stored height 0, and
+  the wall test dropped every wall more than two metres from the ray: on
+  Peragus, floor at 9 metres, every wall further than a fifth of the way.
+  From inside the medical bay the lab next door read as the place the
+  player stood in. The test is flat, as the walks' own wall tests are.
+- A panel that opens during a walk through doors holds the walk; it goes on
+  when the panel is closed, and nothing is started behind a panel or a
+  conversation. On Peragus the hint box about kolto tanks opened on the way
+  from the medical bay to the Lab Station. The walk judged itself arrived
+  (the item above) and pressed Enter on the Lab Station behind the box,
+  which started the walk again, which the box ended again: 658 times
+  "Walking: Lab Station" and "Open Door" in eighteen seconds, until Escape
+  closed the box.
 
 <h3>Bridge:</h3>
 
