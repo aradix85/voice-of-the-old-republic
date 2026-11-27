@@ -66,6 +66,25 @@ unsigned char g_pauseShadow = 0;
 // the shadow still follows, since the engine state did change.
 bool g_inOwnPauseCall = false;
 
+// KOTOR 2 answers SetPausedByCombat with its SetPauseState after the call has
+// returned, so an own call also leaves a note for the fire that answers it:
+// the same on or off, within a moment. Any fire of the pause bit uses the
+// note up.
+struct OwnPauseNote {
+    bool  pending = false;
+    int   onOff   = 0;
+    DWORD at      = 0;
+};
+OwnPauseNote g_ownPauseNote;
+constexpr DWORD kOwnPauseNoteMs = 500;
+
+bool TakeOwnPauseNote(int onOff) {
+    const bool own = g_ownPauseNote.pending && (g_ownPauseNote.onOff != 0) == (onOff != 0) &&
+                     GetTickCount() - g_ownPauseNote.at <= kOwnPauseNoteMs;
+    g_ownPauseNote.pending = false;
+    return own;
+}
+
 // The mod's overlays that hold the overlay pause (they stack: the world
 // resumes only when the last one closes).
 unsigned g_overlayPauseOwners = 0;
@@ -139,6 +158,9 @@ void* PauseClient(const char* what) {
 }
 
 bool CallSetPausedByCombat(void* client, int paused, bool own) {
+    g_ownPauseNote.pending = own;
+    g_ownPauseNote.onOff   = paused;
+    g_ownPauseNote.at      = GetTickCount();
     __try {
         g_inOwnPauseCall = own;
         reinterpret_cast<PFN_SetPausedByCombat>(kAddrSetPausedByCombat)(client, paused, 4, 0);
@@ -351,12 +373,14 @@ extern "C" void __cdecl OnSetPauseState(void* thisPtr, void* p1_addr, void* p2_a
     const unsigned char next = onOff ? static_cast<unsigned char>(prev | maskByte)
                                      : static_cast<unsigned char>(prev & ~maskByte);
     g_pauseShadow = next;
+    const bool noted = (maskByte & kPauseBitManualOrMenu) != 0 &&
+                       acc::engine::TakeOwnPauseNote(onOff);
+    const bool own = acc::engine::g_inOwnPauseCall || noted;
     acclog::Write("Pause", "fire mask=0x%02x on_off=%d shadow %02x->%02x caller=0x%08x%s",
                   static_cast<unsigned>(maskByte), onOff, static_cast<unsigned>(prev),
-                  static_cast<unsigned>(next), callerEip,
-                  acc::engine::g_inOwnPauseCall ? " (SELF)" : "");
+                  static_cast<unsigned>(next), callerEip, own ? " (SELF)" : "");
 
-    if (acc::engine::g_inOwnPauseCall) return;
+    if (own) return;
     if ((maskByte & kPauseBitManualOrMenu) == 0) return;
     const bool wasPaused = (prev & kPauseBitManualOrMenu) != 0;
     const bool nowPaused = (next & kPauseBitManualOrMenu) != 0;
