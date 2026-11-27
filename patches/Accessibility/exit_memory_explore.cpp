@@ -320,6 +320,14 @@ void TickExploreChain() {
     if (out == acc::guidance::ApproachOutcome::Blocked) return StopChain("blocked");
     if (out == acc::guidance::ApproachOutcome::Cancelled) return StopChain("cancelled");
     if (acc::engine::GetCurrentArea() != g_area) return StopChain("area changed");
+    // Nothing is started behind a conversation or a panel. A conversation
+    // ends the walk. A panel is a notice on the way (KOTOR 2's hint boxes
+    // open in the middle of a walk): the walk goes on when it is closed.
+    if (acc::engine::HasActiveDialogPanel()) return StopChain("conversation");
+    if (acc::engine::IsForegroundUiBlocking()) {
+        g_chain.endedAt = 0;
+        return;
+    }
     if (g_chain.thenHandle != 0) {
         Vector at;
         if (acc::engine::GetPlayerPosition(at) && RegionAt(g_area, at) == g_chain.goal) {
@@ -329,10 +337,6 @@ void TickExploreChain() {
         return StopChain("arrived");
     }
     if (acc::engine::IsAnyPartyMemberInCombat()) return StopChain("combat");
-    if (acc::engine::HasActiveDialogPanel() ||
-        acc::engine::IsForegroundUiBlocking()) {
-        return StopChain("panel open");
-    }
     const DWORD now = GetTickCount();
     if (g_chain.endedAt == 0) {
         g_chain.endedAt = now;
