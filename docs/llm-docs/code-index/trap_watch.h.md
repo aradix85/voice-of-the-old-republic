@@ -1,4 +1,4 @@
-# trap_watch.h (53 lines)
+# trap_watch.h (60 lines)
 
 Source: `patches/Accessibility/trap_watch.h`
 
@@ -10,7 +10,8 @@ Three outputs: 1. Ground mines (trigger kind): the engine already emits a feedba
 
 ## Declarations (in source order)
 
-- L38 `void Tick()`: Per-frame tick (internally throttled).
-- L44 `void ScanNow()`: Rate-limited forced rescan (min 100ms spacing).
-- L49 `bool PeekFreshMine(char* nameOut, size_t nameSize, Vector& posOut)`: Freshest not-yet-consumed ground-mine detection (recorded when a trigger trap's detected-by list first gains a party member; entries expire after a few seconds).
-- L50 `void ConsumeFreshMine()`
+- L39 `void Tick()`: Per-frame tick (internally throttled).
+- L45 `void ScanNow()`: Rate-limited forced rescan (min 100ms spacing).
+- L50 `bool PeekFreshMine(char* nameOut, size_t nameSize, Vector& posOut)`: Freshest not-yet-consumed ground-mine detection (recorded when a trigger trap's detected-by list first gains a party member; entries expire after a few seconds).
+- L51 `void ConsumeFreshMine()`
+- L57 `bool IsDetectedMine(uint32_t handle)`: True for a ground mine the party has detected, by server object id: the state the scan mirrors, at most one scan interval old.

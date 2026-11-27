@@ -1,4 +1,4 @@
-# interact_dispatch.cpp (624 lines)
+# interact_dispatch.cpp (625 lines)
 
 Source: `patches/Accessibility/interact_dispatch.cpp`
 
@@ -24,6 +24,6 @@ Enter / Shift+Enter on the narrated target. DispatchInteract is the one pipeline
 - L381 `bool LastUseDidNothing(uint32_t handle)`: A use the engine accepted and never acted on, on this target, the press before: a container that was bashed open takes AddUseObjectAction and does nothing with it.
 - L390 `bool DispatchVerb(acc::picker::ActionSnapshot& snap, uint32_t dispatchHandle, const char* name, void* target, bool forceRadial)`: Dispatch the picked verb.
 - L433 `acc::strings::Id PreRollFor(acc::filter::CycleCategory c)`
-- L452 `bool ShouldSwitchFromInGameMenu()`: The in-game menu (Escape menu and its tabs, which keep the InGameMenu strip in the foreground) is the only blocker the action-menu openers switch out of, as the game's own menu hotkeys do; message boxes, dialogs and s...
-- L458 `void OnInteract(bool forceRadial)`
-- L480 `void DispatchInteract(void* target, uint32_t handle, bool forceRadial)`
+- L453 `bool ShouldSwitchFromInGameMenu()`: The in-game menu (Escape menu and its tabs, which keep the InGameMenu strip in the foreground) is the only blocker the action-menu openers switch out of, as the game's own menu hotkeys do; message boxes, dialogs and s...
+- L459 `void OnInteract(bool forceRadial)`
+- L481 `void DispatchInteract(void* target, uint32_t handle, bool forceRadial)`

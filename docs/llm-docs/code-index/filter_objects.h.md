@@ -1,4 +1,4 @@
-# filter_objects.h (56 lines)
+# filter_objects.h (57 lines)
 
 Source: `patches/Accessibility/filter_objects.h`
 
@@ -9,11 +9,11 @@ Pure predicate over engine_area's GameObjectKind + sub-state. Sub-state filters:
 ## Declarations (in source order)
 
 - L15 `enum class CycleCategory`: Cycle order returned by NextCategory / PrevCategory.
-- L27 `const char* CategoryName(CycleCategory c)`: English, for logs.
-- L30 `acc::strings::Id CategoryNameId(CycleCategory c)`: Localised, for speech: the same mapping as CategoryName.
-- L33 `bool ObjectMatches(void* gameObject, CycleCategory category)`: SEH-guarded via engine_area::GetObjectKind.
-- L37 `CycleCategory ClassifyObject(void* gameObject)`: The first category the object matches, in enum order; Count_ for none (a combat or dialog target, say).
-- L39 `CycleCategory NextCategory(CycleCategory c)`
-- L40 `CycleCategory PrevCategory(CycleCategory c)`
-- L44 `enum class CycleContext`: World = in-world cycle over CSWSArea object list; Map = same data projected onto the area map, fog-of-war-gated.
-- L53 `bool IsMapCycleable(CycleCategory c)`: Which categories the engine renders as map icons.
+- L28 `const char* CategoryName(CycleCategory c)`: English, for logs.
+- L31 `acc::strings::Id CategoryNameId(CycleCategory c)`: Localised, for speech: the same mapping as CategoryName.
+- L34 `bool ObjectMatches(void* gameObject, CycleCategory category)`: SEH-guarded via engine_area::GetObjectKind.
+- L38 `CycleCategory ClassifyObject(void* gameObject)`: The first category the object matches, in enum order; Count_ for none (a combat or dialog target, say).
+- L40 `CycleCategory NextCategory(CycleCategory c)`
+- L41 `CycleCategory PrevCategory(CycleCategory c)`
+- L45 `enum class CycleContext`: World = in-world cycle over CSWSArea object list; Map = same data projected onto the area map, fog-of-war-gated.
+- L54 `bool IsMapCycleable(CycleCategory c)`: Which categories the engine renders as map icons.

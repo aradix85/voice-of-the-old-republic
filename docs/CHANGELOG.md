@@ -278,6 +278,9 @@ installer, as the pre-release `bridge-latest`.
   changing area, which crashed the lift to the Ebon Hawk's hull.
 - An empty container that starts a conversation stays in the , / . lists,
   such as the Ebon Hawk's combat training box.
+- Mines the party has detected are a category of their own in the , / .
+  lists and are found by Q and E.
+- Shift+- never walks to a mine.
 - The installer makes an energy shield that runs out or breaks audible, in
   both games.
 - A local bridge lets an external helper read the game state and act in the
@@ -1135,6 +1138,15 @@ witnesses are at the declarations.
   the second round on and starts the next round each time it closes, so it
   could no longer be found. What is left to search (Ctrl+L, "Here:",
   "nothing left") still counts only what holds items.
+- Detected mines are targets: "Mine" is a seventh category for , / . and
+  Shift+, / Shift+. and Q and E find them, so Shift+Enter can open a mine's
+  actions (Disable, Recover). The lists had no place for a mine, and "Q and
+  E: everything around you" replaces the game's own Q and E, the only keys
+  that picked one. A mine is listed from the moment the game detects it,
+  with or without map-wide selection. Enter on a mine runs the game's own
+  action on it.
+- Shift+- on a mine says "Shift and Enter to disable or recover it" and
+  does not walk: a walk to a mine's own spot ends on it.
 
 <h3>Bridge:</h3>
 

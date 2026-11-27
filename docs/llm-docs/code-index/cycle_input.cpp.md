@@ -1,4 +1,4 @@
-# cycle_input.cpp (208 lines)
+# cycle_input.cpp (210 lines)
 
 Source: `patches/Accessibility/cycle_input.cpp`
 
@@ -7,5 +7,5 @@ Cycle input: the two ingestion paths (the engine key hook and the Win32 poll) an
 ## Declarations (in source order)
 
 - L26 `CategoryBindings BindingsFor( acc::filter::CycleCategory c, acc::filter::CycleContext ctx)`
-- L58 `bool TryHandleEvent(int param_1, int param_2)`
-- L144 `void PollWin32()`
+- L60 `bool TryHandleEvent(int param_1, int param_2)`
+- L146 `void PollWin32()`

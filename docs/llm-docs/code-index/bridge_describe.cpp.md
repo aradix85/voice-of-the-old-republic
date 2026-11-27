@@ -1,4 +1,4 @@
-# bridge_describe.cpp (122 lines)
+# bridge_describe.cpp (123 lines)
 
 Source: `patches/Accessibility/bridge_describe.cpp`
 

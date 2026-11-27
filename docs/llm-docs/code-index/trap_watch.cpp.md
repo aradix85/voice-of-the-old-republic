@@ -1,4 +1,4 @@
-# trap_watch.cpp (285 lines)
+# trap_watch.cpp (294 lines)
 
 Source: `patches/Accessibility/trap_watch.cpp`
 
@@ -16,4 +16,5 @@ Trap detection watcher — see trap_watch.h for the design and docs/llm-docs/min
 - L156 `void ScanNow()`: Forced rescan for the message-enrichment race: the engine appends the mine-detect feedback line in the same tick it updates the detected-by list, which can beat the next 250ms scan.
 - L162 `void ScanInternal(DWORD now)`
 - L263 `bool PeekFreshMine(char* nameOut, size_t nameSize, Vector& posOut)`
-- L276 `void ConsumeFreshMine()`
+- L276 `bool IsDetectedMine(uint32_t handle)`
+- L285 `void ConsumeFreshMine()`
