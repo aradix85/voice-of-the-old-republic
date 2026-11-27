@@ -273,6 +273,15 @@ bool PeekFreshMine(char* nameOut, size_t nameSize, Vector& posOut) {
     return true;
 }
 
+bool IsDetectedMine(uint32_t handle) {
+    for (int i = 0; i < g_tracked_count; ++i) {
+        if (g_tracked[i].handle == handle) {
+            return g_tracked[i].isMine && g_tracked[i].detected;
+        }
+    }
+    return false;
+}
+
 void ConsumeFreshMine() {
     FreshMine* best = nullptr;
     for (auto& f : g_fresh) {

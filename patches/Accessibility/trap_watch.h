@@ -27,6 +27,7 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
 
 #include "engine_offsets.h"  // Vector
 
@@ -48,5 +49,11 @@ void ScanNow();
 // expire after a few seconds). Returns false when none pending.
 bool PeekFreshMine(char* nameOut, size_t nameSize, Vector& posOut);
 void ConsumeFreshMine();
+
+// True for a ground mine the party has detected, by server object id: the
+// state the scan mirrors, at most one scan interval old. This is what makes
+// a mine a target (, / . and Q/E), as the red overlay does for a sighted
+// player.
+bool IsDetectedMine(uint32_t handle);
 
 }  // namespace acc::trap_watch

@@ -32,6 +32,7 @@ enum class Id : int {
     EmptyItems,
     EmptyLandmarks,
     EmptyTransitions,
+    EmptyMines,
     EmptyMapHints,
     EmptyAll,
     CycleNoTarget,
@@ -198,6 +199,9 @@ enum class Id : int {
     FmtInteractTalk,
     FmtInteractOpen,
     FmtInteractNoTake,
+    // A detected mine: the mod never walks to one. Enter runs the game's
+    // own action on it and Shift+Enter lists them.
+    FmtInteractMine,
     FmtInteractFailed,
 
     // ---- Engine-picked action pre-roll. Used when the engine action

@@ -114,6 +114,7 @@ const char* CategoryKey(acc::filter::CycleCategory c) {
         case C::Item:       return "item";
         case C::Landmark:   return "landmark";
         case C::Transition: return "transition";
+        case C::Mine:       return "mine";
         default:            return "other";
     }
 }

@@ -49,6 +49,8 @@ CategoryBindings BindingsFor(
             return {S::CategoryLandmark,   S::EmptyLandmarks};
         case C::Transition:
             return {S::CategoryTransition, S::EmptyTransitions};
+        case C::Mine:
+            return {S::MineNoun,           S::EmptyMines};
         case C::Count_:
             break;
     }

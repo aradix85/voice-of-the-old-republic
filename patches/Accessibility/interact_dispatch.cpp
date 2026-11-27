@@ -440,6 +440,7 @@ acc::strings::Id PreRollFor(acc::filter::CycleCategory c) {
         case C::Item:       return S::FmtInteractNoTake;
         case C::Landmark:   return S::FmtInteractOpen;  // landmark = waypoint
         case C::Transition: return S::FmtInteractOpen;  // transition = doorway
+        case C::Mine:       return S::FmtInteractMine;
         case C::Count_:     break;
     }
     return S::FmtInteractOpen;

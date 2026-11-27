@@ -50,7 +50,7 @@ struct Candidate {
 CycleCategory Classify(void* obj) {
     const CycleCategory order[] = {CycleCategory::Npc, CycleCategory::Door,
                                    CycleCategory::Container, CycleCategory::Item,
-                                   CycleCategory::Transition};
+                                   CycleCategory::Transition, CycleCategory::Mine};
     for (CycleCategory c : order) {
         if (acc::filter::ObjectMatches(obj, c)) return c;
     }

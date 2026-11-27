@@ -2,6 +2,7 @@
 
 #include "engine_player.h"   // GetPlayerServerCreature
 #include "floor_puzzle.h"    // IsPuzzlePlateTrigger — plate cue/cycle exclusion
+#include "trap_watch.h"      // IsDetectedMine
 
 namespace acc::filter {
 
@@ -13,6 +14,7 @@ const char* CategoryName(CycleCategory c) {
         case CycleCategory::Item:        return "Item";
         case CycleCategory::Landmark:    return "Landmark";
         case CycleCategory::Transition:  return "Transition";
+        case CycleCategory::Mine:        return "Mine";
         case CycleCategory::Count_:      return "?";
     }
     return "?";
@@ -27,6 +29,7 @@ acc::strings::Id CategoryNameId(CycleCategory c) {
         case CycleCategory::Item:       return S::CategoryItem;
         case CycleCategory::Landmark:   return S::CategoryLandmark;
         case CycleCategory::Transition: return S::CategoryTransition;
+        case CycleCategory::Mine:       return S::MineNoun;
         case CycleCategory::Count_:     break;
     }
     return S::CategoryItem;
@@ -79,6 +82,10 @@ bool ObjectMatches(void* gameObject, CycleCategory category) {
                    !acc::floor_puzzle::IsPuzzlePlateTrigger(
                        acc::engine::GetObjectHandle(gameObject)) &&
                    acc::engine::IsTransitionTrigger(gameObject);
+        case CycleCategory::Mine:
+            return kind == int(K::Trigger) &&
+                   acc::trap_watch::IsDetectedMine(
+                       acc::engine::GetObjectHandle(gameObject));
         case CycleCategory::Count_:
             return false;
     }

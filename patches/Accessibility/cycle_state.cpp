@@ -174,6 +174,9 @@ bool BuildCategoryListing(acc::filter::CycleCategory category,
                 if (!acc::engine::IsMapNoteEnabled(obj)) continue;
             } else if (discoveryFilter && !acc::discovery::IsDiscovered(obj) &&
                        !isParty(obj) &&
+                       // A mine is in the list because the game detected
+                       // it: that is its discovery.
+                       category != acc::filter::CycleCategory::Mine &&
                        // The game's own map notes ("Duel Organizer") are
                        // signposts the designers placed so players can find
                        // a place they have not reached yet; a sighted player

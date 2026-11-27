@@ -21,6 +21,7 @@ const char* Get(Id id) {
         case Id::EmptyItems:          return "No items in range";
         case Id::EmptyLandmarks:      return "No landmarks in range";
         case Id::EmptyTransitions:    return "No transitions in range";
+        case Id::EmptyMines:          return "No mines detected";
         case Id::EmptyMapHints:       return "No map hints on this map";
         case Id::EmptyAll:            return "No objects in range";
         case Id::CycleNoTarget:       return "No target";
@@ -72,6 +73,7 @@ const char* Get(Id id) {
         case Id::FmtInteractTalk:      return "Talk to %s";
         case Id::FmtInteractOpen:      return "Use %s";
         case Id::FmtInteractNoTake:    return "%s cannot be picked up";
+        case Id::FmtInteractMine:      return "%s. Shift and Enter to disable or recover it";
         case Id::FmtInteractFailed:    return "Interact with %s failed";
         case Id::FmtInteractEngine:    return "%s %s";
         case Id::FmtInteractRadial:    return "Action menu, %s";

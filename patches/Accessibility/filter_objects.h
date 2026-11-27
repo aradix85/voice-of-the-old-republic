@@ -19,7 +19,8 @@ enum class CycleCategory : int {
     Item         = 3,
     Landmark     = 4,
     Transition   = 5,
-    Count_       = 6,
+    Mine         = 6,  // a ground mine the party has detected
+    Count_       = 7,
 };
 
 // English, for logs. Its localised sibling is CategoryNameId below — per the

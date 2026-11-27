@@ -254,6 +254,15 @@ void OnPathfindFocus() {
         return;
     }
 
+    // A mine goes off under whoever walks onto it; the line says which key
+    // acts on it instead.
+    if (a.category == acc::filter::CycleCategory::Mine) {
+        acc::speech::Speak(msg, /*interrupt=*/true);
+        acclog::Write("Cycle", "Shift+- -> [%s] obj=%p handle=0x%08x (mine, no walk)",
+                      msg, a.obj, a.handle);
+        return;
+    }
+
     // Dispatch. Map pins and handle-less targets have no object to "use" —
     // walk straight to the coordinate. Real objects go through UseObject
     // (walk to use-range + trigger); if the engine refuses the use (a
